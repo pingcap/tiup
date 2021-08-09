@@ -54,7 +54,7 @@ size = "1000M"
 [profiles]
 [profiles.default]
 load_balancing = "random"
-max_memory_usage = 10000000000
+max_memory_usage = 0
 use_uncompressed_cache = 0
 [profiles.readonly]
 readonly = 1

@@ -14,11 +14,14 @@
 package utils
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"net"
 	"net/http"
+	"net/url"
+	"os"
 	"time"
 )
 
@@ -32,19 +35,39 @@ func NewHTTPClient(timeout time.Duration, tlsConfig *tls.Config) *HTTPClient {
 	if timeout < time.Second {
 		timeout = 10 * time.Second // default timeout is 10s
 	}
+	tr := &http.Transport{
+		TLSClientConfig: tlsConfig,
+		Dial:            (&net.Dialer{Timeout: 3 * time.Second}).Dial,
+	}
+	// prefer to use the inner http proxy
+	httpProxy := os.Getenv("TIUP_INNER_HTTP_PROXY")
+	if len(httpProxy) == 0 {
+		httpProxy = os.Getenv("HTTP_PROXY")
+	}
+	if len(httpProxy) > 0 {
+		if proxyURL, err := url.Parse(httpProxy); err == nil {
+			tr.Proxy = http.ProxyURL(proxyURL)
+		}
+	}
 	return &HTTPClient{
 		client: &http.Client{
-			Timeout: timeout,
-			Transport: &http.Transport{
-				TLSClientConfig: tlsConfig,
-			},
+			Timeout:   timeout,
+			Transport: tr,
 		},
 	}
 }
 
 // Get fetch an URL with GET method and returns the response
-func (c *HTTPClient) Get(url string) ([]byte, error) {
-	res, err := c.client.Get(url)
+func (c *HTTPClient) Get(ctx context.Context, url string) ([]byte, error) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+	res, err := c.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -54,8 +77,17 @@ func (c *HTTPClient) Get(url string) ([]byte, error) {
 }
 
 // Post send a POST request to the url and returns the response
-func (c *HTTPClient) Post(url string, body io.Reader) ([]byte, error) {
-	res, err := c.client.Post(url, "application/json", body)
+func (c *HTTPClient) Post(ctx context.Context, url string, body io.Reader) ([]byte, error) {
+	req, err := http.NewRequest("POST", url, body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+	res, err := c.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -65,13 +97,16 @@ func (c *HTTPClient) Post(url string, body io.Reader) ([]byte, error) {
 }
 
 // Delete send a DELETE request to the url and returns the response and status code.
-func (c *HTTPClient) Delete(url string, body io.Reader) ([]byte, int, error) {
+func (c *HTTPClient) Delete(ctx context.Context, url string, body io.Reader) ([]byte, int, error) {
 	var statusCode int
 	req, err := http.NewRequest("DELETE", url, body)
 	if err != nil {
 		return nil, statusCode, err
 	}
 
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
 	res, err := c.client.Do(req)
 	if err != nil {
 		return nil, statusCode, err
@@ -82,15 +117,26 @@ func (c *HTTPClient) Delete(url string, body io.Reader) ([]byte, int, error) {
 	return b, statusCode, err
 }
 
+// Client returns the http.Client
+func (c *HTTPClient) Client() *http.Client {
+	return c.client
+}
+
+// WithClient uses the specified HTTP client
+func (c *HTTPClient) WithClient(client *http.Client) *HTTPClient {
+	c.client = client
+	return c
+}
+
 // checkHTTPResponse checks if an HTTP response is with normal status codes
 func checkHTTPResponse(res *http.Response) ([]byte, error) {
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
 	}
 	if res.StatusCode < 200 || res.StatusCode >= 400 {
 		return body, fmt.Errorf("error requesting %s, response: %s, code %d",
-			res.Request.URL, string(body[:]), res.StatusCode)
+			res.Request.URL, string(body), res.StatusCode)
 	}
 	return body, nil
 }

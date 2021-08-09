@@ -16,7 +16,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -29,7 +28,6 @@ import (
 	"github.com/pingcap/tiup/components/playground/instance"
 	"github.com/pingcap/tiup/pkg/environment"
 	tiupexec "github.com/pingcap/tiup/pkg/exec"
-	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -54,7 +52,7 @@ func newGrafana(version string, host string) *grafana {
 func writeDatasourceConfig(fname string, clusterName string, p8sURL string) error {
 	err := makeSureDir(fname)
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	tpl := `apiVersion: 1
@@ -74,7 +72,7 @@ datasources:
 `
 
 	s := fmt.Sprintf(tpl, clusterName, clusterName, p8sURL)
-	err = ioutil.WriteFile(fname, []byte(s), 0644)
+	err = os.WriteFile(fname, []byte(s), 0644)
 	if err != nil {
 		return errors.AddStack(err)
 	}
@@ -98,22 +96,22 @@ func replaceDatasource(dashboardDir string, datasourceName string) error {
 			return nil
 		}
 
-		data, err := ioutil.ReadFile(path)
+		data, err := os.ReadFile(path)
 		if err != nil {
-			return err
+			return errors.AddStack(err)
 		}
 
 		s := string(data)
-		s = strings.Replace(s, "test-cluster", datasourceName, -1)
-		s = strings.Replace(s, "Test-Cluster", datasourceName, -1)
-		s = strings.Replace(s, "${DS_LIGHTNING}", datasourceName, -1)
+		s = strings.ReplaceAll(s, "test-cluster", datasourceName)
+		s = strings.ReplaceAll(s, "Test-Cluster", datasourceName)
+		s = strings.ReplaceAll(s, "${DS_LIGHTNING}", datasourceName)
 		s = re.ReplaceAllLiteralString(s, datasourceName)
 
-		return ioutil.WriteFile(path, []byte(s), 0644)
+		return os.WriteFile(path, []byte(s), 0644)
 	})
 
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	return nil
@@ -122,7 +120,7 @@ func replaceDatasource(dashboardDir string, datasourceName string) error {
 func writeDashboardConfig(fname string, clusterName string, dir string) error {
 	err := makeSureDir(fname)
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	tpl := `apiVersion: 1
@@ -138,7 +136,7 @@ providers:
 `
 	s := fmt.Sprintf(tpl, clusterName, clusterName, dir)
 
-	err = ioutil.WriteFile(fname, []byte(s), 0644)
+	err = os.WriteFile(fname, []byte(s), 0644)
 	if err != nil {
 		return errors.AddStack(err)
 	}
@@ -157,19 +155,19 @@ var clusterName string = "playground"
 func (g *grafana) start(ctx context.Context, dir string, p8sURL string) (err error) {
 	g.port, err = utils.GetFreePort(g.host, 3000)
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	fname := filepath.Join(dir, "conf", "provisioning", "dashboards", "dashboard.yml")
 	err = writeDashboardConfig(fname, clusterName, filepath.Join(dir, "dashboards"))
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	fname = filepath.Join(dir, "conf", "provisioning", "datasources", "datasource.yml")
 	err = writeDatasourceConfig(fname, clusterName, p8sURL)
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	tpl := `
@@ -188,7 +186,7 @@ http_port = %d
 	custome := fmt.Sprintf(tpl, g.host, g.port)
 	customeFName := filepath.Join(dir, "conf", "custom.ini")
 
-	err = ioutil.WriteFile(customeFName, []byte(custome), 0644)
+	err = os.WriteFile(customeFName, []byte(custome), 0644)
 	if err != nil {
 		return errors.AddStack(err)
 	}
@@ -205,7 +203,7 @@ http_port = %d
 	params := &tiupexec.PrepareCommandParams{
 		Ctx:         ctx,
 		Component:   "grafana",
-		Version:     v0manifest.Version(g.version),
+		Version:     utils.Version(g.version),
 		InstanceDir: dir,
 		WD:          dir,
 		Args:        args,
@@ -214,7 +212,7 @@ http_port = %d
 	}
 	cmd, err := tiupexec.PrepareCommand(params)
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 	cmd.Stdout = nil
 	cmd.Stderr = nil

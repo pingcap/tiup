@@ -14,11 +14,13 @@
 package task
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/meta"
 )
@@ -35,9 +37,9 @@ type InitConfig struct {
 }
 
 // Execute implements the Task interface
-func (c *InitConfig) Execute(ctx *Context) error {
+func (c *InitConfig) Execute(ctx context.Context) error {
 	// Copy to remote server
-	exec, found := ctx.GetExecutor(c.instance.GetHost())
+	exec, found := ctxt.GetInner(ctx).GetExecutor(c.instance.GetHost())
 	if !found {
 		return ErrNoExecutor
 	}
@@ -46,7 +48,7 @@ func (c *InitConfig) Execute(ctx *Context) error {
 		return errors.Annotatef(err, "create cache directory failed: %s", c.paths.Cache)
 	}
 
-	err := c.instance.InitConfig(exec, c.clusterName, c.clusterVersion, c.deployUser, c.paths)
+	err := c.instance.InitConfig(ctx, exec, c.clusterName, c.clusterVersion, c.deployUser, c.paths)
 	if err != nil {
 		if c.ignoreCheck && errors.Cause(err) == spec.ErrorCheckConfig {
 			return nil
@@ -57,7 +59,7 @@ func (c *InitConfig) Execute(ctx *Context) error {
 }
 
 // Rollback implements the Task interface
-func (c *InitConfig) Rollback(ctx *Context) error {
+func (c *InitConfig) Rollback(ctx context.Context) error {
 	return ErrUnsupportedRollback
 }
 

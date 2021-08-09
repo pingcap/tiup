@@ -15,11 +15,12 @@ package module
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"time"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -61,7 +62,7 @@ func NewWaitFor(c WaitForConfig) *WaitFor {
 }
 
 // Execute the module return nil if successfully wait for the event.
-func (w *WaitFor) Execute(e executor.Executor) (err error) {
+func (w *WaitFor) Execute(ctx context.Context, e ctxt.Executor) (err error) {
 	pattern := []byte(fmt.Sprintf(":%d ", w.c.Port))
 
 	retryOpt := utils.RetryOption{
@@ -70,7 +71,7 @@ func (w *WaitFor) Execute(e executor.Executor) (err error) {
 	}
 	if err := utils.Retry(func() error {
 		// only listing TCP ports
-		stdout, _, err := e.Execute("ss -ltn", false)
+		stdout, _, err := e.Execute(ctx, "ss -ltn", false)
 		if err == nil {
 			switch w.c.State {
 			case "started":

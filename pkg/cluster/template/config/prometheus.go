@@ -16,11 +16,12 @@ package config
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path"
 	"text/template"
 
-	"github.com/pingcap/tiup/pkg/cluster/embed"
+	"github.com/pingcap/tiup/embed"
+	"golang.org/x/mod/semver"
 )
 
 // PrometheusConfig represent the data to generate Prometheus config
@@ -46,17 +47,27 @@ type PrometheusConfig struct {
 	BlackboxAddr              string
 	KafkaExporterAddr         string
 	GrafanaAddr               string
+	HasTiKVAccelerateRules    bool
 
 	DMMasterAddrs []string
 	DMWorkerAddrs []string
+
+	LocalRules   []string
+	RemoteConfig string
 }
 
 // NewPrometheusConfig returns a PrometheusConfig
-func NewPrometheusConfig(cluster string, enableTLS bool) *PrometheusConfig {
-	return &PrometheusConfig{
-		ClusterName: cluster,
+func NewPrometheusConfig(clusterName, clusterVersion string, enableTLS bool) *PrometheusConfig {
+	cfg := &PrometheusConfig{
+		ClusterName: clusterName,
 		TLSEnabled:  enableTLS,
 	}
+
+	// tikv.accelerate.rules.yml was first introduced in v4.0.0
+	if semver.Compare(clusterVersion, "v4.0.0") >= 0 {
+		cfg.HasTiKVAccelerateRules = true
+	}
+	return cfg
 }
 
 // AddKafka add a kafka address
@@ -185,9 +196,21 @@ func (c *PrometheusConfig) AddDMWorker(ip string, port uint64) *PrometheusConfig
 	return c
 }
 
+// AddLocalRule add a local rule
+func (c *PrometheusConfig) AddLocalRule(rule string) *PrometheusConfig {
+	c.LocalRules = append(c.LocalRules, rule)
+	return c
+}
+
+// SetRemoteConfig set remote read/write config
+func (c *PrometheusConfig) SetRemoteConfig(cfg string) *PrometheusConfig {
+	c.RemoteConfig = cfg
+	return c
+}
+
 // Config generate the config file data.
 func (c *PrometheusConfig) Config() ([]byte, error) {
-	fp := path.Join("/templates", "config", "prometheus.yml.tpl")
+	fp := path.Join("templates", "config", "prometheus.yml.tpl")
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err
@@ -216,5 +239,5 @@ func (c *PrometheusConfig) ConfigToFile(file string) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(file, config, 0755)
+	return os.WriteFile(file, config, 0755)
 }

@@ -14,13 +14,14 @@
 package spec
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
-	"strconv"
+	"time"
 
-	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
 )
@@ -30,6 +31,7 @@ type PumpSpec struct {
 	Host            string                 `yaml:"host"`
 	SSHPort         int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported        bool                   `yaml:"imported,omitempty"`
+	Patched         bool                   `yaml:"patched,omitempty"`
 	Port            int                    `yaml:"port" default:"8250"`
 	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
 	DataDir         string                 `yaml:"data_dir,omitempty"`
@@ -43,22 +45,22 @@ type PumpSpec struct {
 }
 
 // Role returns the component role of the instance
-func (s PumpSpec) Role() string {
+func (s *PumpSpec) Role() string {
 	return ComponentPump
 }
 
 // SSH returns the host and SSH port of the instance
-func (s PumpSpec) SSH() (string, int) {
+func (s *PumpSpec) SSH() (string, int) {
 	return s.Host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
-func (s PumpSpec) GetMainPort() int {
+func (s *PumpSpec) GetMainPort() int {
 	return s.Port
 }
 
 // IsImported returns if the node is imported from TiDB-Ansible
-func (s PumpSpec) IsImported() bool {
+func (s *PumpSpec) IsImported() bool {
 	return s.Imported
 }
 
@@ -95,12 +97,10 @@ func (c *PumpComponent) Instances() []Instance {
 				s.DataDir,
 			},
 			StatusFn: func(tlsCfg *tls.Config, _ ...string) string {
-				scheme := "http"
-				if tlsCfg != nil {
-					scheme = "https"
-				}
-				url := fmt.Sprintf("%s://%s:%d/status", scheme, s.Host, s.Port)
-				return statusByURL(url, tlsCfg)
+				return statusByHost(s.Host, s.Port, "/status", tlsCfg)
+			},
+			UptimeFn: func(tlsCfg *tls.Config) time.Duration {
+				return UptimeByHost(s.Host, s.Port, tlsCfg)
 			},
 		}, c.Topology})
 	}
@@ -115,7 +115,8 @@ type PumpInstance struct {
 
 // ScaleConfig deploy temporary config on scaling
 func (i *PumpInstance) ScaleConfig(
-	e executor.Executor,
+	ctx context.Context,
+	e ctxt.Executor,
 	topo Topology,
 	clusterName,
 	clusterVersion,
@@ -128,26 +129,32 @@ func (i *PumpInstance) ScaleConfig(
 	}()
 	i.topo = mustBeClusterTopo(topo)
 
-	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
+	return i.InitConfig(ctx, e, clusterName, clusterVersion, deployUser, paths)
 }
 
 // InitConfig implements Instance interface.
 func (i *PumpInstance) InitConfig(
-	e executor.Executor,
+	ctx context.Context,
+	e ctxt.Executor,
 	clusterName,
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
 ) error {
 	topo := i.topo.(*Specification)
-	if err := i.BaseInstance.InitConfig(e, topo.GlobalOptions, deployUser, paths); err != nil {
+	if err := i.BaseInstance.InitConfig(ctx, e, topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
 
 	enableTLS := topo.GlobalOptions.TLSEnabled
-	spec := i.InstanceSpec.(PumpSpec)
+	spec := i.InstanceSpec.(*PumpSpec)
+	nodeID := i.ID()
+	// keep origin node id if is imported
+	if i.IsImported() {
+		nodeID = ""
+	}
 	cfg := scripts.NewPumpScript(
-		i.GetHost()+":"+strconv.Itoa(i.GetPort()),
+		nodeID,
 		i.GetHost(),
 		paths.Deploy,
 		paths.Data[0],
@@ -159,11 +166,11 @@ func (i *PumpInstance) InitConfig(
 		return err
 	}
 	dst := filepath.Join(paths.Deploy, "scripts", "run_pump.sh")
-	if err := e.Transfer(fp, dst, false); err != nil {
+	if err := e.Transfer(ctx, fp, dst, false, 0); err != nil {
 		return err
 	}
 
-	if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
+	if _, _, err := e.Execute(ctx, "chmod +x "+dst, false); err != nil {
 		return err
 	}
 
@@ -180,7 +187,7 @@ func (i *PumpInstance) InitConfig(
 				i.GetPort(),
 			),
 		)
-		importConfig, err := ioutil.ReadFile(configPath)
+		importConfig, err := os.ReadFile(configPath)
 		if err != nil {
 			return err
 		}
@@ -210,5 +217,5 @@ func (i *PumpInstance) InitConfig(
 			i.Role())
 	}
 
-	return i.MergeServerConfig(e, globalConfig, spec.Config, paths)
+	return i.MergeServerConfig(ctx, e, globalConfig, spec.Config, paths)
 }

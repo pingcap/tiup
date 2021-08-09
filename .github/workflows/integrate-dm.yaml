@@ -6,29 +6,44 @@ on:
     branches:
       - master
       - release-*
-  push:
-    branches:
-      - master
-      - release-*
+    paths-ignore:
+      - '**.html'
+      - '**.md'
+      - 'CNAME'
+      - 'LICENSE'
+      - 'doc/**'
+      - 'embed/templates/examples/**'
+      - 'components/bench/**'
+      - 'components/client/**'
+      - 'components/ctl/**'
+      - 'components/cluster/**'
+      - 'components/doc/**'
+      - 'components/errdoc/**'
+      - 'components/playground/**'
+      - 'server/**'
+      - 'pkg/version/version.go'
+      - '.github/workflows/integrate-cluster**'
+      - '.github/workflows/integrate-tiup**'
+      - '.github/workflows/integrate-playground**'
 
 jobs:
   dm:
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         cases:
-          - "--do-cases test_cmd"
-          - "--do-cases test_upgrade"
-          - "--native-ssh --do-cases test_cmd"
-          - "--native-ssh --do-cases test_upgrade"
+          - '--do-cases test_cmd'
+          - '--do-cases test_upgrade'
+          - '--native-ssh --do-cases test_cmd'
+          - '--native-ssh --do-cases test_upgrade'
     env:
       working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
     steps:
-      - name: Set up Go 1.14
+      - name: Set up Go 1.16
         uses: actions/setup-go@v2
         with:
-          go-version: 1.14
+          go-version: 1.16.x
         id: go
 
       - name: Check out code into the Go module directory
@@ -62,9 +77,39 @@ jobs:
         id: test
         working-directory: ${{ env.working-directory }}
         run: |
+          # ensuere docker ssh is ready
+          sleep 4
           # should not use -it
           # ref: https://stackoverflow.com/questions/43099116/error-the-input-device-is-not-a-tty
-          docker exec tiup-cluster-control bash /tiup-cluster/tests/tiup-dm/run.sh ${{matrix.cases}}
+          docker exec tiup-cluster-control bash /tiup-cluster/tests/tiup-dm/run.sh ${{ matrix.cases }}
+
+      - name: Collect component log
+        working-directory: ${{ env.working-directory }}
+        # if: ${{ failure() }}
+        if: always()
+        run: |
+          docker exec tiup-cluster-control bash -c 'mkdir -p /tiup-cluster/logs; [[ -d ~/.tiup/logs ]] && find ~/.tiup/logs -type f -name "*.log" -exec cp {} /tiup-cluster/logs \; || true'
+          ls ${{ env.working-directory }}
+          tar czvf ${{ env.working-directory }}/dm.logs.tar.gz ${{ env.working-directory }}/logs/
+
+      - name: Upload component log
+        if: ${{ failure() }}
+        # if: always()
+        uses: actions/upload-artifact@v1
+        with:
+          name: dm_logs
+          path: ${{ env.working-directory }}/dm.logs.tar.gz
+
+      - name: Output dm debug log
+        working-directory: ${{ env.working-directory }}
+        if: ${{ failure() }}
+        # if: always()
+        run: |
+          pwd
+          docker ps
+          df -h
+          free -h
+          find ${{ env.working-directory }}/logs -type f -exec sh -c 'echo "{}" && cat {} && echo "\n"' \; || true
 
       - name: Upload coverage to Codecov
         working-directory: ${{ env.working-directory }}

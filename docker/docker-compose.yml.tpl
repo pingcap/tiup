@@ -19,49 +19,42 @@ services:
       - "8080"
     networks:
       tiops:
-        ipv4_address: __IPPREFIX__.100
-  n1:
+        ipv4_address: {{ipprefix}}.100
+{% for id in range(1, nodes+1) %}
+  n{{id}}:
     <<: *default-node
-    container_name: tiup-cluster-n1
-    hostname: n1
-    # Uncomment for access grafana and prometheus from host when deploy them at n1.
-    # networks:
-    # ports:
-    #   - "3000:3000"
-    #   - "9090:9090"
+    container_name: tiup-cluster-n{{id}}
+    hostname: n{{id}}
     networks:
       tiops:
-        ipv4_address: __IPPREFIX__.101
-  n2:
+        ipv4_address: {{ipprefix}}.{{id+100}}
+{% endfor %}
+{% if ssh_proxy %}
+  bastion:
     <<: *default-node
-    container_name: tiup-cluster-n2
-    hostname: n2
+    container_name: tiup-cluster-bastion
+    hostname: bastion
     networks:
       tiops:
-        ipv4_address: __IPPREFIX__.102
-  n3:
-    <<: *default-node
-    container_name: tiup-cluster-n3
-    hostname: n3
-    networks:
-      tiops:
-        ipv4_address: __IPPREFIX__.103
-  n4:
-    <<: *default-node
-    container_name: tiup-cluster-n4
-    hostname: n4
-    networks:
-      tiops:
-        ipv4_address: __IPPREFIX__.104
-  n5:
-    <<: *default-node
-    container_name: tiup-cluster-n5
-    hostname: n5
-    networks:
-      tiops:
-        ipv4_address: __IPPREFIX__.105
+        ipv4_address: {{ipprefix}}.250
+      tiproxy:
+        ipv4_address: {{proxy_prefix}}.250
 
-# docker network create --gateway __IPPREFIX__.1 --subnet __IPPREFIX__.0/24 tiup-cluster
+{% for id in range(1, nodes+1) %}
+  p{{id}}:
+    <<: *default-node
+    container_name: tiup-cluster-p{{id}}
+    hostname: p{{id}}
+    networks:
+      tiproxy:
+        ipv4_address: {{proxy_prefix}}.{{id+100}}
+{% endfor %}
+{% endif %}
+
 networks:
   tiops:
     external: true
+{% if ssh_proxy %}
+  tiproxy:
+    external: true
+{% endif %}

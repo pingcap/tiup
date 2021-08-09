@@ -27,7 +27,6 @@ func executeTpcc(action string) {
 	runtime.GOMAXPROCS(maxProcs)
 
 	openDB()
-	defer closeDB()
 
 	tpccConfig.DBName = dbName
 	tpccConfig.Threads = threads
@@ -54,6 +53,7 @@ func executeTpcc(action string) {
 
 	timeoutCtx, cancel := context.WithTimeout(globalCtx, totalTime)
 	defer cancel()
+	defer closeDB()
 
 	executeWorkload(timeoutCtx, w, action)
 }

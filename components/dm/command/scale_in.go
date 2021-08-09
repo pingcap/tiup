@@ -14,6 +14,7 @@
 package command
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"time"
@@ -45,26 +46,17 @@ func newScaleInCmd() *cobra.Command {
 				metadata := imetadata.(*dm.Metadata)
 				b.Func(
 					fmt.Sprintf("ScaleInCluster: options=%+v", gOpt),
-					func(ctx *task.Context) error {
+					func(ctx context.Context) error {
 						return ScaleInDMCluster(ctx, metadata.Topology, gOpt)
 					},
 				).Serial(dmtask.NewUpdateDMMeta(clusterName, metadata, gOpt.Nodes))
 			}
 
-			return manager.ScaleIn(
-				clusterName,
-				skipConfirm,
-				gOpt.OptTimeout,
-				gOpt.SSHTimeout,
-				gOpt.SSHType,
-				gOpt.Force,
-				gOpt.Nodes,
-				scale,
-			)
+			return cm.ScaleIn(clusterName, skipConfirm, gOpt, scale)
 		},
 	}
 
-	cmd.Flags().StringSliceVarP(&gOpt.Nodes, "node", "N", nil, "Specify the nodes")
+	cmd.Flags().StringSliceVarP(&gOpt.Nodes, "node", "N", nil, "Specify the nodes (required)")
 	cmd.Flags().BoolVar(&gOpt.Force, "force", false, "Force just try stop and destroy instance before removing the instance from topo")
 
 	_ = cmd.MarkFlagRequired("node")
@@ -74,17 +66,19 @@ func newScaleInCmd() *cobra.Command {
 
 // ScaleInDMCluster scale in dm cluster.
 func ScaleInDMCluster(
-	getter operator.ExecutorGetter,
+	ctx context.Context,
 	topo *dm.Specification,
 	options operator.Options,
 ) error {
 	// instances by uuid
 	instances := map[string]dm.Instance{}
+	instCount := map[string]int{}
 
 	// make sure all nodeIds exists in topology
 	for _, component := range topo.ComponentsByStartOrder() {
 		for _, instance := range component.Instances() {
 			instances[instance.ID()] = instance
+			instCount[instance.GetHost()]++
 		}
 	}
 
@@ -110,7 +104,8 @@ func ScaleInDMCluster(
 				if !deletedNodes.Exist(instance.ID()) {
 					continue
 				}
-				if err := operator.StopAndDestroyInstance(getter, topo, instance, options, false); err != nil {
+				instCount[instance.GetHost()]--
+				if err := operator.StopAndDestroyInstance(ctx, topo, instance, options, instCount[instance.GetHost()] == 0); err != nil {
 					log.Warnf("failed to stop/destroy %s: %v", component.Name(), err)
 				}
 			}
@@ -140,7 +135,7 @@ func ScaleInDMCluster(
 				continue
 			}
 
-			if err := operator.StopComponent(getter, []dm.Instance{instance}, options.OptTimeout); err != nil {
+			if err := operator.StopComponent(ctx, []dm.Instance{instance}, options.OptTimeout); err != nil {
 				return errors.Annotatef(err, "failed to stop %s", component.Name())
 			}
 
@@ -149,18 +144,25 @@ func ScaleInDMCluster(
 				name := instance.(*dm.MasterInstance).Name
 				err := dmMasterClient.OfflineMaster(name, nil)
 				if err != nil {
-					return errors.AddStack(err)
+					return err
 				}
 			case dm.ComponentDMWorker:
 				name := instance.(*dm.WorkerInstance).Name
 				err := dmMasterClient.OfflineWorker(name, nil)
 				if err != nil {
-					return errors.AddStack(err)
+					return err
 				}
 			}
 
-			if err := operator.DestroyComponent(getter, []dm.Instance{instance}, topo, options); err != nil {
+			if err := operator.DestroyComponent(ctx, []dm.Instance{instance}, topo, options); err != nil {
 				return errors.Annotatef(err, "failed to destroy %s", component.Name())
+			}
+
+			instCount[instance.GetHost()]--
+			if instCount[instance.GetHost()] == 0 {
+				if err := operator.DeletePublicKey(ctx, instance.GetHost()); err != nil {
+					return errors.Annotatef(err, "failed to delete public key")
+				}
 			}
 		}
 	}

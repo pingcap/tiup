@@ -14,18 +14,31 @@
 package operator
 
 import (
+	"context"
 	"crypto/tls"
+	"fmt"
+	"reflect"
 	"strconv"
+	"time"
 
-	"github.com/pingcap/errors"
+	perrs "github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/checkpoint"
+	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/set"
+	"go.uber.org/zap"
+)
+
+var (
+	// register checkpoint for upgrade operation
+	upgradePoint       = checkpoint.Register(checkpoint.Field("instance", reflect.DeepEqual))
+	increaseLimitPoint = checkpoint.Register()
 )
 
 // Upgrade the cluster.
 func Upgrade(
-	getter ExecutorGetter,
+	ctx context.Context,
 	topo spec.Topology,
 	options Options,
 	tlsCfg *tls.Config,
@@ -41,35 +54,107 @@ func Upgrade(
 			continue
 		}
 
-		// Transfer leader of evict leader if the component is TiKV/PD in non-force mode
+		log.Infof("Upgrading component %s", component.Name())
 
-		log.Infof("Restarting component %s", component.Name())
+		// perform pre-upgrade actions of component
+		var origLeaderScheduleLimit int
+		var origRegionScheduleLimit int
+		var err error
+		switch component.Name() {
+		case spec.ComponentTiKV:
+			pdClient := api.NewPDClient(topo.(*spec.Specification).GetPDList(), 10*time.Second, tlsCfg)
+			origLeaderScheduleLimit, origRegionScheduleLimit, err = increaseScheduleLimit(ctx, pdClient)
+			if err != nil {
+				// the config modifing error should be able to be safely ignored, as it will
+				// be processed with current settings anyway.
+				log.Warnf("failed increasing schedule limit: %s, ignore", err)
+			} else {
+				defer func() {
+					upgErr := decreaseScheduleLimit(pdClient, origLeaderScheduleLimit, origRegionScheduleLimit)
+					if upgErr != nil {
+						log.Warnf(
+							"failed decreasing schedule limit (original values should be: %s, %s), please check if their current values are reasonable: %s",
+							fmt.Sprintf("leader-schedule-limit=%d", origLeaderScheduleLimit),
+							fmt.Sprintf("region-schedule-limit=%d", origRegionScheduleLimit),
+							upgErr,
+						)
+					}
+				}()
+			}
+		default:
+			// do nothing, kept for future usage with other components
+		}
+
+		// some instances are upgraded after others
+		deferInstances := make([]spec.Instance, 0)
 
 		for _, instance := range instances {
-			var rollingInstance spec.RollingUpdateInstance
-			var isRollingInstance bool
-
-			if !options.Force {
-				rollingInstance, isRollingInstance = instance.(spec.RollingUpdateInstance)
-			}
-
-			if isRollingInstance {
-				err := rollingInstance.PreRestart(topo, int(options.APITimeout), tlsCfg)
-				if err != nil && !options.Force {
-					return errors.AddStack(err)
+			switch component.Name() {
+			case spec.ComponentPD:
+				// defer PD leader to be upgraded after others
+				isLeader, err := instance.(*spec.PDInstance).IsLeader(topo, int(options.APITimeout), tlsCfg)
+				if err != nil {
+					return err
 				}
-			}
-
-			if err := restartInstance(getter, instance, options.OptTimeout); err != nil && !options.Force {
-				return errors.AddStack(err)
-			}
-
-			if isRollingInstance {
-				err := rollingInstance.PostRestart(topo, tlsCfg)
-				if err != nil && !options.Force {
-					return errors.AddStack(err)
+				if isLeader {
+					deferInstances = append(deferInstances, instance)
+					log.Debugf("Defferred upgrading of PD leader %s", instance.ID())
+					continue
 				}
+			default:
+				// do nothing, kept for future usage with other components
 			}
+
+			if err := upgradeInstance(ctx, topo, instance, options, tlsCfg); err != nil {
+				return err
+			}
+		}
+
+		// process defferred instances
+		for _, instance := range deferInstances {
+			log.Debugf("Upgrading defferred instance %s...", instance.ID())
+			if err := upgradeInstance(ctx, topo, instance, options, tlsCfg); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func upgradeInstance(ctx context.Context, topo spec.Topology, instance spec.Instance, options Options, tlsCfg *tls.Config) (err error) {
+	// insert checkpoint
+	point := checkpoint.Acquire(ctx, upgradePoint, map[string]interface{}{"instance": instance.ID()})
+	defer func() {
+		point.Release(err, zap.String("instance", instance.ID()))
+	}()
+
+	if point.Hit() != nil {
+		return nil
+	}
+
+	var rollingInstance spec.RollingUpdateInstance
+	var isRollingInstance bool
+
+	if !options.Force {
+		rollingInstance, isRollingInstance = instance.(spec.RollingUpdateInstance)
+	}
+
+	if isRollingInstance {
+		err := rollingInstance.PreRestart(topo, int(options.APITimeout), tlsCfg)
+		if err != nil && !options.Force {
+			return err
+		}
+	}
+
+	if err := restartInstance(ctx, instance, options.OptTimeout); err != nil && !options.Force {
+		return err
+	}
+
+	if isRollingInstance {
+		err := rollingInstance.PostRestart(topo, tlsCfg)
+		if err != nil && !options.Force {
+			return err
 		}
 	}
 
@@ -82,4 +167,85 @@ func Addr(ins spec.Instance) string {
 		panic(ins)
 	}
 	return ins.GetHost() + ":" + strconv.Itoa(ins.GetPort())
+}
+
+var (
+	leaderScheduleLimitOffset = 32
+	regionScheduleLimitOffset = 512
+	// storeLimitOffset             = 512
+	leaderScheduleLimitThreshold = 64
+	regionScheduleLimitThreshold = 1024
+	// storeLimitThreshold          = 1024
+)
+
+// increaseScheduleLimit increases the schedule limit of leader and region for faster
+// rebalancing during the rolling restart / upgrade process
+func increaseScheduleLimit(ctx context.Context, pc *api.PDClient) (
+	currLeaderScheduleLimit int,
+	currRegionScheduleLimit int,
+	err error) {
+	// insert checkpoint
+	point := checkpoint.Acquire(ctx, increaseLimitPoint, map[string]interface{}{})
+	defer func() {
+		point.Release(err,
+			zap.Int("currLeaderScheduleLimit", currLeaderScheduleLimit),
+			zap.Int("currRegionScheduleLimit", currRegionScheduleLimit),
+		)
+	}()
+
+	if data := point.Hit(); data != nil {
+		currLeaderScheduleLimit = int(data["currLeaderScheduleLimit"].(float64))
+		currRegionScheduleLimit = int(data["currRegionScheduleLimit"].(float64))
+		return
+	}
+
+	// query current values
+	cfg, err := pc.GetConfig()
+	if err != nil {
+		return
+	}
+	val, ok := cfg["schedule.leader-schedule-limit"].(float64)
+	if !ok {
+		return currLeaderScheduleLimit, currRegionScheduleLimit, perrs.New("cannot get current leader-schedule-limit")
+	}
+	currLeaderScheduleLimit = int(val)
+	val, ok = cfg["schedule.region-schedule-limit"].(float64)
+	if !ok {
+		return currLeaderScheduleLimit, currRegionScheduleLimit, perrs.New("cannot get current region-schedule-limit")
+	}
+	currRegionScheduleLimit = int(val)
+
+	// increase values
+	if currLeaderScheduleLimit < leaderScheduleLimitThreshold {
+		newLimit := currLeaderScheduleLimit + leaderScheduleLimitOffset
+		if newLimit > leaderScheduleLimitThreshold {
+			newLimit = leaderScheduleLimitThreshold
+		}
+		if err := pc.SetReplicationConfig("leader-schedule-limit", newLimit); err != nil {
+			return currLeaderScheduleLimit, currRegionScheduleLimit, err
+		}
+	}
+	if currRegionScheduleLimit < regionScheduleLimitThreshold {
+		newLimit := currRegionScheduleLimit + regionScheduleLimitOffset
+		if newLimit > regionScheduleLimitThreshold {
+			newLimit = regionScheduleLimitThreshold
+		}
+		if err := pc.SetReplicationConfig("region-schedule-limit", newLimit); err != nil {
+			// try to revert leader scheduler limit by our best effort, does not make sense
+			// to handle this error again
+			_ = pc.SetReplicationConfig("leader-schedule-limit", currLeaderScheduleLimit)
+			return currLeaderScheduleLimit, currRegionScheduleLimit, err
+		}
+	}
+
+	return
+}
+
+// decreaseScheduleLimit tries to set the schedule limit back to it's original with
+// the same offset value as increaseScheduleLimit added, with some sanity checks
+func decreaseScheduleLimit(pc *api.PDClient, origLeaderScheduleLimit, origRegionScheduleLimit int) error {
+	if err := pc.SetReplicationConfig("leader-schedule-limit", origLeaderScheduleLimit); err != nil {
+		return err
+	}
+	return pc.SetReplicationConfig("region-schedule-limit", origRegionScheduleLimit)
 }

@@ -14,6 +14,7 @@
 package operator
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -23,7 +24,7 @@ import (
 
 	"github.com/AstroProfundis/sysinfo"
 	"github.com/pingcap/tidb-insight/collector/insight"
-	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/module"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
@@ -37,27 +38,30 @@ type CheckOptions struct {
 	EnableDisk bool
 
 	// pre-defined goups of checks
-	//GroupMinimal bool // a minimal set of checks
+	// GroupMinimal bool // a minimal set of checks
 }
 
 // Names of checks
 var (
-	CheckNameGeneral     = "general" // errors that don't fit any specific check
-	CheckNameNTP         = "ntp"
-	CheckNameOSVer       = "os-version"
-	CheckNameSwap        = "swap"
-	CheckNameSysctl      = "sysctl"
-	CheckNameCPUThreads  = "cpu-cores"
-	CheckNameCPUGovernor = "cpu-governor"
-	CheckNameDisks       = "disk"
-	CheckNamePortListen  = "listening-port"
-	CheckNameEpoll       = "epoll-exclusive"
-	CheckNameMem         = "memory"
-	CheckNameLimits      = "limits"
-	CheckNameSysService  = "service"
-	CheckNameSELinux     = "selinux"
-	CheckNameCommand     = "command"
-	CheckNameFio         = "fio"
+	CheckNameGeneral       = "general" // errors that don't fit any specific check
+	CheckNameNTP           = "ntp"
+	CheckNameOSVer         = "os-version"
+	CheckNameSwap          = "swap"
+	CheckNameSysctl        = "sysctl"
+	CheckNameCPUThreads    = "cpu-cores"
+	CheckNameCPUGovernor   = "cpu-governor"
+	CheckNameDisks         = "disk"
+	CheckNamePortListen    = "listening-port"
+	CheckNameEpoll         = "epoll-exclusive"
+	CheckNameMem           = "memory"
+	CheckNameNet           = "network"
+	CheckNameLimits        = "limits"
+	CheckNameSysService    = "service"
+	CheckNameSELinux       = "selinux"
+	CheckNameCommand       = "command"
+	CheckNameFio           = "fio"
+	CheckNameTHP           = "thp"
+	CheckNameDirPermission = "permission"
 )
 
 // CheckResult is the result of a check
@@ -132,6 +136,9 @@ func checkSysInfo(opt *CheckOptions, sysInfo *sysinfo.SysInfo) []*CheckResult {
 	// check memory size
 	results = append(results, checkMem(opt, &sysInfo.Memory)...)
 
+	// check network
+	results = append(results, checkNetwork(opt, sysInfo.Network)...)
+
 	return results
 }
 
@@ -143,15 +150,35 @@ func checkOSInfo(opt *CheckOptions, osInfo *sysinfo.OS) *CheckResult {
 
 	// check OS vendor
 	switch osInfo.Vendor {
-	case "centos", "redhat":
+	case "centos", "redhat", "rhel":
 		// check version
 		if ver, _ := strconv.Atoi(osInfo.Version); ver < 7 {
 			result.Err = fmt.Errorf("%s %s not supported, use version 7 or higher",
 				osInfo.Name, osInfo.Release)
 			return result
 		}
-	case "debian", "ubuntu":
-		// check version
+	case "debian":
+		// debian support is not fully tested, but we suppose it should work
+		msg := "debian support is not fully tested, be careful"
+		result.Err = fmt.Errorf("%s (%s)", result.Msg, msg)
+		result.Warn = true
+		if ver, _ := strconv.Atoi(osInfo.Version); ver < 9 {
+			result.Err = fmt.Errorf("%s %s not supported, use version 9 or higher (%s)",
+				osInfo.Name, osInfo.Release, msg)
+			result.Warn = false
+			return result
+		}
+	case "ubuntu":
+		// ubuntu support is not fully tested, but we suppose it should work
+		msg := "ubuntu support is not fully tested, be careful"
+		result.Err = fmt.Errorf("%s (%s)", result.Msg, msg)
+		result.Warn = true
+		if ver, _ := strconv.ParseFloat(osInfo.Version, 64); ver < 18.04 {
+			result.Err = fmt.Errorf("%s %s not supported, use version 18.04 or higher (%s)",
+				osInfo.Name, osInfo.Release, msg)
+			result.Warn = false
+			return result
+		}
 	default:
 		result.Err = fmt.Errorf("os vendor %s not supported", osInfo.Vendor)
 		return result
@@ -225,6 +252,29 @@ func checkMem(opt *CheckOptions, memInfo *sysinfo.Memory) []*CheckResult {
 			Name: CheckNameMem,
 			Msg:  fmt.Sprintf("memory size is %dMB", memInfo.Size),
 		})
+	}
+
+	return results
+}
+
+func checkNetwork(opt *CheckOptions, networkDevices []sysinfo.NetworkDevice) []*CheckResult {
+	var results []*CheckResult
+	for _, netdev := range networkDevices {
+		// ignore the network devices that cannot be detected
+		if netdev.Speed == 0 {
+			continue
+		}
+		if netdev.Speed >= 1000 {
+			results = append(results, &CheckResult{
+				Name: CheckNameNet,
+				Msg:  fmt.Sprintf("network speed of %s is %dMB", netdev.Name, netdev.Speed),
+			})
+		} else {
+			results = append(results, &CheckResult{
+				Name: CheckNameNet,
+				Err:  fmt.Errorf("network speed of %s is %dMB too low, needs 1GB or more", netdev.Name, netdev.Speed),
+			})
+		}
 	}
 
 	return results
@@ -377,13 +427,14 @@ func CheckKernelParameters(opt *CheckOptions, p []byte) []*CheckResult {
 }
 
 // CheckServices checks if a service is running on the host
-func CheckServices(e executor.Executor, host, service string, disable bool) *CheckResult {
+func CheckServices(ctx context.Context, e ctxt.Executor, host, service string, disable bool) *CheckResult {
 	result := &CheckResult{
 		Name: CheckNameSysService,
 	}
 
 	// check if the service exist before checking its status, ignore when non-exist
 	stdout, _, err := e.Execute(
+		ctx,
 		fmt.Sprintf(
 			"systemctl list-unit-files --type service | grep -i %s.service | wc -l", service),
 		true)
@@ -399,7 +450,7 @@ func CheckServices(e executor.Executor, host, service string, disable bool) *Che
 		return result
 	}
 
-	active, err := GetServiceStatus(e, service+".service")
+	active, err := GetServiceStatus(ctx, e, service+".service")
 	if err != nil {
 		result.Err = err
 	}
@@ -421,7 +472,7 @@ func CheckServices(e executor.Executor, host, service string, disable bool) *Che
 }
 
 // CheckSELinux checks if SELinux is enabled on the host
-func CheckSELinux(e executor.Executor) *CheckResult {
+func CheckSELinux(ctx context.Context, e ctxt.Executor) *CheckResult {
 	result := &CheckResult{
 		Name: CheckNameSELinux,
 	}
@@ -430,14 +481,21 @@ func CheckSELinux(e executor.Executor) *CheckResult {
 		Command: "grep -E '^\\s*SELINUX=enforcing' /etc/selinux/config 2>/dev/null | wc -l",
 		Sudo:    true,
 	})
-	stdout, stderr, err := m.Execute(e)
+	stdout, stderr, err := m.Execute(ctx, e)
 	if err != nil {
 		result.Err = fmt.Errorf("%w %s", err, stderr)
 		return result
 	}
 	out := strings.Trim(string(stdout), "\n")
-	if lines, err := strconv.Atoi(out); err != nil || lines > 0 {
-		result.Err = fmt.Errorf("SELinux is not disabled, %d %s", lines, err)
+	lines, err := strconv.Atoi(out)
+	if err != nil {
+		result.Err = fmt.Errorf("can not check SELinux status, please validate manually, %s", err)
+		result.Warn = true
+		return result
+	}
+
+	if lines > 0 {
+		result.Err = fmt.Errorf("SELinux is not disabled")
 	} else {
 		result.Msg = "SELinux is disabled"
 	}
@@ -494,6 +552,13 @@ func CheckPartitions(opt *CheckOptions, host string, topo *spec.Specification, r
 	flt := flatPartitions(insightInfo.Partitions)
 	parts := sortPartitions(flt)
 
+	// check if multiple instances are using the same partition as data storeage
+	type storePartitionInfo struct {
+		comp string
+		path string
+	}
+	uniqueStores := make(map[string][]storePartitionInfo) // host+partition -> info
+
 	topo.IterInstance(func(inst spec.Instance) {
 		if inst.GetHost() != host {
 			return
@@ -506,6 +571,17 @@ func CheckPartitions(opt *CheckOptions, host string, topo *spec.Specification, r
 			blk := getDisk(parts, dataDir)
 			if blk == nil {
 				return
+			}
+
+			// only check for TiKV and TiFlash, other components are not that I/O sensitive
+			switch inst.ComponentName() {
+			case spec.ComponentTiKV,
+				spec.ComponentTiFlash:
+				usKey := fmt.Sprintf("%s:%s", host, blk.Mount.MountPoint)
+				uniqueStores[usKey] = append(uniqueStores[usKey], storePartitionInfo{
+					comp: inst.ComponentName(),
+					path: dataDir,
+				})
 			}
 
 			switch blk.Mount.FSType {
@@ -534,6 +610,25 @@ func CheckPartitions(opt *CheckOptions, host string, topo *spec.Specification, r
 			}
 		}
 	})
+
+	for key, parts := range uniqueStores {
+		if len(parts) > 1 {
+			pathList := make([]string, 0)
+			for _, p := range parts {
+				pathList = append(pathList,
+					fmt.Sprintf("%s:%s", p.comp, p.path),
+				)
+			}
+			results = append(results, &CheckResult{
+				Name: CheckNameDisks,
+				Err: fmt.Errorf(
+					"multiple components %s are using the same partition %s as data dir",
+					strings.Join(pathList, ","),
+					key,
+				),
+			})
+		}
+	}
 
 	return results
 }
@@ -646,6 +741,111 @@ func CheckFIOResult(rr, rw, lat []byte) []*CheckResult {
 		results = append(results, &CheckResult{
 			Name: CheckNameFio,
 			Err:  fmt.Errorf("error parsing result of read write latency test"),
+		})
+	}
+
+	return results
+}
+
+// CheckTHP checks THP in /sys/kernel/mm/transparent_hugepage/{enabled,defrag}
+func CheckTHP(ctx context.Context, e ctxt.Executor) *CheckResult {
+	result := &CheckResult{
+		Name: CheckNameTHP,
+	}
+
+	m := module.NewShellModule(module.ShellModuleConfig{
+		Command: fmt.Sprintf(`if [ -d %[1]s ]; then cat %[1]s/{enabled,defrag}; fi`, "/sys/kernel/mm/transparent_hugepage"),
+		Sudo:    true,
+	})
+	stdout, stderr, err := m.Execute(ctx, e)
+	if err != nil {
+		result.Err = fmt.Errorf("%w %s", err, stderr)
+		return result
+	}
+
+	for _, line := range strings.Split(strings.Trim(string(stdout), "\n"), "\n") {
+		if len(line) > 0 && !strings.Contains(line, "[never]") {
+			result.Err = fmt.Errorf("THP is enabled, please disable it for best performance")
+			return result
+		}
+	}
+
+	result.Msg = "THP is disabled"
+	return result
+}
+
+// CheckJRE checks if java command is available for TiSpark nodes
+func CheckJRE(ctx context.Context, e ctxt.Executor, host string, topo *spec.Specification) []*CheckResult {
+	var results []*CheckResult
+
+	topo.IterInstance(func(inst spec.Instance) {
+		if inst.ComponentName() != spec.ComponentTiSpark {
+			return
+		}
+
+		// check if java cli is available
+		stdout, stderr, err := e.Execute(ctx, "java -version", false)
+		if err != nil {
+			results = append(results, &CheckResult{
+				Name: CheckNameCommand,
+				Err:  fmt.Errorf("java not usable, %s", strings.Trim(string(stderr), "\n")),
+				Msg:  "JRE is not installed properly or not set in PATH",
+			})
+			return
+		}
+		if len(stderr) > 0 {
+			// java -version returns as below:
+			// openjdk version "1.8.0_265"
+			// openjdk version "11.0.8" 2020-07-14
+			line := strings.Split(string(stderr), "\n")[0]
+			fields := strings.Split(line, `"`)
+			ver := strings.TrimSpace(fields[1])
+			if strings.Compare(ver, "1.8") < 0 {
+				results = append(results, &CheckResult{
+					Name: CheckNameCommand,
+					Err:  fmt.Errorf("java version %s is not supported, use Java 8 (1.8)+", ver),
+					Msg:  "Installed JRE is not Java 8+",
+				})
+			} else {
+				results = append(results, &CheckResult{
+					Name: CheckNameCommand,
+					Msg:  "java: " + strings.Split(string(stderr), "\n")[0],
+				})
+			}
+		} else {
+			results = append(results, &CheckResult{
+				Name: CheckNameCommand,
+				Err:  fmt.Errorf("unknown output of java %s", stdout),
+				Msg:  "java: " + strings.Split(string(stdout), "\n")[0],
+				Warn: true,
+			})
+		}
+	})
+
+	return results
+}
+
+// CheckDirPermission checks if the user can write to given path
+func CheckDirPermission(ctx context.Context, e ctxt.Executor, user, path string) []*CheckResult {
+	var results []*CheckResult
+
+	_, stderr, err := e.Execute(ctx,
+		fmt.Sprintf(
+			"sudo -u %[1]s touch %[2]s/.tiup_cluster_check_file && rm -f %[2]s/.tiup_cluster_check_file",
+			user,
+			path,
+		),
+		false)
+	if err != nil || len(stderr) > 0 {
+		results = append(results, &CheckResult{
+			Name: CheckNameDirPermission,
+			Err:  fmt.Errorf("unable to write to dir %s: %s", path, strings.Split(string(stderr), "\n")[0]),
+			Msg:  fmt.Sprintf("%s: %s", path, err),
+		})
+	} else {
+		results = append(results, &CheckResult{
+			Name: CheckNameDirPermission,
+			Msg:  fmt.Sprintf("%s is writable", path),
 		})
 	}
 

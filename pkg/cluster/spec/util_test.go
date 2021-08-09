@@ -21,6 +21,30 @@ type utilSuite struct{}
 
 var _ = check.Suite(&utilSuite{})
 
+func (s utilSuite) TestAbs(c *check.C) {
+	var path string
+	path = Abs(" foo", "")
+	c.Assert(path, check.Equals, "/home/foo")
+	path = Abs("foo ", " ")
+	c.Assert(path, check.Equals, "/home/foo")
+	path = Abs("foo", "bar")
+	c.Assert(path, check.Equals, "/home/foo/bar")
+	path = Abs("foo", " bar")
+	c.Assert(path, check.Equals, "/home/foo/bar")
+	path = Abs("foo", "bar ")
+	c.Assert(path, check.Equals, "/home/foo/bar")
+	path = Abs("foo", " bar ")
+	c.Assert(path, check.Equals, "/home/foo/bar")
+	path = Abs("foo", "/bar")
+	c.Assert(path, check.Equals, "/bar")
+	path = Abs("foo", " /bar")
+	c.Assert(path, check.Equals, "/bar")
+	path = Abs("foo", "/bar ")
+	c.Assert(path, check.Equals, "/bar")
+	path = Abs("foo", " /bar ")
+	c.Assert(path, check.Equals, "/bar")
+}
+
 func (s *utilSuite) TestMultiDirAbs(c *check.C) {
 	paths := MultiDirAbs("tidb", "")
 	c.Assert(len(paths), check.Equals, 0)

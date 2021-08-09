@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"io"
 	"os"
+	"path"
 
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
@@ -38,10 +39,10 @@ func newCompletionCmd() *cobra.Command {
   ## Load the tiup completion code for bash into the current shell
   source <(tiup completion bash)
   ## Write bash completion code to a file and source if from .bash_profile
-  tiup completion bash > ~/.completion.bash.inc
+  tiup completion bash > ~/.tiup.completion.bash
   printf "
   # tiup shell completion
-  source '$HOME/.completion.bash.inc'
+  source '$HOME/.tiup.completion.bash'
   " >> $HOME/.bash_profile
   source $HOME/.bash_profile
 
@@ -52,18 +53,20 @@ func newCompletionCmd() *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			teleCommand = cmd.CommandPath()
+			shell := os.Getenv("SHELL")
 			if len(args) == 1 {
-				switch args[0] {
-				case "bash":
-					return cmd.Parent().GenBashCompletion(os.Stdout)
-				case "zsh":
-					return genCompletionZsh(os.Stdout, cmd.Parent())
-				default:
-					return errors.New("unsupported shell type " + args[0])
-				}
+				shell = args[0]
 			}
-
-			return cmd.Help()
+			shell = path.Base(shell)
+			switch shell {
+			case "bash":
+				return cmd.Parent().GenBashCompletion(os.Stdout)
+			case "zsh":
+				return genCompletionZsh(os.Stdout, cmd.Parent())
+			default:
+				return errors.New("unsupported shell type " + shell)
+			}
 		},
 	}
 

@@ -15,18 +15,23 @@ package config
 
 import (
 	"bytes"
-	"io/ioutil"
+	"os"
 	"path"
 	"text/template"
 
-	"github.com/pingcap/tiup/pkg/cluster/embed"
+	"github.com/pingcap/tiup/embed"
 )
 
 // GrafanaConfig represent the data to generate Grafana config
 type GrafanaConfig struct {
-	DeployDir string
-	IP        string
-	Port      uint64
+	DeployDir       string
+	IP              string
+	Port            uint64
+	Username        string // admin_user
+	Password        string // admin_password
+	AnonymousEnable bool   // anonymous enable
+	RootURL         string // root_url
+	Domain          string // domain
 }
 
 // NewGrafanaConfig returns a GrafanaConfig
@@ -44,9 +49,39 @@ func (c *GrafanaConfig) WithPort(port uint64) *GrafanaConfig {
 	return c
 }
 
+// WithUsername sets username of admin user
+func (c *GrafanaConfig) WithUsername(user string) *GrafanaConfig {
+	c.Username = user
+	return c
+}
+
+// WithPassword sets password of admin user
+func (c *GrafanaConfig) WithPassword(passwd string) *GrafanaConfig {
+	c.Password = passwd
+	return c
+}
+
+// WithAnonymousenable sets anonymousEnable of anonymousEnable
+func (c *GrafanaConfig) WithAnonymousenable(anonymousEnable bool) *GrafanaConfig {
+	c.AnonymousEnable = anonymousEnable
+	return c
+}
+
+// WithRootURL sets rootURL of root url
+func (c *GrafanaConfig) WithRootURL(rootURL string) *GrafanaConfig {
+	c.RootURL = rootURL
+	return c
+}
+
+// WithDomain sets domain of server domain
+func (c *GrafanaConfig) WithDomain(domain string) *GrafanaConfig {
+	c.Domain = domain
+	return c
+}
+
 // Config generate the config file data.
 func (c *GrafanaConfig) Config() ([]byte, error) {
-	fp := path.Join("/templates", "config", "grafana.ini.tpl")
+	fp := path.Join("templates", "config", "grafana.ini.tpl")
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err
@@ -75,5 +110,5 @@ func (c *GrafanaConfig) ConfigToFile(file string) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(file, config, 0755)
+	return os.WriteFile(file, config, 0755)
 }

@@ -14,29 +14,31 @@
 package spec
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
-	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/utils"
-	"golang.org/x/mod/semver"
 )
 
 // PDSpec represents the PD topology specification in topology.yaml
 type PDSpec struct {
-	Host       string `yaml:"host"`
-	ListenHost string `yaml:"listen_host,omitempty"`
-	SSHPort    int    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported   bool   `yaml:"imported,omitempty"`
+	Host                string `yaml:"host"`
+	ListenHost          string `yaml:"listen_host,omitempty"`
+	AdvertiseClientAddr string `yaml:"advertise_client_addr,omitempty"`
+	AdvertisePeerAddr   string `yaml:"advertise_peer_addr,omitempty"`
+	SSHPort             int    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
+	Imported            bool   `yaml:"imported,omitempty"`
+	Patched             bool   `yaml:"patched,omitempty"`
 	// Use Name to get the name with a default value if it's empty.
 	Name            string                 `yaml:"name"`
 	ClientPort      int                    `yaml:"client_port" default:"2379"`
@@ -52,56 +54,45 @@ type PDSpec struct {
 }
 
 // Status queries current status of the instance
-func (s PDSpec) Status(tlsCfg *tls.Config, pdList ...string) string {
-	curAddr := fmt.Sprintf("%s:%d", s.Host, s.ClientPort)
-	curPdAPI := api.NewPDClient([]string{curAddr}, statusQueryTimeout, tlsCfg)
-	allPdAPI := api.NewPDClient(pdList, statusQueryTimeout, tlsCfg)
-	suffix := ""
-
-	// find dashboard node
-	dashboardAddr, _ := allPdAPI.GetDashboardAddress()
-	if strings.HasPrefix(dashboardAddr, "http") {
-		r := strings.NewReplacer("http://", "", "https://", "")
-		dashboardAddr = r.Replace(dashboardAddr)
-	}
-	if dashboardAddr == curAddr {
-		suffix = "|UI"
-	}
+func (s *PDSpec) Status(tlsCfg *tls.Config, _ ...string) string {
+	addr := fmt.Sprintf("%s:%d", s.Host, s.ClientPort)
+	pc := api.NewPDClient([]string{addr}, statusQueryTimeout, tlsCfg)
 
 	// check health
-	err := curPdAPI.CheckHealth()
+	err := pc.CheckHealth()
 	if err != nil {
-		return "Down" + suffix
+		return "Down"
 	}
 
 	// find leader node
-	leader, err := curPdAPI.GetLeader()
+	leader, err := pc.GetLeader()
 	if err != nil {
-		return "ERR" + suffix
+		return "ERR"
 	}
+	res := "Up"
 	if s.Name == leader.Name {
-		suffix = "|L" + suffix
+		res += "|L"
 	}
-	return "Up" + suffix
+	return res
 }
 
 // Role returns the component role of the instance
-func (s PDSpec) Role() string {
+func (s *PDSpec) Role() string {
 	return ComponentPD
 }
 
 // SSH returns the host and SSH port of the instance
-func (s PDSpec) SSH() (string, int) {
+func (s *PDSpec) SSH() (string, int) {
 	return s.Host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
-func (s PDSpec) GetMainPort() int {
+func (s *PDSpec) GetMainPort() int {
 	return s.ClientPort
 }
 
 // IsImported returns if the node is imported from TiDB-Ansible
-func (s PDSpec) IsImported() bool {
+func (s *PDSpec) IsImported() bool {
 	return s.Imported
 }
 
@@ -142,6 +133,9 @@ func (c *PDComponent) Instances() []Instance {
 					s.DataDir,
 				},
 				StatusFn: s.Status,
+				UptimeFn: func(tlsCfg *tls.Config) time.Duration {
+					return UptimeByHost(s.Host, s.ClientPort, tlsCfg)
+				},
 			},
 			topo: c.Topology,
 		})
@@ -158,55 +152,43 @@ type PDInstance struct {
 
 // InitConfig implement Instance interface
 func (i *PDInstance) InitConfig(
-	e executor.Executor,
+	ctx context.Context,
+	e ctxt.Executor,
 	clusterName,
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
 ) error {
 	topo := i.topo.(*Specification)
-	if err := i.BaseInstance.InitConfig(e, topo.GlobalOptions, deployUser, paths); err != nil {
+	if err := i.BaseInstance.InitConfig(ctx, e, topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
 
 	enableTLS := topo.GlobalOptions.TLSEnabled
-	spec := i.InstanceSpec.(PDSpec)
-	cfg := scripts.NewPDScript(
-		spec.Name,
-		i.GetHost(),
-		paths.Deploy,
-		paths.Data[0],
-		paths.Log,
-	).WithClientPort(spec.ClientPort).
+	spec := i.InstanceSpec.(*PDSpec)
+	cfg := scripts.
+		NewPDScript(spec.Name, i.GetHost(), paths.Deploy, paths.Data[0], paths.Log).
+		WithClientPort(spec.ClientPort).
 		WithPeerPort(spec.PeerPort).
 		AppendEndpoints(topo.Endpoints(deployUser)...).
 		WithListenHost(i.GetListenHost())
 
-	scheme := "http"
 	if enableTLS {
-		scheme = "https"
-		cfg = cfg.WithScheme(scheme)
+		cfg = cfg.WithScheme("https")
 	}
+	cfg = cfg.WithAdvertiseClientAddr(spec.AdvertiseClientAddr).
+		WithAdvertisePeerAddr(spec.AdvertisePeerAddr)
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pd_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
 	}
 	dst := filepath.Join(paths.Deploy, "scripts", "run_pd.sh")
-	if err := e.Transfer(fp, dst, false); err != nil {
+	if err := e.Transfer(ctx, fp, dst, false, 0); err != nil {
 		return err
 	}
-	if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
+	if _, _, err := e.Execute(ctx, "chmod +x "+dst, false); err != nil {
 		return err
-	}
-
-	// Set the PD metrics storage address
-	if semver.Compare(clusterVersion, "v3.1.0") >= 0 && len(topo.Monitors) > 0 {
-		if spec.Config == nil {
-			spec.Config = map[string]interface{}{}
-		}
-		prom := topo.Monitors[0]
-		spec.Config["pd-server.metric-storage"] = fmt.Sprintf("%s://%s:%d", scheme, prom.Host, prom.Port)
 	}
 
 	globalConfig := topo.ServerConfigs.PD
@@ -222,7 +204,7 @@ func (i *PDInstance) InitConfig(
 				i.GetPort(),
 			),
 		)
-		importConfig, err := ioutil.ReadFile(configPath)
+		importConfig, err := os.ReadFile(configPath)
 		if err != nil {
 			return err
 		}
@@ -252,16 +234,17 @@ func (i *PDInstance) InitConfig(
 			i.Role())
 	}
 
-	if err := i.MergeServerConfig(e, globalConfig, spec.Config, paths); err != nil {
+	if err := i.MergeServerConfig(ctx, e, globalConfig, spec.Config, paths); err != nil {
 		return err
 	}
 
-	return checkConfig(e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths, nil)
+	return checkConfig(ctx, e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths, nil)
 }
 
 // ScaleConfig deploy temporary config on scaling
 func (i *PDInstance) ScaleConfig(
-	e executor.Executor,
+	ctx context.Context,
+	e ctxt.Executor,
 	topo Topology,
 	clusterName,
 	clusterVersion,
@@ -269,15 +252,15 @@ func (i *PDInstance) ScaleConfig(
 	paths meta.DirPaths,
 ) error {
 	// We need pd.toml here, but we don't need to check it
-	if err := i.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil &&
+	if err := i.InitConfig(ctx, e, clusterName, clusterVersion, deployUser, paths); err != nil &&
 		errors.Cause(err) != ErrorCheckConfig {
 		return err
 	}
 
 	cluster := mustBeClusterTopo(topo)
 
-	spec := i.InstanceSpec.(PDSpec)
-	cfg := scripts.NewPDScaleScript(
+	spec := i.InstanceSpec.(*PDSpec)
+	cfg0 := scripts.NewPDScript(
 		i.Name,
 		i.GetHost(),
 		paths.Deploy,
@@ -289,8 +272,11 @@ func (i *PDInstance) ScaleConfig(
 		AppendEndpoints(cluster.Endpoints(deployUser)...).
 		WithListenHost(i.GetListenHost())
 	if topo.BaseTopo().GlobalOptions.TLSEnabled {
-		cfg = cfg.WithScheme("https")
+		cfg0 = cfg0.WithScheme("https")
 	}
+	cfg0 = cfg0.WithAdvertiseClientAddr(spec.AdvertiseClientAddr).
+		WithAdvertisePeerAddr(spec.AdvertisePeerAddr)
+	cfg := scripts.NewPDScaleScript(cfg0)
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pd_%s_%d.sh", i.GetHost(), i.GetPort()))
 	log.Infof("script path: %s", fp)
@@ -299,16 +285,36 @@ func (i *PDInstance) ScaleConfig(
 	}
 
 	dst := filepath.Join(paths.Deploy, "scripts", "run_pd.sh")
-	if err := e.Transfer(fp, dst, false); err != nil {
+	if err := e.Transfer(ctx, fp, dst, false, 0); err != nil {
 		return err
 	}
-	if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
+	if _, _, err := e.Execute(ctx, "chmod +x "+dst, false); err != nil {
 		return err
 	}
 	return nil
 }
 
 var _ RollingUpdateInstance = &PDInstance{}
+
+// IsLeader checks if the instance is PD leader
+func (i *PDInstance) IsLeader(topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config) (bool, error) {
+	tidbTopo, ok := topo.(*Specification)
+	if !ok {
+		panic("topo should be type of tidb topology")
+	}
+	pdClient := api.NewPDClient(tidbTopo.GetPDList(), time.Second*5, tlsCfg)
+
+	return i.isLeader(pdClient)
+}
+
+func (i *PDInstance) isLeader(pdClient *api.PDClient) (bool, error) {
+	leader, err := pdClient.GetLeader()
+	if err != nil {
+		return false, errors.Annotatef(err, "failed to get PD leader %s", i.GetHost())
+	}
+
+	return leader.Name == i.Name, nil
+}
 
 // PreRestart implements RollingUpdateInstance interface.
 func (i *PDInstance) PreRestart(topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config) error {
@@ -321,15 +327,13 @@ func (i *PDInstance) PreRestart(topo Topology, apiTimeoutSeconds int, tlsCfg *tl
 	if !ok {
 		panic("topo should be type of tidb topology")
 	}
+	pdClient := api.NewPDClient(tidbTopo.GetPDList(), time.Second*5, tlsCfg)
 
-	pdClient := api.NewPDClient(tidbTopo.GetPDList(), 5*time.Second, tlsCfg)
-
-	leader, err := pdClient.GetLeader()
+	isLeader, err := i.isLeader(pdClient)
 	if err != nil {
-		return errors.Annotatef(err, "failed to get PD leader %s", i.GetHost())
+		return err
 	}
-
-	if len(tidbTopo.PDServers) > 1 && leader.Name == i.Name {
+	if len(tidbTopo.PDServers) > 1 && isLeader {
 		if err := pdClient.EvictPDLeader(timeoutOpt); err != nil {
 			return errors.Annotatef(err, "failed to evict PD leader %s", i.GetHost())
 		}
@@ -340,6 +344,20 @@ func (i *PDInstance) PreRestart(topo Topology, apiTimeoutSeconds int, tlsCfg *tl
 
 // PostRestart implements RollingUpdateInstance interface.
 func (i *PDInstance) PostRestart(topo Topology, tlsCfg *tls.Config) error {
-	// intend to do nothing
+	// When restarting the next PD, if the PD has not been fully started and has become the target of
+	// the transfer leader, this may cause the PD service to be unavailable for about 10 seconds.
+
+	timeoutOpt := utils.RetryOption{
+		Attempts: 100,
+		Delay:    time.Second,
+		Timeout:  120 * time.Second,
+	}
+	currentPDAddrs := []string{fmt.Sprintf("%s:%d", i.Host, i.Port)}
+	pdClient := api.NewPDClient(currentPDAddrs, 5*time.Second, tlsCfg)
+
+	if err := utils.Retry(pdClient.CheckHealth, timeoutOpt); err != nil {
+		return errors.Annotatef(err, "failed to start PD peer %s", i.GetHost())
+	}
+
 	return nil
 }

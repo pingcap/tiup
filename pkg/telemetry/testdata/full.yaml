@@ -1,16 +1,17 @@
 server_configs:
-    tidb:
-        binlog.enable: true
-        binlog.ignore-error: false
-    tikv:
-        storage.reserve-space: 1K
-    pd:
-        replication.enable-placement-rules: true
-    pump:
-        storage.stop-write-at-available-space: 1 mib
+  tidb:
+    binlog.enable: true
+    binlog.ignore-error: false
+  tikv:
+    storage.reserve-space: 1K
+  pd:
+    replication.enable-placement-rules: true
+  pump:
+    storage.stop-write-at-available-space: 1 mib
 
 tidb_servers:
   - host: 172.19.0.101
+    arch: arm64
   - host: 172.19.0.102
 
 pd_servers:
@@ -25,6 +26,8 @@ tikv_servers:
   - host: 172.19.0.103
     data_dir: "/home/tidb/my_kv_data"
   - host: 172.19.0.104
+    config:
+      server.labels: { zone: "us-west-1", disk: "ssd" }
   - host: 172.19.0.105
 
 # tiflash eat too much memory
@@ -33,7 +36,6 @@ tiflash_servers:
   - host: 172.19.0.103
 #   - host: 172.19.0.104
 #   - host: 172.19.0.105
-
 
 pump_servers:
   - host: 172.19.0.103
@@ -45,7 +47,7 @@ drainer_servers:
     data_dir: /home/tidb/data/drainer-8249/data
     commit_ts: -1
     config:
-        syncer.db-type: "file"
+      syncer.db-type: "file"
 
 cdc_servers:
   - host: 172.19.0.103

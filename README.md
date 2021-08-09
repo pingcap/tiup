@@ -6,7 +6,17 @@
 
 # What is TiUP
 
-`tiup` is a tool to download and install TiDB components.
+`tiup` is a tool to download and install [TiDB](https://docs.pingcap.com/tidb/stable/overview) components.
+
+## Documentation
+
+- [English](https://docs.pingcap.com/tidb/stable/tiup-documentation-guide)
+- [简体中文](https://docs.pingcap.com/zh/tidb/stable/tiup-documentation-guide)
+
+## Blog
+
+- [English](https://pingcap.com/blog/)
+- [简体中文](https://pingcap.com/blog-cn/)
 
 ## Installation
 
@@ -40,20 +50,21 @@ tiup uninstall tidb tikv pd
 tiup update --all
 ```
 
-# Usage
+## Usage
+
 After installing `tiup`, you can use it to install binaries of TiDB components and create clusters.
 
 See our [doc](doc/user/README.md) for more information on how to use TiUp.
 
-# Contributing to TiUp
+## Contributing to TiUP
 
-Contributions of code, tests, docs, and bug reports are welcome! To get started take a look at our [open issues](https://github.com/pingcap/tiup/issues).
+Contributions of code, tests, docs, and bug reports are welcome! To get started, take a look at our [open issues](https://github.com/pingcap/tiup/issues).
 
-For docs on how to build, test, and run TiUp, see our [dev docs](doc/dev/README.md).
+For docs on how to build, test, and run TiUP, see our [dev docs](doc/dev/README.md).
 
 See also the [Contribution Guide](https://github.com/pingcap/community/blob/master/contributors/README.md) in PingCAP's
 [community](https://github.com/pingcap/community) repo.
 
-
 ## License
+
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fpingcap%2Ftiup.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fpingcap%2Ftiup?ref=badge_large)

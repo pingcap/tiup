@@ -14,25 +14,27 @@
 package spec
 
 import (
+	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
+	"net/url"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/pingcap/errors"
+	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
-	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/utils"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/prom2json"
-	pdserverapi "github.com/tikv/pd/server/api"
 )
 
 const (
@@ -42,21 +44,24 @@ const (
 
 // TiKVSpec represents the TiKV topology specification in topology.yaml
 type TiKVSpec struct {
-	Host            string                 `yaml:"host"`
-	ListenHost      string                 `yaml:"listen_host,omitempty"`
-	SSHPort         int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported        bool                   `yaml:"imported,omitempty"`
-	Port            int                    `yaml:"port" default:"20160"`
-	StatusPort      int                    `yaml:"status_port" default:"20180"`
-	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
-	DataDir         string                 `yaml:"data_dir,omitempty"`
-	LogDir          string                 `yaml:"log_dir,omitempty"`
-	Offline         bool                   `yaml:"offline,omitempty"`
-	NumaNode        string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
-	Config          map[string]interface{} `yaml:"config,omitempty" validate:"config:ignore"`
-	ResourceControl meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
-	Arch            string                 `yaml:"arch,omitempty"`
-	OS              string                 `yaml:"os,omitempty"`
+	Host                string                 `yaml:"host"`
+	ListenHost          string                 `yaml:"listen_host,omitempty"`
+	AdvertiseAddr       string                 `yaml:"advertise_addr,omitempty"`
+	SSHPort             int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
+	Imported            bool                   `yaml:"imported,omitempty"`
+	Patched             bool                   `yaml:"patched,omitempty"`
+	Port                int                    `yaml:"port" default:"20160"`
+	StatusPort          int                    `yaml:"status_port" default:"20180"`
+	AdvertiseStatusAddr string                 `yaml:"advertise_status_addr,omitempty"`
+	DeployDir           string                 `yaml:"deploy_dir,omitempty"`
+	DataDir             string                 `yaml:"data_dir,omitempty"`
+	LogDir              string                 `yaml:"log_dir,omitempty"`
+	Offline             bool                   `yaml:"offline,omitempty"`
+	NumaNode            string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
+	Config              map[string]interface{} `yaml:"config,omitempty" validate:"config:ignore"`
+	ResourceControl     meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
+	Arch                string                 `yaml:"arch,omitempty"`
+	OS                  string                 `yaml:"os,omitempty"`
 }
 
 // checkStoreStatus checks the store status in current cluster
@@ -65,34 +70,20 @@ func checkStoreStatus(storeAddr string, tlsCfg *tls.Config, pdList ...string) st
 		return "N/A"
 	}
 	pdapi := api.NewPDClient(pdList, statusQueryTimeout, tlsCfg)
-	stores, err := pdapi.GetStores()
+	store, err := pdapi.GetCurrentStore(storeAddr)
 	if err != nil {
+		if errors.Is(err, api.ErrNoStore) {
+			return "N/A"
+		}
 		return "Down"
 	}
 
-	// only get status of the latest store, it is the store with lagest ID number
-	// older stores might be legacy ones that already offlined
-	var latestStore *pdserverapi.StoreInfo
-	for _, store := range stores.Stores {
-		if storeAddr == store.Store.Address {
-			if latestStore == nil {
-				latestStore = store
-				continue
-			}
-			if store.Store.Id > latestStore.Store.Id {
-				latestStore = store
-			}
-		}
-	}
-	if latestStore != nil {
-		return latestStore.Store.StateName
-	}
-	return "N/A"
+	return store.Store.StateName
 }
 
 // Status queries current status of the instance
-func (s TiKVSpec) Status(tlsCfg *tls.Config, pdList ...string) string {
-	storeAddr := fmt.Sprintf("%s:%d", s.Host, s.Port)
+func (s *TiKVSpec) Status(tlsCfg *tls.Config, pdList ...string) string {
+	storeAddr := addr(s)
 	state := checkStoreStatus(storeAddr, tlsCfg, pdList...)
 	if s.Offline && strings.ToLower(state) == "offline" {
 		state = "Pending Offline" // avoid misleading
@@ -101,38 +92,46 @@ func (s TiKVSpec) Status(tlsCfg *tls.Config, pdList ...string) string {
 }
 
 // Role returns the component role of the instance
-func (s TiKVSpec) Role() string {
+func (s *TiKVSpec) Role() string {
 	return ComponentTiKV
 }
 
 // SSH returns the host and SSH port of the instance
-func (s TiKVSpec) SSH() (string, int) {
+func (s *TiKVSpec) SSH() (string, int) {
 	return s.Host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
-func (s TiKVSpec) GetMainPort() int {
+func (s *TiKVSpec) GetMainPort() int {
 	return s.Port
 }
 
 // IsImported returns if the node is imported from TiDB-Ansible
-func (s TiKVSpec) IsImported() bool {
+func (s *TiKVSpec) IsImported() bool {
 	return s.Imported
 }
 
 // Labels returns the labels of TiKV
-func (s TiKVSpec) Labels() (map[string]string, error) {
+func (s *TiKVSpec) Labels() (map[string]string, error) {
 	lbs := make(map[string]string)
 
-	if serverLbs := GetValueFromPath(s.Config, "server.labels"); serverLbs != nil {
-		for k, v := range serverLbs.(map[interface{}]interface{}) {
+	if serverLabels := GetValueFromPath(s.Config, "server.labels"); serverLabels != nil {
+		m := map[interface{}]interface{}{}
+		if sm, ok := serverLabels.(map[string]interface{}); ok {
+			for k, v := range sm {
+				m[k] = v
+			}
+		} else if im, ok := serverLabels.(map[interface{}]interface{}); ok {
+			m = im
+		}
+		for k, v := range m {
 			key, ok := k.(string)
 			if !ok {
-				return nil, errors.Errorf("TiKV label name %v is not a string, check the instance: %s:%d", k, s.Host, s.GetMainPort())
+				return nil, perrs.Errorf("TiKV label name %v is not a string, check the instance: %s:%d", k, s.Host, s.GetMainPort())
 			}
 			value, ok := v.(string)
 			if !ok {
-				return nil, errors.Errorf("TiKV label value %v is not a string, check the instance: %s:%d", v, s.Host, s.GetMainPort())
+				return nil, perrs.Errorf("TiKV label value %v is not a string, check the instance: %s:%d", v, s.Host, s.GetMainPort())
 			}
 
 			lbs[key] = value
@@ -177,6 +176,9 @@ func (c *TiKVComponent) Instances() []Instance {
 				s.DataDir,
 			},
 			StatusFn: s.Status,
+			UptimeFn: func(tlsCfg *tls.Config) time.Duration {
+				return UptimeByHost(s.Host, s.StatusPort, tlsCfg)
+			},
 		}, c.Topology})
 	}
 	return ins
@@ -190,40 +192,39 @@ type TiKVInstance struct {
 
 // InitConfig implement Instance interface
 func (i *TiKVInstance) InitConfig(
-	e executor.Executor,
+	ctx context.Context,
+	e ctxt.Executor,
 	clusterName,
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
 ) error {
 	topo := i.topo.(*Specification)
-	if err := i.BaseInstance.InitConfig(e, topo.GlobalOptions, deployUser, paths); err != nil {
+	if err := i.BaseInstance.InitConfig(ctx, e, topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
 
 	enableTLS := topo.GlobalOptions.TLSEnabled
-	spec := i.InstanceSpec.(TiKVSpec)
-	cfg := scripts.NewTiKVScript(
-		i.GetHost(),
-		paths.Deploy,
-		paths.Data[0],
-		paths.Log,
-	).WithPort(spec.Port).
+	spec := i.InstanceSpec.(*TiKVSpec)
+	cfg := scripts.
+		NewTiKVScript(clusterVersion, i.GetHost(), spec.Port, spec.StatusPort, paths.Deploy, paths.Data[0], paths.Log).
 		WithNumaNode(spec.NumaNode).
-		WithStatusPort(spec.StatusPort).
 		AppendEndpoints(topo.Endpoints(deployUser)...).
-		WithListenHost(i.GetListenHost())
+		WithListenHost(i.GetListenHost()).
+		WithAdvertiseAddr(spec.AdvertiseAddr).
+		WithAdvertiseStatusAddr(spec.AdvertiseStatusAddr)
+
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tikv_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
 	}
 	dst := filepath.Join(paths.Deploy, "scripts", "run_tikv.sh")
 
-	if err := e.Transfer(fp, dst, false); err != nil {
+	if err := e.Transfer(ctx, fp, dst, false, 0); err != nil {
 		return err
 	}
 
-	if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
+	if _, _, err := e.Execute(ctx, "chmod +x "+dst, false); err != nil {
 		return err
 	}
 
@@ -240,7 +241,7 @@ func (i *TiKVInstance) InitConfig(
 				i.GetPort(),
 			),
 		)
-		importConfig, err := ioutil.ReadFile(configPath)
+		importConfig, err := os.ReadFile(configPath)
 		if err != nil {
 			return err
 		}
@@ -270,16 +271,17 @@ func (i *TiKVInstance) InitConfig(
 			i.Role())
 	}
 
-	if err := i.MergeServerConfig(e, globalConfig, spec.Config, paths); err != nil {
+	if err := i.MergeServerConfig(ctx, e, globalConfig, spec.Config, paths); err != nil {
 		return err
 	}
 
-	return checkConfig(e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths, nil)
+	return checkConfig(ctx, e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths, nil)
 }
 
 // ScaleConfig deploy temporary config on scaling
 func (i *TiKVInstance) ScaleConfig(
-	e executor.Executor,
+	ctx context.Context,
+	e ctxt.Executor,
 	topo Topology,
 	clusterName,
 	clusterVersion,
@@ -291,7 +293,7 @@ func (i *TiKVInstance) ScaleConfig(
 		i.topo = s
 	}()
 	i.topo = mustBeClusterTopo(topo)
-	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
+	return i.InitConfig(ctx, e, clusterName, clusterVersion, deployUser, paths)
 }
 
 var _ RollingUpdateInstance = &TiKVInstance{}
@@ -319,14 +321,14 @@ func (i *TiKVInstance) PreRestart(topo Topology, apiTimeoutSeconds int, tlsCfg *
 	// But when there's only one PD instance the pd might not serve request right away after restart.
 	err := pdClient.WaitLeader(timeoutOpt)
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
-	if err := pdClient.EvictStoreLeader(addr(i), timeoutOpt, genLeaderCounter(tidbTopo, tlsCfg)); err != nil {
+	if err := pdClient.EvictStoreLeader(addr(i.InstanceSpec.(*TiKVSpec)), timeoutOpt, genLeaderCounter(tidbTopo, tlsCfg)); err != nil {
 		if utils.IsTimeoutOrMaxRetry(err) {
 			log.Warnf("Ignore evicting store leader from %s, %v", i.ID(), err)
 		} else {
-			return errors.Annotatef(err, "failed to evict store leader %s", i.GetHost())
+			return perrs.Annotatef(err, "failed to evict store leader %s", i.GetHost())
 		}
 	}
 	return nil
@@ -346,18 +348,22 @@ func (i *TiKVInstance) PostRestart(topo Topology, tlsCfg *tls.Config) error {
 	pdClient := api.NewPDClient(tidbTopo.GetPDList(), 5*time.Second, tlsCfg)
 
 	// remove store leader evict scheduler after restart
-	if err := pdClient.RemoveStoreEvict(addr(i)); err != nil {
-		return errors.Annotatef(err, "failed to remove evict store scheduler for %s", i.GetHost())
+	if err := pdClient.RemoveStoreEvict(addr(i.InstanceSpec.(*TiKVSpec))); err != nil {
+		return perrs.Annotatef(err, "failed to remove evict store scheduler for %s", i.GetHost())
 	}
 
 	return nil
 }
 
-func addr(ins Instance) string {
-	if ins.GetPort() == 0 || ins.GetPort() == 80 {
-		panic(ins)
+func addr(spec *TiKVSpec) string {
+	if spec.AdvertiseAddr != "" {
+		return spec.AdvertiseAddr
 	}
-	return ins.GetHost() + ":" + strconv.Itoa(ins.GetPort())
+
+	if spec.Port == 0 || spec.Port == 80 {
+		panic(fmt.Sprintf("invalid TiKV port %d", spec.Port))
+	}
+	return spec.Host + ":" + strconv.Itoa(spec.Port)
 }
 
 func genLeaderCounter(topo *Specification, tlsCfg *tls.Config) func(string) (int, error) {
@@ -409,7 +415,7 @@ func genLeaderCounter(topo *Specification, tlsCfg *tls.Config) func(string) (int
 			}
 		}
 
-		return 0, errors.Errorf("metric %s{type=\"%s\"} not found", metricNameRegionCount, labelNameLeaderCount)
+		return 0, perrs.Errorf("metric %s{type=\"%s\"} not found", metricNameRegionCount, labelNameLeaderCount)
 	}
 }
 
@@ -425,6 +431,17 @@ func makeTransport(tlsCfg *tls.Config) *http.Transport {
 	if tlsCfg != nil {
 		transport.TLSClientConfig = tlsCfg.Clone()
 	}
+
+	// prefer to use the inner http proxy
+	httpProxy := os.Getenv("TIUP_INNER_HTTP_PROXY")
+	if len(httpProxy) == 0 {
+		httpProxy = os.Getenv("HTTP_PROXY")
+	}
+	if len(httpProxy) > 0 {
+		if proxyURL, err := url.Parse(httpProxy); err == nil {
+			transport.Proxy = http.ProxyURL(proxyURL)
+		}
+	}
 	return transport
 }
 
@@ -434,13 +451,13 @@ func checkHTTPS(url string, tlsCfg *tls.Config) error {
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return errors.Annotatef(err, "creating GET request for URL %q failed", url)
+		return perrs.Annotatef(err, "creating GET request for URL %q failed", url)
 	}
 
 	client := http.Client{Transport: transport}
 	resp, err := client.Do(req)
 	if err != nil {
-		return errors.Annotatef(err, "executing GET request for URL %q failed", url)
+		return perrs.Annotatef(err, "executing GET request for URL %q failed", url)
 	}
 	resp.Body.Close()
 	return nil

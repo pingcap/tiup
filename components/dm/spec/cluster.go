@@ -27,7 +27,7 @@ var specManager *cspec.SpecManager
 type Metadata struct {
 	User    string `yaml:"user"`       // the user to run and manage cluster on remote
 	Version string `yaml:"dm_version"` // the version of TiDB cluster
-	//EnableFirewall bool   `yaml:"firewall"`
+	// EnableFirewall bool   `yaml:"firewall"`
 
 	Topology *Specification `yaml:"topology"`
 }
@@ -70,7 +70,7 @@ func (m *Metadata) GetBaseMeta() *cspec.BaseMeta {
 // GetSpecManager return the spec manager of dm cluster.
 func GetSpecManager() *cspec.SpecManager {
 	if specManager == nil {
-		specManager = cspec.NewSpec(filepath.Join(cspec.ProfileDir(), cspec.TiOpsClusterDir), func() cspec.Metadata {
+		specManager = cspec.NewSpec(filepath.Join(cspec.ProfileDir(), cspec.TiUPClusterDir), func() cspec.Metadata {
 			return &Metadata{
 				Topology: new(Specification),
 			}

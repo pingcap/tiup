@@ -14,25 +14,29 @@
 package executor
 
 import (
-	"io/ioutil"
+	"context"
+	"fmt"
 	"os"
 	"os/user"
 	"testing"
 
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/stretchr/testify/require"
 )
 
 func TestLocal(t *testing.T) {
+	ctx := ctxt.New(context.Background(), 0)
+
 	assert := require.New(t)
 	user, err := user.Current()
 	assert.Nil(err)
 	local, err := New(SSHTypeNone, false, SSHConfig{Host: "127.0.0.1", User: user.Username})
 	assert.Nil(err)
-	_, _, err = local.Execute("ls .", false)
+	_, _, err = local.Execute(ctx, "ls .", false)
 	assert.Nil(err)
 
 	// generate a src file and write some data
-	src, err := ioutil.TempFile("", "")
+	src, err := os.CreateTemp("", "")
 	assert.Nil(err)
 	defer os.Remove(src.Name())
 
@@ -43,17 +47,17 @@ func TestLocal(t *testing.T) {
 	assert.Nil(err)
 
 	// generate a dst file and just close it.
-	dst, err := ioutil.TempFile("", "")
+	dst, err := os.CreateTemp("", "")
 	assert.Nil(err)
 	err = dst.Close()
 	assert.Nil(err)
 	defer os.Remove(dst.Name())
 
 	// Transfer src to dst and check it.
-	err = local.Transfer(src.Name(), dst.Name(), false)
+	err = local.Transfer(ctx, src.Name(), dst.Name(), false, 0)
 	assert.Nil(err)
 
-	data, err := ioutil.ReadFile(dst.Name())
+	data, err := os.ReadFile(dst.Name())
 	assert.Nil(err)
 	assert.Equal("src", string(data))
 }
@@ -65,4 +69,28 @@ func TestWrongIP(t *testing.T) {
 	_, err = New(SSHTypeNone, false, SSHConfig{Host: "127.0.0.2", User: user.Username})
 	assert.NotNil(err)
 	assert.Contains(err.Error(), "not found")
+}
+
+func TestLocalExecuteWithQuotes(t *testing.T) {
+	ctx := ctxt.New(context.Background(), 0)
+
+	assert := require.New(t)
+	user, err := user.Current()
+	assert.Nil(err)
+	local, err := New(SSHTypeNone, false, SSHConfig{Host: "127.0.0.1", User: user.Username})
+	assert.Nil(err)
+
+	deployDir, err := os.MkdirTemp("", "tiup-*")
+	assert.Nil(err)
+	defer os.RemoveAll(deployDir)
+
+	cmds := []string{
+		fmt.Sprintf(`find %s -type f -exec sed -i "s/\${DS_.*-CLUSTER}/hello/g" {} \;`, deployDir),
+		fmt.Sprintf(`find %s -type f -exec sed -i "s/DS_.*-CLUSTER/hello/g" {} \;`, deployDir),
+		`ls '/tmp'`,
+	}
+	for _, cmd := range cmds {
+		_, _, err = local.Execute(ctx, cmd, false)
+		assert.Nil(err)
+	}
 }

@@ -18,25 +18,25 @@ import (
 	"os"
 
 	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
 )
 
 func main() {
 	addr := "0.0.0.0:8989"
+	keyDir := ""
 	upstream := "https://tiup-mirrors.pingcap.com"
-	indexKey := ""
-	snapshotKey := ""
-	timestampKey := ""
 
 	cmd := &cobra.Command{
-		Use:   fmt.Sprintf("%s <root-dir>", os.Args[0]),
-		Short: "bootstrap a mirror server",
+		Use:     fmt.Sprintf("%s <root-dir>", os.Args[0]),
+		Short:   "bootstrap a mirror server",
+		Version: version.NewTiUPVersion().String(),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return cmd.Help()
 			}
 
-			s, err := newServer(args[0], upstream, indexKey, snapshotKey, timestampKey)
+			s, err := newServer(args[0], keyDir, upstream)
 			if err != nil {
 				return err
 			}
@@ -45,10 +45,8 @@ func main() {
 		},
 	}
 	cmd.Flags().StringVarP(&addr, "addr", "", addr, "addr to listen")
-	cmd.Flags().StringVarP(&indexKey, "index", "", "", "specific the private key for index")
-	cmd.Flags().StringVarP(&snapshotKey, "snapshot", "", "", "specific the private key for snapshot")
-	cmd.Flags().StringVarP(&timestampKey, "timestamp", "", "", "specific the private key for timestamp")
-	cmd.Flags().StringVarP(&upstream, "upstream", "", upstream, "specific the upstream mirror")
+	cmd.Flags().StringVarP(&keyDir, "key-dir", "", keyDir, "specify the directory where stores the private keys")
+	cmd.Flags().StringVarP(&upstream, "upstream", "", upstream, "specify the upstream mirror")
 
 	if err := cmd.Execute(); err != nil {
 		log.Errorf("Execute command: %s", err.Error())

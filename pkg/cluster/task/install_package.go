@@ -14,11 +14,13 @@
 package task
 
 import (
+	"context"
 	"fmt"
 	"path"
 	"path/filepath"
 
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 )
 
 // InstallPackage is used to copy all files related the specific version a component
@@ -30,9 +32,9 @@ type InstallPackage struct {
 }
 
 // Execute implements the Task interface
-func (c *InstallPackage) Execute(ctx *Context) error {
+func (c *InstallPackage) Execute(ctx context.Context) error {
 	// Install package to remote server
-	exec, found := ctx.GetExecutor(c.host)
+	exec, found := ctxt.GetInner(ctx).GetExecutor(c.host)
 	if !found {
 		return ErrNoExecutor
 	}
@@ -40,14 +42,14 @@ func (c *InstallPackage) Execute(ctx *Context) error {
 	dstDir := filepath.Join(c.dstDir, "bin")
 	dstPath := filepath.Join(dstDir, path.Base(c.srcPath))
 
-	err := exec.Transfer(c.srcPath, dstPath, false)
+	err := exec.Transfer(ctx, c.srcPath, dstPath, false, 0)
 	if err != nil {
 		return errors.Annotatef(err, "failed to scp %s to %s:%s", c.srcPath, c.host, dstPath)
 	}
 
 	cmd := fmt.Sprintf(`tar --no-same-owner -zxf %s -C %s && rm %s`, dstPath, dstDir, dstPath)
 
-	_, stderr, err := exec.Execute(cmd, false)
+	_, stderr, err := exec.Execute(ctx, cmd, false)
 	if err != nil {
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}
@@ -55,7 +57,7 @@ func (c *InstallPackage) Execute(ctx *Context) error {
 }
 
 // Rollback implements the Task interface
-func (c *InstallPackage) Rollback(ctx *Context) error {
+func (c *InstallPackage) Rollback(ctx context.Context) error {
 	return ErrUnsupportedRollback
 }
 

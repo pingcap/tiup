@@ -16,16 +16,18 @@ package instance
 import (
 	"context"
 	"fmt"
+	"net"
 
-	"github.com/pingcap/tiup/pkg/repository/v0manifest"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // Config of the instance.
 type Config struct {
-	ConfigPath string
-	BinPath    string
-	Num        int
-	Host       string
+	ConfigPath string `yaml:"config_path"`
+	BinPath    string `yaml:"bin_path"`
+	Num        int    `yaml:"num"`
+	Host       string `yaml:"host"`
+	UpTimeout  int    `yaml:"up_timeout"`
 }
 
 type instance struct {
@@ -43,7 +45,7 @@ type Instance interface {
 	Pid() int
 	// Start the instance process.
 	// Will kill the process once the context is done.
-	Start(ctx context.Context, version v0manifest.Version) error
+	Start(ctx context.Context, version utils.Version) error
 	// Component Return the component name.
 	Component() string
 	// LogFile return the log file name
@@ -65,15 +67,26 @@ func (inst *instance) StatusAddrs() (addrs []string) {
 }
 
 // CompVersion return the format to run specified version of a component.
-func CompVersion(comp string, version v0manifest.Version) string {
+func CompVersion(comp string, version utils.Version) string {
 	if version.IsEmpty() {
 		return comp
 	}
 	return fmt.Sprintf("%v:%v", comp, version)
 }
 
-func advertiseHost(listen string) string {
+// AdvertiseHost returns the interface's ip addr if listen host is 0.0.0.0
+func AdvertiseHost(listen string) string {
 	if listen == "0.0.0.0" {
+		addrs, err := net.InterfaceAddrs()
+		if err != nil || len(addrs) == 0 {
+			return "localhost"
+		}
+
+		for _, addr := range addrs {
+			if ip, ok := addr.(*net.IPNet); ok && !ip.IP.IsLoopback() && ip.IP.To4() != nil {
+				return ip.IP.To4().String()
+			}
+		}
 		return "localhost"
 	}
 
@@ -84,4 +97,16 @@ func logIfErr(err error) {
 	if err != nil {
 		fmt.Println(err)
 	}
+}
+
+func pdEndpoints(pds []*PDInstance, isHTTP bool) []string {
+	var endpoints []string
+	for _, pd := range pds {
+		if isHTTP {
+			endpoints = append(endpoints, fmt.Sprintf("http://%s:%d", AdvertiseHost(pd.Host), pd.StatusPort))
+		} else {
+			endpoints = append(endpoints, fmt.Sprintf("%s:%d", AdvertiseHost(pd.Host), pd.StatusPort))
+		}
+	}
+	return endpoints
 }

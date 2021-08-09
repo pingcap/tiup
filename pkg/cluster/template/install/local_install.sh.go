@@ -13,11 +13,13 @@
 
 package install
 
-import "io/ioutil"
+import (
+	"os"
+)
 
 // WriteLocalInstallScript writes the install script into specified path
 func WriteLocalInstallScript(path string) error {
-	return ioutil.WriteFile(path, []byte(script), 0755)
+	return os.WriteFile(path, []byte(script), 0755)
 }
 
 var script = `#!/bin/sh
@@ -61,6 +63,19 @@ install_binary() {
   return 0
 }
 
+check_depends() {
+    pass=0
+    command -v tar >/dev/null || {
+        echo "Dependency check failed: please install 'tar' before proceeding."
+        pass=1
+    }
+    return $pass
+}
+
+if ! check_depends; then
+    exit 1
+fi
+
 if ! install_binary; then
     echo "Failed to download and/or extract tiup archive."
     exit 1
@@ -68,12 +83,16 @@ fi
 
 chmod 755 "$bin_dir/tiup"
 
+# telemetry is not needed for offline installations
+"$bin_dir/tiup" telemetry disable
+
+# set mirror to the local path
 "$bin_dir/tiup" mirror set ${script_dir}
 
 bold=$(tput bold 2>/dev/null)
 sgr0=$(tput sgr0 2>/dev/null)
 
-# Refrence: https://stackoverflow.com/questions/14637979/how-to-permanently-set-path-on-linux-unix
+# Reference: https://stackoverflow.com/questions/14637979/how-to-permanently-set-path-on-linux-unix
 shell=$(echo $SHELL | awk 'BEGIN {FS="/";} { print $NF }')
 echo "Detected shell: ${bold}$shell${sgr0}"
 if [ -f "${HOME}/.${shell}_profile" ]; then

@@ -5,11 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"time"
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/proxy"
 	"github.com/pingcap/tiup/pkg/set"
-	"go.etcd.io/etcd/clientv3"
+	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
 // UpdateTopology is used to maintain the cluster meta information
@@ -17,7 +19,8 @@ type UpdateTopology struct {
 	cluster        string
 	profileDir     string
 	metadata       *spec.ClusterMeta
-	deletedNodesID []string
+	deletedNodeIDs []string
+	tcpProxy       *proxy.TCPProxy
 }
 
 // String implements the fmt.Stringer interface
@@ -26,22 +29,34 @@ func (u *UpdateTopology) String() string {
 }
 
 // Execute implements the Task interface
-func (u *UpdateTopology) Execute(ctx *Context) error {
+func (u *UpdateTopology) Execute(ctx context.Context) error {
 	tlsCfg, err := u.metadata.Topology.TLSConfig(
 		filepath.Join(u.profileDir, spec.TLSCertKeyDir),
 	)
 	if err != nil {
 		return err
 	}
-	client, err := u.metadata.Topology.GetEtcdClient(tlsCfg)
+	var client *clientv3.Client
+	if u.tcpProxy == nil {
+		client, err = u.metadata.Topology.GetEtcdClient(tlsCfg)
+	} else {
+		var closeC chan struct{}
+		client, closeC, err = u.metadata.Topology.GetEtcdProxyClient(tlsCfg, u.tcpProxy)
+		defer u.tcpProxy.Close(closeC)
+	}
 	if err != nil {
 		return err
 	}
-	txn := client.Txn(context.Background())
+	// fix https://github.com/pingcap/tiup/issues/333
+	// etcd client defaults to wait forever
+	// if all pd were down, don't hang forever
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	txn := client.Txn(ctx)
 
 	topo := u.metadata.Topology
 
-	deleted := set.NewStringSet(u.deletedNodesID...)
+	deleted := set.NewStringSet(u.deletedNodeIDs...)
 
 	var ops []clientv3.Op
 	var instances []spec.Instance
@@ -56,11 +71,20 @@ func (u *UpdateTopology) Execute(ctx *Context) error {
 		}
 	}
 
+	// the prometheus,grafana,alertmanager stored in etcd will be used by other components (tidb, pd, etc.)
+	// and they assume there is ONLY ONE prometheus.
+	// ref https://github.com/pingcap/tiup/issues/954#issuecomment-737002185
+	updated := set.NewStringSet()
 	for _, ins := range instances {
+		if updated.Exist(ins.ComponentName()) {
+			continue
+		}
 		op, err := updateTopologyOp(ins)
 		if err != nil {
 			return err
 		}
+
+		updated.Insert(ins.ComponentName())
 		ops = append(ops, *op)
 	}
 
@@ -75,9 +99,9 @@ type componentTopology struct {
 	DeployPath string `json:"deploy_path"`
 }
 
-// componentTopology update receives alertmanager, prometheus and grafana instance list, if the list has
-//  no member or all deleted, it will add a `OpDelete` in ops, otherwise it will push an operation to destInstances.
-func updateInstancesAndOps(ops []clientv3.Op, destInstances []spec.Instance, deleted set.StringSet, instances []spec.Instance, componentName string) ([]clientv3.Op, []spec.Instance) {
+// updateInstancesAndOps receives alertmanager, prometheus and grafana instance list, if the list has
+//  no member or all deleted, it will add a `OpDelete` in ops, otherwise it will push all current not deleted instances into instance list.
+func updateInstancesAndOps(ops []clientv3.Op, ins []spec.Instance, deleted set.StringSet, instances []spec.Instance, componentName string) ([]clientv3.Op, []spec.Instance) {
 	var currentInstances []spec.Instance
 	for _, instance := range instances {
 		if deleted.Exist(instance.ID()) {
@@ -89,15 +113,15 @@ func updateInstancesAndOps(ops []clientv3.Op, destInstances []spec.Instance, del
 	if len(currentInstances) == 0 {
 		ops = append(ops, clientv3.OpDelete("/topology/"+componentName))
 	} else {
-		destInstances = append(destInstances, currentInstances...)
+		ins = append(ins, currentInstances...)
 	}
-	return ops, destInstances
+	return ops, ins
 }
 
-// updateTopologyOp receive a  alertmanager, prometheus or grafana instance, and return an operation
+// updateTopologyOp receive an alertmanager, prometheus or grafana instance, and return an operation
 //  for update it's topology.
 func updateTopologyOp(instance spec.Instance) (*clientv3.Op, error) {
-	switch instance.ComponentName() {
+	switch compName := instance.ComponentName(); compName {
 	case spec.ComponentAlertmanager, spec.ComponentPrometheus, spec.ComponentGrafana:
 		topology := componentTopology{
 			IP:         instance.GetHost(),
@@ -108,14 +132,14 @@ func updateTopologyOp(instance spec.Instance) (*clientv3.Op, error) {
 		if err != nil {
 			return nil, err
 		}
-		op := clientv3.OpPut("/topology/"+instance.ComponentName(), string(data))
+		op := clientv3.OpPut("/topology/"+compName, string(data))
 		return &op, nil
 	default:
-		return nil, errors.New("Wrong arguments: updateTopologyOp receive wrong arguments")
+		return nil, errors.New("Wrong arguments: updateTopologyOp receives wrong arguments")
 	}
 }
 
 // Rollback implements the Task interface
-func (u *UpdateTopology) Rollback(ctx *Context) error {
+func (u *UpdateTopology) Rollback(ctx context.Context) error {
 	return nil
 }

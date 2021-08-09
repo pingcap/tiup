@@ -9,10 +9,23 @@ on:
     branches:
       - master
       - release-*
+    paths-ignore:
+      - '**.html'
+      - '**.md'
+      - 'CNAME'
+      - 'LICENSE'
+      - 'doc/**'
+      - 'embed/templates/examples/**'
   push:
     branches:
-      - master
       - release-*
+    paths-ignore:
+      - '**.html'
+      - '**.md'
+      - 'CNAME'
+      - 'LICENSE'
+      - 'doc/**'
+      - 'embed/templates/examples/**'
 
 jobs:
   reprotest:
@@ -22,9 +35,7 @@ jobs:
     strategy:
       matrix:
         go:
-          - 1.13
-          - 1.14
-          - 1.15
+          - 1.16.x
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -35,8 +46,20 @@ jobs:
         with:
           go-version: ${{ matrix.go }}
 
-      - name: Install reprotest
-        run: sudo apt-get update && sudo apt-get -qy install reprotest
+      - name: Install reprotest and prepare
+        id: prepare_env
+        run: |
+          echo ::set-output name=GOROOT::$GOROOT
+          echo ::set-output name=GOPATH::$GOPATH
+          sudo apt-get update && sudo apt-get -qy install reprotest
 
       - name: Check for reproducible build
-        run: sudo reprotest "make clean && BUILD_FLAG='-trimpath -buildmode=pie' make build" bin
+        run: |
+          sudo reprotest \
+            "make clean && \
+            GOROOT=${{ steps.prepare_env.GOROOT }} \
+            GOPATH=${{ steps.prepare_env.GOPATH }} \
+            PATH=$GOROOT/bin:$PATH \
+            BUILD_FLAGS='-trimpath -buildmode=pie' \
+            make build" \
+          bin

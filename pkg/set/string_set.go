@@ -36,6 +36,14 @@ func (s StringSet) Insert(val string) {
 	s[val] = struct{}{}
 }
 
+// Join add all elements of `add` to `s`.
+func (s StringSet) Join(add StringSet) StringSet {
+	for elt := range add {
+		s.Insert(elt)
+	}
+	return s
+}
+
 // Intersection returns the intersection of two sets
 func (s StringSet) Intersection(rhs StringSet) StringSet {
 	newSet := NewStringSet()

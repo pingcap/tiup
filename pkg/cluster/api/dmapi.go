@@ -15,14 +15,15 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/gogo/protobuf/jsonpb"
-	dmpb "github.com/pingcap/dm/dm/pb"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/api/dmpb"
 	"github.com/pingcap/tiup/pkg/utils"
 	"go.uber.org/zap"
 )
@@ -78,7 +79,7 @@ func (dm *DMMasterClient) getEndpoints(cmd string) (endpoints []string) {
 func (dm *DMMasterClient) getMember(endpoints []string) (*dmpb.ListMemberResponse, error) {
 	resp := &dmpb.ListMemberResponse{}
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, err := dm.httpClient.Get(endpoint)
+		body, err := dm.httpClient.Get(context.TODO(), endpoint)
 		if err != nil {
 			return body, err
 		}
@@ -98,10 +99,10 @@ func (dm *DMMasterClient) getMember(endpoints []string) (*dmpb.ListMemberRespons
 	return resp, err
 }
 
-func (dm *DMMasterClient) deleteMember(endpoints []string) (*dmpb.OfflineWorkerResponse, error) {
-	resp := &dmpb.OfflineWorkerResponse{}
+func (dm *DMMasterClient) deleteMember(endpoints []string) (*dmpb.OfflineMemberResponse, error) {
+	resp := &dmpb.OfflineMemberResponse{}
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, statusCode, err := dm.httpClient.Delete(endpoint, nil)
+		body, statusCode, err := dm.httpClient.Delete(context.TODO(), endpoint, nil)
 
 		if statusCode == 404 || bytes.Contains(body, []byte("not exists")) {
 			zap.L().Debug("member to offline does not exist, ignore.")
@@ -135,7 +136,7 @@ func (dm *DMMasterClient) GetMaster(name string) (isFound bool, isActive bool, i
 
 	if err != nil {
 		zap.L().Error("get dm master status failed", zap.Error(err))
-		return false, false, false, errors.AddStack(err)
+		return false, false, false, err
 	}
 
 	for _, member := range memberResp.GetMembers() {
@@ -201,7 +202,7 @@ func (dm *DMMasterClient) GetLeader(retryOpt *utils.RetryOption) (string, error)
 
 	if err := utils.Retry(func() error {
 		memberResp, err = dm.getMember(endpoints)
-		return errors.AddStack(err)
+		return err
 	}, *retryOpt); err != nil {
 		return "", err
 	}
@@ -228,7 +229,7 @@ func (dm *DMMasterClient) GetRegisteredMembers() ([]string, []string, error) {
 
 	if err != nil {
 		zap.L().Error("get dm master status failed", zap.Error(err))
-		return registeredMasters, registeredWorkers, errors.AddStack(err)
+		return registeredMasters, registeredWorkers, err
 	}
 
 	for _, member := range memberResp.Members {

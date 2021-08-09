@@ -15,11 +15,11 @@ package config
 
 import (
 	"bytes"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"text/template"
 
-	"github.com/pingcap/tiup/pkg/cluster/embed"
+	"github.com/pingcap/tiup/embed"
 )
 
 // TiSparkConfig represent the data to generate TiSpark configs
@@ -48,7 +48,7 @@ func (c *TiSparkConfig) WithCustomFields(m map[string]interface{}) *TiSparkConfi
 
 // Config generate the config file data.
 func (c *TiSparkConfig) Config() ([]byte, error) {
-	fp := filepath.Join("/templates", "config", "spark-defaults.conf.tpl")
+	fp := filepath.Join("templates", "config", "spark-defaults.conf.tpl")
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err
@@ -62,7 +62,7 @@ func (c *TiSparkConfig) ConfigToFile(file string) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(file, config, 0755)
+	return os.WriteFile(file, config, 0755)
 }
 
 // ConfigWithTemplate parses the template file

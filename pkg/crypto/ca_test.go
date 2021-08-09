@@ -36,7 +36,7 @@ func TestNewCA(t *testing.T) {
 	assert.Equal(t, pkixOrganization, ca.Cert.Subject.Organization[0])
 	assert.NotEmpty(t, ca.Cert.Subject.OrganizationalUnit)
 	assert.Equal(t, pkixOrganizationalUnit, ca.Cert.Subject.OrganizationalUnit[0])
-	//assert.Equal(t, clsName, ca.Cert.Subject.OrganizationalUnit[1])
+	// assert.Equal(t, clsName, ca.Cert.Subject.OrganizationalUnit[1])
 
 	// check for key usage
 	assert.Equal(t, x509.KeyUsage(33), ca.Cert.KeyUsage) // x509.KeyUsageCertSign | x509.KeyUsageDigitalSignature

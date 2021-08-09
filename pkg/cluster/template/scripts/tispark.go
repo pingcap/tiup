@@ -15,7 +15,7 @@ package scripts
 
 import (
 	"bytes"
-	"io/ioutil"
+	"os"
 	"text/template"
 )
 
@@ -86,7 +86,7 @@ func (c *TiSparkEnv) ScriptToFile(file string) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(file, script, 0755)
+	return os.WriteFile(file, script, 0755)
 }
 
 // ScriptWithTemplate parses the template file

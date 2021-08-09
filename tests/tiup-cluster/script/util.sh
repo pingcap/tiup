@@ -1,6 +1,20 @@
 #!/bin/bash
 
 set -eu
+set -eE -o functrace
+
+failure() {
+    local lineno=$2
+    local fn=$3
+    local exitstatus=$4
+    local msg=$5
+    local lineno_fns=${1% 0}
+    if [[ "$lineno_fns" != "0" ]] ; then
+        lineno="${lineno} ${lineno_fns}"
+    fi
+    echo "${BASH_SOURCE[1]}:${fn}[${lineno}] Failed with status ${exitstatus}: $msg"
+}
+trap 'failure "${BASH_LINENO[*]}" "$LINENO" "${FUNCNAME[*]:-script}" "$?" "$BASH_COMMAND"' ERR
 
 # instance_num <name> <use-native-ssh>
 # get the instance number of the cluster
@@ -13,7 +27,7 @@ function instance_num() {
 
     client=""
     if [ $native_ssh == true ]; then
-        client="--native-ssh"
+        client="--ssh=system"
     fi
 
     count=$(tiup-cluster $client display $name | grep "Total nodes" | awk -F ' ' '{print $3}')
@@ -31,7 +45,7 @@ function wait_instance_num_reach() {
 
     client=""
     if [ $native_ssh == true ]; then
-        client="--native-ssh"
+        client="--ssh=system"
     fi
 
     for ((i=0;i<120;i++))

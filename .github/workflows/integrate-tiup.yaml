@@ -6,10 +6,29 @@ on:
     branches:
       - master
       - release-*
+    paths-ignore:
+      - '**.html'
+      - '**.md'
+      - 'CNAME'
+      - 'LICENSE'
+      - 'doc/**'
+      - 'embed/templates/examples/**'
+      - '.github/workflows/integrate-cluster**'
+      - '.github/workflows/integrate-dm**'
+      - '.github/workflows/integrate-playground**'
   push:
     branches:
       - master
-      - release-*
+    paths-ignore:
+      - '**.html'
+      - '**.md'
+      - 'CNAME'
+      - 'LICENSE'
+      - 'doc/**'
+      - 'embed/templates/examples/**'
+      - '.github/workflows/integrate-cluster**'
+      - '.github/workflows/integrate-dm**'
+      - '.github/workflows/integrate-playground**'
 
 jobs:
   tiup:
@@ -23,10 +42,10 @@ jobs:
     env:
       working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
     steps:
-      - name: Set up Go 1.14
+      - name: Set up Go 1.16
         uses: actions/setup-go@v2
         with:
-          go-version: 1.14
+          go-version: 1.16.x
         id: go
 
       - name: Check out code into the Go module directory
@@ -48,7 +67,7 @@ jobs:
         run: |
           export PATH=$PATH:${{ env.working-directory }}/bin/
           echo $PATH
-          bash ${{ env.working-directory }}/tests/tiup/${{matrix.cases}}.sh
+          bash ${{ env.working-directory }}/tests/tiup/${{ matrix.cases }}.sh
 
       - name: Upload coverage to Codecov
         working-directory: ${{ env.working-directory }}
@@ -66,10 +85,10 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           path: go/src/github.com/${{ github.repository }}
 
-      - name: Set up Go 1.14
+      - name: Set up Go 1.16
         uses: actions/setup-go@v2
         with:
-          go-version: 1.14
+          go-version: 1.16.x
         id: go
 
       - name: make unit-test

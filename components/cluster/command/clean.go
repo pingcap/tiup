@@ -24,8 +24,11 @@ func newCleanCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "clean <cluster-name>",
-		Short: "Cleanup a specified cluster",
-		Long: `Cleanup a specified cluster without destroying it (experimental).
+		Short: "(EXPERIMENTAL) Cleanup a specified cluster",
+		Long: `EXPERIMENTAL: This is an experimental feature, things may or may not work,
+please backup your data before process.
+
+Cleanup a specified cluster without destroying it.
 You can retain some nodes and roles data when cleanup the cluster, eg:
     $ tiup cluster clean <cluster-name> --all
     $ tiup cluster clean <cluster-name> --log
@@ -39,6 +42,7 @@ You can retain some nodes and roles data when cleanup the cluster, eg:
 			}
 
 			clusterName := args[0]
+			clusterReport.ID = scrubClusterName(clusterName)
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
 			if cleanALl {
@@ -50,7 +54,7 @@ You can retain some nodes and roles data when cleanup the cluster, eg:
 				return cmd.Help()
 			}
 
-			return manager.CleanCluster(clusterName, gOpt, cleanOpt, skipConfirm)
+			return cm.CleanCluster(clusterName, gOpt, cleanOpt, skipConfirm)
 		},
 	}
 

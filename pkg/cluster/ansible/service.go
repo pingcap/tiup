@@ -14,6 +14,7 @@
 package ansible
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"strconv"
@@ -22,6 +23,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
@@ -34,6 +36,7 @@ var (
 // parseDirs sets values of directories of component
 func parseDirs(user string, ins spec.InstanceSpec, sshTimeout uint64, sshType executor.SSHType) (spec.InstanceSpec, error) {
 	hostName, sshPort := ins.SSH()
+	ctx := ctxt.New(context.Background(), 0)
 
 	e, err := executor.New(sshType, false, executor.SSHConfig{
 		Host:    hostName,
@@ -47,7 +50,7 @@ func parseDirs(user string, ins spec.InstanceSpec, sshTimeout uint64, sshType ex
 	}
 	log.Debugf("Detecting deploy paths on %s...", hostName)
 
-	stdout, err := readStartScript(e, ins.Role(), hostName, ins.GetMainPort())
+	stdout, err := readStartScript(ctx, e, ins.Role(), hostName, ins.GetMainPort())
 	if len(stdout) <= 1 || err != nil {
 		return ins, err
 	}
@@ -55,8 +58,8 @@ func parseDirs(user string, ins spec.InstanceSpec, sshTimeout uint64, sshType ex
 	switch ins.Role() {
 	case spec.ComponentTiDB:
 		// parse dirs
-		newIns := ins.(spec.TiDBSpec)
-		for _, line := range strings.Split(string(stdout), "\n") {
+		newIns := ins.(*spec.TiDBSpec)
+		for _, line := range strings.Split(stdout, "\n") {
 			if strings.HasPrefix(line, "DEPLOY_DIR=") {
 				newIns.DeployDir = strings.TrimPrefix(line, "DEPLOY_DIR=")
 				continue
@@ -72,8 +75,8 @@ func parseDirs(user string, ins spec.InstanceSpec, sshTimeout uint64, sshType ex
 		return newIns, nil
 	case spec.ComponentTiKV:
 		// parse dirs
-		newIns := ins.(spec.TiKVSpec)
-		for _, line := range strings.Split(string(stdout), "\n") {
+		newIns := ins.(*spec.TiKVSpec)
+		for _, line := range strings.Split(stdout, "\n") {
 			if strings.HasPrefix(line, "cd \"") {
 				newIns.DeployDir = strings.Trim(strings.Split(line, " ")[1], "\"")
 				continue
@@ -94,8 +97,8 @@ func parseDirs(user string, ins spec.InstanceSpec, sshTimeout uint64, sshType ex
 		return newIns, nil
 	case spec.ComponentPD:
 		// parse dirs
-		newIns := ins.(spec.PDSpec)
-		for _, line := range strings.Split(string(stdout), "\n") {
+		newIns := ins.(*spec.PDSpec)
+		for _, line := range strings.Split(stdout, "\n") {
 			if strings.HasPrefix(line, "DEPLOY_DIR=") {
 				newIns.DeployDir = strings.TrimPrefix(line, "DEPLOY_DIR=")
 				continue
@@ -123,8 +126,8 @@ func parseDirs(user string, ins spec.InstanceSpec, sshTimeout uint64, sshType ex
 		return newIns, nil
 	case spec.ComponentTiFlash:
 		// parse dirs
-		newIns := ins.(spec.TiFlashSpec)
-		for _, line := range strings.Split(string(stdout), "\n") {
+		newIns := ins.(*spec.TiFlashSpec)
+		for _, line := range strings.Split(stdout, "\n") {
 			if strings.HasPrefix(line, "cd \"") {
 				newIns.DeployDir = strings.Trim(strings.Split(line, " ")[1], "\"")
 				continue
@@ -139,17 +142,17 @@ func parseDirs(user string, ins spec.InstanceSpec, sshTimeout uint64, sshType ex
 				if !filepath.IsAbs(fname) {
 					fname = filepath.Join(newIns.DeployDir, fname)
 				}
-				err := parseTiflashConfig(e, &newIns, fname)
+				err := parseTiflashConfig(ctx, e, newIns, fname)
 				if err != nil {
-					return nil, errors.AddStack(err)
+					return nil, err
 				}
 			}
 		}
 		return newIns, nil
 	case spec.ComponentPump:
 		// parse dirs
-		newIns := ins.(spec.PumpSpec)
-		for _, line := range strings.Split(string(stdout), "\n") {
+		newIns := ins.(*spec.PumpSpec)
+		for _, line := range strings.Split(stdout, "\n") {
 			if strings.HasPrefix(line, "DEPLOY_DIR=") {
 				newIns.DeployDir = strings.TrimPrefix(line, "DEPLOY_DIR=")
 				continue
@@ -171,10 +174,16 @@ func parseDirs(user string, ins spec.InstanceSpec, sshTimeout uint64, sshType ex
 		return newIns, nil
 	case spec.ComponentDrainer:
 		// parse dirs
-		newIns := ins.(spec.DrainerSpec)
-		for _, line := range strings.Split(string(stdout), "\n") {
+		newIns := ins.(*spec.DrainerSpec)
+		for _, line := range strings.Split(stdout, "\n") {
 			if strings.HasPrefix(line, "DEPLOY_DIR=") {
 				newIns.DeployDir = strings.TrimPrefix(line, "DEPLOY_DIR=")
+				continue
+			}
+			if strings.Contains(line, "--data-dir") {
+				dataArg := strings.Split(line, " ")[4] // 4 whitespaces ahead
+				dataDir := strings.TrimPrefix(dataArg, "--data-dir=")
+				newIns.DataDir = strings.Trim(dataDir, "\"")
 				continue
 			}
 			if strings.Contains(line, "--log-file=") {
@@ -193,8 +202,8 @@ func parseDirs(user string, ins spec.InstanceSpec, sshTimeout uint64, sshType ex
 		return newIns, nil
 	case spec.ComponentPrometheus:
 		// parse dirs
-		newIns := ins.(spec.PrometheusSpec)
-		for _, line := range strings.Split(string(stdout), "\n") {
+		newIns := ins.(*spec.PrometheusSpec)
+		for _, line := range strings.Split(stdout, "\n") {
 			if strings.HasPrefix(line, "DEPLOY_DIR=") {
 				newIns.DeployDir = strings.TrimPrefix(line, "DEPLOY_DIR=")
 				continue
@@ -216,8 +225,8 @@ func parseDirs(user string, ins spec.InstanceSpec, sshTimeout uint64, sshType ex
 		return newIns, nil
 	case spec.ComponentAlertmanager:
 		// parse dirs
-		newIns := ins.(spec.AlertmanagerSpec)
-		for _, line := range strings.Split(string(stdout), "\n") {
+		newIns := ins.(*spec.AlertmanagerSpec)
+		for _, line := range strings.Split(stdout, "\n") {
 			if strings.HasPrefix(line, "DEPLOY_DIR=") {
 				newIns.DeployDir = strings.TrimPrefix(line, "DEPLOY_DIR=")
 				continue
@@ -239,8 +248,8 @@ func parseDirs(user string, ins spec.InstanceSpec, sshTimeout uint64, sshType ex
 		return newIns, nil
 	case spec.ComponentGrafana:
 		// parse dirs
-		newIns := ins.(spec.GrafanaSpec)
-		for _, line := range strings.Split(string(stdout), "\n") {
+		newIns := ins.(*spec.GrafanaSpec)
+		for _, line := range strings.Split(stdout, "\n") {
 			if strings.HasPrefix(line, "DEPLOY_DIR=") {
 				newIns.DeployDir = strings.TrimPrefix(line, "DEPLOY_DIR=")
 				continue
@@ -251,15 +260,15 @@ func parseDirs(user string, ins spec.InstanceSpec, sshTimeout uint64, sshType ex
 	return ins, nil
 }
 
-func parseTiflashConfig(e executor.Executor, spec *spec.TiFlashSpec, fname string) error {
-	data, err := readFile(e, fname)
+func parseTiflashConfig(ctx context.Context, e ctxt.Executor, spec *spec.TiFlashSpec, fname string) error {
+	data, err := readFile(ctx, e, fname)
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	err = parseTiflashConfigFromFileData(spec, data)
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	return nil
@@ -284,9 +293,9 @@ func parseTiflashConfigFromFileData(spec *spec.TiFlashSpec, data []byte) error {
 	return nil
 }
 
-func readFile(e executor.Executor, fname string) (data []byte, err error) {
+func readFile(ctx context.Context, e ctxt.Executor, fname string) (data []byte, err error) {
 	cmd := fmt.Sprintf("cat %s", fname)
-	stdout, stderr, err := e.Execute(cmd, false)
+	stdout, stderr, err := e.Execute(ctx, cmd, false)
 	if err != nil {
 		return nil, errors.Annotatef(err, "stderr: %s", stderr)
 	}
@@ -294,13 +303,13 @@ func readFile(e executor.Executor, fname string) (data []byte, err error) {
 	return stdout, nil
 }
 
-func readStartScript(e executor.Executor, component, host string, port int) (string, error) {
+func readStartScript(ctx context.Context, e ctxt.Executor, component, host string, port int) (string, error) {
 	serviceFile := fmt.Sprintf("%s/%s-%d.service",
 		systemdUnitPath,
 		component,
 		port)
 	cmd := fmt.Sprintf("cat `grep 'ExecStart' %s | sed 's/ExecStart=//'`", serviceFile)
-	stdout, stderr, err := e.Execute(cmd, false)
+	stdout, stderr, err := e.Execute(ctx, cmd, false)
 	if err != nil {
 		return string(stdout), err
 	}

@@ -15,10 +15,12 @@ package spec
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/BurntSushi/toml"
 	. "github.com/pingcap/check"
+	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"gopkg.in/yaml.v2"
 )
 
@@ -34,7 +36,8 @@ func TestMeta(t *testing.T) {
 func (s *metaSuiteTopo) TestDefaultDataDir(c *C) {
 	// Test with without global DataDir.
 	topo := new(Specification)
-	topo.TiKVServers = append(topo.TiKVServers, TiKVSpec{Host: "1.1.1.1", Port: 22})
+	topo.TiKVServers = append(topo.TiKVServers, &TiKVSpec{Host: "1.1.1.1", Port: 22})
+	topo.CDCServers = append(topo.CDCServers, &CDCSpec{Host: "2.3.3.3", Port: 22})
 	data, err := yaml.Marshal(topo)
 	c.Assert(err, IsNil)
 
@@ -44,6 +47,7 @@ func (s *metaSuiteTopo) TestDefaultDataDir(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(topo.GlobalOptions.DataDir, Equals, "data")
 	c.Assert(topo.TiKVServers[0].DataDir, Equals, "data")
+	c.Assert(topo.CDCServers[0].DataDir, Equals, "data")
 
 	// Can keep the default value.
 	data, err = yaml.Marshal(topo)
@@ -53,21 +57,27 @@ func (s *metaSuiteTopo) TestDefaultDataDir(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(topo.GlobalOptions.DataDir, Equals, "data")
 	c.Assert(topo.TiKVServers[0].DataDir, Equals, "data")
+	c.Assert(topo.CDCServers[0].DataDir, Equals, "data")
 
 	// Test with global DataDir.
 	topo = new(Specification)
-	topo.GlobalOptions.DataDir = "/gloable_data"
-	topo.TiKVServers = append(topo.TiKVServers, TiKVSpec{Host: "1.1.1.1", Port: 22})
-	topo.TiKVServers = append(topo.TiKVServers, TiKVSpec{Host: "1.1.1.2", Port: 33, DataDir: "/my_data"})
+	topo.GlobalOptions.DataDir = "/global_data"
+	topo.TiKVServers = append(topo.TiKVServers, &TiKVSpec{Host: "1.1.1.1", Port: 22})
+	topo.TiKVServers = append(topo.TiKVServers, &TiKVSpec{Host: "1.1.1.2", Port: 33, DataDir: "/my_data"})
+	topo.CDCServers = append(topo.CDCServers, &CDCSpec{Host: "2.3.3.3", Port: 22})
+	topo.CDCServers = append(topo.CDCServers, &CDCSpec{Host: "2.3.3.4", Port: 22, DataDir: "/cdc_data"})
 	data, err = yaml.Marshal(topo)
 	c.Assert(err, IsNil)
 
 	topo = new(Specification)
 	err = yaml.Unmarshal(data, topo)
 	c.Assert(err, IsNil)
-	c.Assert(topo.GlobalOptions.DataDir, Equals, "/gloable_data")
-	c.Assert(topo.TiKVServers[0].DataDir, Equals, "/gloable_data/tikv-22")
+	c.Assert(topo.GlobalOptions.DataDir, Equals, "/global_data")
+	c.Assert(topo.TiKVServers[0].DataDir, Equals, "/global_data/tikv-22")
 	c.Assert(topo.TiKVServers[1].DataDir, Equals, "/my_data")
+
+	c.Assert(topo.CDCServers[0].DataDir, Equals, "/global_data/cdc-22")
+	c.Assert(topo.CDCServers[1].DataDir, Equals, "/cdc_data")
 }
 
 func (s *metaSuiteTopo) TestGlobalOptions(c *C) {
@@ -77,13 +87,16 @@ global:
   user: "test1"
   ssh_port: 220
   deploy_dir: "test-deploy"
-  data_dir: "test-data" 
+  data_dir: "test-data"
 tidb_servers:
   - host: 172.16.5.138
     deploy_dir: "tidb-deploy"
 pd_servers:
   - host: 172.16.5.53
     data_dir: "pd-data"
+cdc_servers:
+  - host: 172.16.5.233
+    data_dir: "cdc-data"
 `), &topo)
 	c.Assert(err, IsNil)
 	c.Assert(topo.GlobalOptions.User, Equals, "test1")
@@ -94,6 +107,10 @@ pd_servers:
 	c.Assert(topo.PDServers[0].SSHPort, Equals, 220)
 	c.Assert(topo.PDServers[0].DeployDir, Equals, "test-deploy/pd-2379")
 	c.Assert(topo.PDServers[0].DataDir, Equals, "pd-data")
+
+	c.Assert(topo.CDCServers[0].SSHPort, Equals, 220)
+	c.Assert(topo.CDCServers[0].DeployDir, Equals, "test-deploy/cdc-8300")
+	c.Assert(topo.CDCServers[0].DataDir, Equals, "cdc-data")
 }
 
 func (s *metaSuiteTopo) TestDataDirAbsolute(c *C) {
@@ -101,17 +118,25 @@ func (s *metaSuiteTopo) TestDataDirAbsolute(c *C) {
 	err := yaml.Unmarshal([]byte(`
 global:
   user: "test1"
-  data_dir: "/test-data" 
+  data_dir: "/test-data"
 pd_servers:
   - host: 172.16.5.53
     data_dir: "pd-data"
   - host: 172.16.5.54
     client_port: 12379
+cdc_servers:
+  - host: 172.16.5.233
+    data_dir: "cdc-data"
+  - host: 172.16.5.234
+    port: 23333
 `), &topo)
 	c.Assert(err, IsNil)
 
 	c.Assert(topo.PDServers[0].DataDir, Equals, "pd-data")
 	c.Assert(topo.PDServers[1].DataDir, Equals, "/test-data/pd-12379")
+
+	c.Assert(topo.CDCServers[0].DataDir, Equals, "cdc-data")
+	c.Assert(topo.CDCServers[1].DataDir, Equals, "/test-data/cdc-23333")
 }
 
 func (s *metaSuiteTopo) TestGlobalConfig(c *C) {
@@ -171,7 +196,7 @@ tidb_servers:
 			},
 		},
 	}
-	got := flattenMap(topo.ServerConfigs.TiDB)
+	got := FoldMap(topo.ServerConfigs.TiDB)
 	c.Assert(got, DeepEquals, expected)
 	buf := &bytes.Buffer{}
 	err = toml.NewEncoder(buf).Encode(expected)
@@ -199,7 +224,7 @@ tidb_servers:
 			},
 		},
 	}
-	got = flattenMap(topo.TiDBServers[0].Config)
+	got = FoldMap(topo.TiDBServers[0].Config)
 	c.Assert(err, IsNil)
 	c.Assert(got, DeepEquals, expected)
 
@@ -213,7 +238,7 @@ tidb_servers:
 			},
 		},
 	}
-	got = flattenMap(topo.TiDBServers[1].Config)
+	got = FoldMap(topo.TiDBServers[1].Config)
 	c.Assert(err, IsNil)
 	c.Assert(got, DeepEquals, expected)
 }
@@ -243,7 +268,7 @@ tikv_servers:
 			},
 		},
 	}
-	got := flattenMap(topo.TiKVServers[0].Config)
+	got := FoldMap(topo.TiKVServers[0].Config)
 	c.Assert(err, IsNil)
 	c.Assert(got, DeepEquals, expected)
 }
@@ -471,6 +496,47 @@ item7 = 700
 	c.Assert(string(merge2), DeepEquals, expected)
 }
 
+func (s *metaSuiteTopo) TestTiKVLabels(c *C) {
+	spec := Specification{}
+	err := yaml.Unmarshal([]byte(`
+tikv_servers:
+  - host: 172.16.5.138
+    config:
+      server.labels:
+        dc: dc1
+        zone: zone1
+        host: host1
+`), &spec)
+	c.Assert(err, IsNil)
+	labels, err := spec.TiKVServers[0].Labels()
+	c.Assert(err, IsNil)
+	c.Assert(labels, DeepEquals, map[string]string{
+		"dc":   "dc1",
+		"zone": "zone1",
+		"host": "host1",
+	})
+
+	spec = Specification{}
+	err = yaml.Unmarshal([]byte(`
+tikv_servers:
+  - host: 172.16.5.138
+    config:
+      server.labels.dc: dc1
+      server.labels.zone: zone1
+      server.labels.host: host1
+`), &spec)
+	c.Assert(err, IsNil)
+	/*
+		labels, err = spec.TiKVServers[0].Labels()
+		c.Assert(err, IsNil)
+		c.Assert(labels, DeepEquals, map[string]string{
+			"dc":   "dc1",
+			"zone": "zone1",
+			"host": "host1",
+		})
+	*/
+}
+
 func (s *metaSuiteTopo) TestLocationLabels(c *C) {
 	spec := Specification{}
 
@@ -515,4 +581,270 @@ pd_servers:
 	c.Assert(err, IsNil)
 	_, err = spec.LocationLabels()
 	c.Assert(err, NotNil)
+}
+
+func (s *metaSuiteTopo) TestTiFlashStorageSection(c *C) {
+	spec := &Specification{}
+	err := yaml.Unmarshal([]byte(`
+tiflash_servers:
+  - host: 172.16.5.138
+    data_dir: /hdd0/tiflash,/hdd1/tiflash
+    config:
+      storage.main.dir: [/ssd0/tiflash, /ssd1/tiflash]
+      storage.latest.dir: [/ssd0/tiflash]
+`), spec)
+	c.Assert(err, IsNil)
+
+	flashComp := FindComponent(spec, ComponentTiFlash)
+	instances := flashComp.Instances()
+	c.Assert(len(instances), Equals, 1)
+	// parse using clusterVersion<"v4.0.9"
+	{
+		ins := instances[0]
+		// This should be the same with tiflash_server instance's "data_dir"
+		dataDir := "/hdd0/tiflash,/hdd1/tiflash"
+		cfg := scripts.NewTiFlashScript(ins.GetHost(), "", dataDir, "", "", "")
+		conf, err := ins.(*TiFlashInstance).initTiFlashConfig(cfg, "v4.0.8", spec.ServerConfigs.TiFlash)
+		c.Assert(err, IsNil)
+
+		path, ok := conf["path"]
+		c.Assert(ok, IsTrue)
+		c.Assert(path, Equals, dataDir)
+	}
+	// parse using clusterVersion>="v4.0.9"
+	checkWithVersion := func(ver string) {
+		ins := instances[0].(*TiFlashInstance)
+		dataDir := "/ssd0/tiflash"
+		cfg := scripts.NewTiFlashScript(ins.GetHost(), "", dataDir, "", "", "")
+		conf, err := ins.initTiFlashConfig(cfg, ver, spec.ServerConfigs.TiFlash)
+		c.Assert(err, IsNil)
+
+		_, ok := conf["path"]
+		c.Assert(ok, IsTrue)
+
+		// After merging instance configurations with "storgae", the "path" property should be removed.
+		conf, err = ins.mergeTiFlashInstanceConfig(ver, conf, ins.InstanceSpec.(*TiFlashSpec).Config)
+		c.Assert(err, IsNil)
+		_, ok = conf["path"]
+		c.Assert(ok, IsFalse)
+
+		if storageSection, ok := conf["storage"]; ok {
+			if mainSection, ok := storageSection.(map[string]interface{})["main"]; ok {
+				if mainDirsSection, ok := mainSection.(map[string]interface{})["dir"]; ok {
+					var mainDirs []interface{} = mainDirsSection.([]interface{})
+					c.Assert(len(mainDirs), Equals, 2)
+					c.Assert(mainDirs[0].(string), Equals, "/ssd0/tiflash")
+					c.Assert(mainDirs[1].(string), Equals, "/ssd1/tiflash")
+				} else {
+					c.Error("Can not get storage.main.dir section")
+				}
+			} else {
+				c.Error("Can not get storage.main section")
+			}
+			if latestSection, ok := storageSection.(map[string]interface{})["latest"]; ok {
+				if latestDirsSection, ok := latestSection.(map[string]interface{})["dir"]; ok {
+					var latestDirs []interface{} = latestDirsSection.([]interface{})
+					c.Assert(len(latestDirs), Equals, 1)
+					c.Assert(latestDirs[0].(string), Equals, "/ssd0/tiflash")
+				} else {
+					c.Error("Can not get storage.main.dir section")
+				}
+			} else {
+				c.Error("Can not get storage.main section")
+			}
+		} else {
+			c.Error("Can not get storage section")
+		}
+	}
+	checkWithVersion("v4.0.9")
+	checkWithVersion("nightly")
+}
+
+func (s *metaSuiteTopo) TestTiFlashInvalidStorageSection(c *C) {
+	spec := &Specification{}
+
+	testCases := [][]byte{
+		[]byte(`
+tiflash_servers:
+  - host: 172.16.5.138
+    data_dir: /hdd0/tiflash,/hdd1/tiflash
+    config:
+      # storage.main.dir is not defined
+      storage.latest.dir: ["/ssd0/tiflash"]
+`),
+		[]byte(`
+tiflash_servers:
+  - host: 172.16.5.138
+    data_dir: /hdd0/tiflash,/hdd1/tiflash
+    config:
+      # storage.main.dir is empty string array
+      storage.main.dir: []
+      storage.latest.dir: ["/ssd0/tiflash"]
+`),
+		[]byte(`
+tiflash_servers:
+  - host: 172.16.5.138
+    data_dir: /hdd0/tiflash,/hdd1/tiflash
+    config:
+      # storage.main.dir is not a string array
+      storage.main.dir: /hdd0/tiflash,/hdd1/tiflash
+      storage.latest.dir: ["/ssd0/tiflash"]
+`),
+		[]byte(`
+tiflash_servers:
+  - host: 172.16.5.138
+    data_dir: /hdd0/tiflash,/hdd1/tiflash
+    config:
+      # storage.main.dir is not a string array
+      storage.main.dir: [0, 1]
+      storage.latest.dir: ["/ssd0/tiflash"]
+`),
+	}
+
+	for _, testCase := range testCases {
+		err := yaml.Unmarshal(testCase, spec)
+		c.Check(err, NotNil)
+	}
+}
+
+func (s *metaSuiteTopo) TestTiCDCDataDir(c *C) {
+	spec := &Specification{}
+	err := yaml.Unmarshal([]byte(`
+cdc_servers:
+  - host: 172.16.6.191
+    data_dir: /tidb-data/cdc-8300
+`), spec)
+	c.Assert(err, IsNil)
+
+	cdcComp := FindComponent(spec, ComponentCDC)
+	instances := cdcComp.Instances()
+	c.Assert(len(instances), Equals, 1)
+
+	var expected = map[string]struct {
+		configSupported  bool
+		dataDir          bool // data-dir is set
+		dataDirSupported bool
+	}{
+		"v4.0.12": {false, false, false},
+		"v4.0.13": {true, true, false},
+		"v4.0.14": {true, true, true},
+
+		"v5.0.0": {true, true, false},
+		"v5.0.1": {true, true, false},
+		"v5.0.2": {true, true, false},
+
+		"v5.0.3": {true, true, true},
+		"v5.1.0": {true, true, true},
+
+		"v5.0.0-rc":    {false, false, false},
+		"v5.1.0-alpha": {true, true, false},
+		"v5.2.0-alpha": {true, true, false},
+	}
+
+	checkByVersion := func(version string) {
+		ins := instances[0].(*CDCInstance)
+		cfg := scripts.NewCDCScript(ins.GetHost(), "", "", false, 0, "").
+			PatchByVersion(version, ins.DataDir())
+
+		wanted := expected[version]
+
+		c.Assert(cfg.ConfigFileEnabled, Equals, wanted.configSupported)
+		c.Assert(cfg.DataDirEnabled, Equals, wanted.dataDirSupported)
+		c.Assert(len(cfg.DataDir) != 0, Equals, wanted.dataDir)
+	}
+
+	for k := range expected {
+		checkByVersion(k)
+	}
+}
+
+func (s *metaSuiteTopo) TestTiFlashUsersSettings(c *C) {
+	spec := &Specification{}
+	err := yaml.Unmarshal([]byte(`
+tiflash_servers:
+  - host: 172.16.5.138
+    data_dir: /ssd0/tiflash
+`), spec)
+	c.Assert(err, IsNil)
+
+	flashComp := FindComponent(spec, ComponentTiFlash)
+	instances := flashComp.Instances()
+	c.Assert(len(instances), Equals, 1)
+
+	// parse using clusterVersion<"v4.0.12" || == "5.0.0-rc"
+	checkBackwardCompatibility := func(ver string) {
+		ins := instances[0].(*TiFlashInstance)
+		dataDir := "/ssd0/tiflash"
+		cfg := scripts.NewTiFlashScript(ins.GetHost(), "", dataDir, "", "", "")
+		conf, err := ins.initTiFlashConfig(cfg, ver, spec.ServerConfigs.TiFlash)
+		c.Assert(err, IsNil)
+
+		// We need an empty string for 'users.default.password' for backward compatibility. Or the TiFlash process will fail to start with older versions
+		if usersSection, ok := conf["users"]; !ok {
+			c.Error("Can not get users section")
+		} else {
+			if defaultUser, ok := usersSection.(map[string]interface{})["default"]; !ok {
+				c.Error("Can not get default users section")
+			} else {
+				var password = defaultUser.(map[string]interface{})["password"]
+				c.Assert(password.(string), Equals, "")
+			}
+		}
+	}
+	checkBackwardCompatibility("v4.0.11")
+	checkBackwardCompatibility("v5.0.0-rc")
+
+	// parse using clusterVersion>="v4.0.12"
+	checkWithVersion := func(ver string) {
+		ins := instances[0].(*TiFlashInstance)
+		dataDir := "/ssd0/tiflash"
+		cfg := scripts.NewTiFlashScript(ins.GetHost(), "", dataDir, "", "", "")
+		conf, err := ins.initTiFlashConfig(cfg, ver, spec.ServerConfigs.TiFlash)
+		c.Assert(err, IsNil)
+
+		// Those deprecated settings are ignored in newer versions
+		_, ok := conf["users"]
+		c.Assert(ok, IsFalse)
+	}
+	checkWithVersion("v4.0.12")
+	checkWithVersion("v5.0.0")
+	checkWithVersion("nightly")
+}
+
+func (s *metaSuiteTopo) TestYAMLAnchor(c *C) {
+	topo := Specification{}
+	err := yaml.UnmarshalStrict([]byte(`
+global:
+  custom:
+    tidb_spec: &tidb_spec
+      deploy_dir: "test-deploy"
+      log_dir: "test-deploy/log"
+
+tidb_servers:
+  - <<: *tidb_spec
+    host: 172.16.5.138
+    deploy_dir: "fake-deploy"
+`), &topo)
+	c.Assert(err, IsNil)
+	c.Assert(topo.TiDBServers[0].Host, Equals, "172.16.5.138")
+	c.Assert(topo.TiDBServers[0].DeployDir, Equals, "fake-deploy")
+	c.Assert(topo.TiDBServers[0].LogDir, Equals, "test-deploy/log")
+}
+
+func (s *metaSuiteTopo) TestYAMLAnchorWithUndeclared(c *C) {
+	topo := Specification{}
+	err := yaml.UnmarshalStrict([]byte(`
+global:
+  custom:
+    tidb_spec: &tidb_spec
+      deploy_dir: "test-deploy"
+      log_dir: "test-deploy/log"
+      undeclared: "some stuff"
+
+tidb_servers:
+  - <<: *tidb_spec
+    host: 172.16.5.138
+`), &topo)
+	c.Assert(err, NotNil)
+	c.Assert(strings.Contains(err.Error(), "not found"), IsTrue)
 }

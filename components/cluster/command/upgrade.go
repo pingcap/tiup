@@ -14,10 +14,13 @@
 package command
 
 import (
+	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
 func newUpgradeCmd() *cobra.Command {
+	offlineMode := false
+
 	cmd := &cobra.Command{
 		Use:   "upgrade <cluster-name> <version>",
 		Short: "Upgrade a specified TiDB cluster",
@@ -27,16 +30,21 @@ func newUpgradeCmd() *cobra.Command {
 			}
 
 			clusterName := args[0]
-			version := args[1]
+			version, err := utils.FmtVer(args[1])
+			if err != nil {
+				return err
+			}
+			clusterReport.ID = scrubClusterName(clusterName)
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 			teleCommand = append(teleCommand, version)
 
-			return manager.Upgrade(clusterName, version, gOpt)
+			return cm.Upgrade(clusterName, version, gOpt, skipConfirm, offlineMode)
 		},
 	}
 	cmd.Flags().BoolVar(&gOpt.Force, "force", false, "Force upgrade without transferring PD leader")
-	cmd.Flags().Uint64Var(&gOpt.APITimeout, "transfer-timeout", 300, "Timeout in seconds when transferring PD and TiKV store leaders")
+	cmd.Flags().Uint64Var(&gOpt.APITimeout, "transfer-timeout", 600, "Timeout in seconds when transferring PD and TiKV store leaders")
 	cmd.Flags().BoolVarP(&gOpt.IgnoreConfigCheck, "ignore-config-check", "", false, "Ignore the config check result")
+	cmd.Flags().BoolVarP(&offlineMode, "offline", "", false, "Upgrade a stopped cluster")
 
 	return cmd
 }

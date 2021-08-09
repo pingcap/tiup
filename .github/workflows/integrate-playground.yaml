@@ -6,10 +6,26 @@ on:
     branches:
       - master
       - release-*
-  push:
-    branches:
-      - master
-      - release-*
+    paths-ignore:
+      - '**.html'
+      - '**.md'
+      - 'CNAME'
+      - 'LICENSE'
+      - 'doc/**'
+      - 'embed/templates/examples/**'
+      - 'embed/templates/examples/**'
+      - 'components/bench/**'
+      - 'components/client/**'
+      - 'components/ctl/**'
+      - 'components/cluster/**'
+      - 'components/doc/**'
+      - 'components/errdoc/**'
+      - 'components/dm/**'
+      - 'server/**'
+      - 'pkg/version/version.go'
+      - '.github/workflows/integrate-cluster**'
+      - '.github/workflows/integrate-dm**'
+      - '.github/workflows/integrate-tiup**'
 
 jobs:
   playground:
@@ -23,10 +39,10 @@ jobs:
     env:
       working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
     steps:
-      - name: Set up Go 1.14
+      - name: Set up Go 1.16
         uses: actions/setup-go@v2
         with:
-          go-version: 1.14
+          go-version: 1.16.x
         id: go
 
       - name: Check out code into the Go module directory
@@ -46,22 +62,30 @@ jobs:
         working-directory: ${{ env.working-directory }}
         run: |
           export PATH=$PATH:${{ env.working-directory }}/bin/
-          bash ${{ env.working-directory }}/tests/tiup-playground/${{matrix.cases}}.sh
+          bash ${{ env.working-directory }}/tests/tiup-playground/${{ matrix.cases }}.sh
 
       - name: Collect component log
         working-directory: ${{ env.working-directory }}
-        # if: steps.test.outputs.exit_code != 0
-        if: always()
+        if: ${{ failure() }}
+        # if: always()
         run: |
-          find ${{ env.working-directory }}/tests/tiup-playground/_tmp/home/data -type f | grep -E '*/ti.*/ti.*.log$' | xargs tar czvf ${{ env.working-directory }}/playground.logs.tar.gz
+          # ignore the rocksdb
+          find ${{ env.working-directory }}/tests/tiup-playground/_tmp/home/data -type f -name "*.log" | grep -vE '/data/(raft|db|region-meta)/' | xargs tar czvf ${{ env.working-directory }}/playground.logs.tar.gz
 
       - name: Upload component log
-        # if: steps.test.outputs.exit_code != 0
-        if: always()
+        if: ${{ failure() }}
+        # if: always()
         uses: actions/upload-artifact@v1
         with:
           name: playground_logs
           path: ${{ env.working-directory }}/playground.logs.tar.gz
+
+      - name: Output playground debug log
+        working-directory: ${{ env.working-directory }}
+        if: ${{ failure() }}
+        # if: always()
+        run: |
+          for f in $(find ${{ env.working-directory }}/tests/tiup-playground/_tmp/home/data -type f -name "*.log" | grep -vE '/data/(raft|db|region-meta)/'); do echo "${f}" && cat "${f}"; done
 
       - name: Upload coverage to Codecov
         working-directory: ${{ env.working-directory }}

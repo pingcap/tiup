@@ -14,11 +14,12 @@
 package telemetry
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/pingcap/check"
+	"github.com/pingcap/tiup/pkg/set"
 )
 
 type scrubSuite struct{}
@@ -26,7 +27,7 @@ type scrubSuite struct{}
 var _ = check.Suite(&scrubSuite{})
 
 func (s *scrubSuite) testScrubYaml(c *check.C, generate bool) {
-	files, err := ioutil.ReadDir("./testdata")
+	files, err := os.ReadDir("./testdata")
 	c.Assert(err, check.IsNil)
 
 	for _, f := range files {
@@ -36,21 +37,32 @@ func (s *scrubSuite) testScrubYaml(c *check.C, generate bool) {
 
 		c.Log("file: ", f.Name())
 
-		data, err := ioutil.ReadFile(filepath.Join("./testdata", f.Name()))
+		data, err := os.ReadFile(filepath.Join("./testdata", f.Name()))
 		c.Assert(err, check.IsNil)
 
-		hashs := make(map[string]struct{})
-		hashs["host"] = struct{}{}
+		hashs := map[string]struct{}{
+			"host":       {},
+			"name":       {},
+			"user":       {},
+			"group":      {},
+			"deploy_dir": {},
+			"data_dir":   {},
+			"log_dir":    {},
+		}
+		omits := set.NewStringSet(
+			"config",
+			"server_configs",
+		)
 
-		scrubed, err := ScrubYaml(data, hashs)
+		scrubed, err := ScrubYaml(data, hashs, omits, "dummy-salt-string")
 		c.Assert(err, check.IsNil)
 
 		outName := filepath.Join("./testdata", f.Name()+".out")
 		if generate {
-			err = ioutil.WriteFile(outName, scrubed, 0644)
+			err = os.WriteFile(outName, scrubed, 0644)
 			c.Assert(err, check.IsNil)
 		} else {
-			out, err := ioutil.ReadFile(outName)
+			out, err := os.ReadFile(outName)
 			c.Assert(err, check.IsNil)
 			c.Assert(scrubed, check.BytesEquals, out)
 		}
@@ -63,13 +75,15 @@ func (s *scrubSuite) TestScrubYaml(c *check.C) {
 
 // alertmanager_servers will contains a nil value in the yaml.
 func (s *scrubSuite) TestNilValueNotPanic(c *check.C) {
-	data, err := ioutil.ReadFile(filepath.Join("./testdata", "single/nilvalue.yaml"))
+	data, err := os.ReadFile(filepath.Join("./testdata", "single/nilvalue.yaml"))
 	c.Assert(err, check.IsNil)
 
 	hashs := make(map[string]struct{})
 	hashs["host"] = struct{}{}
+	omits := make(map[string]struct{})
+	omits["config"] = struct{}{}
 
-	scrubed, err := ScrubYaml(data, hashs)
+	scrubed, err := ScrubYaml(data, hashs, omits, "dummy-salt-string")
 	c.Assert(err, check.IsNil)
 
 	var _ = scrubed

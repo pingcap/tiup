@@ -21,17 +21,16 @@ import (
 	stderrors "errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
-	"strings"
 	"time"
 
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/crypto"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // ErrorInsufficientKeys indicates that the key number is less than threshold
@@ -56,33 +55,12 @@ func Init(dst, keyDir string, initTime time.Time) (err error) {
 
 	// init index
 	manifests[ManifestTypeIndex] = NewIndex(initTime)
-	signedManifests[ManifestTypeIndex], err = SignManifest(manifests[ManifestTypeIndex], keys[ManifestTypeIndex]...)
-	if err != nil {
-		return err
-	}
 
-	// snapshot and timestamp are the last two manifests to be initialized
 	// init snapshot
-	manifests[ManifestTypeSnapshot], err = NewSnapshot(initTime).SetVersions(signedManifests)
-	if err != nil {
-		return err
-	}
-	signedManifests[ManifestTypeSnapshot], err = SignManifest(manifests[ManifestTypeSnapshot], keys[ManifestTypeSnapshot]...)
-	if err != nil {
-		return err
-	}
+	manifests[ManifestTypeSnapshot] = NewSnapshot(initTime)
 
 	// init timestamp
-	timestamp, err := NewTimestamp(initTime).SetSnapshot(signedManifests[ManifestTypeSnapshot])
 	manifests[ManifestTypeTimestamp] = NewTimestamp(initTime)
-	if err != nil {
-		return err
-	}
-	manifests[ManifestTypeTimestamp] = timestamp
-	signedManifests[ManifestTypeTimestamp], err = SignManifest(manifests[ManifestTypeTimestamp], keys[ManifestTypeTimestamp]...)
-	if err != nil {
-		return err
-	}
 
 	// root and snapshot has meta of each other inside themselves, but it's ok here
 	// as we are still during the init process, not version bump needed
@@ -100,8 +78,28 @@ func Init(dst, keyDir string, initTime time.Time) (err error) {
 		// FIXME: log a warning about manifest not found instead of returning error
 		return fmt.Errorf("manifest '%s' not initialized porperly", ty)
 	}
-	signedManifests[ManifestTypeRoot], err = SignManifest(manifests[ManifestTypeRoot], keys[ManifestTypeRoot]...)
-	if err != nil {
+
+	if signedManifests[ManifestTypeRoot], err = SignManifest(manifests[ManifestTypeRoot], keys[ManifestTypeRoot]...); err != nil {
+		return err
+	}
+
+	if signedManifests[ManifestTypeIndex], err = SignManifest(manifests[ManifestTypeIndex], keys[ManifestTypeIndex]...); err != nil {
+		return err
+	}
+
+	if _, err = manifests[ManifestTypeSnapshot].(*Snapshot).SetVersions(signedManifests); err != nil {
+		return err
+	}
+
+	if signedManifests[ManifestTypeSnapshot], err = SignManifest(manifests[ManifestTypeSnapshot], keys[ManifestTypeSnapshot]...); err != nil {
+		return err
+	}
+
+	if _, err = manifests[ManifestTypeTimestamp].(*Timestamp).SetSnapshot(signedManifests[ManifestTypeSnapshot]); err != nil {
+		return err
+	}
+
+	if signedManifests[ManifestTypeTimestamp], err = SignManifest(manifests[ManifestTypeTimestamp], keys[ManifestTypeTimestamp]...); err != nil {
 		return err
 	}
 
@@ -109,26 +107,39 @@ func Init(dst, keyDir string, initTime time.Time) (err error) {
 }
 
 // SaveKeyInfo saves a KeyInfo object to a JSON file
-func SaveKeyInfo(key *KeyInfo, ty, dir string) error {
+func SaveKeyInfo(key *KeyInfo, ty, dir string) (string, error) {
 	id, err := key.ID()
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	f, err := os.Create(path.Join(dir, fmt.Sprintf("%s-%s.json", id[:ShortKeyIDLength], ty)))
+	if dir == "" {
+		dir, err = os.Getwd()
+		if err != nil {
+			return "", err
+		}
+	}
+	if utils.IsNotExist(dir) {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return "", errors.Annotate(err, "create key directory")
+		}
+	}
+
+	pubPath := path.Join(dir, fmt.Sprintf("%s-%s.json", id[:ShortKeyIDLength], ty))
+	f, err := os.Create(pubPath)
 	if err != nil {
-		return err
+		return pubPath, err
 	}
 	defer f.Close()
 
 	if _, found := key.Value["private"]; found {
 		err = f.Chmod(0600)
 		if err != nil {
-			return err
+			return pubPath, err
 		}
 	}
 
-	return json.NewEncoder(f).Encode(key)
+	return pubPath, json.NewEncoder(f).Encode(key)
 }
 
 // GenAndSaveKeys generate private keys to keys param and save key file to dir
@@ -140,162 +151,59 @@ func GenAndSaveKeys(keys map[string][]*KeyInfo, ty string, num int, dir string) 
 		}
 		keys[ty] = append(keys[ty], k)
 
-		if err := SaveKeyInfo(k, ty, dir); err != nil {
+		if _, err := SaveKeyInfo(k, ty, dir); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// SignManifestFile add signatures to a manifest file
-func SignManifestFile(mfile string, kfiles ...string) error {
-	type manifestT struct {
-		// Signatures value
-		Signatures []*Signature `json:"signatures"`
-		// Signed value
-		Signed interface{} `json:"signed"`
+// SignManifestData add signatures to a manifest data
+func SignManifestData(data []byte, ki *KeyInfo) ([]byte, error) {
+	m := RawManifest{}
+
+	if err := json.Unmarshal(data, &m); err != nil {
+		return nil, errors.Annotate(err, "unmarshal manifest")
 	}
 
-	fi, err := os.Open(mfile)
-	if err != nil {
-		return err
-	}
-	defer fi.Close()
-
-	m := manifestT{}
-	content, err := ioutil.ReadFile(mfile)
-	if err != nil {
-		return err
-	}
-	if err := json.Unmarshal(content, &m); err != nil {
-		return err
-	}
-	payload, err := cjson.Marshal(m.Signed)
-	if err != nil {
-		return err
+	var signed interface{}
+	if err := json.Unmarshal(m.Signed, &signed); err != nil {
+		return nil, errors.Annotate(err, "unmarshal manifest.signed")
 	}
 
-NextKey:
-	for _, kf := range kfiles {
-		f, err := os.Open(kf)
-		if err != nil {
-			return err
+	payload, err := cjson.Marshal(signed)
+	if err != nil {
+		return nil, errors.Annotate(err, "marshal manifest.signed")
+	}
+
+	id, err := ki.ID()
+	if err != nil {
+		return nil, err
+	}
+
+	sig, err := ki.Signature(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, s := range m.Signatures {
+		if s.KeyID == id {
+			s.Sig = sig
+			return nil, errors.New("this manifest file has already been signed by specified key")
 		}
-		defer f.Close()
-
-		ki := KeyInfo{}
-		if err := json.NewDecoder(f).Decode(&ki); err != nil {
-			return err
-		}
-
-		id, err := ki.ID()
-		if err != nil {
-			return err
-		}
-
-		sig, err := ki.Signature(payload)
-		if err != nil {
-			return err
-		}
-
-		for _, s := range m.Signatures {
-			if s.KeyID == id {
-				s.Sig = sig
-				continue NextKey
-			}
-		}
-
-		m.Signatures = append(m.Signatures, &Signature{
-			KeyID: id,
-			Sig:   sig,
-		})
 	}
 
-	content, err = cjson.Marshal(m)
+	m.Signatures = append(m.Signatures, Signature{
+		KeyID: id,
+		Sig:   sig,
+	})
+
+	content, err := cjson.Marshal(m)
 	if err != nil {
-		return err
+		return nil, errors.Annotate(err, "marshal signed manifest")
 	}
 
-	return ioutil.WriteFile(mfile, content, 0664)
-}
-
-// AddComponent adds a new component to an existing repository
-func AddComponent(id, desc, owner, repo string, isDefault bool, pub, priv string) error {
-	// read key files
-	privBytes, err := ioutil.ReadFile(priv)
-	if err != nil {
-		return err
-	}
-	privKey := &KeyInfo{}
-	if err = json.Unmarshal(privBytes, &privKey); err != nil {
-		return err
-	}
-
-	// read manifest index from disk
-	manifests, err := ReadManifestDir(repo, ManifestTypeIndex, ManifestTypeSnapshot)
-	if err != nil {
-		return err
-	}
-	signedManifests := make(map[string]*Manifest)
-
-	// check id conflicts
-	if _, found := ManifestsConfig[strings.ToLower(id)]; found {
-		// reserved keywords
-		return fmt.Errorf("component id '%s' is not allowed, please use another one", id)
-	}
-	if _, found := manifests[ManifestTypeIndex].(*Index).Components[id]; found {
-		return fmt.Errorf("component id '%s' already exist, please use another one", id)
-	}
-
-	// create new component manifest
-	currTime := time.Now().UTC()
-	comp := NewComponent(id, desc, currTime)
-	manifests[id] = comp
-	signedManifests[id], err = SignManifest(comp, privKey)
-	if err != nil {
-		return err
-	}
-
-	// update repository
-	compInfo := ComponentItem{
-		Owner: owner,
-		URL:   fmt.Sprintf("/%s", comp.Filename()),
-	}
-	index := manifests[ManifestTypeIndex].(*Index)
-	index.Components[id] = compInfo
-	if isDefault {
-		index.DefaultComponents = append(index.DefaultComponents, id)
-	}
-	index.Version++ // bump index version
-	signedManifests[ManifestTypeIndex], err = SignManifest(index, privKey)
-	if err != nil {
-		return err
-	}
-
-	// update snapshot
-	snapshot, err := manifests[ManifestTypeSnapshot].(*Snapshot).SetVersions(signedManifests)
-	if err != nil {
-		return err
-	}
-	snapshot.Expires = currTime.Add(ManifestsConfig[ManifestTypeSnapshot].Expire).Format(time.RFC3339)
-	snapshotSigned, err := SignManifest(snapshot, privKey)
-	if err != nil {
-		return err
-	}
-
-	// update timestamp
-	timestamp, err := NewTimestamp(currTime).SetSnapshot(snapshotSigned)
-	if err != nil {
-		return err
-	}
-	timestamp.Version = manifests[ManifestTypeTimestamp].(*Timestamp).Version + 1
-	manifests[ManifestTypeTimestamp] = timestamp
-	signedManifests[ManifestTypeTimestamp], err = SignManifest(timestamp, privKey)
-	if err != nil {
-		return err
-	}
-
-	return BatchSaveManifests(repo, signedManifests)
+	return content, nil
 }
 
 // NewRoot creates a Root object
@@ -529,9 +437,6 @@ func SignManifest(role ValidManifest, keys ...*KeyInfo) (*Manifest, error) {
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
-		if err != nil {
-			return nil, errors.Trace(err)
-		}
 		signs = append(signs, Signature{
 			KeyID: id,
 			Sig:   sign,
@@ -578,8 +483,12 @@ func SignAndWrite(out io.Writer, role ValidManifest, keys ...*KeyInfo) error {
 // Manifest in the manifestList map should already be signed, they are not checked
 // for signature again.
 func BatchSaveManifests(dst string, manifestList map[string]*Manifest) error {
-	for _, m := range manifestList {
-		writer, err := os.OpenFile(filepath.Join(dst, m.Signed.Filename()), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
+	for ty, m := range manifestList {
+		filename := m.Signed.Filename()
+		if ty == ManifestTypeIndex {
+			filename = fmt.Sprintf("%d.%s", m.Signed.Base().Version, m.Signed.Filename())
+		}
+		writer, err := os.OpenFile(filepath.Join(dst, filename), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
 		if err != nil {
 			return err
 		}

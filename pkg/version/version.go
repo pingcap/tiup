@@ -1,4 +1,4 @@
-// Copyright 2020 PingCAP, Inc.
+// Copyright 2021 PingCAP, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,81 +11,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package version
+// This file only contains version related variables and consts, all
+// type definitions and functions shall not be implemented here.
+// This file is excluded from CI tests.
 
-import (
-	"fmt"
-	"runtime"
-)
+package version
 
 var (
 	// TiUPVerMajor is the major version of TiUP
 	TiUPVerMajor = 1
 	// TiUPVerMinor is the minor version of TiUP
-	TiUPVerMinor = 2
+	TiUPVerMinor = 5
 	// TiUPVerPatch is the patch version of TiUP
-	TiUPVerPatch = 3
-	// TiUPVerName is alternative name of the version
+	TiUPVerPatch = 4
+	// TiUPVerName is an alternative name of the version
 	TiUPVerName = "tiup"
 	// GitHash is the current git commit hash
 	GitHash = "Unknown"
-	// GitBranch is the current git branch name
-	GitBranch = "Unknown"
+	// GitRef is the current git reference name (branch or tag)
+	GitRef = "Unknown"
 )
-
-// NightlyVersion represents latest build of master branch.
-const NightlyVersion = "nightly"
-
-// TiUPVersion is the semver of TiUP
-type TiUPVersion struct {
-	major int
-	minor int
-	patch int
-	name  string
-}
-
-// NewTiUPVersion creates a TiUPVersion object
-func NewTiUPVersion() *TiUPVersion {
-	return &TiUPVersion{
-		major: TiUPVerMajor,
-		minor: TiUPVerMinor,
-		patch: TiUPVerPatch,
-		name:  TiUPVerName,
-	}
-}
-
-// Name returns the alternave name of TiUPVersion
-func (v *TiUPVersion) Name() string {
-	return v.name
-}
-
-// SemVer returns TiUPVersion in semver format
-func (v *TiUPVersion) SemVer() string {
-	return fmt.Sprintf("v%d.%d.%d", v.major, v.minor, v.patch)
-}
-
-// String converts TiUPVersion to a string
-func (v *TiUPVersion) String() string {
-	return fmt.Sprintf("v%d.%d.%d %s\n%s", v.major, v.minor, v.patch, v.name, NewTiUPBuildInfo())
-}
-
-// TiUPBuild is the info of building environment
-type TiUPBuild struct {
-	GitHash   string `json:"gitHash"`
-	GitBranch string `json:"gitBranch"`
-	GoVersion string `json:"goVersion"`
-}
-
-// NewTiUPBuildInfo creates a TiUPBuild object
-func NewTiUPBuildInfo() *TiUPBuild {
-	return &TiUPBuild{
-		GitHash:   GitHash,
-		GitBranch: GitBranch,
-		GoVersion: runtime.Version(),
-	}
-}
-
-// String converts TiUPBuild to a string
-func (v *TiUPBuild) String() string {
-	return fmt.Sprintf("Go Version: %s\nGit Branch: %s\nGitHash: %s", v.GoVersion, v.GitBranch, v.GitHash)
-}

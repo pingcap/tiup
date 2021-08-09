@@ -40,6 +40,23 @@ install_binary() {
     return 0
 }
 
+check_depends() {
+    pass=0
+    command -v curl >/dev/null || {
+        echo "Dependency check failed: please install 'curl' before proceeding."
+        pass=1
+    }
+    command -v tar >/dev/null || {
+        echo "Dependency check failed: please install 'tar' before proceeding."
+        pass=1
+    }
+    return $pass
+}
+
+if ! check_depends; then
+    exit 1
+fi
+
 if ! install_binary; then
     echo "Failed to download and/or extract tiup archive."
     exit 1
@@ -68,8 +85,8 @@ echo "Shell profile:  ${bold}$PROFILE${sgr0}"
 
 case :$PATH: in
     *:$bin_dir:*) : "PATH already contains $bin_dir" ;;
-    *) printf 'export PATH=%s:$PATH\n' "$bin_dir" >> "$PROFILE"
-        echo "$PROFILE has been modified to to add tiup to PATH"
+    *) printf '\nexport PATH=%s:$PATH\n' "$bin_dir" >> "$PROFILE"
+        echo "$PROFILE has been modified to add tiup to PATH"
         echo "open a new terminal or ${bold}source ${PROFILE}${sgr0} to use it"
         ;;
 esac

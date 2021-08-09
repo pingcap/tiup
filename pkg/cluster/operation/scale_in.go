@@ -14,6 +14,7 @@
 package operator
 
 import (
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -25,6 +26,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/proxy"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -69,17 +71,17 @@ func AsyncNodes(spec *spec.Specification, nodes []string, async bool) []string {
 
 // ScaleIn scales in the cluster
 func ScaleIn(
-	getter ExecutorGetter,
+	ctx context.Context,
 	cluster *spec.Specification,
 	options Options,
 	tlsCfg *tls.Config,
 ) error {
-	return ScaleInCluster(getter, cluster, options, tlsCfg)
+	return ScaleInCluster(ctx, cluster, options, tlsCfg)
 }
 
 // ScaleInCluster scales in the cluster
 func ScaleInCluster(
-	getter ExecutorGetter,
+	ctx context.Context,
 	cluster *spec.Specification,
 	options Options,
 	tlsCfg *tls.Config,
@@ -92,7 +94,7 @@ func ScaleInCluster(
 	for _, component := range cluster.ComponentsByStartOrder() {
 		for _, instance := range component.Instances() {
 			instances[instance.ID()] = instance
-			instCount[instance.GetHost()] = instCount[instance.GetHost()] + 1
+			instCount[instance.GetHost()]++
 		}
 	}
 
@@ -117,21 +119,45 @@ func ScaleInCluster(
 		return errors.New("cannot delete all TiKV servers")
 	}
 
-	var pdEndpoint []string
+	// Cannot delete TiSpark master server if there's any TiSpark worker remains
+	if len(deletedDiff[spec.ComponentTiSpark]) > 0 {
+		var cntDiffTiSparkMaster int
+		var cntDiffTiSparkWorker int
+		for _, inst := range deletedDiff[spec.ComponentTiSpark] {
+			switch inst.Role() {
+			case spec.RoleTiSparkMaster:
+				cntDiffTiSparkMaster++
+			case spec.RoleTiSparkWorker:
+				cntDiffTiSparkWorker++
+			}
+		}
+		if cntDiffTiSparkMaster == len(cluster.TiSparkMasters) &&
+			cntDiffTiSparkWorker < len(cluster.TiSparkWorkers) {
+			return errors.New("cannot delete tispark master when there are workers left")
+		}
+	}
+
+	var pdEndpoints []string
 	for _, instance := range (&spec.PDComponent{Topology: cluster}).Instances() {
 		if !deletedNodes.Exist(instance.ID()) {
-			pdEndpoint = append(pdEndpoint, Addr(instance))
+			pdEndpoints = append(pdEndpoints, Addr(instance))
 		}
 	}
 
 	// At least a PD server exists
-	if len(pdEndpoint) == 0 {
+	if len(pdEndpoints) == 0 {
 		return errors.New("cannot find available PD instance")
 	}
 
-	pdClient := api.NewPDClient(pdEndpoint, 10*time.Second, tlsCfg)
+	pdClient := api.NewPDClient(pdEndpoints, 10*time.Second, tlsCfg)
 
-	binlogClient, err := api.NewBinlogClient(pdEndpoint, tlsCfg)
+	tcpProxy := proxy.GetTCPProxy()
+	if tcpProxy != nil {
+		closeC := tcpProxy.Run(pdEndpoints)
+		defer tcpProxy.Close(closeC)
+		pdEndpoints = tcpProxy.GetEndpoints()
+	}
+	binlogClient, err := api.NewBinlogClient(pdEndpoints, tlsCfg)
 	if err != nil {
 		return err
 	}
@@ -145,13 +171,13 @@ func ScaleInCluster(
 				compName := component.Name()
 
 				if compName != spec.ComponentPump && compName != spec.ComponentDrainer {
-					if err := deleteMember(component, instance, pdClient, binlogClient, options.APITimeout); err != nil {
+					if err := deleteMember(ctx, component, instance, pdClient, binlogClient, options.APITimeout); err != nil {
 						log.Warnf("failed to delete %s: %v", compName, err)
 					}
 				}
 
 				instCount[instance.GetHost()]--
-				if err := StopAndDestroyInstance(getter, cluster, instance, options, instCount[instance.GetHost()] == 0); err != nil {
+				if err := StopAndDestroyInstance(ctx, cluster, instance, options, instCount[instance.GetHost()] == 0); err != nil {
 					log.Warnf("failed to stop/destroy %s: %v", compName, err)
 				}
 
@@ -159,11 +185,11 @@ func ScaleInCluster(
 				if binlogClient != nil {
 					id := instance.ID()
 					if compName == spec.ComponentPump {
-						if err := binlogClient.UpdatePumpState(id, "offline"); err != nil {
+						if err := binlogClient.UpdatePumpState(ctx, id, "offline"); err != nil {
 							log.Warnf("failed to update %s state as offline: %v", compName, err)
 						}
 					} else if compName == spec.ComponentDrainer {
-						if err := binlogClient.UpdateDrainerState(id, "offline"); err != nil {
+						if err := binlogClient.UpdateDrainerState(ctx, id, "offline"); err != nil {
 							log.Warnf("failed to update %s state as offline: %v", compName, err)
 						}
 					}
@@ -217,14 +243,14 @@ func ScaleInCluster(
 				continue
 			}
 
-			err := deleteMember(component, instance, pdClient, binlogClient, options.APITimeout)
+			err := deleteMember(ctx, component, instance, pdClient, binlogClient, options.APITimeout)
 			if err != nil {
 				return errors.Trace(err)
 			}
 
 			if !asyncOfflineComps.Exist(instance.ComponentName()) {
 				instCount[instance.GetHost()]--
-				if err := StopAndDestroyInstance(getter, cluster, instance, options, instCount[instance.GetHost()] == 0); err != nil {
+				if err := StopAndDestroyInstance(ctx, cluster, instance, options, instCount[instance.GetHost()] == 0); err != nil {
 					return err
 				}
 			} else {
@@ -233,16 +259,6 @@ func ScaleInCluster(
 			}
 		}
 	}
-
-	pdServers := make([]spec.PDSpec, 0, len(cluster.PDServers))
-	for i := 0; i < len(cluster.PDServers); i++ {
-		s := cluster.PDServers[i]
-		id := s.Host + ":" + strconv.Itoa(s.ClientPort)
-		if !deletedNodes.Exist(id) {
-			pdServers = append(pdServers, s)
-		}
-	}
-	cluster.PDServers = pdServers
 
 	for i := 0; i < len(cluster.TiKVServers); i++ {
 		s := cluster.TiKVServers[i]
@@ -288,6 +304,7 @@ func ScaleInCluster(
 }
 
 func deleteMember(
+	ctx context.Context,
 	component spec.Component,
 	instance spec.Instance,
 	pdClient *api.PDClient,
@@ -315,15 +332,15 @@ func deleteMember(
 		}
 	case spec.ComponentDrainer:
 		addr := instance.GetHost() + ":" + strconv.Itoa(instance.GetPort())
-		err := binlogClient.OfflineDrainer(addr, addr)
+		err := binlogClient.OfflineDrainer(ctx, addr)
 		if err != nil {
-			return errors.AddStack(err)
+			return err
 		}
 	case spec.ComponentPump:
 		addr := instance.GetHost() + ":" + strconv.Itoa(instance.GetPort())
-		err := binlogClient.OfflinePump(addr, addr)
+		err := binlogClient.OfflinePump(ctx, addr)
 		if err != nil {
-			return errors.AddStack(err)
+			return err
 		}
 	}
 

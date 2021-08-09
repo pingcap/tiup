@@ -28,7 +28,7 @@ func newRestartCmd() *cobra.Command {
 
 			clusterName := args[0]
 
-			return manager.RestartCluster(clusterName, gOpt)
+			return cm.RestartCluster(clusterName, gOpt, skipConfirm)
 		},
 	}
 

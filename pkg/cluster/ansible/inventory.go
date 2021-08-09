@@ -14,10 +14,10 @@
 package ansible
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/creasty/defaults"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
@@ -44,8 +44,8 @@ var (
 	groupVarsGrafana      = "group_vars/grafana_servers.yml"
 	// groupVarsMonitorAgent = "group_vars/monitored_servers.yml"
 	groupVarsPrometheus = "group_vars/monitoring_servers.yml"
-	//groupVarsLightning    = "group_vars/lightning_server.yml"
-	//groupVarsImporter     = "group_vars/importer_server.yml"
+	// groupVarsLightning    = "group_vars/lightning_server.yml"
+	// groupVarsImporter     = "group_vars/importer_server.yml"
 )
 
 // ParseAndImportInventory builds a basic ClusterMeta from the main Ansible inventory
@@ -60,7 +60,7 @@ func ParseAndImportInventory(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, 
 		if err != nil {
 			return err
 		}
-		clsMeta.Topology.TiDBServers[i] = ins.(spec.TiDBSpec)
+		clsMeta.Topology.TiDBServers[i] = ins.(*spec.TiDBSpec)
 	}
 	for i := 0; i < len(clsMeta.Topology.TiKVServers); i++ {
 		s := clsMeta.Topology.TiKVServers[i]
@@ -68,7 +68,7 @@ func ParseAndImportInventory(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, 
 		if err != nil {
 			return err
 		}
-		clsMeta.Topology.TiKVServers[i] = ins.(spec.TiKVSpec)
+		clsMeta.Topology.TiKVServers[i] = ins.(*spec.TiKVSpec)
 	}
 	for i := 0; i < len(clsMeta.Topology.PDServers); i++ {
 		s := clsMeta.Topology.PDServers[i]
@@ -76,7 +76,7 @@ func ParseAndImportInventory(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, 
 		if err != nil {
 			return err
 		}
-		clsMeta.Topology.PDServers[i] = ins.(spec.PDSpec)
+		clsMeta.Topology.PDServers[i] = ins.(*spec.PDSpec)
 	}
 	for i := 0; i < len(clsMeta.Topology.TiFlashServers); i++ {
 		s := clsMeta.Topology.TiFlashServers[i]
@@ -84,7 +84,7 @@ func ParseAndImportInventory(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, 
 		if err != nil {
 			return err
 		}
-		clsMeta.Topology.TiFlashServers[i] = ins.(spec.TiFlashSpec)
+		clsMeta.Topology.TiFlashServers[i] = ins.(*spec.TiFlashSpec)
 	}
 	for i := 0; i < len(clsMeta.Topology.PumpServers); i++ {
 		s := clsMeta.Topology.PumpServers[i]
@@ -92,7 +92,7 @@ func ParseAndImportInventory(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, 
 		if err != nil {
 			return err
 		}
-		clsMeta.Topology.PumpServers[i] = ins.(spec.PumpSpec)
+		clsMeta.Topology.PumpServers[i] = ins.(*spec.PumpSpec)
 	}
 	for i := 0; i < len(clsMeta.Topology.Drainers); i++ {
 		s := clsMeta.Topology.Drainers[i]
@@ -100,7 +100,7 @@ func ParseAndImportInventory(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, 
 		if err != nil {
 			return err
 		}
-		clsMeta.Topology.Drainers[i] = ins.(spec.DrainerSpec)
+		clsMeta.Topology.Drainers[i] = ins.(*spec.DrainerSpec)
 	}
 	for i := 0; i < len(clsMeta.Topology.Monitors); i++ {
 		s := clsMeta.Topology.Monitors[i]
@@ -108,7 +108,7 @@ func ParseAndImportInventory(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, 
 		if err != nil {
 			return err
 		}
-		clsMeta.Topology.Monitors[i] = ins.(spec.PrometheusSpec)
+		clsMeta.Topology.Monitors[i] = ins.(*spec.PrometheusSpec)
 	}
 	for i := 0; i < len(clsMeta.Topology.Alertmanagers); i++ {
 		s := clsMeta.Topology.Alertmanagers[i]
@@ -116,7 +116,7 @@ func ParseAndImportInventory(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, 
 		if err != nil {
 			return err
 		}
-		clsMeta.Topology.Alertmanagers[i] = ins.(spec.AlertmanagerSpec)
+		clsMeta.Topology.Alertmanagers[i] = ins.(*spec.AlertmanagerSpec)
 	}
 	for i := 0; i < len(clsMeta.Topology.Grafanas); i++ {
 		s := clsMeta.Topology.Grafanas[i]
@@ -124,7 +124,7 @@ func ParseAndImportInventory(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, 
 		if err != nil {
 			return err
 		}
-		clsMeta.Topology.Grafanas[i] = ins.(spec.GrafanaSpec)
+		clsMeta.Topology.Grafanas[i] = ins.(*spec.GrafanaSpec)
 	}
 
 	// TODO: get values from templates of roles to overwrite defaults
@@ -172,10 +172,11 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 			if host == "" {
 				host = srv.Name
 			}
-			tmpIns := spec.TiDBSpec{
+			tmpIns := &spec.TiDBSpec{
 				Host:     host,
 				SSHPort:  getHostPort(srv, ansCfg),
 				Imported: true,
+				Arch:     "amd64",
 			}
 
 			if port, ok := grpVars["tidb_port"]; ok {
@@ -193,7 +194,7 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 				tmpIns.StatusPort, _ = strconv.Atoi(statusPort)
 			}
 			if logDir, ok := srv.Vars["tidb_log_dir"]; ok {
-				tmpIns.LogDir = logDir
+				tmpIns.LogDir = strings.Trim(logDir, "\"")
 			}
 
 			log.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
@@ -214,10 +215,11 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 			if host == "" {
 				host = srv.Name
 			}
-			tmpIns := spec.TiKVSpec{
+			tmpIns := &spec.TiKVSpec{
 				Host:     host,
 				SSHPort:  getHostPort(srv, ansCfg),
 				Imported: true,
+				Arch:     "amd64",
 			}
 
 			if port, ok := grpVars["tikv_port"]; ok {
@@ -235,10 +237,10 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 				tmpIns.StatusPort, _ = strconv.Atoi(statusPort)
 			}
 			if dataDir, ok := srv.Vars["tikv_data_dir"]; ok {
-				tmpIns.DataDir = dataDir
+				tmpIns.DataDir = strings.Trim(dataDir, "\"")
 			}
 			if logDir, ok := srv.Vars["tikv_log_dir"]; ok {
-				tmpIns.LogDir = logDir
+				tmpIns.LogDir = strings.Trim(logDir, "\"")
 			}
 
 			log.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
@@ -259,10 +261,11 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 			if host == "" {
 				host = srv.Name
 			}
-			tmpIns := spec.PDSpec{
+			tmpIns := &spec.PDSpec{
 				Host:     host,
 				SSHPort:  getHostPort(srv, ansCfg),
 				Imported: true,
+				Arch:     "amd64",
 			}
 			if tmpIns.Host != srv.Name {
 				tmpIns.Name = srv.Name // use alias as the name of PD
@@ -283,10 +286,10 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 				tmpIns.PeerPort, _ = strconv.Atoi(peerPort)
 			}
 			if dataDir, ok := srv.Vars["pd_data_dir"]; ok {
-				tmpIns.DataDir = dataDir
+				tmpIns.DataDir = strings.Trim(dataDir, "\"")
 			}
 			if logDir, ok := srv.Vars["pd_log_dir"]; ok {
-				tmpIns.LogDir = logDir
+				tmpIns.LogDir = strings.Trim(logDir, "\"")
 			}
 
 			log.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
@@ -307,10 +310,11 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 			if host == "" {
 				host = srv.Name
 			}
-			tmpIns := spec.TiFlashSpec{
+			tmpIns := &spec.TiFlashSpec{
 				Host:     host,
 				SSHPort:  getHostPort(srv, ansCfg),
 				Imported: true,
+				Arch:     "amd64",
 			}
 
 			if tcpPort, ok := grpVars["tcp_port"]; ok {
@@ -352,10 +356,10 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 				tmpIns.StatusPort, _ = strconv.Atoi(statusPort)
 			}
 			if dataDir, ok := srv.Vars["data_dir"]; ok {
-				tmpIns.DataDir = dataDir
+				tmpIns.DataDir = strings.Trim(dataDir, "\"")
 			}
 			if logDir, ok := srv.Vars["tiflash_log_dir"]; ok {
-				tmpIns.LogDir = logDir
+				tmpIns.LogDir = strings.Trim(logDir, "\"")
 			}
 			if tmpDir, ok := srv.Vars["tmp_path"]; ok {
 				tmpIns.TmpDir = tmpDir
@@ -384,10 +388,11 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 			if host == "" {
 				host = srv.Name
 			}
-			tmpIns := spec.PrometheusSpec{
+			tmpIns := &spec.PrometheusSpec{
 				Host:     host,
 				SSHPort:  getHostPort(srv, ansCfg),
 				Imported: true,
+				Arch:     "amd64",
 			}
 
 			if port, ok := grpVars["prometheus_port"]; ok {
@@ -429,10 +434,11 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 			if host == "" {
 				host = srv.Name
 			}
-			tmpIns := spec.AlertmanagerSpec{
+			tmpIns := &spec.AlertmanagerSpec{
 				Host:     host,
 				SSHPort:  getHostPort(srv, ansCfg),
 				Imported: true,
+				Arch:     "amd64",
 			}
 
 			if port, ok := grpVars["alertmanager_port"]; ok {
@@ -468,10 +474,11 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 			if host == "" {
 				host = srv.Name
 			}
-			tmpIns := spec.GrafanaSpec{
+			tmpIns := &spec.GrafanaSpec{
 				Host:     host,
 				SSHPort:  getHostPort(srv, ansCfg),
 				Imported: true,
+				Arch:     "amd64",
 			}
 
 			if port, ok := grpVars["grafana_port"]; ok {
@@ -481,6 +488,13 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 			// apply values from the host
 			if port, ok := srv.Vars["grafana_port"]; ok {
 				tmpIns.Port, _ = strconv.Atoi(port)
+			}
+
+			if username, ok := srv.Vars["grafana_admin_user"]; ok {
+				tmpIns.Username = strings.Trim(username, "\"")
+			}
+			if passwd, ok := srv.Vars["grafana_admin_password"]; ok {
+				tmpIns.Password = strings.Trim(passwd, "\"")
 			}
 
 			log.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
@@ -505,10 +519,11 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 			if host == "" {
 				host = srv.Name
 			}
-			tmpIns := spec.PumpSpec{
+			tmpIns := &spec.PumpSpec{
 				Host:     host,
 				SSHPort:  getHostPort(srv, ansCfg),
 				Imported: true,
+				Arch:     "amd64",
 			}
 
 			// nothing in pump_servers.yml
@@ -520,10 +535,10 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 				tmpIns.Port, _ = strconv.Atoi(port)
 			}
 			if dataDir, ok := srv.Vars["pump_data_dir"]; ok {
-				tmpIns.DataDir = dataDir
+				tmpIns.DataDir = strings.Trim(dataDir, "\"")
 			}
 			if logDir, ok := srv.Vars["pump_log_dir"]; ok {
-				tmpIns.LogDir = logDir
+				tmpIns.LogDir = strings.Trim(logDir, "\"")
 			}
 
 			log.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
@@ -546,10 +561,11 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 			if host == "" {
 				host = srv.Name
 			}
-			tmpIns := spec.DrainerSpec{
+			tmpIns := &spec.DrainerSpec{
 				Host:     host,
 				SSHPort:  getHostPort(srv, ansCfg),
 				Imported: true,
+				Arch:     "amd64",
 			}
 
 			// nothing in drainer_servers.yml
@@ -579,7 +595,7 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 func readGroupVars(dir, filename string) (map[string]string, error) {
 	result := make(map[string]string)
 
-	fileData, err := ioutil.ReadFile(filepath.Join(dir, filename))
+	fileData, err := os.ReadFile(filepath.Join(dir, filename))
 	if err != nil {
 		return nil, err
 	}
@@ -600,7 +616,6 @@ func GetHostPort(host *aini.Host, cfg *ini.File) int {
 // 2. get from cfg.Section("defaults").Key("remote_port")
 // 3. get from srv.Port
 func getHostPort(srv *aini.Host, cfg *ini.File) int {
-
 	// parse per host config
 	// aini parse the port inline with hostnames (e.g., something like `host:22`)
 	// but not handling the "ansible_port" variable
@@ -637,7 +652,7 @@ func readAnsibleCfg(cfgFile string) (*ini.File, error) {
 		}
 		cfgData = []byte(data)
 	} else {
-		cfgData, err = ioutil.ReadFile(cfgFile)
+		cfgData, err = os.ReadFile(cfgFile)
 		if err != nil {
 			return nil, err
 		}

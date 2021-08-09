@@ -17,26 +17,41 @@ import (
 	"fmt"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cliutil"
-	"github.com/pingcap/tiup/pkg/errutil"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/tui"
+	"github.com/pingcap/tiup/pkg/utils"
 	"go.uber.org/zap"
 )
 
 // pre defined error types
 var (
 	errNSDeploy              = errNS.NewSubNamespace("deploy")
-	errDeployDirConflict     = errNSDeploy.NewType("dir_conflict", errutil.ErrTraitPreCheck)
-	errDeployPortConflict    = errNSDeploy.NewType("port_conflict", errutil.ErrTraitPreCheck)
+	errDeployDirConflict     = errNSDeploy.NewType("dir_conflict", utils.ErrTraitPreCheck)
+	errDeployDirOverlap      = errNSDeploy.NewType("dir_overlap", utils.ErrTraitPreCheck)
+	errDeployPortConflict    = errNSDeploy.NewType("port_conflict", utils.ErrTraitPreCheck)
 	ErrNoTiSparkMaster       = errors.New("there must be a Spark master node if you want to use the TiSpark component")
 	ErrMultipleTiSparkMaster = errors.New("a TiSpark enabled cluster with more than 1 Spark master node is not supported")
 	ErrMultipleTisparkWorker = errors.New("multiple TiSpark workers on the same host is not supported by Spark")
+	ErrUserOrGroupInvalid    = errors.New(`linux username and groupname must start with a lower case letter or an underscore, ` +
+		`followed by lower case letters, digits, underscores, or dashes. ` +
+		`Usernames may only be up to 32 characters long. ` +
+		`Groupnames may only be up to 16 characters long.`)
+)
+
+// Linux username and groupname must start with a lower case letter or an underscore,
+// followed by lower case letters, digits, underscores, or dashes.
+// ref https://man7.org/linux/man-pages/man8/useradd.8.html
+// ref https://man7.org/linux/man-pages/man8/groupadd.8.html
+var (
+	reUser  = regexp.MustCompile(`^[a-z_]([a-z0-9_-]{0,31}|[a-z0-9_-]{0,30}\$)$`)
+	reGroup = regexp.MustCompile(`^[a-z_]([a-z0-9_-]{0,15})$`)
 )
 
 func fixDir(topo Topology) func(string) string {
@@ -48,13 +63,13 @@ func fixDir(topo Topology) func(string) string {
 	}
 }
 
-// CheckClusterDirConflict checks cluster dir conflict
-func CheckClusterDirConflict(clusterList map[string]Metadata, clusterName string, topo Topology) error {
-	type DirAccessor struct {
-		dirKind  string
-		accessor func(Instance, Topology) string
-	}
+// DirAccessor stands for a directory accessor for an instance
+type DirAccessor struct {
+	dirKind  string
+	accessor func(Instance, Topology) string
+}
 
+func dirAccessors() ([]DirAccessor, []DirAccessor) {
 	instanceDirAccessor := []DirAccessor{
 		{dirKind: "deploy directory", accessor: func(instance Instance, topo Topology) string { return instance.DeployDir() }},
 		{dirKind: "data directory", accessor: func(instance Instance, topo Topology) string { return instance.DataDir() }},
@@ -66,34 +81,55 @@ func CheckClusterDirConflict(clusterList map[string]Metadata, clusterName string
 			if m == nil {
 				return ""
 			}
-			return topo.BaseTopo().MonitoredOptions.DeployDir
+			return m.DeployDir
 		}},
 		{dirKind: "monitor data directory", accessor: func(instance Instance, topo Topology) string {
 			m := topo.BaseTopo().MonitoredOptions
 			if m == nil {
 				return ""
 			}
-			return topo.BaseTopo().MonitoredOptions.DataDir
+			return m.DataDir
 		}},
 		{dirKind: "monitor log directory", accessor: func(instance Instance, topo Topology) string {
 			m := topo.BaseTopo().MonitoredOptions
 			if m == nil {
 				return ""
 			}
-			return topo.BaseTopo().MonitoredOptions.LogDir
+			return m.LogDir
 		}},
 	}
 
-	type Entry struct {
-		clusterName string
-		dirKind     string
-		dir         string
-		instance    Instance
+	return instanceDirAccessor, hostDirAccessor
+}
+
+// DirEntry stands for a directory with attributes and instance
+type DirEntry struct {
+	clusterName string
+	dirKind     string
+	dir         string
+	instance    Instance
+}
+
+func appendEntries(name string, topo Topology, inst Instance, dirAccessor DirAccessor, targets []DirEntry) []DirEntry {
+	for _, dir := range strings.Split(fixDir(topo)(dirAccessor.accessor(inst, topo)), ",") {
+		targets = append(targets, DirEntry{
+			clusterName: name,
+			dirKind:     dirAccessor.dirKind,
+			dir:         dir,
+			instance:    inst,
+		})
 	}
 
-	currentEntries := []Entry{}
-	existingEntries := []Entry{}
+	return targets
+}
 
+// CheckClusterDirConflict checks cluster dir conflict or overlap
+func CheckClusterDirConflict(clusterList map[string]Metadata, clusterName string, topo Topology) error {
+	instanceDirAccessor, hostDirAccessor := dirAccessors()
+	currentEntries := []DirEntry{}
+	existingEntries := []DirEntry{}
+
+	// rebuild existing disk status
 	for name, metadata := range clusterList {
 		if name == clusterName {
 			continue
@@ -101,55 +137,26 @@ func CheckClusterDirConflict(clusterList map[string]Metadata, clusterName string
 
 		topo := metadata.GetTopology()
 
-		f := fixDir(topo)
 		topo.IterInstance(func(inst Instance) {
 			for _, dirAccessor := range instanceDirAccessor {
-				for _, dir := range strings.Split(f(dirAccessor.accessor(inst, topo)), ",") {
-					existingEntries = append(existingEntries, Entry{
-						clusterName: name,
-						dirKind:     dirAccessor.dirKind,
-						dir:         dir,
-						instance:    inst,
-					})
-				}
+				existingEntries = appendEntries(name, topo, inst, dirAccessor, existingEntries)
 			}
 		})
 		IterHost(topo, func(inst Instance) {
 			for _, dirAccessor := range hostDirAccessor {
-				for _, dir := range strings.Split(f(dirAccessor.accessor(inst, topo)), ",") {
-					existingEntries = append(existingEntries, Entry{
-						clusterName: name,
-						dirKind:     dirAccessor.dirKind,
-						dir:         dir,
-						instance:    inst,
-					})
-				}
+				existingEntries = appendEntries(name, topo, inst, dirAccessor, existingEntries)
 			}
 		})
 	}
 
-	f := fixDir(topo)
 	topo.IterInstance(func(inst Instance) {
 		for _, dirAccessor := range instanceDirAccessor {
-			for _, dir := range strings.Split(f(dirAccessor.accessor(inst, topo)), ",") {
-				currentEntries = append(currentEntries, Entry{
-					dirKind:  dirAccessor.dirKind,
-					dir:      dir,
-					instance: inst,
-				})
-			}
+			currentEntries = appendEntries(clusterName, topo, inst, dirAccessor, currentEntries)
 		}
 	})
-
 	IterHost(topo, func(inst Instance) {
 		for _, dirAccessor := range hostDirAccessor {
-			for _, dir := range strings.Split(f(dirAccessor.accessor(inst, topo)), ",") {
-				currentEntries = append(currentEntries, Entry{
-					dirKind:  dirAccessor.dirKind,
-					dir:      dir,
-					instance: inst,
-				})
-			}
+			currentEntries = appendEntries(clusterName, topo, inst, dirAccessor, currentEntries)
 		}
 	})
 
@@ -177,7 +184,7 @@ func CheckClusterDirConflict(clusterList map[string]Metadata, clusterName string
 					"ExistHost":      d2.instance.GetHost(),
 				}
 				zap.L().Info("Meet deploy directory conflict", zap.Any("info", properties))
-				return errDeployDirConflict.New("Deploy directory conflicts to an existing cluster").WithProperty(cliutil.SuggestionFromTemplate(`
+				return errDeployDirConflict.New("Deploy directory conflicts to an existing cluster").WithProperty(tui.SuggestionFromTemplate(`
 The directory you specified in the topology file is:
   Directory: {{ColorKeyword}}{{.ThisDirKind}} {{.ThisDir}}{{ColorReset}}
   Component: {{ColorKeyword}}{{.ThisComponent}} {{.ThisHost}}{{ColorReset}}
@@ -193,15 +200,85 @@ Please change to use another directory or another host.
 		}
 	}
 
+	return CheckClusterDirOverlap(currentEntries)
+}
+
+// CheckClusterDirOverlap checks cluster dir overlaps with data or log.
+// this should only be used across clusters.
+// we don't allow to deploy log under data, and vise versa.
+// ref https://github.com/pingcap/tiup/issues/1047#issuecomment-761711508
+func CheckClusterDirOverlap(entries []DirEntry) error {
+	ignore := func(d1, d2 DirEntry) bool {
+		return (d1.instance.GetHost() != d2.instance.GetHost()) ||
+			d1.dir == "" || d2.dir == "" ||
+			strings.HasSuffix(d1.dirKind, "deploy directory") ||
+			strings.HasSuffix(d2.dirKind, "deploy directory")
+	}
+	for i := 0; i < len(entries)-1; i++ {
+		d1 := entries[i]
+		for j := i + 1; j < len(entries); j++ {
+			d2 := entries[j]
+			if ignore(d1, d2) {
+				continue
+			}
+
+			if utils.IsSubDir(d1.dir, d2.dir) || utils.IsSubDir(d2.dir, d1.dir) {
+				// overlap is allowed in the case both sides are imported
+				if d1.instance.IsImported() && d2.instance.IsImported() {
+					continue
+				}
+				// overlap is allowed in the case one side is imported and the other is monitor,
+				// we assume that the monitor is deployed with the first instance in that host,
+				// it implies that the monitor is imported too.
+				if (strings.HasPrefix(d1.dirKind, "monitor") && d2.instance.IsImported()) ||
+					(d1.instance.IsImported() && strings.HasPrefix(d2.dirKind, "monitor")) {
+					continue
+				}
+
+				// overlap is allowed in the case one side is data dir of a monitor instance,
+				// as the *_exporter don't need data dir, the field is only kept for compatiability
+				// with legacy tidb-ansible deployments.
+				if (strings.HasPrefix(d1.dirKind, "monitor data directory")) ||
+					(strings.HasPrefix(d2.dirKind, "monitor data directory")) {
+					continue
+				}
+
+				properties := map[string]string{
+					"ThisDirKind":   d1.dirKind,
+					"ThisDir":       d1.dir,
+					"ThisComponent": d1.instance.ComponentName(),
+					"ThisHost":      d1.instance.GetHost(),
+					"ThatDirKind":   d2.dirKind,
+					"ThatDir":       d2.dir,
+					"ThatComponent": d2.instance.ComponentName(),
+					"ThatHost":      d2.instance.GetHost(),
+				}
+				zap.L().Info("Meet deploy directory overlap", zap.Any("info", properties))
+				return errDeployDirOverlap.New("Deploy directory overlaps to another instance").WithProperty(tui.SuggestionFromTemplate(`
+The directory you specified in the topology file is:
+  Directory: {{ColorKeyword}}{{.ThisDirKind}} {{.ThisDir}}{{ColorReset}}
+  Component: {{ColorKeyword}}{{.ThisComponent}} {{.ThisHost}}{{ColorReset}}
+
+It overlaps to another instance:
+  Other Directory: {{ColorKeyword}}{{.ThatDirKind}} {{.ThatDir}}{{ColorReset}}
+  Other Component: {{ColorKeyword}}{{.ThatComponent}} {{.ThatHost}}{{ColorReset}}
+
+Please modify the topology file and try again.
+`, properties))
+			}
+		}
+	}
+
 	return nil
 }
 
 // CheckClusterPortConflict checks cluster dir conflict
 func CheckClusterPortConflict(clusterList map[string]Metadata, clusterName string, topo Topology) error {
 	type Entry struct {
-		clusterName string
-		instance    Instance
-		port        int
+		clusterName   string
+		componentName string
+		port          int
+		instance      Instance
 	}
 
 	currentEntries := []Entry{}
@@ -222,23 +299,26 @@ func CheckClusterPortConflict(clusterList map[string]Metadata, clusterName strin
 			blackboxExporterPort := mOpt.BlackboxExporterPort
 			for _, port := range inst.UsedPorts() {
 				existingEntries = append(existingEntries, Entry{
-					clusterName: name,
-					instance:    inst,
-					port:        port,
+					clusterName:   name,
+					componentName: inst.ComponentName(),
+					port:          port,
+					instance:      inst,
 				})
 			}
 			if !uniqueHosts.Exist(inst.GetHost()) {
 				uniqueHosts.Insert(inst.GetHost())
 				existingEntries = append(existingEntries,
 					Entry{
-						clusterName: name,
-						instance:    inst,
-						port:        nodeExporterPort,
+						clusterName:   name,
+						componentName: RoleMonitor,
+						port:          nodeExporterPort,
+						instance:      inst,
 					},
 					Entry{
-						clusterName: name,
-						instance:    inst,
-						port:        blackboxExporterPort,
+						clusterName:   name,
+						componentName: RoleMonitor,
+						port:          blackboxExporterPort,
+						instance:      inst,
 					})
 			}
 		})
@@ -248,8 +328,9 @@ func CheckClusterPortConflict(clusterList map[string]Metadata, clusterName strin
 	topo.IterInstance(func(inst Instance) {
 		for _, port := range inst.UsedPorts() {
 			currentEntries = append(currentEntries, Entry{
-				instance: inst,
-				port:     port,
+				componentName: inst.ComponentName(),
+				port:          port,
+				instance:      inst,
 			})
 		}
 
@@ -261,12 +342,14 @@ func CheckClusterPortConflict(clusterList map[string]Metadata, clusterName strin
 			uniqueHosts.Insert(inst.GetHost())
 			currentEntries = append(currentEntries,
 				Entry{
-					instance: inst,
-					port:     mOpt.NodeExporterPort,
+					componentName: RoleMonitor,
+					port:          mOpt.NodeExporterPort,
+					instance:      inst,
 				},
 				Entry{
-					instance: inst,
-					port:     mOpt.BlackboxExporterPort,
+					componentName: RoleMonitor,
+					port:          mOpt.BlackboxExporterPort,
+					instance:      inst,
 				})
 		}
 	})
@@ -280,15 +363,15 @@ func CheckClusterPortConflict(clusterList map[string]Metadata, clusterName strin
 			if p1.port == p2.port {
 				properties := map[string]string{
 					"ThisPort":       strconv.Itoa(p1.port),
-					"ThisComponent":  p1.instance.ComponentName(),
+					"ThisComponent":  p1.componentName,
 					"ThisHost":       p1.instance.GetHost(),
 					"ExistCluster":   p2.clusterName,
 					"ExistPort":      strconv.Itoa(p2.port),
-					"ExistComponent": p2.instance.ComponentName(),
+					"ExistComponent": p2.componentName,
 					"ExistHost":      p2.instance.GetHost(),
 				}
 				zap.L().Info("Meet deploy port conflict", zap.Any("info", properties))
-				return errDeployPortConflict.New("Deploy port conflicts to an existing cluster").WithProperty(cliutil.SuggestionFromTemplate(`
+				return errDeployPortConflict.New("Deploy port conflicts to an existing cluster").WithProperty(tui.SuggestionFromTemplate(`
 The port you specified in the topology file is:
   Port:      {{ColorKeyword}}{{.ThisPort}}{{ColorReset}}
   Component: {{ColorKeyword}}{{.ThisComponent}} {{.ThisHost}}{{ColorReset}}
@@ -339,7 +422,7 @@ func (e *TiKVLabelError) Error() string {
 	return str
 }
 
-// TiKVLabelProvider provide store labels information
+// TiKVLabelProvider provides the store labels information
 type TiKVLabelProvider interface {
 	GetTiKVLabels() (map[string]map[string]string, error)
 }
@@ -362,7 +445,7 @@ func CheckTiKVLabels(pdLocLabels []string, slp TiKVLabelProvider) error {
 	}
 	for kv := range storeLabels {
 		host := getHostFromAddress(kv)
-		hosts[host] = hosts[host] + 1
+		hosts[host]++
 	}
 
 	for kv, ls := range storeLabels {
@@ -412,9 +495,9 @@ func (s *Specification) platformConflictsDetect() error {
 
 		compSpecs := topoSpec.Field(i)
 		for index := 0; index < compSpecs.Len(); index++ {
-			compSpec := compSpecs.Index(index)
+			compSpec := reflect.Indirect(compSpecs.Index(index))
 			// skip nodes imported from TiDB-Ansible
-			if compSpec.Interface().(InstanceSpec).IsImported() {
+			if compSpec.Addr().Interface().(InstanceSpec).IsImported() {
 				continue
 			}
 			// check hostname
@@ -453,6 +536,49 @@ func (s *Specification) platformConflictsDetect() error {
 	return nil
 }
 
+func (s *Specification) portInvalidDetect() error {
+	topoSpec := reflect.ValueOf(s).Elem()
+	topoType := reflect.TypeOf(s).Elem()
+
+	checkPort := func(idx int, compSpec reflect.Value) error {
+		compSpec = reflect.Indirect(compSpec)
+		cfg := strings.Split(topoType.Field(idx).Tag.Get("yaml"), ",")[0]
+
+		for i := 0; i < compSpec.NumField(); i++ {
+			if strings.HasSuffix(compSpec.Type().Field(i).Name, "Port") {
+				port := int(compSpec.Field(i).Int())
+				if port <= 0 || port >= 65535 {
+					portField := strings.Split(compSpec.Type().Field(i).Tag.Get("yaml"), ",")[0]
+					return errors.Errorf("`%s` of %s=%d is invalid, port should be in the range [0, 65535]", cfg, portField, port)
+				}
+			}
+		}
+		return nil
+	}
+
+	for i := 0; i < topoSpec.NumField(); i++ {
+		compSpecs := topoSpec.Field(i)
+
+		// check on struct
+		if compSpecs.Kind() == reflect.Struct {
+			if err := checkPort(i, compSpecs); err != nil {
+				return err
+			}
+			continue
+		}
+
+		// check on slice
+		for index := 0; index < compSpecs.Len(); index++ {
+			compSpec := reflect.Indirect(compSpecs.Index(index))
+			if err := checkPort(i, compSpec); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 func (s *Specification) portConflictsDetect() error {
 	type (
 		usedPort struct {
@@ -488,9 +614,9 @@ func (s *Specification) portConflictsDetect() error {
 
 		compSpecs := topoSpec.Field(i)
 		for index := 0; index < compSpecs.Len(); index++ {
-			compSpec := compSpecs.Index(index)
+			compSpec := reflect.Indirect(compSpecs.Index(index))
 			// skip nodes imported from TiDB-Ansible
-			if compSpec.Interface().(InstanceSpec).IsImported() {
+			if compSpec.Addr().Interface().(InstanceSpec).IsImported() {
 				continue
 			}
 			// check hostname
@@ -599,7 +725,7 @@ func (s *Specification) dirConflictsDetect() error {
 
 		compSpecs := topoSpec.Field(i)
 		for index := 0; index < compSpecs.Len(); index++ {
-			compSpec := compSpecs.Index(index)
+			compSpec := reflect.Indirect(compSpecs.Index(index))
 			// check hostname
 			host := compSpec.FieldByName("Host").String()
 			cfg := strings.Split(topoType.Field(i).Tag.Get("yaml"), ",")[0] // without meta
@@ -630,7 +756,7 @@ func (s *Specification) dirConflictsDetect() error {
 					prev, exist := dirStats[item]
 					// not checking between imported nodes
 					if exist &&
-						!(compSpec.Interface().(InstanceSpec).IsImported() && prev.imported) {
+						!(compSpec.Addr().Interface().(InstanceSpec).IsImported() && prev.imported) {
 						return &meta.ValidateErr{
 							Type:   meta.TypeConflict,
 							Target: "directory",
@@ -644,7 +770,7 @@ func (s *Specification) dirConflictsDetect() error {
 					dirStats[item] = conflict{
 						tp:       tp,
 						cfg:      cfg,
-						imported: compSpec.Interface().(InstanceSpec).IsImported(),
+						imported: compSpec.Addr().Interface().(InstanceSpec).IsImported(),
 					}
 				}
 			}
@@ -684,7 +810,7 @@ func (s *Specification) CountDir(targetHost, dirPrefix string) int {
 
 		compSpecs := topoSpec.Field(i)
 		for index := 0; index < compSpecs.Len(); index++ {
-			compSpec := compSpecs.Index(index)
+			compSpec := reflect.Indirect(compSpecs.Index(index))
 			deployDir := compSpec.FieldByName("DeployDir").String()
 			host := compSpec.FieldByName("Host").String()
 
@@ -794,27 +920,63 @@ func (s *Specification) validateTLSEnabled() error {
 	return nil
 }
 
+func (s *Specification) validateUserGroup() error {
+	gOpts := s.GlobalOptions
+	if user := gOpts.User; !reUser.MatchString(user) {
+		return errors.Annotatef(ErrUserOrGroupInvalid, "`global` of user='%s' is invalid", user)
+	}
+	// if group is nil, then we'll set it to the same as user
+	if group := gOpts.Group; group != "" && !reGroup.MatchString(group) {
+		return errors.Annotatef(ErrUserOrGroupInvalid, "`global` of group='%s' is invalid", group)
+	}
+	return nil
+}
+
+func (s *Specification) validatePDNames() error {
+	// check pdserver name
+	pdNames := set.NewStringSet()
+	for _, pd := range s.PDServers {
+		if pd.Name == "" {
+			continue
+		}
+
+		if pdNames.Exist(pd.Name) {
+			return errors.Errorf("component pd_servers.name is not supported duplicated, the name %s is duplicated", pd.Name)
+		}
+		pdNames.Insert(pd.Name)
+	}
+	return nil
+}
+
+func (s *Specification) validateTiFlashConfigs() error {
+	c := FindComponent(s, ComponentTiFlash)
+	for _, ins := range c.Instances() {
+		if err := ins.(*TiFlashInstance).CheckIncorrectConfigs(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Validate validates the topology specification and produce error if the
 // specification invalid (e.g: port conflicts or directory conflicts)
 func (s *Specification) Validate() error {
-	if err := s.validateTLSEnabled(); err != nil {
-		return err
+	validators := []func() error{
+		s.validateTLSEnabled,
+		s.platformConflictsDetect,
+		s.portInvalidDetect,
+		s.portConflictsDetect,
+		s.dirConflictsDetect,
+		s.validateUserGroup,
+		s.validatePDNames,
+		s.validateTiSparkSpec,
+		s.validateTiFlashConfigs,
 	}
 
-	if err := s.platformConflictsDetect(); err != nil {
-		return err
-	}
-
-	if err := s.portConflictsDetect(); err != nil {
-		return err
-	}
-
-	if err := s.dirConflictsDetect(); err != nil {
-		return err
-	}
-
-	if err := s.validateTiSparkSpec(); err != nil {
-		return err
+	for _, v := range validators {
+		if err := v(); err != nil {
+			return err
+		}
 	}
 
 	return RelativePathDetect(s, isSkipField)
@@ -837,7 +999,7 @@ func RelativePathDetect(topo interface{}, isSkipField func(reflect.Value) bool) 
 
 		compSpecs := topoSpec.Field(i)
 		for index := 0; index < compSpecs.Len(); index++ {
-			compSpec := compSpecs.Index(index)
+			compSpec := reflect.Indirect(compSpecs.Index(index))
 
 			// Relateve path detect
 			for _, field := range pathTypes {

@@ -17,7 +17,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/pingcap/tiup/pkg/repository/v0manifest"
+	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/mod/semver"
 )
 
@@ -46,12 +46,12 @@ data-dir = "%[6]s"
 max-open-files = 256
 `
 
-func writeTiFlashProxyConfig(w io.Writer, version v0manifest.Version, ip, deployDir string, servicePort, proxyPort, proxyStatusPort int) error {
+func writeTiFlashProxyConfig(w io.Writer, version utils.Version, ip, deployDir string, servicePort, proxyPort, proxyStatusPort int) error {
 	// TODO: support multi-dir
 	dataDir := fmt.Sprintf("%s/flash", deployDir)
 	logDir := fmt.Sprintf("%s/log", deployDir)
 	var statusAddr string
-	if semver.Compare(version.String(), "v4.0.5") >= 0 || version.String() == "nightly" {
+	if semver.Compare(version.String(), "v4.0.5") >= 0 || version.IsNightly() {
 		statusAddr = fmt.Sprintf(`status-addr = "0.0.0.0:%[2]d"
 advertise-status-addr = "%[1]s:%[2]d"`, ip, proxyStatusPort)
 	} else {

@@ -14,10 +14,11 @@
 package operator
 
 import (
+	"context"
 	"strings"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/module"
 )
 
@@ -33,13 +34,13 @@ import (
 
 Mar 09 13:56:19 ip-172-16-5-70 systemd[1]: Started drainer-8249 service.
 */
-func GetServiceStatus(e executor.Executor, name string) (active string, err error) {
+func GetServiceStatus(ctx context.Context, e ctxt.Executor, name string) (active string, err error) {
 	c := module.SystemdModuleConfig{
 		Unit:   name,
 		Action: "status",
 	}
 	systemd := module.NewSystemdModule(c)
-	stdout, _, err := systemd.Execute(e)
+	stdout, _, err := systemd.Execute(ctx, e)
 
 	lines := strings.Split(string(stdout), "\n")
 	if len(lines) >= 3 {

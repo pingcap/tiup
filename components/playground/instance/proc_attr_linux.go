@@ -11,6 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+//go:build linux
 // +build linux
 
 package instance
@@ -20,4 +21,5 @@ import "syscall"
 // SysProcAttr to be use for every Process we start.
 var SysProcAttr = &syscall.SysProcAttr{
 	Pdeathsig: syscall.SIGKILL,
+	Setpgid:   true,
 }

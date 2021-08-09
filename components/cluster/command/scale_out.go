@@ -14,21 +14,19 @@
 package command
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 
-	"github.com/pingcap/tiup/pkg/cluster"
-	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/manager"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/utils"
-	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
 func newScaleOutCmd() *cobra.Command {
-	opt := cluster.ScaleOutOptions{
-		IdentityFile: filepath.Join(tiuputils.UserHome(), ".ssh", "id_rsa"),
+	opt := manager.DeployOptions{
+		IdentityFile: filepath.Join(utils.UserHome(), ".ssh", "id_rsa"),
 	}
 	cmd := &cobra.Command{
 		Use:          "scale-out <cluster-name> <topology.yaml>",
@@ -39,35 +37,29 @@ func newScaleOutCmd() *cobra.Command {
 				return cmd.Help()
 			}
 
-			// natvie ssh has it's own logic to find the default identity_file
-			if gOpt.SSHType == executor.SSHTypeSystem && !utils.IsFlagSetByUser(cmd.Flags(), "identity_file") {
-				opt.IdentityFile = ""
-			}
-
 			clusterName := args[0]
+			clusterReport.ID = scrubClusterName(clusterName)
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
 			topoFile := args[1]
-			if data, err := ioutil.ReadFile(topoFile); err == nil {
+			if data, err := os.ReadFile(topoFile); err == nil {
 				teleTopology = string(data)
 			}
 
-			return manager.ScaleOut(
+			return cm.ScaleOut(
 				clusterName,
 				topoFile,
 				postScaleOutHook,
 				final,
 				opt,
 				skipConfirm,
-				gOpt.OptTimeout,
-				gOpt.SSHTimeout,
-				gOpt.SSHType,
+				gOpt,
 			)
 		},
 	}
 
-	cmd.Flags().StringVarP(&opt.User, "user", "u", tiuputils.CurrentUser(), "The user name to login via SSH. The user must has root (or sudo) privilege.")
-	cmd.Flags().BoolVarP(&opt.SkipCreateUser, "skip-create-user", "", false, "Skip creating the user specified in topology (experimental).")
+	cmd.Flags().StringVarP(&opt.User, "user", "u", utils.CurrentUser(), "The user name to login via SSH. The user must has root (or sudo) privilege.")
+	cmd.Flags().BoolVarP(&opt.SkipCreateUser, "skip-create-user", "", false, "(EXPERIMENTAL) Skip creating the user specified in topology.")
 	cmd.Flags().StringVarP(&opt.IdentityFile, "identity_file", "i", opt.IdentityFile, "The path of the SSH identity file. If specified, public key authentication will be used.")
 	cmd.Flags().BoolVarP(&opt.UsePassword, "password", "p", false, "Use password of target hosts. If specified, password authentication will be used.")
 	cmd.Flags().BoolVarP(&opt.NoLabels, "no-labels", "", false, "Don't check TiKV labels")

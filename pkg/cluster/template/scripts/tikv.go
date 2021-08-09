@@ -15,35 +15,47 @@ package scripts
 
 import (
 	"bytes"
-	"io/ioutil"
+	"fmt"
+	"os"
 	"path"
 	"text/template"
 
-	"github.com/pingcap/tiup/pkg/cluster/embed"
+	"github.com/pingcap/tiup/embed"
+	"golang.org/x/mod/semver"
+)
+
+const (
+	advertiseStatusAddrSupportedFrom = "v4.0.1"
 )
 
 // TiKVScript represent the data to generate TiKV config
 type TiKVScript struct {
-	IP         string
-	ListenHost string
-	Port       int
-	StatusPort int
-	DeployDir  string
-	DataDir    string
-	LogDir     string
-	NumaNode   string
-	Endpoints  []*PDScript
+	IP                         string
+	ListenHost                 string
+	AdvertiseAddr              string
+	AdvertiseStatusAddr        string
+	Port                       int
+	StatusPort                 int
+	DeployDir                  string
+	DataDir                    string
+	LogDir                     string
+	SupportAdvertiseStatusAddr bool
+	NumaNode                   string
+	Endpoints                  []*PDScript
 }
 
 // NewTiKVScript returns a TiKVScript with given arguments
-func NewTiKVScript(ip, deployDir, dataDir, logDir string) *TiKVScript {
+func NewTiKVScript(version, ip string, port, statusPort int, deployDir, dataDir, logDir string) *TiKVScript {
 	return &TiKVScript{
-		IP:         ip,
-		Port:       20160,
-		StatusPort: 20180,
-		DeployDir:  deployDir,
-		DataDir:    dataDir,
-		LogDir:     logDir,
+		IP:                         ip,
+		AdvertiseAddr:              fmt.Sprintf("%s:%d", ip, port),
+		AdvertiseStatusAddr:        fmt.Sprintf("%s:%d", ip, statusPort),
+		Port:                       port,
+		StatusPort:                 statusPort,
+		DeployDir:                  deployDir,
+		DataDir:                    dataDir,
+		LogDir:                     logDir,
+		SupportAdvertiseStatusAddr: semver.Compare(version, advertiseStatusAddrSupportedFrom) >= 0,
 	}
 }
 
@@ -53,15 +65,19 @@ func (c *TiKVScript) WithListenHost(listenHost string) *TiKVScript {
 	return c
 }
 
-// WithPort set Port field of TiKVScript
-func (c *TiKVScript) WithPort(port int) *TiKVScript {
-	c.Port = port
+// WithAdvertiseAddr set AdvertiseAddr of TiKVScript
+func (c *TiKVScript) WithAdvertiseAddr(addr string) *TiKVScript {
+	if addr != "" {
+		c.AdvertiseAddr = addr
+	}
 	return c
 }
 
-// WithStatusPort set StatusPort field of TiKVScript
-func (c *TiKVScript) WithStatusPort(port int) *TiKVScript {
-	c.StatusPort = port
+// WithAdvertiseStatusAddr set AdvertiseStatusAddr of TiKVScript
+func (c *TiKVScript) WithAdvertiseStatusAddr(addr string) *TiKVScript {
+	if addr != "" {
+		c.AdvertiseStatusAddr = addr
+	}
 	return c
 }
 
@@ -79,7 +95,7 @@ func (c *TiKVScript) AppendEndpoints(ends ...*PDScript) *TiKVScript {
 
 // Config generate the config file data.
 func (c *TiKVScript) Config() ([]byte, error) {
-	fp := path.Join("/templates", "scripts", "run_tikv.sh.tpl")
+	fp := path.Join("templates", "scripts", "run_tikv.sh.tpl")
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err
@@ -93,7 +109,7 @@ func (c *TiKVScript) ConfigToFile(file string) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(file, config, 0755)
+	return os.WriteFile(file, config, 0755)
 }
 
 // ConfigWithTemplate generate the TiKV config content by tpl

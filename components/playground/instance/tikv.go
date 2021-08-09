@@ -22,7 +22,6 @@ import (
 	"strings"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -55,20 +54,15 @@ func (inst *TiKVInstance) Addr() string {
 }
 
 // Start calls set inst.cmd and Start
-func (inst *TiKVInstance) Start(ctx context.Context, version v0manifest.Version) error {
-	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
-		return err
-	}
+func (inst *TiKVInstance) Start(ctx context.Context, version utils.Version) error {
 	if err := inst.checkConfig(); err != nil {
 		return err
 	}
-	endpoints := make([]string, 0, len(inst.pds))
-	for _, pd := range inst.pds {
-		endpoints = append(endpoints, fmt.Sprintf("http://%s:%d", advertiseHost(inst.Host), pd.StatusPort))
-	}
+
+	endpoints := pdEndpoints(inst.pds, true)
 	args := []string{
 		fmt.Sprintf("--addr=%s:%d", inst.Host, inst.Port),
-		fmt.Sprintf("--advertise-addr=%s:%d", advertiseHost(inst.Host), inst.Port),
+		fmt.Sprintf("--advertise-addr=%s:%d", AdvertiseHost(inst.Host), inst.Port),
 		fmt.Sprintf("--status-addr=%s:%d", inst.Host, inst.StatusPort),
 		fmt.Sprintf("--pd=%s", strings.Join(endpoints, ",")),
 		fmt.Sprintf("--config=%s", inst.ConfigPath),
@@ -77,7 +71,9 @@ func (inst *TiKVInstance) Start(ctx context.Context, version v0manifest.Version)
 	}
 
 	var err error
-	if inst.Process, err = NewComponentProcess(ctx, inst.Dir, inst.BinPath, "tikv", version, args...); err != nil {
+	envs := make(map[string]string)
+	envs["MALLOC_CONF"] = "prof:true,prof_active:false"
+	if inst.Process, err = NewComponentProcessWithEnvs(ctx, inst.Dir, inst.BinPath, "tikv", version, envs, args...); err != nil {
 		return err
 	}
 	logIfErr(inst.Process.SetOutputFile(inst.LogFile()))
@@ -97,10 +93,13 @@ func (inst *TiKVInstance) LogFile() string {
 
 // StoreAddr return the store address of TiKV
 func (inst *TiKVInstance) StoreAddr() string {
-	return fmt.Sprintf("%s:%d", advertiseHost(inst.Host), inst.Port)
+	return fmt.Sprintf("%s:%d", AdvertiseHost(inst.Host), inst.Port)
 }
 
 func (inst *TiKVInstance) checkConfig() error {
+	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
+		return err
+	}
 	if inst.ConfigPath == "" {
 		inst.ConfigPath = path.Join(inst.Dir, "tikv.toml")
 	}

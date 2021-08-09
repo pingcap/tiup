@@ -14,15 +14,16 @@
 package command
 
 import (
-	"github.com/pingcap/tiup/pkg/cluster"
+	"github.com/pingcap/tiup/pkg/cluster/manager"
 	"github.com/spf13/cobra"
 )
 
 func newExecCmd() *cobra.Command {
-	opt := cluster.ExecOptions{}
+	opt := manager.ExecOptions{}
 	cmd := &cobra.Command{
-		Use:   "exec <cluster-name>",
-		Short: "Run shell command on host in the dm cluster",
+		Use:    "exec <cluster-name>",
+		Short:  "Run shell command on host in the dm cluster",
+		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return cmd.Help()
@@ -30,7 +31,7 @@ func newExecCmd() *cobra.Command {
 
 			clusterName := args[0]
 
-			return manager.Exec(clusterName, opt, gOpt)
+			return cm.Exec(clusterName, opt, gOpt)
 		},
 	}
 

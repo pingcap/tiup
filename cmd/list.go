@@ -15,16 +15,16 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/environment"
-	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
-	"github.com/pingcap/tiup/pkg/version"
+	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 	"golang.org/x/mod/semver"
 )
@@ -53,6 +53,7 @@ components or versions which have not been installed.
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			teleCommand = cmd.CommandPath()
 			env := environment.GlobalEnv()
 			switch len(args) {
 			case 0:
@@ -92,7 +93,7 @@ func (lr *listResult) print() {
 func showComponentList(env *environment.Environment, opt listOptions) (*listResult, error) {
 	err := env.V1Repository().UpdateComponentManifests()
 	if err != nil {
-		return nil, err
+		tui.ColorWarningMsg.Fprint(os.Stderr, "Warn: Update component manifest failed, err_msg=[", err.Error(), "]\n")
 	}
 
 	installed, err := env.Profile().InstalledComponents()
@@ -202,24 +203,18 @@ func showComponentVersions(env *environment.Environment, component string, opt l
 	for plat := range comp.Platforms {
 		versions := comp.VersionList(plat)
 		for ver, verinfo := range versions {
-			if v0manifest.Version(ver).IsNightly() && ver == comp.Nightly {
-				platforms[version.NightlyVersion] = append(platforms[version.NightlyVersion], plat)
-				released[version.NightlyVersion] = verinfo.Released
-			} else {
-				platforms[ver] = append(platforms[ver], plat)
-				released[ver] = verinfo.Released
+			if ver == comp.Nightly {
+				key := fmt.Sprintf("%s -> %s", utils.NightlyVersionAlias, comp.Nightly)
+				platforms[key] = append(platforms[key], plat)
+				released[key] = verinfo.Released
 			}
+			platforms[ver] = append(platforms[ver], plat)
+			released[ver] = verinfo.Released
 		}
 	}
 	verList := []string{}
 	for v := range platforms {
-		if v0manifest.Version(v).IsNightly() {
-			continue
-		}
 		verList = append(verList, v)
-	}
-	if comp.Nightly != "" {
-		verList = append(verList, version.NightlyVersion)
 	}
 	sort.Slice(verList, func(p, q int) bool {
 		return semver.Compare(verList[p], verList[q]) < 0
@@ -229,10 +224,8 @@ func showComponentVersions(env *environment.Environment, component string, opt l
 		installStatus := ""
 		if installed.Exist(v) {
 			installStatus = "YES"
-		} else {
-			if opt.installedOnly {
-				continue
-			}
+		} else if opt.installedOnly {
+			continue
 		}
 		cmpTable = append(cmpTable, []string{v, installStatus, released[v], strings.Join(platforms[v], ",")})
 	}

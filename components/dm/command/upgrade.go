@@ -18,6 +18,8 @@ import (
 )
 
 func newUpgradeCmd() *cobra.Command {
+	offlineMode := false
+
 	cmd := &cobra.Command{
 		Use:   "upgrade <cluster-name> <version>",
 		Short: "Upgrade a specified DM cluster",
@@ -26,9 +28,11 @@ func newUpgradeCmd() *cobra.Command {
 				return cmd.Help()
 			}
 
-			return manager.Upgrade(args[0], args[1], gOpt)
+			return cm.Upgrade(args[0], args[1], gOpt, skipConfirm, offlineMode)
 		},
 	}
+
+	cmd.Flags().BoolVarP(&offlineMode, "offline", "", false, "Upgrade a stopped cluster")
 
 	return cmd
 }

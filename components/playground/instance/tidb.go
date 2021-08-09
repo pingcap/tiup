@@ -16,12 +16,10 @@ package instance
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
-	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -51,14 +49,9 @@ func NewTiDBInstance(binPath string, dir, host, configPath string, id int, pds [
 }
 
 // Start calls set inst.cmd and Start
-func (inst *TiDBInstance) Start(ctx context.Context, version v0manifest.Version) error {
-	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
-		return err
-	}
-	endpoints := make([]string, 0, len(inst.pds))
-	for _, pd := range inst.pds {
-		endpoints = append(endpoints, fmt.Sprintf("%s:%d", inst.Host, pd.StatusPort))
-	}
+func (inst *TiDBInstance) Start(ctx context.Context, version utils.Version) error {
+	endpoints := pdEndpoints(inst.pds, false)
+
 	args := []string{
 		"-P", strconv.Itoa(inst.Port),
 		"--store=tikv",
@@ -95,5 +88,5 @@ func (inst *TiDBInstance) LogFile() string {
 
 // Addr return the listen address of TiDB
 func (inst *TiDBInstance) Addr() string {
-	return fmt.Sprintf("%s:%d", advertiseHost(inst.Host), inst.Port)
+	return fmt.Sprintf("%s:%d", AdvertiseHost(inst.Host), inst.Port)
 }

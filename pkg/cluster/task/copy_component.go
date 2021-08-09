@@ -14,10 +14,12 @@
 package task
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/environment"
+	"github.com/pingcap/tiup/pkg/repository"
 )
 
 // CopyComponent is used to copy all files related the specific version a component
@@ -32,18 +34,15 @@ type CopyComponent struct {
 	dstDir    string
 }
 
-// PackagePath return the tar bar path
-func PackagePath(comp string, version string, os string, arch string) string {
-	fileName := fmt.Sprintf("%s-%s-%s-%s.tar.gz", comp, version, os, arch)
-	return spec.ProfilePath(spec.TiOpsPackageCacheDir, fileName)
-}
-
 // Execute implements the Task interface
-func (c *CopyComponent) Execute(ctx *Context) error {
+func (c *CopyComponent) Execute(ctx context.Context) error {
 	// If the version is not specified, the last stable one will be used
 	if c.version == "" {
 		env := environment.GlobalEnv()
-		ver, _, err := env.V1Repository().LatestStableVersion(c.component, false)
+		ver, _, err := env.V1Repository().WithOptions(repository.Options{
+			GOOS:   c.os,
+			GOARCH: c.arch,
+		}).LatestStableVersion(c.component, false)
 		if err != nil {
 			return err
 		}
@@ -53,7 +52,7 @@ func (c *CopyComponent) Execute(ctx *Context) error {
 	// Copy to remote server
 	srcPath := c.srcPath
 	if srcPath == "" {
-		srcPath = PackagePath(c.component, c.version, c.os, c.arch)
+		srcPath = spec.PackagePath(c.component, c.version, c.os, c.arch)
 	}
 
 	install := &InstallPackage{
@@ -66,7 +65,7 @@ func (c *CopyComponent) Execute(ctx *Context) error {
 }
 
 // Rollback implements the Task interface
-func (c *CopyComponent) Rollback(ctx *Context) error {
+func (c *CopyComponent) Rollback(ctx context.Context) error {
 	return ErrUnsupportedRollback
 }
 

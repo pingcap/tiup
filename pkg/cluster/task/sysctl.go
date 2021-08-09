@@ -14,10 +14,12 @@
 package task
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 )
 
 var (
@@ -32,8 +34,8 @@ type Sysctl struct {
 }
 
 // Execute implements the Task interface
-func (s *Sysctl) Execute(ctx *Context) error {
-	e, ok := ctx.GetExecutor(s.host)
+func (s *Sysctl) Execute(ctx context.Context) error {
+	e, ok := ctxt.GetInner(ctx).GetExecutor(s.host)
 	if !ok {
 		return ErrNoExecutor
 	}
@@ -45,8 +47,8 @@ func (s *Sysctl) Execute(ctx *Context) error {
 		fmt.Sprintf("sysctl -p %s", sysctlFilePath),
 	}, " && ")
 
-	stdout, stderr, err := e.Execute(cmd, true)
-	ctx.SetOutputs(s.host, stdout, stderr)
+	stdout, stderr, err := e.Execute(ctx, cmd, true)
+	ctxt.GetInner(ctx).SetOutputs(s.host, stdout, stderr)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -55,7 +57,7 @@ func (s *Sysctl) Execute(ctx *Context) error {
 }
 
 // Rollback implements the Task interface
-func (s *Sysctl) Rollback(ctx *Context) error {
+func (s *Sysctl) Rollback(ctx context.Context) error {
 	return ErrUnsupportedRollback
 }
 

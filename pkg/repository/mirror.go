@@ -14,27 +14,47 @@
 package repository
 
 import (
+	"bytes"
+	"encoding/json"
 	stderrors "errors"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"math/rand"
 	"net/http"
+	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/cavaliercoder/grab"
+	"github.com/google/uuid"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/repository/model"
+	"github.com/pingcap/tiup/pkg/repository/store"
+	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/pkg/utils"
-	"github.com/pingcap/tiup/pkg/verbose"
+	"github.com/pingcap/tiup/pkg/utils/mock"
+	"github.com/pingcap/tiup/pkg/utils/rand"
+	"github.com/pingcap/tiup/pkg/version"
 )
 
-// ErrNotFound represents the resource not exists.
-var ErrNotFound = stderrors.New("not found")
+const (
+	// OptionYanked is the key that represents a component is yanked or not
+	OptionYanked = "yanked"
+	// OptionStandalone is the key that represents a component is standalone or not
+	OptionStandalone = "standalone"
+	// OptionHidden is the key that represents a component is hidden or not
+	OptionHidden = "hidden"
+)
+
+// predefined errors
+var (
+	ErrNotFound       = stderrors.New("not found") // resource does not exists
+	ErrManifestTooOld = stderrors.New("component manifest is too old, update it before publish")
+)
 
 type (
 	// DownloadProgress represents the download progress notifier
@@ -47,11 +67,14 @@ type (
 	// MirrorOptions is used to customize the mirror download options
 	MirrorOptions struct {
 		Progress DownloadProgress
+		Upstream string
+		KeyDir   string
 	}
 
 	// Mirror represents a repository mirror, which can be remote HTTP
 	// server or a local file system directory
 	Mirror interface {
+		model.Backend
 		// Source returns the address of the mirror
 		Source() string
 		// Open initialize the mirror.
@@ -79,11 +102,14 @@ func NewMirror(mirror string, options MirrorOptions) Mirror {
 			options: options,
 		}
 	}
-	return &localFilesystem{rootPath: mirror}
+	return &localFilesystem{rootPath: mirror, keyDir: options.KeyDir, upstream: options.Upstream}
 }
 
 type localFilesystem struct {
 	rootPath string
+	keyDir   string
+	upstream string
+	keys     map[string]*v1manifest.KeyInfo
 }
 
 // Source implements the Mirror interface
@@ -100,6 +126,89 @@ func (l *localFilesystem) Open() error {
 	if !fi.IsDir() {
 		return errors.Errorf("local system mirror `%s` should be a directory", l.rootPath)
 	}
+
+	if l.keyDir == "" {
+		l.keyDir = path.Join(l.rootPath, "keys")
+	}
+	if utils.IsNotExist(l.keyDir) {
+		return nil
+	}
+	return l.loadKeys()
+}
+
+// load mirror keys
+func (l *localFilesystem) loadKeys() error {
+	l.keys = make(map[string]*v1manifest.KeyInfo)
+	return filepath.Walk(l.keyDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		f, err := os.Open(path)
+		if err != nil {
+			return errors.Annotate(err, "open file while loadKeys")
+		}
+		defer f.Close()
+
+		ki := v1manifest.KeyInfo{}
+		if err := json.NewDecoder(f).Decode(&ki); err != nil {
+			return errors.Annotate(err, "decode key")
+		}
+
+		id, err := ki.ID()
+		if err != nil {
+			return err
+		}
+
+		l.keys[id] = &ki
+		return nil
+	})
+}
+
+// Publish implements the model.Backend interface
+func (l *localFilesystem) Publish(manifest *v1manifest.Manifest, info model.ComponentInfo) error {
+	txn, err := store.New(l.rootPath, l.upstream).Begin()
+	if err != nil {
+		return err
+	}
+
+	if err := model.New(txn, l.keys).Publish(manifest, info); err != nil {
+		_ = txn.Rollback()
+		return err
+	}
+
+	return nil
+}
+
+// Grant implements the model.Backend interface
+func (l *localFilesystem) Grant(id, name string, key *v1manifest.KeyInfo) error {
+	txn, err := store.New(l.rootPath, l.upstream).Begin()
+	if err != nil {
+		return err
+	}
+
+	if err := model.New(txn, l.keys).Grant(id, name, key); err != nil {
+		_ = txn.Rollback()
+		return err
+	}
+
+	return nil
+}
+
+// Rotate implements the model.Backend interface
+func (l *localFilesystem) Rotate(m *v1manifest.Manifest) error {
+	txn, err := store.New(l.rootPath, l.upstream).Begin()
+	if err != nil {
+		return err
+	}
+
+	if err := model.New(txn, l.keys).Rotate(m); err != nil {
+		_ = txn.Rollback()
+		return err
+	}
+
 	return nil
 }
 
@@ -180,10 +289,11 @@ func (l *httpMirror) Open() error {
 
 func (l *httpMirror) download(url string, to string, maxSize int64) (io.ReadCloser, error) {
 	defer func(start time.Time) {
-		verbose.Log("Download resource %s in %s", url, time.Since(start))
+		log.Verbose("Download resource %s in %s", url, time.Since(start))
 	}(time.Now())
 
 	client := grab.NewClient()
+	client.UserAgent = fmt.Sprintf("tiup/%s", version.NewTiUPVersion().SemVer())
 	req, err := grab.NewRequest(to, url)
 	if err != nil {
 		return nil, errors.Trace(err)
@@ -240,13 +350,114 @@ L:
 
 func (l *httpMirror) prepareURL(resource string) string {
 	url := strings.TrimSuffix(l.server, "/") + "/" + strings.TrimPrefix(resource, "/")
-	// Force CDN to refresh if the resource name starts with TiupBinaryName.
-	if strings.HasPrefix(resource, TiupBinaryName) {
+	// Force CDN to refresh if the resource name starts with TiUPBinaryName.
+	if strings.HasPrefix(resource, TiUPBinaryName) {
 		nano := time.Now().UnixNano()
 		url = fmt.Sprintf("%s?v=%d", url, nano)
 	}
 
 	return url
+}
+
+// Grant implements the model.Backend interface
+func (l *httpMirror) Grant(id, name string, key *v1manifest.KeyInfo) error {
+	return errors.Errorf("cannot add a user for a remote mirror, please set your mirror to a local directory")
+}
+
+// Rotate implements the model.Backend interface
+func (l *httpMirror) Rotate(m *v1manifest.Manifest) error {
+	rotateAddr := fmt.Sprintf("%s/api/v1/rotate", l.Source())
+	data, err := json.Marshal(m)
+	if err != nil {
+		return errors.Annotate(err, "marshal root manifest")
+	}
+
+	client := http.Client{Timeout: time.Minute}
+	resp, err := client.Post(rotateAddr, "text/json", bytes.NewBuffer(data))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 300 {
+		return nil
+	}
+	switch resp.StatusCode {
+	case http.StatusConflict:
+		return errors.Errorf("The manifest has been modified after you fetched it, please try again")
+	case http.StatusBadRequest:
+		return errors.Errorf("The server rejected the manifest, please check if it's a valid root manifest")
+	default:
+		buf := new(strings.Builder)
+		if _, err := io.Copy(buf, resp.Body); err != nil {
+			return err
+		}
+
+		return fmt.Errorf("Unknow error from server, response code: %d response body: %s", resp.StatusCode, buf.String())
+	}
+}
+
+// Publish implements the model.Backend interface
+func (l *httpMirror) Publish(manifest *v1manifest.Manifest, info model.ComponentInfo) error {
+	sid := uuid.New().String()
+
+	if info.Filename() != "" {
+		tarAddr := fmt.Sprintf("%s/api/v1/tarball/%s", l.Source(), sid)
+		resp, err := utils.PostFile(info, tarAddr, "file", info.Filename())
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode >= 300 {
+			return errors.Errorf("error on uplaod tarbal, server returns %d", resp.StatusCode)
+		}
+	}
+
+	payload, err := json.Marshal(manifest)
+	if err != nil {
+		return err
+	}
+	bodyBuf := bytes.NewBuffer(payload)
+	q := url.Values{}
+	if info.Yanked() != nil {
+		q.Set(OptionYanked, fmt.Sprintf("%t", *info.Yanked()))
+	}
+	if info.Standalone() != nil {
+		q.Set(OptionStandalone, fmt.Sprintf("%t", *info.Standalone()))
+	}
+	if info.Hidden() != nil {
+		q.Set(OptionHidden, fmt.Sprintf("%t", *info.Hidden()))
+	}
+	qstr := ""
+	if len(q) > 0 {
+		qstr = "?" + q.Encode()
+	}
+	manifestAddr := fmt.Sprintf("%s/api/v1/component/%s/%s%s", l.Source(), sid, manifest.Signed.(*v1manifest.Component).ID, qstr)
+
+	client := http.Client{Timeout: time.Minute}
+	resp, err := client.Post(manifestAddr, "text/json", bodyBuf)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 300 {
+		return nil
+	}
+	switch resp.StatusCode {
+	case http.StatusConflict:
+		return ErrManifestTooOld
+	case http.StatusForbidden:
+		return errors.Errorf("The server refused, make sure you have access to this component")
+	default:
+		buf := new(strings.Builder)
+		if _, err := io.Copy(buf, resp.Body); err != nil {
+			return err
+		}
+
+		return fmt.Errorf("Unknow error from server, response code: %d response body: %s", resp.StatusCode, buf.String())
+	}
 }
 
 func (l *httpMirror) isRetryable(err error) bool {
@@ -285,6 +496,9 @@ func (l *httpMirror) Download(resource, targetDir string) error {
 			return nil
 		}
 		return r.Close()
+	}, utils.RetryOption{
+		Timeout:  time.Hour,
+		Attempts: 3,
 	})
 	if err != nil {
 		return err
@@ -346,6 +560,25 @@ func (l *MockMirror) Download(resource, targetDir string) error {
 	return err
 }
 
+// Grant implements the model.Backend interface
+func (l *MockMirror) Grant(id, name string, key *v1manifest.KeyInfo) error {
+	return nil
+}
+
+// Rotate implements the model.Backend interface
+func (l *MockMirror) Rotate(m *v1manifest.Manifest) error {
+	return nil
+}
+
+// Publish implements the Mirror interface
+func (l *MockMirror) Publish(manifest *v1manifest.Manifest, info model.ComponentInfo) error {
+	// Mock point for unit test
+	if fn := mock.On("Publish"); fn != nil {
+		fn.(func(*v1manifest.Manifest, model.ComponentInfo))(manifest, info)
+	}
+	return nil
+}
+
 // Fetch implements Mirror.
 func (l *MockMirror) Fetch(resource string, maxSize int64) (io.ReadCloser, error) {
 	content, ok := l.Resources[resource]
@@ -355,7 +588,7 @@ func (l *MockMirror) Fetch(resource string, maxSize int64) (io.ReadCloser, error
 	if maxSize > 0 && int64(len(content)) > maxSize {
 		return nil, fmt.Errorf("oversized resource %s in mock mirror %v > %v", resource, len(content), maxSize)
 	}
-	return ioutil.NopCloser(strings.NewReader(content)), nil
+	return io.NopCloser(strings.NewReader(content)), nil
 }
 
 // Close implements Mirror.

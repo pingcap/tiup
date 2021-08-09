@@ -16,11 +16,11 @@ package scripts
 import (
 	"bytes"
 	"errors"
-	"io/ioutil"
+	"os"
 	"path"
 	"text/template"
 
-	"github.com/pingcap/tiup/pkg/cluster/embed"
+	"github.com/pingcap/tiup/embed"
 )
 
 // DMMasterScript represent the data to generate TiDB config
@@ -90,7 +90,7 @@ func (c *DMMasterScript) AppendEndpoints(ends ...*DMMasterScript) *DMMasterScrip
 
 // Config generate the config file data.
 func (c *DMMasterScript) Config() ([]byte, error) {
-	fp := path.Join("/templates", "scripts", "run_dm-master.sh.tpl")
+	fp := path.Join("templates", "scripts", "run_dm-master.sh.tpl")
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err
@@ -104,7 +104,7 @@ func (c *DMMasterScript) ConfigToFile(file string) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(file, config, 0755)
+	return os.WriteFile(file, config, 0755)
 }
 
 // ConfigWithTemplate generate the TiDB config content by tpl
@@ -173,7 +173,7 @@ func (c *DMMasterScaleScript) AppendEndpoints(ends ...*DMMasterScript) *DMMaster
 
 // Config generate the config file data.
 func (c *DMMasterScaleScript) Config() ([]byte, error) {
-	fp := path.Join("/templates", "scripts", "run_dm-master_scale.sh.tpl")
+	fp := path.Join("templates", "scripts", "run_dm-master_scale.sh.tpl")
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err
@@ -187,5 +187,5 @@ func (c *DMMasterScaleScript) ConfigToFile(file string) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(file, config, 0755)
+	return os.WriteFile(file, config, 0755)
 }

@@ -14,14 +14,14 @@
 package spec
 
 import (
-	"io/ioutil"
+	"errors"
 	"os"
 	"path/filepath"
 
 	"github.com/joomcode/errorx"
-	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cliutil"
-	"github.com/pingcap/tiup/pkg/file"
+	perrs "github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/version"
 	"gopkg.in/yaml.v2"
@@ -70,7 +70,7 @@ func (s *SpecManager) NewMetadata() Metadata {
 // as its name.
 func (s *SpecManager) Path(cluster string, subpath ...string) string {
 	if cluster == "" {
-		// keep the same behavior with legacy version of TiOps, we could change
+		// keep the same behavior with legacy version of TiUP, we could change
 		// it in the future if needed.
 		cluster = "default-cluster"
 	}
@@ -108,7 +108,7 @@ func (s *SpecManager) SaveMeta(clusterName string, meta Metadata) error {
 		*opsVer = version.NewTiUPVersion().String()
 	}
 
-	err = file.SaveFileWithBackup(metaFile, data, backupDir)
+	err = utils.SaveFileWithBackup(metaFile, data, backupDir)
 	if err != nil {
 		return wrapError(err)
 	}
@@ -120,14 +120,14 @@ func (s *SpecManager) SaveMeta(clusterName string, meta Metadata) error {
 func (s *SpecManager) Metadata(clusterName string, meta interface{}) error {
 	fname := s.Path(clusterName, metaFileName)
 
-	yamlFile, err := ioutil.ReadFile(fname)
+	yamlFile, err := os.ReadFile(fname)
 	if err != nil {
-		return errors.AddStack(err)
+		return perrs.AddStack(err)
 	}
 
 	err = yaml.Unmarshal(yamlFile, meta)
 	if err != nil {
-		return errors.AddStack(err)
+		return perrs.AddStack(err)
 	}
 
 	return nil
@@ -142,7 +142,7 @@ func (s *SpecManager) Exist(name string) (exist bool, err error) {
 		if os.IsNotExist(err) {
 			return false, nil
 		}
-		return false, errors.AddStack(err)
+		return false, perrs.AddStack(err)
 	}
 
 	return true, nil
@@ -155,12 +155,12 @@ func (s *SpecManager) Remove(name string) error {
 
 // List return the cluster names.
 func (s *SpecManager) List() (names []string, err error) {
-	fileInfos, err := ioutil.ReadDir(s.base)
+	fileInfos, err := os.ReadDir(s.base)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil
 		}
-		return nil, errors.AddStack(err)
+		return nil, perrs.AddStack(err)
 	}
 
 	for _, info := range fileInfos {
@@ -178,13 +178,15 @@ func (s *SpecManager) GetAllClusters() (map[string]Metadata, error) {
 	clusters := make(map[string]Metadata)
 	names, err := s.List()
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return nil, err
 	}
 	for _, name := range names {
 		metadata := s.NewMetadata()
 		err = s.Metadata(name, metadata)
-		if err != nil {
-			return nil, errors.Trace(err)
+		// clusters with topology validation errors should also be listed
+		if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
+			!errors.Is(perrs.Cause(err), ErrNoTiSparkMaster) {
+			return nil, perrs.Trace(err)
 		}
 		clusters[name] = metadata
 	}
@@ -196,7 +198,7 @@ func (s *SpecManager) ensureDir(clusterName string) error {
 	if err := utils.CreateDir(s.Path(clusterName)); err != nil {
 		return ErrCreateDirFailed.
 			Wrap(err, "Failed to create cluster metadata directory '%s'", s.Path(clusterName)).
-			WithProperty(cliutil.SuggestionFromString("Please check file system permissions and try again."))
+			WithProperty(tui.SuggestionFromString("Please check file system permissions and try again."))
 	}
 	return nil
 }

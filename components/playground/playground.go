@@ -18,7 +18,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
@@ -26,19 +25,20 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"syscall"
-	"text/tabwriter"
 	"time"
 
-	"github.com/cheynewallace/tabby"
+	"github.com/AstroProfundis/tabby"
 	"github.com/fatih/color"
+	"github.com/juju/ansiterm"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/playground/instance"
-	"github.com/pingcap/tiup/pkg/cliutil/progress"
 	"github.com/pingcap/tiup/pkg/cluster/api"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/environment"
-	"github.com/pingcap/tiup/pkg/repository/v0manifest"
+	"github.com/pingcap/tiup/pkg/tui/progress"
 	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
@@ -53,7 +53,7 @@ type Playground struct {
 	booted  bool
 	// the latest receive signal
 	curSig      int32
-	bootOptions *bootOptions
+	bootOptions *BootOptions
 	port        int
 
 	pds              []*instance.PDInstance
@@ -98,7 +98,7 @@ func (p *Playground) allocID(componentID string) int {
 }
 
 func (p *Playground) handleDisplay(r io.Writer) (err error) {
-	w := tabwriter.NewWriter(r, 0, 0, 2, ' ', 0)
+	w := ansiterm.NewTabWriter(r, 0, 0, 2, ' ', 0)
 	t := tabby.NewCustom(w)
 
 	// TODO add more info.
@@ -115,7 +115,7 @@ func (p *Playground) handleDisplay(r io.Writer) (err error) {
 	})
 
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	t.Print()
@@ -176,7 +176,7 @@ func (p *Playground) removePumpWhenTombstone(c *api.BinlogClient, inst *instance
 	defer logIfErr(p.renderSDFile())
 
 	for {
-		tombstone, err := c.IsPumpTombstone(inst.NodeID())
+		tombstone, err := c.IsPumpTombstone(context.TODO(), inst.Addr())
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -199,7 +199,7 @@ func (p *Playground) removeDrainerWhenTombstone(c *api.BinlogClient, inst *insta
 	defer logIfErr(p.renderSDFile())
 
 	for {
-		tombstone, err := c.IsDrainerTombstone(inst.NodeID())
+		tombstone, err := c.IsDrainerTombstone(context.TODO(), inst.Addr())
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -256,7 +256,7 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 		return nil
 	})
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	if inst == nil {
@@ -265,24 +265,24 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 	}
 
 	switch cid {
-	case "pd":
+	case spec.ComponentPD:
 		for i := 0; i < len(p.pds); i++ {
 			if p.pds[i].Pid() == pid {
 				inst := p.pds[i]
 				err := p.pdClient().DelPD(inst.Name(), timeoutOpt)
 				if err != nil {
-					return errors.AddStack(err)
+					return err
 				}
 				p.pds = append(p.pds[:i], p.pds[i+1:]...)
 			}
 		}
-	case "tikv":
+	case spec.ComponentTiKV:
 		for i := 0; i < len(p.tikvs); i++ {
 			if p.tikvs[i].Pid() == pid {
 				inst := p.tikvs[i]
 				err := p.pdClient().DelStore(inst.Addr(), timeoutOpt)
 				if err != nil {
-					return errors.AddStack(err)
+					return err
 				}
 
 				go p.killKVIfTombstone(inst)
@@ -290,25 +290,25 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 				return nil
 			}
 		}
-	case "tidb":
+	case spec.ComponentTiDB:
 		for i := 0; i < len(p.tidbs); i++ {
 			if p.tidbs[i].Pid() == pid {
 				p.tidbs = append(p.tidbs[:i], p.tidbs[i+1:]...)
 			}
 		}
-	case "ticdc":
+	case spec.ComponentCDC:
 		for i := 0; i < len(p.ticdcs); i++ {
 			if p.ticdcs[i].Pid() == pid {
 				p.ticdcs = append(p.ticdcs[:i], p.ticdcs[i+1:]...)
 			}
 		}
-	case "tiflash":
+	case spec.ComponentTiFlash:
 		for i := 0; i < len(p.tiflashs); i++ {
 			if p.tiflashs[i].Pid() == pid {
 				inst := p.tiflashs[i]
 				err := p.pdClient().DelStore(inst.Addr(), timeoutOpt)
 				if err != nil {
-					return errors.AddStack(err)
+					return err
 				}
 
 				go p.killTiFlashIfTombstone(inst)
@@ -316,18 +316,18 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 				return nil
 			}
 		}
-	case "pump":
+	case spec.ComponentPump:
 		for i := 0; i < len(p.pumps); i++ {
 			if p.pumps[i].Pid() == pid {
 				inst := p.pumps[i]
 
 				c, err := p.binlogClient()
 				if err != nil {
-					return errors.AddStack(err)
+					return err
 				}
-				err = c.OfflinePump(inst.Addr(), inst.NodeID())
+				err = c.OfflinePump(context.TODO(), inst.Addr())
 				if err != nil {
-					return errors.AddStack(err)
+					return err
 				}
 
 				go p.removePumpWhenTombstone(c, inst)
@@ -335,18 +335,18 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 				return nil
 			}
 		}
-	case "drainer":
+	case spec.ComponentDrainer:
 		for i := 0; i < len(p.drainers); i++ {
 			if p.drainers[i].Pid() == pid {
 				inst := p.drainers[i]
 
 				c, err := p.binlogClient()
 				if err != nil {
-					return errors.AddStack(err)
+					return err
 				}
-				err = c.OfflineDrainer(inst.Addr(), inst.NodeID())
+				err = c.OfflineDrainer(context.TODO(), inst.Addr())
 				if err != nil {
-					return errors.AddStack(err)
+					return err
 				}
 
 				go p.removeDrainerWhenTombstone(c, inst)
@@ -379,7 +379,7 @@ func (p *Playground) sanitizeConfig(boot instance.Config, cfg *instance.Config) 
 		cfg.ConfigPath = boot.ConfigPath
 	}
 	if cfg.Host == "" {
-		cfg.Host = boot.ConfigPath
+		cfg.Host = boot.Host
 	}
 
 	path, err := getAbsolutePath(cfg.ConfigPath)
@@ -392,30 +392,30 @@ func (p *Playground) sanitizeConfig(boot instance.Config, cfg *instance.Config) 
 
 func (p *Playground) sanitizeComponentConfig(cid string, cfg *instance.Config) error {
 	switch cid {
-	case "pd":
-		return p.sanitizeConfig(p.bootOptions.pd, cfg)
-	case "tikv":
-		return p.sanitizeConfig(p.bootOptions.tikv, cfg)
-	case "tidb":
-		return p.sanitizeConfig(p.bootOptions.tidb, cfg)
-	case "tiflash":
-		return p.sanitizeConfig(p.bootOptions.tiflash, cfg)
-	case "ticdc":
-		return p.sanitizeConfig(p.bootOptions.ticdc, cfg)
-	case "pump":
-		return p.sanitizeConfig(p.bootOptions.pump, cfg)
-	case "drainer":
-		return p.sanitizeConfig(p.bootOptions.drainer, cfg)
+	case spec.ComponentPD:
+		return p.sanitizeConfig(p.bootOptions.PD, cfg)
+	case spec.ComponentTiKV:
+		return p.sanitizeConfig(p.bootOptions.TiKV, cfg)
+	case spec.ComponentTiDB:
+		return p.sanitizeConfig(p.bootOptions.TiDB, cfg)
+	case spec.ComponentTiFlash:
+		return p.sanitizeConfig(p.bootOptions.TiFlash, cfg)
+	case spec.ComponentCDC:
+		return p.sanitizeConfig(p.bootOptions.TiCDC, cfg)
+	case spec.ComponentPump:
+		return p.sanitizeConfig(p.bootOptions.Pump, cfg)
+	case spec.ComponentDrainer:
+		return p.sanitizeConfig(p.bootOptions.Drainer, cfg)
 	default:
-		return fmt.Errorf("unknow %s in sanitizeConfig", cid)
+		return fmt.Errorf("unknown %s in sanitizeConfig", cid)
 	}
 }
 
 func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) error {
 	fmt.Printf("Start %s instance\n", inst.Component())
-	err := inst.Start(ctx, v0manifest.Version(p.bootOptions.version))
+	err := inst.Start(ctx, utils.Version(p.bootOptions.Version))
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 	p.addWaitInstance(inst)
 	return nil
@@ -441,19 +441,19 @@ func (p *Playground) addWaitInstance(inst instance.Instance) {
 }
 
 func (p *Playground) handleScaleOut(w io.Writer, cmd *Command) error {
-	// Ignore Config.Num, alway one command as scale out one instance.
+	// Ignore Config.Num, always one command as scale out one instance.
 	err := p.sanitizeComponentConfig(cmd.ComponentID, &cmd.Config)
 	if err != nil {
 		return err
 	}
 	inst, err := p.addInstance(cmd.ComponentID, cmd.Config)
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
-	err = p.startInstance(context.Background(), inst)
+	err = p.startInstance(context.TODO(), inst)
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	logIfErr(p.renderSDFile())
@@ -486,7 +486,7 @@ func (p *Playground) commandHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data, err := ioutil.ReadAll(r.Body)
+	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(403)
 		fmt.Fprintln(w, err)
@@ -522,66 +522,66 @@ func (p *Playground) RWalkInstances(fn func(componentID string, ins instance.Ins
 	for i := len(ids); i > 0; i-- {
 		err := fn(ids[i-1], instances[i-1])
 		if err != nil {
-			return errors.AddStack(err)
+			return err
 		}
 	}
 	return nil
 }
 
-// WalkInstances call fn for every intance and stop if return not nil.
+// WalkInstances call fn for every instance and stop if return not nil.
 func (p *Playground) WalkInstances(fn func(componentID string, ins instance.Instance) error) error {
 	for _, ins := range p.pds {
-		err := fn("pd", ins)
+		err := fn(spec.ComponentPD, ins)
 		if err != nil {
-			return errors.AddStack(err)
+			return err
 		}
 	}
 	for _, ins := range p.tikvs {
-		err := fn("tikv", ins)
+		err := fn(spec.ComponentTiKV, ins)
 		if err != nil {
-			return errors.AddStack(err)
+			return err
 		}
 	}
 
 	for _, ins := range p.pumps {
-		err := fn("pump", ins)
+		err := fn(spec.ComponentPump, ins)
 		if err != nil {
-			return errors.AddStack(err)
+			return err
 		}
 	}
 
 	for _, ins := range p.tidbs {
-		err := fn("tidb", ins)
+		err := fn(spec.ComponentTiDB, ins)
 		if err != nil {
-			return errors.AddStack(err)
+			return err
 		}
 	}
 
 	for _, ins := range p.ticdcs {
-		err := fn("ticdc", ins)
+		err := fn(spec.ComponentCDC, ins)
 		if err != nil {
-			return errors.AddStack(err)
+			return err
 		}
 	}
 
 	for _, ins := range p.drainers {
-		err := fn("drainer", ins)
+		err := fn(spec.ComponentDrainer, ins)
 		if err != nil {
-			return errors.AddStack(err)
+			return err
 		}
 	}
 
 	for _, ins := range p.tiflashs {
-		err := fn("tiflash", ins)
+		err := fn(spec.ComponentTiFlash, ins)
 		if err != nil {
-			return errors.AddStack(err)
+			return err
 		}
 	}
 	return nil
 }
 
 func (p *Playground) enableBinlog() bool {
-	return p.bootOptions.pump.Num > 0
+	return p.bootOptions.Pump.Num > 0
 }
 
 func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins instance.Instance, err error) {
@@ -604,13 +604,16 @@ func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins i
 	id := p.allocID(componentID)
 	dir := filepath.Join(dataDir, fmt.Sprintf("%s-%d", componentID, id))
 	// look more like listen ip?
-	host := p.bootOptions.host
+	host := p.bootOptions.Host
 	if cfg.Host != "" {
 		host = cfg.Host
 	}
 
+	// use the advertised host instead of 0.0.0.0
+	host = instance.AdvertiseHost(host)
+
 	switch componentID {
-	case "pd":
+	case spec.ComponentPD:
 		inst := instance.NewPDInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id)
 		ins = inst
 		if p.booted {
@@ -622,39 +625,46 @@ func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins i
 				pd.InitCluster(p.pds)
 			}
 		}
-	case "tidb":
+	case spec.ComponentTiDB:
 		inst := instance.NewTiDBInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, p.enableBinlog())
 		ins = inst
 		p.tidbs = append(p.tidbs, inst)
-	case "tikv":
+	case spec.ComponentTiKV:
 		inst := instance.NewTiKVInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds)
 		ins = inst
 		p.tikvs = append(p.tikvs, inst)
-	case "tiflash":
+	case spec.ComponentTiFlash:
 		inst := instance.NewTiFlashInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, p.tidbs)
 		ins = inst
 		p.tiflashs = append(p.tiflashs, inst)
-	case "ticdc":
+	case spec.ComponentCDC:
 		inst := instance.NewTiCDC(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds)
 		ins = inst
 		p.ticdcs = append(p.ticdcs, inst)
-	case "pump":
+	case spec.ComponentPump:
 		inst := instance.NewPump(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds)
 		ins = inst
 		p.pumps = append(p.pumps, inst)
-	case "drainer":
+	case spec.ComponentDrainer:
 		inst := instance.NewDrainer(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds)
 		ins = inst
 		p.drainers = append(p.drainers, inst)
 	default:
-		return nil, errors.Errorf("unknow component: %s", componentID)
+		return nil, errors.Errorf("unknown component: %s", componentID)
 	}
 
 	return
 }
 
-func (p *Playground) bootCluster(ctx context.Context, env *environment.Environment, options *bootOptions) error {
-	for _, cfg := range []*instance.Config{&options.pd, &options.tidb, &options.tikv, &options.tiflash, &options.pump, &options.drainer} {
+func (p *Playground) bootCluster(ctx context.Context, env *environment.Environment, options *BootOptions) error {
+	for _, cfg := range []*instance.Config{
+		&options.PD,
+		&options.TiDB,
+		&options.TiKV,
+		&options.TiFlash,
+		&options.Pump,
+		&options.Drainer,
+	} {
 		path, err := getAbsolutePath(cfg.ConfigPath)
 		if err != nil {
 			return errors.Annotatef(err, "cannot eval absolute directory: %s", cfg.ConfigPath)
@@ -664,34 +674,18 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 	p.bootOptions = options
 
-	if options.pd.Num < 1 || options.tidb.Num < 1 || options.tikv.Num < 1 {
-		return fmt.Errorf("all components count must be great than 0 (tidb=%v, tikv=%v, pd=%v)",
-			options.tidb.Num, options.tikv.Num, options.pd.Num)
+	if options.PD.Num < 1 || options.TiKV.Num < 1 {
+		return fmt.Errorf("all components count must be great than 0 (tikv=%v, pd=%v)", options.TiKV.Num, options.PD.Num)
 	}
 
-	if options.version == "" {
-		version, _, err := env.V1Repository().LatestStableVersion("tidb", false)
-		if err != nil {
-			return err
-		}
-		options.version = version.String()
-
-		fmt.Println(color.YellowString(`Use the latest stable version: %s
-
-    Specify version manually:   tiup playground <version>
-    The stable version:         tiup playground v4.0.0
-    The nightly version:        tiup playground nightly
-`, options.version))
-	}
-
-	if options.version != "nightly" {
-		if semver.Compare(options.version, "v3.1.0") < 0 && options.tiflash.Num != 0 {
-			fmt.Println(color.YellowString("Warning: current version %s doesn't support TiFlash", options.version))
-			options.tiflash.Num = 0
-		} else if runtime.GOOS == "darwin" && semver.Compare(options.version, "v4.0.0") < 0 {
+	if !utils.Version(options.Version).IsNightly() {
+		if semver.Compare(options.Version, "v3.1.0") < 0 && options.TiFlash.Num != 0 {
+			fmt.Println(color.YellowString("Warning: current version %s doesn't support TiFlash", options.Version))
+			options.TiFlash.Num = 0
+		} else if runtime.GOOS == "darwin" && semver.Compare(options.Version, "v4.0.0") < 0 {
 			// only runs tiflash on version later than v4.0.0 when executing on darwin
-			fmt.Println(color.YellowString("Warning: current version %s doesn't support TiFlash on darwin", options.version))
-			options.tiflash.Num = 0
+			fmt.Println(color.YellowString("Warning: current version %s doesn't support TiFlash on darwin", options.Version))
+			options.TiFlash.Num = 0
 		}
 	}
 
@@ -699,20 +693,20 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		comp string
 		instance.Config
 	}{
-		{"pd", options.pd},
-		{"tikv", options.tikv},
-		{"pump", options.pump},
-		{"tidb", options.tidb},
-		{"ticdc", options.ticdc},
-		{"drainer", options.drainer},
-		{"tiflash", options.tiflash},
+		{spec.ComponentPD, options.PD},
+		{spec.ComponentTiKV, options.TiKV},
+		{spec.ComponentPump, options.Pump},
+		{spec.ComponentTiDB, options.TiDB},
+		{spec.ComponentCDC, options.TiCDC},
+		{spec.ComponentDrainer, options.Drainer},
+		{spec.ComponentTiFlash, options.TiFlash},
 	}
 
 	for _, inst := range instances {
 		for i := 0; i < inst.Num; i++ {
 			_, err := p.addInstance(inst.comp, inst.Config)
 			if err != nil {
-				return errors.AddStack(err)
+				return err
 			}
 		}
 	}
@@ -720,12 +714,12 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 	fmt.Println("Playground Bootstrapping...")
 
 	var monitorInfo *MonitorInfo
-	if options.monitor {
+	if options.Monitor {
 		var err error
 
 		p.monitor, monitorInfo, err = p.bootMonitor(ctx, env)
 		if err != nil {
-			return errors.AddStack(err)
+			return err
 		}
 
 		p.instanceWaiter.Go(func() error {
@@ -740,7 +734,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 		p.grafana, err = p.bootGrafana(ctx, env, monitorInfo)
 		if err != nil {
-			return errors.AddStack(err)
+			return err
 		}
 
 		p.instanceWaiter.Go(func() error {
@@ -757,7 +751,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 	anyPumpReady := false
 	// Start all instance except tiflash.
 	err := p.WalkInstances(func(cid string, ins instance.Instance) error {
-		if cid == "tiflash" {
+		if cid == spec.ComponentTiFlash {
 			return nil
 		}
 
@@ -767,8 +761,8 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		}
 
 		// if no any pump, tidb will quit right away.
-		if cid == "pump" && !anyPumpReady {
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second*120)
+		if cid == spec.ComponentPump && !anyPumpReady {
+			ctx, cancel := context.WithTimeout(context.TODO(), time.Second*120)
 			err = ins.(*instance.Pump).Ready(ctx)
 			cancel()
 			if err != nil {
@@ -780,100 +774,115 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		return nil
 	})
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	p.booted = true
 
 	var succ []string
-	for _, db := range p.tidbs {
-		prefix := color.YellowString("Waiting for tidb %s ready ", db.Addr())
-		bar := progress.NewSingleBar(prefix)
-		bar.StartRenderLoop()
-		if s := checkDB(db.Addr()); s {
-			succ = append(succ, db.Addr())
-			bar.UpdateDisplay(&progress.DisplayProps{
-				Prefix: prefix,
-				Mode:   progress.ModeDone,
-			})
-		} else {
-			bar.UpdateDisplay(&progress.DisplayProps{
-				Prefix: prefix,
-				Mode:   progress.ModeError,
-			})
+	if len(p.tidbs) > 0 {
+		var wg sync.WaitGroup
+		var appendMutex sync.Mutex
+		bars := progress.NewMultiBar(color.YellowString("Waiting for tidb instances ready\n"))
+		for _, db := range p.tidbs {
+			wg.Add(1)
+			prefix := color.YellowString(db.Addr())
+			bar := bars.AddBar(prefix)
+			go func(dbInst *instance.TiDBInstance) {
+				defer wg.Done()
+				if s := checkDB(dbInst.Addr(), options.TiDB.UpTimeout); s {
+					{
+						appendMutex.Lock()
+						succ = append(succ, dbInst.Addr())
+						appendMutex.Unlock()
+					}
+					bar.UpdateDisplay(&progress.DisplayProps{
+						Prefix: prefix,
+						Mode:   progress.ModeDone,
+					})
+				} else {
+					bar.UpdateDisplay(&progress.DisplayProps{
+						Prefix: prefix,
+						Mode:   progress.ModeError,
+					})
+				}
+			}(db)
 		}
-		bar.StopRenderLoop()
+		bars.StartRenderLoop()
+		wg.Wait()
+		bars.StopRenderLoop()
 	}
 
 	if len(succ) > 0 {
 		// start TiFlash after at least one TiDB is up.
-		startTiFlash := func() error {
+		var started []*instance.TiFlashInstance
+		for _, flash := range p.tiflashs {
+			if err := p.startInstance(ctx, flash); err != nil {
+				fmt.Println(color.RedString("TiFlash %s failed to start: %s", flash.Addr(), err))
+			} else {
+				started = append(started, flash)
+			}
+		}
+		p.tiflashs = started
+
+		if len(p.tiflashs) > 0 {
 			var endpoints []string
 			for _, pd := range p.pds {
 				endpoints = append(endpoints, pd.Addr())
 			}
 			pdClient := api.NewPDClient(endpoints, 10*time.Second, nil)
 
-			// make sure TiKV are all up
-			for _, kv := range p.tikvs {
-				if err := checkStoreStatus(pdClient, "tikv", kv.StoreAddr()); err != nil {
-					return err
-				}
-			}
-
+			var wg sync.WaitGroup
+			bars := progress.NewMultiBar(color.YellowString("Waiting for tiflash instances ready\n"))
 			for _, flash := range p.tiflashs {
-				if err := p.startInstance(ctx, flash); err != nil {
-					return err
-				}
+				wg.Add(1)
+				prefix := color.YellowString(flash.Addr())
+				bar := bars.AddBar(prefix)
+				go func(flashInst *instance.TiFlashInstance) {
+					defer wg.Done()
+					displayResult := &progress.DisplayProps{
+						Prefix: prefix,
+					}
+					if cmd := flashInst.Cmd(); cmd == nil {
+						displayResult.Mode = progress.ModeError
+						displayResult.Suffix = "initialize command failed"
+					} else if state := cmd.ProcessState; state != nil && state.Exited() {
+						displayResult.Mode = progress.ModeError
+						displayResult.Suffix = fmt.Sprintf("process exited with code: %d", state.ExitCode())
+					} else if s := checkStoreStatus(pdClient, flashInst.Addr(), options.TiFlash.UpTimeout); !s {
+						displayResult.Mode = progress.ModeError
+						displayResult.Suffix = "failed to up after timeout"
+					} else {
+						displayResult.Mode = progress.ModeDone
+					}
+					bar.UpdateDisplay(displayResult)
+				}(flash)
 			}
-
-			// check if all TiFlash is up
-			for _, flash := range p.tiflashs {
-				cmd := flash.Cmd()
-				if cmd == nil {
-					return errors.Errorf("tiflash %s initialize command failed", flash.StoreAddr())
-				}
-				if state := cmd.ProcessState; state != nil && state.Exited() {
-					return errors.Errorf("tiflash process exited with code: %d", state.ExitCode())
-				}
-				if err := checkStoreStatus(pdClient, "tiflash", flash.StoreAddr()); err != nil {
-					return err
-				}
-			}
-
-			return nil
-		}
-		if len(p.tiflashs) > 0 {
-			err := startTiFlash()
-			if err != nil {
-				fmt.Println(color.RedString("TiFlash failed to start: %s", err))
-			}
+			bars.StartRenderLoop()
+			wg.Wait()
+			bars.StopRenderLoop()
 		}
 
 		fmt.Println(color.GreenString("CLUSTER START SUCCESSFULLY, Enjoy it ^-^"))
 		for _, dbAddr := range succ {
 			ss := strings.Split(dbAddr, ":")
-			fmt.Println(color.GreenString("To connect TiDB: mysql --host %s --port %s -u root", ss[0], ss[1]))
+			connectMsg := "To connect TiDB: mysql --host %s --port %s -u root -p (no password) --comments"
+			fmt.Println(color.GreenString(connectMsg, ss[0], ss[1]))
 		}
-
 	}
 
-	if pdAddr := p.pds[0].Addr(); hasDashboard(pdAddr) {
+	if pdAddr := p.pds[0].Addr(); len(p.tidbs) > 0 && hasDashboard(pdAddr) {
 		fmt.Println(color.GreenString("To view the dashboard: http://%s/dashboard", pdAddr))
 	}
 
-	if monitorInfo != nil && len(p.pds) != 0 {
-		client, err := newEtcdClient(p.pds[0].Addr())
-		if err == nil && client != nil {
-			promBinary, err := json.Marshal(monitorInfo)
-			if err == nil {
-				_, err = client.Put(context.TODO(), "/topology/prometheus", string(promBinary))
-				if err != nil {
-					fmt.Println("Set the PD metrics storage failed")
-				}
-				fmt.Print(color.GreenString("To view the Prometheus: http://%s:%d\n", monitorInfo.IP, monitorInfo.Port))
-			}
-		}
+	var pdAddrs []string
+	for _, pd := range p.pds {
+		pdAddrs = append(pdAddrs, pd.Addr())
+	}
+	fmt.Println(color.GreenString("PD client endpoints: %v", pdAddrs))
+
+	if monitorInfo != nil {
+		p.updateMonitorTopology(spec.ComponentPrometheus, *monitorInfo)
 	}
 
 	dumpDSN(filepath.Join(p.dataDir, "dsn"), p.tidbs)
@@ -888,11 +897,29 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 	logIfErr(p.renderSDFile())
 
-	if p.grafana != nil {
-		fmt.Print(color.GreenString("To view the Grafana: http://%s:%d\n", p.grafana.host, p.grafana.port))
+	if g := p.grafana; g != nil {
+		p.updateMonitorTopology(spec.ComponentGrafana, MonitorInfo{g.host, g.port, g.cmd.Path})
 	}
 
 	return nil
+}
+
+func (p *Playground) updateMonitorTopology(componentID string, info MonitorInfo) {
+	info.IP = instance.AdvertiseHost(info.IP)
+	fmt.Print(color.GreenString("To view the %s: http://%s:%d\n", strings.Title(componentID), info.IP, info.Port))
+	if len(p.pds) == 0 {
+		return
+	}
+
+	client, err := newEtcdClient(p.pds[0].Addr())
+	if err == nil && client != nil {
+		if promBinary, err := json.Marshal(info); err == nil {
+			_, err = client.Put(context.TODO(), "/topology/"+componentID, string(promBinary))
+			if err != nil {
+				fmt.Println("Set the PD metrics storage failed")
+			}
+		}
+	}
 }
 
 // Wait all instance quit and return the first non-nil err.
@@ -900,7 +927,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 func (p *Playground) wait() error {
 	err := p.instanceWaiter.Wait()
 	if err != nil && atomic.LoadInt32(&p.curSig) == 0 {
-		return errors.AddStack(err)
+		return err
 	}
 
 	return nil
@@ -920,7 +947,8 @@ func (p *Playground) terminate(sig syscall.Signal) {
 		timer.Stop()
 	}
 
-	for _, inst := range p.startedInstances {
+	for i := len(p.startedInstances); i > 0; i-- {
+		inst := p.startedInstances[i-1]
 		if sig == syscall.SIGKILL {
 			fmt.Printf("Force %s(%d) to quit...\n", inst.Component(), inst.Pid())
 		} else if atomic.LoadInt32(&p.curSig) == int32(sig) { // In case of double ctr+c
@@ -956,7 +984,7 @@ func (p *Playground) renderSDFile() error {
 
 	err := p.monitor.renderSDFile(cid2targets)
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	return nil
@@ -971,12 +999,12 @@ func (p *Playground) bootMonitor(ctx context.Context, env *environment.Environme
 	dataDir := p.dataDir
 	promDir := filepath.Join(dataDir, "prometheus")
 
-	monitor, err := newMonitor(ctx, options.version, options.host, promDir)
+	monitor, err := newMonitor(ctx, options.Version, options.Host, promDir)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	monitorInfo.IP = options.host
+	monitorInfo.IP = instance.AdvertiseHost(options.Host)
 	monitorInfo.BinaryPath = promDir
 	monitorInfo.Port = monitor.port
 
@@ -991,7 +1019,7 @@ func (p *Playground) bootMonitor(ctx context.Context, env *environment.Environme
 	monitor.cmd.Stdout = os.Stdout
 
 	if err := monitor.cmd.Start(); err != nil {
-		return nil, nil, errors.AddStack(err)
+		return nil, nil, err
 	}
 
 	return monitor, monitorInfo, nil
@@ -1001,12 +1029,12 @@ func (p *Playground) bootMonitor(ctx context.Context, env *environment.Environme
 func (p *Playground) bootGrafana(ctx context.Context, env *environment.Environment, monitorInfo *MonitorInfo) (*grafana, error) {
 	// set up grafana
 	options := p.bootOptions
-	if err := installIfMissing(env.Profile(), "grafana", options.version); err != nil {
-		return nil, errors.AddStack(err)
+	if err := installIfMissing("grafana", options.Version); err != nil {
+		return nil, err
 	}
-	installPath, err := env.Profile().ComponentInstalledPath("grafana", v0manifest.Version(options.version))
+	installPath, err := env.Profile().ComponentInstalledPath("grafana", utils.Version(options.Version))
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return nil, err
 	}
 
 	dataDir := p.dataDir
@@ -1038,19 +1066,19 @@ func (p *Playground) bootGrafana(ctx context.Context, env *environment.Environme
 		return nil
 	})
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return nil, err
 	}
 
 	err = replaceDatasource(dashboardDir, clusterName)
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return nil, err
 	}
 
-	grafana := newGrafana(options.version, options.host)
+	grafana := newGrafana(options.Version, options.Host)
 	// fmt.Println("Start Grafana instance...")
 	err = grafana.start(ctx, grafanaDir, fmt.Sprintf("http://%s:%d", monitorInfo.IP, monitorInfo.Port))
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return nil, err
 	}
 
 	return grafana, nil

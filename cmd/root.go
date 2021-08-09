@@ -14,30 +14,46 @@
 package cmd
 
 import (
+	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/fatih/color"
+	"github.com/google/uuid"
+	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/localdata"
+	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/repository"
+	"github.com/pingcap/tiup/pkg/repository/v1manifest"
+	"github.com/pingcap/tiup/pkg/telemetry"
 	"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
 )
 
-var rootCmd *cobra.Command
-var repoOpts repository.Options
+var (
+	rootCmd       *cobra.Command
+	repoOpts      repository.Options
+	reportEnabled bool // is telemetry report enabled
+	eventUUID     = uuid.New().String()
+	teleCommand   string
+)
+
+// arguments
+var (
+	binary       string
+	binPath      string
+	tag          string
+	printVersion bool // not using cobra.Command.Version to make it possible to show component versions
+)
 
 func init() {
 	cobra.EnableCommandSorting = false
-
-	var (
-		binary       string
-		binPath      string
-		tag          string
-		printVersion bool
-	)
+	_ = os.Setenv(localdata.EnvNameTelemetryEventUUID, eventUUID)
 
 	rootCmd = &cobra.Command{
 		Use: `tiup [flags] <command> [args...]
@@ -55,14 +71,28 @@ the latest stable version will be downloaded from the repository.`,
 			return nil
 		},
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			teleCommand = cmd.CommandPath()
 			if printVersion && len(args) == 0 {
 				return nil
 			}
-			e, err := environment.InitEnv(repoOpts)
-			if err != nil {
-				return err
+			switch cmd.Name() {
+			case "init",
+				"set":
+				if cmd.HasParent() && cmd.Parent().Name() == "mirror" {
+					// skip environment init
+					break
+				}
+				fallthrough
+			default:
+				e, err := environment.InitEnv(repoOpts)
+				if err != nil {
+					if errors.Is(perrs.Cause(err), v1manifest.ErrLoadManifest) {
+						log.Warnf("Please check for root manifest file, you may download one from the repository mirror, or try `tiup mirror set` to force reset it.")
+					}
+					return err
+				}
+				environment.SetGlobalEnv(e)
 			}
-			environment.SetGlobalEnv(e)
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -99,6 +129,7 @@ the latest stable version will be downloaded from the repository.`,
 						break
 					}
 				}
+				teleCommand = fmt.Sprintf("%s %s", cmd.CommandPath(), componentSpec)
 				return exec.RunComponent(env, tag, componentSpec, binPath, transparentParams)
 			}
 			return cmd.Help()
@@ -113,7 +144,6 @@ the latest stable version will be downloaded from the repository.`,
 	}
 
 	rootCmd.PersistentFlags().BoolVarP(&repoOpts.SkipVersionCheck, "skip-version-check", "", false, "Skip the strict version check, by default a version must be a valid SemVer string")
-	rootCmd.Flags().BoolVarP(&printVersion, "version", "v", false, "Print the version of tiup")
 	rootCmd.Flags().StringVarP(&binary, "binary", "B", "", "Print binary path of a specific version of a component `<component>[:version]`\n"+
 		"and the latest version installed will be selected if no version specified")
 	rootCmd.Flags().StringVarP(&tag, "tag", "T", "", "Specify a tag for component instance")
@@ -122,6 +152,7 @@ the latest stable version will be downloaded from the repository.`,
 	// $ tiup dumpling -h ${host}.
 	// We try to leave the handling of `-h` flag to the component.
 	rootCmd.PersistentFlags().Bool("help", false, "Help for this command")
+	rootCmd.Flags().BoolVarP(&printVersion, "version", "v", false, "Print the version of tiup")
 
 	rootCmd.AddCommand(
 		newInstallCmd(),
@@ -160,8 +191,77 @@ the latest stable version will be downloaded from the repository.`,
 
 // Execute parses the command line arguments and calls proper functions
 func Execute() {
-	if err := rootCmd.Execute(); err != nil {
+	start := time.Now()
+	code := 0
+
+	err := rootCmd.Execute()
+	if err != nil {
 		fmt.Println(color.RedString("Error: %v", err))
-		os.Exit(1)
+		code = 1
+	}
+
+	teleReport := new(telemetry.Report)
+	tiupReport := new(telemetry.TiUPReport)
+	teleReport.EventDetail = &telemetry.Report_Tiup{Tiup: tiupReport}
+
+	env := environment.GlobalEnv()
+	if env == nil {
+		// if the env is not initialized, skip telemetry upload
+		// as many info are read from the env.
+		// TODO: split pure meta information from env object and
+		// us a dedicated package for that
+		reportEnabled = false
+	} else {
+		teleMeta, _, err := telemetry.GetMeta(env)
+		if err == nil {
+			reportEnabled = teleMeta.Status == telemetry.EnableStatus
+			teleReport.InstallationUUID = teleMeta.UUID
+		} // default to false on errors
+	}
+
+	if reportEnabled {
+		teleReport.EventUUID = eventUUID
+		teleReport.EventUnixTimestamp = start.Unix()
+		teleReport.Version = telemetry.TiUPMeta()
+		teleReport.Version.TiUPVersion = version.NewTiUPVersion().SemVer()
+		tiupReport.Command = teleCommand
+		tiupReport.CustomMirror = env.Profile().Config.Mirror != repository.DefaultMirror
+		if tag != "" {
+			tiupReport.Tag = telemetry.SaltedHash(tag)
+		}
+
+		f := func() {
+			defer func() {
+				if r := recover(); r != nil {
+					if environment.DebugMode {
+						log.Debugf("Recovered in telemetry report: %v", r)
+					}
+				}
+			}()
+
+			tiupReport.ExitCode = int32(code)
+			tiupReport.TakeMilliseconds = uint64(time.Since(start).Milliseconds())
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
+			tele := telemetry.NewTelemetry()
+			err := tele.Report(ctx, teleReport)
+			if environment.DebugMode {
+				if err != nil {
+					log.Infof("report failed: %v", err)
+				}
+				fmt.Fprintf(os.Stderr, "report: %s\n", teleReport.String())
+				if data, err := json.Marshal(teleReport); err == nil {
+					log.Debugf("report: %s\n", string(data))
+				}
+			}
+			cancel()
+		}
+
+		f()
+	}
+
+	color.Unset()
+
+	if code != 0 {
+		os.Exit(code)
 	}
 }

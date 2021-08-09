@@ -14,13 +14,17 @@
 package spec
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"path/filepath"
+	"time"
 
-	"github.com/pingcap/tiup/pkg/cluster/executor"
+	perrs "github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
+	"golang.org/x/mod/semver"
 )
 
 // CDCSpec represents the Drainer topology specification in topology.yaml
@@ -28,12 +32,14 @@ type CDCSpec struct {
 	Host            string                 `yaml:"host"`
 	SSHPort         int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported        bool                   `yaml:"imported,omitempty"`
+	Patched         bool                   `yaml:"patched,omitempty"`
 	Port            int                    `yaml:"port" default:"8300"`
 	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
+	DataDir         string                 `yaml:"data_dir,omitempty"`
 	LogDir          string                 `yaml:"log_dir,omitempty"`
 	Offline         bool                   `yaml:"offline,omitempty"`
-	GCTTL           int64                  `yaml:"gc-ttl,omitempty"`
-	TZ              string                 `yaml:"tz,omitempty"`
+	GCTTL           int64                  `yaml:"gc-ttl,omitempty" validate:"gc-ttl:editable"`
+	TZ              string                 `yaml:"tz,omitempty" validate:"tz:editable"`
 	NumaNode        string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
 	Config          map[string]interface{} `yaml:"config,omitempty" validate:"config:ignore"`
 	ResourceControl meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
@@ -42,22 +48,22 @@ type CDCSpec struct {
 }
 
 // Role returns the component role of the instance
-func (s CDCSpec) Role() string {
+func (s *CDCSpec) Role() string {
 	return ComponentCDC
 }
 
 // SSH returns the host and SSH port of the instance
-func (s CDCSpec) SSH() (string, int) {
+func (s *CDCSpec) SSH() (string, int) {
 	return s.Host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
-func (s CDCSpec) GetMainPort() int {
+func (s *CDCSpec) GetMainPort() int {
 	return s.Port
 }
 
 // IsImported returns if the node is imported from TiDB-Ansible
-func (s CDCSpec) IsImported() bool {
+func (s *CDCSpec) IsImported() bool {
 	return s.Imported
 }
 
@@ -79,7 +85,7 @@ func (c *CDCComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.CDCServers))
 	for _, s := range c.Topology.CDCServers {
 		s := s
-		ins = append(ins, &CDCInstance{BaseInstance{
+		instance := &CDCInstance{BaseInstance{
 			InstanceSpec: s,
 			Name:         c.Name(),
 			Host:         s.Host,
@@ -93,14 +99,17 @@ func (c *CDCComponent) Instances() []Instance {
 				s.DeployDir,
 			},
 			StatusFn: func(tlsCfg *tls.Config, _ ...string) string {
-				scheme := "http"
-				if tlsCfg != nil {
-					scheme = "https"
-				}
-				url := fmt.Sprintf("%s://%s:%d/status", scheme, s.Host, s.Port)
-				return statusByURL(url, tlsCfg)
+				return statusByHost(s.Host, s.Port, "/status", tlsCfg)
 			},
-		}, c.Topology})
+			UptimeFn: func(tlsCfg *tls.Config) time.Duration {
+				return UptimeByHost(s.Host, s.Port, tlsCfg)
+			},
+		}, c.Topology}
+		if s.DataDir != "" {
+			instance.Dirs = append(instance.Dirs, s.DataDir)
+		}
+
+		ins = append(ins, instance)
 	}
 	return ins
 }
@@ -113,7 +122,8 @@ type CDCInstance struct {
 
 // ScaleConfig deploy temporary config on scaling
 func (i *CDCInstance) ScaleConfig(
-	e executor.Executor,
+	ctx context.Context,
+	e ctxt.Executor,
 	topo Topology,
 	clusterName,
 	clusterVersion,
@@ -126,24 +136,33 @@ func (i *CDCInstance) ScaleConfig(
 	}()
 	i.topo = mustBeClusterTopo(topo)
 
-	return i.InitConfig(e, clusterName, clusterVersion, user, paths)
+	return i.InitConfig(ctx, e, clusterName, clusterVersion, user, paths)
 }
 
 // InitConfig implements Instance interface.
 func (i *CDCInstance) InitConfig(
-	e executor.Executor,
+	ctx context.Context,
+	e ctxt.Executor,
 	clusterName,
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
 ) error {
 	topo := i.topo.(*Specification)
-	if err := i.BaseInstance.InitConfig(e, topo.GlobalOptions, deployUser, paths); err != nil {
+	if err := i.BaseInstance.InitConfig(ctx, e, topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
-
 	enableTLS := topo.GlobalOptions.TLSEnabled
-	spec := i.InstanceSpec.(CDCSpec)
+	spec := i.InstanceSpec.(*CDCSpec)
+	globalConfig := topo.ServerConfigs.CDC
+	instanceConfig := spec.Config
+
+	if semver.Compare(clusterVersion, "v4.0.13") == -1 {
+		if len(globalConfig)+len(instanceConfig) > 0 {
+			return perrs.New("server_config is only supported with TiCDC version v4.0.13 or later")
+		}
+	}
+
 	cfg := scripts.NewCDCScript(
 		i.GetHost(),
 		paths.Deploy,
@@ -153,21 +172,23 @@ func (i *CDCInstance) InitConfig(
 		spec.TZ,
 	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).AppendEndpoints(topo.Endpoints(deployUser)...)
 
+	if len(paths.Data) != 0 {
+		cfg = cfg.PatchByVersion(clusterVersion, paths.Data[0])
+	}
+
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_cdc_%s_%d.sh", i.GetHost(), i.GetPort()))
 
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
 	}
 	dst := filepath.Join(paths.Deploy, "scripts", "run_cdc.sh")
-	if err := e.Transfer(fp, dst, false); err != nil {
+	if err := e.Transfer(ctx, fp, dst, false, 0); err != nil {
 		return err
 	}
 
-	if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
+	if _, _, err := e.Execute(ctx, "chmod +x "+dst, false); err != nil {
 		return err
 	}
 
-	specConfig := spec.Config
-
-	return i.MergeServerConfig(e, topo.ServerConfigs.CDC, specConfig, paths)
+	return i.MergeServerConfig(ctx, e, globalConfig, instanceConfig, paths)
 }

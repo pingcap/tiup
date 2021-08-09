@@ -14,13 +14,15 @@
 package spec
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 
-	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
 )
@@ -30,6 +32,7 @@ type DrainerSpec struct {
 	Host            string                 `yaml:"host"`
 	SSHPort         int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported        bool                   `yaml:"imported,omitempty"`
+	Patched         bool                   `yaml:"patched,omitempty"`
 	Port            int                    `yaml:"port" default:"8249"`
 	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
 	DataDir         string                 `yaml:"data_dir,omitempty"`
@@ -44,22 +47,22 @@ type DrainerSpec struct {
 }
 
 // Role returns the component role of the instance
-func (s DrainerSpec) Role() string {
+func (s *DrainerSpec) Role() string {
 	return ComponentDrainer
 }
 
 // SSH returns the host and SSH port of the instance
-func (s DrainerSpec) SSH() (string, int) {
+func (s *DrainerSpec) SSH() (string, int) {
 	return s.Host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
-func (s DrainerSpec) GetMainPort() int {
+func (s *DrainerSpec) GetMainPort() int {
 	return s.Port
 }
 
 // IsImported returns if the node is imported from TiDB-Ansible
-func (s DrainerSpec) IsImported() bool {
+func (s *DrainerSpec) IsImported() bool {
 	return s.Imported
 }
 
@@ -96,12 +99,10 @@ func (c *DrainerComponent) Instances() []Instance {
 				s.DataDir,
 			},
 			StatusFn: func(tlsCfg *tls.Config, _ ...string) string {
-				scheme := "http"
-				if tlsCfg != nil {
-					scheme = "https"
-				}
-				url := fmt.Sprintf("%s://%s:%d/status", scheme, s.Host, s.Port)
-				return statusByURL(url, tlsCfg)
+				return statusByHost(s.Host, s.Port, "/status", tlsCfg)
+			},
+			UptimeFn: func(tlsCfg *tls.Config) time.Duration {
+				return UptimeByHost(s.Host, s.Port, tlsCfg)
 			},
 		}, c.Topology})
 	}
@@ -116,7 +117,8 @@ type DrainerInstance struct {
 
 // ScaleConfig deploy temporary config on scaling
 func (i *DrainerInstance) ScaleConfig(
-	e executor.Executor,
+	ctx context.Context,
+	e ctxt.Executor,
 	topo Topology,
 	clusterName,
 	clusterVersion,
@@ -129,26 +131,32 @@ func (i *DrainerInstance) ScaleConfig(
 	}()
 	i.topo = mustBeClusterTopo(topo)
 
-	return i.InitConfig(e, clusterName, clusterVersion, user, paths)
+	return i.InitConfig(ctx, e, clusterName, clusterVersion, user, paths)
 }
 
 // InitConfig implements Instance interface.
 func (i *DrainerInstance) InitConfig(
-	e executor.Executor,
+	ctx context.Context,
+	e ctxt.Executor,
 	clusterName,
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
 ) error {
 	topo := i.topo.(*Specification)
-	if err := i.BaseInstance.InitConfig(e, topo.GlobalOptions, deployUser, paths); err != nil {
+	if err := i.BaseInstance.InitConfig(ctx, e, topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
 
 	enableTLS := topo.GlobalOptions.TLSEnabled
-	spec := i.InstanceSpec.(DrainerSpec)
+	spec := i.InstanceSpec.(*DrainerSpec)
+	nodeID := i.GetHost() + ":" + strconv.Itoa(i.GetPort())
+	// keep origin node id if is imported
+	if i.IsImported() {
+		nodeID = ""
+	}
 	cfg := scripts.NewDrainerScript(
-		i.GetHost()+":"+strconv.Itoa(i.GetPort()),
+		nodeID,
 		i.GetHost(),
 		paths.Deploy,
 		paths.Data[0],
@@ -163,11 +171,11 @@ func (i *DrainerInstance) InitConfig(
 		return err
 	}
 	dst := filepath.Join(paths.Deploy, "scripts", "run_drainer.sh")
-	if err := e.Transfer(fp, dst, false); err != nil {
+	if err := e.Transfer(ctx, fp, dst, false, 0); err != nil {
 		return err
 	}
 
-	if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
+	if _, _, err := e.Execute(ctx, "chmod +x "+dst, false); err != nil {
 		return err
 	}
 
@@ -184,7 +192,7 @@ func (i *DrainerInstance) InitConfig(
 				i.GetPort(),
 			),
 		)
-		importConfig, err := ioutil.ReadFile(configPath)
+		importConfig, err := os.ReadFile(configPath)
 		if err != nil {
 			return err
 		}
@@ -214,9 +222,9 @@ func (i *DrainerInstance) InitConfig(
 			i.Role())
 	}
 
-	if err := i.MergeServerConfig(e, globalConfig, spec.Config, paths); err != nil {
+	if err := i.MergeServerConfig(ctx, e, globalConfig, spec.Config, paths); err != nil {
 		return err
 	}
 
-	return checkConfig(e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths, nil)
+	return checkConfig(ctx, e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths, nil)
 }

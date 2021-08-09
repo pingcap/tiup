@@ -16,12 +16,12 @@ package scripts
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path"
 	"strings"
 	"text/template"
 
-	"github.com/pingcap/tiup/pkg/cluster/embed"
+	"github.com/pingcap/tiup/embed"
 )
 
 // TiFlashScript represent the data to generate TiFlash config
@@ -120,7 +120,7 @@ func (c *TiFlashScript) AppendEndpoints(ends ...*PDScript) *TiFlashScript {
 
 // Config generate the config file data.
 func (c *TiFlashScript) Config() ([]byte, error) {
-	fp := path.Join("/templates", "scripts", "run_tiflash.sh.tpl")
+	fp := path.Join("templates", "scripts", "run_tiflash.sh.tpl")
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err
@@ -134,7 +134,7 @@ func (c *TiFlashScript) ConfigToFile(file string) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(file, config, 0755)
+	return os.WriteFile(file, config, 0755)
 }
 
 // ConfigWithTemplate generate the TiFlash config content by tpl

@@ -14,7 +14,6 @@
 package utils
 
 import (
-	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/hex"
@@ -23,20 +22,6 @@ import (
 
 	"github.com/pingcap/errors"
 )
-
-// CheckSHA returns error if the hash of reader content mismatches `sha`
-func CheckSHA(reader io.Reader, sha string) error {
-	sha1Writer := sha1.New()
-	if _, err := io.Copy(sha1Writer, reader); err != nil {
-		return errors.Trace(err)
-	}
-
-	checksum := hex.EncodeToString(sha1Writer.Sum(nil))
-	if checksum != strings.TrimSpace(sha) {
-		return errors.Errorf("checksum mismatch, expect: %v, got: %v", sha, checksum)
-	}
-	return nil
-}
 
 // CheckSHA256 returns an error if the hash of reader mismatches `sha`
 func CheckSHA256(reader io.Reader, sha string) error {
@@ -47,7 +32,11 @@ func CheckSHA256(reader io.Reader, sha string) error {
 
 	checksum := hex.EncodeToString(shaWriter.Sum(nil))
 	if checksum != strings.TrimSpace(sha) {
-		return errors.Errorf("checksum mismatch, expect: %v, got: %v", sha, checksum)
+		return &HashValidationErr{
+			cipher: "sha256",
+			expect: sha,
+			actual: checksum,
+		}
 	}
 	return nil
 }

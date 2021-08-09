@@ -14,10 +14,12 @@
 package task
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 )
 
 var (
@@ -34,8 +36,8 @@ type Limit struct {
 }
 
 // Execute implements the Task interface
-func (l *Limit) Execute(ctx *Context) error {
-	e, ok := ctx.GetExecutor(l.host)
+func (l *Limit) Execute(ctx context.Context) error {
+	e, ok := ctxt.GetInner(ctx).GetExecutor(l.host)
 	if !ok {
 		return ErrNoExecutor
 	}
@@ -48,8 +50,8 @@ func (l *Limit) Execute(ctx *Context) error {
 			l.domain, l.limit, l.item, l.value, limitsFilePath),
 	}, " && ")
 
-	stdout, stderr, err := e.Execute(cmd, true)
-	ctx.SetOutputs(l.host, stdout, stderr)
+	stdout, stderr, err := e.Execute(ctx, cmd, true)
+	ctxt.GetInner(ctx).SetOutputs(l.host, stdout, stderr)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -58,7 +60,7 @@ func (l *Limit) Execute(ctx *Context) error {
 }
 
 // Rollback implements the Task interface
-func (l *Limit) Rollback(ctx *Context) error {
+func (l *Limit) Rollback(ctx context.Context) error {
 	return ErrUnsupportedRollback
 }
 

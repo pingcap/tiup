@@ -15,11 +15,11 @@ package scripts
 
 import (
 	"bytes"
-	"io/ioutil"
+	"os"
 	"path"
 	"text/template"
 
-	"github.com/pingcap/tiup/pkg/cluster/embed"
+	"github.com/pingcap/tiup/embed"
 )
 
 // GrafanaScript represent the data to generate Grafana config
@@ -54,7 +54,7 @@ func (c *GrafanaScript) WithTPLFile(file string) *GrafanaScript {
 func (c *GrafanaScript) Config() ([]byte, error) {
 	fp := c.tplName
 	if fp == "" {
-		fp = path.Join("/templates", "scripts", "run_grafana.sh.tpl")
+		fp = path.Join("templates", "scripts", "run_grafana.sh.tpl")
 	}
 
 	tpl, err := embed.ReadFile(fp)
@@ -85,5 +85,5 @@ func (c *GrafanaScript) ConfigToFile(file string) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(file, config, 0755)
+	return os.WriteFile(file, config, 0755)
 }

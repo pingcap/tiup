@@ -14,25 +14,37 @@
 package ansible
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
+	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/tui"
 )
 
 // ImportConfig copies config files from cluster which deployed through tidb-ansible
-func ImportConfig(name string, clsMeta *spec.ClusterMeta, sshTimeout uint64, sshType executor.SSHType) error {
+func ImportConfig(name string, clsMeta *spec.ClusterMeta, gOpt operator.Options) error {
 	// there may be already cluster dir, skip create
-	//if err := os.MkdirAll(meta.ClusterPath(name), 0755); err != nil {
-	//	return err
-	//}
-	//if err := ioutil.WriteFile(meta.ClusterPath(name, "topology.yaml"), yamlFile, 0664); err != nil {
-	//	return err
-	//}
+	// if err := os.MkdirAll(meta.ClusterPath(name), 0755); err != nil {
+	// 	 return err
+	// }
+	// if err := os.WriteFile(meta.ClusterPath(name, "topology.yaml"), yamlFile, 0664); err != nil {
+	// 	 return err
+	// }
+
+	var sshProxyProps *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
+	if gOpt.SSHType != executor.SSHTypeNone && len(gOpt.SSHProxyHost) != 0 {
+		var err error
+		if sshProxyProps, err = tui.ReadIdentityFileOrPassword(gOpt.SSHProxyIdentity, gOpt.SSHProxyUsePassword); err != nil {
+			return err
+		}
+	}
 	var copyFileTasks []task.Task
 	for _, comp := range clsMeta.Topology.ComponentsByStartOrder() {
 		log.Infof("Copying config file(s) of %s...", comp.Name())
@@ -43,7 +55,22 @@ func ImportConfig(name string, clsMeta *spec.ClusterMeta, sshTimeout uint64, ssh
 					SSHKeySet(
 						spec.ClusterPath(name, "ssh", "id_rsa"),
 						spec.ClusterPath(name, "ssh", "id_rsa.pub")).
-					UserSSH(inst.GetHost(), inst.GetSSHPort(), clsMeta.User, sshTimeout, sshType, "").
+					UserSSH(
+						inst.GetHost(),
+						inst.GetSSHPort(),
+						clsMeta.User,
+						gOpt.SSHTimeout,
+						gOpt.OptTimeout,
+						gOpt.SSHProxyHost,
+						gOpt.SSHProxyPort,
+						gOpt.SSHProxyUser,
+						sshProxyProps.Password,
+						sshProxyProps.IdentityFile,
+						sshProxyProps.IdentityFilePassphrase,
+						gOpt.SSHProxyTimeout,
+						gOpt.SSHType,
+						"",
+					).
 					CopyFile(filepath.Join(inst.DeployDir(), "conf", inst.ComponentName()+".toml"),
 						spec.ClusterPath(name,
 							spec.AnsibleImportedConfigPath,
@@ -52,7 +79,8 @@ func ImportConfig(name string, clsMeta *spec.ClusterMeta, sshTimeout uint64, ssh
 								inst.GetHost(),
 								inst.GetPort())),
 						inst.GetHost(),
-						true).
+						true,
+						0).
 					Build()
 				copyFileTasks = append(copyFileTasks, t)
 			case spec.ComponentTiFlash:
@@ -60,7 +88,22 @@ func ImportConfig(name string, clsMeta *spec.ClusterMeta, sshTimeout uint64, ssh
 					SSHKeySet(
 						spec.ClusterPath(name, "ssh", "id_rsa"),
 						spec.ClusterPath(name, "ssh", "id_rsa.pub")).
-					UserSSH(inst.GetHost(), inst.GetSSHPort(), clsMeta.User, sshTimeout, sshType, "").
+					UserSSH(
+						inst.GetHost(),
+						inst.GetSSHPort(),
+						clsMeta.User,
+						gOpt.SSHTimeout,
+						gOpt.OptTimeout,
+						gOpt.SSHProxyHost,
+						gOpt.SSHProxyPort,
+						gOpt.SSHProxyUser,
+						sshProxyProps.Password,
+						sshProxyProps.IdentityFile,
+						sshProxyProps.IdentityFilePassphrase,
+						gOpt.SSHProxyTimeout,
+						gOpt.SSHType,
+						"",
+					).
 					CopyFile(filepath.Join(inst.DeployDir(), "conf", inst.ComponentName()+".toml"),
 						spec.ClusterPath(name,
 							spec.AnsibleImportedConfigPath,
@@ -69,7 +112,8 @@ func ImportConfig(name string, clsMeta *spec.ClusterMeta, sshTimeout uint64, ssh
 								inst.GetHost(),
 								inst.GetPort())),
 						inst.GetHost(),
-						true).
+						true,
+						0).
 					CopyFile(filepath.Join(inst.DeployDir(), "conf", inst.ComponentName()+"-learner.toml"),
 						spec.ClusterPath(name,
 							spec.AnsibleImportedConfigPath,
@@ -78,7 +122,8 @@ func ImportConfig(name string, clsMeta *spec.ClusterMeta, sshTimeout uint64, ssh
 								inst.GetHost(),
 								inst.GetPort())),
 						inst.GetHost(),
-						true).
+						true,
+						0).
 					Build()
 				copyFileTasks = append(copyFileTasks, t)
 			default:
@@ -90,7 +135,7 @@ func ImportConfig(name string, clsMeta *spec.ClusterMeta, sshTimeout uint64, ssh
 		Parallel(false, copyFileTasks...).
 		Build()
 
-	if err := t.Execute(task.NewContext()); err != nil {
+	if err := t.Execute(ctxt.New(context.Background(), 0)); err != nil {
 		return errors.Trace(err)
 	}
 	log.Infof("Finished copying configs.")

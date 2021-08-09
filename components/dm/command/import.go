@@ -14,15 +14,17 @@
 package command
 
 import (
+	"context"
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"github.com/fatih/color"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/dm/ansible"
-	"github.com/pingcap/tiup/pkg/cliutil"
-	"github.com/pingcap/tiup/pkg/cluster"
 	cansible "github.com/pingcap/tiup/pkg/cluster/ansible"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
+	"github.com/pingcap/tiup/pkg/cluster/manager"
+	"github.com/pingcap/tiup/pkg/tui"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
@@ -39,26 +41,27 @@ func newImportCmd() *cobra.Command {
 		Short: "Import an exist DM 1.0 cluster from dm-ansible and re-deploy 2.0 version",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := supportVersion(clusterVersion); err != nil {
-				return errors.AddStack(err)
+				return err
 			}
 
 			importer, err := ansible.NewImporter(ansibleDir, inventoryFileName, gOpt.SSHType, gOpt.SSHTimeout)
 			if err != nil {
-				return errors.AddStack(err)
+				return err
 			}
 
-			clusterName, meta, err := importer.ImportFromAnsibleDir()
+			ctx := ctxt.New(context.Background(), 0)
+			clusterName, meta, err := importer.ImportFromAnsibleDir(ctx)
 			if err != nil {
-				return errors.AddStack(err)
+				return err
 			}
 
 			if rename != "" {
 				clusterName = rename
 			}
 
-			err = importer.ScpSourceToMaster(meta.Topology)
+			err = importer.ScpSourceToMaster(ctx, meta.Topology)
 			if err != nil {
-				return errors.AddStack(err)
+				return err
 			}
 
 			data, err := yaml.Marshal(meta.Topology)
@@ -66,7 +69,7 @@ func newImportCmd() *cobra.Command {
 				return errors.AddStack(err)
 			}
 
-			f, err := ioutil.TempFile("", "tiup-*")
+			f, err := os.CreateTemp("", "tiup-*")
 			if err != nil {
 				return errors.AddStack(err)
 			}
@@ -80,33 +83,31 @@ func newImportCmd() *cobra.Command {
 			fmt.Println(string(data))
 
 			if !skipConfirm {
-				err = cliutil.PromptForConfirmOrAbortError(
+				err = tui.PromptForConfirmOrAbortError(
 					color.HiYellowString("Using the Topology to deploy DM %s cluster %s, Please Stop the DM cluster from ansible side first.\nDo you want to continue? [y/N]: ",
 						clusterVersion,
 						clusterName,
 					))
 				if err != nil {
-					return errors.AddStack(err)
+					return err
 				}
 			}
 
-			err = manager.Deploy(
+			err = cm.Deploy(
 				clusterName,
 				clusterVersion,
 				f.Name(),
-				cluster.DeployOptions{
+				manager.DeployOptions{
 					IdentityFile: cansible.SSHKeyPath(),
 					User:         tiuputils.CurrentUser(),
 				},
 				nil,
 				skipConfirm,
-				gOpt.OptTimeout,
-				gOpt.SSHTimeout,
-				gOpt.SSHType,
+				gOpt,
 			)
 
 			if err != nil {
-				return errors.AddStack(err)
+				return err
 			}
 
 			return nil
@@ -116,7 +117,7 @@ func newImportCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&ansibleDir, "dir", "d", "./", "The path to DM-Ansible directory")
 	cmd.Flags().StringVar(&inventoryFileName, "inventory", cansible.AnsibleInventoryFile, "The name of inventory file")
 	cmd.Flags().StringVarP(&rename, "rename", "r", "", "Rename the imported cluster to `NAME`")
-	cmd.Flags().StringVarP(&clusterVersion, "cluster-version", "v", "", "cluster version of DM to deploy")
+	cmd.Flags().StringVarP(&clusterVersion, "cluster-version", "v", "", "cluster version of DM to deploy (required)")
 
 	err := cmd.MarkFlagRequired("cluster-version")
 	if err != nil { // if no this flag

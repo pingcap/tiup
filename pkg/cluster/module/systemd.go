@@ -14,11 +14,12 @@
 package module
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
 
-	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 )
 
 // scope can be either "system", "user" or "global"
@@ -35,6 +36,7 @@ type SystemdModuleConfig struct {
 	ReloadDaemon bool          // run daemon-reload before other actions
 	Scope        string        // user, system or global
 	Force        bool          // add the `--force` arg to systemctl command
+	Signal       string        // specify the signal to send to process
 	Timeout      time.Duration // timeout to execute the command
 }
 
@@ -55,9 +57,13 @@ func NewSystemdModule(config SystemdModuleConfig) *SystemdModule {
 		systemctl = fmt.Sprintf("%s --force", systemctl)
 	}
 
+	if config.Signal != "" {
+		systemctl = fmt.Sprintf("%s --signal %s", systemctl, config.Signal)
+	}
+
 	switch config.Scope {
 	case SystemdScopeUser:
-		sudo = false // `--user` scope does not need root priviledge
+		sudo = false // `--user` scope does not need root privilege
 		fallthrough
 	case SystemdScopeGlobal:
 		systemctl = fmt.Sprintf("%s --%s", systemctl, config.Scope)
@@ -88,6 +94,6 @@ func NewSystemdModule(config SystemdModuleConfig) *SystemdModule {
 
 // Execute passes the command to executor and returns its results, the executor
 // should be already initialized.
-func (mod *SystemdModule) Execute(exec executor.Executor) ([]byte, []byte, error) {
-	return exec.Execute(mod.cmd, mod.sudo, mod.timeout)
+func (mod *SystemdModule) Execute(ctx context.Context, exec ctxt.Executor) ([]byte, []byte, error) {
+	return exec.Execute(ctx, mod.cmd, mod.sudo, mod.timeout)
 }

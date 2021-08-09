@@ -23,9 +23,17 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
+	"sync"
+	"time"
 
 	"github.com/otiai10/copy"
 	"github.com/pingcap/errors"
+)
+
+var (
+	fileLocks = make(map[string]*sync.Mutex)
+	filesLock = sync.Mutex{}
 )
 
 // IsSymExist check whether a symbol link is exist
@@ -68,6 +76,20 @@ func IsExecBinary(path string) bool {
 		return false
 	}
 	return !info.IsDir() && info.Mode()&0111 == 0111
+}
+
+// IsSubDir returns if sub is a sub directory of parent
+func IsSubDir(parent, sub string) bool {
+	up := ".." + string(os.PathSeparator)
+
+	rel, err := filepath.Rel(parent, sub)
+	if err != nil {
+		return false
+	}
+	if !strings.HasPrefix(rel, up) && rel != ".." {
+		return true
+	}
+	return false
 }
 
 // Untar decompresses the tarball
@@ -154,7 +176,21 @@ func Copy(src, dst string) error {
 		return err
 	}
 
-	return os.Chmod(dst, fi.Mode())
+	err = os.Chmod(dst, fi.Mode())
+	if err != nil {
+		return err
+	}
+
+	// Make sure the created dst's modify time is newer (at least equal) than src
+	// this is used to workaround github action virtual filesystem
+	ofi, err := os.Stat(dst)
+	if err != nil {
+		return err
+	}
+	if fi.ModTime().After(ofi.ModTime()) {
+		return os.Chtimes(dst, fi.ModTime(), fi.ModTime())
+	}
+	return nil
 }
 
 // Move moves a file from src to dst, this is done by copying the file and then
@@ -230,4 +266,70 @@ func TailN(fname string, n int) (lines []string, err error) {
 	}
 
 	return
+}
+
+func fileLock(path string) *sync.Mutex {
+	filesLock.Lock()
+	defer filesLock.Unlock()
+
+	if _, ok := fileLocks[path]; !ok {
+		fileLocks[path] = &sync.Mutex{}
+	}
+
+	return fileLocks[path]
+}
+
+// SaveFileWithBackup will backup the file before save it.
+// e.g., backup meta.yaml as meta-2006-01-02T15:04:05Z07:00.yaml
+// backup the files in the same dir of path if backupDir is empty.
+func SaveFileWithBackup(path string, data []byte, backupDir string) error {
+	fileLock(path).Lock()
+	defer fileLock(path).Unlock()
+
+	info, err := os.Stat(path)
+	if err != nil && !os.IsNotExist(err) {
+		return errors.AddStack(err)
+	}
+
+	if info != nil && info.IsDir() {
+		return errors.Errorf("%s is directory", path)
+	}
+
+	// backup file
+	if !os.IsNotExist(err) {
+		base := filepath.Base(path)
+		dir := filepath.Dir(path)
+
+		var backupName string
+		timestr := time.Now().Format(time.RFC3339Nano)
+		p := strings.Split(base, ".")
+		if len(p) == 1 {
+			backupName = base + "-" + timestr
+		} else {
+			backupName = strings.Join(p[0:len(p)-1], ".") + "-" + timestr + "." + p[len(p)-1]
+		}
+
+		backupData, err := os.ReadFile(path)
+		if err != nil {
+			return errors.AddStack(err)
+		}
+
+		var backupPath string
+		if backupDir != "" {
+			backupPath = filepath.Join(backupDir, backupName)
+		} else {
+			backupPath = filepath.Join(dir, backupName)
+		}
+		err = os.WriteFile(backupPath, backupData, 0644)
+		if err != nil {
+			return errors.AddStack(err)
+		}
+	}
+
+	err = os.WriteFile(path, data, 0644)
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	return nil
 }

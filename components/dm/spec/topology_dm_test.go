@@ -15,7 +15,6 @@ package spec
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -33,8 +32,8 @@ var _ = Suite(&metaSuiteDM{})
 func TestDefaultDataDir(t *testing.T) {
 	// Test with without global DataDir.
 	topo := new(Specification)
-	topo.Masters = append(topo.Masters, MasterSpec{Host: "1.1.1.1", Port: 1111})
-	topo.Workers = append(topo.Workers, WorkerSpec{Host: "1.1.2.1", Port: 2221})
+	topo.Masters = append(topo.Masters, &MasterSpec{Host: "1.1.1.1", Port: 1111})
+	topo.Workers = append(topo.Workers, &WorkerSpec{Host: "1.1.2.1", Port: 2221})
 	data, err := yaml.Marshal(topo)
 	assert.Nil(t, err)
 
@@ -59,10 +58,10 @@ func TestDefaultDataDir(t *testing.T) {
 	// Test with global DataDir.
 	topo = new(Specification)
 	topo.GlobalOptions.DataDir = "/gloable_data"
-	topo.Masters = append(topo.Masters, MasterSpec{Host: "1.1.1.1", Port: 1111})
-	topo.Masters = append(topo.Masters, MasterSpec{Host: "1.1.1.2", Port: 1112, DataDir: "/my_data"})
-	topo.Workers = append(topo.Workers, WorkerSpec{Host: "1.1.2.1", Port: 2221})
-	topo.Workers = append(topo.Workers, WorkerSpec{Host: "1.1.2.2", Port: 2222, DataDir: "/my_data"})
+	topo.Masters = append(topo.Masters, &MasterSpec{Host: "1.1.1.1", Port: 1111})
+	topo.Masters = append(topo.Masters, &MasterSpec{Host: "1.1.1.2", Port: 1112, DataDir: "/my_data"})
+	topo.Workers = append(topo.Workers, &WorkerSpec{Host: "1.1.2.1", Port: 2221})
+	topo.Workers = append(topo.Workers, &WorkerSpec{Host: "1.1.2.2", Port: 2222, DataDir: "/my_data"})
 	data, err = yaml.Marshal(topo)
 	assert.Nil(t, err)
 
@@ -182,6 +181,7 @@ master_servers:
     arch: "aarch64"
 worker_servers:
   - host: 172.16.5.138
+    arch: "amd64"
 `), &topo)
 	assert.NotNil(t, err)
 	assert.Equal(t, "platform mismatch for '172.16.5.138' between 'master_servers:linux/arm64' and 'worker_servers:linux/amd64'", err.Error())
@@ -273,7 +273,7 @@ worker_servers:
 }
 
 func withTempFile(content string, fn func(string)) {
-	file, err := ioutil.TempFile("/tmp", "topology-test")
+	file, err := os.CreateTemp("/tmp", "topology-test")
 	if err != nil {
 		panic(fmt.Sprintf("create temp file: %s", err))
 	}
@@ -520,5 +520,23 @@ worker_servers:
 		assert.Equal(t, "/my-global-deploy/dm-worker-8262/data", topo.Workers[2].DataDir)
 		assert.Equal(t, "/my-global-deploy/dm-worker-8262", topo.Workers[4].DeployDir)
 		assert.Equal(t, "/my-global-deploy/dm-worker-8262/data", topo.Workers[4].DataDir)
+	})
+}
+
+func TestMonitorLogDir(t *testing.T) {
+	withTempFile(`
+monitored:
+  node_exporter_port: 39100
+  blackbox_exporter_port: 39115
+  deploy_dir: "test-deploy"
+  log_dir: "test-deploy/log"
+`, func(file string) {
+		topo := Specification{}
+		err := spec.ParseTopologyYaml(file, &topo)
+		assert.Nil(t, err)
+		assert.Equal(t, 39100, topo.MonitoredOptions.NodeExporterPort)
+		assert.Equal(t, 39115, topo.MonitoredOptions.BlackboxExporterPort)
+		assert.Equal(t, "test-deploy/log", topo.MonitoredOptions.LogDir)
+		assert.Equal(t, "test-deploy", topo.MonitoredOptions.DeployDir)
 	})
 }

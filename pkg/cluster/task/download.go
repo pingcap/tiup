@@ -14,10 +14,12 @@
 package task
 
 import (
+	"context"
 	"fmt"
 
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/environment"
+	"github.com/pingcap/tiup/pkg/repository"
 )
 
 // Downloader is used to download the specific version of a component from
@@ -40,11 +42,14 @@ func NewDownloader(component string, os string, arch string, version string) *Do
 }
 
 // Execute implements the Task interface
-func (d *Downloader) Execute(_ *Context) error {
+func (d *Downloader) Execute(_ context.Context) error {
 	// If the version is not specified, the last stable one will be used
 	if d.version == "" {
 		env := environment.GlobalEnv()
-		ver, _, err := env.V1Repository().LatestStableVersion(d.component, false)
+		ver, _, err := env.V1Repository().WithOptions(repository.Options{
+			GOOS:   d.os,
+			GOARCH: d.arch,
+		}).LatestStableVersion(d.component, false)
 		if err != nil {
 			return err
 		}
@@ -54,7 +59,7 @@ func (d *Downloader) Execute(_ *Context) error {
 }
 
 // Rollback implements the Task interface
-func (d *Downloader) Rollback(ctx *Context) error {
+func (d *Downloader) Rollback(ctx context.Context) error {
 	// We cannot delete the component because of some versions maybe exists before
 	return nil
 }

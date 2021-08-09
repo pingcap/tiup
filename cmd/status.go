@@ -14,7 +14,6 @@
 package cmd
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -33,6 +32,7 @@ func newStatusCmd() *cobra.Command {
 		Use:   "status",
 		Short: "List the status of instantiated components",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			teleCommand = cmd.CommandPath()
 			env := environment.GlobalEnv()
 			if len(args) > 0 {
 				return cmd.Help()
@@ -47,7 +47,7 @@ func showStatus(env *environment.Environment) error {
 	var table [][]string
 	table = append(table, []string{"Name", "Component", "PID", "Status", "Created Time", "Directory", "Binary", "Args"})
 	if dataDir := env.LocalPath(localdata.DataParentDir); utils.IsExist(dataDir) {
-		dirs, err := ioutil.ReadDir(dataDir)
+		dirs, err := os.ReadDir(dataDir)
 		if err != nil {
 			return err
 		}

@@ -14,9 +14,9 @@
 package spec
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -26,13 +26,15 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/checkpoint"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/module"
 	system "github.com/pingcap/tiup/pkg/cluster/template/systemd"
 	"github.com/pingcap/tiup/pkg/meta"
+	"go.uber.org/zap"
 )
 
-// Components names supported by TiOps
+// Components names
 const (
 	ComponentTiDB             = "tidb"
 	ComponentTiKV             = "tikv"
@@ -45,11 +47,20 @@ const (
 	ComponentTiSpark          = "tispark"
 	ComponentSpark            = "spark"
 	ComponentAlertmanager     = "alertmanager"
+	ComponentDMMaster         = "dm-master"
+	ComponentDMWorker         = "dm-worker"
 	ComponentPrometheus       = "prometheus"
 	ComponentPushwaygate      = "pushgateway"
 	ComponentBlackboxExporter = "blackbox_exporter"
 	ComponentNodeExporter     = "node_exporter"
 	ComponentCheckCollector   = "insight"
+)
+
+var (
+	// CopyConfigFile is the checkpoint to cache config file transfer action
+	CopyConfigFile = checkpoint.Register(
+		checkpoint.Field("config-file", reflect.DeepEqual),
+	)
 )
 
 // Component represents a component of the cluster.
@@ -70,10 +81,10 @@ type RollingUpdateInstance interface {
 type Instance interface {
 	InstanceSpec
 	ID() string
-	Ready(executor.Executor, uint64) error
-	InitConfig(e executor.Executor, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error
-	ScaleConfig(e executor.Executor, topo Topology, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error
-	PrepareStart(tlsCfg *tls.Config) error
+	Ready(context.Context, ctxt.Executor, uint64) error
+	InitConfig(ctx context.Context, e ctxt.Executor, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error
+	ScaleConfig(ctx context.Context, e ctxt.Executor, topo Topology, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error
+	PrepareStart(ctx context.Context, tlsCfg *tls.Config) error
 	ComponentName() string
 	InstanceName() string
 	ServiceName() string
@@ -84,32 +95,35 @@ type Instance interface {
 	UsedPorts() []int
 	UsedDirs() []string
 	Status(tlsCfg *tls.Config, pdList ...string) string
+	Uptime(tlsCfg *tls.Config) time.Duration
 	DataDir() string
 	LogDir() string
 	OS() string // only linux supported now
 	Arch() string
+	IsPatched() bool
+	SetPatched(bool)
 }
 
 // PortStarted wait until a port is being listened
-func PortStarted(e executor.Executor, port int, timeout uint64) error {
+func PortStarted(ctx context.Context, e ctxt.Executor, port int, timeout uint64) error {
 	c := module.WaitForConfig{
 		Port:    port,
 		State:   "started",
 		Timeout: time.Second * time.Duration(timeout),
 	}
 	w := module.NewWaitFor(c)
-	return w.Execute(e)
+	return w.Execute(ctx, e)
 }
 
 // PortStopped wait until a port is being released
-func PortStopped(e executor.Executor, port int, timeout uint64) error {
+func PortStopped(ctx context.Context, e ctxt.Executor, port int, timeout uint64) error {
 	c := module.WaitForConfig{
 		Port:    port,
 		State:   "stopped",
 		Timeout: time.Second * time.Duration(timeout),
 	}
 	w := module.NewWaitFor(c)
-	return w.Execute(e)
+	return w.Execute(ctx, e)
 }
 
 // BaseInstance implements some method of Instance interface..
@@ -125,19 +139,30 @@ type BaseInstance struct {
 	Ports    []int
 	Dirs     []string
 	StatusFn func(tlsCfg *tls.Config, pdHosts ...string) string
+	UptimeFn func(tlsCfg *tls.Config) time.Duration
 }
 
 // Ready implements Instance interface
-func (i *BaseInstance) Ready(e executor.Executor, timeout uint64) error {
-	return PortStarted(e, i.Port, timeout)
+func (i *BaseInstance) Ready(ctx context.Context, e ctxt.Executor, timeout uint64) error {
+	return PortStarted(ctx, e, i.Port, timeout)
 }
 
 // InitConfig init the service configuration.
-func (i *BaseInstance) InitConfig(e executor.Executor, opt GlobalOptions, user string, paths meta.DirPaths) error {
+func (i *BaseInstance) InitConfig(ctx context.Context, e ctxt.Executor, opt GlobalOptions, user string, paths meta.DirPaths) (err error) {
 	comp := i.ComponentName()
 	host := i.GetHost()
 	port := i.GetPort()
 	sysCfg := filepath.Join(paths.Cache, fmt.Sprintf("%s-%s-%d.service", comp, host, port))
+
+	// insert checkpoint
+	point := checkpoint.Acquire(ctx, CopyConfigFile, map[string]interface{}{"config-file": sysCfg})
+	defer func() {
+		point.Release(err, zap.String("config-file", sysCfg))
+	}()
+
+	if point.Hit() != nil {
+		return nil
+	}
 
 	resource := MergeResourceControl(opt.ResourceControl, i.resourceControl())
 	systemCfg := system.NewConfig(comp, user, paths.Deploy).
@@ -157,11 +182,11 @@ func (i *BaseInstance) InitConfig(e executor.Executor, opt GlobalOptions, user s
 		return errors.Trace(err)
 	}
 	tgt := filepath.Join("/tmp", comp+"_"+uuid.New().String()+".service")
-	if err := e.Transfer(sysCfg, tgt, false); err != nil {
+	if err := e.Transfer(ctx, sysCfg, tgt, false, 0); err != nil {
 		return errors.Annotatef(err, "transfer from %s to %s failed", sysCfg, tgt)
 	}
 	cmd := fmt.Sprintf("mv %s /etc/systemd/system/%s-%d.service", tgt, comp, port)
-	if _, _, err := e.Execute(cmd, true); err != nil {
+	if _, _, err := e.Execute(ctx, cmd, true); err != nil {
 		return errors.Annotatef(err, "execute: %s", cmd)
 	}
 
@@ -170,15 +195,15 @@ func (i *BaseInstance) InitConfig(e executor.Executor, opt GlobalOptions, user s
 
 // TransferLocalConfigFile scp local config file to remote
 // Precondition: the user on remote have permission to access & mkdir of dest files
-func (i *BaseInstance) TransferLocalConfigFile(e executor.Executor, local, remote string) error {
+func (i *BaseInstance) TransferLocalConfigFile(ctx context.Context, e ctxt.Executor, local, remote string) error {
 	remoteDir := filepath.Dir(remote)
 	// make sure the directory exists
 	cmd := fmt.Sprintf("mkdir -p %s", remoteDir)
-	if _, _, err := e.Execute(cmd, false); err != nil {
+	if _, _, err := e.Execute(ctx, cmd, false); err != nil {
 		return errors.Annotatef(err, "execute: %s", cmd)
 	}
 
-	if err := e.Transfer(local, remote, false); err != nil {
+	if err := e.Transfer(ctx, local, remote, false, 0); err != nil {
 		return errors.Annotatef(err, "transfer from %s to %s failed", local, remote)
 	}
 
@@ -187,20 +212,30 @@ func (i *BaseInstance) TransferLocalConfigFile(e executor.Executor, local, remot
 
 // TransferLocalConfigDir scp local config directory to remote
 // Precondition: the user on remote have right to access & mkdir of dest files
-func (i *BaseInstance) TransferLocalConfigDir(e executor.Executor, local, remote string, filter func(string) bool) error {
-	files, err := ioutil.ReadDir(local)
+func (i *BaseInstance) TransferLocalConfigDir(ctx context.Context, e ctxt.Executor, local, remote string, filter func(string) bool) error {
+	return i.IteratorLocalConfigDir(ctx, local, filter, func(fname string) error {
+		localPath := path.Join(local, fname)
+		remotePath := path.Join(remote, fname)
+		if err := i.TransferLocalConfigFile(ctx, e, localPath, remotePath); err != nil {
+			return errors.Annotatef(err, "transfer local config (%s -> %s) failed", localPath, remotePath)
+		}
+		return nil
+	})
+}
+
+// IteratorLocalConfigDir iterators the local dir with filter, then invoke f for each found fileName
+func (i *BaseInstance) IteratorLocalConfigDir(ctx context.Context, local string, filter func(string) bool, f func(string) error) error {
+	files, err := os.ReadDir(local)
 	if err != nil {
 		return errors.Annotatef(err, "read local directory %s failed", local)
 	}
 
-	for _, f := range files {
-		if filter != nil && !filter(f.Name()) {
+	for _, file := range files {
+		if filter != nil && !filter(file.Name()) {
 			continue
 		}
-		localPath := path.Join(local, f.Name())
-		remotePath := path.Join(remote, f.Name())
-		if err := i.TransferLocalConfigFile(e, localPath, remotePath); err != nil {
-			return errors.Annotatef(err, "transfer local config (%s -> %s) failed", localPath, remotePath)
+		if err := f(file.Name()); err != nil {
+			return err
 		}
 	}
 
@@ -208,35 +243,35 @@ func (i *BaseInstance) TransferLocalConfigDir(e executor.Executor, local, remote
 }
 
 // MergeServerConfig merges the server configuration and overwrite the global configuration
-func (i *BaseInstance) MergeServerConfig(e executor.Executor, globalConf, instanceConf map[string]interface{}, paths meta.DirPaths) error {
+func (i *BaseInstance) MergeServerConfig(ctx context.Context, e ctxt.Executor, globalConf, instanceConf map[string]interface{}, paths meta.DirPaths) error {
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("%s-%s-%d.toml", i.ComponentName(), i.GetHost(), i.GetPort()))
 	conf, err := merge2Toml(i.ComponentName(), globalConf, instanceConf)
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(fp, conf, os.ModePerm)
+	err = os.WriteFile(fp, conf, os.ModePerm)
 	if err != nil {
 		return err
 	}
 	dst := filepath.Join(paths.Deploy, "conf", fmt.Sprintf("%s.toml", i.ComponentName()))
 	// transfer config
-	return e.Transfer(fp, dst, false)
+	return e.Transfer(ctx, fp, dst, false, 0)
 }
 
 // mergeTiFlashLearnerServerConfig merges the server configuration and overwrite the global configuration
-func (i *BaseInstance) mergeTiFlashLearnerServerConfig(e executor.Executor, globalConf, instanceConf map[string]interface{}, paths meta.DirPaths) error {
+func (i *BaseInstance) mergeTiFlashLearnerServerConfig(ctx context.Context, e ctxt.Executor, globalConf, instanceConf map[string]interface{}, paths meta.DirPaths) error {
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("%s-learner-%s-%d.toml", i.ComponentName(), i.GetHost(), i.GetPort()))
 	conf, err := merge2Toml(i.ComponentName()+"-learner", globalConf, instanceConf)
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(fp, conf, os.ModePerm)
+	err = os.WriteFile(fp, conf, os.ModePerm)
 	if err != nil {
 		return err
 	}
 	dst := filepath.Join(paths.Deploy, "conf", fmt.Sprintf("%s-learner.toml", i.ComponentName()))
 	// transfer config
-	return e.Transfer(fp, dst, false)
+	return e.Transfer(ctx, fp, dst, false, 0)
 }
 
 // ID returns the identifier of this instance, the ID is constructed by host:port
@@ -259,17 +294,17 @@ func (i *BaseInstance) InstanceName() string {
 
 // ServiceName implements Instance interface
 func (i *BaseInstance) ServiceName() string {
+	var name string
 	switch i.ComponentName() {
 	case ComponentSpark, ComponentTiSpark:
-		if i.Port > 0 {
-			return fmt.Sprintf("%s-%d.service", i.Role(), i.Port)
-		}
-		return fmt.Sprintf("%s.service", i.Role())
+		name = i.Role()
+	default:
+		name = i.Name
 	}
 	if i.Port > 0 {
-		return fmt.Sprintf("%s-%d.service", i.Name, i.Port)
+		return fmt.Sprintf("%s-%d.service", name, i.Port)
 	}
-	return fmt.Sprintf("%s.service", i.Name)
+	return fmt.Sprintf("%s.service", name)
 }
 
 // GetHost implements Instance interface
@@ -292,12 +327,12 @@ func (i *BaseInstance) GetSSHPort() int {
 
 // DeployDir implements Instance interface
 func (i *BaseInstance) DeployDir() string {
-	return reflect.ValueOf(i.InstanceSpec).FieldByName("DeployDir").String()
+	return reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("DeployDir").String()
 }
 
 // DataDir implements Instance interface
 func (i *BaseInstance) DataDir() string {
-	dataDir := reflect.ValueOf(i.InstanceSpec).FieldByName("DataDir")
+	dataDir := reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("DataDir")
 	if !dataDir.IsValid() {
 		return ""
 	}
@@ -314,7 +349,7 @@ func (i *BaseInstance) DataDir() string {
 func (i *BaseInstance) LogDir() string {
 	logDir := ""
 
-	field := reflect.ValueOf(i.InstanceSpec).FieldByName("LogDir")
+	field := reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("LogDir")
 	if field.IsValid() {
 		logDir = field.Interface().(string)
 	}
@@ -330,7 +365,7 @@ func (i *BaseInstance) LogDir() string {
 
 // OS implements Instance interface
 func (i *BaseInstance) OS() string {
-	v := reflect.ValueOf(i.InstanceSpec).FieldByName("OS")
+	v := reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("OS")
 	if !v.IsValid() {
 		return ""
 	}
@@ -339,15 +374,33 @@ func (i *BaseInstance) OS() string {
 
 // Arch implements Instance interface
 func (i *BaseInstance) Arch() string {
-	v := reflect.ValueOf(i.InstanceSpec).FieldByName("Arch")
+	v := reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("Arch")
 	if !v.IsValid() {
 		return ""
 	}
 	return v.Interface().(string)
 }
 
+// IsPatched implements Instance interface
+func (i *BaseInstance) IsPatched() bool {
+	v := reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("Patched")
+	if !v.IsValid() {
+		return false
+	}
+	return v.Bool()
+}
+
+// SetPatched implements the Instance interface
+func (i *BaseInstance) SetPatched(p bool) {
+	v := reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("Patched")
+	if !v.CanSet() {
+		return
+	}
+	v.SetBool(p)
+}
+
 // PrepareStart checks instance requirements before starting
-func (i *BaseInstance) PrepareStart(tlsCfg *tls.Config) error {
+func (i *BaseInstance) PrepareStart(ctx context.Context, tlsCfg *tls.Config) error {
 	return nil
 }
 
@@ -372,7 +425,7 @@ func MergeResourceControl(lhs, rhs meta.ResourceControl) meta.ResourceControl {
 }
 
 func (i *BaseInstance) resourceControl() meta.ResourceControl {
-	if v := reflect.ValueOf(i.InstanceSpec).FieldByName("ResourceControl"); v.IsValid() {
+	if v := reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("ResourceControl"); v.IsValid() {
 		return v.Interface().(meta.ResourceControl)
 	}
 	return meta.ResourceControl{}
@@ -396,4 +449,9 @@ func (i *BaseInstance) UsedDirs() []string {
 // Status implements Instance interface
 func (i *BaseInstance) Status(tlsCfg *tls.Config, pdList ...string) string {
 	return i.StatusFn(tlsCfg, pdList...)
+}
+
+// Uptime implements Instance interface
+func (i *BaseInstance) Uptime(tlsCfg *tls.Config) time.Duration {
+	return i.UptimeFn(tlsCfg)
 }

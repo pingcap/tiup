@@ -29,7 +29,6 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/repository"
-	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -97,17 +96,12 @@ func (inst *TiFlashInstance) StatusAddrs() (addrs []string) {
 }
 
 // Start calls set inst.cmd and Start
-func (inst *TiFlashInstance) Start(ctx context.Context, version v0manifest.Version) error {
-	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
-		return err
-	}
-	endpoints := make([]string, 0, len(inst.pds))
-	for _, pd := range inst.pds {
-		endpoints = append(endpoints, fmt.Sprintf("%s:%d", advertiseHost(inst.Host), pd.StatusPort))
-	}
+func (inst *TiFlashInstance) Start(ctx context.Context, version utils.Version) error {
+	endpoints := pdEndpoints(inst.pds, false)
+
 	tidbStatusAddrs := make([]string, 0, len(inst.dbs))
 	for _, db := range inst.dbs {
-		tidbStatusAddrs = append(tidbStatusAddrs, fmt.Sprintf("%s:%d", advertiseHost(db.Host), uint64(db.StatusPort)))
+		tidbStatusAddrs = append(tidbStatusAddrs, fmt.Sprintf("%s:%d", AdvertiseHost(db.Host), uint64(db.StatusPort)))
 	}
 	wd, err := filepath.Abs(inst.Dir)
 	if err != nil {
@@ -158,7 +152,7 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version v0manifest.Versi
 		if err != nil {
 			return err
 		}
-		if version, err = env.GetComponentInstalledVersion("tiflash", version); err != nil {
+		if version, err = env.DownloadComponentIfMissing("tiflash", version); err != nil {
 			return err
 		}
 		// version may be empty, we will use the latest stable version later in Start cmd.
@@ -207,10 +201,13 @@ func (inst *TiFlashInstance) Cmd() *exec.Cmd {
 
 // StoreAddr return the store address of TiFlash
 func (inst *TiFlashInstance) StoreAddr() string {
-	return fmt.Sprintf("%s:%d", advertiseHost(inst.Host), inst.ServicePort)
+	return fmt.Sprintf("%s:%d", AdvertiseHost(inst.Host), inst.ServicePort)
 }
 
-func (inst *TiFlashInstance) checkConfig(deployDir, clusterManagerPath string, version v0manifest.Version, tidbStatusAddrs, endpoints []string) error {
+func (inst *TiFlashInstance) checkConfig(deployDir, clusterManagerPath string, version utils.Version, tidbStatusAddrs, endpoints []string) error {
+	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
+		return errors.Trace(err)
+	}
 	if inst.ConfigPath == "" {
 		inst.ConfigPath = path.Join(inst.Dir, "tiflash.toml")
 	}

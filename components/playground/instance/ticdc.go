@@ -16,11 +16,10 @@ package instance
 import (
 	"context"
 	"fmt"
-	"github.com/pingcap/tiup/pkg/repository/v0manifest"
-	"github.com/pingcap/tiup/pkg/utils"
-	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // TiCDC represent a ticdc instance.
@@ -50,21 +49,14 @@ func NewTiCDC(binPath string, dir, host, configPath string, id int, pds []*PDIns
 }
 
 // Start implements Instance interface.
-func (c *TiCDC) Start(ctx context.Context, version v0manifest.Version) error {
-	if err := os.MkdirAll(c.Dir, 0755); err != nil {
-		return err
-	}
-
-	var urls []string
-	for _, pd := range c.pds {
-		urls = append(urls, fmt.Sprintf("http://%s:%d", pd.Host, pd.StatusPort))
-	}
+func (c *TiCDC) Start(ctx context.Context, version utils.Version) error {
+	endpoints := pdEndpoints(c.pds, true)
 
 	args := []string{
 		"server",
 		fmt.Sprintf("--addr=%s:%d", c.Host, c.Port),
-		fmt.Sprintf("--advertise-addr=%s:%d", advertiseHost(c.Host), c.Port),
-		fmt.Sprintf("--pd=%s", strings.Join(urls, ",")),
+		fmt.Sprintf("--advertise-addr=%s:%d", AdvertiseHost(c.Host), c.Port),
+		fmt.Sprintf("--pd=%s", strings.Join(endpoints, ",")),
 		fmt.Sprintf("--log-file=%s", c.LogFile()),
 	}
 

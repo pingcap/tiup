@@ -78,8 +78,8 @@ func TestPollutedManifest(t *testing.T) {
 	// Mock remote correct but local throw sign error
 	mirror = MockMirror{
 		Resources: map[string]string{
-			/* these files will expire after 2120 */
-			"/timestamp.json": `{"signatures":[{"keyid":"66d4ea1da00076c822a6e1b4df5eb1e529eb38f6edcedff323e62f2bfe3eaddd","sig":"Mkrw+6H7hQATE0BpjOJ/f7GZlnDzADbxSqWS6+JxW6Dhw/17N+S/K127+7DnBhHNq7+uoiC7jPcCAxYXv2f096fowod9rqvYq47dMLMzNHZ/e63SNeI9B57m9wR58ljkH1cRY0dtJqMVESot0RMDRArYRRzs2kvPp8LvzfJqLP0IXPS/VWrOOyzSJoIuvaNyWY+dNrqM7XYI+y0TWIl06r00TwOjLKjjzLbJcqTBETharQ6o7O7U+V6H3QnmgRa0LtwKIpuDl52PSWhuKRhgfWB4sKfirVlTopGVDI7GmdrvCKlAY8x1tcXrlbDQAEKhHfJXTCO1MBaLToqHug3tMQ=="}],"signed":{"_type":"timestamp","expires":"2120-08-01T14:47:48+08:00","meta":{"/snapshot.json":{"hashes":{"sha256":"aba19fedb329be3c8a08291e06f9849997ca5a9c62f6b429865987c932488249"},"length":1760}},"spec_version":"0.1.0","version":639}}`,
+			// these files will expire after 2120
+			"/timestamp.json": `{"signatures":[{"keyid":"66d4ea1da00076c822a6e1b4df5eb1e529eb38f6edcedff323e62f2bfe3eaddd","sig":"Mo/o68zmRCpu5gHB9uEyVVtf5Cz432F6dd/jkKVDQXw3vG4ftnOiIRF590OfE79VFQ3BXDgMUmfD7sdkcU5Gc4HBUqKWt3vI1tFsEFfxZDQSA/upONirknxtKKZtrjDkk/rjD7cLE3S/Stul+ho0LwwlFncUZmdYaaXBeP9YileekUR15S+XvIInNO5YK+vy2EqTjMQdYTMabhZHxvP35MUMnphXuBV0aLjuvkaksF2V0mXFGcB9GUHzmgGuW32VoF2G6UBiRYaSu0r1LjTqS2auL/TciLZmi95KAAlCz3f8SOpkQ0z5bZiSk8SFCbPN1tb97RSaFJQ1jnEmxZULZA=="}],"signed":{"_type":"timestamp","expires":"2120-08-01T14:47:48+08:00","meta":{"/snapshot.json":{"hashes":{"sha256":"acb8b69c0335c6b4f3b0315dc58bdf774fca558c050dd16ae4459e3a82d39261"},"length":1760}},"spec_version":"0.1.0","version":99999}}`,
 			"/420.index.json": `{"signatures":[{"keyid":"7fce7ec4f9c36d51dec7ec96065bb64958b743e46ea8141da668cd2ce58a9e61","sig":"MFVJxmU1ErcobtRcssvQiHQLTAVyCVieVpSNlgIAv6FSGN8utFpKuV3RKgelgJskt2j/gJ6k+ITpUqd1Y9iiff44N9u9oov0CBR7gYoSfSum8yEqI0AeJKePUu40959xe/1WU881npF50+LE8ovk0MC8mXzNDoe4kHWFZBve9s+VbPS1KwD2jdnf9sR95rJLF8vxMwnDwsXmdf5Y4TV9nUvQ996BRmr0YFQKBVl9DqxQ+Y2KyXjrNaZwJhKdF7I3W6fCOF4Cf5QMbZ6SG4TrPsscjscZQKJHox3iMuL6NGEem2B2lEJovrlBh0U9/cN4y6CZvEnL3uGYp7gxVvTe7A=="}],"signed":{"_type":"index","components":{"tidb":{"hidden":false,"owner":"pingcap","standalone":false,"url":"/tidb.json","yanked":false}},"default_components":[],"expires":"2121-06-23T12:05:15+08:00","owners":{"pingcap":{"keys":{"a61b695e2b86097d993e94e99fd15ec6d8fc8e9522948c9ff21c2f2c881093ae":{"keytype":"rsa","keyval":{"public":"-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnayxhw6KeoKK+Ax9RW6v\n66YjrpRpGLewLmSSAzJGX8nL5/a2nEbXbeF9po265KcBSFWol8jLBsmG56ruwwxp\noWWhJPncqGqy8wMeRMmTf7ATGa+tk+To7UAQD0MYzt7rRlIdpqi9Us3J6076Z83k\n2sxFnX9sVflhOsotGWL7hmrn/CJWxKsO6OVCoqbIlnJV8xFazE2eCfaDTIEEEgnh\nLIGDsmv1AN8ImUIn/hyKcm1PfhDZrF5qhEVhfz5D8aX3cUcEJw8BvCaNloXyHf+y\nDKjqO/dJ7YFWVt7nPqOvaEkBQGMd54ETJ/BbO9r3WTsjXKleoPovBSQ/oOxApypb\nNQIDAQAB\n-----END PUBLIC KEY-----\n"},"scheme":"rsassa-pss-sha256"}},"name":"PingCAP","threshold":1}},"spec_version":"0.1.0","version":420}}`,
 		},
 	}
@@ -142,6 +142,7 @@ func TestCheckTimestamp(t *testing.T) {
 	expiredTimestamp := timestampManifest()
 	expiredTimestamp.Expires = "2000-05-12T04:51:08Z"
 	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, expiredTimestamp)
+	repo.PurgeTimestamp()
 	_, _, err = repo.fetchTimestamp()
 	assert.NotNil(t, err)
 
@@ -152,6 +153,30 @@ func TestCheckTimestamp(t *testing.T) {
 	assert.NotNil(t, err)
 
 	// TODO test that a bad signature causes an error
+}
+
+func TestCacheTimestamp(t *testing.T) {
+	mirror := MockMirror{
+		Resources: map[string]string{},
+	}
+	local := v1manifest.NewMockManifests()
+	privk := setNewRoot(t, local)
+	repo := NewV1Repo(&mirror, Options{}, local)
+
+	repoTimestamp := timestampManifest()
+	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, repoTimestamp, privk)
+	changed, _, err := repo.fetchTimestamp()
+	assert.Nil(t, err)
+	assert.True(t, changed)
+
+	delete(mirror.Resources, v1manifest.ManifestURLTimestamp)
+	changed, _, err = repo.fetchTimestamp()
+	assert.Nil(t, err)
+	assert.False(t, changed)
+
+	repo.PurgeTimestamp()
+	_, _, err = repo.fetchTimestamp()
+	assert.NotNil(t, err)
 }
 
 func TestUpdateLocalSnapshot(t *testing.T) {
@@ -301,7 +326,7 @@ func TestYanked(t *testing.T) {
 
 	_, err = repo.updateComponentManifest("bar", false)
 	assert.NotNil(t, err)
-	assert.Equal(t, errors.Cause(err), errUnknownComponent)
+	assert.Equal(t, errors.Cause(err), ErrUnknownComponent)
 }
 
 func TestUpdateComponent(t *testing.T) {
@@ -347,74 +372,6 @@ func TestUpdateComponent(t *testing.T) {
 	// TODO test that invalid signature of component manifest causes an error
 }
 
-func TestDownloadManifest(t *testing.T) {
-	mirror := MockMirror{
-		Resources: map[string]string{},
-	}
-	someString := "foo201"
-	mirror.Resources["/foo-2.0.1.tar.gz"] = someString
-	local := v1manifest.NewMockManifests()
-	setNewRoot(t, local)
-	repo := NewV1Repo(&mirror, Options{}, local)
-	item := versionItem()
-
-	// Happy path file is as expected
-	reader, err := repo.FetchComponent(&item)
-	assert.Nil(t, err)
-	buf := new(strings.Builder)
-	_, err = io.Copy(buf, reader)
-	assert.Nil(t, err)
-	assert.Equal(t, someString, buf.String())
-
-	// Sad paths
-
-	// bad hash
-	item.Hashes[v1manifest.SHA256] = "Not a hash"
-	_, err = repo.FetchComponent(&item)
-	assert.NotNil(t, err)
-
-	//  Too long
-	item.Length = 26
-	_, err = repo.FetchComponent(&item)
-	assert.NotNil(t, err)
-
-	// missing tar ball/bad url
-	item.URL = "/bar-2.0.1.tar.gz"
-	_, err = repo.FetchComponent(&item)
-	assert.NotNil(t, err)
-}
-
-func TestSelectVersion(t *testing.T) {
-	mirror := MockMirror{
-		Resources: map[string]string{},
-	}
-	local := v1manifest.NewMockManifests()
-	setNewRoot(t, local)
-	repo := NewV1Repo(&mirror, Options{}, local)
-
-	// Simple case
-	s, i, err := repo.selectVersion("foo", map[string]v1manifest.VersionItem{"v0.1.0": {URL: "1"}}, "")
-	assert.Nil(t, err)
-	assert.Equal(t, "v0.1.0", s)
-	assert.Equal(t, "1", i.URL)
-
-	// Choose by order
-	s, i, err = repo.selectVersion("foo", map[string]v1manifest.VersionItem{"v0.1.0": {URL: "1"}, "v0.1.1": {URL: "2"}, "v0.2.0": {URL: "3"}}, "")
-	assert.Nil(t, err)
-	assert.Equal(t, "v0.2.0", s)
-	assert.Equal(t, "3", i.URL)
-
-	// Choose specific
-	s, i, err = repo.selectVersion("foo", map[string]v1manifest.VersionItem{"v0.1.0": {URL: "1"}, "v0.1.1": {URL: "2"}, "v0.2.0": {URL: "3"}}, "v0.1.1")
-	assert.Nil(t, err)
-	assert.Equal(t, "v0.1.1", s)
-	assert.Equal(t, "2", i.URL)
-
-	// Target doesn't exists
-	_, _, err = repo.selectVersion("foo", map[string]v1manifest.VersionItem{"v0.1.0": {URL: "1"}, "v0.1.1": {URL: "2"}, "v0.2.0": {URL: "3"}}, "v0.2.1")
-	assert.NotNil(t, err)
-}
-
 func TestEnsureManifests(t *testing.T) {
 	mirror := MockMirror{
 		Resources: map[string]string{},
@@ -443,7 +400,7 @@ func TestEnsureManifests(t *testing.T) {
 	assert.NotContains(t, local.Saved, v1manifest.ManifestFilenameRoot)
 
 	// Happy update
-	root2, priv2 := rootManifest(t)
+	root2, priv2 := rootManifest(t) // generate new root key
 	root, _ := repo.loadRoot()
 	root2.Version = root.Version + 1
 	mirror.Resources["/43.root.json"] = serialize(t, root2, priv, priv2)
@@ -451,13 +408,14 @@ func TestEnsureManifests(t *testing.T) {
 	rootMeta := snapshot.Meta[v1manifest.ManifestURLRoot]
 	rootMeta.Version = root2.Version
 	snapshot.Meta[v1manifest.ManifestURLRoot] = rootMeta
-	snapStr = serialize(t, snapshot, priv)
+	snapStr = serialize(t, snapshot, priv2) // sign snapshot with new key
 	ts.Meta[v1manifest.ManifestURLSnapshot].Hashes[v1manifest.SHA256] = hash(snapStr)
 	ts.Version++
 	mirror.Resources[v1manifest.ManifestURLSnapshot] = snapStr
-	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, ts, priv)
+	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, ts, priv2)
 	local.Saved = []string{}
 
+	repo.PurgeTimestamp()
 	err = repo.ensureManifests()
 	assert.Nil(t, err)
 	assert.Contains(t, local.Saved, v1manifest.ManifestFilenameRoot)
@@ -471,8 +429,76 @@ func TestEnsureManifests(t *testing.T) {
 	mirror.Resources[v1manifest.ManifestURLSnapshot] = snapStr
 	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, ts, priv)
 
+	repo.PurgeTimestamp()
 	err = repo.ensureManifests()
 	assert.NotNil(t, err)
+}
+
+func TestLatestStableVersion(t *testing.T) {
+	mirror := MockMirror{
+		Resources: map[string]string{},
+	}
+	local := v1manifest.NewMockManifests()
+	priv := setNewRoot(t, local)
+
+	repo := NewV1Repo(&mirror, Options{GOOS: "plat", GOARCH: "form"}, local)
+
+	index, indexPriv := indexManifest(t)
+	snapshot := snapshotManifest()
+	snapStr := serialize(t, snapshot, priv)
+	ts := timestampManifest()
+	ts.Meta[v1manifest.ManifestURLSnapshot].Hashes[v1manifest.SHA256] = hash(snapStr)
+	// v2.0.1: unyanked
+	// v2.0.3: yanked
+	// v3.0.0-rc: unyanked
+	foo := componentManifest()
+	indexURL, _, _ := snapshot.VersionedURL(v1manifest.ManifestURLIndex)
+	mirror.Resources[indexURL] = serialize(t, index, priv)
+	mirror.Resources[v1manifest.ManifestURLSnapshot] = snapStr
+	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, ts, priv)
+	mirror.Resources["/7.foo.json"] = serialize(t, foo, indexPriv)
+
+	v, _, err := repo.LatestStableVersion("foo", false)
+	assert.Nil(t, err)
+	assert.Equal(t, "v2.0.1", v.String())
+
+	v, _, err = repo.LatestStableVersion("foo", true)
+	assert.Nil(t, err)
+	assert.Equal(t, "v2.0.3", v.String())
+}
+
+func TestLatestStableVersionWithPrerelease(t *testing.T) {
+	mirror := MockMirror{
+		Resources: map[string]string{},
+	}
+	local := v1manifest.NewMockManifests()
+	priv := setNewRoot(t, local)
+
+	repo := NewV1Repo(&mirror, Options{GOOS: "plat", GOARCH: "form"}, local)
+
+	index, indexPriv := indexManifest(t)
+	snapshot := snapshotManifest()
+	snapStr := serialize(t, snapshot, priv)
+	ts := timestampManifest()
+	ts.Meta[v1manifest.ManifestURLSnapshot].Hashes[v1manifest.SHA256] = hash(snapStr)
+	foo := componentManifest()
+
+	// v2.0.1: yanked
+	// v2.0.3: yanked
+	// v3.0.0-rc: unyanked
+	item := foo.Platforms["plat/form"]["v2.0.1"]
+	item.Yanked = true
+	foo.Platforms["plat/form"]["v2.0.1"] = item
+
+	indexURL, _, _ := snapshot.VersionedURL(v1manifest.ManifestURLIndex)
+	mirror.Resources[indexURL] = serialize(t, index, priv)
+	mirror.Resources[v1manifest.ManifestURLSnapshot] = snapStr
+	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, ts, priv)
+	mirror.Resources["/7.foo.json"] = serialize(t, foo, indexPriv)
+
+	v, _, err := repo.LatestStableVersion("foo", false)
+	assert.Nil(t, err)
+	assert.Equal(t, "v3.0.0-rc", v.String())
 }
 
 func TestUpdateComponents(t *testing.T) {
@@ -496,11 +522,13 @@ func TestUpdateComponents(t *testing.T) {
 	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, ts, priv)
 	mirror.Resources["/7.foo.json"] = serialize(t, foo, indexPriv)
 	mirror.Resources["/foo-2.0.1.tar.gz"] = "foo201"
+	mirror.Resources["/foo-3.0.0-rc.tar.gz"] = "foo300rc"
 
 	// Install
 	err := repo.UpdateComponents([]ComponentSpec{{
 		ID: "foo",
 	}})
+
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(local.Installed))
 	assert.Equal(t, "v2.0.1", local.Installed["foo"].Version)
@@ -521,6 +549,7 @@ func TestUpdateComponents(t *testing.T) {
 	ts.Version++
 	mirror.Resources[v1manifest.ManifestURLSnapshot] = snapStr
 	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, ts, priv)
+	repo.PurgeTimestamp()
 	err = repo.UpdateComponents([]ComponentSpec{{
 		ID:        "foo",
 		TargetDir: "/tmp/mock-mock",
@@ -601,6 +630,17 @@ func TestUpdateComponents(t *testing.T) {
 	assert.Equal(t, 1, len(local.Installed))
 	assert.Equal(t, "v2.0.2", local.Installed["foo"].Version)
 	assert.Equal(t, "foo202", local.Installed["foo"].Contents)
+
+	// Install preprelease version
+	// Specific version
+	err = repo.UpdateComponents([]ComponentSpec{{
+		ID:      "foo",
+		Version: "v3.0.0-rc",
+	}})
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(local.Installed))
+	assert.Equal(t, "v3.0.0-rc", local.Installed["foo"].Version)
+	assert.Equal(t, "foo300rc", local.Installed["foo"].Contents)
 }
 
 func timestampManifest() *v1manifest.Timestamp {
@@ -647,16 +687,29 @@ func componentManifest() *v1manifest.Component {
 		Description: "foo does stuff",
 		Platforms: map[string]map[string]v1manifest.VersionItem{
 			"plat/form": {
-				"v2.0.1": versionItem(),
-				"v2.0.3": versionItem3(),
+				"v2.0.1":    versionItem(),
+				"v2.0.3":    versionItem3(),
+				"v3.0.0-rc": versionItemPrerelease(),
 			},
+		},
+	}
+}
+
+func versionItemPrerelease() v1manifest.VersionItem {
+	return v1manifest.VersionItem{
+		URL:   "/foo-3.0.0-rc.tar.gz",
+		Entry: "dummy",
+		FileHash: v1manifest.FileHash{
+			Hashes: map[string]string{v1manifest.SHA256: "0cd2f56431d966c8897c87193539aabb3ffb34b1c55aad4b8a03dd6421cec5aa"},
+			Length: 28,
 		},
 	}
 }
 
 func versionItem() v1manifest.VersionItem {
 	return v1manifest.VersionItem{
-		URL: "/foo-2.0.1.tar.gz",
+		URL:   "/foo-2.0.1.tar.gz",
+		Entry: "dummy",
 		FileHash: v1manifest.FileHash{
 			Hashes: map[string]string{v1manifest.SHA256: "8dc7102c0d675dfa53da273317b9f627e96ed24efeecc8c5ebd00dc06f4e09c3"},
 			Length: 28,
@@ -666,7 +719,8 @@ func versionItem() v1manifest.VersionItem {
 
 func versionItem2() v1manifest.VersionItem {
 	return v1manifest.VersionItem{
-		URL: "/foo-2.0.2.tar.gz",
+		URL:   "/foo-2.0.2.tar.gz",
+		Entry: "dummy",
 		FileHash: v1manifest.FileHash{
 			Hashes: map[string]string{v1manifest.SHA256: "5abe91bc22039c15c05580062357be7ab0bfd7968582a118fbb4eb817ddc2e76"},
 			Length: 12,
@@ -677,6 +731,7 @@ func versionItem2() v1manifest.VersionItem {
 func versionItem3() v1manifest.VersionItem {
 	return v1manifest.VersionItem{
 		URL:    "/foo-2.0.3.tar.gz",
+		Entry:  "dummy",
 		Yanked: true,
 		FileHash: v1manifest.FileHash{
 			Hashes: map[string]string{v1manifest.SHA256: "5abe91bc22039c15c05580062357be7ab0bfd7968582a118fbb4eb817ddc2e76"},
@@ -824,88 +879,3 @@ func hash(s string) string {
 
 	return hex.EncodeToString(shaWriter.Sum(nil))
 }
-
-// Test we can correctly load manifests generate by tools/migrate
-// which generate the v1manifest from the v0manifest.
-//func TestWithMigrate(t *testing.T) {
-//	// generate using tools/migrate
-//	mdir := "./testdata/manifests"
-//
-//	// create a repo using the manifests as a mirror.
-//	// profileDir will contains the only trusted root.
-//	repo, profileDir := createMigrateRepo(t, mdir)
-//	_, err := repo.loadRoot()
-//	assert.Nil(t, err)
-//	defer os.RemoveAll(profileDir)
-//	_ = profileDir
-//
-//	err = repo.updateLocalRoot()
-//	assert.Nil(t, err)
-//
-//	_, err = repo.ensureManifests()
-//	assert.Nil(t, err)
-//
-//	// after ensureManifests we should can load index/timestamp/snapshot
-//	var snap v1manifest.Snapshot
-//	var index v1manifest.Index
-//	var root v1manifest.Root
-//	{
-//		exists, err := repo.local.LoadManifest(&index)
-//		assert.Nil(t, err)
-//		assert.True(t, exists)
-//		exists, err = repo.local.LoadManifest(&root)
-//		assert.Nil(t, err)
-//		assert.True(t, exists)
-//		exists, err = repo.local.LoadManifest(&snap)
-//		assert.Nil(t, err)
-//		assert.True(t, exists)
-//	}
-//
-//	// check can load component manifests.
-//	assert.NotZero(t, len(snap.Meta))
-//	assert.NotZero(t, len(index.Components))
-//	{
-//		// Every component should in snapshot's meta
-//		t.Logf("snap meta: %+v", snap.Meta)
-//		for _, item := range index.Components {
-//			_, ok := snap.Meta[item.URL]
-//			assert.True(t, ok, "component url: %s", item.URL)
-//		}
-//
-//		// Test after updateComponentManifest we can load it locally.
-//		for id, item := range index.Components {
-//			_, err := repo.updateComponentManifest(id)
-//			assert.Nil(t, err)
-//
-//			filename := v1manifest.ComponentManifestFilename(id)
-//			_, _, err = snap.VersionedURL(item.URL)
-//			assert.Nil(t, err)
-//			_, err = repo.local.LoadComponentManifest(&index, filename)
-//			assert.Nil(t, err)
-//		}
-//	}
-//}
-
-/*
-func createMigrateRepo(t *testing.T, mdir string) (repo *V1Repository, profileDir string) {
-	var err error
-	profileDir, err = ioutil.TempDir("", "tiup-*")
-	assert.Nil(t, err)
-	t.Logf("using profile dir: %s", profileDir)
-
-	// copy root.json from mdir to profileDir
-	data, err := ioutil.ReadFile(filepath.Join(mdir, "root.json"))
-	assert.Nil(t, err)
-	err = ioutil.WriteFile(filepath.Join(profileDir, "root.json"), data, 0644)
-	assert.Nil(t, err)
-
-	localdata.DefaultTiupHome = profileDir
-	profile := localdata.InitProfile()
-	options := Options{}
-	mirror := NewMirror(mdir, MirrorOptions{})
-	local, err := v1manifest.NewManifests(profile)
-	assert.Nil(t, err)
-	repo = NewV1Repo(mirror, options, local)
-	return
-}
-*/

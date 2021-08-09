@@ -24,7 +24,8 @@ import (
 	"time"
 
 	"github.com/fatih/color"
-	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
+	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 	"go.uber.org/zap"
 )
@@ -36,15 +37,15 @@ type Local struct {
 	Locale string // the locale used when executing the command
 }
 
-var _ Executor = &Local{}
+var _ ctxt.Executor = &Local{}
 
 // Execute implements Executor interface.
-func (l *Local) Execute(cmd string, sudo bool, timeout ...time.Duration) ([]byte, []byte, error) {
+func (l *Local) Execute(ctx context.Context, cmd string, sudo bool, timeout ...time.Duration) ([]byte, []byte, error) {
 	// try to acquire root permission
 	if l.Sudo || sudo {
-		cmd = fmt.Sprintf("sudo -H -u root bash -c \"cd; %s\"", cmd)
+		cmd = fmt.Sprintf("sudo -H -u root bash -c 'cd; %s'", cmd)
 	} else {
-		cmd = fmt.Sprintf("sudo -H -u %s bash -c \"cd; %s\"", l.Config.User, cmd)
+		cmd = fmt.Sprintf("sudo -H -u %s bash -c 'cd; %s'", l.Config.User, cmd)
 	}
 
 	// set a basic PATH in case it's empty on login
@@ -60,10 +61,9 @@ func (l *Local) Execute(cmd string, sudo bool, timeout ...time.Duration) ([]byte
 		timeout = append(timeout, executeDefaultTimeout)
 	}
 
-	ctx := context.Background()
 	if len(timeout) > 0 {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(context.Background(), timeout[0])
+		ctx, cancel = context.WithTimeout(ctx, timeout[0])
 		defer cancel()
 	}
 
@@ -91,7 +91,7 @@ func (l *Local) Execute(cmd string, sudo bool, timeout ...time.Duration) ([]byte
 		if len(stdout.Bytes()) > 0 || len(stderr.Bytes()) > 0 {
 			output := strings.TrimSpace(strings.Join([]string{stdout.String(), stderr.String()}, "\n"))
 			baseErr = baseErr.
-				WithProperty(cliutil.SuggestionFromFormat("Command output:\n%s\n", color.YellowString(output)))
+				WithProperty(tui.SuggestionFromFormat("Command output:\n%s\n", color.YellowString(output)))
 		}
 		return stdout.Bytes(), stderr.Bytes(), baseErr
 	}
@@ -100,7 +100,7 @@ func (l *Local) Execute(cmd string, sudo bool, timeout ...time.Duration) ([]byte
 }
 
 // Transfer implements Executer interface.
-func (l *Local) Transfer(src string, dst string, download bool) error {
+func (l *Local) Transfer(ctx context.Context, src, dst string, download bool, limit int) error {
 	targetPath := filepath.Dir(dst)
 	if err := utils.CreateDir(targetPath); err != nil {
 		return err
@@ -140,7 +140,7 @@ func (l *Local) Transfer(src string, dst string, download bool) error {
 		if len(stdout.Bytes()) > 0 || len(stderr.Bytes()) > 0 {
 			output := strings.TrimSpace(strings.Join([]string{stdout.String(), stderr.String()}, "\n"))
 			baseErr = baseErr.
-				WithProperty(cliutil.SuggestionFromFormat("Command output:\n%s\n", color.YellowString(output)))
+				WithProperty(tui.SuggestionFromFormat("Command output:\n%s\n", color.YellowString(output)))
 		}
 		return baseErr
 	}

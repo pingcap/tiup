@@ -14,19 +14,22 @@
 package command
 
 import (
+	"context"
 	"path"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cliutil"
-	"github.com/pingcap/tiup/pkg/cluster"
-	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/manager"
+	operator "github.com/pingcap/tiup/pkg/cluster/operation"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/cluster/task"
+	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 	"golang.org/x/mod/semver"
 )
 
 func newDeployCmd() *cobra.Command {
-	opt := cluster.DeployOptions{
+	opt := manager.DeployOptions{
 		IdentityFile: path.Join(utils.UserHome(), ".ssh", "id_rsa"),
 	}
 	cmd := &cobra.Command{
@@ -35,7 +38,7 @@ func newDeployCmd() *cobra.Command {
 		Long:         "Deploy a DM cluster for production. SSH connection will be used to deploy files, as well as creating system users for running the service.",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			shouldContinue, err := cliutil.CheckCommandArgsAndMayPrintHelp(cmd, args, 3)
+			shouldContinue, err := tui.CheckCommandArgsAndMayPrintHelp(cmd, args, 3)
 			if err != nil {
 				return err
 			}
@@ -43,30 +46,18 @@ func newDeployCmd() *cobra.Command {
 				return nil
 			}
 
-			// natvie ssh has it's own logic to find the default identity_file
-			if gOpt.SSHType == executor.SSHTypeSystem && !utils.IsFlagSetByUser(cmd.Flags(), "identity_file") {
-				opt.IdentityFile = ""
-			}
-
 			clusterName := args[0]
-			version := args[1]
+			version, err := utils.FmtVer(args[1])
+			if err != nil {
+				return err
+			}
 			topoFile := args[2]
 
 			if err := supportVersion(version); err != nil {
 				return err
 			}
 
-			return manager.Deploy(
-				clusterName,
-				version,
-				topoFile,
-				opt,
-				nil,
-				skipConfirm,
-				gOpt.OptTimeout,
-				gOpt.SSHTimeout,
-				gOpt.SSHType,
-			)
+			return cm.Deploy(clusterName, version, topoFile, opt, postDeployHook, skipConfirm, gOpt)
 		},
 	}
 
@@ -88,4 +79,12 @@ func supportVersion(vs string) error {
 	}
 
 	return nil
+}
+
+func postDeployHook(builder *task.Builder, topo spec.Topology) {
+	enableTask := task.NewBuilder().Func("Setting service auto start on boot", func(ctx context.Context) error {
+		return operator.Enable(ctx, topo, operator.Options{}, true)
+	}).BuildAsStep("Enable service").SetHidden(true)
+
+	builder.Parallel(false, enableTask)
 }

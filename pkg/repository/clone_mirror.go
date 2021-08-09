@@ -25,13 +25,14 @@ import (
 
 	"github.com/pingcap/errors"
 	ru "github.com/pingcap/tiup/pkg/repository/utils"
-	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/utils"
-	"github.com/pingcap/tiup/pkg/version"
 	"golang.org/x/mod/semver"
+	"golang.org/x/sync/errgroup"
 )
+
+const defaultJobs = 1
 
 // CloneOptions represents the options of clone a remote mirror
 type CloneOptions struct {
@@ -41,6 +42,7 @@ type CloneOptions struct {
 	Full       bool
 	Components map[string]*[]string
 	Prefix     bool
+	Jobs       uint
 }
 
 // CloneMirror clones a local mirror from the remote repository
@@ -50,29 +52,25 @@ func CloneMirror(repo *V1Repository,
 	targetDir string,
 	selectedVersions []string,
 	options CloneOptions) error {
-
-	fmt.Printf("Start to clone mirror, targetDir is %s, selectedVersions are [%s]\n", targetDir, strings.Join(selectedVersions, ","))
+	if strings.TrimRight(targetDir, "/") == strings.TrimRight(repo.Mirror().Source(), "/") {
+		return errors.Errorf("Refusing to clone from %s to %s", targetDir, repo.Mirror().Source())
+	}
+	fmt.Printf("Start to clone mirror, targetDir is %s, source mirror is %s, selectedVersions are [%s]\n", targetDir, repo.Mirror().Source(), strings.Join(selectedVersions, ","))
 	fmt.Println("If this does not meet expectations, please abort this process, read `tiup mirror clone --help` and run again")
 
-	if utils.IsNotExist(targetDir) {
-		if err := os.MkdirAll(targetDir, 0755); err != nil {
-			return err
-		}
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
+		return err
 	}
 
 	// Temporary directory is used to save the unverified tarballs
 	tmpDir := filepath.Join(targetDir, fmt.Sprintf("_tmp_%d", time.Now().UnixNano()))
 	keyDir := filepath.Join(targetDir, "keys")
 
-	if utils.IsNotExist(tmpDir) {
-		if err := os.MkdirAll(tmpDir, 0755); err != nil {
-			return err
-		}
+	if err := os.MkdirAll(tmpDir, 0755); err != nil {
+		return err
 	}
-	if utils.IsNotExist(keyDir) {
-		if err := os.MkdirAll(keyDir, 0755); err != nil {
-			return err
-		}
+	if err := os.MkdirAll(keyDir, 0755); err != nil {
+		return err
 	}
 	defer os.RemoveAll(tmpDir)
 
@@ -133,7 +131,7 @@ func CloneMirror(repo *V1Repository,
 		return errors.Trace(err)
 	}
 	// save owner key
-	if err := v1manifest.SaveKeyInfo(ownerkeyInfo, "pingcap", keyDir); err != nil {
+	if _, err := v1manifest.SaveKeyInfo(ownerkeyInfo, "pingcap", keyDir); err != nil {
 		return errors.Trace(err)
 	}
 
@@ -252,8 +250,16 @@ func cloneComponents(repo *V1Repository,
 	tidbClusterVersionMapper func(string) string,
 	targetDir, tmpDir string,
 	options CloneOptions) (map[string]*v1manifest.Component, error) {
-
 	compManifests := map[string]*v1manifest.Component{}
+
+	jobs := options.Jobs
+	if jobs <= 0 {
+		jobs = defaultJobs
+	}
+	errG := &errgroup.Group{}
+	tickets := make(chan struct{}, jobs)
+	defer func() { close(tickets) }()
+
 	for _, name := range components {
 		manifest, err := repo.FetchComponentManifest(name, true)
 		if err != nil {
@@ -275,43 +281,58 @@ func cloneComponents(repo *V1Repository,
 				Platforms:   map[string]map[string]v1manifest.VersionItem{},
 			}
 			// Include the nightly reference version
-			if vs.Exist(version.NightlyVersion) {
+			if vs.Exist(utils.NightlyVersionAlias) {
 				newManifest.Nightly = manifest.Nightly
 				vs.Insert(manifest.Nightly)
 			}
 		}
 
+		platforms := []string{}
 		for _, goos := range options.OSs {
 			for _, goarch := range options.Archs {
-				platform := PlatformString(goos, goarch)
-				versions := manifest.VersionListWithYanked(platform)
-				if versions == nil {
-					fmt.Printf("The component '%s' donesn't have %s/%s, skipped\n", name, goos, goarch)
-				}
-				for v, versionItem := range versions {
-					if !options.Full {
-						newVersions := newManifest.VersionListWithYanked(platform)
-						if newVersions == nil {
-							newVersions = map[string]v1manifest.VersionItem{}
-							newManifest.Platforms[platform] = newVersions
-						}
-						newVersions[v] = versionItem
-						if !checkVersion(options, vs, v) {
-							versionItem.Yanked = true
-							newVersions[v] = versionItem
-							continue
-						}
+				platforms = append(platforms, PlatformString(goos, goarch))
+			}
+		}
+		if len(platforms) > 0 {
+			platforms = append(platforms, v1manifest.AnyPlatform)
+		}
+
+		for _, platform := range platforms {
+			for v, versionItem := range manifest.Platforms[platform] {
+				if !options.Full {
+					newVersions := newManifest.Platforms[platform]
+					if newVersions == nil {
+						newVersions = map[string]v1manifest.VersionItem{}
+						newManifest.Platforms[platform] = newVersions
 					}
-					if versionItem.Yanked {
+					newVersions[v] = versionItem
+					if !checkVersion(options, vs, v) {
+						versionItem.Yanked = true
+						newVersions[v] = versionItem
 						continue
 					}
-					if err := download(targetDir, tmpDir, repo, &versionItem); err != nil {
-						return nil, errors.Annotatef(err, "download resource: %s", name)
-					}
 				}
+				if _, err := repo.FetchComponentManifest(name, false); err != nil || versionItem.Yanked {
+					// The component or the version is yanked, skip download binary
+					continue
+				}
+				name, versionItem := name, versionItem
+				errG.Go(func() error {
+					tickets <- struct{}{}
+					defer func() { <-tickets }()
+
+					err := download(targetDir, tmpDir, repo, &versionItem)
+					if err != nil {
+						return errors.Annotatef(err, "download resource: %s", name)
+					}
+					return nil
+				})
 			}
 		}
 		compManifests[name] = newManifest
+	}
+	if err := errG.Wait(); err != nil {
+		return nil, err
 	}
 
 	// Download TiUP binary
@@ -323,7 +344,7 @@ func cloneComponents(repo *V1Repository,
 
 			if err := repo.Mirror().Download(url, tmpDir); err != nil {
 				if errors.Cause(err) == ErrNotFound {
-					fmt.Printf("TiUP donesn't have %s/%s, skipped\n", goos, goarch)
+					fmt.Printf("TiUP doesn't have %s/%s, skipped\n", goos, goarch)
 					continue
 				}
 				return nil, err
@@ -342,7 +363,7 @@ func download(targetDir, tmpDir string, repo *V1Repository, item *v1manifest.Ver
 	validate := func(dir string) error {
 		hashes, n, err := ru.HashFile(path.Join(dir, item.URL))
 		if err != nil {
-			return errors.AddStack(err)
+			return err
 		}
 		if uint(n) != item.Length {
 			return errors.Errorf("file length mismatch, expected: %d, got: %v", item.Length, n)
@@ -365,7 +386,7 @@ func download(targetDir, tmpDir string, repo *V1Repository, item *v1manifest.Ver
 	// Skip installed file if exists file valid
 	if utils.IsExist(dstFile) {
 		if err := validate(targetDir); err == nil {
-			fmt.Println("Skip exists file:", filepath.Join(targetDir, item.URL))
+			fmt.Println("Skipping existing file:", filepath.Join(targetDir, item.URL))
 			return nil
 		}
 	}
@@ -389,7 +410,6 @@ func checkVersion(options CloneOptions, versions set.StringSet, version string) 
 	}
 	// prefix match
 	for v := range versions {
-
 		if options.Prefix && strings.HasPrefix(version, v) {
 			return true
 		} else if version == v {
@@ -403,7 +423,6 @@ func combineVersions(versions *[]string,
 	tidbClusterVersionMapper func(string) string,
 	manifest *v1manifest.Component, oss, archs,
 	selectedVersions []string) set.StringSet {
-
 	if (versions == nil || len(*versions) < 1) && len(selectedVersions) < 1 {
 		return nil
 	}
@@ -428,6 +447,9 @@ func combineVersions(versions *[]string,
 				continue
 			}
 			for _, selectedVersion := range selectedVersions {
+				if selectedVersion == utils.NightlyVersionAlias {
+					selectedVersion = manifest.Nightly
+				}
 				_, found := versions[selectedVersion]
 				// Some TiUP components won't be bound version with TiDB, if cannot find
 				// selected version we download the latest version to as a alternative
@@ -435,7 +457,7 @@ func combineVersions(versions *[]string,
 					// Use the latest stable versionS if the selected version doesn't exist in specific platform
 					var latest string
 					for v := range versions {
-						if v0manifest.Version(v).IsNightly() {
+						if utils.Version(v).IsNightly() {
 							continue
 						}
 						if latest == "" || semver.Compare(v, latest) > 0 {
@@ -444,6 +466,9 @@ func combineVersions(versions *[]string,
 					}
 					if latest == "" {
 						continue
+					}
+					if selectedVersion != utils.LatestVersionAlias {
+						fmt.Printf("%s %s/%s %s not found, using %s instead.\n", manifest.ID, os, arch, selectedVersion, latest)
 					}
 					selectedVersion = latest
 				}

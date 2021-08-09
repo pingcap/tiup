@@ -14,11 +14,14 @@
 package task
 
 import (
+	"context"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/joomcode/errorx"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/module"
 )
 
@@ -27,8 +30,6 @@ var (
 	errEnvInitSubCommandFailed = errNSEnvInit.NewType("sub_command_failed")
 	// ErrEnvInitFailed is ErrEnvInitFailed
 	ErrEnvInitFailed = errNSEnvInit.NewType("failed")
-	// SSH authorized_keys file
-	defaultSSHAuthorizedKeys = "~/.ssh/authorized_keys"
 )
 
 // EnvInit is used to initialize the remote environment, e.g:
@@ -42,16 +43,16 @@ type EnvInit struct {
 }
 
 // Execute implements the Task interface
-func (e *EnvInit) Execute(ctx *Context) error {
+func (e *EnvInit) Execute(ctx context.Context) error {
 	return e.execute(ctx)
 }
 
-func (e *EnvInit) execute(ctx *Context) error {
+func (e *EnvInit) execute(ctx context.Context) error {
 	wrapError := func(err error) *errorx.Error {
 		return ErrEnvInitFailed.Wrap(err, "Failed to initialize TiDB environment on remote host '%s'", e.host)
 	}
 
-	exec, found := ctx.GetExecutor(e.host)
+	exec, found := ctxt.GetInner(ctx).GetExecutor(e.host)
 	if !found {
 		panic(ErrNoExecutor)
 	}
@@ -64,51 +65,30 @@ func (e *EnvInit) execute(ctx *Context) error {
 			Sudoer: true,
 		})
 
-		_, _, errx := um.Execute(exec)
+		_, _, errx := um.Execute(ctx, exec)
 		if errx != nil {
 			return wrapError(errx)
 		}
 	}
 
-	pubKey, err := ioutil.ReadFile(ctx.PublicKeyPath)
+	pubKey, err := os.ReadFile(ctxt.GetInner(ctx).PublicKeyPath)
 	if err != nil {
 		return wrapError(err)
 	}
 
 	// Authorize
-	cmd := `su - ` + e.deployUser + ` -c 'test -d ~/.ssh || mkdir -p ~/.ssh && chmod 700 ~/.ssh'`
-	_, _, err = exec.Execute(cmd, true)
+	cmd := `su - ` + e.deployUser + ` -c 'mkdir -p ~/.ssh && chmod 700 ~/.ssh'`
+	_, _, err = exec.Execute(ctx, cmd, true)
 	if err != nil {
 		return wrapError(errEnvInitSubCommandFailed.
 			Wrap(err, "Failed to create '~/.ssh' directory for user '%s'", e.deployUser))
 	}
 
-	// detect if custom path of authorized keys file is set
-	// NOTE: we do not yet support:
-	//   - custom config for user (~/.ssh/config)
-	//   - sshd started with custom config (other than /etc/ssh/sshd_config)
-	//   - ssh server implementations other than OpenSSH (such as dropbear)
-	sshAuthorizedKeys := defaultSSHAuthorizedKeys
-	cmd = "grep -Ev '^\\s*#|^\\s*$' /etc/ssh/sshd_config"
-	stdout, _, _ := exec.Execute(cmd, true) // error ignored as we have default value
-	for _, line := range strings.Split(string(stdout), "\n") {
-		if !strings.Contains(line, "AuthorizedKeysFile") {
-			continue
-		}
-		fields := strings.Fields(line)
-		if len(fields) >= 2 {
-			sshAuthorizedKeys = fields[1]
-		}
-	}
-
-	if !strings.HasPrefix(sshAuthorizedKeys, "/") && !strings.HasPrefix(sshAuthorizedKeys, "~") {
-		sshAuthorizedKeys = fmt.Sprintf("~/%s", sshAuthorizedKeys)
-	}
-
 	pk := strings.TrimSpace(string(pubKey))
+	sshAuthorizedKeys := executor.FindSSHAuthorizedKeysFile(ctx, exec)
 	cmd = fmt.Sprintf(`su - %[1]s -c 'grep $(echo %[2]s) %[3]s || echo %[2]s >> %[3]s && chmod 600 %[3]s'`,
 		e.deployUser, pk, sshAuthorizedKeys)
-	_, _, err = exec.Execute(cmd, true)
+	_, _, err = exec.Execute(ctx, cmd, true)
 	if err != nil {
 		return wrapError(errEnvInitSubCommandFailed.
 			Wrap(err, "Failed to write public keys to '%s' for user '%s'", sshAuthorizedKeys, e.deployUser))
@@ -118,7 +98,7 @@ func (e *EnvInit) execute(ctx *Context) error {
 }
 
 // Rollback implements the Task interface
-func (e *EnvInit) Rollback(ctx *Context) error {
+func (e *EnvInit) Rollback(ctx context.Context) error {
 	return ErrUnsupportedRollback
 }
 

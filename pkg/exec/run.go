@@ -22,7 +22,6 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -31,18 +30,15 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
-	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/telemetry"
+	"github.com/pingcap/tiup/pkg/utils"
+	"github.com/pingcap/tiup/pkg/version"
 	"golang.org/x/mod/semver"
 )
 
 // RunComponent start a component and wait it
 func RunComponent(env *environment.Environment, tag, spec, binPath string, args []string) error {
 	component, version := environment.ParseCompVersion(spec)
-	if !env.IsSupportedComponent(component) {
-		return fmt.Errorf("component `%s` does not support `%s/%s` (see `tiup list`)", component, runtime.GOOS, runtime.GOARCH)
-	}
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -97,11 +93,11 @@ func RunComponent(env *environment.Environment, tag, spec, binPath string, args 
 		fmt.Printf("Got signal %v (Component: %v ; PID: %v)\n", s, component, p.Pid)
 		if component == "tidb" {
 			return syscall.Kill(p.Pid, syscall.SIGKILL)
-		} else if sig != syscall.SIGINT {
-			return syscall.Kill(p.Pid, sig)
-		} else {
-			return nil
 		}
+		if sig != syscall.SIGINT {
+			return syscall.Kill(p.Pid, sig)
+		}
+		return nil
 
 	case err := <-ch:
 		return errors.Annotatef(err, "run `%s` (wd:%s) failed", p.Exec, p.Dir)
@@ -132,17 +128,18 @@ func base62Tag() string {
 
 // PrepareCommandParams for PrepareCommand.
 type PrepareCommandParams struct {
-	Ctx         context.Context
-	Component   string
-	Version     v0manifest.Version
-	BinPath     string
-	Tag         string
-	InstanceDir string
-	WD          string
-	Args        []string
-	SysProcAttr *syscall.SysProcAttr
-	Env         *environment.Environment
-	CheckUpdate bool
+	Ctx          context.Context
+	Component    string
+	Version      utils.Version
+	BinPath      string
+	Tag          string
+	InstanceDir  string
+	WD           string
+	Args         []string
+	EnvVariables []string
+	SysProcAttr  *syscall.SysProcAttr
+	Env          *environment.Environment
+	CheckUpdate  bool
 }
 
 // PrepareCommand will download necessary component and returns a *exec.Cmd
@@ -155,12 +152,12 @@ func PrepareCommand(p *PrepareCommandParams) (*exec.Cmd, error) {
 	}
 
 	if p.Version.IsEmpty() && p.CheckUpdate {
-		latestV, _, err := env.V1Repository().LatestStableVersion(p.Component, true)
+		latestV, _, err := env.V1Repository().LatestStableVersion(p.Component, false)
 		if err != nil {
 			return nil, err
 		}
 		if semver.Compare(selectVer.String(), latestV.String()) < 0 {
-			fmt.Println(color.YellowString(`Found %[1]s newer version:
+			fmt.Fprintln(os.Stderr, color.YellowString(`Found %[1]s newer version:
 
     The latest version:         %[2]s
     Local installed version:    %[3]s
@@ -218,20 +215,22 @@ func PrepareCommand(p *PrepareCommandParams) (*exec.Cmd, error) {
 	envs := []string{
 		fmt.Sprintf("%s=%s", localdata.EnvNameHome, profile.Root()),
 		fmt.Sprintf("%s=%s", localdata.EnvNameWorkDir, tiupWd),
+		fmt.Sprintf("%s=%s", localdata.EnvNameUserInputVersion, p.Version.String()),
+		fmt.Sprintf("%s=%s", localdata.EnvNameTiUPVersion, version.NewTiUPVersion().SemVer()),
 		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, p.InstanceDir),
 		fmt.Sprintf("%s=%s", localdata.EnvNameComponentDataDir, sd),
 		fmt.Sprintf("%s=%s", localdata.EnvNameComponentInstallDir, installPath),
 		fmt.Sprintf("%s=%s", localdata.EnvNameTelemetryStatus, teleMeta.Status),
 		fmt.Sprintf("%s=%s", localdata.EnvNameTelemetryUUID, teleMeta.UUID),
+		fmt.Sprintf("%s=%s", localdata.EnvNameTelemetrySecret, teleMeta.Secret),
 		fmt.Sprintf("%s=%s", localdata.EnvTag, p.Tag),
 	}
+	envs = append(envs, os.Environ()...)
+	envs = append(envs, p.EnvVariables...)
 
 	// init the command
 	c := exec.CommandContext(p.Ctx, binPath, p.Args...)
-	c.Env = append(
-		envs,
-		os.Environ()...,
-	)
+	c.Env = envs
 	c.Stdin = os.Stdin
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
@@ -241,7 +240,7 @@ func PrepareCommand(p *PrepareCommandParams) (*exec.Cmd, error) {
 	return c, nil
 }
 
-func launchComponent(ctx context.Context, component string, version v0manifest.Version, binPath string, tag string, args []string, env *environment.Environment) (*localdata.Process, error) {
+func launchComponent(ctx context.Context, component string, version utils.Version, binPath string, tag string, args []string, env *environment.Environment) (*localdata.Process, error) {
 	instanceDir := os.Getenv(localdata.EnvNameInstanceDataDir)
 	if instanceDir == "" {
 		// Generate a tag for current instance if the tag doesn't specified
@@ -279,7 +278,7 @@ func launchComponent(ctx context.Context, component string, version v0manifest.V
 		Cmd:         c,
 	}
 
-	fmt.Printf("Starting component `%s`: %s\n", component, strings.Join(append([]string{p.Exec}, p.Args...), " "))
+	fmt.Fprintf(os.Stderr, "Starting component `%s`: %s\n", component, strings.Join(append([]string{p.Exec}, p.Args...), " "))
 	err = p.Cmd.Start()
 	if p.Cmd.Process != nil {
 		p.Pid = p.Cmd.Process.Pid

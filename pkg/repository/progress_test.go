@@ -14,10 +14,10 @@
 package repository
 
 import (
-	. "github.com/pingcap/check"
+	"testing"
 )
 
-func (s *repositorySuite) TestProgress(c *C) {
+func TestProgress(t *testing.T) {
 	ps := []DownloadProgress{
 		DisableProgress{},
 		&ProgressBar{},

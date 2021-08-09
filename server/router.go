@@ -47,8 +47,9 @@ func (s *server) router() http.Handler {
 	r := mux.NewRouter()
 
 	r.Handle("/api/v1/tarball/{sid}", handler.UploadTarbal(s.sm))
-	r.Handle("/api/v1/component/{sid}/{name}", handler.SignComponent(s.sm, s.keys))
-	r.PathPrefix("/").Handler(s.static("/", s.root, s.upstream))
+	r.Handle("/api/v1/component/{sid}/{name}", handler.SignComponent(s.sm, s.mirror))
+	r.Handle("/api/v1/rotate", handler.RotateRoot(s.mirror))
+	r.PathPrefix("/").Handler(s.static("/", s.mirror.Source(), s.upstream))
 
 	return httpRequestMiddleware(r)
 }

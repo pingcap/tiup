@@ -48,7 +48,7 @@ Simply type tiup help <command>|<component> for full details.`,
 func externalHelp(env *environment.Environment, spec string, args ...string) {
 	profile := env.Profile()
 	component, version := environment.ParseCompVersion(spec)
-	selectVer, err := profile.SelectInstalledVersion(component, version)
+	selectVer, err := env.SelectInstalledVersion(component, version)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -78,12 +78,10 @@ func externalHelp(env *environment.Environment, spec string, args ...string) {
 		fmt.Sprintf("%s=%s", localdata.EnvNameComponentInstallDir, installPath),
 		fmt.Sprintf("%s=%s", localdata.EnvNameComponentDataDir, sd),
 	}
+	envs = append(envs, os.Environ()...)
 
 	comp := exec.Command(binaryPath, utils.RebuildArgs(args)...)
-	comp.Env = append(
-		envs,
-		os.Environ()...,
-	)
+	comp.Env = envs
 	comp.Stdout = os.Stdout
 	comp.Stderr = os.Stderr
 	if err := comp.Start(); err != nil {
@@ -111,30 +109,10 @@ func rebuildArgs(args []string) []string {
 }
 
 func usageTemplate(profile *localdata.Profile) string {
-	var installComps string
-	if repo := profile.Manifest(); repo != nil && len(repo.Components) > 0 {
-		installComps = `
-Available Components:
-`
-		var maxNameLen int
-		for _, comp := range repo.Components {
-			if len(comp.Name) > maxNameLen {
-				maxNameLen = len(comp.Name)
-			}
-		}
-
-		for _, comp := range repo.Components {
-			if !comp.Standalone {
-				continue
-			}
-			installComps = installComps + fmt.Sprintf("  %s%s   %s\n", comp.Name, strings.Repeat(" ", maxNameLen-len(comp.Name)), comp.Desc)
-		}
-	} else {
-		installComps = `
+	installComps := `
 Components Manifest:
   use "tiup list" to fetch the latest components manifest
 `
-	}
 
 	return `Usage:{{if .Runnable}}
   {{.UseLine}}{{end}}{{if gt (len .Aliases) 0}}

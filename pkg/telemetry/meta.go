@@ -14,7 +14,7 @@
 package telemetry
 
 import (
-	"io/ioutil"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -22,6 +22,7 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
+	"github.com/pingcap/tiup/pkg/utils/rand"
 	"gopkg.in/yaml.v2"
 )
 
@@ -41,6 +42,7 @@ const defaultStatus = EnableStatus
 // Meta data of telemetry.
 type Meta struct {
 	UUID   string `yaml:"uuid,omitempty"`
+	Secret string `yaml:"secret,omitempty"`
 	Status Status `yaml:"status,omitempty"`
 }
 
@@ -49,10 +51,21 @@ func NewUUID() string {
 	return uuid.New().String()
 }
 
+// NewSecret generates a new random string as encryption secret
+func NewSecret() string {
+	rbytes := make([]byte, 16)
+	_, err := rand.Read(rbytes)
+	if err != nil {
+		return NewUUID()
+	}
+	return fmt.Sprintf("%x", rbytes)
+}
+
 // NewMeta create a new default Meta.
 func NewMeta() *Meta {
 	return &Meta{
 		UUID:   NewUUID(),
+		Secret: NewSecret(),
 		Status: EnableStatus,
 	}
 }
@@ -61,7 +74,7 @@ func NewMeta() *Meta {
 // return a default Meta and save it if the file not exist.
 func LoadFrom(fname string) (meta *Meta, err error) {
 	var data []byte
-	data, err = ioutil.ReadFile(fname)
+	data, err = os.ReadFile(fname)
 
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -74,6 +87,20 @@ func LoadFrom(fname string) (meta *Meta, err error) {
 	meta = new(Meta)
 	err = yaml.Unmarshal(data, meta)
 
+	// populate UUID and secret if not set
+	var updated bool
+	if meta.UUID == "" {
+		meta.UUID = NewUUID()
+		updated = true
+	}
+	if meta.Secret == "" {
+		meta.Secret = NewSecret()
+		updated = true
+	}
+	if updated {
+		err = meta.SaveTo(fname)
+	}
+
 	return
 }
 
@@ -84,7 +111,7 @@ func (m *Meta) SaveTo(fname string) error {
 		return errors.AddStack(err)
 	}
 
-	return ioutil.WriteFile(fname, data, 0644)
+	return os.WriteFile(fname, data, 0644)
 }
 
 // GetMeta read the telemeta from disk

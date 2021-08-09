@@ -17,7 +17,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -27,7 +26,6 @@ import (
 	"github.com/pingcap/tiup/components/playground/instance"
 	"github.com/pingcap/tiup/pkg/environment"
 	tiupexec "github.com/pingcap/tiup/pkg/exec"
-	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -57,7 +55,7 @@ func (m *monitor) renderSDFile(cid2targets map[string][]string) error {
 		return errors.AddStack(err)
 	}
 
-	err = ioutil.WriteFile(m.sdFname, data, 0644)
+	err = os.WriteFile(m.sdFname, data, 0644)
 	if err != nil {
 		return errors.AddStack(err)
 	}
@@ -92,7 +90,7 @@ func newMonitor(ctx context.Context, version string, host, dir string) (*monitor
 
 	port, err := utils.GetFreePort(host, 9090)
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return nil, err
 	}
 	addr := fmt.Sprintf("%s:%d", host, port)
 
@@ -127,7 +125,7 @@ scrape_configs:
 	m := new(monitor)
 	m.sdFname = filepath.Join(dir, "targets.json")
 
-	if err := ioutil.WriteFile(filepath.Join(dir, "prometheus.yml"), []byte(tmpl), os.ModePerm); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "prometheus.yml"), []byte(tmpl), os.ModePerm); err != nil {
 		return nil, errors.AddStack(err)
 	}
 
@@ -135,14 +133,14 @@ scrape_configs:
 		fmt.Sprintf("--config.file=%s", filepath.Join(dir, "prometheus.yml")),
 		fmt.Sprintf("--web.external-url=http://%s", addr),
 		fmt.Sprintf("--web.listen-address=%s:%d", host, port),
-		fmt.Sprintf("--storage.tsdb.path='%s'", filepath.Join(dir, "data")),
+		fmt.Sprintf("--storage.tsdb.path=%s", filepath.Join(dir, "data")),
 	}
 
 	env := environment.GlobalEnv()
 	params := &tiupexec.PrepareCommandParams{
 		Ctx:         ctx,
 		Component:   "prometheus",
-		Version:     v0manifest.Version(version),
+		Version:     utils.Version(version),
 		InstanceDir: dir,
 		WD:          dir,
 		Args:        args,

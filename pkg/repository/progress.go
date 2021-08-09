@@ -16,7 +16,7 @@ package repository
 import (
 	"fmt"
 
-	"github.com/cheggaaa/pb"
+	"github.com/cheggaaa/pb/v3"
 )
 
 // DisableProgress implement the DownloadProgress interface and disable download progress
@@ -42,7 +42,7 @@ func (p *ProgressBar) Start(url string, size int64) {
 	p.size = size
 	p.bar = pb.Start64(size)
 	p.bar.Set(pb.Bytes, true)
-	p.bar.SetTemplateString(fmt.Sprintf(`download %s {{counters . }} {{percent . }} {{speed . }}`, url))
+	p.bar.SetTemplateString(fmt.Sprintf(`download %s {{counters . }} {{percent . }} {{speed . "%%s/s" "? MiB/s"}}`, url))
 }
 
 // SetCurrent implement the DownloadProgress interface

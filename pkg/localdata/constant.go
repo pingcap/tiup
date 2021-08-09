@@ -13,10 +13,10 @@
 
 package localdata
 
-// DefaultTiupHome represents the default home directory for this build of tiup
+// DefaultTiUPHome represents the default home directory for this build of tiup
 // If this is left empty, the default will be thee combination of the running
 // user's home directory and ProfileDirName
-var DefaultTiupHome string
+var DefaultTiUPHome string
 
 // ProfileDirName is the name of the profile directory to be used
 var ProfileDirName = ".tiup"
@@ -32,6 +32,9 @@ const (
 
 	// KeyInfoParentDir represent the parent directory of all keys
 	KeyInfoParentDir = "keys"
+
+	// DefaultPrivateKeyName represents the default private key file stored in ${TIUP_HOME}/keys
+	DefaultPrivateKeyName = "private.json"
 
 	// DataParentDir represent the parent directory of all running instances
 	DataParentDir = "data"
@@ -54,6 +57,12 @@ const (
 	// EnvNameWorkDir represents the work directory of TiUP where user type the command `tiup xxx`
 	EnvNameWorkDir = "TIUP_WORK_DIR"
 
+	// EnvNameUserInputVersion represents the version user specified when running a component by `tiup component:version`
+	EnvNameUserInputVersion = "TIUP_USER_INPUT_VERSION"
+
+	// EnvNameTiUPVersion represents the version of TiUP itself, not the version of component
+	EnvNameTiUPVersion = "TIUP_VERSION"
+
 	// EnvNameHome represents the environment name of tiup home directory
 	EnvNameHome = "TIUP_HOME"
 
@@ -62,6 +71,12 @@ const (
 
 	// EnvNameTelemetryUUID represents the environment name of tiup telemetry uuid
 	EnvNameTelemetryUUID = "TIUP_TELEMETRY_UUID"
+
+	// EnvNameTelemetryEventUUID represents the environment name of tiup telemetry event uuid
+	EnvNameTelemetryEventUUID = "TIUP_TELEMETRY_EVENT_UUID"
+
+	// EnvNameTelemetrySecret represents the environment name of tiup telemetry secret
+	EnvNameTelemetrySecret = "TIUP_TELEMETRY_SECRET"
 
 	// EnvTag is the tag of the running component
 	EnvTag = "TIUP_TAG"
@@ -80,6 +95,15 @@ const (
 
 	// EnvNameKeepSourceTarget is the variable name by which user can keep the source target or not
 	EnvNameKeepSourceTarget = "TIUP_KEEP_SOURCE_TARGET"
+
+	// EnvNameMirrorSyncScript make it possible for user to sync mirror commit to other place (eg. CDN)
+	EnvNameMirrorSyncScript = "TIUP_MIRROR_SYNC_SCRIPT"
+
+	// EnvNameLogPath is the variable name by which user can write the log files into
+	EnvNameLogPath = "TIUP_LOG_PATH"
+
+	// EnvNameDebug is the variable name by which user can set tiup runs in debug mode(eg. print panic logs)
+	EnvNameDebug = "TIUP_CLUSTER_DEBUG"
 
 	// MetaFilename represents the process meta file name
 	MetaFilename = "tiup_process_meta"

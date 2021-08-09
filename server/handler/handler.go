@@ -36,7 +36,7 @@ func init() {
 				Message: e.Error(),
 			}
 		}
-		log.Debugf("Unknow error occured: %s", err.Error())
+		log.Debugf("Unknow error occurred: %s", err.Error())
 		return &errorMessage{
 			Status:  "UNKNOWN_ERROR",
 			Message: "make sure your request is valid",

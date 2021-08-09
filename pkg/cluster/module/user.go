@@ -14,9 +14,10 @@
 package module
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 )
 
 const (
@@ -26,7 +27,7 @@ const (
 	UserActionAdd = "add"
 	// UserActionDel delete user.
 	UserActionDel = "del"
-	//UserActionModify = "modify"
+	// UserActionModify = "modify"
 
 	// TODO: in RHEL/CentOS, the commands are in /usr/sbin, but in some
 	// other distros they may be in other location such as /usr/bin, we'll
@@ -34,7 +35,7 @@ const (
 	useraddCmd  = "/usr/sbin/useradd"
 	userdelCmd  = "/usr/sbin/userdel"
 	groupaddCmd = "/usr/sbin/groupadd"
-	//usermodCmd = "/usr/sbin/usermod"
+	// usermodCmd = "/usr/sbin/usermod"
 )
 
 var (
@@ -122,8 +123,8 @@ func NewUserModule(config UserModuleConfig) *UserModule {
 
 // Execute passes the command to executor and returns its results, the executor
 // should be already initialized.
-func (mod *UserModule) Execute(exec executor.Executor) ([]byte, []byte, error) {
-	a, b, err := exec.Execute(mod.cmd, true)
+func (mod *UserModule) Execute(ctx context.Context, exec ctxt.Executor) ([]byte, []byte, error) {
+	a, b, err := exec.Execute(ctx, mod.cmd, true)
 	if err != nil {
 		switch mod.config.Action {
 		case UserActionAdd:

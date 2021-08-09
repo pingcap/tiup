@@ -16,12 +16,10 @@ package instance
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -66,38 +64,36 @@ func (inst *PDInstance) Name() string {
 }
 
 // Start calls set inst.cmd and Start
-func (inst *PDInstance) Start(ctx context.Context, version v0manifest.Version) error {
-	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
-		return err
-	}
+func (inst *PDInstance) Start(ctx context.Context, version utils.Version) error {
 	uid := inst.Name()
 	args := []string{
 		"--name=" + uid,
 		fmt.Sprintf("--data-dir=%s", filepath.Join(inst.Dir, "data")),
 		fmt.Sprintf("--peer-urls=http://%s:%d", inst.Host, inst.Port),
-		fmt.Sprintf("--advertise-peer-urls=http://%s:%d", advertiseHost(inst.Host), inst.Port),
+		fmt.Sprintf("--advertise-peer-urls=http://%s:%d", AdvertiseHost(inst.Host), inst.Port),
 		fmt.Sprintf("--client-urls=http://%s:%d", inst.Host, inst.StatusPort),
-		fmt.Sprintf("--advertise-client-urls=http://%s:%d", advertiseHost(inst.Host), inst.StatusPort),
+		fmt.Sprintf("--advertise-client-urls=http://%s:%d", AdvertiseHost(inst.Host), inst.StatusPort),
 		fmt.Sprintf("--log-file=%s", inst.LogFile()),
 	}
 	if inst.ConfigPath != "" {
 		args = append(args, fmt.Sprintf("--config=%s", inst.ConfigPath))
 	}
 
-	if len(inst.initEndpoints) > 0 {
+	switch {
+	case len(inst.initEndpoints) > 0:
 		endpoints := make([]string, 0)
 		for _, pd := range inst.initEndpoints {
 			uid := fmt.Sprintf("pd-%d", pd.ID)
-			endpoints = append(endpoints, fmt.Sprintf("%s=http://%s:%d", uid, advertiseHost(inst.Host), pd.Port))
+			endpoints = append(endpoints, fmt.Sprintf("%s=http://%s:%d", uid, AdvertiseHost(inst.Host), pd.Port))
 		}
 		args = append(args, fmt.Sprintf("--initial-cluster=%s", strings.Join(endpoints, ",")))
-	} else if len(inst.joinEndpoints) > 0 {
+	case len(inst.joinEndpoints) > 0:
 		endpoints := make([]string, 0)
 		for _, pd := range inst.joinEndpoints {
-			endpoints = append(endpoints, fmt.Sprintf("http://%s:%d", advertiseHost(inst.Host), pd.Port))
+			endpoints = append(endpoints, fmt.Sprintf("http://%s:%d", AdvertiseHost(inst.Host), pd.Port))
 		}
 		args = append(args, fmt.Sprintf("--join=%s", strings.Join(endpoints, ",")))
-	} else {
+	default:
 		return errors.Errorf("must set the init or join instances.")
 	}
 
@@ -122,5 +118,5 @@ func (inst *PDInstance) LogFile() string {
 
 // Addr return the listen address of PD
 func (inst *PDInstance) Addr() string {
-	return fmt.Sprintf("%s:%d", advertiseHost(inst.Host), inst.StatusPort)
+	return fmt.Sprintf("%s:%d", AdvertiseHost(inst.Host), inst.StatusPort)
 }

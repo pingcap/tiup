@@ -27,15 +27,15 @@ import (
 
 // sub directory names
 const (
-	TiOpsPackageCacheDir = "packages"
-	TiOpsClusterDir      = "clusters"
-	TiOpsAuditDir        = "audit"
-	TLSCertKeyDir        = "tls"
-	TLSCACert            = "ca.crt"
-	TLSCAKey             = "ca.pem"
-	TLSClientCert        = "client.crt"
-	TLSClientKey         = "client.pem"
-	PFXClientCert        = "client.pfx"
+	TiUPPackageCacheDir = "packages"
+	TiUPClusterDir      = "clusters"
+	TiUPAuditDir        = "audit"
+	TLSCertKeyDir       = "tls"
+	TLSCACert           = "ca.crt"
+	TLSCAKey            = "ca.pem"
+	TLSClientCert       = "client.crt"
+	TLSClientKey        = "client.pem"
+	PFXClientCert       = "client.pfx"
 )
 
 var profileDir string
@@ -54,7 +54,7 @@ var initialized = false
 
 // Initialize initializes the global variables of meta package. If the
 // environment variable TIUP_COMPONENT_DATA_DIR is set, it is used as root of
-// the profile directory, otherwise the `$HOME/.tiops` of current user is used.
+// the profile directory, otherwise the `$HOME/.tiup` of current user is used.
 // The directory will be created before return if it does not already exist.
 func Initialize(base string) error {
 	tiupData := os.Getenv(tiuplocaldata.EnvNameComponentDataDir)
@@ -68,7 +68,7 @@ func Initialize(base string) error {
 		profileDir = tiupData
 	}
 
-	clusterBaseDir := filepath.Join(profileDir, TiOpsClusterDir)
+	clusterBaseDir := filepath.Join(profileDir, TiUPClusterDir)
 	tidbSpec = NewSpec(clusterBaseDir, func() Metadata {
 		return &ClusterMeta{
 			Topology: new(Specification),
@@ -79,7 +79,7 @@ func Initialize(base string) error {
 	return utils2.CreateDir(profileDir)
 }
 
-// ProfileDir returns the full profile directory path of TiOps.
+// ProfileDir returns the full profile directory path of TiUP.
 func ProfileDir() string {
 	return profileDir
 }

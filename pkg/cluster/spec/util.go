@@ -14,16 +14,19 @@
 package spec
 
 import (
+	"bytes"
+	"context"
 	"crypto/tls"
 	"fmt"
 	"path/filepath"
 	"reflect"
 	"strings"
+	"time"
 
-	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/version"
-	"go.etcd.io/etcd/pkg/transport"
+	"github.com/prometheus/common/expfmt"
+	"go.etcd.io/etcd/client/pkg/v3/transport"
 )
 
 var tidbSpec *SpecManager
@@ -40,7 +43,7 @@ func GetSpecManager() *SpecManager {
 type ClusterMeta struct {
 	User    string `yaml:"user"`         // the user to run and manage cluster on remote
 	Version string `yaml:"tidb_version"` // the version of TiDB cluster
-	//EnableFirewall bool   `yaml:"firewall"`
+	// EnableFirewall bool   `yaml:"firewall"`
 	OpsVer string `yaml:"last_ops_ver,omitempty"` // the version of ourself that updated the meta last time
 
 	Topology *Specification `yaml:"topology"`
@@ -84,7 +87,7 @@ func (m *ClusterMeta) GetBaseMeta() *BaseMeta {
 
 // AuditDir return the directory for saving audit log.
 func AuditDir() string {
-	return filepath.Join(profileDir, TiOpsAuditDir)
+	return filepath.Join(profileDir, TiUPAuditDir)
 }
 
 // SaveClusterMeta saves the cluster meta information to profile directory
@@ -105,7 +108,7 @@ func ClusterMetadata(clusterName string) (*ClusterMeta, error) {
 		// validated `edit-config`, or by some unexpected operations from a broken legacy
 		// release, we could provide max possibility that operations like `display`, `scale`
 		// and `destroy` are still (more or less) working, by ignoring certain errors.
-		return &cm, errors.AddStack(err)
+		return &cm, err
 	}
 
 	return &cm, nil
@@ -120,27 +123,73 @@ func LoadClientCert(dir string) (*tls.Config, error) {
 	}.ClientConfig()
 }
 
-// statusByURL queries current status of the instance by http status api.
-func statusByURL(url string, tlsCfg *tls.Config) string {
+// statusByHost queries current status of the instance by http status api.
+func statusByHost(host string, port int, path string, tlsCfg *tls.Config) string {
 	client := utils.NewHTTPClient(statusQueryTimeout, tlsCfg)
 
-	// body doesn't have any status section needed
-	body, err := client.Get(url)
-	if err != nil {
-		return "Down"
+	scheme := "http"
+	if tlsCfg != nil {
+		scheme = "https"
 	}
-	if body == nil {
+	if path == "" {
+		path = "/"
+	}
+	url := fmt.Sprintf("%s://%s:%d%s", scheme, host, port, path)
+
+	// body doesn't have any status section needed
+	body, err := client.Get(context.TODO(), url)
+	if err != nil || body == nil {
 		return "Down"
 	}
 	return "Up"
 }
 
+// UptimeByHost queries current uptime of the instance by http Prometheus metric api.
+func UptimeByHost(host string, port int, tlsCfg *tls.Config) time.Duration {
+	scheme := "http"
+	if tlsCfg != nil {
+		scheme = "https"
+	}
+	url := fmt.Sprintf("%s://%s:%d/metrics", scheme, host, port)
+
+	client := utils.NewHTTPClient(statusQueryTimeout, tlsCfg)
+
+	body, err := client.Get(context.TODO(), url)
+	if err != nil || body == nil {
+		return 0
+	}
+
+	var parser expfmt.TextParser
+	reader := bytes.NewReader(body)
+	mf, err := parser.TextToMetricFamilies(reader)
+	if err != nil {
+		return 0
+	}
+
+	now := time.Now()
+	for k, v := range mf {
+		if k == promMetricStartTimeSeconds {
+			ms := v.GetMetric()
+			if len(ms) >= 1 {
+				startTime := ms[0].Gauge.GetValue()
+				return now.Sub(time.Unix(int64(startTime), 0))
+			}
+			return 0
+		}
+	}
+
+	return 0
+}
+
 // Abs returns the absolute path
 func Abs(user, path string) string {
+	// trim whitespaces before joining
+	user = strings.TrimSpace(user)
+	path = strings.TrimSpace(path)
 	if !strings.HasPrefix(path, "/") {
-		return filepath.Join("/home", user, path)
+		path = filepath.Join("/home", user, path)
 	}
-	return path
+	return filepath.Clean(path)
 }
 
 // MultiDirAbs returns the absolute path for multi-dir separated by comma
@@ -154,4 +203,10 @@ func MultiDirAbs(user, paths string) []string {
 		dirs = append(dirs, Abs(user, path))
 	}
 	return dirs
+}
+
+// PackagePath return the tar bar path
+func PackagePath(comp string, version string, os string, arch string) string {
+	fileName := fmt.Sprintf("%s-%s-%s-%s.tar.gz", comp, version, os, arch)
+	return ProfilePath(TiUPPackageCacheDir, fileName)
 }

@@ -19,8 +19,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -30,7 +28,6 @@ import (
 	"strings"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/mod/semver"
 )
@@ -52,8 +49,8 @@ func InitProfile() *Profile {
 	switch {
 	case os.Getenv(EnvNameHome) != "":
 		profileDir = os.Getenv(EnvNameHome)
-	case DefaultTiupHome != "":
-		profileDir = DefaultTiupHome
+	case DefaultTiUPHome != "":
+		profileDir = DefaultTiUPHome
 	default:
 		u, err := user.Current()
 		if err != nil {
@@ -79,36 +76,10 @@ func (p *Profile) Root() string {
 	return p.root
 }
 
-// BinaryPathV0 returns the binary path of component specific version
-func (p *Profile) BinaryPathV0(component string, version v0manifest.Version) (string, error) {
-	manifest := p.Versions(component)
-	if manifest == nil {
-		return "", errors.Errorf("component `%s` doesn't install", component)
-	}
-	var entry string
-	if version.IsNightly() && manifest.Nightly != nil {
-		entry = manifest.Nightly.Entry
-	} else {
-		for _, v := range manifest.Versions {
-			if v.Version == version {
-				entry = v.Entry
-			}
-		}
-	}
-	if entry == "" {
-		return "", errors.Errorf("cannot found entry for %s:%s", component, version)
-	}
-	installPath, err := p.ComponentInstalledPath(component, version)
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(installPath, entry), nil
-}
-
 // GetComponentInstalledVersion return the installed version of component.
-func (p *Profile) GetComponentInstalledVersion(component string, version v0manifest.Version) (v0manifest.Version, error) {
-	if !version.IsEmpty() {
-		return version, nil
+func (p *Profile) GetComponentInstalledVersion(component string, ver utils.Version) (utils.Version, error) {
+	if !ver.IsEmpty() && ver.String() != utils.NightlyVersionAlias {
+		return ver, nil
 	}
 	versions, err := p.InstalledVersions(component)
 	if err != nil {
@@ -119,19 +90,25 @@ func (p *Profile) GetComponentInstalledVersion(component string, version v0manif
 	// report an error if the specific component doesn't be installed
 
 	// Check whether the specific version exist in local
-	if len(versions) > 0 {
-		sort.Slice(versions, func(i, j int) bool {
-			return semver.Compare(versions[i], versions[j]) < 0
-		})
-		version = v0manifest.Version(versions[len(versions)-1])
-	} else {
-		return "", fmt.Errorf("component not installed, please try `tiup install %s` to install it", component)
+	if len(versions) == 0 {
+		return "", errors.Errorf("component not installed, please try `tiup install %s` to install it", component)
 	}
-	return version, nil
+	sort.Slice(versions, func(i, j int) bool {
+		return semver.Compare(versions[i], versions[j]) < 0
+	})
+	if ver.String() != utils.NightlyVersionAlias {
+		for i := len(versions); i > 0; i-- {
+			if utils.Version(versions[i-1]).IsNightly() {
+				return utils.Version(versions[i-1]), nil
+			}
+		}
+		return "", errors.Errorf("component(nightly) not installed, please try `tiup install %s:nightly` to install it", component)
+	}
+	return utils.Version(versions[len(versions)-1]), nil
 }
 
 // ComponentInstalledPath returns the path where the component installed
-func (p *Profile) ComponentInstalledPath(component string, version v0manifest.Version) (string, error) {
+func (p *Profile) ComponentInstalledPath(component string, version utils.Version) (string, error) {
 	installedVersion, err := p.GetComponentInstalledVersion(component, version)
 	if err != nil {
 		return "", err
@@ -147,7 +124,7 @@ func (p *Profile) SaveTo(path string, data []byte, perm os.FileMode) error {
 	if err := os.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
 		return errors.Trace(err)
 	}
-	return ioutil.WriteFile(fullPath, data, perm)
+	return os.WriteFile(fullPath, data, perm)
 }
 
 // WriteJSON writes struct to a file (in the profile directory) in JSON format
@@ -185,65 +162,10 @@ func (p *Profile) ReadMetaFile(dirName string) (*Process, error) {
 	return &process, err
 }
 
-func (p *Profile) versionFileName(component string) string {
-	return fmt.Sprintf("manifest/tiup-component-%s.index", component)
-}
-
-func (p *Profile) v0ManifestFileName() string {
-	return "manifest/tiup-manifest.index"
-}
-
-func (p *Profile) isNotExist(path string) bool {
-	return utils.IsNotExist(p.Path(path))
-}
-
-// Manifest returns the components manifest
-func (p *Profile) Manifest() *v0manifest.ComponentManifest {
-	if p.isNotExist(p.v0ManifestFileName()) {
-		return nil
-	}
-
-	var manifest v0manifest.ComponentManifest
-	if err := p.readJSON(p.v0ManifestFileName(), &manifest); err != nil {
-		// The manifest was marshaled and stored by `tiup`, it should
-		// be a valid JSON file
-		log.Fatal(err)
-	}
-
-	return &manifest
-}
-
-// SaveManifest saves the latest components manifest to local profile
-func (p *Profile) SaveManifest(manifest *v0manifest.ComponentManifest) error {
-	return p.WriteJSON(p.v0ManifestFileName(), manifest)
-}
-
-// Versions returns the version manifest of specific component
-func (p *Profile) Versions(component string) *v0manifest.VersionManifest {
-	file := p.versionFileName(component)
-	if p.isNotExist(file) {
-		return nil
-	}
-
-	var manifest v0manifest.VersionManifest
-	if err := p.readJSON(file, &manifest); err != nil {
-		// The manifest was marshaled and stored by `tiup`, it should
-		// be a valid JSON file
-		log.Fatal(err)
-	}
-
-	return &manifest
-}
-
-// SaveVersions saves the latest version manifest to local profile of specific component
-func (p *Profile) SaveVersions(component string, manifest *v0manifest.VersionManifest) error {
-	return p.WriteJSON(p.versionFileName(component), manifest)
-}
-
 // InstalledComponents returns the installed components
 func (p *Profile) InstalledComponents() ([]string, error) {
 	compDir := filepath.Join(p.root, ComponentParentDir)
-	fileInfos, err := ioutil.ReadDir(compDir)
+	fileInfos, err := os.ReadDir(compDir)
 	if err != nil && os.IsNotExist(err) {
 		return nil, nil
 	}
@@ -268,7 +190,7 @@ func (p *Profile) InstalledVersions(component string) ([]string, error) {
 		return nil, nil
 	}
 
-	fileInfos, err := ioutil.ReadDir(path)
+	fileInfos, err := os.ReadDir(path)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -277,7 +199,7 @@ func (p *Profile) InstalledVersions(component string) ([]string, error) {
 		if !fi.IsDir() {
 			continue
 		}
-		sub, err := ioutil.ReadDir(filepath.Join(path, fi.Name()))
+		sub, err := os.ReadDir(filepath.Join(path, fi.Name()))
 		if err != nil || len(sub) < 1 {
 			continue
 		}
@@ -300,38 +222,6 @@ func (p *Profile) VersionIsInstalled(component, version string) (bool, error) {
 	return false, nil
 }
 
-// SelectInstalledVersion selects the installed versions and the latest release version
-// will be chosen if there is an empty version
-func (p *Profile) SelectInstalledVersion(component string, version v0manifest.Version) (v0manifest.Version, error) {
-	installed, err := p.InstalledVersions(component)
-	if err != nil {
-		return "", err
-	}
-
-	errInstallFirst := fmt.Errorf("use `tiup install %[1]s` to install `%[1]s` first", component)
-	if len(installed) < 1 {
-		return "", errInstallFirst
-	}
-
-	if version.IsEmpty() {
-		sort.Slice(installed, func(i, j int) bool {
-			return semver.Compare(installed[i], installed[j]) < 0
-		})
-		version = v0manifest.Version(installed[len(installed)-1])
-	}
-	found := false
-	for _, v := range installed {
-		if v0manifest.Version(v) == version {
-			found = true
-			break
-		}
-	}
-	if !found {
-		return "", errInstallFirst
-	}
-	return version, nil
-}
-
 // ResetMirror reset root.json and cleanup manifests directory
 func (p *Profile) ResetMirror(addr, root string) error {
 	// Calculating root.json path
@@ -342,11 +232,12 @@ func (p *Profile) ResetMirror(addr, root string) error {
 	localRoot := p.Path("bin", fmt.Sprintf("%s.root.json", hex.EncodeToString(shaWriter.Sum(nil))[:16]))
 
 	if root == "" {
-		if utils.IsExist(localRoot) {
+		switch {
+		case utils.IsExist(localRoot):
 			root = localRoot
-		} else if strings.HasSuffix(addr, "/") {
+		case strings.HasSuffix(addr, "/"):
 			root = addr + "root.json"
-		} else {
+		default:
 			root = addr + "/root.json"
 		}
 	}
@@ -354,19 +245,21 @@ func (p *Profile) ResetMirror(addr, root string) error {
 	// Fetch root.json
 	var wc io.ReadCloser
 	if strings.HasPrefix(root, "http") {
-		if resp, err := http.Get(root); err != nil {
+		resp, err := http.Get(root)
+		if err != nil {
 			return err
-		} else if resp.StatusCode != http.StatusOK {
+		}
+		if resp.StatusCode != http.StatusOK {
+			resp.Body.Close()
 			return errors.Errorf("Fetch remote root.json returns http code %d", resp.StatusCode)
-		} else {
-			wc = resp.Body
 		}
+		wc = resp.Body
 	} else {
-		if file, err := os.Open(root); err == nil {
-			wc = file
-		} else {
+		file, err := os.Open(root)
+		if err != nil {
 			return err
 		}
+		wc = file
 	}
 	defer wc.Close()
 

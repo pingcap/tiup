@@ -15,11 +15,11 @@ package scripts
 
 import (
 	"bytes"
-	"io/ioutil"
+	"os"
 	"path"
 	"text/template"
 
-	"github.com/pingcap/tiup/pkg/cluster/embed"
+	"github.com/pingcap/tiup/embed"
 )
 
 // PumpScript represent the data to generate Pump config
@@ -67,7 +67,7 @@ func (c *PumpScript) AppendEndpoints(ends ...*PDScript) *PumpScript {
 
 // Config generate the config file data.
 func (c *PumpScript) Config() ([]byte, error) {
-	fp := path.Join("/templates", "scripts", "run_pump.sh.tpl")
+	fp := path.Join("templates", "scripts", "run_pump.sh.tpl")
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err
@@ -81,7 +81,7 @@ func (c *PumpScript) ConfigToFile(file string) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(file, config, 0755)
+	return os.WriteFile(file, config, 0755)
 }
 
 // ConfigWithTemplate generate the Pump config content by tpl

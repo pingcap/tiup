@@ -16,14 +16,15 @@ package command
 import (
 	"path/filepath"
 
-	"github.com/pingcap/tiup/pkg/cluster"
-	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/manager"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
 func newScaleOutCmd() *cobra.Command {
-	opt := cluster.ScaleOutOptions{
+	opt := manager.DeployOptions{
 		IdentityFile: filepath.Join(utils.UserHome(), ".ssh", "id_rsa"),
 	}
 	cmd := &cobra.Command{
@@ -35,25 +36,10 @@ func newScaleOutCmd() *cobra.Command {
 				return cmd.Help()
 			}
 
-			// natvie ssh has it's own logic to find the default identity_file
-			if gOpt.SSHType == executor.SSHTypeSystem && !utils.IsFlagSetByUser(cmd.Flags(), "identity_file") {
-				opt.IdentityFile = ""
-			}
-
 			clusterName := args[0]
 			topoFile := args[1]
 
-			return manager.ScaleOut(
-				clusterName,
-				topoFile,
-				nil,
-				nil,
-				opt,
-				skipConfirm,
-				gOpt.OptTimeout,
-				gOpt.SSHTimeout,
-				gOpt.SSHType,
-			)
+			return cm.ScaleOut(clusterName, topoFile, postScaleOutHook, nil, opt, skipConfirm, gOpt)
 		},
 	}
 
@@ -62,4 +48,8 @@ func newScaleOutCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&opt.UsePassword, "password", "p", false, "Use password of target hosts. If specified, password authentication will be used.")
 
 	return cmd
+}
+
+func postScaleOutHook(builder *task.Builder, newPart spec.Topology) {
+	postDeployHook(builder, newPart)
 }

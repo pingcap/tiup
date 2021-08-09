@@ -15,39 +15,49 @@ package scripts
 
 import (
 	"bytes"
-	"io/ioutil"
+	"os"
 	"path"
 	"text/template"
 
-	"github.com/pingcap/tiup/pkg/cluster/embed"
+	"github.com/pingcap/tiup/embed"
 )
 
 // TiDBScript represent the data to generate TiDB config
 type TiDBScript struct {
-	IP         string
-	ListenHost string
-	Port       int
-	StatusPort int
-	DeployDir  string
-	LogDir     string
-	NumaNode   string
-	Endpoints  []*PDScript
+	IP            string
+	ListenHost    string
+	AdvertiseAddr string
+	Port          int
+	StatusPort    int
+	DeployDir     string
+	LogDir        string
+	NumaNode      string
+	Endpoints     []*PDScript
 }
 
 // NewTiDBScript returns a TiDBScript with given arguments
 func NewTiDBScript(ip, deployDir, logDir string) *TiDBScript {
 	return &TiDBScript{
-		IP:         ip,
-		Port:       4000,
-		StatusPort: 10080,
-		DeployDir:  deployDir,
-		LogDir:     logDir,
+		IP:            ip,
+		AdvertiseAddr: ip,
+		Port:          4000,
+		StatusPort:    10080,
+		DeployDir:     deployDir,
+		LogDir:        logDir,
 	}
 }
 
 // WithListenHost set ListenHost field of TiDBScript
 func (c *TiDBScript) WithListenHost(listenHost string) *TiDBScript {
 	c.ListenHost = listenHost
+	return c
+}
+
+// WithAdvertiseAddr set AdvertiseAddr field of TiDBScript
+func (c *TiDBScript) WithAdvertiseAddr(addr string) *TiDBScript {
+	if addr != "" {
+		c.AdvertiseAddr = addr
+	}
 	return c
 }
 
@@ -77,7 +87,7 @@ func (c *TiDBScript) AppendEndpoints(ends ...*PDScript) *TiDBScript {
 
 // Config generate the config file data.
 func (c *TiDBScript) Config() ([]byte, error) {
-	fp := path.Join("/templates", "scripts", "run_tidb.sh.tpl")
+	fp := path.Join("templates", "scripts", "run_tidb.sh.tpl")
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err
@@ -91,7 +101,7 @@ func (c *TiDBScript) ConfigToFile(file string) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(file, config, 0755)
+	return os.WriteFile(file, config, 0755)
 }
 
 // ConfigWithTemplate generate the TiDB config content by tpl

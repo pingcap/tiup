@@ -14,7 +14,6 @@
 package main
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -31,19 +30,19 @@ c: Test-Cluster
 d: ${DS_LIGHTNING}
 	`
 
-	dir, err := ioutil.TempDir("", "play_replace_test_*")
+	dir, err := os.MkdirTemp("", "play_replace_test_*")
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
 	fname := filepath.Join(dir, "a.json")
-	err = ioutil.WriteFile(fname, []byte(origin), 0644)
+	err = os.WriteFile(fname, []byte(origin), 0644)
 	assert.Nil(t, err)
 
 	name := "myname"
 	err = replaceDatasource(dir, name)
 	assert.Nil(t, err)
 
-	data, err := ioutil.ReadFile(fname)
+	data, err := os.ReadFile(fname)
 	assert.Nil(t, err)
 	replaced := string(data)
 

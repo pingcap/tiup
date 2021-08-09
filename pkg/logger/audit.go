@@ -15,10 +15,7 @@ package logger
 
 import (
 	"bytes"
-	"os"
-	"strings"
 
-	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/audit"
 	utils2 "github.com/pingcap/tiup/pkg/utils"
 	"go.uber.org/atomic"
@@ -42,9 +39,9 @@ func DisableAuditLog() {
 }
 
 func newAuditLogCore() zapcore.Core {
-	auditBuffer = bytes.NewBufferString(strings.Join(os.Args, " ") + "\n")
+	auditBuffer = bytes.NewBuffer([]byte{})
 	encoder := zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig())
-	return zapcore.NewCore(encoder, zapcore.Lock(zapcore.AddSync(auditBuffer)), zapcore.InfoLevel)
+	return zapcore.NewCore(encoder, zapcore.Lock(zapcore.AddSync(auditBuffer)), zapcore.DebugLevel)
 }
 
 // OutputAuditLogIfEnabled outputs audit log if enabled.
@@ -54,12 +51,12 @@ func OutputAuditLogIfEnabled() error {
 	}
 
 	if err := utils2.CreateDir(auditDir); err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	err := audit.OutputAuditLog(auditDir, auditBuffer.Bytes())
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 	auditBuffer.Reset()
 

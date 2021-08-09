@@ -15,11 +15,11 @@ package system
 
 import (
 	"bytes"
-	"io/ioutil"
+	"os"
 	"path"
 	"text/template"
 
-	"github.com/pingcap/tiup/pkg/cluster/embed"
+	"github.com/pingcap/tiup/embed"
 )
 
 // Config represent the data to generate systemd config
@@ -33,6 +33,7 @@ type Config struct {
 	LimitCORE           string
 	DeployDir           string
 	DisableSendSigkill  bool
+	GrantCapNetRaw      bool
 	// Takes one of no, on-success, on-failure, on-abnormal, on-watchdog, on-abort, or always.
 	// The Template set as always if this is not setted.
 	Restart string
@@ -83,12 +84,12 @@ func (c *Config) ConfigToFile(file string) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(file, config, 0755)
+	return os.WriteFile(file, config, 0755)
 }
 
 // Config generate the config file data.
 func (c *Config) Config() ([]byte, error) {
-	fp := path.Join("/templates", "systemd", "system.service.tpl")
+	fp := path.Join("templates", "systemd", "system.service.tpl")
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err

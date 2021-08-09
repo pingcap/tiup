@@ -15,7 +15,6 @@ package spec
 
 import (
 	"crypto/tls"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -49,6 +48,10 @@ func (t *TestTopology) Merge(topo Topology) Topology {
 	panic("not support")
 }
 
+func (t *TestTopology) FillHostArch(hostArch map[string]string) error {
+	panic("not support")
+}
+
 func (m *TestMetadata) SetTopology(topo Topology) {
 	testTopo, ok := topo.(*TestTopology)
 	if !ok {
@@ -76,6 +79,10 @@ func (t *TestTopology) NewPart() Topology {
 
 func (t *TestTopology) MergeTopo(topo Topology) Topology {
 	panic("not support")
+}
+
+func (t *TestTopology) Type() string {
+	return TopoTypeTiDB
 }
 
 func (t *TestTopology) BaseTopo() *BaseTopo {
@@ -110,7 +117,7 @@ func (t *TestTopology) CountDir(host string, dir string) int {
 }
 
 func TestSpec(t *testing.T) {
-	dir, err := ioutil.TempDir("", "test-*")
+	dir, err := os.MkdirTemp("", "test-*")
 	assert.Nil(t, err)
 
 	spec := NewSpec(dir, func() Metadata {

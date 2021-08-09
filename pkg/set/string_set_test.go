@@ -20,15 +20,15 @@ import (
 	"github.com/pingcap/check"
 )
 
-var _ = check.Suite(&stringSetTestSuite{})
+var _ = check.Suite(&setTestSuite{})
 
-type stringSetTestSuite struct{}
+type setTestSuite struct{}
 
 func TestNewStringSet(t *testing.T) {
 	check.TestingT(t)
 }
 
-func (s *stringSetTestSuite) TestStringSet(c *check.C) {
+func (s *setTestSuite) TestStringSet(c *check.C) {
 	set := NewStringSet()
 	vals := []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "10"}
 	for i := range vals {

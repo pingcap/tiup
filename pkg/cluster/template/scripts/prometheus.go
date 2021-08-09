@@ -15,12 +15,12 @@ package scripts
 
 import (
 	"bytes"
-	"io/ioutil"
+	"os"
 	"path"
 	"regexp"
 	"text/template"
 
-	"github.com/pingcap/tiup/pkg/cluster/embed"
+	"github.com/pingcap/tiup/embed"
 )
 
 // PrometheusScript represent the data to generate Prometheus config
@@ -79,7 +79,7 @@ func (c *PrometheusScript) WithTPLFile(fname string) *PrometheusScript {
 func (c *PrometheusScript) Config() ([]byte, error) {
 	fp := c.tplFile
 	if fp == "" {
-		fp = path.Join("/templates", "scripts", "run_prometheus.sh.tpl")
+		fp = path.Join("templates", "scripts", "run_prometheus.sh.tpl")
 	}
 
 	tpl, err := embed.ReadFile(fp)
@@ -110,5 +110,5 @@ func (c *PrometheusScript) ConfigToFile(file string) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(file, config, 0755)
+	return os.WriteFile(file, config, 0755)
 }

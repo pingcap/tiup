@@ -15,13 +15,13 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
+	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -48,6 +48,7 @@ which is used to uninstall tiup.
   # Uninstall all installed components
   tiup uninstall --all`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			teleCommand = cmd.CommandPath()
 			env := environment.GlobalEnv()
 			if self {
 				deletable := []string{"bin", "manifest", "manifests", "components", "storage/cluster/packages"}
@@ -81,26 +82,39 @@ which is used to uninstall tiup.
 
 func removeComponents(env *environment.Environment, specs []string, all bool) error {
 	for _, spec := range specs {
-		var path string
+		paths := []string{}
 		if strings.Contains(spec, ":") {
 			parts := strings.SplitN(spec, ":", 2)
 			// after this version is deleted, component will have no version left. delete the whole component dir directly
-			if dir, err := ioutil.ReadDir(env.LocalPath(localdata.ComponentParentDir, parts[0])); err == nil && len(dir) <= 1 {
-				path = env.LocalPath(localdata.ComponentParentDir, parts[0])
+			dir, err := os.ReadDir(env.LocalPath(localdata.ComponentParentDir, parts[0]))
+			if err != nil {
+				return errors.Trace(err)
+			}
+			if parts[1] == utils.NightlyVersionAlias {
+				for _, fi := range dir {
+					if utils.Version(fi.Name()).IsNightly() {
+						paths = append(paths, env.LocalPath(localdata.ComponentParentDir, parts[0], fi.Name()))
+					}
+				}
 			} else {
-				path = env.LocalPath(localdata.ComponentParentDir, parts[0], parts[1])
+				paths = append(paths, env.LocalPath(localdata.ComponentParentDir, parts[0], parts[1]))
+			}
+			if len(dir)-len(paths) < 1 {
+				paths = append(paths, env.LocalPath(localdata.ComponentParentDir, parts[0]))
 			}
 		} else {
 			if !all {
 				fmt.Printf("Use `tiup uninstall %s --all` if you want to remove all versions.\n", spec)
 				continue
 			}
-			path = env.LocalPath(localdata.ComponentParentDir, spec)
+			paths = append(paths, env.LocalPath(localdata.ComponentParentDir, spec))
 		}
-		err := os.RemoveAll(path)
-		if err != nil {
-			return err
+		for _, path := range paths {
+			if err := os.RemoveAll(path); err != nil {
+				return errors.Trace(err)
+			}
 		}
+
 		fmt.Printf("Uninstalled component `%s` successfully!\n", spec)
 	}
 	return nil

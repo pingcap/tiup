@@ -14,11 +14,11 @@
 package config
 
 import (
-	"io/ioutil"
+	"os"
 	"path"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cluster/embed"
+	"github.com/pingcap/tiup/embed"
 )
 
 // AlertManagerConfig represent the data to generate AlertManager config
@@ -31,10 +31,10 @@ func NewAlertManagerConfig() *AlertManagerConfig {
 
 // Config generate the config file data.
 func (c *AlertManagerConfig) Config() ([]byte, error) {
-	fp := path.Join("/templates", "config", "alertmanager.yml")
+	fp := path.Join("templates", "config", "alertmanager.yml")
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return nil, err
 	}
 	return c.ConfigWithTemplate(string(tpl))
 }
@@ -50,7 +50,7 @@ func (c *AlertManagerConfig) ConfigToFile(file string) error {
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(file, config, 0755); err != nil {
+	if err := os.WriteFile(file, config, 0755); err != nil {
 		return errors.AddStack(err)
 	}
 	return nil

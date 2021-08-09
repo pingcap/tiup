@@ -17,7 +17,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -73,26 +72,26 @@ func NewManifests(profile *localdata.Profile) (*FsManifests, error) {
 	// Load the root manifest.
 	manifest, err := result.load(ManifestFilenameRoot)
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return nil, err
 	}
 
 	// We must load without validation because we have no keys yet.
 	var root Root
-	err = ReadNoVerify(strings.NewReader(manifest), &root)
+	_, err = ReadNoVerify(strings.NewReader(manifest), &root)
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return nil, err
 	}
 
 	// Populate our key store from the root manifest.
 	err = loadKeys(&root, result.keys)
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return nil, err
 	}
 
 	// Now that we've bootstrapped the key store, we can verify the root manifest we loaded earlier.
 	_, err = ReadManifest(strings.NewReader(manifest), &root, result.keys)
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return nil, err
 	}
 
 	result.cache.Store(ManifestFilenameRoot, manifest)
@@ -128,7 +127,7 @@ func (ms *FsManifests) save(manifest *Manifest, filename string) error {
 		return errors.Trace(err)
 	}
 
-	err = ioutil.WriteFile(path, bytes, 0644)
+	err = os.WriteFile(path, bytes, 0644)
 	if err != nil {
 		return err
 	}
@@ -205,9 +204,12 @@ func (ms *FsManifests) load(filename string) (string, error) {
 				if err != nil {
 					return "", errors.Trace(err)
 				}
-				bytes, err := ioutil.ReadFile(initRoot)
+				bytes, err := os.ReadFile(initRoot)
 				if err != nil {
-					return "", errors.Errorf("cannot open the initial root.json at %s", initRoot)
+					return "", &LoadManifestError{
+						manifest: "root.json",
+						err:      err,
+					}
 				}
 				return string(bytes), nil
 			}
@@ -349,7 +351,7 @@ func (ms *MockManifests) LoadManifest(role ValidManifest) (*Manifest, bool, erro
 
 	err := loadKeys(role, ms.Ks)
 	if err != nil {
-		return nil, false, errors.AddStack(err)
+		return nil, false, err
 	}
 	return manifest, true, nil
 }

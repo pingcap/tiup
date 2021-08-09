@@ -9,9 +9,10 @@ pushd "$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 PATH=$PATH:/tiup-cluster/bin
 export TIUP_CLUSTER_PROGRESS_REFRESH_RATE=10s
 export TIUP_CLUSTER_EXECUTE_DEFAULT_TIMEOUT=300s
+export DEBUG_CHECKPOINT=1
 
-export version=${version-v4.0.4}
-export old_version=${old_version-v3.0.16}
+export version=${version-v4.0.12}
+export old_version=${old_version-v3.0.20}
 
 # Prepare local config
 echo "preparing local config"

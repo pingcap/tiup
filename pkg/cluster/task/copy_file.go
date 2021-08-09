@@ -14,9 +14,11 @@
 package task
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 )
 
 // CopyFile will copy a local file to the target host
@@ -25,16 +27,17 @@ type CopyFile struct {
 	dst      string
 	remote   string
 	download bool
+	limit    int
 }
 
 // Execute implements the Task interface
-func (c *CopyFile) Execute(ctx *Context) error {
-	e, ok := ctx.GetExecutor(c.remote)
+func (c *CopyFile) Execute(ctx context.Context) error {
+	e, ok := ctxt.GetInner(ctx).GetExecutor(c.remote)
 	if !ok {
 		return ErrNoExecutor
 	}
 
-	err := e.Transfer(c.src, c.dst, c.download)
+	err := e.Transfer(ctx, c.src, c.dst, c.download, c.limit)
 	if err != nil {
 		return errors.Annotate(err, "failed to transfer file")
 	}
@@ -43,7 +46,7 @@ func (c *CopyFile) Execute(ctx *Context) error {
 }
 
 // Rollback implements the Task interface
-func (c *CopyFile) Rollback(ctx *Context) error {
+func (c *CopyFile) Rollback(ctx context.Context) error {
 	return ErrUnsupportedRollback
 }
 

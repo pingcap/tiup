@@ -14,23 +14,31 @@
 package config
 
 import (
-	"io/ioutil"
+	"bytes"
+	"os"
 	"path"
+	"text/template"
 
-	"github.com/pingcap/tiup/pkg/cluster/embed"
+	"github.com/pingcap/tiup/embed"
 )
 
 // BlackboxConfig represent the data to generate AlertManager config
-type BlackboxConfig struct{}
+type BlackboxConfig struct {
+	DeployDir  string
+	TLSEnabled bool
+}
 
 // NewBlackboxConfig returns a BlackboxConfig
-func NewBlackboxConfig() *BlackboxConfig {
-	return &BlackboxConfig{}
+func NewBlackboxConfig(deployDir string, tlsEnabled bool) *BlackboxConfig {
+	return &BlackboxConfig{
+		DeployDir:  deployDir,
+		TLSEnabled: tlsEnabled,
+	}
 }
 
 // Config generate the config file data.
 func (c *BlackboxConfig) Config() ([]byte, error) {
-	fp := path.Join("/templates", "config", "blackbox.yml")
+	fp := path.Join("templates", "config", "blackbox.yml.tpl")
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err
@@ -44,10 +52,20 @@ func (c *BlackboxConfig) ConfigToFile(file string) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(file, config, 0755)
+	return os.WriteFile(file, config, 0755)
 }
 
 // ConfigWithTemplate generate the AlertManager config content by tpl
 func (c *BlackboxConfig) ConfigWithTemplate(tpl string) ([]byte, error) {
-	return []byte(tpl), nil
+	tmpl, err := template.New("Blackbox").Parse(tpl)
+	if err != nil {
+		return nil, err
+	}
+
+	content := bytes.NewBufferString("")
+	if err := tmpl.Execute(content, c); err != nil {
+		return nil, err
+	}
+
+	return content.Bytes(), nil
 }

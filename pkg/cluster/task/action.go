@@ -14,6 +14,7 @@
 package task
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 
@@ -31,57 +32,55 @@ type ClusterOperate struct {
 }
 
 // Execute implements the Task interface
-func (c *ClusterOperate) Execute(ctx *Context) error {
+func (c *ClusterOperate) Execute(ctx context.Context) error {
+	var (
+		err         error
+		printStatus bool = true
+	)
+	var opErrMsg = [...]string{
+		"failed to start",
+		"failed to stop",
+		"failed to restart",
+		"failed to destroy",
+		"failed to upgrade",
+		"failed to scale in",
+		"failed to scale out",
+		"failed to destroy tombstone",
+	}
 	switch c.op {
 	case operator.StartOperation:
-		err := operator.Start(ctx, c.spec, c.options, c.tlsCfg)
-		if err != nil {
-			return errors.Annotate(err, "failed to start")
-		}
-		operator.PrintClusterStatus(ctx, c.spec)
+		err = operator.Start(ctx, c.spec, c.options, c.tlsCfg)
 	case operator.StopOperation:
-		err := operator.Stop(ctx, c.spec, c.options, c.tlsCfg)
-		if err != nil {
-			return errors.Annotate(err, "failed to stop")
-		}
-		operator.PrintClusterStatus(ctx, c.spec)
+		err = operator.Stop(ctx, c.spec, c.options, c.tlsCfg)
 	case operator.RestartOperation:
-		err := operator.Restart(ctx, c.spec, c.options, c.tlsCfg)
-		if err != nil {
-			return errors.Annotate(err, "failed to restart")
-		}
-		operator.PrintClusterStatus(ctx, c.spec)
-	case operator.UpgradeOperation:
-		err := operator.Upgrade(ctx, c.spec, c.options, c.tlsCfg)
-		if err != nil {
-			return errors.Annotate(err, "failed to upgrade")
-		}
-		operator.PrintClusterStatus(ctx, c.spec)
+		err = operator.Restart(ctx, c.spec, c.options, c.tlsCfg)
 	case operator.DestroyOperation:
-		err := operator.Destroy(ctx, c.spec, c.options)
-		if err != nil {
-			return errors.Annotate(err, "failed to destroy")
-		}
-	case operator.DestroyTombstoneOperation:
-		_, err := operator.DestroyTombstone(ctx, c.spec, false, c.options, c.tlsCfg)
-		if err != nil {
-			return errors.Annotate(err, "failed to destroy")
-		}
-	// print nothing
+		err = operator.Destroy(ctx, c.spec, c.options)
+	case operator.UpgradeOperation:
+		err = operator.Upgrade(ctx, c.spec, c.options, c.tlsCfg)
 	case operator.ScaleInOperation:
-		err := operator.ScaleIn(ctx, c.spec, c.options, c.tlsCfg)
-		if err != nil {
-			return errors.Annotate(err, "failed to scale in")
-		}
+		err = operator.ScaleIn(ctx, c.spec, c.options, c.tlsCfg)
+		printStatus = false
+	case operator.DestroyTombstoneOperation:
+		_, err = operator.DestroyTombstone(ctx, c.spec, false, c.options, c.tlsCfg)
+		printStatus = false
 	default:
 		return errors.Errorf("nonsupport %s", c.op)
+	}
+
+	if err != nil {
+		return errors.Annotatef(err, opErrMsg[c.op])
+	}
+
+	if printStatus {
+		operator.PrintClusterStatus(ctx, c.spec)
 	}
 
 	return nil
 }
 
 // Rollback implements the Task interface
-func (c *ClusterOperate) Rollback(ctx *Context) error {
+func (c *ClusterOperate) Rollback(ctx context.Context) error {
 	return ErrUnsupportedRollback
 }
 

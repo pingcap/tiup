@@ -33,6 +33,7 @@ func newDisplayCmd() *cobra.Command {
 	var (
 		clusterName       string
 		showDashboardOnly bool
+		showVersionOnly   bool
 	)
 	cmd := &cobra.Command{
 		Use:   "display <cluster-name>",
@@ -43,11 +44,12 @@ func newDisplayCmd() *cobra.Command {
 			}
 
 			clusterName = args[0]
+			clusterReport.ID = scrubClusterName(clusterName)
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
 			exist, err := tidbSpec.Exist(clusterName)
 			if err != nil {
-				return perrs.AddStack(err)
+				return err
 			}
 
 			if !exist {
@@ -57,23 +59,32 @@ func newDisplayCmd() *cobra.Command {
 			metadata, err := spec.ClusterMetadata(clusterName)
 			if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
 				!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
-				return perrs.AddStack(err)
+				return err
 			}
+
+			if showVersionOnly {
+				fmt.Println(metadata.Version)
+				return nil
+			}
+
 			if showDashboardOnly {
 				tlsCfg, err := metadata.Topology.TLSConfig(tidbSpec.Path(clusterName, spec.TLSCertKeyDir))
 				if err != nil {
-					return perrs.AddStack(err)
+					return err
 				}
 				return displayDashboardInfo(clusterName, tlsCfg)
 			}
 
-			return manager.Display(clusterName, gOpt)
+			return cm.Display(clusterName, gOpt)
 		},
 	}
 
 	cmd.Flags().StringSliceVarP(&gOpt.Roles, "role", "R", nil, "Only display specified roles")
 	cmd.Flags().StringSliceVarP(&gOpt.Nodes, "node", "N", nil, "Only display specified nodes")
+	cmd.Flags().BoolVar(&gOpt.ShowUptime, "uptime", false, "Display with uptime")
 	cmd.Flags().BoolVar(&showDashboardOnly, "dashboard", false, "Only display TiDB Dashboard information")
+	cmd.Flags().BoolVar(&showVersionOnly, "version", false, "Only display TiDB cluster version")
+	cmd.Flags().BoolVar(&gOpt.JSON, "json", false, "Output in JSON format when applicable")
 
 	return cmd
 }

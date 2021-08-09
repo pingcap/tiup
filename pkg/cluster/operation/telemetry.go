@@ -21,7 +21,8 @@ import (
 	"sync"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cluster/report"
+	"github.com/pingcap/tiup/pkg/checkpoint"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/telemetry"
 	"github.com/pingcap/tiup/pkg/version"
@@ -31,7 +32,6 @@ import (
 // GetNodeInfo the node info in topology.
 func GetNodeInfo(
 	ctx context.Context,
-	getter ExecutorGetter,
 	topo spec.Topology,
 ) (nodes []*telemetry.NodeInfo, err error) {
 	ver := version.NewTiUPVersion().String()
@@ -53,7 +53,7 @@ func GetNodeInfo(
 
 	err = errg.Wait()
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return nil, err
 	}
 
 	// Copy and get info per host.
@@ -68,39 +68,43 @@ func GetNodeInfo(
 		}
 		foundHosts[host] = struct{}{}
 
+		// the checkpoint part of context can't be shared between goroutines
+		// since it's used to trace the stack, so we must create a new layer
+		// of checkpoint context every time put it into a new goroutine.
+		nctx := checkpoint.NewContext(ctx)
 		errg.Go(func() error {
-			exec := getter.Get(host)
+			exec := ctxt.GetInner(nctx).Get(host)
 
 			// Copy component...
-			_, _, err := exec.Execute("mkdir -p "+filepath.Join(dir, "bin"), false)
+			_, _, err := exec.Execute(nctx, "mkdir -p "+filepath.Join(dir, "bin"), false)
 			if err != nil {
 				return err
 			}
 
 			resName := fmt.Sprintf("%s-%s", "cluster", ver)
 			fileName := fmt.Sprintf("%s-%s-%s.tar.gz", resName, inst.OS(), inst.Arch())
-			srcPath := spec.ProfilePath(spec.TiOpsPackageCacheDir, fileName)
+			srcPath := spec.ProfilePath(spec.TiUPPackageCacheDir, fileName)
 
 			dstDir := filepath.Join(dir, "bin")
 			dstPath := filepath.Join(dstDir, path.Base(srcPath))
-			err = exec.Transfer(srcPath, dstPath, false)
+			err = exec.Transfer(nctx, srcPath, dstPath, false, 0)
 			if err != nil {
 				return err
 			}
 
 			// get node info by exec _telemetry node_info at remote instance.
 			cmd := fmt.Sprintf(`tar --no-same-owner -zxf %s -C %s && rm %s`, dstPath, dstDir, dstPath)
-			_, stderr, err := exec.Execute(cmd, false)
+			_, stderr, err := exec.Execute(nctx, cmd, false)
 			if err != nil {
 				return errors.Annotatef(err, "stderr: %s", string(stderr))
 			}
 
 			cmd = fmt.Sprintf("%s/cluster _telemetry node_info", dstDir)
-			stdout, _, err := exec.Execute(cmd, false)
+			stdout, _, err := exec.Execute(nctx, cmd, false)
 			if err == nil {
-				nodeInfo, err := report.NodeInfoFromText(string(stdout))
+				nodeInfo, err := telemetry.NodeInfoFromText(string(stdout))
 				if err == nil {
-					nodeInfo.NodeId = telemetry.HashReport(host)
+					nodeInfo.NodeId = telemetry.SaltedHash(host)
 					nodesMu.Lock()
 					nodes = append(nodes, nodeInfo)
 					nodesMu.Unlock()
@@ -112,7 +116,7 @@ func GetNodeInfo(
 
 	err = errg.Wait()
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return nil, err
 	}
 
 	return

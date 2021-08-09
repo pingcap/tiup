@@ -25,17 +25,18 @@ type sampleDataMeta struct {
 	StrSlice     []string                 `yaml:"strs,omitempty" validate:"strs:editable"`
 	MapSlice     []map[string]interface{} `yaml:"maps,omitempty" validate:"maps:ignore"`
 	StrElem      string                   `yaml:"stre" validate:"editable"`
+	StrElem2     string                   `yaml:"str2,omitempty" validate:"str2:expandable"`
 	StructSlice1 []sampleDataElem         `yaml:"slice1" validate:"slice1:editable"`
 	StructSlice2 []sampleDataElem         `yaml:"slice2,omitempty"`
 	StructSlice3 []sampleDataEditable     `yaml:"slice3,omitempty" validate:"slice3:editable"`
 }
 
 type sampleDataElem struct {
-	StrElem1       string                   `yaml:"str1" validate:"str1:editable"`
-	StrElem2       string                   `yaml:"str2,omitempty" validate:"str2:editable"`
-	IntElem        int                      `yaml:"int"`
-	InterfaceElem  interface{}              `yaml:"interface,omitempty" validate:"interface:editable"`
-	InterfaceSlice []map[string]interface{} `yaml:"mapslice,omitempty" validate:"mapslice:editable"`
+	StrElem1       string                 `yaml:"str1" validate:"str1:editable"`
+	StrElem2       string                 `yaml:"str2,omitempty" validate:"str2:editable"`
+	IntElem        int                    `yaml:"int"`
+	InterfaceElem  interface{}            `yaml:"interface,omitempty" validate:"interface:editable"`
+	InterfaceSlice map[string]interface{} `yaml:"mapslice,omitempty" validate:"mapslice:editable"`
 }
 
 type sampleDataEditable struct {
@@ -70,7 +71,7 @@ strs:
 	err = ValidateSpecDiff(d1, d2)
 	c.Assert(err, IsNil)
 
-	// add editable element (without specifing alias)
+	// add editable element (without specifying alias)
 	err = yaml.Unmarshal([]byte(`
 ints: [11, 13, 12]
 strs:
@@ -472,4 +473,90 @@ maps:
 	c.Assert(err, IsNil)
 	err = ValidateSpecDiff(d1, d2)
 	c.Assert(err, IsNil)
+}
+
+func (d *diffSuite) TestValidateSpecDiffType(c *C) {
+	var d1 sampleDataMeta
+	var d2 sampleDataMeta
+	var err error
+
+	err = yaml.Unmarshal([]byte(`
+ints: [11, 12, 13]
+slice3:
+  - key0: 0
+`), &d1)
+	c.Assert(err, IsNil)
+
+	// Modify key in editable map, with the same type
+	err = yaml.Unmarshal([]byte(`
+ints: [11, 12, 13]
+slice3:
+  - key0: 1
+`), &d2)
+	c.Assert(err, IsNil)
+	err = ValidateSpecDiff(d1, d2)
+	c.Assert(err, IsNil)
+
+	// Modify key in editable map, with value type changed
+	err = yaml.Unmarshal([]byte(`
+ints: [11, 12, 13]
+slice3:
+  - key0: 2.0
+`), &d2)
+	c.Assert(err, IsNil)
+	err = ValidateSpecDiff(d1, d2)
+	c.Assert(err, IsNil)
+
+	// Modify key in editable map, with value type changed
+	err = yaml.Unmarshal([]byte(`
+ints: [11, 12, 13]
+slice3:
+  - key0: sss
+`), &d2)
+	c.Assert(err, IsNil)
+	err = ValidateSpecDiff(d1, d2)
+	c.Assert(err, IsNil)
+}
+
+func (d *diffSuite) TestValidateSpecDiffExpandable(c *C) {
+	var d1 sampleDataMeta
+	var d2 sampleDataMeta
+	var err error
+
+	err = yaml.Unmarshal([]byte(`
+str2: "/ssd0/tiflash,/ssd1/tiflash"
+`), &d1)
+	c.Assert(err, IsNil)
+
+	// Expand path
+	err = yaml.Unmarshal([]byte(`
+str2: "/ssd0/tiflash,/ssd1/tiflash,/ssd2/tiflash"
+`), &d2)
+	c.Assert(err, IsNil)
+	err = ValidateSpecDiff(d1, d2)
+	c.Assert(err, IsNil)
+
+	// Expand path with non-sorted paths
+	err = yaml.Unmarshal([]byte(`
+str2: "/ssd0/tiflash,/ssd2/tiflash,/ssd1/tiflash"
+`), &d2)
+	c.Assert(err, IsNil)
+	err = ValidateSpecDiff(d1, d2)
+	c.Assert(err, IsNil)
+
+	// Expand path with non-sorted paths. Changing the first path is not allowed.
+	err = yaml.Unmarshal([]byte(`
+str2: "/ssd1/tiflash,/ssd0/tiflash,/ssd2/tiflash"
+`), &d2)
+	c.Assert(err, IsNil)
+	err = ValidateSpecDiff(d1, d2)
+	c.Assert(err, NotNil)
+
+	// Shirnking paths is not allowed
+	err = yaml.Unmarshal([]byte(`
+str2: "/ssd0/tiflash"
+`), &d2)
+	c.Assert(err, IsNil)
+	err = ValidateSpecDiff(d1, d2)
+	c.Assert(err, NotNil)
 }

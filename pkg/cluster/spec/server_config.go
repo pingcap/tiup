@@ -15,6 +15,7 @@ package spec
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -25,10 +26,11 @@ import (
 	"github.com/BurntSushi/toml"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
-	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/utils"
+	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -40,7 +42,7 @@ const (
 	migrateLockName = "tiup-migrate.lck"
 )
 
-// ErrorCheckConfig represent error occured in config check stage
+// ErrorCheckConfig represent error occurred in config check stage
 var ErrorCheckConfig = errors.New("check config failed")
 
 // strKeyMap tries to convert `map[interface{}]interface{}` to `map[string]interface{}`
@@ -70,12 +72,12 @@ func strKeyMap(val interface{}) interface{} {
 	return val
 }
 
-func flattenKey(key string, val interface{}) (string, interface{}) {
+func foldKey(key string, val interface{}) (string, interface{}) {
 	parts := strings.SplitN(key, ".", 2)
 	if len(parts) == 1 {
 		return key, strKeyMap(val)
 	}
-	subKey, subVal := flattenKey(parts[1], val)
+	subKey, subVal := foldKey(parts[1], val)
 	return parts[0], map[string]interface{}{
 		subKey: strKeyMap(subVal),
 	}
@@ -99,24 +101,74 @@ func patch(origin map[string]interface{}, key string, val interface{}) {
 	}
 }
 
-func flattenMap(ms map[string]interface{}) map[string]interface{} {
+// FoldMap convert single layer map to multi-layer
+func FoldMap(ms map[string]interface{}) map[string]interface{} {
+	// we flatten map first to deal with the case like:
+	// a.b:
+	//   c.d: xxx
+	ms = FlattenMap(ms)
 	result := map[string]interface{}{}
 	for k, v := range ms {
-		key, val := flattenKey(k, v)
+		key, val := foldKey(k, v)
 		patch(result, key, val)
 	}
 	return result
 }
 
-func merge(orig map[string]interface{}, overwrites ...map[string]interface{}) (map[string]interface{}, error) {
-	lhs := flattenMap(orig)
+// FlattenMap convert mutil-layer map to single layer
+func FlattenMap(ms map[string]interface{}) map[string]interface{} {
+	result := map[string]interface{}{}
+	for k, v := range ms {
+		var sub map[string]interface{}
+
+		if m, ok := v.(map[string]interface{}); ok {
+			sub = FlattenMap(m)
+		} else if m, ok := v.(map[interface{}]interface{}); ok {
+			fixM := map[string]interface{}{}
+			for k, v := range m {
+				if sk, ok := k.(string); ok {
+					fixM[sk] = v
+				}
+			}
+			sub = FlattenMap(fixM)
+		} else {
+			result[k] = v
+			continue
+		}
+
+		for sk, sv := range sub {
+			result[k+"."+sk] = sv
+		}
+	}
+	return result
+}
+
+// MergeConfig merge two or more config into one and unflat them
+// config1:
+//   a.b.a: 1
+//   a.b.b: 2
+// config2:
+//   a.b.a: 3
+//   a.b.c: 4
+// config3:
+//   b.c = 5
+// After MergeConfig(config1, config2, config3):
+//   a:
+//     b:
+//       a: 3
+//       b: 2
+//       c: 4
+//   b:
+//     c: 5
+func MergeConfig(orig map[string]interface{}, overwrites ...map[string]interface{}) map[string]interface{} {
+	lhs := FoldMap(orig)
 	for _, overwrite := range overwrites {
-		rhs := flattenMap(overwrite)
+		rhs := FoldMap(overwrite)
 		for k, v := range rhs {
 			patch(lhs, k, v)
 		}
 	}
-	return lhs, nil
+	return lhs
 }
 
 // GetValueFromPath try to find the value by path recursively
@@ -124,6 +176,7 @@ func GetValueFromPath(m map[string]interface{}, p string) interface{} {
 	ss := strings.Split(p, ".")
 
 	searchMap := make(map[interface{}]interface{})
+	m = FoldMap(m)
 	for k, v := range m {
 		searchMap[k] = v
 	}
@@ -140,19 +193,15 @@ func searchValue(m map[interface{}]interface{}, ss []string) interface{} {
 		return m[ss[0]]
 	}
 
-	if m[strings.Join(ss, ".")] != nil {
-		return m[strings.Join(ss, ".")]
-	}
-
-	for i := l - 1; i > 0; i-- {
-		key := strings.Join(ss[:i], ".")
-		if m[key] == nil {
-			continue
+	key := ss[0]
+	if pm, ok := m[key].(map[interface{}]interface{}); ok {
+		return searchValue(pm, ss[1:])
+	} else if pm, ok := m[key].(map[string]interface{}); ok {
+		searchMap := make(map[interface{}]interface{})
+		for k, v := range pm {
+			searchMap[k] = v
 		}
-		if pm, ok := m[key].(map[interface{}]interface{}); ok {
-			return searchValue(pm, ss[i:])
-		}
-		return nil
+		return searchValue(searchMap, ss[1:])
 	}
 
 	return nil
@@ -164,11 +213,7 @@ func Merge2Toml(comp string, global, overwrite map[string]interface{}) ([]byte, 
 }
 
 func merge2Toml(comp string, global, overwrite map[string]interface{}) ([]byte, error) {
-	lhs, err := merge(global, overwrite)
-	if err != nil {
-		return nil, perrs.AddStack(err)
-	}
-
+	lhs := MergeConfig(global, overwrite)
 	buf := bytes.NewBufferString(fmt.Sprintf(`# WARNING: This file is auto-generated. Do not edit! All your modification will be overwritten!
 # You can use 'tiup cluster edit-config' and 'tiup cluster reload' to update the configuration
 # All configuration items you want to change can be added to:
@@ -180,9 +225,23 @@ func merge2Toml(comp string, global, overwrite map[string]interface{}) ([]byte, 
 
 	enc := toml.NewEncoder(buf)
 	enc.Indent = ""
-	err = enc.Encode(lhs)
+	err := enc.Encode(lhs)
 	if err != nil {
 		return nil, perrs.Trace(err)
+	}
+	return buf.Bytes(), nil
+}
+
+func encodeRemoteCfg2Yaml(remote Remote) ([]byte, error) {
+	if len(remote.RemoteRead) == 0 && len(remote.RemoteWrite) == 0 {
+		return []byte{}, nil
+	}
+
+	buf := bytes.NewBufferString("")
+	enc := yaml.NewEncoder(buf)
+	err := enc.Encode(remote)
+	if err != nil {
+		return nil, err
 	}
 	return buf.Bytes(), nil
 }
@@ -194,54 +253,65 @@ func mergeImported(importConfig []byte, specConfigs ...map[string]interface{}) (
 	}
 
 	// overwrite topology specifieced configs upon the imported configs
-	lhs, err := merge(configData, specConfigs...)
-	if err != nil {
-		return nil, perrs.Trace(err)
-	}
+	lhs := MergeConfig(configData, specConfigs...)
 	return lhs, nil
 }
 
 // BindVersion map the cluster version to the third components binding version.
 type BindVersion func(comp string, version string) (bindVersion string)
 
-func checkConfig(e executor.Executor, componentName, clusterVersion, nodeOS, arch, config string, paths meta.DirPaths, bindVersion BindVersion) error {
-	repo, err := clusterutil.NewRepository(nodeOS, arch)
-	if err != nil {
-		return perrs.Annotate(ErrorCheckConfig, err.Error())
-	}
-
-	ver := clusterVersion
-	if bindVersion != nil {
-		ver = bindVersion(componentName, clusterVersion)
-	}
-
-	entry, err := repo.ComponentBinEntry(componentName, ver)
-	if err != nil {
-		return perrs.Annotate(ErrorCheckConfig, err.Error())
-	}
-
-	binPath := path.Join(paths.Deploy, "bin", entry)
-	// Skip old versions
-	if !hasConfigCheckFlag(e, binPath) {
-		return nil
-	}
-
-	// Hack tikv --pd flag
-	extra := ""
-	if componentName == ComponentTiKV {
-		extra = `--pd=""`
-	}
-
+func checkConfig(ctx context.Context, e ctxt.Executor, componentName, clusterVersion, nodeOS, arch, config string, paths meta.DirPaths, bindVersion BindVersion) error {
+	var cmd string
 	configPath := path.Join(paths.Deploy, "conf", config)
-	_, _, err = e.Execute(fmt.Sprintf("%s --config-check --config=%s %s", binPath, configPath, extra), false)
+	switch componentName {
+	case ComponentPrometheus:
+		cmd = fmt.Sprintf("%s/bin/prometheus/promtool check config %s", paths.Deploy, configPath)
+	case ComponentAlertmanager:
+		cmd = fmt.Sprintf("%s/bin/alertmanager/amtool check-config %s", paths.Deploy, configPath)
+	default:
+		repo, err := clusterutil.NewRepository(nodeOS, arch)
+		if err != nil {
+			return perrs.Annotate(ErrorCheckConfig, err.Error())
+		}
+
+		clsVer := utils.Version(clusterVersion)
+		ver := clusterVersion
+		if clsVer.IsNightly() {
+			ver = utils.NightlyVersionAlias
+		}
+		// FIXME: workaround for nightly versions, need refactor
+		if bindVersion != nil {
+			ver = bindVersion(componentName, ver)
+		}
+
+		entry, err := repo.ComponentBinEntry(componentName, ver)
+		if err != nil {
+			return perrs.Annotate(ErrorCheckConfig, err.Error())
+		}
+		binPath := path.Join(paths.Deploy, "bin", entry)
+
+		// Skip old versions
+		if !hasConfigCheckFlag(ctx, e, binPath) {
+			return nil
+		}
+
+		extra := ""
+		if componentName == ComponentTiKV {
+			// Pass in an empty pd address and the correct data dir
+			extra = fmt.Sprintf(`--pd "" --data-dir "%s"`, paths.Data[0])
+		}
+		cmd = fmt.Sprintf("%s --config-check --config=%s %s", binPath, configPath, extra)
+	}
+
+	_, _, err := e.Execute(ctx, cmd, false)
 	if err != nil {
 		return perrs.Annotate(ErrorCheckConfig, err.Error())
 	}
 	return nil
 }
 
-func hasConfigCheckFlag(e executor.Executor, binPath string) bool {
-	stdout, stderr, _ := e.Execute(fmt.Sprintf("%s --help", binPath), false)
+func hasConfigCheckFlag(ctx context.Context, e ctxt.Executor, binPath string) bool {
+	stdout, stderr, _ := e.Execute(ctx, fmt.Sprintf("%s --help", binPath), false)
 	return strings.Contains(string(stdout), "config-check") || strings.Contains(string(stderr), "config-check")
 }
 

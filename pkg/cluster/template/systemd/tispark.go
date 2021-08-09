@@ -15,12 +15,12 @@ package system
 
 import (
 	"bytes"
-	"io/ioutil"
+	"os"
 	"path"
 	"strings"
 	"text/template"
 
-	"github.com/pingcap/tiup/pkg/cluster/embed"
+	"github.com/pingcap/tiup/embed"
 )
 
 // TiSparkConfig represent the data to generate systemd config
@@ -55,12 +55,12 @@ func (c *TiSparkConfig) ConfigToFile(file string) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(file, config, 0755)
+	return os.WriteFile(file, config, 0755)
 }
 
 // Config generate the config file data.
 func (c *TiSparkConfig) Config() ([]byte, error) {
-	fp := path.Join("/templates", "systemd", "tispark.service.tpl")
+	fp := path.Join("templates", "systemd", "tispark.service.tpl")
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err

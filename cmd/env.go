@@ -23,11 +23,13 @@ import (
 
 var envList = []string{
 	localdata.EnvNameHome,
-	localdata.EnvNameTelemetryStatus,
-	localdata.EnvNameTelemetryUUID,
 	localdata.EnvNameSSHPassPrompt,
 	localdata.EnvNameSSHPath,
 	localdata.EnvNameSCPPath,
+	localdata.EnvNameKeepSourceTarget,
+	localdata.EnvNameMirrorSyncScript,
+	localdata.EnvNameLogPath,
+	localdata.EnvNameDebug,
 }
 
 func newEnvCmd() *cobra.Command {
@@ -35,6 +37,7 @@ func newEnvCmd() *cobra.Command {
 		Use:   "env [name1...N]",
 		Short: "Show the list of system environment variable that related to TiUP",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			teleCommand = cmd.CommandPath()
 			if len(args) == 0 {
 				showEnvList(true, envList...)
 				return nil

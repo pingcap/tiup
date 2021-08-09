@@ -16,11 +16,9 @@ package instance
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -62,7 +60,7 @@ func (d *Drainer) LogFile() string {
 
 // Addr return the address of Drainer.
 func (d *Drainer) Addr() string {
-	return fmt.Sprintf("%s:%d", advertiseHost(d.Host), d.Port)
+	return fmt.Sprintf("%s:%d", AdvertiseHost(d.Host), d.Port)
 }
 
 // NodeID return the node id of drainer.
@@ -71,21 +69,14 @@ func (d *Drainer) NodeID() string {
 }
 
 // Start implements Instance interface.
-func (d *Drainer) Start(ctx context.Context, version v0manifest.Version) error {
-	if err := os.MkdirAll(d.Dir, 0755); err != nil {
-		return err
-	}
-
-	var urls []string
-	for _, pd := range d.pds {
-		urls = append(urls, fmt.Sprintf("http://%s:%d", pd.Host, pd.StatusPort))
-	}
+func (d *Drainer) Start(ctx context.Context, version utils.Version) error {
+	endpoints := pdEndpoints(d.pds, true)
 
 	args := []string{
 		fmt.Sprintf("--node-id=%s", d.NodeID()),
 		fmt.Sprintf("--addr=%s:%d", d.Host, d.Port),
-		fmt.Sprintf("--advertise-addr=%s:%d", advertiseHost(d.Host), d.Port),
-		fmt.Sprintf("--pd-urls=%s", strings.Join(urls, ",")),
+		fmt.Sprintf("--advertise-addr=%s:%d", AdvertiseHost(d.Host), d.Port),
+		fmt.Sprintf("--pd-urls=%s", strings.Join(endpoints, ",")),
 		fmt.Sprintf("--log-file=%s", d.LogFile()),
 	}
 	if d.ConfigPath != "" {

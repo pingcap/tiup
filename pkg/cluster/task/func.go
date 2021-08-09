@@ -13,14 +13,16 @@
 
 package task
 
+import "context"
+
 // Func wrap a closure.
 type Func struct {
 	name string
-	fn   func(ctx *Context) error
+	fn   func(ctx context.Context) error
 }
 
 // NewFunc create a Func task
-func NewFunc(name string, fn func(ctx *Context) error) *Func {
+func NewFunc(name string, fn func(ctx context.Context) error) *Func {
 	return &Func{
 		name: name,
 		fn:   fn,
@@ -28,12 +30,12 @@ func NewFunc(name string, fn func(ctx *Context) error) *Func {
 }
 
 // Execute implements the Task interface
-func (m *Func) Execute(ctx *Context) error {
+func (m *Func) Execute(ctx context.Context) error {
 	return m.fn(ctx)
 }
 
 // Rollback implements the Task interface
-func (m *Func) Rollback(_ *Context) error {
+func (m *Func) Rollback(_ context.Context) error {
 	return ErrUnsupportedRollback
 }
 

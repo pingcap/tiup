@@ -14,11 +14,13 @@
 package spec
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"path/filepath"
+	"time"
 
-	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/config"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
@@ -29,6 +31,7 @@ type AlertmanagerSpec struct {
 	Host            string               `yaml:"host"`
 	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported        bool                 `yaml:"imported,omitempty"`
+	Patched         bool                 `yaml:"patched,omitempty"`
 	WebPort         int                  `yaml:"web_port" default:"9093"`
 	ClusterPort     int                  `yaml:"cluster_port" default:"9094"`
 	DeployDir       string               `yaml:"deploy_dir,omitempty"`
@@ -42,22 +45,22 @@ type AlertmanagerSpec struct {
 }
 
 // Role returns the component role of the instance
-func (s AlertmanagerSpec) Role() string {
+func (s *AlertmanagerSpec) Role() string {
 	return ComponentAlertmanager
 }
 
 // SSH returns the host and SSH port of the instance
-func (s AlertmanagerSpec) SSH() (string, int) {
+func (s *AlertmanagerSpec) SSH() (string, int) {
 	return s.Host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
-func (s AlertmanagerSpec) GetMainPort() int {
+func (s *AlertmanagerSpec) GetMainPort() int {
 	return s.WebPort
 }
 
 // IsImported returns if the node is imported from TiDB-Ansible
-func (s AlertmanagerSpec) IsImported() bool {
+func (s *AlertmanagerSpec) IsImported() bool {
 	return s.Imported
 }
 
@@ -98,7 +101,10 @@ func (c *AlertManagerComponent) Instances() []Instance {
 					s.DataDir,
 				},
 				StatusFn: func(_ *tls.Config, _ ...string) string {
-					return "-"
+					return statusByHost(s.Host, s.WebPort, "/-/ready", nil)
+				},
+				UptimeFn: func(tlsCfg *tls.Config) time.Duration {
+					return UptimeByHost(s.Host, s.WebPort, tlsCfg)
 				},
 			},
 			topo: c.Topology,
@@ -115,14 +121,15 @@ type AlertManagerInstance struct {
 
 // InitConfig implement Instance interface
 func (i *AlertManagerInstance) InitConfig(
-	e executor.Executor,
+	ctx context.Context,
+	e ctxt.Executor,
 	clusterName,
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
 ) error {
 	gOpts := *i.topo.BaseTopo().GlobalOptions
-	if err := i.BaseInstance.InitConfig(e, gOpts, deployUser, paths); err != nil {
+	if err := i.BaseInstance.InitConfig(ctx, e, gOpts, deployUser, paths); err != nil {
 		return err
 	}
 
@@ -130,7 +137,7 @@ func (i *AlertManagerInstance) InitConfig(
 
 	enableTLS := gOpts.TLSEnabled
 	// Transfer start script
-	spec := i.InstanceSpec.(AlertmanagerSpec)
+	spec := i.InstanceSpec.(*AlertmanagerSpec)
 	cfg := scripts.NewAlertManagerScript(spec.Host, paths.Deploy, paths.Data[0], paths.Log, enableTLS).
 		WithWebPort(spec.WebPort).WithClusterPort(spec.ClusterPort).WithNumaNode(spec.NumaNode).
 		AppendEndpoints(AlertManagerEndpoints(alertmanagers, deployUser, enableTLS))
@@ -141,28 +148,32 @@ func (i *AlertManagerInstance) InitConfig(
 	}
 
 	dst := filepath.Join(paths.Deploy, "scripts", "run_alertmanager.sh")
-	if err := e.Transfer(fp, dst, false); err != nil {
+	if err := e.Transfer(ctx, fp, dst, false, 0); err != nil {
 		return err
 	}
-	if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
+	if _, _, err := e.Execute(ctx, "chmod +x "+dst, false); err != nil {
 		return err
 	}
 
 	// transfer config
 	dst = filepath.Join(paths.Deploy, "conf", "alertmanager.yml")
 	if spec.ConfigFilePath != "" {
-		return i.TransferLocalConfigFile(e, spec.ConfigFilePath, dst)
+		return i.TransferLocalConfigFile(ctx, e, spec.ConfigFilePath, dst)
 	}
 	configPath := filepath.Join(paths.Cache, fmt.Sprintf("alertmanager_%s.yml", i.GetHost()))
 	if err := config.NewAlertManagerConfig().ConfigToFile(configPath); err != nil {
 		return err
 	}
-	return i.TransferLocalConfigFile(e, configPath, dst)
+	if err := i.TransferLocalConfigFile(ctx, e, configPath, dst); err != nil {
+		return err
+	}
+	return checkConfig(ctx, e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".yml", paths, nil)
 }
 
 // ScaleConfig deploy temporary config on scaling
 func (i *AlertManagerInstance) ScaleConfig(
-	e executor.Executor,
+	ctx context.Context,
+	e ctxt.Executor,
 	topo Topology,
 	clusterName string,
 	clusterVersion string,
@@ -171,6 +182,6 @@ func (i *AlertManagerInstance) ScaleConfig(
 ) error {
 	s := i.topo
 	defer func() { i.topo = s }()
-	i.topo = mustBeClusterTopo(topo)
-	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
+	i.topo = topo
+	return i.InitConfig(ctx, e, clusterName, clusterVersion, deployUser, paths)
 }

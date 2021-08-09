@@ -14,13 +14,13 @@
 package task
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	dmspec "github.com/pingcap/tiup/components/dm/spec"
 
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/set"
 )
 
@@ -41,54 +41,62 @@ func NewUpdateDMMeta(cluster string, metadata *dmspec.Metadata, deletedNodesID [
 }
 
 // Execute implements the Task interface
-func (u *UpdateDMMeta) Execute(ctx *task.Context) error {
-	// make a copy
-	newMeta := &dmspec.Metadata{}
-	*newMeta = *u.metadata
-	newMeta.Topology = &dmspec.Specification{
-		GlobalOptions: u.metadata.Topology.GlobalOptions,
-		// MonitoredOptions: u.metadata.Topology.MonitoredOptions,
-		ServerConfigs: u.metadata.Topology.ServerConfigs,
-	}
-
+// the metadata especially the topology is in wide use,
+// the other callers point to this field by a pointer,
+// so we should update the original topology directly, and don't make a copy
+func (u *UpdateDMMeta) Execute(ctx context.Context) error {
 	deleted := set.NewStringSet(u.deletedNodesID...)
 	topo := u.metadata.Topology
+	masters := make([]*dmspec.MasterSpec, 0)
 	for i, instance := range (&dmspec.DMMasterComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
-		newMeta.Topology.Masters = append(newMeta.Topology.Masters, topo.Masters[i])
+		masters = append(masters, topo.Masters[i])
 	}
+	topo.Masters = masters
+
+	workers := make([]*dmspec.WorkerSpec, 0)
 	for i, instance := range (&dmspec.DMWorkerComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
-		newMeta.Topology.Workers = append(newMeta.Topology.Workers, topo.Workers[i])
+		workers = append(workers, topo.Workers[i])
 	}
+	topo.Workers = workers
+
+	monitors := make([]*spec.PrometheusSpec, 0)
 	for i, instance := range (&spec.MonitorComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
-		newMeta.Topology.Monitors = append(newMeta.Topology.Monitors, topo.Monitors[i])
+		monitors = append(monitors, topo.Monitors[i])
 	}
+	topo.Monitors = monitors
+
+	grafanas := make([]*spec.GrafanaSpec, 0)
 	for i, instance := range (&spec.GrafanaComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
-		newMeta.Topology.Grafanas = append(newMeta.Topology.Grafanas, topo.Grafanas[i])
+		grafanas = append(grafanas, topo.Grafanas[i])
 	}
+	topo.Grafanas = grafanas
+
+	alertmanagers := make([]*spec.AlertmanagerSpec, 0)
 	for i, instance := range (&spec.AlertManagerComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
-		newMeta.Topology.Alertmanagers = append(newMeta.Topology.Alertmanagers, topo.Alertmanagers[i])
+		alertmanagers = append(alertmanagers, topo.Alertmanagers[i])
 	}
+	topo.Alertmanagers = alertmanagers
 
-	return dmspec.GetSpecManager().SaveMeta(u.cluster, newMeta)
+	return dmspec.GetSpecManager().SaveMeta(u.cluster, u.metadata)
 }
 
 // Rollback implements the Task interface
-func (u *UpdateDMMeta) Rollback(ctx *task.Context) error {
+func (u *UpdateDMMeta) Rollback(ctx context.Context) error {
 	return dmspec.GetSpecManager().SaveMeta(u.cluster, u.metadata)
 }
 

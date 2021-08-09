@@ -15,6 +15,8 @@ package v1manifest
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"time"
 )
 
@@ -100,11 +102,11 @@ type Owner struct {
 
 // VersionItem is the manifest structure of a version of a component
 type VersionItem struct {
-	URL          string   `json:"url"`
-	Yanked       bool     `json:"yanked"`
-	Entry        string   `json:"entry"`
-	Released     string   `json:"released"`
-	Dependencies []string `json:"dependencies"`
+	URL          string            `json:"url"`
+	Yanked       bool              `json:"yanked"`
+	Entry        string            `json:"entry"`
+	Released     string            `json:"released"`
+	Dependencies map[string]string `json:"dependencies"`
 
 	FileHash
 }
@@ -256,6 +258,9 @@ func (manifest *Component) VersionList(platform string) map[string]VersionItem {
 
 // VersionListWithYanked return all versions include yanked versions
 func (manifest *Component) VersionListWithYanked(platform string) map[string]VersionItem {
+	if manifest == nil {
+		return nil
+	}
 	vs, ok := manifest.Platforms[platform]
 	if !ok {
 		vs, ok = manifest.Platforms[AnyPlatform]
@@ -265,4 +270,35 @@ func (manifest *Component) VersionListWithYanked(platform string) map[string]Ver
 	}
 
 	return vs
+}
+
+// ErrLoadManifest is an empty object of LoadManifestError, useful for type check
+var ErrLoadManifest = &LoadManifestError{}
+
+// LoadManifestError is the error type used when loading manifest failes
+type LoadManifestError struct {
+	manifest string // manifest name
+	err      error  // wrapped error
+}
+
+// Error implements the error interface
+func (e *LoadManifestError) Error() string {
+	return fmt.Sprintf(
+		"error loading manifest %s: %s",
+		e.manifest, e.err,
+	)
+}
+
+// Unwrap implements the error interface
+func (e *LoadManifestError) Unwrap() error { return e.err }
+
+// Is implements the error interface
+func (e *LoadManifestError) Is(target error) bool {
+	t, ok := target.(*LoadManifestError)
+	if !ok {
+		return false
+	}
+
+	return (e.manifest == t.manifest || t.manifest == "") &&
+		(errors.Is(e.err, t.err) || t.err == nil)
 }

@@ -17,18 +17,18 @@ import (
 	"regexp"
 
 	"github.com/joomcode/errorx"
-	"github.com/pingcap/tiup/pkg/cliutil"
-	"github.com/pingcap/tiup/pkg/errutil"
+	"github.com/pingcap/tiup/pkg/tui"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 var (
 	// ErrInvalidClusterName is an error for invalid cluster name. You should use `ValidateClusterNameOrError()`
 	// to generate this error.
-	ErrInvalidClusterName = errorx.CommonErrors.NewType("invalid_cluster_name", errutil.ErrTraitPreCheck)
+	ErrInvalidClusterName = errorx.CommonErrors.NewType("invalid_cluster_name", utils.ErrTraitPreCheck)
 )
 
 var (
-	clusterNameRegexp = regexp.MustCompile(`^[a-zA-Z0-9\-_]+$`)
+	clusterNameRegexp = regexp.MustCompile(`^[a-zA-Z0-9\-_\.]+$`)
 )
 
 // ValidateClusterNameOrError validates a cluster name and returns error if the name is invalid.
@@ -40,7 +40,7 @@ func ValidateClusterNameOrError(n string) error {
 	if !clusterNameRegexp.MatchString(n) {
 		return ErrInvalidClusterName.
 			New("Cluster name '%s' is invalid", n).
-			WithProperty(cliutil.SuggestionFromString("The cluster name should only contains alphabets, numbers, hyphen (-) and underscore (_)."))
+			WithProperty(tui.SuggestionFromString("The cluster name should only contain alphabets, numbers, hyphen (-), underscore (_), and dot (.)."))
 	}
 	return nil
 }

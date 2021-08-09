@@ -16,8 +16,8 @@ package ansible
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -28,6 +28,7 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/dm/spec"
 	"github.com/pingcap/tiup/pkg/cluster/ansible"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/relex/aini"
@@ -76,7 +77,7 @@ func searchConfigFile(dir string) (fname string, err error) {
 func readConfigFile(dir string) (file *ini.File, err error) {
 	fname, err := searchConfigFile(dir)
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return nil, err
 	}
 
 	file, err = ini.Load(fname)
@@ -108,7 +109,7 @@ func getAbsPath(dir string, path string) string {
 
 // ExecutorGetter get the executor by host.
 type ExecutorGetter interface {
-	Get(host string) (e executor.Executor)
+	Get(host string) (e ctxt.Executor)
 }
 
 // Importer used for import from ansible.
@@ -145,7 +146,7 @@ func NewImporter(ansibleDir, inventoryFileName string, sshType executor.SSHType,
 	}, nil
 }
 
-func (im *Importer) getExecutor(host string, port int) (e executor.Executor, err error) {
+func (im *Importer) getExecutor(host string, port int) (e ctxt.Executor, err error) {
 	if im.testExecutorGetter != nil {
 		return im.testExecutorGetter.Get(host), nil
 	}
@@ -165,13 +166,13 @@ func (im *Importer) getExecutor(host string, port int) (e executor.Executor, err
 	return
 }
 
-func (im *Importer) fetchFile(host string, port int, fname string) (data []byte, err error) {
+func (im *Importer) fetchFile(ctx context.Context, host string, port int, fname string) (data []byte, err error) {
 	e, err := im.getExecutor(host, port)
 	if err != nil {
 		return nil, errors.Annotatef(err, "failed to get executor, target: %s:%d", host, port)
 	}
 
-	tmp, err := ioutil.TempDir("", "tiup")
+	tmp, err := os.MkdirTemp("", "tiup")
 	if err != nil {
 		return nil, errors.AddStack(err)
 	}
@@ -179,12 +180,12 @@ func (im *Importer) fetchFile(host string, port int, fname string) (data []byte,
 
 	tmp = filepath.Join(tmp, filepath.Base(fname))
 
-	err = e.Transfer(fname, tmp, true /*download*/)
+	err = e.Transfer(ctx, fname, tmp, true /*download*/, 0)
 	if err != nil {
 		return nil, errors.Annotatef(err, "transfer %s from %s:%d", fname, host, port)
 	}
 
-	data, err = ioutil.ReadFile(tmp)
+	data, err = os.ReadFile(tmp)
 	if err != nil {
 		return nil, errors.AddStack(err)
 	}
@@ -202,10 +203,10 @@ func setConfig(config *map[string]interface{}, k string, v interface{}) {
 
 // handleWorkerConfig fetch the config file of worker and generate the source
 // which we need for the master.
-func (im *Importer) handleWorkerConfig(srv *spec.WorkerSpec, fname string) error {
-	data, err := im.fetchFile(srv.Host, srv.SSHPort, fname)
+func (im *Importer) handleWorkerConfig(ctx context.Context, srv *spec.WorkerSpec, fname string) error {
+	data, err := im.fetchFile(ctx, srv.Host, srv.SSHPort, fname)
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	config := new(Config)
@@ -222,9 +223,9 @@ func (im *Importer) handleWorkerConfig(srv *spec.WorkerSpec, fname string) error
 
 // ScpSourceToMaster scp the source files to master,
 // and set V1SourcePath of the master spec.
-func (im *Importer) ScpSourceToMaster(topo *spec.Specification) (err error) {
+func (im *Importer) ScpSourceToMaster(ctx context.Context, topo *spec.Specification) (err error) {
 	for i := 0; i < len(topo.Masters); i++ {
-		master := &topo.Masters[i]
+		master := topo.Masters[i]
 		target := filepath.Join(firstNonEmpty(master.DeployDir, topo.GlobalOptions.DeployDir), "v1source")
 		master.V1SourcePath = target
 
@@ -232,13 +233,13 @@ func (im *Importer) ScpSourceToMaster(topo *spec.Specification) (err error) {
 		if err != nil {
 			return errors.Annotatef(err, "failed to get executor, target: %s:%d", master.Host, master.SSHPort)
 		}
-		_, stderr, err := e.Execute("mkdir -p "+target, false)
+		_, stderr, err := e.Execute(ctx, "mkdir -p "+target, false)
 		if err != nil {
 			return errors.Annotatef(err, "failed to execute: %s", string(stderr))
 		}
 
 		for addr, source := range im.sources {
-			f, err := ioutil.TempFile("", "tiup-dm-*")
+			f, err := os.CreateTemp("", "tiup-dm-*")
 			if err != nil {
 				return errors.AddStack(err)
 			}
@@ -253,9 +254,9 @@ func (im *Importer) ScpSourceToMaster(topo *spec.Specification) (err error) {
 				return errors.AddStack(err)
 			}
 
-			err = e.Transfer(f.Name(), filepath.Join(target, addr+".yml"), false)
+			err = e.Transfer(ctx, f.Name(), filepath.Join(target, addr+".yml"), false, 0)
 			if err != nil {
-				return errors.AddStack(err)
+				return err
 			}
 		}
 	}
@@ -272,13 +273,13 @@ func instancDeployDir(comp string, port int, hostDir string, globalDir string) s
 }
 
 // ImportFromAnsibleDir generate the metadata from ansible deployed cluster.
-func (im *Importer) ImportFromAnsibleDir() (clusterName string, meta *spec.Metadata, err error) {
+func (im *Importer) ImportFromAnsibleDir(ctx context.Context) (clusterName string, meta *spec.Metadata, err error) {
 	dir := im.dir
 	inventoryFileName := im.inventoryFileName
 
 	cfg, err := readConfigFile(dir)
 	if err != nil {
-		return "", nil, errors.AddStack(err)
+		return "", nil, err
 	}
 
 	fname := filepath.Join(dir, inventoryFileName)
@@ -297,6 +298,9 @@ func (im *Importer) ImportFromAnsibleDir() (clusterName string, meta *spec.Metad
 	}
 	topo := meta.Topology
 
+	// Grafana admin username and password
+	var grafanaUser string
+	var grafanaPass string
 	if group, ok := inventory.Groups["all"]; ok {
 		for k, v := range group.Vars {
 			switch k {
@@ -311,9 +315,10 @@ func (im *Importer) ImportFromAnsibleDir() (clusterName string, meta *spec.Metad
 				topo.GlobalOptions.DeployDir = v
 				// ansible convention directory for log
 				topo.GlobalOptions.LogDir = filepath.Join(v, "log")
-			// ignore user/pass, we will deploy new one.
 			case "grafana_admin_user":
+				grafanaUser = strings.Trim(v, "\"")
 			case "grafana_admin_password":
+				grafanaPass = strings.Trim(v, "\"")
 			default:
 				fmt.Println("ignore unknown global var ", k, v)
 			}
@@ -324,19 +329,20 @@ func (im *Importer) ImportFromAnsibleDir() (clusterName string, meta *spec.Metad
 		switch gname {
 		case "dm_master_servers":
 			for _, host := range group.Hosts {
-				srv := spec.MasterSpec{
-					Host:    host.Vars["ansible_host"],
-					SSHPort: ansible.GetHostPort(host, cfg),
+				srv := &spec.MasterSpec{
+					Host:     host.Vars["ansible_host"],
+					SSHPort:  ansible.GetHostPort(host, cfg),
+					Imported: true,
 				}
 
 				runFileName := filepath.Join(host.Vars["deploy_dir"], "scripts", "run_dm-master.sh")
-				data, err := im.fetchFile(srv.Host, srv.SSHPort, runFileName)
+				data, err := im.fetchFile(ctx, srv.Host, srv.SSHPort, runFileName)
 				if err != nil {
-					return "", nil, errors.AddStack(err)
+					return "", nil, err
 				}
 				deployDir, flags, err := parseRunScript(data)
 				if err != nil {
-					return "", nil, errors.AddStack(err)
+					return "", nil, err
 				}
 
 				if deployDir == "" {
@@ -371,20 +377,21 @@ func (im *Importer) ImportFromAnsibleDir() (clusterName string, meta *spec.Metad
 			}
 		case "dm_worker_servers":
 			for _, host := range group.Hosts {
-				srv := spec.WorkerSpec{
+				srv := &spec.WorkerSpec{
 					Host:      host.Vars["ansible_host"],
 					SSHPort:   ansible.GetHostPort(host, cfg),
 					DeployDir: firstNonEmpty(host.Vars["deploy_dir"], topo.GlobalOptions.DeployDir),
+					Imported:  true,
 				}
 
 				runFileName := filepath.Join(host.Vars["deploy_dir"], "scripts", "run_dm-worker.sh")
-				data, err := im.fetchFile(srv.Host, srv.SSHPort, runFileName)
+				data, err := im.fetchFile(ctx, srv.Host, srv.SSHPort, runFileName)
 				if err != nil {
-					return "", nil, errors.AddStack(err)
+					return "", nil, err
 				}
 				deployDir, flags, err := parseRunScript(data)
 				if err != nil {
-					return "", nil, errors.AddStack(err)
+					return "", nil, err
 				}
 
 				if deployDir == "" {
@@ -421,9 +428,9 @@ func (im *Importer) ImportFromAnsibleDir() (clusterName string, meta *spec.Metad
 				// We will always set the wd as DeployDir.
 				srv.DeployDir = deployDir
 
-				err = im.handleWorkerConfig(&srv, configFileName)
+				err = im.handleWorkerConfig(ctx, srv, configFileName)
 				if err != nil {
-					return "", nil, errors.AddStack(err)
+					return "", nil, err
 				}
 
 				topo.Workers = append(topo.Workers, srv)
@@ -432,21 +439,22 @@ func (im *Importer) ImportFromAnsibleDir() (clusterName string, meta *spec.Metad
 			fmt.Println("ignore deprecated dm_portal_servers")
 		case "prometheus_servers":
 			for _, host := range group.Hosts {
-				srv := spec.PrometheusSpec{
+				srv := &spec.PrometheusSpec{
 					Host:      host.Vars["ansible_host"],
 					SSHPort:   ansible.GetHostPort(host, cfg),
 					DeployDir: firstNonEmpty(host.Vars["deploy_dir"], topo.GlobalOptions.DeployDir),
+					Imported:  true,
 				}
 
 				runFileName := filepath.Join(host.Vars["deploy_dir"], "scripts", "run_prometheus.sh")
-				data, err := im.fetchFile(srv.Host, srv.SSHPort, runFileName)
+				data, err := im.fetchFile(ctx, srv.Host, srv.SSHPort, runFileName)
 				if err != nil {
-					return "", nil, errors.AddStack(err)
+					return "", nil, err
 				}
 
 				deployDir, flags, err := parseRunScript(data)
 				if err != nil {
-					return "", nil, errors.AddStack(err)
+					return "", nil, err
 				}
 
 				if deployDir == "" {
@@ -480,21 +488,22 @@ func (im *Importer) ImportFromAnsibleDir() (clusterName string, meta *spec.Metad
 			}
 		case "alertmanager_servers":
 			for _, host := range group.Hosts {
-				srv := spec.AlertmanagerSpec{
+				srv := &spec.AlertmanagerSpec{
 					Host:      host.Vars["ansible_host"],
 					SSHPort:   ansible.GetHostPort(host, cfg),
 					DeployDir: firstNonEmpty(host.Vars["deploy_dir"], topo.GlobalOptions.DeployDir),
+					Imported:  true,
 				}
 
 				runFileName := filepath.Join(host.Vars["deploy_dir"], "scripts", "run_alertmanager.sh")
-				data, err := im.fetchFile(srv.Host, srv.SSHPort, runFileName)
+				data, err := im.fetchFile(ctx, srv.Host, srv.SSHPort, runFileName)
 				if err != nil {
-					return "", nil, errors.AddStack(err)
+					return "", nil, err
 				}
 
 				deployDir, flags, err := parseRunScript(data)
 				if err != nil {
-					return "", nil, errors.AddStack(err)
+					return "", nil, err
 				}
 
 				if deployDir == "" {
@@ -535,20 +544,23 @@ func (im *Importer) ImportFromAnsibleDir() (clusterName string, meta *spec.Metad
 						port = iv
 					}
 				}
-				srv := spec.GrafanaSpec{
-					Host:    host.Vars["ansible_host"],
-					SSHPort: ansible.GetHostPort(host, cfg),
-					Port:    port,
+				srv := &spec.GrafanaSpec{
+					Host:     host.Vars["ansible_host"],
+					SSHPort:  ansible.GetHostPort(host, cfg),
+					Port:     port,
+					Username: grafanaUser,
+					Password: grafanaPass,
+					Imported: true,
 				}
 
 				runFileName := filepath.Join(host.Vars["deploy_dir"], "scripts", "run_grafana.sh")
-				data, err := im.fetchFile(srv.Host, srv.SSHPort, runFileName)
+				data, err := im.fetchFile(ctx, srv.Host, srv.SSHPort, runFileName)
 				if err != nil {
-					return "", nil, errors.AddStack(err)
+					return "", nil, err
 				}
 				_, flags, err := parseRunScript(data)
 				if err != nil {
-					return "", nil, errors.AddStack(err)
+					return "", nil, err
 				}
 
 				for k, v := range flags {

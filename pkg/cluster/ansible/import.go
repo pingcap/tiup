@@ -16,13 +16,18 @@ package ansible
 import (
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
+	"strings"
 
+	"github.com/BurntSushi/toml"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/set"
 	"github.com/relex/aini"
 )
 
@@ -56,17 +61,19 @@ func parseInventoryFile(invFile io.Reader) (string, *spec.ClusterMeta, *aini.Inv
 
 	clsMeta := &spec.ClusterMeta{
 		Topology: &spec.Specification{
-			GlobalOptions:    spec.GlobalOptions{},
+			GlobalOptions: spec.GlobalOptions{
+				Arch: "amd64",
+			},
 			MonitoredOptions: spec.MonitoredOptions{},
-			TiDBServers:      make([]spec.TiDBSpec, 0),
-			TiKVServers:      make([]spec.TiKVSpec, 0),
-			PDServers:        make([]spec.PDSpec, 0),
-			TiFlashServers:   make([]spec.TiFlashSpec, 0),
-			PumpServers:      make([]spec.PumpSpec, 0),
-			Drainers:         make([]spec.DrainerSpec, 0),
-			Monitors:         make([]spec.PrometheusSpec, 0),
-			Grafanas:         make([]spec.GrafanaSpec, 0),
-			Alertmanagers:    make([]spec.AlertmanagerSpec, 0),
+			TiDBServers:      make([]*spec.TiDBSpec, 0),
+			TiKVServers:      make([]*spec.TiKVSpec, 0),
+			PDServers:        make([]*spec.PDSpec, 0),
+			TiFlashServers:   make([]*spec.TiFlashSpec, 0),
+			PumpServers:      make([]*spec.PumpSpec, 0),
+			Drainers:         make([]*spec.DrainerSpec, 0),
+			Monitors:         make([]*spec.PrometheusSpec, 0),
+			Grafanas:         make([]*spec.GrafanaSpec, 0),
+			Alertmanagers:    make([]*spec.AlertmanagerSpec, 0),
 		},
 	}
 	clsName := ""
@@ -81,11 +88,20 @@ func parseInventoryFile(invFile io.Reader) (string, *spec.ClusterMeta, *aini.Inv
 		clsMeta.Topology.GlobalOptions.DeployDir = grp.Vars["deploy_dir"]
 		// deploy_dir and data_dir of monitored need to be set, otherwise they will be
 		// subdirs of deploy_dir in global options
-		clsMeta.Topology.MonitoredOptions.DeployDir = clsMeta.Topology.GlobalOptions.DeployDir
-		clsMeta.Topology.MonitoredOptions.DataDir = filepath.Join(
-			clsMeta.Topology.MonitoredOptions.DeployDir,
-			"data",
-		)
+		allSame := uniqueVar("deploy_dir", inventory.Groups["monitored_servers"].Hosts)
+		if len(allSame) == 1 {
+			clsMeta.Topology.MonitoredOptions.DeployDir = allSame[0]
+			clsMeta.Topology.MonitoredOptions.DataDir = filepath.Join(
+				clsMeta.Topology.MonitoredOptions.DeployDir,
+				"data",
+			)
+		} else {
+			clsMeta.Topology.MonitoredOptions.DeployDir = clsMeta.Topology.GlobalOptions.DeployDir
+			clsMeta.Topology.MonitoredOptions.DataDir = filepath.Join(
+				clsMeta.Topology.MonitoredOptions.DeployDir,
+				"data",
+			)
+		}
 
 		if grp.Vars["process_supervision"] != "systemd" {
 			return "", nil, inventory, errors.New("only support cluster deployed with systemd")
@@ -100,6 +116,7 @@ func parseInventoryFile(invFile io.Reader) (string, *spec.ClusterMeta, *aini.Inv
 	} else {
 		return "", nil, inventory, errors.New("no available host in the inventory file")
 	}
+
 	return clsName, clsMeta, inventory, err
 }
 
@@ -112,4 +129,171 @@ func SSHKeyPath() string {
 	}
 
 	return fmt.Sprintf("%s/.ssh/id_rsa", homeDir)
+}
+
+func uniqueVar(key string, hosts map[string]*aini.Host) []string {
+	vars := set.NewStringSet()
+	for _, h := range hosts {
+		vars.Insert(h.Vars[key])
+	}
+	return vars.Slice()
+}
+
+// parse config files
+func parseConfigFile(cfgfile string) (map[string]interface{}, error) {
+	srvConfigs := make(map[string]interface{})
+	if _, err := toml.DecodeFile(cfgfile, &srvConfigs); err != nil {
+		return nil, errors.Annotate(err, "decode toml file")
+	}
+	return spec.FlattenMap(srvConfigs), nil
+}
+
+func diffConfigs(configs []map[string]interface{}) (global map[string]interface{}, locals []map[string]interface{}) {
+	global = make(map[string]interface{})
+	keySet := set.NewStringSet()
+
+	// parse all configs from file
+	for _, config := range configs {
+		locals = append(locals, config)
+		for k := range config {
+			keySet.Insert(k)
+		}
+	}
+
+	// summary global config
+	for k := range keySet {
+		valSet := set.NewAnySet(reflect.DeepEqual)
+		for _, config := range locals {
+			valSet.Insert(config[k])
+		}
+		if len(valSet.Slice()) > 1 {
+			// this key can't be put into global
+			continue
+		}
+		global[k] = valSet.Slice()[0]
+	}
+
+	// delete global config from local
+	for _, config := range locals {
+		for k := range global {
+			delete(config, k)
+		}
+	}
+
+	return
+}
+
+// CommentConfig add `#` to the head of each lines for imported configs
+func CommentConfig(clsName string) error {
+	dir := spec.ClusterPath(clsName, spec.AnsibleImportedConfigPath)
+	err := filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
+		if err != nil || info.IsDir() || !strings.HasSuffix(info.Name(), ".toml") {
+			return nil
+		}
+
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return errors.Annotatef(err, "read config file %s", path)
+		}
+		lines := strings.Split(string(content), "\n")
+		for idx := range lines {
+			lines[idx] = "# " + lines[idx]
+		}
+		if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0644); err != nil {
+			return errors.Annotatef(err, "write config file %s", path)
+		}
+
+		return nil
+	})
+	return errors.Annotate(err, "comment imported config")
+}
+
+// LoadConfig files to clusterMeta, include tidbservers, tikvservers, pdservers pumpservers and drainerservers
+func LoadConfig(clsName string, cls *spec.ClusterMeta) error {
+	// deal with tidb config
+	configs := []map[string]interface{}{}
+	for _, srv := range cls.Topology.TiDBServers {
+		prefixkey := spec.ComponentTiDB
+		fname := spec.ClusterPath(clsName, spec.AnsibleImportedConfigPath, fmt.Sprintf("%s-%s-%d.toml", prefixkey, srv.Host, srv.Port))
+		if config, err := parseConfigFile(fname); err == nil {
+			configs = append(configs, config)
+		} else {
+			return err
+		}
+	}
+	global, locals := diffConfigs(configs)
+	cls.Topology.ServerConfigs.TiDB = spec.MergeConfig(cls.Topology.ServerConfigs.TiDB, global)
+	for i, local := range locals {
+		cls.Topology.TiDBServers[i].Config = spec.MergeConfig(cls.Topology.TiDBServers[i].Config, local)
+	}
+
+	// deal with tikv config
+	configs = []map[string]interface{}{}
+	for _, srv := range cls.Topology.TiKVServers {
+		prefixkey := spec.ComponentTiKV
+		fname := spec.ClusterPath(clsName, spec.AnsibleImportedConfigPath, fmt.Sprintf("%s-%s-%d.toml", prefixkey, srv.Host, srv.Port))
+		if config, err := parseConfigFile(fname); err == nil {
+			configs = append(configs, config)
+		} else {
+			return err
+		}
+	}
+	global, locals = diffConfigs(configs)
+	cls.Topology.ServerConfigs.TiKV = spec.MergeConfig(cls.Topology.ServerConfigs.TiKV, global)
+	for i, local := range locals {
+		cls.Topology.TiKVServers[i].Config = spec.MergeConfig(cls.Topology.TiKVServers[i].Config, local)
+	}
+
+	// deal with pd config
+	configs = []map[string]interface{}{}
+	for _, srv := range cls.Topology.PDServers {
+		prefixkey := spec.ComponentPD
+		fname := spec.ClusterPath(clsName, spec.AnsibleImportedConfigPath, fmt.Sprintf("%s-%s-%d.toml", prefixkey, srv.Host, srv.ClientPort))
+		if config, err := parseConfigFile(fname); err == nil {
+			configs = append(configs, config)
+		} else {
+			return err
+		}
+	}
+	global, locals = diffConfigs(configs)
+	cls.Topology.ServerConfigs.PD = spec.MergeConfig(cls.Topology.ServerConfigs.PD, global)
+	for i, local := range locals {
+		cls.Topology.PDServers[i].Config = spec.MergeConfig(cls.Topology.PDServers[i].Config, local)
+	}
+
+	// deal with pump config
+	configs = []map[string]interface{}{}
+	for _, srv := range cls.Topology.PumpServers {
+		prefixkey := spec.ComponentPump
+		fname := spec.ClusterPath(clsName, spec.AnsibleImportedConfigPath, fmt.Sprintf("%s-%s-%d.toml", prefixkey, srv.Host, srv.Port))
+		if config, err := parseConfigFile(fname); err == nil {
+			configs = append(configs, config)
+		} else {
+			return err
+		}
+	}
+	global, locals = diffConfigs(configs)
+	cls.Topology.ServerConfigs.Pump = spec.MergeConfig(cls.Topology.ServerConfigs.Pump, global)
+	for i, local := range locals {
+		cls.Topology.PumpServers[i].Config = spec.MergeConfig(cls.Topology.PumpServers[i].Config, local)
+	}
+
+	// deal with drainer config
+	configs = []map[string]interface{}{}
+	for _, srv := range cls.Topology.Drainers {
+		prefixkey := spec.ComponentDrainer
+		fname := spec.ClusterPath(clsName, spec.AnsibleImportedConfigPath, fmt.Sprintf("%s-%s-%d.toml", prefixkey, srv.Host, srv.Port))
+		if config, err := parseConfigFile(fname); err == nil {
+			configs = append(configs, config)
+		} else {
+			return err
+		}
+	}
+	global, locals = diffConfigs(configs)
+	cls.Topology.ServerConfigs.Drainer = spec.MergeConfig(cls.Topology.ServerConfigs.Drainer, global)
+	for i, local := range locals {
+		cls.Topology.Drainers[i].Config = spec.MergeConfig(cls.Topology.Drainers[i].Config, local)
+	}
+
+	return nil
 }

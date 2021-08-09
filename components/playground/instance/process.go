@@ -2,6 +2,7 @@ package instance
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -11,7 +12,7 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/environment"
 	tiupexec "github.com/pingcap/tiup/pkg/exec"
-	"github.com/pingcap/tiup/pkg/repository/v0manifest"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // Process represent process to be run by playground
@@ -24,7 +25,7 @@ type Process interface {
 	Cmd() *exec.Cmd
 }
 
-// process implementes Process
+// process implements Process
 type process struct {
 	cmd       *exec.Cmd
 	startTime time.Time
@@ -84,28 +85,42 @@ func (p *process) Cmd() *exec.Cmd {
 	return p.cmd
 }
 
-// NewComponentProcess create a Process instance.
-func NewComponentProcess(ctx context.Context, dir, binPath, component string, version v0manifest.Version, arg ...string) (Process, error) {
+// NewComponentProcessWithEnvs create a Process instance with given environment variables.
+func NewComponentProcessWithEnvs(ctx context.Context, dir, binPath, component string, version utils.Version, envs map[string]string, arg ...string) (Process, error) {
 	if dir == "" {
 		panic("dir must be set")
+	}
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return nil, err
 	}
 
 	env := environment.GlobalEnv()
 	params := &tiupexec.PrepareCommandParams{
-		Ctx:         ctx,
-		Component:   component,
-		Version:     version,
-		BinPath:     binPath,
-		InstanceDir: dir,
-		WD:          dir,
-		Args:        arg,
-		SysProcAttr: SysProcAttr,
-		Env:         env,
+		Ctx:          ctx,
+		Component:    component,
+		Version:      version,
+		BinPath:      binPath,
+		InstanceDir:  dir,
+		WD:           dir,
+		Args:         arg,
+		EnvVariables: make([]string, 0),
+		SysProcAttr:  SysProcAttr,
+		Env:          env,
 	}
+	for k, v := range envs {
+		pair := fmt.Sprintf("%s=%s", k, v)
+		params.EnvVariables = append(params.EnvVariables, pair)
+	}
+
 	cmd, err := tiupexec.PrepareCommand(params)
 	if err != nil {
 		return nil, err
 	}
 
 	return &process{cmd: cmd}, nil
+}
+
+// NewComponentProcess create a Process instance.
+func NewComponentProcess(ctx context.Context, dir, binPath, component string, version utils.Version, arg ...string) (Process, error) {
+	return NewComponentProcessWithEnvs(ctx, dir, binPath, component, version, nil, arg...)
 }
