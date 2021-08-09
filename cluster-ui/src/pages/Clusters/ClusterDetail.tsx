@@ -282,6 +282,12 @@ function ClusterDetailPage() {
           <Button onClick={() => handleOpenDashboard('dbusers')}>
             用户管理
           </Button>
+          <Button
+            style={{ display: 'none' }}
+            onClick={() => handleOpenDashboard('statement')}
+          >
+            SQL 语句分析
+          </Button>
           <Button onClick={() => handleOpenDashboard('full')}>更多功能</Button>
         </Space>
         <Button danger onClick={handleDestroyCluster}>

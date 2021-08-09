@@ -17,6 +17,7 @@ const TITLES: any = {
   configuration: '修改配置',
   data: '数据管理',
   dbusers: '用户管理',
+  statement: 'SQL 语句分析',
 }
 
 export default function DashboardPortalPage() {
@@ -67,7 +68,11 @@ export default function DashboardPortalPage() {
         setDashboardToken('')
         setVerified(VerifyStatus.Fail)
       } else {
-        checkFeatureEnabled(dashboardToken)
+        if (target === 'statement') {
+          setVerified(VerifyStatus.OK)
+        } else {
+          checkFeatureEnabled(dashboardToken)
+        }
       }
     })
     // eslint-disable-next-line
@@ -91,7 +96,11 @@ export default function DashboardPortalPage() {
         } else {
           const { token } = data
           setDashboardToken(token)
-          checkFeatureEnabled(token)
+          if (target === 'statement') {
+            setVerified(VerifyStatus.OK)
+          } else {
+            checkFeatureEnabled(token)
+          }
         }
       }
     )

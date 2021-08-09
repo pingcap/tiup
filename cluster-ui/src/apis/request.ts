@@ -16,10 +16,10 @@ export default function request(
     ...options,
     method: method || 'GET',
     headers: {
-      ...options?.headers,
       Accept: 'application/json',
       'Content-Type': 'application/json',
       Authorization: getAuthTokenAsBearer() || '',
+      ...options?.headers,
     },
   }
   if (body) {
@@ -48,13 +48,19 @@ function parseResponse(response: Response) {
         errMsg = resData.msg || resData.message || response.statusText
       })
       .finally(() => {
-        if (response.status === 401) {
-          message.error({ content: errMsg, key: '401' })
-          clearAuthToken()
+        if (
+          response.url.startsWith('http://127.0.0.1') ||
+          response.url.startsWith('http://localhost') ||
+          response.url.startsWith(window.location.origin)
+        ) {
+          if (response.status === 401) {
+            message.error({ content: errMsg, key: '401' })
+            clearAuthToken()
 
-          window.location.hash = '/login'
-        } else {
-          notification.error({ message: errMsg })
+            window.location.hash = '/login'
+          } else {
+            notification.error({ message: errMsg })
+          }
         }
 
         const error: ResError = new Error(errMsg)
