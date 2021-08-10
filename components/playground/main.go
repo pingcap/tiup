@@ -296,7 +296,7 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 	defaultOptions := &BootOptions{}
 
 	rootCmd.Flags().String(mode, defaultMode, "TiUP playground mode: 'tidb', 'tikv-slim'")
-	rootCmd.Flags().Bool(withMonitor, true, "Whether to start prometheus and grafana component. (default: true)")
+	rootCmd.Flags().Bool(withMonitor, true, "Whether to start prometheus and grafana component")
 	rootCmd.Flags().Lookup(withMonitor).NoOptDefVal = ""
 
 	rootCmd.Flags().Int(db, defaultOptions.TiDB.Num, "TiDB instance number")
