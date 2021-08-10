@@ -227,11 +227,19 @@ func CheckClusterDirOverlap(entries []DirEntry) error {
 				if d1.instance.IsImported() && d2.instance.IsImported() {
 					continue
 				}
-				// overlap is alloed in the case one side is imported and the other is monitor,
+				// overlap is allowed in the case one side is imported and the other is monitor,
 				// we assume that the monitor is deployed with the first instance in that host,
 				// it implies that the monitor is imported too.
 				if (strings.HasPrefix(d1.dirKind, "monitor") && d2.instance.IsImported()) ||
 					(d1.instance.IsImported() && strings.HasPrefix(d2.dirKind, "monitor")) {
+					continue
+				}
+
+				// overlap is allowed in the case one side is data dir of a monitor instance,
+				// as the *_exporter don't need data dir, the field is only kept for compatiability
+				// with legacy tidb-ansible deployments.
+				if (strings.HasPrefix(d1.dirKind, "monitor data directory")) ||
+					(strings.HasPrefix(d2.dirKind, "monitor data directory")) {
 					continue
 				}
 

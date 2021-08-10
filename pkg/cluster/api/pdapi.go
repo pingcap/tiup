@@ -15,6 +15,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
@@ -62,7 +63,7 @@ func (pc *PDClient) tryIdentifyVersion() {
 	endpoints := pc.getEndpoints(pdVersionURI)
 	response := map[string]string{}
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, err := pc.httpClient.Get(endpoint)
+		body, err := pc.httpClient.Get(context.TODO(), endpoint)
 		if err != nil {
 			return body, err
 		}
@@ -150,7 +151,7 @@ func (pc *PDClient) CheckHealth() error {
 	endpoints := pc.getEndpoints(pdPingURI)
 
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, err := pc.httpClient.Get(endpoint)
+		body, err := pc.httpClient.Get(context.TODO(), endpoint)
 		if err != nil {
 			return body, err
 		}
@@ -174,7 +175,7 @@ func (pc *PDClient) GetStores() (*StoresInfo, error) {
 	storesInfo := StoresInfo{}
 
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, err := pc.httpClient.Get(endpoint)
+		body, err := pc.httpClient.Get(context.TODO(), endpoint)
 		if err != nil {
 			return body, err
 		}
@@ -267,7 +268,7 @@ func (pc *PDClient) GetLeader() (*pdpb.Member, error) {
 	leader := pdpb.Member{}
 
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, err := pc.httpClient.Get(endpoint)
+		body, err := pc.httpClient.Get(context.TODO(), endpoint)
 		if err != nil {
 			return body, err
 		}
@@ -288,7 +289,7 @@ func (pc *PDClient) GetMembers() (*pdpb.GetMembersResponse, error) {
 	members := pdpb.GetMembersResponse{}
 
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, err := pc.httpClient.Get(endpoint)
+		body, err := pc.httpClient.Get(context.TODO(), endpoint)
 		if err != nil {
 			return body, err
 		}
@@ -312,7 +313,7 @@ func (pc *PDClient) GetConfig() (map[string]interface{}, error) {
 	pdConfig := map[string]interface{}{}
 
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, err := pc.httpClient.Get(endpoint)
+		body, err := pc.httpClient.Get(context.TODO(), endpoint)
 		if err != nil {
 			return body, err
 		}
@@ -358,7 +359,7 @@ func (pc *PDClient) EvictPDLeader(retryOpt *utils.RetryOption) error {
 	endpoints := pc.getEndpoints(cmd)
 
 	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, err := pc.httpClient.Post(endpoint, nil)
+		body, err := pc.httpClient.Post(context.TODO(), endpoint, nil)
 		if err != nil {
 			return body, err
 		}
@@ -438,7 +439,7 @@ func (pc *PDClient) EvictStoreLeader(host string, retryOpt *utils.RetryOption, c
 	endpoints := pc.getEndpoints(pdSchedulersURI)
 
 	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		return pc.httpClient.Post(endpoint, bytes.NewBuffer(scheduler))
+		return pc.httpClient.Post(context.TODO(), endpoint, bytes.NewBuffer(scheduler))
 	})
 	if err != nil {
 		return err
@@ -498,7 +499,7 @@ func (pc *PDClient) RemoveStoreEvict(host string) error {
 	endpoints := pc.getEndpoints(cmd)
 
 	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, statusCode, err := pc.httpClient.Delete(endpoint, nil)
+		body, statusCode, err := pc.httpClient.Delete(context.TODO(), endpoint, nil)
 		if err != nil {
 			if statusCode == http.StatusNotFound || bytes.Contains(body, []byte("scheduler not found")) {
 				log.Debugf("Store leader evicting scheduler does not exist, ignore.")
@@ -533,7 +534,7 @@ func (pc *PDClient) DelPD(name string, retryOpt *utils.RetryOption) error {
 	endpoints := pc.getEndpoints(cmd)
 
 	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, statusCode, err := pc.httpClient.Delete(endpoint, nil)
+		body, statusCode, err := pc.httpClient.Delete(context.TODO(), endpoint, nil)
 		if err != nil {
 			if statusCode == http.StatusNotFound || bytes.Contains(body, []byte("not found, pd")) {
 				log.Debugf("PD node does not exist, ignore: %s", body)
@@ -620,7 +621,7 @@ func (pc *PDClient) DelStore(host string, retryOpt *utils.RetryOption) error {
 	endpoints := pc.getEndpoints(cmd)
 
 	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, statusCode, err := pc.httpClient.Delete(endpoint, nil)
+		body, statusCode, err := pc.httpClient.Delete(context.TODO(), endpoint, nil)
 		if err != nil {
 			if statusCode == http.StatusNotFound || bytes.Contains(body, []byte("not found")) {
 				log.Debugf("store %d %s does not exist, ignore: %s", storeID, host, body)
@@ -673,7 +674,7 @@ func (pc *PDClient) DelStore(host string, retryOpt *utils.RetryOption) error {
 func (pc *PDClient) updateConfig(url string, body io.Reader) error {
 	endpoints := pc.getEndpoints(url)
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		return pc.httpClient.Post(endpoint, body)
+		return pc.httpClient.Post(context.TODO(), endpoint, body)
 	})
 	return err
 }
@@ -687,7 +688,7 @@ func (pc *PDClient) UpdateReplicateConfig(body io.Reader) error {
 func (pc *PDClient) GetReplicateConfig() ([]byte, error) {
 	endpoints := pc.getEndpoints(pdConfigReplicate)
 	return tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		return pc.httpClient.Get(endpoint)
+		return pc.httpClient.Get(context.TODO(), endpoint)
 	})
 }
 
@@ -744,7 +745,7 @@ func (pc *PDClient) CheckRegion(state string) (*RegionsInfo, error) {
 	regionsInfo := RegionsInfo{}
 
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, err := pc.httpClient.Get(endpoint)
+		body, err := pc.httpClient.Get(context.TODO(), endpoint)
 		if err != nil {
 			return body, err
 		}

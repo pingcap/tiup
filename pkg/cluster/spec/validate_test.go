@@ -1098,6 +1098,32 @@ tikv_servers:
     log_dir: "/home/tidb6wu/tidb1-data/tikv-32160-log"
     data_dir: "/home/tidb6wu/tidb1-data/tikv-32160"
 `,
+		`
+monitored:
+  node_exporter_port: 9100
+  blackbox_exporter_port: 9115
+  deploy_dir: /data/deploy/monitor-9100
+  data_dir: /data/deploy/monitor-9100
+  log_dir: /data/deploy/monitor-9100/log
+pd_servers:
+  - host: n0
+    name: pd0
+    imported: true
+    deploy_dir: /data/deploy
+    data_dir: /data/deploy/data.pd
+    log_dir: /data/deploy/log
+  - host: n1
+    name: pd1
+    log_dir: "/data/deploy/pd-2379/log"
+    data_dir: "/data/pd-2379"
+    deploy_dir: "/data/deploy/pd-2379"
+cdc_servers:
+  - host: n1
+    port: 8300
+    deploy_dir: /data/deploy/ticdc-8300
+    data_dir: /data1/ticdc-8300
+    log_dir: /data/deploy/ticdc-8300/log
+`,
 	}
 	for _, s := range goodTopos {
 		err = yaml.Unmarshal([]byte(s), &topo)

@@ -595,6 +595,9 @@ func newEtcdClient(endpoint string) (*clientv3.Client, error) {
 }
 
 func main() {
+	dataDir := os.Getenv(localdata.EnvNameInstanceDataDir)
+	instanceName := dataDir[strings.LastIndex(dataDir, "/")+1:]
+	fmt.Printf("\033]0;TiUP Playground: %s\a", instanceName)
 	start := time.Now()
 	code := 0
 	err := execute()
@@ -629,8 +632,8 @@ func main() {
 				}
 			}
 			playgroundReport.TakeMilliseconds = uint64(time.Since(start).Milliseconds())
-			tele := telemetry.NewTelemetry()
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
+			tele := telemetry.NewTelemetry()
 			err := tele.Report(ctx, teleReport)
 			if environment.DebugMode {
 				if err != nil {
