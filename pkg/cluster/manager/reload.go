@@ -103,7 +103,7 @@ func (m *Manager) Reload(name string, gOpt operator.Options, skipRestart, skipCo
 	if err != nil {
 		return err
 	}
-	if topo.Type() == spec.TopoTypeTiDB {
+	if topo.Type() == spec.TopoTypeTiDB && !skipRestart {
 		b.UpdateTopology(
 			name,
 			m.specManager.Path(name),
@@ -117,11 +117,11 @@ func (m *Manager) Reload(name string, gOpt operator.Options, skipRestart, skipCo
 		b.ParallelStep("+ Refresh monitor configs", gOpt.Force, monitorConfigTasks...)
 	}
 
-	tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
-	if err != nil {
-		return err
-	}
 	if !skipRestart {
+		tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
+		if err != nil {
+			return err
+		}
 		b.Func("UpgradeCluster", func(ctx context.Context) error {
 			return operator.Upgrade(ctx, topo, gOpt, tlsCfg)
 		})
