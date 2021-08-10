@@ -39,7 +39,7 @@ func NewBlackboxConfig(deployDir string, tlsEnabled bool) *BlackboxConfig {
 // Config generate the config file data.
 func (c *BlackboxConfig) Config() ([]byte, error) {
 	fp := path.Join("templates", "config", "blackbox.yml.tpl")
-	tpl, err := embed.ReadFile(fp)
+	tpl, err := embed.ReadTemplate(fp)
 	if err != nil {
 		return nil, err
 	}

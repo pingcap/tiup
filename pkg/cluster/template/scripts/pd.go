@@ -124,7 +124,7 @@ func (c *PDScript) Config() ([]byte, error) {
 
 func (c *PDScript) configWithScript(script string) ([]byte, error) {
 	fp := path.Join("templates", "scripts", script)
-	tpl, err := embed.ReadFile(fp)
+	tpl, err := embed.ReadTemplate(fp)
 	if err != nil {
 		return nil, err
 	}
