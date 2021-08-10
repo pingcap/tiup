@@ -87,7 +87,7 @@ func (m *Manager) Reload(name string, opt operator.Options, skipRestart, skipCon
 	}
 
 	tb := m.sshTaskBuilder(name, topo, base.User, opt)
-	if topo.Type() == spec.TopoTypeTiDB {
+	if topo.Type() == spec.TopoTypeTiDB && !skipRestart {
 		tb = tb.UpdateTopology(
 			name,
 			m.specManager.Path(name),
@@ -101,11 +101,11 @@ func (m *Manager) Reload(name string, opt operator.Options, skipRestart, skipCon
 		tb = tb.ParallelStep("+ Refresh monitor configs", opt.Force, monitorConfigTasks...)
 	}
 
-	tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
-	if err != nil {
-		return err
-	}
 	if !skipRestart {
+		tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
+		if err != nil {
+			return err
+		}
 		tb = tb.Func("UpgradeCluster", func(ctx context.Context) error {
 			return operator.Upgrade(ctx, topo, opt, tlsCfg)
 		})
