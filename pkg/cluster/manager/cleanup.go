@@ -58,6 +58,15 @@ func (m *Manager) CleanCluster(name string, gOpt operator.Options, cleanOpt oper
 		retainDataNodes := set.NewStringSet(cleanOpt.RetainDataNodes...)
 
 		for _, ins := range instances {
+			// not cleaning files of monitor agents if the instance does not have one
+			switch ins.ComponentName() {
+			case spec.ComponentNodeExporter,
+				spec.ComponentBlackboxExporter:
+				if ins.IgnoreMonitorAgent() {
+					continue
+				}
+			}
+
 			// Some data of instances will be retained
 			dataRetained := retainDataRoles.Exist(ins.ComponentName()) ||
 				retainDataNodes.Exist(ins.ID()) || retainDataNodes.Exist(ins.GetHost())
