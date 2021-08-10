@@ -211,7 +211,7 @@ func (c *PrometheusConfig) SetRemoteConfig(cfg string) *PrometheusConfig {
 // Config generate the config file data.
 func (c *PrometheusConfig) Config() ([]byte, error) {
 	fp := path.Join("templates", "config", "prometheus.yml.tpl")
-	tpl, err := embed.ReadFile(fp)
+	tpl, err := embed.ReadTemplate(fp)
 	if err != nil {
 		return nil, err
 	}

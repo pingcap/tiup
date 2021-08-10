@@ -128,6 +128,13 @@ func ScaleInDMCluster(
 
 	dmMasterClient = api.NewDMMasterClient(dmMasterEndpoint, 10*time.Second, nil)
 
+	noAgentHosts := set.NewStringSet()
+	topo.IterInstance(func(inst dm.Instance) {
+		if inst.IgnoreMonitorAgent() {
+			noAgentHosts.Insert(inst.GetHost())
+		}
+	})
+
 	// Delete member from cluster
 	for _, component := range topo.ComponentsByStartOrder() {
 		for _, instance := range component.Instances() {
@@ -135,7 +142,7 @@ func ScaleInDMCluster(
 				continue
 			}
 
-			if err := operator.StopComponent(ctx, []dm.Instance{instance}, options.OptTimeout); err != nil {
+			if err := operator.StopComponent(ctx, []dm.Instance{instance}, noAgentHosts, options.OptTimeout); err != nil {
 				return errors.Annotatef(err, "failed to stop %s", component.Name())
 			}
 

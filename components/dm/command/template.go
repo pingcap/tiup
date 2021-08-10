@@ -38,8 +38,8 @@ func newTemplateCmd() *cobra.Command {
 				name = "topology.example.yaml"
 			}
 
-			fp := path.Join("templates", "examples", "dm", name)
-			tpl, err := embed.ReadFile(fp)
+			fp := path.Join("examples", "dm", name)
+			tpl, err := embed.ReadExample(fp)
 			if err != nil {
 				return err
 			}

@@ -33,6 +33,7 @@ type CDCSpec struct {
 	SSHPort         int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported        bool                   `yaml:"imported,omitempty"`
 	Patched         bool                   `yaml:"patched,omitempty"`
+	IgnoreExporter  bool                   `yaml:"ignore_exporter,omitempty"`
 	Port            int                    `yaml:"port" default:"8300"`
 	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
 	DataDir         string                 `yaml:"data_dir,omitempty"`
@@ -65,6 +66,11 @@ func (s *CDCSpec) GetMainPort() int {
 // IsImported returns if the node is imported from TiDB-Ansible
 func (s *CDCSpec) IsImported() bool {
 	return s.Imported
+}
+
+// IgnoreMonitorAgent returns if the node does not have monitor agents available
+func (s *CDCSpec) IgnoreMonitorAgent() bool {
+	return s.IgnoreExporter
 }
 
 // CDCComponent represents CDC component.

@@ -88,7 +88,7 @@ func (c *TiDBScript) AppendEndpoints(ends ...*PDScript) *TiDBScript {
 // Config generate the config file data.
 func (c *TiDBScript) Config() ([]byte, error) {
 	fp := path.Join("templates", "scripts", "run_tidb.sh.tpl")
-	tpl, err := embed.ReadFile(fp)
+	tpl, err := embed.ReadTemplate(fp)
 	if err != nil {
 		return nil, err
 	}

@@ -47,7 +47,7 @@ func (c *DatasourceConfig) WithPort(port uint64) *DatasourceConfig {
 // Config generate the config file data.
 func (c *DatasourceConfig) Config() ([]byte, error) {
 	fp := path.Join("templates", "config", "datasource.yml.tpl")
-	tpl, err := embed.ReadFile(fp)
+	tpl, err := embed.ReadTemplate(fp)
 	if err != nil {
 		return nil, err
 	}
