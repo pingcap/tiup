@@ -27,6 +27,7 @@ type Config struct {
 	BinPath    string `yaml:"bin_path"`
 	Num        int    `yaml:"num"`
 	Host       string `yaml:"host"`
+	Port       int    `yaml:"port"`
 	UpTimeout  int    `yaml:"up_timeout"`
 }
 

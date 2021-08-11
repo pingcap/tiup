@@ -11,7 +11,6 @@ require (
 	github.com/AstroProfundis/sysinfo v0.0.0-20210610033012-3aad056e509d
 	github.com/AstroProfundis/tabby v1.1.1-color
 	github.com/BurntSushi/toml v0.4.1
-	github.com/HdrHistogram/hdrhistogram-go v1.1.0 // indirect
 	github.com/ScaleFT/sshkeys v0.0.0-20200327173127-6142f742bca5
 	github.com/StackExchange/wmi v0.0.0-20210224194228-fe8f1750fd46 // indirect
 	github.com/VividCortex/ewma v1.2.0 // indirect
@@ -36,7 +35,7 @@ require (
 	github.com/jeremywohl/flatten v1.0.1
 	github.com/joomcode/errorx v1.0.3
 	github.com/juju/ansiterm v0.0.0-20180109212912-720a0952cc2a
-	github.com/juju/testing v0.0.0-20210324180055-18c50b0c2098 // indirect
+	github.com/kr/text v0.2.0 // indirect
 	github.com/lunixbochs/vtclean v1.0.0 // indirect
 	github.com/mattn/go-isatty v0.0.13 // indirect
 	github.com/mattn/go-runewidth v0.0.13
@@ -46,7 +45,6 @@ require (
 	github.com/pingcap/failpoint v0.0.0-20210316064728-7acb0f0a3dfd
 	github.com/pingcap/fn v0.0.0-20200306044125-d5540d389059
 	github.com/pingcap/kvproto v0.0.0-20210622031542-706fcaf286c8
-	github.com/pingcap/tidb v2.0.11+incompatible
 	github.com/pingcap/tidb-insight v0.3.2
 	github.com/prometheus/client_model v0.2.0
 	github.com/prometheus/common v0.29.0
@@ -61,8 +59,6 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/tj/go-termd v0.0.1
 	github.com/tklauser/go-sysconf v0.3.6 // indirect
-	github.com/uber/jaeger-client-go v2.29.1+incompatible // indirect
-	github.com/uber/jaeger-lib v2.4.1+incompatible // indirect
 	go.etcd.io/etcd/client/pkg/v3 v3.5.0
 	go.etcd.io/etcd/client/v3 v3.5.0
 	go.uber.org/atomic v1.8.0
@@ -77,6 +73,7 @@ require (
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20210624195500-8bfb893ecb84
 	google.golang.org/grpc v1.38.0
+	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/ini.v1 v1.62.0
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b

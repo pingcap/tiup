@@ -32,14 +32,17 @@ type TiDBInstance struct {
 }
 
 // NewTiDBInstance return a TiDBInstance
-func NewTiDBInstance(binPath string, dir, host, configPath string, id int, pds []*PDInstance, enableBinlog bool) *TiDBInstance {
+func NewTiDBInstance(binPath string, dir, host, configPath string, id, port int, pds []*PDInstance, enableBinlog bool) *TiDBInstance {
+	if port <= 0 {
+		port = 4000
+	}
 	return &TiDBInstance{
 		instance: instance{
 			BinPath:    binPath,
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
-			Port:       utils.MustGetFreePort(host, GetTiDBPort(configPath)),
+			Port:       utils.MustGetFreePort(host, port),
 			StatusPort: utils.MustGetFreePort("0.0.0.0", 10080),
 			ConfigPath: configPath,
 		},
