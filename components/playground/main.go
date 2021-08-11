@@ -299,7 +299,6 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 	rootCmd.Flags().String(mode, defaultMode, "TiUP playground mode: 'tidb', 'tikv-slim'")
 	rootCmd.Flags().Bool(withoutMonitor, false, "Don't start prometheus and grafana component")
 	rootCmd.Flags().Bool(withMonitor, true, "Start prometheus and grafana component")
-	_ = rootCmd.Flags().MarkHidden(withMonitor)
 	_ = rootCmd.Flags().MarkDeprecated(withMonitor, "Please use --without-monitor to control whether to disable monitor.")
 
 	rootCmd.Flags().Int(db, defaultOptions.TiDB.Num, "TiDB instance number")
