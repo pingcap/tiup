@@ -75,7 +75,7 @@ var (
 
 const (
 	mode        = "mode"
-	withMonitor = "monitor"
+	withoutMonitor = "no-monitor"
 
 	// instance numbers
 	db      = "db"
@@ -296,8 +296,7 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 	defaultOptions := &BootOptions{}
 
 	rootCmd.Flags().String(mode, defaultMode, "TiUP playground mode: 'tidb', 'tikv-slim'")
-	rootCmd.Flags().Bool(withMonitor, true, "Whether to start prometheus and grafana component")
-	rootCmd.Flags().Lookup(withMonitor).NoOptDefVal = ""
+	rootCmd.Flags().Bool(withoutMonitor, false, "Don't start prometheus and grafana component")
 
 	rootCmd.Flags().Int(db, defaultOptions.TiDB.Num, "TiDB instance number")
 	rootCmd.Flags().Int(kv, defaultOptions.TiKV.Num, "TiKV instance number")
@@ -365,12 +364,12 @@ func populateOpt(flagSet *pflag.FlagSet) (err error) {
 
 	flagSet.Visit(func(flag *pflag.Flag) {
 		switch flag.Name {
-		case withMonitor:
+		case withoutMonitor:
 			options.Monitor, err = strconv.ParseBool(flag.Value.String())
 			if err != nil {
 				return
 			}
-
+			options.Monitor = !options.Monitor
 		case db:
 			options.TiDB.Num, err = strconv.Atoi(flag.Value.String())
 			if err != nil {
