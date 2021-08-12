@@ -119,7 +119,7 @@ func (e *EasySSHExecutor) initialize(config SSHConfig) {
 func (e *EasySSHExecutor) Execute(ctx context.Context, cmd string, sudo bool, timeout ...time.Duration) ([]byte, []byte, error) {
 	// try to acquire root permission
 	if e.Sudo || sudo {
-		cmd = fmt.Sprintf("sudo -H bash -c \"%s\"", cmd)
+		cmd = fmt.Sprintf("/usr/bin/sudo -H bash -c \"%s\"", cmd)
 	}
 
 	// set a basic PATH in case it's empty on login
@@ -237,7 +237,7 @@ func (e *NativeSSHExecutor) Execute(ctx context.Context, cmd string, sudo bool, 
 
 	// try to acquire root permission
 	if e.Sudo || sudo {
-		cmd = fmt.Sprintf("sudo -H bash -c \"%s\"", cmd)
+		cmd = fmt.Sprintf("/usr/bin/sudo -H bash -c \"%s\"", cmd)
 	}
 
 	// set a basic PATH in case it's empty on login
