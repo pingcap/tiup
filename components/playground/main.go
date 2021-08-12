@@ -74,8 +74,8 @@ var (
 )
 
 const (
-	mode        = "mode"
-	withMonitor = "monitor"
+	mode           = "mode"
+	withMonitor    = "monitor"
 	withoutMonitor = "without-monitor"
 
 	// instance numbers
