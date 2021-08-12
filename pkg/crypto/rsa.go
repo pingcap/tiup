@@ -15,7 +15,6 @@ package crypto
 
 import (
 	"crypto"
-	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -24,6 +23,7 @@ import (
 	"net"
 
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/crypto/rand"
 	"software.sslmate.com/src/go-pkcs12"
 )
 

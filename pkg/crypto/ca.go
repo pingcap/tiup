@@ -14,7 +14,7 @@
 package crypto
 
 import (
-	"crypto/rand"
+	cr "crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/crypto/rand"
 )
 
 var serialNumberLimit = new(big.Int).Lsh(big.NewInt(1), 128)
@@ -39,7 +40,7 @@ func NewCA(clsName string) (*CertificateAuthority, error) {
 	currTime := time.Now().UTC()
 
 	// generate a random serial number for the new ca
-	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
+	serialNumber, err := cr.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +102,7 @@ func (ca *CertificateAuthority) Sign(csrBytes []byte) ([]byte, error) {
 	}
 
 	// generate a random serial number for the new cert
-	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
+	serialNumber, err := cr.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
 		return nil, err
 	}
