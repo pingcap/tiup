@@ -31,13 +31,13 @@ import (
 	"github.com/cavaliercoder/grab"
 	"github.com/google/uuid"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/crypto/rand"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/repository/model"
 	"github.com/pingcap/tiup/pkg/repository/store"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/utils/mock"
-	"github.com/pingcap/tiup/pkg/utils/rand"
 	"github.com/pingcap/tiup/pkg/version"
 )
 

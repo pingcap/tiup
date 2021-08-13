@@ -26,9 +26,9 @@ import (
 	"github.com/fatih/color"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/base52"
+	"github.com/pingcap/tiup/pkg/crypto/rand"
 	"github.com/pingcap/tiup/pkg/tui"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
-	"github.com/pingcap/tiup/pkg/utils/rand"
 )
 
 // CommandArgs returns the original commands from the first line of a file

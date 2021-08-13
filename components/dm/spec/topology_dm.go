@@ -118,10 +118,11 @@ func AllDMComponentNames() (roles []string) {
 
 // MasterSpec represents the Master topology specification in topology.yaml
 type MasterSpec struct {
-	Host     string `yaml:"host"`
-	SSHPort  int    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported bool   `yaml:"imported,omitempty"`
-	Patched  bool   `yaml:"patched,omitempty"`
+	Host           string `yaml:"host"`
+	SSHPort        int    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
+	Imported       bool   `yaml:"imported,omitempty"`
+	Patched        bool   `yaml:"patched,omitempty"`
+	IgnoreExporter bool   `yaml:"ignore_exporter,omitempty"`
 	// Use Name to get the name with a default value if it's empty.
 	Name            string                 `yaml:"name,omitempty"`
 	Port            int                    `yaml:"port,omitempty" default:"8261"`
@@ -178,12 +179,18 @@ func (s *MasterSpec) IsImported() bool {
 	return s.Imported
 }
 
+// IgnoreMonitorAgent returns if the node does not have monitor agents available
+func (s *MasterSpec) IgnoreMonitorAgent() bool {
+	return s.IgnoreExporter
+}
+
 // WorkerSpec represents the Master topology specification in topology.yaml
 type WorkerSpec struct {
-	Host     string `yaml:"host"`
-	SSHPort  int    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported bool   `yaml:"imported,omitempty"`
-	Patched  bool   `yaml:"patched,omitempty"`
+	Host           string `yaml:"host"`
+	SSHPort        int    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
+	Imported       bool   `yaml:"imported,omitempty"`
+	Patched        bool   `yaml:"patched,omitempty"`
+	IgnoreExporter bool   `yaml:"ignore_exporter,omitempty"`
 	// Use Name to get the name with a default value if it's empty.
 	Name            string                 `yaml:"name,omitempty"`
 	Port            int                    `yaml:"port,omitempty" default:"8262"`
@@ -231,6 +238,11 @@ func (s *WorkerSpec) GetMainPort() int {
 // IsImported returns if the node is imported from TiDB-Ansible
 func (s *WorkerSpec) IsImported() bool {
 	return s.Imported
+}
+
+// IgnoreMonitorAgent returns if the node does not have monitor agents available
+func (s *WorkerSpec) IgnoreMonitorAgent() bool {
+	return s.IgnoreExporter
 }
 
 // UnmarshalYAML sets default values when unmarshaling the topology file

@@ -7,7 +7,15 @@ import (
 //go:embed templates
 var embededFiles goembed.FS
 
-// ReadFile read the file embed.
-func ReadFile(path string) ([]byte, error) {
+// ReadTemplate read the template file embed.
+func ReadTemplate(path string) ([]byte, error) {
 	return embededFiles.ReadFile(path)
+}
+
+//go:embed examples
+var embedExamples goembed.FS
+
+// ReadExample read an example file
+func ReadExample(path string) ([]byte, error) {
+	return embedExamples.ReadFile(path)
 }

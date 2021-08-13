@@ -61,8 +61,8 @@ func newTemplateCmd() *cobra.Command {
 				name = "local.yaml"
 			}
 
-			fp := path.Join("templates", "examples", name)
-			tpl, err := embed.ReadFile(fp)
+			fp := path.Join("examples", "cluster", name)
+			tpl, err := embed.ReadExample(fp)
 			if err != nil {
 				return err
 			}

@@ -85,7 +85,7 @@ func (c *CDCScript) WithDataDirEnabled() *CDCScript {
 // Config generate the config file data.
 func (c *CDCScript) Config() ([]byte, error) {
 	fp := path.Join("templates", "scripts", "run_cdc.sh.tpl")
-	tpl, err := embed.ReadFile(fp)
+	tpl, err := embed.ReadTemplate(fp)
 	if err != nil {
 		return nil, err
 	}
