@@ -621,10 +621,7 @@ func parseRunScript(data []byte) (deployDir string, flags map[string]string, err
 			line = line[:index]
 		}
 
-		if strings.HasSuffix(line, "\\") {
-			line = line[:len(line)-1]
-		}
-
+		line = strings.TrimSuffix(line, "\\")
 		line = strings.TrimSpace(line)
 
 		// parse flag
