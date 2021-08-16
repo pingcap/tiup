@@ -831,7 +831,7 @@ func CheckDirPermission(ctx context.Context, e ctxt.Executor, user, path string)
 
 	_, stderr, err := e.Execute(ctx,
 		fmt.Sprintf(
-			"sudo -u %[1]s touch %[2]s/.tiup_cluster_check_file && rm -f %[2]s/.tiup_cluster_check_file",
+			"/usr/bin/sudo -u %[1]s touch %[2]s/.tiup_cluster_check_file && rm -f %[2]s/.tiup_cluster_check_file",
 			user,
 			path,
 		),

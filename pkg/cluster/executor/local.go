@@ -43,9 +43,9 @@ var _ ctxt.Executor = &Local{}
 func (l *Local) Execute(ctx context.Context, cmd string, sudo bool, timeout ...time.Duration) ([]byte, []byte, error) {
 	// try to acquire root permission
 	if l.Sudo || sudo {
-		cmd = fmt.Sprintf("sudo -H -u root bash -c 'cd; %s'", cmd)
+		cmd = fmt.Sprintf("/usr/bin/sudo -H -u root bash -c 'cd; %s'", cmd)
 	} else {
-		cmd = fmt.Sprintf("sudo -H -u %s bash -c 'cd; %s'", l.Config.User, cmd)
+		cmd = fmt.Sprintf("/usr/bin/sudo -H -u %s bash -c 'cd; %s'", l.Config.User, cmd)
 	}
 
 	// set a basic PATH in case it's empty on login
@@ -114,7 +114,7 @@ func (l *Local) Transfer(ctx context.Context, src, dst string, download bool, li
 	if download || user.Username == l.Config.User {
 		cmd = fmt.Sprintf("cp %s %s", src, dst)
 	} else {
-		cmd = fmt.Sprintf("sudo -H -u root bash -c \"cp %[1]s %[2]s && chown %[3]s:$(id -g -n %[3]s) %[2]s\"", src, dst, l.Config.User)
+		cmd = fmt.Sprintf("/usr/bin/sudo -H -u root bash -c \"cp %[1]s %[2]s && chown %[3]s:$(id -g -n %[3]s) %[2]s\"", src, dst, l.Config.User)
 	}
 
 	command := exec.Command("/bin/sh", "-c", cmd)
