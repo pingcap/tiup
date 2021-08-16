@@ -92,6 +92,7 @@ const (
 	// hosts
 	clusterHost = "host"
 	dbHost      = "db.Host"
+	dbPort      = "db.Port"
 	pdHost      = "pd.Host"
 
 	// config paths
@@ -273,6 +274,7 @@ Examples:
 
 	rootCmd.Flags().String(clusterHost, defaultOptions.Host, "Playground cluster host")
 	rootCmd.Flags().String(dbHost, defaultOptions.TiDB.Host, "Playground TiDB host. If not provided, TiDB will still use `host` flag as its host")
+	rootCmd.Flags().Int(dbPort, defaultOptions.TiDB.Port, "Playground TiDB port. If not provided, TiDB will use 4000 as its port")
 	rootCmd.Flags().String(pdHost, defaultOptions.PD.Host, "Playground PD host. If not provided, PD will still use `host` flag as its host")
 
 	rootCmd.Flags().String(dbConfig, defaultOptions.TiDB.ConfigPath, "TiDB instance configuration file")
@@ -413,6 +415,11 @@ func populateOpt(flagSet *pflag.FlagSet) (err error) {
 			options.Host = flag.Value.String()
 		case dbHost:
 			options.TiDB.Host = flag.Value.String()
+		case dbPort:
+			options.TiDB.Port, err = strconv.Atoi(flag.Value.String())
+			if err != nil {
+				return
+			}
 		case pdHost:
 			options.PD.Host = flag.Value.String()
 		}

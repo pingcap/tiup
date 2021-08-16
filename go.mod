@@ -10,7 +10,7 @@ replace (
 require (
 	github.com/AstroProfundis/sysinfo v0.0.0-20210610033012-3aad056e509d
 	github.com/AstroProfundis/tabby v1.1.1-color
-	github.com/BurntSushi/toml v0.3.1
+	github.com/BurntSushi/toml v0.4.1
 	github.com/ScaleFT/sshkeys v0.0.0-20200327173127-6142f742bca5
 	github.com/StackExchange/wmi v0.0.0-20210224194228-fe8f1750fd46 // indirect
 	github.com/VividCortex/ewma v1.2.0 // indirect
@@ -35,6 +35,7 @@ require (
 	github.com/jeremywohl/flatten v1.0.1
 	github.com/joomcode/errorx v1.0.3
 	github.com/juju/ansiterm v0.0.0-20180109212912-720a0952cc2a
+	github.com/kr/text v0.2.0 // indirect
 	github.com/lunixbochs/vtclean v1.0.0 // indirect
 	github.com/mattn/go-isatty v0.0.13 // indirect
 	github.com/mattn/go-runewidth v0.0.13
@@ -72,6 +73,7 @@ require (
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20210624195500-8bfb893ecb84
 	google.golang.org/grpc v1.38.0
+	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/ini.v1 v1.62.0
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
