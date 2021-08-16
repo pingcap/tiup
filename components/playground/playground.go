@@ -456,6 +456,16 @@ func (p *Playground) handleScaleOut(w io.Writer, cmd *Command) error {
 		return err
 	}
 
+	if cmd.ComponentID == "tidb" {
+		addr := p.tidbs[len(p.tidbs)-1].Addr()
+		if checkDB(addr, cmd.UpTimeout) {
+			ss := strings.Split(addr, ":")
+			connectMsg := "To connect new added TiDB: mysql --host %s --port %s -u root -p (no password) --comments"
+			fmt.Println(color.GreenString(connectMsg, ss[0], ss[1]))
+			fmt.Fprintln(w, color.GreenString(connectMsg, ss[0], ss[1]))
+		}
+	}
+
 	logIfErr(p.renderSDFile())
 
 	return nil
@@ -656,6 +666,83 @@ func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins i
 	return
 }
 
+func (p *Playground) waitAllTidbUp() []string {
+	var succ []string
+	if len(p.tidbs) > 0 {
+		var wg sync.WaitGroup
+		var appendMutex sync.Mutex
+		bars := progress.NewMultiBar(color.YellowString("Waiting for tidb instances ready\n"))
+		for _, db := range p.tidbs {
+			wg.Add(1)
+			prefix := color.YellowString(db.Addr())
+			bar := bars.AddBar(prefix)
+			go func(dbInst *instance.TiDBInstance) {
+				defer wg.Done()
+				if s := checkDB(dbInst.Addr(), options.TiDB.UpTimeout); s {
+					{
+						appendMutex.Lock()
+						succ = append(succ, dbInst.Addr())
+						appendMutex.Unlock()
+					}
+					bar.UpdateDisplay(&progress.DisplayProps{
+						Prefix: prefix,
+						Mode:   progress.ModeDone,
+					})
+				} else {
+					bar.UpdateDisplay(&progress.DisplayProps{
+						Prefix: prefix,
+						Mode:   progress.ModeError,
+					})
+				}
+			}(db)
+		}
+		bars.StartRenderLoop()
+		wg.Wait()
+		bars.StopRenderLoop()
+	}
+	return succ
+}
+
+func (p *Playground) waitAllTiFlashUp() {
+	if len(p.tiflashs) > 0 {
+		var endpoints []string
+		for _, pd := range p.pds {
+			endpoints = append(endpoints, pd.Addr())
+		}
+		pdClient := api.NewPDClient(endpoints, 10*time.Second, nil)
+
+		var wg sync.WaitGroup
+		bars := progress.NewMultiBar(color.YellowString("Waiting for tiflash instances ready\n"))
+		for _, flash := range p.tiflashs {
+			wg.Add(1)
+			prefix := color.YellowString(flash.Addr())
+			bar := bars.AddBar(prefix)
+			go func(flashInst *instance.TiFlashInstance) {
+				defer wg.Done()
+				displayResult := &progress.DisplayProps{
+					Prefix: prefix,
+				}
+				if cmd := flashInst.Cmd(); cmd == nil {
+					displayResult.Mode = progress.ModeError
+					displayResult.Suffix = "initialize command failed"
+				} else if state := cmd.ProcessState; state != nil && state.Exited() {
+					displayResult.Mode = progress.ModeError
+					displayResult.Suffix = fmt.Sprintf("process exited with code: %d", state.ExitCode())
+				} else if s := checkStoreStatus(pdClient, flashInst.Addr(), options.TiFlash.UpTimeout); !s {
+					displayResult.Mode = progress.ModeError
+					displayResult.Suffix = "failed to up after timeout"
+				} else {
+					displayResult.Mode = progress.ModeDone
+				}
+				bar.UpdateDisplay(displayResult)
+			}(flash)
+		}
+		bars.StartRenderLoop()
+		wg.Wait()
+		bars.StopRenderLoop()
+	}
+}
+
 func (p *Playground) bootCluster(ctx context.Context, env *environment.Environment, options *BootOptions) error {
 	for _, cfg := range []*instance.Config{
 		&options.PD,
@@ -779,39 +866,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 	p.booted = true
 
-	var succ []string
-	if len(p.tidbs) > 0 {
-		var wg sync.WaitGroup
-		var appendMutex sync.Mutex
-		bars := progress.NewMultiBar(color.YellowString("Waiting for tidb instances ready\n"))
-		for _, db := range p.tidbs {
-			wg.Add(1)
-			prefix := color.YellowString(db.Addr())
-			bar := bars.AddBar(prefix)
-			go func(dbInst *instance.TiDBInstance) {
-				defer wg.Done()
-				if s := checkDB(dbInst.Addr(), options.TiDB.UpTimeout); s {
-					{
-						appendMutex.Lock()
-						succ = append(succ, dbInst.Addr())
-						appendMutex.Unlock()
-					}
-					bar.UpdateDisplay(&progress.DisplayProps{
-						Prefix: prefix,
-						Mode:   progress.ModeDone,
-					})
-				} else {
-					bar.UpdateDisplay(&progress.DisplayProps{
-						Prefix: prefix,
-						Mode:   progress.ModeError,
-					})
-				}
-			}(db)
-		}
-		bars.StartRenderLoop()
-		wg.Wait()
-		bars.StopRenderLoop()
-	}
+	succ := p.waitAllTidbUp()
 
 	if len(succ) > 0 {
 		// start TiFlash after at least one TiDB is up.
@@ -824,44 +879,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			}
 		}
 		p.tiflashs = started
-
-		if len(p.tiflashs) > 0 {
-			var endpoints []string
-			for _, pd := range p.pds {
-				endpoints = append(endpoints, pd.Addr())
-			}
-			pdClient := api.NewPDClient(endpoints, 10*time.Second, nil)
-
-			var wg sync.WaitGroup
-			bars := progress.NewMultiBar(color.YellowString("Waiting for tiflash instances ready\n"))
-			for _, flash := range p.tiflashs {
-				wg.Add(1)
-				prefix := color.YellowString(flash.Addr())
-				bar := bars.AddBar(prefix)
-				go func(flashInst *instance.TiFlashInstance) {
-					defer wg.Done()
-					displayResult := &progress.DisplayProps{
-						Prefix: prefix,
-					}
-					if cmd := flashInst.Cmd(); cmd == nil {
-						displayResult.Mode = progress.ModeError
-						displayResult.Suffix = "initialize command failed"
-					} else if state := cmd.ProcessState; state != nil && state.Exited() {
-						displayResult.Mode = progress.ModeError
-						displayResult.Suffix = fmt.Sprintf("process exited with code: %d", state.ExitCode())
-					} else if s := checkStoreStatus(pdClient, flashInst.Addr(), options.TiFlash.UpTimeout); !s {
-						displayResult.Mode = progress.ModeError
-						displayResult.Suffix = "failed to up after timeout"
-					} else {
-						displayResult.Mode = progress.ModeDone
-					}
-					bar.UpdateDisplay(displayResult)
-				}(flash)
-			}
-			bars.StartRenderLoop()
-			wg.Wait()
-			bars.StopRenderLoop()
-		}
+		p.waitAllTiFlashUp()
 
 		fmt.Println(color.GreenString("CLUSTER START SUCCESSFULLY, Enjoy it ^-^"))
 		for _, dbAddr := range succ {
