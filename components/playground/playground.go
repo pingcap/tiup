@@ -456,6 +456,16 @@ func (p *Playground) handleScaleOut(w io.Writer, cmd *Command) error {
 		return err
 	}
 
+	if cmd.ComponentID == "tidb" {
+		addr := p.tidbs[len(p.tidbs)-1].Addr()
+		if checkDB(addr, cmd.UpTimeout) {
+			ss := strings.Split(addr, ":")
+			connectMsg := "To connect new added TiDB: mysql --host %s --port %s -u root -p (no password) --comments"
+			fmt.Println(color.GreenString(connectMsg, ss[0], ss[1]))
+			fmt.Fprintln(w, color.GreenString(connectMsg, ss[0], ss[1]))
+		}
+	}
+
 	logIfErr(p.renderSDFile())
 
 	return nil
