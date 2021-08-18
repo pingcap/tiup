@@ -884,7 +884,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		fmt.Println(color.GreenString("CLUSTER START SUCCESSFULLY, Enjoy it ^-^"))
 		for _, dbAddr := range succ {
 			ss := strings.Split(dbAddr, ":")
-			connectMsg := "To connect TiDB: mysql --host %s --port %s -u root -p (no password) --comments"
+			connectMsg := "To connect TiDB: mysql --comments --host %s --port %s -u root -p (no password)"
 			fmt.Println(color.GreenString(connectMsg, ss[0], ss[1]))
 		}
 	}
