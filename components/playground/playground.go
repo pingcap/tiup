@@ -460,7 +460,7 @@ func (p *Playground) handleScaleOut(w io.Writer, cmd *Command) error {
 		addr := p.tidbs[len(p.tidbs)-1].Addr()
 		if checkDB(addr, cmd.UpTimeout) {
 			ss := strings.Split(addr, ":")
-			connectMsg := "To connect new added TiDB: mysql --host %s --port %s -u root -p (no password) --comments"
+			connectMsg := "To connect new added TiDB: mysql --comments --host %s --port %s -u root -p (no password)"
 			fmt.Println(color.GreenString(connectMsg, ss[0], ss[1]))
 			fmt.Fprintln(w, color.GreenString(connectMsg, ss[0], ss[1]))
 		}
@@ -884,7 +884,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		fmt.Println(color.GreenString("CLUSTER START SUCCESSFULLY, Enjoy it ^-^"))
 		for _, dbAddr := range succ {
 			ss := strings.Split(dbAddr, ":")
-			connectMsg := "To connect TiDB: mysql --host %s --port %s -u root -p (no password) --comments"
+			connectMsg := "To connect TiDB: mysql --comments --host %s --port %s -u root -p (no password)"
 			fmt.Println(color.GreenString(connectMsg, ss[0], ss[1]))
 		}
 	}
