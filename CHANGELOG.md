@@ -1,5 +1,17 @@
 TiUP Changelog
 
+## [1.5.5] 2021-08-19
+
+### Fixes
+
+- Fix error when reloading a stopped cluster with `--skip-restart` argument ([#1513](https://github.com/pingcap/tiup/pull/1513), [@AstroProfundis](https://github.com/AstroProfundis))
+- Use absolute path for `sudo` command, to workaround errors on systems where `devtoolset` is enabled ([#1516](https://github.com/pingcap/tiup/pull/1516), [@nexustar](https://github.com/nexustar))
+- Fix custom TiDB port not correctly set in playground ([#1511](https://github.com/pingcap/tiup/pull/1511), [@hecomlilong](https://github.com/hecomlilong))
+
+### Improvements
+
+- Adjust suggested argument order in playground examples ([#1522](https://github.com/pingcap/tiup/pull/1522), [@glkappe](https://github.com/glkappe))
+
 ## [1.5.4] 2021-08-05
 
 ### Fixes
