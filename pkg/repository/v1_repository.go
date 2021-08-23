@@ -36,6 +36,7 @@ import (
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/mod/semver"
+	"golang.org/x/sync/errgroup"
 )
 
 // ErrUnknownComponent represents the specific component cannot be found in index.json
@@ -703,11 +704,18 @@ func (r *V1Repository) UpdateComponentManifests() error {
 		return err
 	}
 
+	var g errgroup.Group
 	for name := range index.Components {
-		_, err = r.updateComponentManifest(name, false)
-		if err != nil && errors.Cause(err) != ErrUnknownComponent {
+		name := name
+		g.Go(func() error {
+			_, err = r.updateComponentManifest(name, false)
 			return err
-		}
+		})
+	}
+
+	err = g.Wait()
+	if err != nil && errors.Cause(err) != ErrUnknownComponent {
+		return err
 	}
 
 	return nil
