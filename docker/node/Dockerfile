@@ -15,6 +15,7 @@ RUN apt-get update && \
         openssh-server \
         openjdk-11-jre-headless \
         sudo vim \
+        iproute2 \
         && \
     mkdir -p /var/run/sshd && \
     sed -i "s/UsePrivilegeSeparation.*/UsePrivilegeSeparation no/g" /etc/ssh/sshd_config && \
