@@ -49,7 +49,7 @@ func (l *Local) Execute(ctx context.Context, cmd string, sudo bool, timeout ...t
 	}
 
 	// set a basic PATH in case it's empty on login
-	cmd = fmt.Sprintf("PATH=$PATH:/usr/bin:/usr/sbin %s", cmd)
+	cmd = fmt.Sprintf("PATH=$PATH:/bin:/sbin:/usr/bin:/usr/sbin %s", cmd)
 
 	if l.Locale != "" {
 		cmd = fmt.Sprintf("export LANG=%s; %s", l.Locale, cmd)
