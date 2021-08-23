@@ -192,7 +192,7 @@ func (m *Manager) RestartCluster(name string, gOpt operator.Options, skipConfirm
 
 	if !skipConfirm {
 		if err := tui.PromptForConfirmOrAbortError(
-			fmt.Sprintf("Will restart the cluster %s with nodes: %s roles: %s.\nDo you want to continue? [y/N]:",
+			fmt.Sprintf("Will restart the cluster %s with nodes: %s roles: %s.\nCluster will be unavailable\nDo you want to continue? [y/N]:",
 				color.HiYellowString(name),
 				color.HiYellowString(strings.Join(gOpt.Nodes, ",")),
 				color.HiYellowString(strings.Join(gOpt.Roles, ",")),
