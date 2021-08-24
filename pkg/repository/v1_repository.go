@@ -875,21 +875,6 @@ func (r *V1Repository) LatestStableVersion(id string, withYanked bool) (utils.Ve
 // Support you have install the component, need to get entry from local manifest.
 // Load the manifest locally only to get then Entry, do not force do something need access mirror.
 func (r *V1Repository) BinaryPath(installPath string, componentID string, ver string) (string, error) {
-	component, err := r.updateComponentManifest(componentID, false)
-	if err != nil {
-		return "", err
-	}
-
-	// Always use the newest nightly entry.
-	// Because the one the user installed may be scraped.
-	if utils.Version(ver).IsNightly() {
-		if !component.HasNightly(r.PlatformString()) {
-			return "", errors.Errorf("the component `%s` on platform %s does not have a nightly version", componentID, r.PlatformString())
-		}
-
-		ver = component.Nightly
-	}
-
 	// We need yanked version because we may have installed that version before it was yanked
 	versionItem, err := r.ComponentVersion(componentID, ver, true)
 	if err != nil {
