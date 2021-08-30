@@ -152,8 +152,10 @@ func checkOSInfo(opt *CheckOptions, osInfo *sysinfo.OS) *CheckResult {
 	switch osInfo.Vendor {
 	case "centos", "redhat", "rhel":
 		// check version
-		if ver, _ := strconv.Atoi(osInfo.Version); ver < 7 {
-			result.Err = fmt.Errorf("%s %s not supported, use version 7 or higher",
+		// CentOS 8 is known to be not working, and we don't have plan to support it
+		// as of now, we may add support for RHEL 8 based systems in the future.
+		if ver, _ := strconv.ParseFloat(osInfo.Version, 64); ver < 7 || ver >= 8 {
+			result.Err = fmt.Errorf("%s %s not supported, use version 7 please",
 				osInfo.Name, osInfo.Release)
 			return result
 		}
@@ -162,7 +164,7 @@ func checkOSInfo(opt *CheckOptions, osInfo *sysinfo.OS) *CheckResult {
 		msg := "debian support is not fully tested, be careful"
 		result.Err = fmt.Errorf("%s (%s)", result.Msg, msg)
 		result.Warn = true
-		if ver, _ := strconv.Atoi(osInfo.Version); ver < 9 {
+		if ver, _ := strconv.ParseFloat(osInfo.Version, 64); ver < 9 {
 			result.Err = fmt.Errorf("%s %s not supported, use version 9 or higher (%s)",
 				osInfo.Name, osInfo.Release, msg)
 			result.Warn = false

@@ -708,17 +708,15 @@ func (r *V1Repository) UpdateComponentManifests() error {
 	for name := range index.Components {
 		name := name
 		g.Go(func() error {
-			_, err = r.updateComponentManifest(name, false)
+			_, err := r.updateComponentManifest(name, false)
+			if err != nil && errors.Cause(err) == ErrUnknownComponent {
+				err = nil
+			}
 			return err
 		})
 	}
-
 	err = g.Wait()
-	if err != nil && errors.Cause(err) != ErrUnknownComponent {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 // FetchComponentManifest fetch the component manifest.
