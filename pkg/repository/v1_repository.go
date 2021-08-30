@@ -758,6 +758,46 @@ func (r *V1Repository) ComponentVersion(id, ver string, includeYanked bool) (*v1
 	return vi, nil
 }
 
+// LocalComponentVersion returns version item of a component from local manifest file
+func (r *V1Repository) LocalComponentVersion(id, ver string, includeYanked bool) (*v1manifest.VersionItem, error) {
+	index := v1manifest.Index{}
+	_, exists, err := r.Local().LoadManifest(&index)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.Errorf("unreachable: index.json not found in manifests directory")
+	}
+
+	components := index.ComponentList()
+	comp := components[id]
+	filename := v1manifest.ComponentManifestFilename(id)
+	manifest, err := r.Local().LoadComponentManifest(&comp, filename)
+	if err != nil {
+		return nil, err
+	}
+
+	if ver == utils.NightlyVersionAlias {
+		if !manifest.HasNightly(r.PlatformString()) {
+			return nil, errors.Annotatef(ErrUnknownVersion, "component %s does not have nightly on %s", id, r.PlatformString())
+		}
+
+		ver = manifest.Nightly
+	}
+	if ver == "" {
+		v, _, err := r.LatestStableVersion(id, includeYanked)
+		if err != nil {
+			return nil, err
+		}
+		ver = v.String()
+	}
+	vi := manifest.VersionItem(r.PlatformString(), ver, includeYanked)
+	if vi == nil {
+		return nil, errors.Annotatef(ErrUnknownVersion, "version %s on %s for component %s not found", ver, r.PlatformString(), id)
+	}
+	return vi, nil
+}
+
 // ResolveComponentVersionWithPlatform resolves the latest version of a component that satisfies the constraint
 func (r *V1Repository) ResolveComponentVersionWithPlatform(id, constraint, platform string) (utils.Version, error) {
 	manifest, err := r.FetchComponentManifest(id, false)
@@ -876,7 +916,7 @@ func (r *V1Repository) LatestStableVersion(id string, withYanked bool) (utils.Ve
 // Load the manifest locally only to get then Entry, do not force do something need access mirror.
 func (r *V1Repository) BinaryPath(installPath string, componentID string, ver string) (string, error) {
 	// We need yanked version because we may have installed that version before it was yanked
-	versionItem, err := r.ComponentVersion(componentID, ver, true)
+	versionItem, err := r.LocalComponentVersion(componentID, ver, true)
 	if err != nil {
 		return "", err
 	}
