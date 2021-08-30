@@ -132,7 +132,7 @@ func GetAuditList(dir string) ([]Item, error) {
 	}
 
 	sort.Slice(auditList, func(i, j int) bool {
-		return auditList[i].Time > auditList[j].Time
+		return auditList[i].Time < auditList[j].Time
 	})
 
 	return auditList, nil
