@@ -104,8 +104,8 @@ func RunComponent(env *environment.Environment, tag, spec, binPath string, args 
 			selectVer, _ := env.SelectInstalledVersion(component, version)
 
 			if semver.Compare(selectVer.String(), latestV.String()) < 0 {
-				updateInfo = fmt.Sprint(color.YellowString(`Found %[1]s newer version:
-
+				updateInfo = fmt.Sprint(color.YellowString(`
+Found %[1]s newer version:
 	The latest version:         %[2]s
 	Local installed version:    %[3]s
 	Update current component:   tiup update %[1]s
@@ -130,7 +130,7 @@ func RunComponent(env *environment.Environment, tag, spec, binPath string, args 
 		return nil
 
 	case err := <-ch:
-		defer fmt.Println(<-updateC)
+		defer fmt.Print(<-updateC)
 		return errors.Annotatef(err, "run `%s` (wd:%s) failed", p.Exec, p.Dir)
 	}
 }
