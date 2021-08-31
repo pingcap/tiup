@@ -90,7 +90,7 @@ func RunComponent(env *environment.Environment, tag, spec, binPath string, args 
 
 	// timeout for check update
 	go func() {
-		time.Sleep(time.Second)
+		time.Sleep(2 * time.Second)
 		updateC <- ""
 	}()
 
