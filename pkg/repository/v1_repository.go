@@ -764,7 +764,15 @@ func (r *V1Repository) LocalComponentVersion(id, ver string, includeYanked bool)
 		return nil, err
 	}
 	if !exists {
-		return nil, errors.Errorf("unreachable: index.json not found in manifests directory")
+		err = r.ensureManifests()
+		if err != nil {
+			return nil, err
+		}
+		_, _, err := r.Local().LoadManifest(&index)
+
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	components := index.ComponentList()
