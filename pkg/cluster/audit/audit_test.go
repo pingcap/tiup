@@ -118,11 +118,11 @@ func (s *testAuditSuite) TestShowAuditLog(c *C) {
 	// tabby table size is based on column width, while time.RFC3339 maybe print out timezone like +08:00 or Z(UTC)
 	// skip the first two lines
 	list := strings.Join(strings.Split(readFakeStdout(f), "\n")[2:], "\n")
-	c.Assert(list, Equals, fmt.Sprintf(`ftmpqzww84Q  %s  test with nanosecond
-4F7ZTL       %s  test with second
+	c.Assert(list, Equals, fmt.Sprintf(`4F7ZTL       %s  test with second
+ftmpqzww84Q  %s  test with nanosecond
 `,
-		time.Unix(nanoSecond/1e9, 0).Format(time.RFC3339),
 		time.Unix(second, 0).Format(time.RFC3339),
+		time.Unix(nanoSecond/1e9, 0).Format(time.RFC3339),
 	))
 	f.Close()
 
