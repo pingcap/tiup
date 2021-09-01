@@ -67,6 +67,7 @@ func RunComponent(env *environment.Environment, tag, spec, binPath string, args 
 	var sig syscall.Signal
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	updateC := make(chan string)
 
 	defer func() {
 		for err := range ch {
@@ -87,6 +88,35 @@ func RunComponent(env *environment.Environment, tag, spec, binPath string, args 
 		ch <- p.Cmd.Wait()
 	}()
 
+	// timeout for check update
+	go func() {
+		time.Sleep(2 * time.Second)
+		updateC <- ""
+	}()
+
+	go func() {
+		var updateInfo string
+		if version.IsEmpty() {
+			latestV, _, err := env.V1Repository().LatestStableVersion(p.Component, false)
+			if err != nil {
+				return
+			}
+			selectVer, _ := env.SelectInstalledVersion(component, version)
+
+			if semver.Compare(selectVer.String(), latestV.String()) < 0 {
+				updateInfo = fmt.Sprint(color.YellowString(`
+Found %[1]s newer version:
+	The latest version:         %[2]s
+	Local installed version:    %[3]s
+	Update current component:   tiup update %[1]s
+	Update all components:      tiup update --all
+`,
+					p.Component, latestV.String(), selectVer.String()))
+			}
+		}
+		updateC <- updateInfo
+	}()
+
 	select {
 	case s := <-sc:
 		sig = s.(syscall.Signal)
@@ -100,6 +130,7 @@ func RunComponent(env *environment.Environment, tag, spec, binPath string, args 
 		return nil
 
 	case err := <-ch:
+		defer fmt.Print(<-updateC)
 		return errors.Annotatef(err, "run `%s` (wd:%s) failed", p.Exec, p.Dir)
 	}
 }
@@ -149,23 +180,6 @@ func PrepareCommand(p *PrepareCommandParams) (*exec.Cmd, error) {
 	selectVer, err := env.DownloadComponentIfMissing(p.Component, p.Version)
 	if err != nil {
 		return nil, err
-	}
-
-	if p.Version.IsEmpty() && p.CheckUpdate {
-		latestV, _, err := env.V1Repository().LatestStableVersion(p.Component, false)
-		if err != nil {
-			return nil, err
-		}
-		if semver.Compare(selectVer.String(), latestV.String()) < 0 {
-			fmt.Fprintln(os.Stderr, color.YellowString(`Found %[1]s newer version:
-
-    The latest version:         %[2]s
-    Local installed version:    %[3]s
-    Update current component:   tiup update %[1]s
-    Update all components:      tiup update --all
-`,
-				p.Component, latestV.String(), selectVer.String()))
-		}
 	}
 
 	// playground && cluster version must greater than v1.0.0
