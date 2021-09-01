@@ -1,5 +1,17 @@
 TiUP Changelog
 
+## [1.5.6] 2021-09-01
+
+### Fixes
+
+- Fix OS version check rules for `tiup-cluster check` ([#1535](https://github.com/pingcap/tiup/pull/1535), [@AstroProfundis](https://github.com/AstroProfundis))
+- Fix component upgrade order for `tiup-cluster` to make sure TiCDC nodes work correctly ([#1542](https://github.com/pingcap/tiup/pull/1542), [@overvenus](https://github.com/overvenus))
+
+### Improvements
+
+- Adjust warning message of `tiup-cluster restart` to make users clear that the cluster will be unavailable during the process ([#1523](https://github.com/pingcap/tiup/pull/1523), [@glkappe](https://github.com/glkappe))
+- Reverse the order of audit log listing to show latest records at the buttom ([#1538](https://github.com/pingcap/tiup/pull/1538), [@AstroProfundis](https://github.com/AstroProfundis))
+
 ## [1.5.5] 2021-08-19
 
 ### Fixes
