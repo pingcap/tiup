@@ -43,7 +43,7 @@ require (
 	github.com/pingcap/failpoint v0.0.0-20210806123219-9af598712e22
 	github.com/pingcap/fn v0.0.0-20200306044125-d5540d389059
 	github.com/pingcap/kvproto v0.0.0-20210830034942-555d7b3265ae
-	github.com/pingcap/tidb-insight/collector v0.0.0-20210901043639-8691260bf3b5
+	github.com/pingcap/tidb-insight/collector v0.0.0-20210901075740-c60ea2cc41e4
 	github.com/prometheus/client_model v0.2.0
 	github.com/prometheus/common v0.30.0
 	github.com/prometheus/prom2json v1.3.0

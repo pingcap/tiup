@@ -428,8 +428,8 @@ github.com/pingcap/kvproto v0.0.0-20210830034942-555d7b3265ae h1:T6MfH69aJMRPUOS
 github.com/pingcap/kvproto v0.0.0-20210830034942-555d7b3265ae/go.mod h1:IOdRDPLyda8GX2hE/jO7gqaCV/PNFh8BZQCQZXfIOqI=
 github.com/pingcap/log v0.0.0-20191012051959-b742a5d432e9 h1:AJD9pZYm72vMgPcQDww9rkZ1DnWfl0pXV3BOWlkYIjA=
 github.com/pingcap/log v0.0.0-20191012051959-b742a5d432e9/go.mod h1:4rbK1p9ILyIfb6hU7OG2CiWSqMXnp3JMbiaVJ6mvoY8=
-github.com/pingcap/tidb-insight/collector v0.0.0-20210901043639-8691260bf3b5 h1:L5YvkQP1t04hzicGn+QeEaGiYRi5B8CL8ugDBCWcF7k=
-github.com/pingcap/tidb-insight/collector v0.0.0-20210901043639-8691260bf3b5/go.mod h1:dV38N1mISWxCX7KJpn0gXGJoPaMhlx6+VCdfkUMNotg=
+github.com/pingcap/tidb-insight/collector v0.0.0-20210901075740-c60ea2cc41e4 h1:DYcr/+vxxjUi/4GP4IKtiKmhywZE4/27xEWecIgvblo=
+github.com/pingcap/tidb-insight/collector v0.0.0-20210901075740-c60ea2cc41e4/go.mod h1:dV38N1mISWxCX7KJpn0gXGJoPaMhlx6+VCdfkUMNotg=
 github.com/pkg/errors v0.8.0/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=

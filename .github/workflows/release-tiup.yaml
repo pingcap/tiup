@@ -89,8 +89,8 @@ jobs:
           fi
           echo ::set-output name=REL_VER::$REL_VER
 
-          BUILD_FLAGS='-trimpath -buildmode=pie' make build && \
-          BUILD_FLAGS='-trimpath -buildmode=pie' make ctl && \
+          BUILD_FLAGS='-trimpath' make build && \
+          BUILD_FLAGS='-trimpath' make ctl && \
           echo "Build success."
 
           checksum_file=checksum.${{ matrix.os }}-${{ matrix.arch }}.txt
