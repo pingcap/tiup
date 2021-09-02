@@ -245,18 +245,18 @@ Examples:
 				// using a self build binary) and version number is not set, we assume
 				// it is a developer and use the latest release version by default.
 				// The platform string used to resolve the full version number is set
-				// to "linux-amd64" as this is the platform that every released version
+				// to "linux/amd64" as this is the platform that every released version
 				// is available.
 				// For platforms lacks of support for some versions, e.g., darwin-amd64,
 				// specifically set a valid version for it, or use custom binpath for
 				// all components used.
 				// If none of the binpath arguments is set, use the platform of the
 				// playground binary itself.
-				if options.TiDB.BinPath != "" || options.TiKV.BinPath != "" ||
+				if (options.TiDB.BinPath != "" || options.TiKV.BinPath != "" ||
 					options.PD.BinPath != "" || options.TiFlash.BinPath != "" ||
 					options.TiCDC.BinPath != "" || options.Pump.BinPath != "" ||
-					options.Drainer.BinPath != "" && options.Version == "" {
-					version, err = env.V1Repository().ResolveComponentVersionWithPlatform(spec.ComponentTiDB, options.Version, "linux-amd64")
+					options.Drainer.BinPath != "") && options.Version == "" {
+					version, err = env.V1Repository().ResolveComponentVersionWithPlatform(spec.ComponentTiDB, options.Version, "linux/amd64")
 				} else {
 					version, err = env.V1Repository().ResolveComponentVersion(spec.ComponentTiDB, options.Version)
 				}

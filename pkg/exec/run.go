@@ -176,24 +176,9 @@ type PrepareCommandParams struct {
 // PrepareCommand will download necessary component and returns a *exec.Cmd
 func PrepareCommand(p *PrepareCommandParams) (*exec.Cmd, error) {
 	env := p.Env
-
-	selectVer, err := env.DownloadComponentIfMissing(p.Component, p.Version)
-	if err != nil {
-		return nil, err
-	}
-
-	// playground && cluster version must greater than v1.0.0
-	if (p.Component == "playground" || p.Component == "cluster") && semver.Compare(selectVer.String(), "v1.0.0") < 0 {
-		return nil, errors.Errorf("incompatible component version, please use `tiup update %s` to upgrade to the latest version", p.Component)
-	}
-
 	profile := env.Profile()
-	installPath, err := profile.ComponentInstalledPath(p.Component, selectVer)
-	if err != nil {
-		return nil, err
-	}
-
 	binPath := p.BinPath
+
 	if binPath != "" {
 		tmp, err := filepath.Abs(binPath)
 		if err != nil {
@@ -201,11 +186,22 @@ func PrepareCommand(p *PrepareCommandParams) (*exec.Cmd, error) {
 		}
 		binPath = tmp
 	} else {
+		selectVer, err := env.DownloadComponentIfMissing(p.Component, p.Version)
+		if err != nil {
+			return nil, err
+		}
+
+		// playground && cluster version must greater than v1.0.0
+		if (p.Component == "playground" || p.Component == "cluster") && semver.Compare(selectVer.String(), "v1.0.0") < 0 {
+			return nil, errors.Errorf("incompatible component version, please use `tiup update %s` to upgrade to the latest version", p.Component)
+		}
+
 		binPath, err = env.BinaryPath(p.Component, selectVer)
 		if err != nil {
 			return nil, err
 		}
 	}
+	installPath := filepath.Dir(binPath)
 
 	if err := os.MkdirAll(p.InstanceDir, 0755); err != nil {
 		return nil, err
