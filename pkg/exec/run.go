@@ -201,7 +201,7 @@ func PrepareCommand(p *PrepareCommandParams) (*exec.Cmd, error) {
 			return nil, err
 		}
 	}
-	installPath, _ := filepath.Split(binPath)
+	installPath := filepath.Dir(binPath)
 
 	if err := os.MkdirAll(p.InstanceDir, 0755); err != nil {
 		return nil, err
