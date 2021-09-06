@@ -488,7 +488,12 @@ func DestroyClusterTombstone(
 			instCount[instance.GetHost()]--
 			err := StopAndDestroyInstance(ctx, cluster, instance, options, instCount[instance.GetHost()] == 0)
 			if err != nil {
-				return err
+				if options.Force {
+					log.Warnf("failed to stop and destroy instance %s (%s), ignored as --force is set, you may need to manually cleanup the files",
+						instance, err)
+				} else {
+					return err
+				}
 			}
 		}
 		return nil
