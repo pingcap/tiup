@@ -91,9 +91,11 @@ func (lr *listResult) print() {
 }
 
 func showComponentList(env *environment.Environment, opt listOptions) (*listResult, error) {
-	err := env.V1Repository().UpdateComponentManifests()
-	if err != nil {
-		tui.ColorWarningMsg.Fprint(os.Stderr, "Warn: Update component manifest failed, err_msg=[", err.Error(), "]\n")
+	if !opt.installedOnly {
+		err := env.V1Repository().UpdateComponentManifests()
+		if err != nil {
+			tui.ColorWarningMsg.Fprint(os.Stderr, "Warn: Update component manifest failed, err_msg=[", err.Error(), "]\n")
+		}
 	}
 
 	installed, err := env.Profile().InstalledComponents()
@@ -183,7 +185,11 @@ func showComponentList(env *environment.Environment, opt listOptions) (*listResu
 func showComponentVersions(env *environment.Environment, component string, opt listOptions) (*listResult, error) {
 	var comp *v1manifest.Component
 	var err error
-	comp, err = env.V1Repository().FetchComponentManifest(component, false)
+	if opt.installedOnly {
+		comp, err = env.V1Repository().LocalComponentManifest(component, false)
+	} else {
+		comp, err = env.V1Repository().FetchComponentManifest(component, false)
+	}
 	if err != nil {
 		return nil, errors.Annotate(err, "failed to fetch component")
 	}

@@ -737,15 +737,7 @@ func (r *V1Repository) LocalComponentManifest(id string, withYanked bool) (com *
 		return nil, err
 	}
 	if !exists {
-		err = r.ensureManifests()
-		if err != nil {
-			return nil, err
-		}
-		_, _, err := r.Local().LoadManifest(&index)
-
-		if err != nil {
-			return nil, err
-		}
+		return r.FetchComponentManifest(id, withYanked)
 	}
 
 	components := index.ComponentList()
