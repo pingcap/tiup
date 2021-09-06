@@ -34,5 +34,7 @@ func newPruneCmd() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().BoolVar(&gOpt.Force, "force", false, "Ignore errors when deleting the instance with data from the cluster")
+
 	return cmd
 }
