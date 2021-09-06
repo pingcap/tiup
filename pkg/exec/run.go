@@ -59,7 +59,7 @@ func RunComponent(env *environment.Environment, tag, spec, binPath string, args 
 		}
 	}
 	if err != nil {
-		fmt.Printf("Failed to start component `%s`\n", component)
+		fmt.Fprintf(os.Stderr, "Failed to start component `%s`\n", component)
 		return err
 	}
 
@@ -77,7 +77,7 @@ func RunComponent(env *environment.Environment, tag, spec, binPath string, args 
 					(sig == syscall.SIGINT && strings.Contains(errs, "exit status 1")) {
 					continue
 				}
-				fmt.Printf("Component `%s` exit with error: %s\n", component, errs)
+				fmt.Fprintf(os.Stderr, "Component `%s` exit with error: %s\n", component, errs)
 				return
 			}
 		}
@@ -120,7 +120,7 @@ Found %[1]s newer version:
 	select {
 	case s := <-sc:
 		sig = s.(syscall.Signal)
-		fmt.Printf("Got signal %v (Component: %v ; PID: %v)\n", s, component, p.Pid)
+		fmt.Fprintf(os.Stderr, "Got signal %v (Component: %v ; PID: %v)\n", s, component, p.Pid)
 		if component == "tidb" {
 			return syscall.Kill(p.Pid, syscall.SIGKILL)
 		}
@@ -130,7 +130,7 @@ Found %[1]s newer version:
 		return nil
 
 	case err := <-ch:
-		defer fmt.Print(<-updateC)
+		defer fmt.Fprint(os.Stderr, <-updateC)
 		return errors.Annotatef(err, "run `%s` (wd:%s) failed", p.Exec, p.Dir)
 	}
 }
@@ -140,7 +140,7 @@ func cleanDataDir(rm bool, dir string) {
 		return
 	}
 	if err := os.RemoveAll(dir); err != nil {
-		fmt.Println("clean data directory failed: ", err.Error())
+		fmt.Fprintln(os.Stderr, "clean data directory failed: ", err.Error())
 	}
 }
 
