@@ -729,6 +729,23 @@ func (r *V1Repository) FetchComponentManifest(id string, withYanked bool) (com *
 	return r.updateComponentManifest(id, withYanked)
 }
 
+// LocalComponentManifest load the component manifest from local.
+func (r *V1Repository) LocalComponentManifest(id string, withYanked bool) (com *v1manifest.Component, err error) {
+	index := v1manifest.Index{}
+	_, exists, err := r.Local().LoadManifest(&index)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return r.FetchComponentManifest(id, withYanked)
+	}
+
+	components := index.ComponentList()
+	comp := components[id]
+	filename := v1manifest.ComponentManifestFilename(id)
+	return r.Local().LoadComponentManifest(&comp, filename)
+}
+
 // ComponentVersion returns version item of a component
 func (r *V1Repository) ComponentVersion(id, ver string, includeYanked bool) (*v1manifest.VersionItem, error) {
 	manifest, err := r.FetchComponentManifest(id, includeYanked)
@@ -758,27 +775,7 @@ func (r *V1Repository) ComponentVersion(id, ver string, includeYanked bool) (*v1
 
 // LocalComponentVersion returns version item of a component from local manifest file
 func (r *V1Repository) LocalComponentVersion(id, ver string, includeYanked bool) (*v1manifest.VersionItem, error) {
-	index := v1manifest.Index{}
-	_, exists, err := r.Local().LoadManifest(&index)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		err = r.ensureManifests()
-		if err != nil {
-			return nil, err
-		}
-		_, _, err := r.Local().LoadManifest(&index)
-
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	components := index.ComponentList()
-	comp := components[id]
-	filename := v1manifest.ComponentManifestFilename(id)
-	manifest, err := r.Local().LoadComponentManifest(&comp, filename)
+	manifest, err := r.LocalComponentManifest(id, includeYanked)
 	if err != nil {
 		return nil, err
 	}
@@ -806,7 +803,7 @@ func (r *V1Repository) LocalComponentVersion(id, ver string, includeYanked bool)
 
 // ResolveComponentVersionWithPlatform resolves the latest version of a component that satisfies the constraint
 func (r *V1Repository) ResolveComponentVersionWithPlatform(id, constraint, platform string) (utils.Version, error) {
-	manifest, err := r.FetchComponentManifest(id, false)
+	manifest, err := r.LocalComponentManifest(id, false)
 	if err != nil {
 		return "", err
 	}
