@@ -219,7 +219,7 @@ func (r *V1Repository) updateLocalSnapshot() (*v1manifest.Snapshot, error) {
 	}(time.Now())
 
 	timestampChanged, tsManifest, err := r.fetchTimestamp()
-	if v1manifest.IsSignatureError(errors.Cause(err)) {
+	if v1manifest.IsSignatureError(errors.Cause(err)) || v1manifest.IsExpirationError(errors.Cause(err)) {
 		// The signature is wrong, update our signatures from the root manifest and try again.
 		err = r.updateLocalRoot()
 		if err != nil {
