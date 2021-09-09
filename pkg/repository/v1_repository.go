@@ -203,25 +203,10 @@ func (r *V1Repository) ensureManifests() error {
 		log.Verbose("Ensure manifests finished in %s", time.Since(start))
 	}(time.Now())
 
-	// Update root before anything else.
-	if err := r.updateLocalRoot(); err != nil {
-		return err
-	}
-
 	// Update snapshot.
 	snapshot, err := r.updateLocalSnapshot()
 	if err != nil {
 		return err
-	}
-
-	// Check that the version of root we have is the same as declared in the snapshot.
-	newRoot, err := r.loadRoot()
-	if err != nil {
-		return err
-	}
-	snapRootVersion := snapshot.Meta[v1manifest.ManifestURLRoot].Version
-	if newRoot.Version != snapRootVersion {
-		return fmt.Errorf("root version mismatch. Expected: %v, found: %v", snapRootVersion, newRoot.Version)
 	}
 
 	return r.updateLocalIndex(snapshot)
@@ -234,7 +219,7 @@ func (r *V1Repository) updateLocalSnapshot() (*v1manifest.Snapshot, error) {
 	}(time.Now())
 
 	timestampChanged, tsManifest, err := r.fetchTimestamp()
-	if v1manifest.IsSignatureError(errors.Cause(err)) {
+	if v1manifest.IsSignatureError(errors.Cause(err)) || v1manifest.IsExpirationError(errors.Cause(err)) {
 		// The signature is wrong, update our signatures from the root manifest and try again.
 		err = r.updateLocalRoot()
 		if err != nil {
@@ -281,6 +266,22 @@ func (r *V1Repository) updateLocalSnapshot() (*v1manifest.Snapshot, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		// Update root if needed and restart the update process
+		var oldRoot v1manifest.Root
+		_, _, err = r.local.LoadManifest(&oldRoot)
+		if err != nil {
+			return nil, err
+		}
+		newRootVersion := snapshot.Meta[v1manifest.ManifestURLRoot].Version
+
+		if newRootVersion > oldRoot.Version {
+			err := r.updateLocalRoot()
+			if err != nil {
+				return nil, err
+			}
+			return r.updateLocalSnapshot()
+		}
 	}
 
 	if timestampChanged {
@@ -303,11 +304,6 @@ func FnameWithVersion(fname string, version uint) string {
 }
 
 func (r *V1Repository) updateLocalRoot() error {
-	// There is no need to update root.json if other manifest not changed
-	if r.timestamp != nil {
-		return nil
-	}
-
 	defer func(start time.Time) {
 		log.Verbose("Update local root finished in %s", time.Since(start))
 	}(time.Now())
