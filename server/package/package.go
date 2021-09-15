@@ -19,7 +19,6 @@ import (
 	"os/exec"
 	"runtime"
 
-	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/spf13/cobra"
 )
 
@@ -50,9 +49,6 @@ func execute() error {
 		Short:        "Package a tiup component and generate package directory",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := chwd(); err != nil {
-				return err
-			}
 			if len(args) < 1 {
 				return cmd.Help()
 			}
@@ -102,12 +98,4 @@ func packTarget(targets []string, options packageOptions) error {
 		return fmt.Errorf("package target: %s", err.Error())
 	}
 	return nil
-}
-
-func chwd() error {
-	pwd, found := os.LookupEnv(localdata.EnvNameWorkDir)
-	if !found {
-		return fmt.Errorf("cannot get tiup work directory")
-	}
-	return os.Chdir(pwd)
 }

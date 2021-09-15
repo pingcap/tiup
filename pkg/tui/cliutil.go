@@ -47,7 +47,8 @@ func RegisterArg0(s string) {
 }
 
 func args() []string {
-	if wd := os.Getenv(localdata.EnvNameWorkDir); wd != "" {
+	// if running in TiUP component mode
+	if wd := os.Getenv(localdata.EnvNameTiUPVersion); wd != "" {
 		return append([]string{arg0}, os.Args[1:]...)
 	}
 	return os.Args
