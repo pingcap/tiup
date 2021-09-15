@@ -28,11 +28,9 @@ import (
 // 1. tiup playground
 // 2. tiup playground display
 func targetTag() (port int, err error) {
-	myTag := os.Getenv(localdata.EnvTag)
 	dir := os.Getenv(localdata.EnvNameInstanceDataDir)
-	dir = filepath.Dir(dir)
 
-	port, err = loadPort(filepath.Join(dir, myTag))
+	port, err = loadPort(dir)
 	if err == nil {
 		return port, nil
 	}

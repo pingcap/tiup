@@ -75,9 +75,6 @@ const (
 	// EnvNameTelemetrySecret represents the environment name of tiup telemetry secret
 	EnvNameTelemetrySecret = "TIUP_TELEMETRY_SECRET"
 
-	// EnvTag is the tag of the running component
-	EnvTag = "TIUP_TAG"
-
 	// EnvNameSSHPassPrompt is the variable name by which user specific the password prompt for sshpass
 	EnvNameSSHPassPrompt = "TIUP_SSHPASS_PROMPT"
 

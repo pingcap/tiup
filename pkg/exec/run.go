@@ -227,7 +227,6 @@ func PrepareCommand(p *PrepareCommandParams) (*exec.Cmd, error) {
 		fmt.Sprintf("%s=%s", localdata.EnvNameTelemetryStatus, teleMeta.Status),
 		fmt.Sprintf("%s=%s", localdata.EnvNameTelemetryUUID, teleMeta.UUID),
 		fmt.Sprintf("%s=%s", localdata.EnvNameTelemetrySecret, teleMeta.Secret),
-		fmt.Sprintf("%s=%s", localdata.EnvTag, p.Tag),
 	}
 	envs = append(envs, os.Environ()...)
 	envs = append(envs, p.EnvVariables...)
