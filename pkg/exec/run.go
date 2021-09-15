@@ -212,11 +212,6 @@ func PrepareCommand(p *PrepareCommandParams) (*exec.Cmd, error) {
 		return nil, err
 	}
 
-	tiupWd, err := os.Getwd()
-	if err != nil {
-		return nil, err
-	}
-
 	teleMeta, _, err := telemetry.GetMeta(env)
 	if err != nil {
 		return nil, err
@@ -224,7 +219,6 @@ func PrepareCommand(p *PrepareCommandParams) (*exec.Cmd, error) {
 
 	envs := []string{
 		fmt.Sprintf("%s=%s", localdata.EnvNameHome, profile.Root()),
-		fmt.Sprintf("%s=%s", localdata.EnvNameWorkDir, tiupWd),
 		fmt.Sprintf("%s=%s", localdata.EnvNameUserInputVersion, p.Version.String()),
 		fmt.Sprintf("%s=%s", localdata.EnvNameTiUPVersion, version.NewTiUPVersion().SemVer()),
 		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, p.InstanceDir),

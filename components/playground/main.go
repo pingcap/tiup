@@ -546,7 +546,10 @@ func getAbsolutePath(path string) (string, error) {
 	}
 
 	if !filepath.IsAbs(path) && !strings.HasPrefix(path, "~/") {
-		wd := os.Getenv(localdata.EnvNameWorkDir)
+		wd, err := os.Getwd()
+		if err != nil {
+			return "", err
+		}
 		if wd == "" {
 			return "", errors.New("playground running at non-tiup mode")
 		}

@@ -54,9 +54,6 @@ const (
 	// EnvNameComponentInstallDir represents the install directory of specific component
 	EnvNameComponentInstallDir = "TIUP_COMPONENT_INSTALL_DIR"
 
-	// EnvNameWorkDir represents the work directory of TiUP where user type the command `tiup xxx`
-	EnvNameWorkDir = "TIUP_WORK_DIR"
-
 	// EnvNameUserInputVersion represents the version user specified when running a component by `tiup component:version`
 	EnvNameUserInputVersion = "TIUP_USER_INPUT_VERSION"
 

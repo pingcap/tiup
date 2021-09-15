@@ -218,13 +218,6 @@ func Execute() {
 	zap.L().Info("Execute command", zap.String("command", tui.OsArgs()))
 	zap.L().Debug("Environment variables", zap.Strings("env", os.Environ()))
 
-	// Switch current work directory if running in TiUP component mode
-	if wd := os.Getenv(localdata.EnvNameWorkDir); wd != "" {
-		if err := os.Chdir(wd); err != nil {
-			zap.L().Warn("Failed to switch work directory", zap.String("working_dir", wd), zap.Error(err))
-		}
-	}
-
 	code := 0
 	err := rootCmd.Execute()
 	if err != nil {
