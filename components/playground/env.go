@@ -36,7 +36,7 @@ func targetTag() (port int, err error) {
 	}
 	err = nil
 
-	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(filepath.Dir(dir), func(path string, info os.FileInfo, err error) error {
 		if port != 0 {
 			return filepath.SkipDir
 		}
