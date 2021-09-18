@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"strings"
 
 	"github.com/pingcap/go-tpc/tpch"
@@ -11,7 +13,11 @@ import (
 var tpchConfig tpch.Config
 
 func executeTpch(action string, _ []string) {
-	openDB()
+	if err := openDB(); err != nil {
+		fmt.Println(err)
+		fmt.Println("Cannot open database, pleae check it (ip/port/username/password)")
+		os.Exit(1)
+	}
 	defer closeDB()
 
 	tpchConfig.DBName = dbName

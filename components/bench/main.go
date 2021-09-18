@@ -51,7 +51,7 @@ func closeDB() {
 	globalDB = nil
 }
 
-func openDB() {
+func openDB() error {
 	// TODO: support other drivers
 	var tmpDB *sql.DB
 	ds := fmt.Sprintf("%s:%s@tcp(%s:%d)/", user, password, host, port)
@@ -59,7 +59,7 @@ func openDB() {
 	var err error
 	globalDB, err = sql.Open(mysqlDriver, dsn)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	if err := globalDB.Ping(); err != nil {
 		errString := err.Error()
@@ -67,14 +67,16 @@ func openDB() {
 			tmpDB, _ = sql.Open(mysqlDriver, ds)
 			defer tmpDB.Close()
 			if _, err := tmpDB.Exec(createDBDDL + dbName); err != nil {
-				panic(fmt.Errorf("failed to create database, err %v", err))
+				return fmt.Errorf("failed to create database, err %v", err)
 			}
 		} else {
 			globalDB = nil
+			return err
 		}
 	} else {
 		globalDB.SetMaxIdleConns(threads + 1)
 	}
+	return nil
 }
 
 func main() {
