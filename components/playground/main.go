@@ -71,6 +71,8 @@ var (
 	teleReport       *telemetry.Report
 	playgroundReport *telemetry.PlaygroundReport
 	options          = &BootOptions{}
+	tag              string
+	dataDir          string
 )
 
 const (
@@ -154,6 +156,20 @@ Examples:
 		Args: func(cmd *cobra.Command, args []string) error {
 			return nil
 		},
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			dataDir = os.Getenv(localdata.EnvNameInstanceDataDir)
+			if dataDir == "" {
+				tag = base62Tag()
+				dataDir = filepath.Join(os.Getenv(localdata.EnvNameHome), localdata.DataParentDir, tag)
+				// TBD: mkdir, rmdir
+				if dataDir == "" {
+					return errors.Errorf("cannot read environment variable %s nor %s", localdata.EnvNameInstanceDataDir, localdata.EnvNameHome)
+				}
+			}
+			instanceName := dataDir[strings.LastIndex(dataDir, "/")+1:]
+			fmt.Printf("\033]0;TiUP Playground: %s\a", instanceName)
+			return nil
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			teleReport = new(telemetry.Report)
 			playgroundReport = new(telemetry.PlaygroundReport)
@@ -176,11 +192,6 @@ Examples:
 
 			if err := populateOpt(cmd.Flags()); err != nil {
 				return err
-			}
-
-			dataDir := os.Getenv(localdata.EnvNameInstanceDataDir)
-			if dataDir == "" {
-				return errors.Errorf("cannot read environment variable %s", localdata.EnvNameInstanceDataDir)
 			}
 
 			port, err := utils.GetFreePort("0.0.0.0", 9527)
@@ -298,6 +309,7 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 	defaultOptions := &BootOptions{}
 
 	rootCmd.Flags().String(mode, defaultMode, "TiUP playground mode: 'tidb', 'tikv-slim'")
+	rootCmd.Flags().StringVarP(&tag, "tag", "T", "", "Specify a tag for playground")
 	rootCmd.Flags().Bool(withoutMonitor, false, "Don't start prometheus and grafana component")
 	rootCmd.Flags().Bool(withMonitor, true, "Start prometheus and grafana component")
 	_ = rootCmd.Flags().MarkDeprecated(withMonitor, "Please use --without-monitor to control whether to disable monitor.")
@@ -339,6 +351,19 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 	rootCmd.AddCommand(newScaleIn())
 
 	return rootCmd.Execute()
+}
+
+func base62Tag() string {
+	const base = 62
+	const sets = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+	b := make([]byte, 0)
+	num := time.Now().UnixNano() / int64(time.Millisecond)
+	for num > 0 {
+		r := math.Mod(float64(num), float64(base))
+		num /= base
+		b = append([]byte{sets[int(r)]}, b...)
+	}
+	return string(b)
 }
 
 func populateOpt(flagSet *pflag.FlagSet) (err error) {
@@ -613,9 +638,6 @@ func newEtcdClient(endpoint string) (*clientv3.Client, error) {
 }
 
 func main() {
-	dataDir := os.Getenv(localdata.EnvNameInstanceDataDir)
-	instanceName := dataDir[strings.LastIndex(dataDir, "/")+1:]
-	fmt.Printf("\033]0;TiUP Playground: %s\a", instanceName)
 	start := time.Now()
 	code := 0
 	err := execute()

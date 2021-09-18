@@ -130,6 +130,9 @@ the latest stable version will be downloaded from the repository.`,
 					}
 				}
 				teleCommand = fmt.Sprintf("%s %s", cmd.CommandPath(), componentSpec)
+				if tag != "" {
+					fmt.Fprintln(os.Stderr, color.YellowString("--tag/-T is Deprecated in TiUP and moved to playground, it is suggested to use `tiup playground --tag` instead"))
+				}
 				return exec.RunComponent(env, tag, componentSpec, binPath, transparentParams)
 			}
 			return cmd.Help()
@@ -146,7 +149,7 @@ the latest stable version will be downloaded from the repository.`,
 	rootCmd.PersistentFlags().BoolVarP(&repoOpts.SkipVersionCheck, "skip-version-check", "", false, "Skip the strict version check, by default a version must be a valid SemVer string")
 	rootCmd.Flags().StringVarP(&binary, "binary", "B", "", "Print binary path of a specific version of a component `<component>[:version]`\n"+
 		"and the latest version installed will be selected if no version specified")
-	rootCmd.Flags().StringVarP(&tag, "tag", "T", "", "Specify a tag for component instance")
+	rootCmd.Flags().StringVarP(&tag, "tag", "T", "", "[Deprecated] Specify a tag for component instance")
 	rootCmd.Flags().StringVar(&binPath, "binpath", "", "Specify the binary path of component instance")
 	// Some components will define themself -h flag, eg:
 	// $ tiup dumpling -h ${host}.
