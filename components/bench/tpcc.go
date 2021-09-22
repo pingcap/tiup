@@ -26,7 +26,11 @@ func executeTpcc(action string) {
 	}
 	runtime.GOMAXPROCS(maxProcs)
 
-	openDB()
+	if err := openDB(); err != nil {
+		fmt.Println(err)
+		fmt.Println("Cannot open database, pleae check it (ip/port/username/password)")
+		os.Exit(1)
+	}
 
 	tpccConfig.DBName = dbName
 	tpccConfig.Threads = threads
