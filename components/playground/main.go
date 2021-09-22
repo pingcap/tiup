@@ -177,6 +177,8 @@ Examples:
 				if err != nil {
 					return err
 				}
+			} else {
+				dataDir = tiupDataDir
 			}
 			instanceName := dataDir[strings.LastIndex(dataDir, "/")+1:]
 			fmt.Printf("\033]0;TiUP Playground: %s\a", instanceName)
