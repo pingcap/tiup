@@ -18,6 +18,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -72,6 +73,7 @@ var (
 	playgroundReport *telemetry.PlaygroundReport
 	options          = &BootOptions{}
 	tag              string
+	tiupDataDir      string
 	dataDir          string
 )
 
@@ -157,13 +159,23 @@ Examples:
 			return nil
 		},
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			dataDir = os.Getenv(localdata.EnvNameInstanceDataDir)
-			if dataDir == "" {
-				tag = base62Tag()
-				dataDir = filepath.Join(os.Getenv(localdata.EnvNameHome), localdata.DataParentDir, tag)
-				// TBD: mkdir, rmdir
+			tiupDataDir = os.Getenv(localdata.EnvNameInstanceDataDir)
+			tiupHome := os.Getenv(localdata.EnvNameHome)
+			if tiupHome == "" {
+				tiupHome, _ = getAbsolutePath(filepath.Join("~", localdata.ProfileDirName))
+			}
+			if tiupDataDir == "" {
+				if tag == "" {
+					dataDir = filepath.Join(tiupHome, localdata.DataParentDir, base62Tag())
+				} else {
+					dataDir = filepath.Join(tiupHome, localdata.DataParentDir, tag)
+				}
 				if dataDir == "" {
 					return errors.Errorf("cannot read environment variable %s nor %s", localdata.EnvNameInstanceDataDir, localdata.EnvNameHome)
+				}
+				err := os.MkdirAll(dataDir, os.ModePerm)
+				if err != nil {
+					return err
 				}
 			}
 			instanceName := dataDir[strings.LastIndex(dataDir, "/")+1:]
@@ -234,6 +246,7 @@ Examples:
 				if atomic.LoadUint32(&booted) == 0 {
 					cancel()
 					time.AfterFunc(time.Second, func() {
+						removeData()
 						os.Exit(0)
 					})
 					return
@@ -244,6 +257,7 @@ Examples:
 				sig = (<-sc).(syscall.Signal)
 				atomic.StoreInt32(&p.curSig, int32(syscall.SIGKILL))
 				if sig == syscall.SIGINT {
+					removeData()
 					p.terminate(syscall.SIGKILL)
 				}
 			}()
@@ -692,5 +706,12 @@ func main() {
 
 	if code != 0 {
 		os.Exit(code)
+	}
+}
+
+func removeData() {
+	// remove if not set tag when run at standalone mode
+	if tiupDataDir == "" && tag == "" {
+		os.RemoveAll(dataDir)
 	}
 }
