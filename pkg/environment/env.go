@@ -49,14 +49,14 @@ func Mirror() string {
 	reset := func(m string) {
 		os.Setenv(repository.EnvMirrors, m)
 		if err := profile.ResetMirror(m, ""); err != nil {
-			fmt.Printf("WARNING: reset mirror failed, %s\n", err.Error())
+			fmt.Fprintf(os.Stderr, "WARNING: reset mirror failed, %s\n", err.Error())
 		}
 	}
 
 	m := os.Getenv(repository.EnvMirrors)
 	if m != "" {
 		if cfg.Mirror != m {
-			fmt.Printf(`WARNING: both mirror config (%s)
+			fmt.Fprintf(os.Stderr, `WARNING: both mirror config (%s)
 and TIUP_MIRRORS (%s) have been set.
 Setting mirror to TIUP_MIRRORS (%s)
 `, cfg.Mirror, m, m)
@@ -260,7 +260,7 @@ func (env *Environment) DownloadComponentIfMissing(component string, ver utils.V
 	}
 
 	if needDownload {
-		fmt.Printf("The component `%s` version %s is not installed; downloading from repository.\n", component, ver.String())
+		fmt.Fprintf(os.Stderr, "The component `%s` version %s is not installed; downloading from repository.\n", component, ver.String())
 		err := env.downloadComponent(component, ver, false)
 		if err != nil {
 			return "", err
