@@ -47,6 +47,9 @@ type GrafanaSpec struct {
 	AnonymousEnable bool                 `yaml:"anonymous_enable" default:"false" validate:"anonymous_enable:editable"`
 	RootURL         string               `yaml:"root_url" validate:"root_url:editable"`
 	Domain          string               `yaml:"domain" validate:"domain:editable"`
+	DefaultTheme    string               `yaml:"default_theme,omitempty" validate:"default_theme:editable"`
+	OrgName         string               `yaml:"org_name,omitempty" validate:"org_name:editable"`
+	OrgRole         string               `yaml:"org_role,omitempty" validate:"org_role:editable"`
 }
 
 // Role returns the component role of the instance
@@ -166,6 +169,9 @@ func (i *GrafanaInstance) InitConfig(
 		WithAnonymousenable(spec.AnonymousEnable).
 		WithRootURL(spec.RootURL).
 		WithDomain(spec.Domain).
+		WithDefaultTheme(spec.DefaultTheme).
+		WithOrgName(spec.OrgName).
+		WithOrgRole(spec.OrgRole).
 		ConfigToFile(fp); err != nil {
 		return err
 	}
