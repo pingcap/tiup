@@ -174,6 +174,7 @@ func (i *PDInstance) InitConfig(
 	spec := i.InstanceSpec.(*PDSpec)
 	cfg := scripts.
 		NewPDScript(spec.Name, i.GetHost(), paths.Deploy, paths.Data[0], paths.Log).
+		WithNumaNode(spec.NumaNode).
 		WithClientPort(spec.ClientPort).
 		WithPeerPort(spec.PeerPort).
 		AppendEndpoints(topo.Endpoints(deployUser)...).
