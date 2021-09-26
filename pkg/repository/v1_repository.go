@@ -167,12 +167,14 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 		target := filepath.Join(targetDir, versionItem.URL)
 		err = r.DownloadComponent(versionItem, target)
 		if err != nil {
+			os.RemoveAll(targetDir)
 			errs = append(errs, err.Error())
 			continue
 		}
 
 		reader, err := os.Open(target)
 		if err != nil {
+			os.RemoveAll(targetDir)
 			errs = append(errs, err.Error())
 			continue
 		}
@@ -181,6 +183,7 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 		reader.Close()
 
 		if err != nil {
+			os.RemoveAll(targetDir)
 			errs = append(errs, err.Error())
 		}
 
