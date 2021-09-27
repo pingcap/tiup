@@ -32,6 +32,9 @@ type GrafanaConfig struct {
 	AnonymousEnable bool   // anonymous enable
 	RootURL         string // root_url
 	Domain          string // domain
+	DefaultTheme    string // default_theme
+	OrgName         string // org_name
+	OrgRole         string // org_role
 }
 
 // NewGrafanaConfig returns a GrafanaConfig
@@ -76,6 +79,24 @@ func (c *GrafanaConfig) WithRootURL(rootURL string) *GrafanaConfig {
 // WithDomain sets domain of server domain
 func (c *GrafanaConfig) WithDomain(domain string) *GrafanaConfig {
 	c.Domain = domain
+	return c
+}
+
+// WithDefaultTheme sets defaultTheme of default theme
+func (c *GrafanaConfig) WithDefaultTheme(defaultTheme string) *GrafanaConfig {
+	c.DefaultTheme = defaultTheme
+	return c
+}
+
+// WithOrgName sets orgName of org name
+func (c *GrafanaConfig) WithOrgName(orgName string) *GrafanaConfig {
+	c.OrgName = orgName
+	return c
+}
+
+// WithOrgRole sets orgName of org role
+func (c *GrafanaConfig) WithOrgRole(orgRole string) *GrafanaConfig {
+	c.OrgRole = orgRole
 	return c
 }
 

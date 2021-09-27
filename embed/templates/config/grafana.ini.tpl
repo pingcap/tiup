@@ -169,7 +169,11 @@ admin_password = {{.Password}}
 ;login_hint = email or username
 
 # Default UI theme ("dark" or "light")
+{{- if .DefaultTheme}}
+default_theme = {{.DefaultTheme}}
+{{- else}}
 ;default_theme = dark
+{{- end}}
 
 ############### Set Cookie Name for Multiple Instances #######################
 [auth]
@@ -182,10 +186,18 @@ enabled = true
 {{- end}}
 
 # specify organization name that should be used for unauthenticated users
+{{- if .OrgName}}
+org_name = {{.OrgName}}
+{{- else}}
 ;org_name = Main Org.
+{{- end}}
 
 # specify role for unauthenticated users
+{{- if .OrgRole}}
+org_role = {{.OrgRole}}
+{{- else}}
 ;org_role = Viewer
+{{- end}}
 
 #################################### Basic Auth ##########################
 [auth.basic]
