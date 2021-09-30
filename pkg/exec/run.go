@@ -261,6 +261,12 @@ func launchComponent(ctx context.Context, component string, version utils.Versio
 		instanceDir = env.LocalPath(localdata.DataParentDir, tag)
 	}
 
+	if len(args) > 0 {
+		if args[0] == "--" {
+			args = args[1:]
+		}
+	}
+
 	params := &PrepareCommandParams{
 		Ctx:         ctx,
 		Component:   component,
