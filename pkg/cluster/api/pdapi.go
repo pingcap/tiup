@@ -327,6 +327,29 @@ func (pc *PDClient) GetConfig() (map[string]interface{}, error) {
 	return flatten.Flatten(pdConfig, "", flatten.DotStyle)
 }
 
+// GetClusterID return cluster ID
+func (pc *PDClient) GetClusterID() (string, error) {
+	endpoints := pc.getEndpoints(pdClusterIDURI)
+
+	// We don't use the `github.com/tikv/pd/server/config` directly because
+	// there is compatible issue: https://github.com/pingcap/tiup/issues/637
+	clusterID := map[string]interface{}{}
+
+	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
+		body, err := pc.httpClient.Get(context.TODO(), endpoint)
+		if err != nil {
+			return body, err
+		}
+
+		return body, json.Unmarshal(body, &clusterID)
+	})
+	if err != nil {
+		return "", err
+	}
+
+	return clusterID["id"].(string), nil
+}
+
 // GetDashboardAddress get the PD node address which runs dashboard
 func (pc *PDClient) GetDashboardAddress() (string, error) {
 	cfg, err := pc.GetConfig()
