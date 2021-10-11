@@ -729,52 +729,35 @@ func (pc *PDClient) GetLocationLabels() ([]string, bool, error) {
 }
 
 // GetTiKVLabels implements TiKVLabelProvider
-func (pc *PDClient) GetTiKVLabels() (map[string]map[string]string, error) {
+func (pc *PDClient) GetTiKVLabels() (map[string]map[string]string, []map[string]string, error) {
 	r, err := pc.GetStores()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
+
+	var storeInfo []map[string]string
 
 	locationLabels := map[string]map[string]string{}
-	for _, s := range r.Stores {
-		if s.Store.State != metapb.StoreState_Up {
-			continue
-		}
-		lbs := s.Store.GetLabels()
-		labels := map[string]string{}
-		for _, lb := range lbs {
-			labels[lb.GetKey()] = lb.GetValue()
-		}
-		// Skip tiflash
-		if labels["engine"] == "tiflash" {
-			continue
-		}
-		locationLabels[s.Store.GetAddress()] = labels
-	}
-	return locationLabels, nil
-}
 
-// GetTiKVStoreStateAndLabels implements TiKVLabelProvider
-func (pc *PDClient) GetTiKVStoreStateAndLabels() ([]map[string]string, error) {
-	r, err := pc.GetStores()
-	if err != nil {
-		return nil, err
-	}
-
-	var storeState []map[string]string
 	for _, s := range r.Stores {
-		if s.Store.State == metapb.StoreState_Up || s.Store.State == metapb.StoreState_Offline {
+		if s.Store.State == metapb.StoreState_Up {
 			lbs := s.Store.GetLabels()
-			var labels []string
+			labelsMap := map[string]string{}
+
+			var labelsArr []string
+
 			for _, lb := range lbs {
 				// Skip tiflash
 				if lb.GetKey() != "tiflash" {
-					labels = append(labels, fmt.Sprintf("%s: %s", lb.GetKey(), lb.GetValue()))
+					labelsArr = append(labelsArr, fmt.Sprintf("%s: %s", lb.GetKey(), lb.GetValue()))
+					labelsMap[lb.GetKey()] = lb.GetValue()
 				}
 			}
 
-			label := fmt.Sprintf("%s%s%s", "{", strings.Join(labels, ","), "}")
-			storeState = append(storeState, map[string]string{
+			locationLabels[s.Store.GetAddress()] = labelsMap
+
+			label := fmt.Sprintf("%s%s%s", "{", strings.Join(labelsArr, ","), "}")
+			storeInfo = append(storeInfo, map[string]string{
 				strings.Split(s.Store.GetAddress(), ":")[0]: fmt.Sprintf("%s|%d|%s|%d|%d|%v|%v|%s",
 					strings.Split(s.Store.GetAddress(), ":")[1],
 					s.Store.GetId(),
@@ -787,7 +770,7 @@ func (pc *PDClient) GetTiKVStoreStateAndLabels() ([]map[string]string, error) {
 			})
 		}
 	}
-	return storeState, nil
+	return locationLabels, storeInfo, nil
 }
 
 // UpdateScheduleConfig updates the PD schedule config

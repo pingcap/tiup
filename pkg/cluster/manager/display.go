@@ -54,6 +54,19 @@ type InstInfo struct {
 	Port          int
 }
 
+// LabelInfo represents an instance label info
+type LabelInfo struct {
+	Machine   string `json:"machine"`
+	Port      string `json:"port"`
+	Store     string `json:"store"`
+	Status    string `json:"status"`
+	Leaders   string `json:"leaders"`
+	Regions   string `json:"regions"`
+	Capacity  string `json:"capacity"`
+	Available string `json:"available"`
+	Labels    string `json:"labels"`
+}
+
 // ClusterMetaInfo hold the structure for the JSON output of the dashboard info
 type ClusterMetaInfo struct {
 	ClusterType    string `json:"cluster_type"`
@@ -71,7 +84,9 @@ type ClusterMetaInfo struct {
 // JSONOutput holds the structure for the JSON output of `tiup cluster display --json`
 type JSONOutput struct {
 	ClusterMetaInfo ClusterMetaInfo `json:"cluster_meta"`
-	InstanceInfos   []InstInfo      `json:"instances"`
+	InstanceInfos   []InstInfo      `json:"instances,omitempty"`
+	LocationLabel   string          `json:"location_label,omitempty"`
+	LabelInfos      []LabelInfo     `json:"labels,omitempty"`
 }
 
 // Display cluster meta and topology.
@@ -241,24 +256,49 @@ func (m *Manager) DisplayTiKVLabels(name string, opt operator.Options) error {
 	base := metadata.GetBaseMeta()
 	// display cluster meta
 	cyan := color.New(color.FgCyan, color.Bold)
-	fmt.Printf("Cluster type:       %s\n", cyan.Sprint(m.sysName))
-	fmt.Printf("Cluster name:       %s\n", cyan.Sprint(name))
-	fmt.Printf("Cluster version:    %s\n", cyan.Sprint(base.Version))
-	fmt.Printf("SSH type:           %s\n", cyan.Sprint(topo.BaseTopo().GlobalOptions.SSHType))
-	fmt.Printf("Component name:     %s\n", cyan.Sprint("TiKV"))
 
-	// display TLS info
-	if topo.BaseTopo().GlobalOptions.TLSEnabled {
-		fmt.Printf("TLS encryption:  	%s\n", cyan.Sprint("enabled"))
-		fmt.Printf("CA certificate:     %s\n", cyan.Sprint(
-			m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSCACert),
-		))
-		fmt.Printf("Client private key: %s\n", cyan.Sprint(
-			m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSClientKey),
-		))
-		fmt.Printf("Client certificate: %s\n", cyan.Sprint(
-			m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSClientCert),
-		))
+	var j *JSONOutput
+	if opt.JSON {
+		j = &JSONOutput{
+			ClusterMetaInfo: ClusterMetaInfo{
+				m.sysName,
+				name,
+				base.Version,
+				topo.BaseTopo().GlobalOptions.User,
+				string(topo.BaseTopo().GlobalOptions.SSHType),
+				topo.BaseTopo().GlobalOptions.TLSEnabled,
+				"", // CA Cert
+				"", // Client Cert
+				"", // Client Key
+				"",
+			},
+		}
+
+		if topo.BaseTopo().GlobalOptions.TLSEnabled {
+			j.ClusterMetaInfo.TLSCACert = m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSCACert)
+			j.ClusterMetaInfo.TLSClientKey = m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSClientKey)
+			j.ClusterMetaInfo.TLSClientCert = m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSClientCert)
+		}
+	} else {
+		fmt.Printf("Cluster type:       %s\n", cyan.Sprint(m.sysName))
+		fmt.Printf("Cluster name:       %s\n", cyan.Sprint(name))
+		fmt.Printf("Cluster version:    %s\n", cyan.Sprint(base.Version))
+		fmt.Printf("SSH type:           %s\n", cyan.Sprint(topo.BaseTopo().GlobalOptions.SSHType))
+		fmt.Printf("Component name:     %s\n", cyan.Sprint("TiKV"))
+
+		// display TLS info
+		if topo.BaseTopo().GlobalOptions.TLSEnabled {
+			fmt.Printf("TLS encryption:  	%s\n", cyan.Sprint("enabled"))
+			fmt.Printf("CA certificate:     %s\n", cyan.Sprint(
+				m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSCACert),
+			))
+			fmt.Printf("Client private key: %s\n", cyan.Sprint(
+				m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSClientKey),
+			))
+			fmt.Printf("Client certificate: %s\n", cyan.Sprint(
+				m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSClientCert),
+			))
+		}
 	}
 
 	// display topology
@@ -288,17 +328,21 @@ func (m *Manager) DisplayTiKVLabels(name string, opt operator.Options) error {
 		}
 	})
 
+	var (
+		labelInfoArr  []LabelInfo
+		locationLabel []string
+	)
+
 	if _, ok := topo.(*spec.Specification); ok {
 		// Check if TiKV's label set correctly
 		pdClient := api.NewPDClient(masterActive, 10*time.Second, tlsCfg)
 		// No
-		lbs, _, err := pdClient.GetLocationLabels()
+		locationLabel, _, err = pdClient.GetLocationLabels()
 		if err != nil {
 			log.Debugf("get location labels from pd failed: %v", err)
 		}
-		fmt.Printf("Location labels:    %s\n", cyan.Sprint(strings.Join(lbs, ",")))
 
-		storeStates, err := pdClient.GetTiKVStoreStateAndLabels()
+		_, storeInfos, err := pdClient.GetTiKVLabels()
 		if err != nil {
 			log.Debugf("get tikv state and labels from pd failed: %v", err)
 		}
@@ -317,7 +361,7 @@ func (m *Manager) DisplayTiKVLabels(name string, opt operator.Options) error {
 			}
 			clusterTable = append(clusterTable, row)
 
-			for _, val := range storeStates {
+			for _, val := range storeInfos {
 				if _, ok := val[storeIP]; ok {
 					storeInfo := strings.Split(val[storeIP], "|")
 					row := []string{
@@ -332,11 +376,34 @@ func (m *Manager) DisplayTiKVLabels(name string, opt operator.Options) error {
 						storeInfo[7],
 					}
 					clusterTable = append(clusterTable, row)
+
+					labelInfoArr = append(labelInfoArr, LabelInfo{
+						Machine:   storeIP,
+						Port:      storeInfo[0],
+						Store:     storeInfo[1],
+						Status:    storeInfo[2],
+						Leaders:   storeInfo[3],
+						Regions:   storeInfo[4],
+						Capacity:  storeInfo[5],
+						Available: storeInfo[6],
+						Labels:    storeInfo[7],
+					})
 				}
 			}
 		}
 	}
 
+	if opt.JSON {
+		j.LocationLabel = strings.Join(locationLabel, ",")
+		j.LabelInfos = labelInfoArr
+		d, err := json.MarshalIndent(j, "", "  ")
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(d))
+		return nil
+	}
+	fmt.Printf("Location labels:    %s\n", cyan.Sprint(strings.Join(locationLabel, ",")))
 	tui.PrintTable(clusterTable, true)
 	fmt.Printf("Total nodes: %d\n", len(clusterTable)-1)
 

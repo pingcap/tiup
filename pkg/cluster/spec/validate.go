@@ -434,7 +434,7 @@ func (e *TiKVLabelError) Error() string {
 
 // TiKVLabelProvider provides the store labels information
 type TiKVLabelProvider interface {
-	GetTiKVLabels() (map[string]map[string]string, error)
+	GetTiKVLabels() (map[string]map[string]string, []map[string]string, error)
 }
 
 func getHostFromAddress(addr string) string {
@@ -449,7 +449,7 @@ func CheckTiKVLabels(pdLocLabels []string, slp TiKVLabelProvider) error {
 	lbs := set.NewStringSet(pdLocLabels...)
 	hosts := make(map[string]int)
 
-	storeLabels, err := slp.GetTiKVLabels()
+	storeLabels, _, err := slp.GetTiKVLabels()
 	if err != nil {
 		return err
 	}
