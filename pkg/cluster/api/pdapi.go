@@ -330,9 +330,6 @@ func (pc *PDClient) GetConfig() (map[string]interface{}, error) {
 // GetClusterID return cluster ID
 func (pc *PDClient) GetClusterID() (string, error) {
 	endpoints := pc.getEndpoints(pdClusterIDURI)
-
-	// We don't use the `github.com/tikv/pd/server/config` directly because
-	// there is compatible issue: https://github.com/pingcap/tiup/issues/637
 	clusterID := map[string]interface{}{}
 
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
@@ -347,7 +344,7 @@ func (pc *PDClient) GetClusterID() (string, error) {
 		return "", err
 	}
 
-	return clusterID["id"].(string), nil
+	return fmt.Sprintf("%.0f", clusterID["id"]), nil
 }
 
 // GetDashboardAddress get the PD node address which runs dashboard
