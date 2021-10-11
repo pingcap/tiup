@@ -55,6 +55,19 @@ type InstInfo struct {
 	Port          int
 }
 
+// LabelInfo represents an instance label info
+type LabelInfo struct {
+	Machine   string `json:"machine"`
+	Port      string `json:"port"`
+	Store     string `json:"store"`
+	Status    string `json:"status"`
+	Leaders   string `json:"leaders"`
+	Regions   string `json:"regions"`
+	Capacity  string `json:"capacity"`
+	Available string `json:"available"`
+	Labels    string `json:"labels"`
+}
+
 // ClusterMetaInfo hold the structure for the JSON output of the dashboard info
 type ClusterMetaInfo struct {
 	ClusterType    string `json:"cluster_type"`
