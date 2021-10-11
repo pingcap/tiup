@@ -347,7 +347,7 @@ func (pc *PDClient) GetClusterID() (string, error) {
 		return "", err
 	}
 
-	return clusterID["id"].(string), nil
+	return fmt.Sprintf("%.0f", clusterID["id"]), nil
 }
 
 // GetDashboardAddress get the PD node address which runs dashboard
