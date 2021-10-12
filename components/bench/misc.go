@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -106,7 +107,8 @@ func executeWorkload(ctx context.Context, w workload.Workloader, threads int, ac
 			defer wg.Done()
 			if err := execute(ctx, w, action, threads, index); err != nil {
 				if action == "prepare" {
-					panic(fmt.Sprintf("a fatal occurred when preparing data: %v", err))
+					fmt.Printf("a fatal occurred when preparing data: %v\n", err)
+					os.Exit(1)
 				}
 				fmt.Printf("execute %s failed, err %v\n", action, err)
 				return
