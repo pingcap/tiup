@@ -91,6 +91,8 @@ server:
 
 check: fmt lint tidy check-static vet
 	@# Target: run all checkers. (fmt, lint, tidy, check-static and vet)
+	$(MAKE) -C components/bench ${MAKECMDGOALS}
+	$(MAKE) -C components/client ${MAKECMDGOALS}
 
 check-static: tools/bin/golangci-lint
 	@# Target: run the golangci-lint static check tool
@@ -119,6 +121,8 @@ clean:
 
 test: failpoint-enable run-tests failpoint-disable
 	@# Target: run tests with failpoint enabled
+	$(MAKE) -C components/bench ${MAKECMDGOALS}
+	$(MAKE) -C components/client ${MAKECMDGOALS}
 
 # TODO: refactor integration tests base on v1 manifest
 # run-tests: unit-test integration_test
