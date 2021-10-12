@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -54,19 +55,6 @@ type InstInfo struct {
 	Port          int
 }
 
-// LabelInfo represents an instance label info
-type LabelInfo struct {
-	Machine   string `json:"machine"`
-	Port      string `json:"port"`
-	Store     string `json:"store"`
-	Status    string `json:"status"`
-	Leaders   string `json:"leaders"`
-	Regions   string `json:"regions"`
-	Capacity  string `json:"capacity"`
-	Available string `json:"available"`
-	Labels    string `json:"labels"`
-}
-
 // ClusterMetaInfo hold the structure for the JSON output of the dashboard info
 type ClusterMetaInfo struct {
 	ClusterType    string `json:"cluster_type"`
@@ -86,7 +74,7 @@ type JSONOutput struct {
 	ClusterMetaInfo ClusterMetaInfo `json:"cluster_meta"`
 	InstanceInfos   []InstInfo      `json:"instances,omitempty"`
 	LocationLabel   string          `json:"location_label,omitempty"`
-	LabelInfos      []LabelInfo     `json:"labels,omitempty"`
+	LabelInfos      []api.LabelInfo `json:"labels,omitempty"`
 }
 
 // Display cluster meta and topology.
@@ -329,7 +317,7 @@ func (m *Manager) DisplayTiKVLabels(name string, opt operator.Options) error {
 	})
 
 	var (
-		labelInfoArr  []LabelInfo
+		labelInfoArr  []api.LabelInfo
 		locationLabel []string
 	)
 
@@ -362,32 +350,21 @@ func (m *Manager) DisplayTiKVLabels(name string, opt operator.Options) error {
 			clusterTable = append(clusterTable, row)
 
 			for _, val := range storeInfos {
-				if _, ok := val[storeIP]; ok {
-					storeInfo := strings.Split(val[storeIP], "|")
+				if store, ok := val[storeIP]; ok {
 					row := []string{
 						"",
-						storeInfo[0],
-						storeInfo[1],
-						color.CyanString(storeInfo[2]),
-						storeInfo[3],
-						storeInfo[4],
-						storeInfo[5],
-						storeInfo[6],
-						storeInfo[7],
+						store.Port,
+						strconv.FormatUint(store.Store, 10),
+						color.CyanString(store.Status),
+						fmt.Sprintf("%v", store.Leaders),
+						fmt.Sprintf("%v", store.Regions),
+						store.Capacity,
+						store.Available,
+						store.Labels,
 					}
 					clusterTable = append(clusterTable, row)
 
-					labelInfoArr = append(labelInfoArr, LabelInfo{
-						Machine:   storeIP,
-						Port:      storeInfo[0],
-						Store:     storeInfo[1],
-						Status:    storeInfo[2],
-						Leaders:   storeInfo[3],
-						Regions:   storeInfo[4],
-						Capacity:  storeInfo[5],
-						Available: storeInfo[6],
-						Labels:    storeInfo[7],
-					})
+					labelInfoArr = append(labelInfoArr, store)
 				}
 			}
 		}

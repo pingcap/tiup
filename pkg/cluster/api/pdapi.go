@@ -43,6 +43,19 @@ type PDClient struct {
 	httpClient *utils.HTTPClient
 }
 
+// LabelInfo represents an instance label info
+type LabelInfo struct {
+	Machine   string `json:"machine"`
+	Port      string `json:"port"`
+	Store     uint64 `json:"store"`
+	Status    string `json:"status"`
+	Leaders   int    `json:"leaders"`
+	Regions   int    `json:"regions"`
+	Capacity  string `json:"capacity"`
+	Available string `json:"available"`
+	Labels    string `json:"labels"`
+}
+
 // NewPDClient returns a new PDClient
 func NewPDClient(addrs []string, timeout time.Duration, tlsConfig *tls.Config) *PDClient {
 	enableTLS := false
@@ -729,13 +742,13 @@ func (pc *PDClient) GetLocationLabels() ([]string, bool, error) {
 }
 
 // GetTiKVLabels implements TiKVLabelProvider
-func (pc *PDClient) GetTiKVLabels() (map[string]map[string]string, []map[string]string, error) {
+func (pc *PDClient) GetTiKVLabels() (map[string]map[string]string, []map[string]LabelInfo, error) {
 	r, err := pc.GetStores()
 	if err != nil {
 		return nil, nil, err
 	}
 
-	var storeInfo []map[string]string
+	var storeInfo []map[string]LabelInfo
 
 	locationLabels := map[string]map[string]string{}
 
@@ -757,16 +770,18 @@ func (pc *PDClient) GetTiKVLabels() (map[string]map[string]string, []map[string]
 			locationLabels[s.Store.GetAddress()] = labelsMap
 
 			label := fmt.Sprintf("%s%s%s", "{", strings.Join(labelsArr, ","), "}")
-			storeInfo = append(storeInfo, map[string]string{
-				strings.Split(s.Store.GetAddress(), ":")[0]: fmt.Sprintf("%s|%d|%s|%d|%d|%v|%v|%s",
-					strings.Split(s.Store.GetAddress(), ":")[1],
-					s.Store.GetId(),
-					s.Store.State.String(),
-					s.Status.LeaderCount,
-					s.Status.RegionCount,
-					s.Status.Capacity.MarshalString(),
-					s.Status.Available.MarshalString(),
-					label),
+			storeInfo = append(storeInfo, map[string]LabelInfo{
+				strings.Split(s.Store.GetAddress(), ":")[0]: {
+					Machine:   strings.Split(s.Store.GetAddress(), ":")[0],
+					Port:      strings.Split(s.Store.GetAddress(), ":")[1],
+					Store:     s.Store.GetId(),
+					Status:    s.Store.State.String(),
+					Leaders:   s.Status.LeaderCount,
+					Regions:   s.Status.RegionCount,
+					Capacity:  s.Status.Capacity.MarshalString(),
+					Available: s.Status.Available.MarshalString(),
+					Labels:    label,
+				},
 			})
 		}
 	}

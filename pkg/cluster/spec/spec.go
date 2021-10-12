@@ -264,7 +264,7 @@ func (s *Specification) LocationLabels() ([]string, error) {
 }
 
 // GetTiKVLabels implements TiKVLabelProvider
-func (s *Specification) GetTiKVLabels() (map[string]map[string]string, []map[string]string, error) {
+func (s *Specification) GetTiKVLabels() (map[string]map[string]string, []map[string]api.LabelInfo, error) {
 	kvs := s.TiKVServers
 	locationLabels := map[string]map[string]string{}
 	for _, kv := range kvs {

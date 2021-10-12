@@ -22,6 +22,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pingcap/tiup/pkg/cluster/api"
+
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
@@ -434,7 +436,7 @@ func (e *TiKVLabelError) Error() string {
 
 // TiKVLabelProvider provides the store labels information
 type TiKVLabelProvider interface {
-	GetTiKVLabels() (map[string]map[string]string, []map[string]string, error)
+	GetTiKVLabels() (map[string]map[string]string, []map[string]api.LabelInfo, error)
 }
 
 func getHostFromAddress(addr string) string {
