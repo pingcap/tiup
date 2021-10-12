@@ -264,17 +264,17 @@ func (s *Specification) LocationLabels() ([]string, error) {
 }
 
 // GetTiKVLabels implements TiKVLabelProvider
-func (s *Specification) GetTiKVLabels() (map[string]map[string]string, error) {
+func (s *Specification) GetTiKVLabels() (map[string]map[string]string, []map[string]api.LabelInfo, error) {
 	kvs := s.TiKVServers
 	locationLabels := map[string]map[string]string{}
 	for _, kv := range kvs {
 		address := fmt.Sprintf("%s:%d", kv.Host, kv.GetMainPort())
 		var err error
 		if locationLabels[address], err = kv.Labels(); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
-	return locationLabels, nil
+	return locationLabels, nil, nil
 }
 
 // AllComponentNames contains the names of all components.
