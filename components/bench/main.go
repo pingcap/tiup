@@ -23,6 +23,7 @@ var (
 	user           string
 	password       string
 	threads        int
+	acThreads      int
 	driver         string
 	totalTime      time.Duration
 	totalCount     int
@@ -53,11 +54,13 @@ func closeDB() {
 
 func openDB() error {
 	// TODO: support other drivers
-	var tmpDB *sql.DB
-	ds := fmt.Sprintf("%s:%s@tcp(%s:%d)/", user, password, host, port)
-	dsn := ds + dbName
-	var err error
-	globalDB, err = sql.Open(mysqlDriver, dsn)
+	var (
+		tmpDB *sql.DB
+		err   error
+		ds    = fmt.Sprintf("%s:%s@tcp(%s:%d)/", user, password, host, port)
+	)
+	// allow multiple statements in one query to allow q15 on the TPC-H
+	globalDB, err = sql.Open(mysqlDriver, fmt.Sprintf("%s%s?multiStatements=true", ds, dbName))
 	if err != nil {
 		return err
 	}
@@ -74,8 +77,9 @@ func openDB() error {
 			return err
 		}
 	} else {
-		globalDB.SetMaxIdleConns(threads + 1)
+		globalDB.SetMaxIdleConns(threads + acThreads + 1)
 	}
+
 	return nil
 }
 
@@ -92,6 +96,7 @@ func main() {
 	rootCmd.PersistentFlags().StringVarP(&password, "password", "p", "", "Database password")
 	rootCmd.PersistentFlags().IntVarP(&port, "port", "P", 4000, "Database port")
 	rootCmd.PersistentFlags().IntVarP(&threads, "threads", "T", 1, "Thread concurrency")
+	rootCmd.PersistentFlags().IntVarP(&acThreads, "acThreads", "t", 1, "OLAP client concurrency, only for CH-benCHmark")
 	rootCmd.PersistentFlags().StringVarP(&driver, "driver", "d", "", "Database driver: mysql")
 	rootCmd.PersistentFlags().DurationVar(&totalTime, "time", 1<<63-1, "Total execution time")
 	rootCmd.PersistentFlags().IntVar(&totalCount, "count", 0, "Total execution count, 0 means infinite")
@@ -99,14 +104,15 @@ func main() {
 	rootCmd.PersistentFlags().BoolVar(&ignoreError, "ignore-error", false, "Ignore error when running workload")
 	rootCmd.PersistentFlags().BoolVar(&silence, "silence", false, "Don't print error when running workload")
 	rootCmd.PersistentFlags().DurationVar(&outputInterval, "interval", 10*time.Second, "Output interval time")
-	rootCmd.PersistentFlags().IntVar(&isolationLevel, "isolation", 0, `Isolation Level 0: Default, 1: ReadUncommitted, 
-2: ReadCommitted, 3: WriteCommitted, 4: RepeatableRead, 
+	rootCmd.PersistentFlags().IntVar(&isolationLevel, "isolation", 0, `Isolation Level 0: Default, 1: ReadUncommitted,
+2: ReadCommitted, 3: WriteCommitted, 4: RepeatableRead,
 5: Snapshot, 6: Serializable, 7: Linerizable`)
 
 	cobra.EnablePrefixMatching = true
 
 	registerTpcc(rootCmd)
 	registerTpch(rootCmd)
+	registerCHBenchmark(rootCmd)
 	registerYcsb(rootCmd)
 
 	var cancel context.CancelFunc

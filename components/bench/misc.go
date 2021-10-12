@@ -15,6 +15,9 @@ func checkPrepare(ctx context.Context, w workload.Workloader) {
 		fmt.Println("Skip preparing checking. Please load CSV data into database and check later.")
 		return
 	}
+	if w.Name() == "tpcc" && tpccConfig.NoCheck {
+		return
+	}
 
 	var wg sync.WaitGroup
 	wg.Add(threads)
@@ -34,7 +37,7 @@ func checkPrepare(ctx context.Context, w workload.Workloader) {
 	wg.Wait()
 }
 
-func execute(ctx context.Context, w workload.Workloader, action string, index int) error {
+func execute(ctx context.Context, w workload.Workloader, action string, threads, index int) error {
 	count := totalCount / threads
 
 	ctx = w.InitThread(ctx, index)
@@ -66,7 +69,7 @@ func execute(ctx context.Context, w workload.Workloader, action string, index in
 
 		if err != nil {
 			if !silence {
-				fmt.Printf("execute %s failed, err %v\n", action, err)
+				fmt.Printf("[%s] execute %s failed, err %v\n", time.Now().Format("2006-01-02 15:04:05"), action, err)
 			}
 			if !ignoreError {
 				return err
@@ -77,7 +80,7 @@ func execute(ctx context.Context, w workload.Workloader, action string, index in
 	return nil
 }
 
-func executeWorkload(ctx context.Context, w workload.Workloader, action string) {
+func executeWorkload(ctx context.Context, w workload.Workloader, threads int, action string) {
 	var wg sync.WaitGroup
 	wg.Add(threads)
 
@@ -101,7 +104,10 @@ func executeWorkload(ctx context.Context, w workload.Workloader, action string) 
 	for i := 0; i < threads; i++ {
 		go func(index int) {
 			defer wg.Done()
-			if err := execute(ctx, w, action, index); err != nil {
+			if err := execute(ctx, w, action, threads, index); err != nil {
+				if action == "prepare" {
+					panic(fmt.Sprintf("a fatal occurred when preparing data: %v", err))
+				}
 				fmt.Printf("execute %s failed, err %v\n", action, err)
 				return
 			}
@@ -117,7 +123,4 @@ func executeWorkload(ctx context.Context, w workload.Workloader, action string) 
 	outputCancel()
 
 	<-ch
-
-	fmt.Println("Finished")
-	w.OutputStats(true)
 }
