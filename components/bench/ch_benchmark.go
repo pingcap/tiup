@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
 	"runtime"
 	"strings"
 	"sync"
@@ -32,8 +31,8 @@ func registerCHBenchmark(root *cobra.Command) {
 	var cmdPrepare = &cobra.Command{
 		Use:   "prepare",
 		Short: "Prepare data for the workload",
-		Run: func(cmd *cobra.Command, args []string) {
-			executeCH("prepare")
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return executeCH("prepare")
 		},
 	}
 	cmdPrepare.PersistentFlags().BoolVar(&chConfig.CreateTiFlashReplica,
@@ -62,21 +61,20 @@ func registerCHBenchmark(root *cobra.Command) {
 	var cmdRun = &cobra.Command{
 		Use:   "run",
 		Short: "Run workload",
-		Run: func(cmd *cobra.Command, _ []string) {
-			executeCH("run")
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return executeCH("run")
 		},
 	}
 	cmd.AddCommand(cmdRun, cmdPrepare)
 	root.AddCommand(cmd)
 }
 
-func executeCH(action string) {
+func executeCH(action string) error {
 	runtime.GOMAXPROCS(maxProcs)
 
 	if err := openDB(); err != nil {
-		fmt.Println(err)
 		fmt.Println("Cannot open database, pleae check it (ip/port/username/password)")
-		os.Exit(1)
+		return err
 	}
 	defer closeDB()
 
@@ -92,20 +90,16 @@ func executeCH(action string) {
 	)
 	tp, err = tpcc.NewWorkloader(globalDB, &tpccConfig)
 	if err != nil {
-		fmt.Printf("Failed to init tp work loader: %v\n", err)
-		os.Exit(1)
+		fmt.Println("Failed to init tp work loader")
+		return err
 	}
 	ap = ch.NewWorkloader(globalDB, &chConfig)
-	if err != nil {
-		fmt.Printf("Failed to init tp work loader: %v\n", err)
-		os.Exit(1)
-	}
 	timeoutCtx, cancel := context.WithTimeout(globalCtx, totalTime)
 	defer cancel()
 
 	if action == "prepare" {
 		executeWorkload(timeoutCtx, ap, 1, "prepare")
-		return
+		return nil
 	}
 
 	type workLoaderSetting struct {
@@ -125,4 +119,6 @@ func executeCH(action string) {
 	for _, workLoader := range []workLoaderSetting{{workLoader: tp, threads: threads}, {workLoader: ap, threads: acThreads}} {
 		workLoader.workLoader.OutputStats(true)
 	}
+
+	return nil
 }
