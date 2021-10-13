@@ -342,7 +342,7 @@ func (pc *PDClient) GetConfig() (map[string]interface{}, error) {
 }
 
 // GetClusterID return cluster ID
-func (pc *PDClient) GetClusterID() (string, error) {
+func (pc *PDClient) GetClusterID() (int64, error) {
 	endpoints := pc.getEndpoints(pdClusterIDURI)
 	clusterID := map[string]interface{}{}
 
@@ -355,10 +355,10 @@ func (pc *PDClient) GetClusterID() (string, error) {
 		return body, json.Unmarshal(body, &clusterID)
 	})
 	if err != nil {
-		return "", err
+		return 0, err
 	}
 
-	return fmt.Sprintf("%.0f", clusterID["id"]), nil
+	return int64(clusterID["id"].(float64)), nil
 }
 
 // GetDashboardAddress get the PD node address which runs dashboard
