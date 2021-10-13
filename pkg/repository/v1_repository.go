@@ -732,17 +732,16 @@ func (r *V1Repository) FetchComponentManifest(id string, withYanked bool) (com *
 func (r *V1Repository) LocalComponentManifest(id string, withYanked bool) (com *v1manifest.Component, err error) {
 	index := v1manifest.Index{}
 	_, exists, err := r.Local().LoadManifest(&index)
-	if err != nil {
-		return nil, err
+	if err == nil && exists {
+		components := index.ComponentList()
+		comp := components[id]
+		filename := v1manifest.ComponentManifestFilename(id)
+		componentManifest, err := r.Local().LoadComponentManifest(&comp, filename)
+		if err == nil && componentManifest != nil {
+			return componentManifest, nil
+		}
 	}
-	if !exists {
-		return r.FetchComponentManifest(id, withYanked)
-	}
-
-	components := index.ComponentList()
-	comp := components[id]
-	filename := v1manifest.ComponentManifestFilename(id)
-	return r.Local().LoadComponentManifest(&comp, filename)
+	return r.FetchComponentManifest(id, withYanked)
 }
 
 // ComponentVersion returns version item of a component
