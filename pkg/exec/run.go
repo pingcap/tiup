@@ -144,7 +144,8 @@ func cleanDataDir(rm bool, dir string) {
 	}
 }
 
-func base62Tag() string {
+// Base62Tag returns a tag based on time
+func Base62Tag() string {
 	const base = 62
 	const sets = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 	b := make([]byte, 0)
@@ -256,7 +257,7 @@ func launchComponent(ctx context.Context, component string, version utils.Versio
 	if instanceDir == "" {
 		// Generate a tag for current instance if the tag doesn't specified
 		if tag == "" {
-			tag = base62Tag()
+			tag = Base62Tag()
 		}
 		instanceDir = env.LocalPath(localdata.DataParentDir, tag)
 	}
