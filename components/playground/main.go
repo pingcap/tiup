@@ -38,7 +38,6 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/environment"
-	"github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/repository"
@@ -166,7 +165,7 @@ Examples:
 			}
 			if tiupDataDir == "" {
 				if tag == "" {
-					dataDir = filepath.Join(tiupHome, localdata.DataParentDir, exec.Base62Tag())
+					dataDir = filepath.Join(tiupHome, localdata.DataParentDir, utils.Base62Tag())
 				} else {
 					dataDir = filepath.Join(tiupHome, localdata.DataParentDir, tag)
 				}
