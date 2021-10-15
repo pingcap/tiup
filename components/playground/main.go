@@ -18,7 +18,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"math"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -166,7 +165,7 @@ Examples:
 			}
 			if tiupDataDir == "" {
 				if tag == "" {
-					dataDir = filepath.Join(tiupHome, localdata.DataParentDir, base62Tag())
+					dataDir = filepath.Join(tiupHome, localdata.DataParentDir, utils.Base62Tag())
 				} else {
 					dataDir = filepath.Join(tiupHome, localdata.DataParentDir, tag)
 				}
@@ -367,19 +366,6 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 	rootCmd.AddCommand(newScaleIn())
 
 	return rootCmd.Execute()
-}
-
-func base62Tag() string {
-	const base = 62
-	const sets = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-	b := make([]byte, 0)
-	num := time.Now().UnixNano() / int64(time.Millisecond)
-	for num > 0 {
-		r := math.Mod(float64(num), float64(base))
-		num /= base
-		b = append([]byte{sets[int(r)]}, b...)
-	}
-	return string(b)
 }
 
 func populateOpt(flagSet *pflag.FlagSet) (err error) {
