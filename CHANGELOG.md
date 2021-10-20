@@ -1,5 +1,13 @@
 TiUP Changelog
 
+## [1.6.1] 2021-10-21
+
+### Fixes
+
+- Fix `tiup-bench` reporting wrong latency for TPCC workloads ([#1577](https://github.com/pingcap/tiup/pull/1577), [@lobshunter](https://github.com/lobshunter))
+- Fix test cases for `tiup-bench` and `tiup-client` ([#1579](https://github.com/pingcap/tiup/pull/1579), [@AstroProfundis](https://github.com/AstroProfundis))
+- Fix fetching component manifest error on certain circumstances ([#1581](https://github.com/pingcap/tiup/pull/1581), [@nexustar](https://github.com/nexustar))
+
 ## [1.6.0] 2021-10-09
 
 ### New Features
