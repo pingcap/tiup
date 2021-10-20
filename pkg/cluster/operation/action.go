@@ -471,8 +471,13 @@ func StartComponent(ctx context.Context, instances []spec.Instance, noAgentHosts
 	// eg: PD has more strict restrictions on the capacity expansion process,
 	// that is, there should be only one node in the peer-join stage at most
 	// ref https://github.com/tikv/pd/blob/d38b36714ccee70480c39e07126e3456b5fb292d/server/join/join.go#L179-L191
-	if options.Operation == ScaleOutOperation && (name == spec.ComponentPD || name == spec.ComponentDMMaster) {
-		return serialStartInstances(ctx, instances, options, tlsCfg)
+	if options.Operation == ScaleOutOperation {
+		switch name {
+		case spec.ComponentPD,
+			spec.ComponentTiFlash,
+			spec.ComponentDMMaster:
+			return serialStartInstances(ctx, instances, options, tlsCfg)
+		}
 	}
 
 	errg, _ := errgroup.WithContext(ctx)
