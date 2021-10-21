@@ -919,6 +919,7 @@ func (s *Specification) validateTLSEnabled() error {
 		case ComponentPD,
 			ComponentTiDB,
 			ComponentTiKV,
+			ComponentTiFlash,
 			ComponentPump,
 			ComponentDrainer,
 			ComponentCDC,
