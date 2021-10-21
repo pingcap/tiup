@@ -16,6 +16,7 @@ package instance
 import (
 	"context"
 	"fmt"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -43,6 +44,7 @@ func NewTiDBInstance(binPath string, dir, host, configPath string, id, port int,
 			Dir:        dir,
 			Host:       host,
 			Port:       utils.MustGetFreePort(host, port),
+			Socket:     path.Join("/tmp", fmt.Sprintf("tidb_%d.sock", id)),
 			StatusPort: utils.MustGetFreePort("0.0.0.0", 10080),
 			ConfigPath: configPath,
 		},
@@ -60,6 +62,7 @@ func (inst *TiDBInstance) Start(ctx context.Context, version utils.Version) erro
 		"--store=tikv",
 		fmt.Sprintf("--host=%s", inst.Host),
 		fmt.Sprintf("--status=%d", inst.StatusPort),
+		fmt.Sprintf("--socket=%s", inst.Socket),
 		fmt.Sprintf("--path=%s", strings.Join(endpoints, ",")),
 		fmt.Sprintf("--log-file=%s", filepath.Join(inst.Dir, "tidb.log")),
 	}
