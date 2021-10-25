@@ -88,9 +88,11 @@ func (m *Manager) Deploy(
 	if err := spec.ParseTopologyYaml(topoFile, topo); err != nil {
 		return err
 	}
-	if semver.Compare(clusterVersion, "v4.0.5") < 0 &&
-		len(topo.(*spec.Specification).TiFlashServers) > 0 {
-		return fmt.Errorf("TiFlash %s is not supported in TLS enabled cluster", clusterVersion)
+	if clusterSpec, ok := topo.(*spec.Specification); ok {
+		if semver.Compare(clusterVersion, "v4.0.5") < 0 &&
+			len(clusterSpec.TiFlashServers) > 0 {
+			return fmt.Errorf("TiFlash %s is not supported in TLS enabled cluster", clusterVersion)
+		}
 	}
 
 	instCnt := 0

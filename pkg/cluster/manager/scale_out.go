@@ -79,9 +79,11 @@ func (m *Manager) ScaleOut(
 		return err
 	}
 
-	if semver.Compare(base.Version, "v4.0.5") < 0 &&
-		len(topo.(*spec.Specification).TiFlashServers) > 0 {
-		return fmt.Errorf("TiFlash %s is not supported in TLS enabled cluster", base.Version)
+	if clusterSpec, ok := topo.(*spec.Specification); ok {
+		if semver.Compare(base.Version, "v4.0.5") < 0 &&
+			len(clusterSpec.TiFlashServers) > 0 {
+			return fmt.Errorf("TiFlash %s is not supported in TLS enabled cluster", base.Version)
+		}
 	}
 
 	if newPartTopo, ok := newPart.(*spec.Specification); ok {
