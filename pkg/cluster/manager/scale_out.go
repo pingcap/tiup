@@ -16,6 +16,7 @@ package manager
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/fatih/color"
@@ -32,6 +33,7 @@ import (
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
+	"golang.org/x/mod/semver"
 	"gopkg.in/yaml.v3"
 )
 
@@ -76,6 +78,12 @@ func (m *Manager) ScaleOut(
 		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
 		return err
 	}
+
+	if semver.Compare(base.Version, "v4.0.5") < 0 &&
+		len(topo.(*spec.Specification).TiFlashServers) > 0 {
+		return fmt.Errorf("TiFlash %s is not supported in TLS enabled cluster", base.Version)
+	}
+
 	if newPartTopo, ok := newPart.(*spec.Specification); ok {
 		newPartTopo.AdjustByVersion(base.Version)
 	}

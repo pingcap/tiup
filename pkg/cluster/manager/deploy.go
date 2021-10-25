@@ -38,6 +38,7 @@ import (
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
+	"golang.org/x/mod/semver"
 )
 
 // DeployOptions contains the options for scale out.
@@ -86,6 +87,10 @@ func (m *Manager) Deploy(
 
 	if err := spec.ParseTopologyYaml(topoFile, topo); err != nil {
 		return err
+	}
+	if semver.Compare(clusterVersion, "v4.0.5") < 0 &&
+		len(topo.(*spec.Specification).TiFlashServers) > 0 {
+		return fmt.Errorf("TiFlash %s is not supported in TLS enabled cluster", clusterVersion)
 	}
 
 	instCnt := 0
