@@ -57,6 +57,7 @@ type (
 		SSH() (string, int)
 		GetMainPort() int
 		IsImported() bool
+		IgnoreMonitorAgent() bool
 	}
 
 	// GlobalOptions represents the global options for all groups in topology
@@ -263,17 +264,17 @@ func (s *Specification) LocationLabels() ([]string, error) {
 }
 
 // GetTiKVLabels implements TiKVLabelProvider
-func (s *Specification) GetTiKVLabels() (map[string]map[string]string, error) {
+func (s *Specification) GetTiKVLabels() (map[string]map[string]string, []map[string]api.LabelInfo, error) {
 	kvs := s.TiKVServers
 	locationLabels := map[string]map[string]string{}
 	for _, kv := range kvs {
 		address := fmt.Sprintf("%s:%d", kv.Host, kv.GetMainPort())
 		var err error
 		if locationLabels[address], err = kv.Labels(); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
-	return locationLabels, nil
+	return locationLabels, nil, nil
 }
 
 // AllComponentNames contains the names of all components.
@@ -660,14 +661,14 @@ func (s *Specification) ComponentsByStartOrder() (comps []Component) {
 
 // ComponentsByUpdateOrder return component in the order need to be updated.
 func (s *Specification) ComponentsByUpdateOrder() (comps []Component) {
-	// "tiflash", "cdc", "pd", "tikv", "pump", "tidb", "drainer", "prometheus", "grafana", "alertmanager"
+	// "tiflash", "pd", "tikv", "pump", "tidb", "drainer", "cdc", "prometheus", "grafana", "alertmanager"
 	comps = append(comps, &TiFlashComponent{s})
-	comps = append(comps, &CDCComponent{s})
 	comps = append(comps, &PDComponent{s})
 	comps = append(comps, &TiKVComponent{s})
 	comps = append(comps, &PumpComponent{s})
 	comps = append(comps, &TiDBComponent{s})
 	comps = append(comps, &DrainerComponent{s})
+	comps = append(comps, &CDCComponent{s})
 	comps = append(comps, &MonitorComponent{s})
 	comps = append(comps, &GrafanaComponent{s})
 	comps = append(comps, &AlertManagerComponent{s})

@@ -101,13 +101,6 @@ func binaryPath(home, cmd string) (string, error) {
 }
 
 func run(name string, args ...string) error {
-	// Change the working directory to the same with TiUP working directory
-	if wd := os.Getenv(localdata.EnvNameWorkDir); wd != "" {
-		if err := os.Chdir(wd); err != nil {
-			return err
-		}
-	}
-
 	// Handle `cdc cli`
 	if strings.Contains(name, " ") {
 		xs := strings.Split(name, " ")

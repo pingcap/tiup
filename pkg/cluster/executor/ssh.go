@@ -139,11 +139,11 @@ func (e *EasySSHExecutor) initialize(config SSHConfig) {
 func (e *EasySSHExecutor) Execute(ctx context.Context, cmd string, sudo bool, timeout ...time.Duration) ([]byte, []byte, error) {
 	// try to acquire root permission
 	if e.Sudo || sudo {
-		cmd = fmt.Sprintf("sudo -H bash -c \"%s\"", cmd)
+		cmd = fmt.Sprintf("/usr/bin/sudo -H bash -c \"%s\"", cmd)
 	}
 
 	// set a basic PATH in case it's empty on login
-	cmd = fmt.Sprintf("PATH=$PATH:/usr/bin:/usr/sbin %s", cmd)
+	cmd = fmt.Sprintf("PATH=$PATH:/bin:/sbin:/usr/bin:/usr/sbin %s", cmd)
 
 	if e.Locale != "" {
 		cmd = fmt.Sprintf("export LANG=%s; %s", e.Locale, cmd)
@@ -261,7 +261,9 @@ func (e *NativeSSHExecutor) configArgs(args []string, isScp bool) []string {
 				proxyArgs = append([]string{"sshpass", "-p", proxy.Passphrase, "-P", e.prompt("passphrase")}, proxyArgs...)
 			}
 		}
-		args = append(args, []string{"-o", fmt.Sprintf(`ProxyCommand="%s %s@%s -p %d -W %%h:%%p"`, strings.Join(proxyArgs, " "), proxy.User, proxy.Host, proxy.Port)}...)
+		// Don't need to extra quote it, exec.Command will handle it right
+		// ref https://stackoverflow.com/a/26473771/2298986
+		args = append(args, []string{"-o", fmt.Sprintf(`ProxyCommand=%s %s@%s -p %d -W %%h:%%p`, strings.Join(proxyArgs, " "), proxy.User, proxy.Host, proxy.Port)}...)
 	}
 	return args
 }
@@ -274,11 +276,11 @@ func (e *NativeSSHExecutor) Execute(ctx context.Context, cmd string, sudo bool, 
 
 	// try to acquire root permission
 	if e.Sudo || sudo {
-		cmd = fmt.Sprintf("sudo -H bash -c \"%s\"", cmd)
+		cmd = fmt.Sprintf("/usr/bin/sudo -H bash -c \"%s\"", cmd)
 	}
 
 	// set a basic PATH in case it's empty on login
-	cmd = fmt.Sprintf("PATH=$PATH:/usr/bin:/usr/sbin %s", cmd)
+	cmd = fmt.Sprintf("PATH=$PATH:/bin:/sbin:/usr/bin:/usr/sbin %s", cmd)
 
 	if e.Locale != "" {
 		cmd = fmt.Sprintf("export LANG=%s; %s", e.Locale, cmd)

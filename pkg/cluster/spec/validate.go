@@ -22,6 +22,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pingcap/tiup/pkg/cluster/api"
+
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
@@ -227,11 +229,19 @@ func CheckClusterDirOverlap(entries []DirEntry) error {
 				if d1.instance.IsImported() && d2.instance.IsImported() {
 					continue
 				}
-				// overlap is alloed in the case one side is imported and the other is monitor,
+				// overlap is allowed in the case one side is imported and the other is monitor,
 				// we assume that the monitor is deployed with the first instance in that host,
 				// it implies that the monitor is imported too.
 				if (strings.HasPrefix(d1.dirKind, "monitor") && d2.instance.IsImported()) ||
 					(d1.instance.IsImported() && strings.HasPrefix(d2.dirKind, "monitor")) {
+					continue
+				}
+
+				// overlap is allowed in the case one side is data dir of a monitor instance,
+				// as the *_exporter don't need data dir, the field is only kept for compatiability
+				// with legacy tidb-ansible deployments.
+				if (strings.HasPrefix(d1.dirKind, "monitor data directory")) ||
+					(strings.HasPrefix(d2.dirKind, "monitor data directory")) {
 					continue
 				}
 
@@ -264,7 +274,7 @@ Please modify the topology file and try again.
 	return nil
 }
 
-// CheckClusterPortConflict checks cluster dir conflict
+// CheckClusterPortConflict checks cluster port conflict
 func CheckClusterPortConflict(clusterList map[string]Metadata, clusterName string, topo Topology) error {
 	type Entry struct {
 		clusterName   string
@@ -353,6 +363,7 @@ func CheckClusterPortConflict(clusterList map[string]Metadata, clusterName strin
 			}
 
 			if p1.port == p2.port {
+				// build the conflict info
 				properties := map[string]string{
 					"ThisPort":       strconv.Itoa(p1.port),
 					"ThisComponent":  p1.componentName,
@@ -362,6 +373,15 @@ func CheckClusterPortConflict(clusterList map[string]Metadata, clusterName strin
 					"ExistComponent": p2.componentName,
 					"ExistHost":      p2.instance.GetHost(),
 				}
+				// if one of the instances marks itself as ignore_exporter, do not report
+				// the monitoring agent ports conflict and just skip
+				if (p1.componentName == RoleMonitor || p2.componentName == RoleMonitor) &&
+					(p1.instance.IgnoreMonitorAgent() || p2.instance.IgnoreMonitorAgent()) {
+					zap.L().Debug("Ignored deploy port conflict", zap.Any("info", properties))
+					continue
+				}
+
+				// build error message
 				zap.L().Info("Meet deploy port conflict", zap.Any("info", properties))
 				return errDeployPortConflict.New("Deploy port conflicts to an existing cluster").WithProperty(tui.SuggestionFromTemplate(`
 The port you specified in the topology file is:
@@ -416,7 +436,7 @@ func (e *TiKVLabelError) Error() string {
 
 // TiKVLabelProvider provides the store labels information
 type TiKVLabelProvider interface {
-	GetTiKVLabels() (map[string]map[string]string, error)
+	GetTiKVLabels() (map[string]map[string]string, []map[string]api.LabelInfo, error)
 }
 
 func getHostFromAddress(addr string) string {
@@ -431,7 +451,7 @@ func CheckTiKVLabels(pdLocLabels []string, slp TiKVLabelProvider) error {
 	lbs := set.NewStringSet(pdLocLabels...)
 	hosts := make(map[string]int)
 
-	storeLabels, err := slp.GetTiKVLabels()
+	storeLabels, _, err := slp.GetTiKVLabels()
 	if err != nil {
 		return err
 	}
@@ -950,6 +970,64 @@ func (s *Specification) validateTiFlashConfigs() error {
 	return nil
 }
 
+// validateMonitorAgent checks for conflicts in topology for different ignore_exporter
+// settings for multiple instances on the same host / IP
+func (s *Specification) validateMonitorAgent() error {
+	type (
+		conflict struct {
+			ignore bool
+			cfg    string
+		}
+	)
+	agentStats := map[string]conflict{}
+	topoSpec := reflect.ValueOf(s).Elem()
+	topoType := reflect.TypeOf(s).Elem()
+
+	for i := 0; i < topoSpec.NumField(); i++ {
+		if isSkipField(topoSpec.Field(i)) {
+			continue
+		}
+
+		compSpecs := topoSpec.Field(i)
+		for index := 0; index < compSpecs.Len(); index++ {
+			compSpec := reflect.Indirect(compSpecs.Index(index))
+			// skip nodes imported from TiDB-Ansible
+			if compSpec.Addr().Interface().(InstanceSpec).IsImported() {
+				continue
+			}
+
+			// check hostname
+			host := compSpec.FieldByName("Host").String()
+			cfg := strings.Split(topoType.Field(i).Tag.Get("yaml"), ",")[0] // without meta
+			if host == "" {
+				return errors.Errorf("`%s` contains empty host field", cfg)
+			}
+
+			// agent conflicts
+			stat := conflict{}
+			if j, found := findField(compSpec, "IgnoreExporter"); found {
+				stat.ignore = compSpec.Field(j).Bool()
+				stat.cfg = cfg
+			}
+
+			prev, exist := agentStats[host]
+			if exist {
+				if prev.ignore != stat.ignore {
+					return &meta.ValidateErr{
+						Type:   meta.TypeMismatch,
+						Target: "ignore_exporter",
+						LHS:    fmt.Sprintf("%s:%v", prev.cfg, prev.ignore),
+						RHS:    fmt.Sprintf("%s:%v", stat.cfg, stat.ignore),
+						Value:  host,
+					}
+				}
+			}
+			agentStats[host] = stat
+		}
+	}
+	return nil
+}
+
 // Validate validates the topology specification and produce error if the
 // specification invalid (e.g: port conflicts or directory conflicts)
 func (s *Specification) Validate() error {
@@ -963,6 +1041,7 @@ func (s *Specification) Validate() error {
 		s.validatePDNames,
 		s.validateTiSparkSpec,
 		s.validateTiFlashConfigs,
+		s.validateMonitorAgent,
 	}
 
 	for _, v := range validators {

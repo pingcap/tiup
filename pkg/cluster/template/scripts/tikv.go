@@ -96,7 +96,7 @@ func (c *TiKVScript) AppendEndpoints(ends ...*PDScript) *TiKVScript {
 // Config generate the config file data.
 func (c *TiKVScript) Config() ([]byte, error) {
 	fp := path.Join("templates", "scripts", "run_tikv.sh.tpl")
-	tpl, err := embed.ReadFile(fp)
+	tpl, err := embed.ReadTemplate(fp)
 	if err != nil {
 		return nil, err
 	}

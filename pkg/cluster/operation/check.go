@@ -152,8 +152,10 @@ func checkOSInfo(opt *CheckOptions, osInfo *sysinfo.OS) *CheckResult {
 	switch osInfo.Vendor {
 	case "centos", "redhat", "rhel":
 		// check version
-		if ver, _ := strconv.Atoi(osInfo.Version); ver < 7 {
-			result.Err = fmt.Errorf("%s %s not supported, use version 7 or higher",
+		// CentOS 8 is known to be not working, and we don't have plan to support it
+		// as of now, we may add support for RHEL 8 based systems in the future.
+		if ver, _ := strconv.ParseFloat(osInfo.Version, 64); ver < 7 || ver >= 8 {
+			result.Err = fmt.Errorf("%s %s not supported, use version 7 please",
 				osInfo.Name, osInfo.Release)
 			return result
 		}
@@ -162,7 +164,7 @@ func checkOSInfo(opt *CheckOptions, osInfo *sysinfo.OS) *CheckResult {
 		msg := "debian support is not fully tested, be careful"
 		result.Err = fmt.Errorf("%s (%s)", result.Msg, msg)
 		result.Warn = true
-		if ver, _ := strconv.Atoi(osInfo.Version); ver < 9 {
+		if ver, _ := strconv.ParseFloat(osInfo.Version, 64); ver < 9 {
 			result.Err = fmt.Errorf("%s %s not supported, use version 9 or higher (%s)",
 				osInfo.Name, osInfo.Release, msg)
 			result.Warn = false
@@ -487,8 +489,15 @@ func CheckSELinux(ctx context.Context, e ctxt.Executor) *CheckResult {
 		return result
 	}
 	out := strings.Trim(string(stdout), "\n")
-	if lines, err := strconv.Atoi(out); err != nil || lines > 0 {
-		result.Err = fmt.Errorf("SELinux is not disabled, %d %s", lines, err)
+	lines, err := strconv.Atoi(out)
+	if err != nil {
+		result.Err = fmt.Errorf("can not check SELinux status, please validate manually, %s", err)
+		result.Warn = true
+		return result
+	}
+
+	if lines > 0 {
+		result.Err = fmt.Errorf("SELinux is not disabled")
 	} else {
 		result.Msg = "SELinux is disabled"
 	}
@@ -824,7 +833,7 @@ func CheckDirPermission(ctx context.Context, e ctxt.Executor, user, path string)
 
 	_, stderr, err := e.Execute(ctx,
 		fmt.Sprintf(
-			"sudo -u %[1]s touch %[2]s/.tiup_cluster_check_file && rm -f %[2]s/.tiup_cluster_check_file",
+			"/usr/bin/sudo -u %[1]s touch %[2]s/.tiup_cluster_check_file && rm -f %[2]s/.tiup_cluster_check_file",
 			user,
 			path,
 		),

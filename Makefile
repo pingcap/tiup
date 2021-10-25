@@ -91,6 +91,8 @@ server:
 
 check: fmt lint tidy check-static vet
 	@# Target: run all checkers. (fmt, lint, tidy, check-static and vet)
+	$(MAKE) -C components/bench ${MAKECMDGOALS}
+	$(MAKE) -C components/client ${MAKECMDGOALS}
 
 check-static: tools/bin/golangci-lint
 	@# Target: run the golangci-lint static check tool
@@ -119,6 +121,8 @@ clean:
 
 test: failpoint-enable run-tests failpoint-disable
 	@# Target: run tests with failpoint enabled
+	$(MAKE) -C components/bench ${MAKECMDGOALS}
+	$(MAKE) -C components/client ${MAKECMDGOALS}
 
 # TODO: refactor integration tests base on v1 manifest
 # run-tests: unit-test integration_test
@@ -161,5 +165,5 @@ tools/bin/revive: tools/check/go.mod
 	$(GO) build -o ../bin/revive github.com/mgechev/revive
 
 tools/bin/golangci-lint:
-	@# Target: pull in specific version of golangci-lint (v1.38.0)
-	curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b ./tools/bin v1.38.0
+	@# Target: pull in specific version of golangci-lint (v1.42.1)
+	curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ./tools/bin v1.42.1

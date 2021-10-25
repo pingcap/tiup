@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -71,6 +72,7 @@ of components or the repository itself.`,
 		newMirrorShowCmd(),
 		newMirrorSetCmd(),
 		newMirrorModifyCmd(),
+		newMirrorRenewCmd(),
 		newMirrorGrantCmd(),
 		newMirrorRotateCmd(),
 	)
@@ -105,7 +107,7 @@ func newMirrorSignCmd() *cobra.Command {
 
 			if strings.HasPrefix(args[0], "http") {
 				client := utils.NewHTTPClient(time.Duration(timeout)*time.Second, nil)
-				data, err := client.Get(args[0])
+				data, err := client.Get(context.TODO(), args[0])
 				if err != nil {
 					return err
 				}
@@ -114,7 +116,7 @@ func newMirrorSignCmd() *cobra.Command {
 					return err
 				}
 
-				if _, err = client.Post(args[0], bytes.NewBuffer(data)); err != nil {
+				if _, err = client.Post(context.TODO(), args[0], bytes.NewBuffer(data)); err != nil {
 					return err
 				}
 
@@ -334,6 +336,56 @@ func newMirrorModifyCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&standalone, "standalone", "", standalone, "can this component run directly")
 	cmd.Flags().BoolVarP(&hidden, "hide", "", hidden, "is this component visible in list")
 	cmd.Flags().BoolVarP(&yanked, "yank", "", yanked, "is this component deprecated")
+	return cmd
+}
+
+// the `mirror renew` sub command
+func newMirrorRenewCmd() *cobra.Command {
+	var privPath string
+	var days int
+
+	cmd := &cobra.Command{
+		Use:   "renew <component> [flags]",
+		Short: "Renew the manifest of a published component.",
+		Long:  "Renew the manifest of a published component, bump version and extend its expire time.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			teleCommand = cmd.CommandPath()
+			if len(args) != 1 {
+				return cmd.Help()
+			}
+
+			component := args[0]
+
+			env := environment.GlobalEnv()
+
+			comp, _ := environment.ParseCompVersion(component)
+			m, err := env.V1Repository().FetchComponentManifest(comp, true)
+			if err != nil {
+				// ignore manifest expiration error
+				if v1manifest.IsExpirationError(perrs.Cause(err)) {
+					fmt.Println(err)
+				} else {
+					return err
+				}
+			}
+
+			if days > 0 {
+				v1manifest.RenewManifest(m, time.Now(), time.Hour*24*time.Duration(days))
+			} else {
+				v1manifest.RenewManifest(m, time.Now())
+			}
+
+			manifest, err := sign(privPath, m)
+			if err != nil {
+				return err
+			}
+
+			return env.V1Repository().Mirror().Publish(manifest, &model.PublishInfo{})
+		},
+	}
+
+	cmd.Flags().StringVarP(&privPath, "key", "k", "", "private key path")
+	cmd.Flags().IntVar(&days, "days", 0, "after how many days the manifest expires, 0 means builtin default values of manifests")
 	return cmd
 }
 

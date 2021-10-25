@@ -19,17 +19,16 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestPlaygroundAbsDir(t *testing.T) {
-	err := os.Setenv(localdata.EnvNameWorkDir, "/testing")
+	err := os.Chdir("/usr")
 	assert.Nil(t, err)
 
 	a, err := getAbsolutePath("./a")
 	assert.Nil(t, err)
-	assert.Equal(t, "/testing/a", a)
+	assert.Equal(t, "/usr/a", a)
 
 	b, err := getAbsolutePath("../b")
 	assert.Nil(t, err)

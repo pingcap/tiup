@@ -26,9 +26,9 @@ import (
 	"github.com/fatih/color"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/base52"
+	"github.com/pingcap/tiup/pkg/crypto/rand"
 	"github.com/pingcap/tiup/pkg/tui"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
-	"github.com/pingcap/tiup/pkg/utils/rand"
 )
 
 // CommandArgs returns the original commands from the first line of a file
@@ -132,7 +132,7 @@ func GetAuditList(dir string) ([]Item, error) {
 	}
 
 	sort.Slice(auditList, func(i, j int) bool {
-		return auditList[i].Time > auditList[j].Time
+		return auditList[i].Time < auditList[j].Time
 	})
 
 	return auditList, nil

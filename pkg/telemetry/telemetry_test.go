@@ -62,10 +62,10 @@ func (s *TelemetrySuite) TestReport(c *check.C) {
 
 	msg := new(Report)
 
-	err := tele.Report(context.Background(), msg)
+	err := tele.Report(context.TODO(), msg)
 	c.Assert(err, check.NotNil)
 
 	msg.EventUUID = "dfdfdf"
-	err = tele.Report(context.Background(), msg)
+	err = tele.Report(context.TODO(), msg)
 	c.Assert(err, check.IsNil)
 }

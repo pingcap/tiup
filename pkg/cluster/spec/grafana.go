@@ -35,6 +35,7 @@ type GrafanaSpec struct {
 	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported        bool                 `yaml:"imported,omitempty"`
 	Patched         bool                 `yaml:"patched,omitempty"`
+	IgnoreExporter  bool                 `yaml:"ignore_exporter,omitempty"`
 	Port            int                  `yaml:"port" default:"3000"`
 	DeployDir       string               `yaml:"deploy_dir,omitempty"`
 	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
@@ -46,6 +47,9 @@ type GrafanaSpec struct {
 	AnonymousEnable bool                 `yaml:"anonymous_enable" default:"false" validate:"anonymous_enable:editable"`
 	RootURL         string               `yaml:"root_url" validate:"root_url:editable"`
 	Domain          string               `yaml:"domain" validate:"domain:editable"`
+	DefaultTheme    string               `yaml:"default_theme,omitempty" validate:"default_theme:editable"`
+	OrgName         string               `yaml:"org_name,omitempty" validate:"org_name:editable"`
+	OrgRole         string               `yaml:"org_role,omitempty" validate:"org_role:editable"`
 }
 
 // Role returns the component role of the instance
@@ -66,6 +70,11 @@ func (s *GrafanaSpec) GetMainPort() int {
 // IsImported returns if the node is imported from TiDB-Ansible
 func (s *GrafanaSpec) IsImported() bool {
 	return s.Imported
+}
+
+// IgnoreMonitorAgent returns if the node does not have monitor agents available
+func (s *GrafanaSpec) IgnoreMonitorAgent() bool {
+	return s.IgnoreExporter
 }
 
 // GrafanaComponent represents Grafana component.
@@ -160,6 +169,9 @@ func (i *GrafanaInstance) InitConfig(
 		WithAnonymousenable(spec.AnonymousEnable).
 		WithRootURL(spec.RootURL).
 		WithDomain(spec.Domain).
+		WithDefaultTheme(spec.DefaultTheme).
+		WithOrgName(spec.OrgName).
+		WithOrgRole(spec.OrgRole).
 		ConfigToFile(fp); err != nil {
 		return err
 	}

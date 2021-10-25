@@ -36,6 +36,7 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/playground/instance"
 	"github.com/pingcap/tiup/pkg/cluster/api"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/logger/log"
@@ -47,6 +48,7 @@ import (
 	"github.com/spf13/pflag"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.uber.org/zap"
+	"golang.org/x/mod/semver"
 	"gopkg.in/yaml.v3"
 )
 
@@ -69,11 +71,15 @@ var (
 	teleReport       *telemetry.Report
 	playgroundReport *telemetry.PlaygroundReport
 	options          = &BootOptions{}
+	tag              string
+	tiupDataDir      string
+	dataDir          string
 )
 
 const (
-	mode        = "mode"
-	withMonitor = "monitor"
+	mode           = "mode"
+	withMonitor    = "monitor"
+	withoutMonitor = "without-monitor"
 
 	// instance numbers
 	db      = "db"
@@ -91,6 +97,7 @@ const (
 	// hosts
 	clusterHost = "host"
 	dbHost      = "db.Host"
+	dbPort      = "db.Port"
 	pdHost      = "pd.Host"
 
 	// config paths
@@ -150,6 +157,32 @@ Examples:
 		Args: func(cmd *cobra.Command, args []string) error {
 			return nil
 		},
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			tiupDataDir = os.Getenv(localdata.EnvNameInstanceDataDir)
+			tiupHome := os.Getenv(localdata.EnvNameHome)
+			if tiupHome == "" {
+				tiupHome, _ = getAbsolutePath(filepath.Join("~", localdata.ProfileDirName))
+			}
+			if tiupDataDir == "" {
+				if tag == "" {
+					dataDir = filepath.Join(tiupHome, localdata.DataParentDir, utils.Base62Tag())
+				} else {
+					dataDir = filepath.Join(tiupHome, localdata.DataParentDir, tag)
+				}
+				if dataDir == "" {
+					return errors.Errorf("cannot read environment variable %s nor %s", localdata.EnvNameInstanceDataDir, localdata.EnvNameHome)
+				}
+				err := os.MkdirAll(dataDir, os.ModePerm)
+				if err != nil {
+					return err
+				}
+			} else {
+				dataDir = tiupDataDir
+			}
+			instanceName := dataDir[strings.LastIndex(dataDir, "/")+1:]
+			fmt.Printf("\033]0;TiUP Playground: %s\a", instanceName)
+			return nil
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			teleReport = new(telemetry.Report)
 			playgroundReport = new(telemetry.PlaygroundReport)
@@ -172,11 +205,6 @@ Examples:
 
 			if err := populateOpt(cmd.Flags()); err != nil {
 				return err
-			}
-
-			dataDir := os.Getenv(localdata.EnvNameInstanceDataDir)
-			if dataDir == "" {
-				return errors.Errorf("cannot read environment variable %s", localdata.EnvNameInstanceDataDir)
 			}
 
 			port, err := utils.GetFreePort("0.0.0.0", 9527)
@@ -219,6 +247,7 @@ Examples:
 				if atomic.LoadUint32(&booted) == 0 {
 					cancel()
 					time.AfterFunc(time.Second, func() {
+						removeData()
 						os.Exit(0)
 					})
 					return
@@ -229,9 +258,47 @@ Examples:
 				sig = (<-sc).(syscall.Signal)
 				atomic.StoreInt32(&p.curSig, int32(syscall.SIGKILL))
 				if sig == syscall.SIGINT {
+					removeData()
 					p.terminate(syscall.SIGKILL)
 				}
 			}()
+
+			// expand version string
+			if !semver.IsValid(options.Version) {
+				var version utils.Version
+				var err error
+				// If any of the binpath arguments is set (which indicates the user is
+				// using a self build binary) and version number is not set, we assume
+				// it is a developer and use the latest release version by default.
+				// The platform string used to resolve the full version number is set
+				// to "linux/amd64" as this is the platform that every released version
+				// is available.
+				// For platforms lacks of support for some versions, e.g., darwin-amd64,
+				// specifically set a valid version for it, or use custom binpath for
+				// all components used.
+				// If none of the binpath arguments is set, use the platform of the
+				// playground binary itself.
+				if (options.TiDB.BinPath != "" || options.TiKV.BinPath != "" ||
+					options.PD.BinPath != "" || options.TiFlash.BinPath != "" ||
+					options.TiCDC.BinPath != "" || options.Pump.BinPath != "" ||
+					options.Drainer.BinPath != "") && options.Version == "" {
+					version, err = env.V1Repository().ResolveComponentVersionWithPlatform(spec.ComponentTiDB, options.Version, "linux/amd64")
+				} else {
+					version, err = env.V1Repository().ResolveComponentVersion(spec.ComponentTiDB, options.Version)
+				}
+				if err != nil {
+					return errors.Annotate(err, fmt.Sprintf("can not expand version %s to a valid semver string", options.Version))
+				}
+				fmt.Println(color.YellowString(`Using the version %s for version constraint "%s".
+		
+If you'd like to use a TiDB version other than %s, cancel and retry with the following arguments:
+	Specify version manually:   tiup playground <version>
+	Specify version range:      tiup playground ^5
+	The nightly version:        tiup playground nightly
+`, version, options.Version, version))
+
+				options.Version = version.String()
+			}
 
 			bootErr := p.bootCluster(ctx, env, options)
 			if bootErr != nil {
@@ -257,7 +324,10 @@ Examples:
 	defaultOptions := &BootOptions{}
 
 	rootCmd.Flags().String(mode, defaultMode, "TiUP playground mode: 'tidb', 'tikv-slim'")
-	rootCmd.Flags().Bool(withMonitor, false, "Start prometheus and grafana component")
+	rootCmd.Flags().StringVarP(&tag, "tag", "T", "", "Specify a tag for playground")
+	rootCmd.Flags().Bool(withoutMonitor, false, "Don't start prometheus and grafana component")
+	rootCmd.Flags().Bool(withMonitor, true, "Start prometheus and grafana component")
+	_ = rootCmd.Flags().MarkDeprecated(withMonitor, "Please use --without-monitor to control whether to disable monitor.")
 
 	rootCmd.Flags().Int(db, defaultOptions.TiDB.Num, "TiDB instance number")
 	rootCmd.Flags().Int(kv, defaultOptions.TiKV.Num, "TiKV instance number")
@@ -272,6 +342,7 @@ Examples:
 
 	rootCmd.Flags().String(clusterHost, defaultOptions.Host, "Playground cluster host")
 	rootCmd.Flags().String(dbHost, defaultOptions.TiDB.Host, "Playground TiDB host. If not provided, TiDB will still use `host` flag as its host")
+	rootCmd.Flags().Int(dbPort, defaultOptions.TiDB.Port, "Playground TiDB port. If not provided, TiDB will use 4000 as its port")
 	rootCmd.Flags().String(pdHost, defaultOptions.PD.Host, "Playground PD host. If not provided, PD will still use `host` flag as its host")
 
 	rootCmd.Flags().String(dbConfig, defaultOptions.TiDB.ConfigPath, "TiDB instance configuration file")
@@ -330,7 +401,12 @@ func populateOpt(flagSet *pflag.FlagSet) (err error) {
 			if err != nil {
 				return
 			}
-
+		case withoutMonitor:
+			options.Monitor, err = strconv.ParseBool(flag.Value.String())
+			if err != nil {
+				return
+			}
+			options.Monitor = !options.Monitor
 		case db:
 			options.TiDB.Num, err = strconv.Atoi(flag.Value.String())
 			if err != nil {
@@ -412,6 +488,11 @@ func populateOpt(flagSet *pflag.FlagSet) (err error) {
 			options.Host = flag.Value.String()
 		case dbHost:
 			options.TiDB.Host = flag.Value.String()
+		case dbPort:
+			options.TiDB.Port, err = strconv.Atoi(flag.Value.String())
+			if err != nil {
+				return
+			}
 		case pdHost:
 			options.PD.Host = flag.Value.String()
 		}
@@ -492,7 +573,10 @@ func getAbsolutePath(path string) (string, error) {
 	}
 
 	if !filepath.IsAbs(path) && !strings.HasPrefix(path, "~/") {
-		wd := os.Getenv(localdata.EnvNameWorkDir)
+		wd, err := os.Getwd()
+		if err != nil {
+			return "", err
+		}
 		if wd == "" {
 			return "", errors.New("playground running at non-tiup mode")
 		}
@@ -590,8 +674,8 @@ func main() {
 				}
 			}
 			playgroundReport.TakeMilliseconds = uint64(time.Since(start).Milliseconds())
-			tele := telemetry.NewTelemetry()
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
+			tele := telemetry.NewTelemetry()
 			err := tele.Report(ctx, teleReport)
 			if environment.DebugMode {
 				if err != nil {
@@ -610,5 +694,12 @@ func main() {
 
 	if code != 0 {
 		os.Exit(code)
+	}
+}
+
+func removeData() {
+	// remove if not set tag when run at standalone mode
+	if tiupDataDir == "" && tag == "" {
+		os.RemoveAll(dataDir)
 	}
 }

@@ -120,7 +120,7 @@ func (s *KeyStore) verifySignature(signed []byte, role string, signatures []Sign
 	has := make(map[string]struct{})
 	for _, sig := range signatures {
 		if _, ok := has[sig.KeyID]; ok {
-			return errors.Errorf("signature section of %s contains duplicate signatures", filename)
+			return newSignatureError(filename, errors.Errorf("signature section of %s contains duplicate signatures", filename))
 		}
 		has[sig.KeyID] = struct{}{}
 	}
@@ -152,7 +152,7 @@ func (s *KeyStore) verifySignature(signed []byte, role string, signatures []Sign
 		}
 	}
 	if validSigs < keys.threshold {
-		return errors.Errorf("not enough signatures (%v) for threshold %v in %s", validSigs, keys.threshold, filename)
+		return newSignatureError(filename, errors.Errorf("not enough signatures (%v) for threshold %v in %s", validSigs, keys.threshold, filename))
 	}
 
 	return nil

@@ -1,5 +1,5 @@
 # Based on the deprecated `https://github.com/tutumcloud/tutum-debian`
-FROM golang:1.16
+FROM golang:1.17-bullseye
 
 # Use mirrors for poor network...
 #RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list && \
@@ -15,6 +15,7 @@ RUN apt-get update && \
         openssh-server \
         openjdk-11-jre-headless \
         sudo vim \
+        iproute2 \
         && \
     mkdir -p /var/run/sshd && \
     sed -i "s/UsePrivilegeSeparation.*/UsePrivilegeSeparation no/g" /etc/ssh/sshd_config && \

@@ -49,14 +49,14 @@ func Mirror() string {
 	reset := func(m string) {
 		os.Setenv(repository.EnvMirrors, m)
 		if err := profile.ResetMirror(m, ""); err != nil {
-			fmt.Printf("WARNING: reset mirror failed, %s\n", err.Error())
+			fmt.Fprintf(os.Stderr, "WARNING: reset mirror failed, %s\n", err.Error())
 		}
 	}
 
 	m := os.Getenv(repository.EnvMirrors)
 	if m != "" {
 		if cfg.Mirror != m {
-			fmt.Printf(`WARNING: both mirror config (%s)
+			fmt.Fprintf(os.Stderr, `WARNING: both mirror config (%s)
 and TIUP_MIRRORS (%s) have been set.
 Setting mirror to TIUP_MIRRORS (%s)
 `, cfg.Mirror, m, m)
@@ -187,13 +187,6 @@ func (env *Environment) downloadComponent(component string, version utils.Versio
 // SelectInstalledVersion selects the installed versions and the latest release version
 // will be chosen if there is an empty version
 func (env *Environment) SelectInstalledVersion(component string, ver utils.Version) (utils.Version, error) {
-	if ver == utils.NightlyVersionAlias {
-		var err error
-		if ver, _, err = env.v1Repo.LatestNightlyVersion(component); err != nil {
-			return ver, err
-		}
-	}
-
 	installed, err := env.Profile().InstalledVersions(component)
 	if err != nil {
 		return ver, err
@@ -201,7 +194,7 @@ func (env *Environment) SelectInstalledVersion(component string, ver utils.Versi
 
 	versions := []string{}
 	for _, v := range installed {
-		vi, err := env.v1Repo.ComponentVersion(component, v, true)
+		vi, err := env.v1Repo.LocalComponentVersion(component, v, true)
 		if errors.Cause(err) == repository.ErrUnknownVersion {
 			continue
 		}
@@ -211,44 +204,40 @@ func (env *Environment) SelectInstalledVersion(component string, ver utils.Versi
 		if vi.Yanked {
 			continue
 		}
+		if (string(ver) == utils.NightlyVersionAlias) != utils.Version(v).IsNightly() {
+			continue
+		}
 		versions = append(versions, v)
 	}
+	// Reverse sort: v5.0.0-rc,v5.0.0-nightly-20210305,v4.0.11
+	sort.Slice(versions, func(i, j int) bool {
+		return semver.Compare(versions[i], versions[j]) > 0
+	})
 
 	errInstallFirst := errors.Annotatef(ErrInstallFirst, "use `tiup install %s` to install component `%s` first", component, component)
-	if len(installed) == 0 {
-		return ver, errInstallFirst
-	}
 
-	if !ver.IsEmpty() {
+	if ver.IsEmpty() || string(ver) == utils.NightlyVersionAlias {
+		var selected utils.Version
+		for _, v := range versions {
+			if semver.Prerelease(v) == "" {
+				return utils.Version(v), nil
+			}
+			// select prerelease version when there is only prelease version on local
+			if selected.IsEmpty() {
+				selected = utils.Version(v)
+			}
+		}
+		if !selected.IsEmpty() {
+			return selected, nil
+		}
+	} else {
 		for _, v := range versions {
 			if utils.Version(v) == ver {
 				return ver, nil
 			}
 		}
-		return ver, errInstallFirst
 	}
-
-	sort.Slice(versions, func(i, j int) bool {
-		// Reverse sort: v5.0.0-rc,v5.0.0-nightly-20210305,v4.0.11
-		return semver.Compare(versions[i], versions[j]) > 0
-	})
-
-	for _, v := range versions {
-		if utils.Version(v).IsNightly() {
-			continue
-		}
-		if semver.Prerelease(v) == "" {
-			ver = utils.Version(v)
-			break
-		} else if ver.IsEmpty() {
-			ver = utils.Version(v)
-		}
-	}
-
-	if ver.IsEmpty() {
-		return ver, errInstallFirst
-	}
-	return ver, nil
+	return ver, errInstallFirst
 }
 
 // DownloadComponentIfMissing downloads the specific version of a component if it is missing
@@ -271,7 +260,7 @@ func (env *Environment) DownloadComponentIfMissing(component string, ver utils.V
 	}
 
 	if needDownload {
-		fmt.Printf("The component `%s` version %s is not installed; downloading from repository.\n", component, ver.String())
+		fmt.Fprintf(os.Stderr, "The component `%s` version %s is not installed; downloading from repository.\n", component, ver.String())
 		err := env.downloadComponent(component, ver, false)
 		if err != nil {
 			return "", err

@@ -15,6 +15,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
@@ -22,6 +23,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/jeremywohl/flatten"
@@ -39,6 +41,19 @@ type PDClient struct {
 	addrs      []string
 	tlsEnabled bool
 	httpClient *utils.HTTPClient
+}
+
+// LabelInfo represents an instance label info
+type LabelInfo struct {
+	Machine   string `json:"machine"`
+	Port      string `json:"port"`
+	Store     uint64 `json:"store"`
+	Status    string `json:"status"`
+	Leaders   int    `json:"leaders"`
+	Regions   int    `json:"regions"`
+	Capacity  string `json:"capacity"`
+	Available string `json:"available"`
+	Labels    string `json:"labels"`
 }
 
 // NewPDClient returns a new PDClient
@@ -62,7 +77,7 @@ func (pc *PDClient) tryIdentifyVersion() {
 	endpoints := pc.getEndpoints(pdVersionURI)
 	response := map[string]string{}
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, err := pc.httpClient.Get(endpoint)
+		body, err := pc.httpClient.Get(context.TODO(), endpoint)
 		if err != nil {
 			return body, err
 		}
@@ -150,7 +165,7 @@ func (pc *PDClient) CheckHealth() error {
 	endpoints := pc.getEndpoints(pdPingURI)
 
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, err := pc.httpClient.Get(endpoint)
+		body, err := pc.httpClient.Get(context.TODO(), endpoint)
 		if err != nil {
 			return body, err
 		}
@@ -174,7 +189,7 @@ func (pc *PDClient) GetStores() (*StoresInfo, error) {
 	storesInfo := StoresInfo{}
 
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, err := pc.httpClient.Get(endpoint)
+		body, err := pc.httpClient.Get(context.TODO(), endpoint)
 		if err != nil {
 			return body, err
 		}
@@ -267,7 +282,7 @@ func (pc *PDClient) GetLeader() (*pdpb.Member, error) {
 	leader := pdpb.Member{}
 
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, err := pc.httpClient.Get(endpoint)
+		body, err := pc.httpClient.Get(context.TODO(), endpoint)
 		if err != nil {
 			return body, err
 		}
@@ -288,7 +303,7 @@ func (pc *PDClient) GetMembers() (*pdpb.GetMembersResponse, error) {
 	members := pdpb.GetMembersResponse{}
 
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, err := pc.httpClient.Get(endpoint)
+		body, err := pc.httpClient.Get(context.TODO(), endpoint)
 		if err != nil {
 			return body, err
 		}
@@ -312,7 +327,7 @@ func (pc *PDClient) GetConfig() (map[string]interface{}, error) {
 	pdConfig := map[string]interface{}{}
 
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, err := pc.httpClient.Get(endpoint)
+		body, err := pc.httpClient.Get(context.TODO(), endpoint)
 		if err != nil {
 			return body, err
 		}
@@ -324,6 +339,26 @@ func (pc *PDClient) GetConfig() (map[string]interface{}, error) {
 	}
 
 	return flatten.Flatten(pdConfig, "", flatten.DotStyle)
+}
+
+// GetClusterID return cluster ID
+func (pc *PDClient) GetClusterID() (int64, error) {
+	endpoints := pc.getEndpoints(pdClusterIDURI)
+	clusterID := map[string]interface{}{}
+
+	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
+		body, err := pc.httpClient.Get(context.TODO(), endpoint)
+		if err != nil {
+			return body, err
+		}
+
+		return body, json.Unmarshal(body, &clusterID)
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	return int64(clusterID["id"].(float64)), nil
 }
 
 // GetDashboardAddress get the PD node address which runs dashboard
@@ -358,7 +393,7 @@ func (pc *PDClient) EvictPDLeader(retryOpt *utils.RetryOption) error {
 	endpoints := pc.getEndpoints(cmd)
 
 	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, err := pc.httpClient.Post(endpoint, nil)
+		body, err := pc.httpClient.Post(context.TODO(), endpoint, nil)
 		if err != nil {
 			return body, err
 		}
@@ -438,7 +473,7 @@ func (pc *PDClient) EvictStoreLeader(host string, retryOpt *utils.RetryOption, c
 	endpoints := pc.getEndpoints(pdSchedulersURI)
 
 	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		return pc.httpClient.Post(endpoint, bytes.NewBuffer(scheduler))
+		return pc.httpClient.Post(context.TODO(), endpoint, bytes.NewBuffer(scheduler))
 	})
 	if err != nil {
 		return err
@@ -498,7 +533,7 @@ func (pc *PDClient) RemoveStoreEvict(host string) error {
 	endpoints := pc.getEndpoints(cmd)
 
 	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, statusCode, err := pc.httpClient.Delete(endpoint, nil)
+		body, statusCode, err := pc.httpClient.Delete(context.TODO(), endpoint, nil)
 		if err != nil {
 			if statusCode == http.StatusNotFound || bytes.Contains(body, []byte("scheduler not found")) {
 				log.Debugf("Store leader evicting scheduler does not exist, ignore.")
@@ -533,7 +568,7 @@ func (pc *PDClient) DelPD(name string, retryOpt *utils.RetryOption) error {
 	endpoints := pc.getEndpoints(cmd)
 
 	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, statusCode, err := pc.httpClient.Delete(endpoint, nil)
+		body, statusCode, err := pc.httpClient.Delete(context.TODO(), endpoint, nil)
 		if err != nil {
 			if statusCode == http.StatusNotFound || bytes.Contains(body, []byte("not found, pd")) {
 				log.Debugf("PD node does not exist, ignore: %s", body)
@@ -620,7 +655,7 @@ func (pc *PDClient) DelStore(host string, retryOpt *utils.RetryOption) error {
 	endpoints := pc.getEndpoints(cmd)
 
 	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, statusCode, err := pc.httpClient.Delete(endpoint, nil)
+		body, statusCode, err := pc.httpClient.Delete(context.TODO(), endpoint, nil)
 		if err != nil {
 			if statusCode == http.StatusNotFound || bytes.Contains(body, []byte("not found")) {
 				log.Debugf("store %d %s does not exist, ignore: %s", storeID, host, body)
@@ -673,7 +708,7 @@ func (pc *PDClient) DelStore(host string, retryOpt *utils.RetryOption) error {
 func (pc *PDClient) updateConfig(url string, body io.Reader) error {
 	endpoints := pc.getEndpoints(url)
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		return pc.httpClient.Post(endpoint, body)
+		return pc.httpClient.Post(context.TODO(), endpoint, body)
 	})
 	return err
 }
@@ -687,7 +722,7 @@ func (pc *PDClient) UpdateReplicateConfig(body io.Reader) error {
 func (pc *PDClient) GetReplicateConfig() ([]byte, error) {
 	endpoints := pc.getEndpoints(pdConfigReplicate)
 	return tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		return pc.httpClient.Get(endpoint)
+		return pc.httpClient.Get(context.TODO(), endpoint)
 	})
 }
 
@@ -707,29 +742,50 @@ func (pc *PDClient) GetLocationLabels() ([]string, bool, error) {
 }
 
 // GetTiKVLabels implements TiKVLabelProvider
-func (pc *PDClient) GetTiKVLabels() (map[string]map[string]string, error) {
+func (pc *PDClient) GetTiKVLabels() (map[string]map[string]string, []map[string]LabelInfo, error) {
 	r, err := pc.GetStores()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
+	var storeInfo []map[string]LabelInfo
+
 	locationLabels := map[string]map[string]string{}
+
 	for _, s := range r.Stores {
-		if s.Store.State != metapb.StoreState_Up {
-			continue
+		if s.Store.State == metapb.StoreState_Up {
+			lbs := s.Store.GetLabels()
+			labelsMap := map[string]string{}
+
+			var labelsArr []string
+
+			for _, lb := range lbs {
+				// Skip tiflash
+				if lb.GetKey() != "tiflash" {
+					labelsArr = append(labelsArr, fmt.Sprintf("%s: %s", lb.GetKey(), lb.GetValue()))
+					labelsMap[lb.GetKey()] = lb.GetValue()
+				}
+			}
+
+			locationLabels[s.Store.GetAddress()] = labelsMap
+
+			label := fmt.Sprintf("%s%s%s", "{", strings.Join(labelsArr, ","), "}")
+			storeInfo = append(storeInfo, map[string]LabelInfo{
+				strings.Split(s.Store.GetAddress(), ":")[0]: {
+					Machine:   strings.Split(s.Store.GetAddress(), ":")[0],
+					Port:      strings.Split(s.Store.GetAddress(), ":")[1],
+					Store:     s.Store.GetId(),
+					Status:    s.Store.State.String(),
+					Leaders:   s.Status.LeaderCount,
+					Regions:   s.Status.RegionCount,
+					Capacity:  s.Status.Capacity.MarshalString(),
+					Available: s.Status.Available.MarshalString(),
+					Labels:    label,
+				},
+			})
 		}
-		lbs := s.Store.GetLabels()
-		labels := map[string]string{}
-		for _, lb := range lbs {
-			labels[lb.GetKey()] = lb.GetValue()
-		}
-		// Skip tiflash
-		if labels["engine"] == "tiflash" {
-			continue
-		}
-		locationLabels[s.Store.GetAddress()] = labels
 	}
-	return locationLabels, nil
+	return locationLabels, storeInfo, nil
 }
 
 // UpdateScheduleConfig updates the PD schedule config
@@ -744,7 +800,7 @@ func (pc *PDClient) CheckRegion(state string) (*RegionsInfo, error) {
 	regionsInfo := RegionsInfo{}
 
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, err := pc.httpClient.Get(endpoint)
+		body, err := pc.httpClient.Get(context.TODO(), endpoint)
 		if err != nil {
 			return body, err
 		}

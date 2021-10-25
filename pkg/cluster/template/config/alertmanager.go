@@ -32,7 +32,7 @@ func NewAlertManagerConfig() *AlertManagerConfig {
 // Config generate the config file data.
 func (c *AlertManagerConfig) Config() ([]byte, error) {
 	fp := path.Join("templates", "config", "alertmanager.yml")
-	tpl, err := embed.ReadFile(fp)
+	tpl, err := embed.ReadTemplate(fp)
 	if err != nil {
 		return nil, err
 	}

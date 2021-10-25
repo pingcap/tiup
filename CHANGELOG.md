@@ -1,5 +1,105 @@
 TiUP Changelog
 
+## [1.6.1] 2021-10-21
+
+### Fixes
+
+- Fix `tiup-bench` reporting wrong latency for TPCC workloads ([#1577](https://github.com/pingcap/tiup/pull/1577), [@lobshunter](https://github.com/lobshunter))
+- Fix test cases for `tiup-bench` and `tiup-client` ([#1579](https://github.com/pingcap/tiup/pull/1579), [@AstroProfundis](https://github.com/AstroProfundis))
+- Fix fetching component manifest error on certain circumstances ([#1581](https://github.com/pingcap/tiup/pull/1581), [@nexustar](https://github.com/nexustar))
+
+## [1.6.0] 2021-10-09
+
+### New Features
+
+- Add support of using `ssh-agent` auth socket in `tiup-cluster` ([#1416](https://github.com/pingcap/tiup/pull/1416), [@9547](https://github.com/9547))
+- Add parallel task concurrency control in `tiup-cluster` and `tiup-dm` with `-c/--concurrency` argument ([#1420](https://github.com/pingcap/tiup/pull/1420), [@AstroProfundis](https://github.com/AstroProfundis))
+  - The default value of max number of parallel tasks allowed is 5, this feature could help users managing very large clusters to avoid connection errors on operations.
+- Add the ability to detect CPU arch for deployment servers automatically in `tiup-cluster` and `tiup-dm` if not set by user ([#1423](https://github.com/pingcap/tiup/pull/1423), [@9547](https://github.com/9547))
+- Add `renew` subcommand for `tiup mirror` to extend the expiration date of component manifest ([#1479](https://github.com/pingcap/tiup/pull/1479), [@AstroProfundis](https://github.com/AstroProfundis))
+- Add the ability to ignore monitor agents for specific instances in `tiup-cluster` ([#1492](https://github.com/pingcap/tiup/pull/1492), [@AstroProfundis](https://github.com/AstroProfundis))
+- Add `--force` argument for `prune` subcommand in `tiup-cluster` ([#1552](https://github.com/pingcap/tiup/pull/1552), [@AstroProfundis](https://github.com/AstroProfundis))
+- Add more configuration fields for Grafana in `tiup-cluster` and `tiup-dm` ([#1566](https://github.com/pingcap/tiup/pull/1566), [@haiboumich](https://github.com/haiboumich))
+- [Experimental] Add support of SSH connections via proxy in `tiup-cluster` ([#1438](https://github.com/pingcap/tiup/pull/1438), [@9547](https://github.com/9547))
+- Deprecate the `--monitor` argument and introduce a new `--without-monitor` argument to disable monitoring components in `tiup-playground` ([#1512](https://github.com/pingcap/tiup/pull/1512), [@LittleFall](https://github.com/LittleFall))
+- Deprecate the `TIUP_WORK_DIR` environment as it's not actually been used, and make it possible for `tiup-playground` to run without `tiup` ([#1553](https://github.com/pingcap/tiup/pull/1553) [#1556](https://github.com/pingcap/tiup/pull/1556) [#1558](https://github.com/pingcap/tiup/pull/1558), [@nexustar](https://github.com/nexustar))
+
+### Fixes
+
+- Fix `blackbox_exporter` configs for TLS enabled clusters in `tiup-cluster` ([#1443](https://github.com/pingcap/tiup/pull/1443), [@9547](https://github.com/9547))
+- Only try to apply THP fix if it's available on the deployment server in `tiup-cluster` ([#1458](https://github.com/pingcap/tiup/pull/1458), [@9547](https://github.com/9547))
+- Fix sudo errors in `tiup-cluster` when devtoolset is enabled on deployment server ([#1516](https://github.com/pingcap/tiup/pull/1516), [@nexustar](https://github.com/nexustar))
+- Fix test cases for `tiup-dm` ([#1540](https://github.com/pingcap/tiup/pull/1540), [@nexustar](https://github.com/nexustar))
+- Fix downloading of uneeded component packages when `--binpath` is specifiedin `tiup-playground` ([#1495](https://github.com/pingcap/tiup/pull/1495), [@AstroProfundis](https://github.com/AstroProfundis); [#1545](https://github.com/pingcap/tiup/pull/1545), [@nexustar](https://github.com/nexustar))
+- Fix panic when `tiup-bench` fails to connect to the database ([#1557](https://github.com/pingcap/tiup/pull/1557), [@nexustar](https://github.com/nexustar))
+- Fix `numa_node` configs are not rendered into PD startup script in `tiup-cluster` ([#1565](https://github.com/pingcap/tiup/pull/1565), [@onlyacat](https://github.com/onlyacat))
+- Correctly handle `--` in command line arguments passed to `tiup` ([#1569](https://github.com/pingcap/tiup/pull/1569), [@dveeden](https://github.com/dveeden))
+
+### Improvements
+
+- Reduce network usage on various operations and speed up the process
+  - Update component manifests simultaneously in `tiup list` ([#1532](https://github.com/pingcap/tiup/pull/1532), [@nexustar](https://github.com/nexustar))
+  - Not requesting manifest before actually using the component ([#1539](https://github.com/pingcap/tiup/pull/1539), [@nexustar](https://github.com/nexustar))
+  - Update `root.json` only when necessary ([#1554](https://github.com/pingcap/tiup/pull/1554), [@nexustar](https://github.com/nexustar))
+- Use the value of `--wait-timeout` argument as timeout of SSH command operations with the `builtin` executor ([#1445](https://github.com/pingcap/tiup/pull/1445), [@AstroProfundis](https://github.com/AstroProfundis))
+- Refuse to `clone` a local mirror to the same location it is stored ([#1464](https://github.com/pingcap/tiup/pull/1464), [@dveeden](https://github.com/dveeden))
+- Set terminal title to show session tag in `tiup-playground` ([#1506](https://github.com/pingcap/tiup/pull/1506), [@dveeden](https://github.com/dveeden))
+- Show TiDB port when scale out in `tiup-playground` ([#1520](https://github.com/pingcap/tiup/pull/1520), [@nexustar](https://github.com/nexustar))
+- Cleanup files if component fails to install ([#1562](https://github.com/pingcap/tiup/pull/1562), [@nexustar](https://github.com/nexustar))
+- Update docs and examples ([#1484](https://github.com/pingcap/tiup/pull/1484), [@ichn-hu](https://github.com/ichn-hu); [#1502](https://github.com/pingcap/tiup/pull/1502), [@AstroProfundis](https://github.com/AstroProfundis))
+- Use auto completion from `cobra` itself ([#1544](https://github.com/pingcap/tiup/pull/1544), [@AstroProfundis](https://github.com/AstroProfundis); [#1549](https://github.com/pingcap/tiup/pull/1549), [@nexustar](https://github.com/nexustar))
+
+## [1.5.6] 2021-09-01
+
+### Fixes
+
+- Fix OS version check rules for `tiup-cluster check` ([#1535](https://github.com/pingcap/tiup/pull/1535), [@AstroProfundis](https://github.com/AstroProfundis))
+- Fix component upgrade order for `tiup-cluster` to make sure TiCDC nodes work correctly ([#1542](https://github.com/pingcap/tiup/pull/1542), [@overvenus](https://github.com/overvenus))
+
+### Improvements
+
+- Adjust warning message of `tiup-cluster restart` to make users clear that the cluster will be unavailable during the process ([#1523](https://github.com/pingcap/tiup/pull/1523), [@glkappe](https://github.com/glkappe))
+- Reverse the order of audit log listing to show latest records at the buttom ([#1538](https://github.com/pingcap/tiup/pull/1538), [@AstroProfundis](https://github.com/AstroProfundis))
+
+## [1.5.5] 2021-08-19
+
+### Fixes
+
+- Fix error when reloading a stopped cluster with `--skip-restart` argument ([#1513](https://github.com/pingcap/tiup/pull/1513), [@AstroProfundis](https://github.com/AstroProfundis))
+- Use absolute path for `sudo` command, to workaround errors on systems where `devtoolset` is enabled ([#1516](https://github.com/pingcap/tiup/pull/1516), [@nexustar](https://github.com/nexustar))
+- Fix custom TiDB port not correctly set in playground ([#1511](https://github.com/pingcap/tiup/pull/1511), [@hecomlilong](https://github.com/hecomlilong))
+
+### Improvements
+
+- Adjust suggested argument order in playground examples ([#1522](https://github.com/pingcap/tiup/pull/1522), [@glkappe](https://github.com/glkappe))
+
+## [1.5.4] 2021-08-05
+
+### Fixes
+
+- Allow editing of `lerner_config` field in TiFlash spec ([#1494](https://github.com/pingcap/tiup/pull/1494), [@AstroProfundis](https://github.com/AstroProfundis))
+- Fix incorrect timeout for telemetry requests ([#1500](https://github.com/pingcap/tiup/pull/1500), [@AstroProfundis](https://github.com/AstroProfundis))
+- Ingore `data_dir` of monitor agents when checking for directory overlaps ([#1510](https://github.com/pingcap/tiup/pull/1510), [@AstroProfundis](https://github.com/AstroProfundis))
+
+### Improvements
+
+- Distinguish cookie names of multiple grafana instances on the same host ([#1491](https://github.com/pingcap/tiup/pull/1491), [@AstroProfundis](https://github.com/AstroProfundis))
+
+## [1.5.3] 2021-07-15
+
+### Fixes
+
+- Fix incorrect alert rules for TiDB version 3.x ([#1463](https://github.com/pingcap/tiup/pull/1463), [@9547](https://github.com/9547))
+- Fix TiKV config check to correctly handle the `data_dir` value ([#1471](https://github.com/pingcap/tiup/pull/1471), [@tabokie](https://github.com/tabokie))
+
+### Improvements
+
+- Update dependencies and adjust error message of `ctl` ([#1459](https://github.com/pingcap/tiup/pull/1459), [@AstroProfundis](https://github.com/AstroProfundis))
+- Use `$SHELL` environment variable for completion ([#1455](https://github.com/pingcap/tiup/pull/1455), [@dveeden](https://github.com/dveeden))
+- Allow listing components from local cached manifests without network access ([#1466](https://github.com/pingcap/tiup/pull/1466), [@c4pt0r](https://github.com/c4pt0r))
+- Adjust error message of SELinux check failure ([#1476](https://github.com/pingcap/tiup/pull/1476), [@AstroProfundis](https://github.com/AstroProfundis))
+- Adjust warning message when `scale-in` with `--force` argument to make it more clear of potential risks ([#1477](https://github.com/pingcap/tiup/pull/1477), [@AstroProfundis](https://github.com/AstroProfundis))
+
 ## [1.5.2] 2021-06-24
 
 ### Fixes

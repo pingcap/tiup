@@ -59,21 +59,28 @@ func Enable(
 	components := cluster.ComponentsByStartOrder()
 	components = FilterComponent(components, roleFilter)
 	monitoredOptions := cluster.GetMonitoredOptions()
+	noAgentHosts := set.NewStringSet()
 
 	instCount := map[string]int{}
 	cluster.IterInstance(func(inst spec.Instance) {
-		instCount[inst.GetHost()]++
+		if inst.IgnoreMonitorAgent() {
+			noAgentHosts.Insert(inst.GetHost())
+		} else {
+			instCount[inst.GetHost()]++
+		}
 	})
 
 	for _, comp := range components {
 		insts := FilterInstance(comp.Instances(), nodeFilter)
-		err := EnableComponent(ctx, insts, options, isEnable)
+		err := EnableComponent(ctx, insts, noAgentHosts, options, isEnable)
 		if err != nil {
 			return errors.Annotatef(err, "failed to enable/disable %s", comp.Name())
 		}
 
 		for _, inst := range insts {
-			instCount[inst.GetHost()]--
+			if !inst.IgnoreMonitorAgent() {
+				instCount[inst.GetHost()]--
+			}
 		}
 	}
 
@@ -90,7 +97,7 @@ func Enable(
 		hosts = append(hosts, host)
 	}
 
-	return EnableMonitored(ctx, hosts, monitoredOptions, options.OptTimeout, isEnable)
+	return EnableMonitored(ctx, hosts, noAgentHosts, monitoredOptions, options.OptTimeout, isEnable)
 }
 
 // Start the cluster.
@@ -106,15 +113,24 @@ func Start(
 	components := cluster.ComponentsByStartOrder()
 	components = FilterComponent(components, roleFilter)
 	monitoredOptions := cluster.GetMonitoredOptions()
+	noAgentHosts := set.NewStringSet()
+
+	cluster.IterInstance(func(inst spec.Instance) {
+		if inst.IgnoreMonitorAgent() {
+			noAgentHosts.Insert(inst.GetHost())
+		}
+	})
 
 	for _, comp := range components {
 		insts := FilterInstance(comp.Instances(), nodeFilter)
-		err := StartComponent(ctx, insts, options, tlsCfg)
+		err := StartComponent(ctx, insts, noAgentHosts, options, tlsCfg)
 		if err != nil {
 			return errors.Annotatef(err, "failed to start %s", comp.Name())
 		}
 		for _, inst := range insts {
-			uniqueHosts.Insert(inst.GetHost())
+			if !inst.IgnoreMonitorAgent() {
+				uniqueHosts.Insert(inst.GetHost())
+			}
 		}
 	}
 
@@ -126,7 +142,7 @@ func Start(
 	for host := range uniqueHosts {
 		hosts = append(hosts, host)
 	}
-	return StartMonitored(ctx, hosts, monitoredOptions, options.OptTimeout)
+	return StartMonitored(ctx, hosts, noAgentHosts, monitoredOptions, options.OptTimeout)
 }
 
 // Stop the cluster.
@@ -141,20 +157,27 @@ func Stop(
 	components := cluster.ComponentsByStopOrder()
 	components = FilterComponent(components, roleFilter)
 	monitoredOptions := cluster.GetMonitoredOptions()
+	noAgentHosts := set.NewStringSet()
 
 	instCount := map[string]int{}
 	cluster.IterInstance(func(inst spec.Instance) {
-		instCount[inst.GetHost()]++
+		if inst.IgnoreMonitorAgent() {
+			noAgentHosts.Insert(inst.GetHost())
+		} else {
+			instCount[inst.GetHost()]++
+		}
 	})
 
 	for _, comp := range components {
 		insts := FilterInstance(comp.Instances(), nodeFilter)
-		err := StopComponent(ctx, insts, options.OptTimeout)
+		err := StopComponent(ctx, insts, noAgentHosts, options.OptTimeout)
 		if err != nil && !options.Force {
 			return errors.Annotatef(err, "failed to stop %s", comp.Name())
 		}
 		for _, inst := range insts {
-			instCount[inst.GetHost()]--
+			if !inst.IgnoreMonitorAgent() {
+				instCount[inst.GetHost()]--
+			}
 		}
 	}
 
@@ -170,7 +193,7 @@ func Stop(
 		hosts = append(hosts, host)
 	}
 
-	if err := StopMonitored(ctx, hosts, monitoredOptions, options.OptTimeout); err != nil && !options.Force {
+	if err := StopMonitored(ctx, hosts, noAgentHosts, monitoredOptions, options.OptTimeout); err != nil && !options.Force {
 		return err
 	}
 	return nil
@@ -223,26 +246,26 @@ func Restart(
 }
 
 // StartMonitored start BlackboxExporter and NodeExporter
-func StartMonitored(ctx context.Context, hosts []string, options *spec.MonitoredOptions, timeout uint64) error {
-	return systemctlMonitor(ctx, hosts, options, "start", timeout)
+func StartMonitored(ctx context.Context, hosts []string, noAgentHosts set.StringSet, options *spec.MonitoredOptions, timeout uint64) error {
+	return systemctlMonitor(ctx, hosts, noAgentHosts, options, "start", timeout)
 }
 
 // StopMonitored stop BlackboxExporter and NodeExporter
-func StopMonitored(ctx context.Context, hosts []string, options *spec.MonitoredOptions, timeout uint64) error {
-	return systemctlMonitor(ctx, hosts, options, "stop", timeout)
+func StopMonitored(ctx context.Context, hosts []string, noAgentHosts set.StringSet, options *spec.MonitoredOptions, timeout uint64) error {
+	return systemctlMonitor(ctx, hosts, noAgentHosts, options, "stop", timeout)
 }
 
 // EnableMonitored enable/disable monitor service in a cluster
-func EnableMonitored(ctx context.Context, hosts []string, options *spec.MonitoredOptions, timeout uint64, isEnable bool) error {
+func EnableMonitored(ctx context.Context, hosts []string, noAgentHosts set.StringSet, options *spec.MonitoredOptions, timeout uint64, isEnable bool) error {
 	action := "disable"
 	if isEnable {
 		action = "enable"
 	}
 
-	return systemctlMonitor(ctx, hosts, options, action, timeout)
+	return systemctlMonitor(ctx, hosts, noAgentHosts, options, action, timeout)
 }
 
-func systemctlMonitor(ctx context.Context, hosts []string, options *spec.MonitoredOptions, action string, timeout uint64) error {
+func systemctlMonitor(ctx context.Context, hosts []string, noAgentHosts set.StringSet, options *spec.MonitoredOptions, action string, timeout uint64) error {
 	ports := monitorPortMap(options)
 	for _, comp := range []string{spec.ComponentNodeExporter, spec.ComponentBlackboxExporter} {
 		log.Infof("%s component %s", actionPrevMsgs[action], comp)
@@ -250,6 +273,10 @@ func systemctlMonitor(ctx context.Context, hosts []string, options *spec.Monitor
 		errg, _ := errgroup.WithContext(ctx)
 		for _, host := range hosts {
 			host := host
+			if noAgentHosts.Exist(host) {
+				log.Debugf("Ignored %s component %s for %s", action, comp, host)
+				continue
+			}
 			nctx := checkpoint.NewContext(ctx)
 			errg.Go(func() error {
 				log.Infof("\t%s instance %s", actionPrevMsgs[action], host)
@@ -388,7 +415,7 @@ func systemctl(ctx context.Context, executor ctxt.Executor, service string, acti
 }
 
 // EnableComponent enable/disable the instances
-func EnableComponent(ctx context.Context, instances []spec.Instance, options Options, isEnable bool) error {
+func EnableComponent(ctx context.Context, instances []spec.Instance, noAgentHosts set.StringSet, options Options, isEnable bool) error {
 	if len(instances) == 0 {
 		return nil
 	}
@@ -404,6 +431,16 @@ func EnableComponent(ctx context.Context, instances []spec.Instance, options Opt
 
 	for _, ins := range instances {
 		ins := ins
+
+		// skip certain instances
+		switch name {
+		case spec.ComponentNodeExporter,
+			spec.ComponentBlackboxExporter:
+			if noAgentHosts.Exist(ins.GetHost()) {
+				log.Debugf("Ignored enabling/disabling %s for %s:%d", name, ins.GetHost(), ins.GetPort())
+				continue
+			}
+		}
 
 		// the checkpoint part of context can't be shared between goroutines
 		// since it's used to trace the stack, so we must create a new layer
@@ -422,7 +459,7 @@ func EnableComponent(ctx context.Context, instances []spec.Instance, options Opt
 }
 
 // StartComponent start the instances.
-func StartComponent(ctx context.Context, instances []spec.Instance, options Options, tlsCfg *tls.Config) error {
+func StartComponent(ctx context.Context, instances []spec.Instance, noAgentHosts set.StringSet, options Options, tlsCfg *tls.Config) error {
 	if len(instances) == 0 {
 		return nil
 	}
@@ -442,6 +479,14 @@ func StartComponent(ctx context.Context, instances []spec.Instance, options Opti
 
 	for _, ins := range instances {
 		ins := ins
+		switch name {
+		case spec.ComponentNodeExporter,
+			spec.ComponentBlackboxExporter:
+			if noAgentHosts.Exist(ins.GetHost()) {
+				log.Debugf("Ignored starting %s for %s:%d", name, ins.GetHost(), ins.GetPort())
+				continue
+			}
+		}
 
 		// the checkpoint part of context can't be shared between goroutines
 		// since it's used to trace the stack, so we must create a new layer
@@ -484,7 +529,7 @@ func stopInstance(ctx context.Context, ins spec.Instance, timeout uint64) error 
 }
 
 // StopComponent stop the instances.
-func StopComponent(ctx context.Context, instances []spec.Instance, timeout uint64) error {
+func StopComponent(ctx context.Context, instances []spec.Instance, noAgentHosts set.StringSet, timeout uint64) error {
 	if len(instances) == 0 {
 		return nil
 	}
@@ -496,6 +541,14 @@ func StopComponent(ctx context.Context, instances []spec.Instance, timeout uint6
 
 	for _, ins := range instances {
 		ins := ins
+		switch name {
+		case spec.ComponentNodeExporter,
+			spec.ComponentBlackboxExporter:
+			if noAgentHosts.Exist(ins.GetHost()) {
+				log.Debugf("Ignored stopping %s for %s:%d", name, ins.GetHost(), ins.GetPort())
+				continue
+			}
+		}
 
 		// the checkpoint part of context can't be shared between goroutines
 		// since it's used to trace the stack, so we must create a new layer

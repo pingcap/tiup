@@ -411,6 +411,30 @@ tispark_masters:
 	c.Assert(err.Error(), Equals, "component tispark is not supported in TLS enabled cluster")
 }
 
+func (s *metaSuiteTopo) TestMonitorAgentValidation(c *C) {
+	topo := Specification{}
+	err := yaml.Unmarshal([]byte(`
+pd_servers:
+  - host: 172.16.5.138
+    port: 1234
+  - host: 172.16.5.139
+    ignore_exporter: true
+`), &topo)
+	c.Assert(err, IsNil)
+
+	topo = Specification{}
+	err = yaml.Unmarshal([]byte(`
+pd_servers:
+  - host: 172.16.5.138
+    port: 1234
+tikv_servers:
+  - host: 172.16.5.138
+    ignore_exporter: true
+`), &topo)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "ignore_exporter mismatch for '172.16.5.138' between 'tikv_servers:true' and 'pd_servers:false'")
+}
+
 func (s *metaSuiteTopo) TestCrossClusterPortConflicts(c *C) {
 	topo1 := Specification{}
 	err := yaml.Unmarshal([]byte(`
@@ -430,6 +454,10 @@ pd_servers:
   - host: 172.16.5.138
     client_port: 2234
     peer_port: 2235
+  - host: 172.16.5.139
+    client_port: 2236
+    peer_port: 2237
+    ignore_exporter: true
 `), &topo2)
 	c.Assert(err, IsNil)
 
@@ -470,6 +498,30 @@ It conflicts to a port in the existing cluster:
   Existing Component:    monitor 172.16.5.138
 
 Please change to use another port or another host.`)
+
+	// monitoring agent port conflict but the instance marked as ignore_exporter
+	topo3 = Specification{}
+	err = yaml.Unmarshal([]byte(`
+tidb_servers:
+- host: 172.16.5.138
+  ignore_exporter: true
+`), &topo3)
+	c.Assert(err, IsNil)
+	err = CheckClusterPortConflict(clsList, "topo", &topo3)
+	c.Assert(err, IsNil)
+
+	// monitoring agent port conflict but the existing instance marked as ignore_exporter
+	topo3 = Specification{}
+	err = yaml.Unmarshal([]byte(`
+monitored:
+  node_exporter_port: 9102
+  blackbox_exporter_port: 9116
+tidb_servers:
+- host: 172.16.5.139
+`), &topo3)
+	c.Assert(err, IsNil)
+	err = CheckClusterPortConflict(clsList, "topo", &topo3)
+	c.Assert(err, IsNil)
 
 	// component port conflict
 	topo4 := Specification{}
@@ -1045,6 +1097,32 @@ tikv_servers:
     status_port: 32180
     log_dir: "/home/tidb6wu/tidb1-data/tikv-32160-log"
     data_dir: "/home/tidb6wu/tidb1-data/tikv-32160"
+`,
+		`
+monitored:
+  node_exporter_port: 9100
+  blackbox_exporter_port: 9115
+  deploy_dir: /data/deploy/monitor-9100
+  data_dir: /data/deploy/monitor-9100
+  log_dir: /data/deploy/monitor-9100/log
+pd_servers:
+  - host: n0
+    name: pd0
+    imported: true
+    deploy_dir: /data/deploy
+    data_dir: /data/deploy/data.pd
+    log_dir: /data/deploy/log
+  - host: n1
+    name: pd1
+    log_dir: "/data/deploy/pd-2379/log"
+    data_dir: "/data/pd-2379"
+    deploy_dir: "/data/deploy/pd-2379"
+cdc_servers:
+  - host: n1
+    port: 8300
+    deploy_dir: /data/deploy/ticdc-8300
+    data_dir: /data1/ticdc-8300
+    log_dir: /data/deploy/ticdc-8300/log
 `,
 	}
 	for _, s := range goodTopos {

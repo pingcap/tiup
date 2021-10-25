@@ -18,7 +18,6 @@ import (
 	"path/filepath"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/localdata"
 )
 
 // targetTag find the target playground we want to send the command.
@@ -28,17 +27,13 @@ import (
 // 1. tiup playground
 // 2. tiup playground display
 func targetTag() (port int, err error) {
-	myTag := os.Getenv(localdata.EnvTag)
-	dir := os.Getenv(localdata.EnvNameInstanceDataDir)
-	dir = filepath.Dir(dir)
-
-	port, err = loadPort(filepath.Join(dir, myTag))
+	port, err = loadPort(dataDir)
 	if err == nil {
 		return port, nil
 	}
 	err = nil
 
-	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(filepath.Dir(dataDir), func(path string, info os.FileInfo, err error) error {
 		if port != 0 {
 			return filepath.SkipDir
 		}
