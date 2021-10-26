@@ -310,7 +310,7 @@ func systemctlMonitor(ctx context.Context, hosts []string, noAgentHosts set.Stri
 	return nil
 }
 
-func restartInstance(ctx context.Context, ins spec.Instance, timeout uint64) error {
+func restartInstance(ctx context.Context, ins spec.Instance, timeout uint64, tlsCfg *tls.Config) error {
 	e := ctxt.GetInner(ctx).Get(ins.GetHost())
 	log.Infof("\tRestarting instance %s", ins.ID())
 
@@ -319,30 +319,11 @@ func restartInstance(ctx context.Context, ins spec.Instance, timeout uint64) err
 	}
 
 	// Check ready.
-	if err := ins.Ready(ctx, e, timeout); err != nil {
+	if err := ins.Ready(ctx, e, timeout, tlsCfg); err != nil {
 		return toFailedActionError(err, "restart", ins.GetHost(), ins.ServiceName(), ins.LogDir())
 	}
 
 	log.Infof("\tRestart instance %s success", ins.ID())
-
-	return nil
-}
-
-// RestartComponent restarts the component.
-func RestartComponent(ctx context.Context, instances []spec.Instance, timeout uint64) error {
-	if len(instances) == 0 {
-		return nil
-	}
-
-	name := instances[0].ComponentName()
-	log.Infof("Restarting component %s", name)
-
-	for _, ins := range instances {
-		err := restartInstance(ctx, ins, timeout)
-		if err != nil {
-			return err
-		}
-	}
 
 	return nil
 }
@@ -366,7 +347,7 @@ func enableInstance(ctx context.Context, ins spec.Instance, timeout uint64, isEn
 	return nil
 }
 
-func startInstance(ctx context.Context, ins spec.Instance, timeout uint64) error {
+func startInstance(ctx context.Context, ins spec.Instance, timeout uint64, tlsCfg *tls.Config) error {
 	e := ctxt.GetInner(ctx).Get(ins.GetHost())
 	log.Infof("\tStarting instance %s", ins.ID())
 
@@ -375,7 +356,7 @@ func startInstance(ctx context.Context, ins spec.Instance, timeout uint64) error
 	}
 
 	// Check ready.
-	if err := ins.Ready(ctx, e, timeout); err != nil {
+	if err := ins.Ready(ctx, e, timeout, tlsCfg); err != nil {
 		return toFailedActionError(err, "start", ins.GetHost(), ins.ServiceName(), ins.LogDir())
 	}
 
@@ -501,7 +482,7 @@ func StartComponent(ctx context.Context, instances []spec.Instance, noAgentHosts
 			if err := ins.PrepareStart(nctx, tlsCfg); err != nil {
 				return err
 			}
-			return startInstance(nctx, ins, options.OptTimeout)
+			return startInstance(nctx, ins, options.OptTimeout, tlsCfg)
 		})
 	}
 
@@ -513,7 +494,7 @@ func serialStartInstances(ctx context.Context, instances []spec.Instance, option
 		if err := ins.PrepareStart(ctx, tlsCfg); err != nil {
 			return err
 		}
-		if err := startInstance(ctx, ins, options.OptTimeout); err != nil {
+		if err := startInstance(ctx, ins, options.OptTimeout, tlsCfg); err != nil {
 			return err
 		}
 	}

@@ -81,7 +81,7 @@ type RollingUpdateInstance interface {
 type Instance interface {
 	InstanceSpec
 	ID() string
-	Ready(context.Context, ctxt.Executor, uint64) error
+	Ready(context.Context, ctxt.Executor, uint64, *tls.Config) error
 	InitConfig(ctx context.Context, e ctxt.Executor, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error
 	ScaleConfig(ctx context.Context, e ctxt.Executor, topo Topology, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error
 	PrepareStart(ctx context.Context, tlsCfg *tls.Config) error
@@ -143,7 +143,7 @@ type BaseInstance struct {
 }
 
 // Ready implements Instance interface
-func (i *BaseInstance) Ready(ctx context.Context, e ctxt.Executor, timeout uint64) error {
+func (i *BaseInstance) Ready(ctx context.Context, e ctxt.Executor, timeout uint64, _ *tls.Config) error {
 	return PortStarted(ctx, e, i.Port, timeout)
 }
 

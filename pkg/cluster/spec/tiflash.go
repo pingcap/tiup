@@ -740,7 +740,9 @@ func (i *TiFlashInstance) PrepareStart(ctx context.Context, tlsCfg *tls.Config) 
 }
 
 // Ready implements Instance interface
-func (i *TiFlashInstance) Ready(ctx context.Context, e ctxt.Executor, timeout uint64) error {
+func (i *TiFlashInstance) Ready(ctx context.Context, e ctxt.Executor, timeout uint64, tlsCfg *tls.Config) error {
+	// FIXME: the timeout is applied twice in the whole `Ready()` process, in the worst
+	// case it might wait double time as other components
 	if err := PortStarted(ctx, e, i.Port, timeout); err != nil {
 		return err
 	}
@@ -748,8 +750,6 @@ func (i *TiFlashInstance) Ready(ctx context.Context, e ctxt.Executor, timeout ui
 	scheme := "http"
 	if i.topo.BaseTopo().GlobalOptions.TLSEnabled {
 		scheme = "https"
-		// TODO: implement tls config for tiflash instances
-		// (we don't support tiflash instance in tls enabled cluster yet)
 	}
 	addr := fmt.Sprintf("%s://%s:%d/tiflash/store-status", scheme, i.Host, i.GetStatusPort())
 	req, err := http.NewRequest("GET", addr, nil)
@@ -764,7 +764,7 @@ func (i *TiFlashInstance) Ready(ctx context.Context, e ctxt.Executor, timeout ui
 	}
 	var queryErr error
 	if err := utils.Retry(func() error {
-		client := utils.NewHTTPClient(statusQueryTimeout, nil)
+		client := utils.NewHTTPClient(statusQueryTimeout, tlsCfg)
 		res, err := client.Client().Do(req)
 		if err != nil {
 			queryErr = err
