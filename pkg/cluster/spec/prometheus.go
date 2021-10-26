@@ -39,6 +39,7 @@ type PrometheusSpec struct {
 	Patched               bool                   `yaml:"patched,omitempty"`
 	IgnoreExporter        bool                   `yaml:"ignore_exporter,omitempty"`
 	Port                  int                    `yaml:"port" default:"9090"`
+	NgPort                int                    `yaml:"ng_port" default:"8428"`
 	DeployDir             string                 `yaml:"deploy_dir,omitempty"`
 	DataDir               string                 `yaml:"data_dir,omitempty"`
 	LogDir                string                 `yaml:"log_dir,omitempty"`
@@ -153,6 +154,10 @@ func (i *MonitorInstance) InitConfig(
 		return err
 	}
 
+	topoHasField := func(field string) (reflect.Value, bool) {
+		return findSliceField(i.topo, field)
+	}
+
 	enableTLS := gOpts.TLSEnabled
 	// transfer run script
 	spec := i.InstanceSpec.(*PrometheusSpec)
@@ -164,6 +169,17 @@ func (i *MonitorInstance) InitConfig(
 	).WithPort(spec.Port).
 		WithNumaNode(spec.NumaNode).
 		WithRetention(spec.Retention)
+
+	// launch ng-monitoring
+	var pds []string
+	if servers, found := topoHasField("PDServers"); found {
+		for i := 0; i < servers.Len(); i++ {
+			pd := servers.Index(i).Interface().(*PDSpec)
+			pds = append(pds, fmt.Sprintf("\"%s:%d\"", pd.Host, pd.ClientPort))
+		}
+	}
+	cfg = cfg.WithNgPort(spec.NgPort).WithPd(pds)
+
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_prometheus_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
@@ -178,9 +194,6 @@ func (i *MonitorInstance) InitConfig(
 		return err
 	}
 
-	topoHasField := func(field string) (reflect.Value, bool) {
-		return findSliceField(i.topo, field)
-	}
 	monitoredOptions := i.topo.GetMonitoredOptions()
 
 	// transfer config
