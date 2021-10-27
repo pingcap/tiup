@@ -7,6 +7,7 @@ cd "${DEPLOY_DIR}" || exit 1
 # WARNING: This file was auto-generated. Do not edit!
 #          All your edit might be overwritten!
 
+if [-d "bin/ng-monitoring-server"]; then
 {{- if .NumaNode}}
 numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/ng-monitoring-server \
 {{- else}}
@@ -17,6 +18,7 @@ bin/ng-monitoring-server \
     --log.path "{{.LogDir}}" \
     >/dev/null 2>&1 &
 ng_pid=$!
+fi
 
 {{- if .NumaNode}}
 numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/prometheus/prometheus \
