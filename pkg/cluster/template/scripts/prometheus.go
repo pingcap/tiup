@@ -18,6 +18,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"strings"
 	"text/template"
 
 	"github.com/pingcap/tiup/embed"
@@ -28,7 +29,7 @@ type PrometheusScript struct {
 	IP        string
 	Port      int
 	NgPort    int
-	PdList    []string
+	PdList    string
 	DeployDir string
 	DataDir   string
 	LogDir    string
@@ -66,9 +67,9 @@ func (c *PrometheusScript) WithNumaNode(numa string) *PrometheusScript {
 	return c
 }
 
-// WithPd set Pd field of PrometheusScript
-func (c *PrometheusScript) WithPd(pd []string) *PrometheusScript {
-	c.PdList = pd
+// WithPdList set Pd field of PrometheusScript
+func (c *PrometheusScript) WithPdList(pds []string) *PrometheusScript {
+	c.PdList = strings.Join(pds, ",")
 	return c
 }
 

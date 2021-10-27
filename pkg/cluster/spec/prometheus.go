@@ -118,6 +118,7 @@ func (c *MonitorComponent) Instances() []Instance {
 
 			Ports: []int{
 				s.Port,
+				s.NgPort,
 			},
 			Dirs: []string{
 				s.DeployDir,
@@ -175,10 +176,10 @@ func (i *MonitorInstance) InitConfig(
 	if servers, found := topoHasField("PDServers"); found {
 		for i := 0; i < servers.Len(); i++ {
 			pd := servers.Index(i).Interface().(*PDSpec)
-			pds = append(pds, fmt.Sprintf("\"%s:%d\"", pd.Host, pd.ClientPort))
+			pds = append(pds, fmt.Sprintf("%s:%d", pd.Host, pd.ClientPort))
 		}
 	}
-	cfg = cfg.WithNgPort(spec.NgPort).WithPd(pds)
+	cfg = cfg.WithNgPort(spec.NgPort).WithPdList(pds)
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_prometheus_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {

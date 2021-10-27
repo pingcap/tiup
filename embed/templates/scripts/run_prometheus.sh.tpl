@@ -33,6 +33,5 @@ bin/prometheus/prometheus \
     2>&1 | tee -i -a "{{.LogDir}}/prometheus.log" &
 prometheus_pid=$!
 
-
-wait -n
-kill $(jobs -p)
+trap 'kill $ng_pid $prometheus_pid; exit' CHLD
+wait
