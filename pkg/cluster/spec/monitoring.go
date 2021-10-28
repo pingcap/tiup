@@ -155,10 +155,6 @@ func (i *MonitorInstance) InitConfig(
 		return err
 	}
 
-	topoHasField := func(field string) (reflect.Value, bool) {
-		return findSliceField(i.topo, field)
-	}
-
 	enableTLS := gOpts.TLSEnabled
 	// transfer run script
 	spec := i.InstanceSpec.(*PrometheusSpec)
@@ -170,16 +166,6 @@ func (i *MonitorInstance) InitConfig(
 	).WithPort(spec.Port).
 		WithNumaNode(spec.NumaNode).
 		WithRetention(spec.Retention)
-
-	// launch ng-monitoring
-	var pds []string
-	if servers, found := topoHasField("PDServers"); found {
-		for i := 0; i < servers.Len(); i++ {
-			pd := servers.Index(i).Interface().(*PDSpec)
-			pds = append(pds, fmt.Sprintf("%s:%d", pd.Host, pd.ClientPort))
-		}
-	}
-	cfg = cfg.WithNgPort(spec.NgPort).WithPdList(pds)
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_prometheus_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
@@ -195,21 +181,26 @@ func (i *MonitorInstance) InitConfig(
 		return err
 	}
 
+	topoHasField := func(field string) (reflect.Value, bool) {
+		return findSliceField(i.topo, field)
+	}
 	monitoredOptions := i.topo.GetMonitoredOptions()
 
 	// transfer config
-	fp = filepath.Join(paths.Cache, fmt.Sprintf("prometheus_%s_%d.yml", i.GetHost(), i.GetPort()))
 	cfig := config.NewPrometheusConfig(clusterName, clusterVersion, enableTLS)
 	if monitoredOptions != nil {
 		cfig.AddBlackbox(i.GetHost(), uint64(monitoredOptions.BlackboxExporterPort))
 	}
 	uniqueHosts := set.NewStringSet()
 
+	ngcfg := config.NewNgMonitoringConfig(clusterName, clusterVersion, enableTLS)
+
 	if servers, found := topoHasField("PDServers"); found {
 		for i := 0; i < servers.Len(); i++ {
 			pd := servers.Index(i).Interface().(*PDSpec)
 			uniqueHosts.Insert(pd.Host)
 			cfig.AddPD(pd.Host, uint64(pd.ClientPort))
+			ngcfg.AddPD(pd.Host, uint64(pd.ClientPort))
 		}
 	}
 	if servers, found := topoHasField("TiKVServers"); found {
@@ -322,6 +313,17 @@ func (i *MonitorInstance) InitConfig(
 		return err
 	}
 
+	ngcfg.AddPort(spec.NgPort).AddLog(paths.Log)
+	fp = filepath.Join(paths.Cache, fmt.Sprintf("ngmonitoring_%s_%d.yml", i.GetHost(), i.GetPort()))
+	if err := ngcfg.ConfigToFile(fp); err != nil {
+		return err
+	}
+	dst = filepath.Join(paths.Deploy, "conf", "ngmonitoring.yml")
+	if err := e.Transfer(ctx, fp, dst, false, 0); err != nil {
+		return err
+	}
+
+	fp = filepath.Join(paths.Cache, fmt.Sprintf("prometheus_%s_%d.yml", i.GetHost(), i.GetPort()))
 	if err := cfig.ConfigToFile(fp); err != nil {
 		return err
 	}
