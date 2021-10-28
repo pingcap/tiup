@@ -313,7 +313,11 @@ func (i *MonitorInstance) InitConfig(
 		return err
 	}
 
-	ngcfg.AddPort(spec.NgPort).AddLog(paths.Log)
+	ngcfg.AddIP(i.GetHost())
+	ngcfg.AddPort(spec.NgPort)
+	ngcfg.AddDeployDir(paths.Deploy)
+	ngcfg.AddDataDir(paths.Data[0])
+	ngcfg.AddLog(paths.Log)
 	fp = filepath.Join(paths.Cache, fmt.Sprintf("ngmonitoring_%s_%d.yml", i.GetHost(), i.GetPort()))
 	if err := ngcfg.ConfigToFile(fp); err != nil {
 		return err

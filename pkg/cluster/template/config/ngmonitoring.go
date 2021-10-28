@@ -27,8 +27,11 @@ import (
 type NgMonitoringConfig struct {
 	ClusterName string
 	TLSEnabled  bool
+	IP          string
 	Port        int
 	PDAddrs     string
+	DeployDir   string
+	DataDir     string
 	LogDir      string
 }
 
@@ -51,9 +54,27 @@ func (c *NgMonitoringConfig) AddPD(ip string, port uint64) *NgMonitoringConfig {
 	return c
 }
 
+// AddIP add ip to ng-monitoring conf
+func (c *NgMonitoringConfig) AddIP(ip string) *NgMonitoringConfig {
+	c.IP = ip
+	return c
+}
+
 // AddLog add logdir to ng-monitoring conf
-func (c *NgMonitoringConfig) AddLog(logdir string) *NgMonitoringConfig {
-	c.LogDir = logdir
+func (c *NgMonitoringConfig) AddLog(dir string) *NgMonitoringConfig {
+	c.LogDir = dir
+	return c
+}
+
+// AddDeployDir add logdir to ng-monitoring conf
+func (c *NgMonitoringConfig) AddDeployDir(dir string) *NgMonitoringConfig {
+	c.DeployDir = dir
+	return c
+}
+
+// AddDataDir add logdir to ng-monitoring conf
+func (c *NgMonitoringConfig) AddDataDir(dir string) *NgMonitoringConfig {
+	c.DataDir = dir
 	return c
 }
 
