@@ -1,13 +1,21 @@
 #!/bin/bash
 set -e
 
+function hup_handle {
+    childpid=$(cat /proc/$$/task/$$/children)
+    child=($childpid)
+    kill -HUP ${child[@]:0:2}
+    wait
+}
+trap hup_handle HUP
+
 DEPLOY_DIR={{.DeployDir}}
 cd "${DEPLOY_DIR}" || exit 1
 
 # WARNING: This file was auto-generated. Do not edit!
 #          All your edit might be overwritten!
 
-if [-d "bin/ng-monitoring-server"]; then
+if [ -e "bin/ng-monitoring-server" ]; then
 {{- if .NumaNode}}
 numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/ng-monitoring-server \
 {{- else}}
@@ -35,5 +43,5 @@ bin/prometheus/prometheus \
     2>&1 | tee -i -a "{{.LogDir}}/prometheus.log" &
 prometheus_pid=$!
 
-trap 'kill $ng_pid $prometheus_pid; exit' CHLD
+#trap 'kill $ng_pid $prometheus_pid; exit' CHLD
 wait
