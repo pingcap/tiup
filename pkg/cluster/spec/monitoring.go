@@ -39,7 +39,7 @@ type PrometheusSpec struct {
 	Patched               bool                   `yaml:"patched,omitempty"`
 	IgnoreExporter        bool                   `yaml:"ignore_exporter,omitempty"`
 	Port                  int                    `yaml:"port" default:"9090"`
-	NgPort                int                    `yaml:"ng_port" default:"8428"`
+	NgPort                int                    `yaml:"ng_port" default:"12020"`
 	DeployDir             string                 `yaml:"deploy_dir,omitempty"`
 	DataDir               string                 `yaml:"data_dir,omitempty"`
 	LogDir                string                 `yaml:"log_dir,omitempty"`
