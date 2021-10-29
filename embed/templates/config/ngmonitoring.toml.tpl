@@ -17,9 +17,9 @@ endpoints = [{{.PDAddrs}}]
 
 {{- if .TLSEnabled}}
 [security]
-ca-file = "{{.DeployDir}}/tls/ca.crt"
-cert-file = "{{.DeployDir}}/tls/prometheus.crt"
-key-file = "{{.DeployDir}}/tls/prometheus.pem"
+ca-path = "{{.DeployDir}}/tls/ca.crt"
+cert-path = "{{.DeployDir}}/tls/prometheus.crt"
+key-path = "{{.DeployDir}}/tls/prometheus.pem"
 {{- end}}
 
 [storage]

@@ -101,7 +101,7 @@ func (c *NgMonitoringConfig) ConfigWithTemplate(tpl string) ([]byte, error) {
 
 // Config generate the config file data.
 func (c *NgMonitoringConfig) Config() ([]byte, error) {
-	fp := path.Join("templates", "config", "ngmonitoring.yml.tpl")
+	fp := path.Join("templates", "config", "ngmonitoring.toml.tpl")
 	tpl, err := embed.ReadTemplate(fp)
 	if err != nil {
 		return nil, err

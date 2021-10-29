@@ -318,11 +318,11 @@ func (i *MonitorInstance) InitConfig(
 	ngcfg.AddDeployDir(paths.Deploy)
 	ngcfg.AddDataDir(paths.Data[0])
 	ngcfg.AddLog(paths.Log)
-	fp = filepath.Join(paths.Cache, fmt.Sprintf("ngmonitoring_%s_%d.yml", i.GetHost(), i.GetPort()))
+	fp = filepath.Join(paths.Cache, fmt.Sprintf("ngmonitoring_%s_%d.toml", i.GetHost(), i.GetPort()))
 	if err := ngcfg.ConfigToFile(fp); err != nil {
 		return err
 	}
-	dst = filepath.Join(paths.Deploy, "conf", "ngmonitoring.yml")
+	dst = filepath.Join(paths.Deploy, "conf", "ngmonitoring.toml")
 	if err := e.Transfer(ctx, fp, dst, false, 0); err != nil {
 		return err
 	}

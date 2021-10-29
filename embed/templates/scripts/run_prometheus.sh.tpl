@@ -13,7 +13,7 @@ numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/ng-monitoring-se
 {{- else}}
 bin/ng-monitoring-server \
 {{- end}}
-    --config {{.DeployDir}}/conf/ngmonitoring.yml \
+    --config {{.DeployDir}}/conf/ngmonitoring.toml \
     >/dev/null 2>&1 &
 fi
 
