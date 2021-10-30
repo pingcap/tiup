@@ -2,7 +2,7 @@ package command
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"strings"
 	"testing"
 )
@@ -39,7 +39,7 @@ func Test_TemplateLocalCommandSingle(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		out, err := ioutil.ReadAll(b)
+		out, err := io.ReadAll(b)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -63,7 +63,7 @@ func Test_TemplateLocalCommandMulti(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	out, err := ioutil.ReadAll(b)
+	out, err := io.ReadAll(b)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,7 +90,7 @@ func Test_TemplateLocalCommandNoopt(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	out, err := ioutil.ReadAll(b)
+	out, err := io.ReadAll(b)
 	if err != nil {
 		t.Fatal(err)
 	}
