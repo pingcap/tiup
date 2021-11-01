@@ -31,6 +31,7 @@ type TemplateOptions struct {
 	Local   bool // print and render local template
 }
 
+// LocalTemplate contains the variables for print local template.
 type LocalTemplate struct {
 	GlobalUser          string   // global.user in yaml template
 	GlobalGroup         string   // global.group in yaml template
