@@ -147,7 +147,7 @@ func upgradeInstance(ctx context.Context, topo spec.Topology, instance spec.Inst
 		}
 	}
 
-	if err := restartInstance(ctx, instance, options.OptTimeout); err != nil && !options.Force {
+	if err := restartInstance(ctx, instance, options.OptTimeout, tlsCfg); err != nil && !options.Force {
 		return err
 	}
 

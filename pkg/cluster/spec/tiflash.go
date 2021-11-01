@@ -19,12 +19,15 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/pingcap/errors"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
@@ -248,6 +251,11 @@ type TiFlashInstance struct {
 // GetServicePort returns the service port of TiFlash
 func (i *TiFlashInstance) GetServicePort() int {
 	return i.InstanceSpec.(*TiFlashSpec).FlashServicePort
+}
+
+// GetStatusPort returns the status port of TiFlash
+func (i *TiFlashInstance) GetStatusPort() int {
+	return i.InstanceSpec.(*TiFlashSpec).FlashProxyStatusPort
 }
 
 // checkIncorrectKey checks TiFlash's key should not be set in config
@@ -729,4 +737,55 @@ func (i *TiFlashInstance) PrepareStart(ctx context.Context, tlsCfg *tls.Config) 
 	endpoints := i.getEndpoints(topo)
 	pdClient := api.NewPDClient(endpoints, 10*time.Second, tlsCfg)
 	return pdClient.UpdateReplicateConfig(bytes.NewBuffer(enablePlacementRules))
+}
+
+// Ready implements Instance interface
+func (i *TiFlashInstance) Ready(ctx context.Context, e ctxt.Executor, timeout uint64, tlsCfg *tls.Config) error {
+	// FIXME: the timeout is applied twice in the whole `Ready()` process, in the worst
+	// case it might wait double time as other components
+	if err := PortStarted(ctx, e, i.Port, timeout); err != nil {
+		return err
+	}
+
+	scheme := "http"
+	if i.topo.BaseTopo().GlobalOptions.TLSEnabled {
+		scheme = "https"
+	}
+	addr := fmt.Sprintf("%s://%s:%d/tiflash/store-status", scheme, i.Host, i.GetStatusPort())
+	req, err := http.NewRequest("GET", addr, nil)
+	if err != nil {
+		return err
+	}
+	req = req.WithContext(ctx)
+
+	retryOpt := utils.RetryOption{
+		Delay:   time.Second,
+		Timeout: time.Second * time.Duration(timeout),
+	}
+	var queryErr error
+	if err := utils.Retry(func() error {
+		client := utils.NewHTTPClient(statusQueryTimeout, tlsCfg)
+		res, err := client.Client().Do(req)
+		if err != nil {
+			queryErr = err
+			return err
+		}
+		defer res.Body.Close()
+		body, err := io.ReadAll(res.Body)
+		if err != nil {
+			queryErr = err
+			return err
+		}
+		if res.StatusCode == http.StatusNotFound || string(body) == "Running" {
+			return nil
+		}
+
+		err = fmt.Errorf("tiflash store status '%s' not ready", string(body))
+		queryErr = err
+		return err
+	}, retryOpt); err != nil {
+		return errors.Annotatef(queryErr, "timed out waiting for tiflash %s:%d to be ready after %ds",
+			i.Host, i.Port, timeout)
+	}
+	return nil
 }
