@@ -130,9 +130,6 @@ the latest stable version will be downloaded from the repository.`,
 					}
 				}
 				teleCommand = fmt.Sprintf("%s %s", cmd.CommandPath(), componentSpec)
-				if tag != "" {
-					fmt.Fprintln(os.Stderr, color.YellowString("--tag/-T is Deprecated in TiUP and moved to playground, it is suggested to use `tiup playground --tag` instead"))
-				}
 				return exec.RunComponent(env, tag, componentSpec, binPath, transparentParams)
 			}
 			return cmd.Help()
