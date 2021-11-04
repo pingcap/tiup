@@ -22,6 +22,7 @@ do
 {{- end}}
         --config {{.DeployDir}}/conf/ngmonitoring.toml \
         >/dev/null 2>&1
+    sleep 15s
 done" > bin/ng-wrapper.sh
 fi
 
