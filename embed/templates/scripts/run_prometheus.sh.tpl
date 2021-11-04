@@ -25,7 +25,9 @@ do
 done" > bin/ng-wrapper.sh
 fi
 
+{{- if .EnableNG}}
 /bin/bash bin/ng-wrapper.sh &
+{{- end}}
 
 exec > >(tee -i -a "{{.LogDir}}/prometheus.log")
 exec 2>&1

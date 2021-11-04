@@ -39,7 +39,7 @@ type PrometheusSpec struct {
 	Patched               bool                   `yaml:"patched,omitempty"`
 	IgnoreExporter        bool                   `yaml:"ignore_exporter,omitempty"`
 	Port                  int                    `yaml:"port" default:"9090"`
-	NgPort                int                    `yaml:"ng_port" default:"12020"`
+	NgPort                int                    `yaml:"ng_port,omitempty"`
 	DeployDir             string                 `yaml:"deploy_dir,omitempty"`
 	DataDir               string                 `yaml:"data_dir,omitempty"`
 	LogDir                string                 `yaml:"log_dir,omitempty"`
@@ -109,7 +109,7 @@ func (c *MonitorComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(servers))
 
 	for _, s := range servers {
-		ins = append(ins, &MonitorInstance{BaseInstance{
+		mi := &MonitorInstance{BaseInstance{
 			InstanceSpec: s,
 			Name:         c.Name(),
 			Host:         s.Host,
@@ -118,7 +118,6 @@ func (c *MonitorComponent) Instances() []Instance {
 
 			Ports: []int{
 				s.Port,
-				s.NgPort,
 			},
 			Dirs: []string{
 				s.DeployDir,
@@ -130,7 +129,11 @@ func (c *MonitorComponent) Instances() []Instance {
 			UptimeFn: func(tlsCfg *tls.Config) time.Duration {
 				return UptimeByHost(s.Host, s.Port, tlsCfg)
 			},
-		}, c.Topology})
+		}, c.Topology}
+		if s.NgPort > 0 {
+			mi.BaseInstance.Ports = append(mi.BaseInstance.Ports, s.NgPort)
+		}
+		ins = append(ins, mi)
 	}
 	return ins
 }
@@ -165,7 +168,8 @@ func (i *MonitorInstance) InitConfig(
 		paths.Log,
 	).WithPort(spec.Port).
 		WithNumaNode(spec.NumaNode).
-		WithRetention(spec.Retention)
+		WithRetention(spec.Retention).
+		WithNG(spec.NgPort)
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_prometheus_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
@@ -318,6 +322,7 @@ func (i *MonitorInstance) InitConfig(
 	ngcfg.AddDeployDir(paths.Deploy)
 	ngcfg.AddDataDir(paths.Data[0])
 	ngcfg.AddLog(paths.Log)
+
 	fp = filepath.Join(paths.Cache, fmt.Sprintf("ngmonitoring_%s_%d.toml", i.GetHost(), i.GetPort()))
 	if err := ngcfg.ConfigToFile(fp); err != nil {
 		return err
