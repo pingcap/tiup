@@ -564,9 +564,9 @@ func (s *Specification) portInvalidDetect() error {
 				if port == 0 && len(portTags) > 1 && portTags[1] == "omitempty" {
 					continue
 				}
-				if port <= 0 || port > 65535 {
+				if port < 1 || port > 65535 {
 					portField := strings.Split(compSpec.Type().Field(i).Tag.Get("yaml"), ",")[0]
-					return errors.Errorf("`%s` of %s=%d is invalid, port should be in the range (0, 65535]", cfg, portField, port)
+					return errors.Errorf("`%s` of %s=%d is invalid, port should be in the range [1, 65535]", cfg, portField, port)
 				}
 			}
 		}
