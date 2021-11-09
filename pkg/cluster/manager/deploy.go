@@ -89,7 +89,8 @@ func (m *Manager) Deploy(
 		return err
 	}
 	if clusterSpec, ok := topo.(*spec.Specification); ok {
-		if semver.Compare(clusterVersion, "v4.0.5") < 0 &&
+		if clusterSpec.GlobalOptions.TLSEnabled &&
+			semver.Compare(clusterVersion, "v4.0.5") < 0 &&
 			len(clusterSpec.TiFlashServers) > 0 {
 			return fmt.Errorf("TiFlash %s is not supported in TLS enabled cluster", clusterVersion)
 		}
