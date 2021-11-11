@@ -164,13 +164,13 @@ func (m *Manager) fillHostArch(s, p *tui.SSHConnectionProps, topo spec.Topology,
 	hostArch := map[string]string{}
 	var detectTasks []*task.StepDisplay
 	topo.IterInstance(func(inst spec.Instance) {
+		if inst.Arch() != "" {
+			return
+		}
 		if _, ok := hostArch[inst.GetHost()]; ok {
 			return
 		}
 		hostArch[inst.GetHost()] = ""
-		if inst.Arch() != "" {
-			return
-		}
 
 		tf := task.NewBuilder().
 			RootSSH(
