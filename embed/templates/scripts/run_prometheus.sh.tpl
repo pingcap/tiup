@@ -23,11 +23,11 @@ do
         --config {{.DeployDir}}/conf/ngmonitoring.toml \
         >/dev/null 2>&1
     sleep 15s
-done" > bin/ng-wrapper.sh
+done" > scripts/ng-wrapper.sh
 fi
 
 {{- if .EnableNG}}
-/bin/bash bin/ng-wrapper.sh &
+/bin/bash scripts/ng-wrapper.sh &
 {{- end}}
 
 exec > >(tee -i -a "{{.LogDir}}/prometheus.log")
