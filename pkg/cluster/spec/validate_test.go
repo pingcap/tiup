@@ -985,7 +985,7 @@ global:
   ssh_port: 65536
 `), &topo)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "`global` of ssh_port=65536 is invalid, port should be in the range [0, 65535]")
+	c.Assert(err.Error(), Equals, "`global` of ssh_port=65536 is invalid, port should be in the range [1, 65535]")
 
 	err = yaml.Unmarshal([]byte(`
 global:
@@ -995,14 +995,14 @@ tidb_servers:
     port: -1
 `), &topo)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "`tidb_servers` of port=-1 is invalid, port should be in the range [0, 65535]")
+	c.Assert(err.Error(), Equals, "`tidb_servers` of port=-1 is invalid, port should be in the range [1, 65535]")
 
 	err = yaml.Unmarshal([]byte(`
 monitored:
     node_exporter_port: 102400
 `), &topo)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "`monitored` of node_exporter_port=102400 is invalid, port should be in the range [0, 65535]")
+	c.Assert(err.Error(), Equals, "`monitored` of node_exporter_port=102400 is invalid, port should be in the range [1, 65535]")
 }
 
 func (s *metaSuiteTopo) TestInvalidUserGroup(c *C) {
