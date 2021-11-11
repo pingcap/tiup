@@ -1,5 +1,25 @@
 TiUP Changelog
 
+## [1.7.0] 2021-11-15
+
+### New Features
+
+- Support deploying and managing TLS enabled TiDB cluster with TiFlash nodes ([#1594](https://github.com/pingcap/tiup/pull/1594), [@nexustar](https://github.com/nexustar))
+- Support rendering template for local deployment with vairables in `tiup-cluster` and `tiup-dm` ([#1596](https://github.com/pingcap/tiup/pull/1596), [@makocchi-git](https://github.com/makocchi-git))
+- [experimental] Support optionally enable next-generation monitor (`ng-monitor`) for latest TiDB releases ([#1601](https://github.com/pingcap/tiup/pull/1601), [@nexustar](https://github.com/nexustar))
+- [experimental] Support JSON output format for `tiup-cluster` and `tiup-dm` ([#1617](https://github.com/pingcap/tiup/pull/1617), [@AstroProfundis](https://github.com/AstroProfundis))
+
+### Fixes
+
+- Remove warning about tag argument for `tiup-playground` ([#1606](https://github.com/pingcap/tiup/pull/1606), [@nexustar](https://github.com/nexustar))
+- Set `--external-url` for AlertManager in `tiup-cluster` ([#1608](https://github.com/pingcap/tiup/pull/1608), [@reAsOn2010](https://github.com/reAsOn2010))
+- Fix auto detecting of system arch fail in certain circumstances ([#1610](https://github.com/pingcap/tiup/pull/1610), [@AstroProfundis](https://github.com/AstroProfundis))
+
+### Improvements
+
+- Support getting cluster ID from PD in `pdapi` package ([#1573](https://github.com/pingcap/tiup/pull/1573) [#1574](https://github.com/pingcap/tiup/pull/1574), [@nexustar](https://github.com/nexustar); [#1580](https://github.com/pingcap/tiup/pull/1580), [@AstroProfundis](https://github.com/AstroProfundis))
+- Accurately get status of TiFlash nodes during operations ([#1600](https://github.com/pingcap/tiup/pull/1600), [@AstroProfundis](https://github.com/AstroProfundis))
+
 ## [1.6.1] 2021-10-21
 
 ### Fixes
