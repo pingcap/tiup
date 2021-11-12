@@ -84,7 +84,7 @@ func (m *Manager) ScaleIn(
 	base := metadata.GetBaseMeta()
 
 	// Regenerate configuration
-	regenConfigTasks, hasImported := buildRegenConfigTasks(m, name, topo, base, nodes, true)
+	regenConfigTasks, hasImported := buildRegenConfigTasks(m, name, topo, base, gOpt, nodes, true)
 
 	// handle dir scheme changes
 	if hasImported {
@@ -107,7 +107,7 @@ func (m *Manager) ScaleIn(
 
 	t := b.
 		ParallelStep("+ Refresh instance configs", force, regenConfigTasks...).
-		Parallel(force, buildReloadPromTasks(metadata.GetTopology(), nodes...)...).
+		Parallel(force, buildReloadPromTasks(metadata.GetTopology(), gOpt, nodes...)...).
 		Build()
 
 	if err := t.Execute(ctxt.New(context.Background(), gOpt.Concurrency)); err != nil {

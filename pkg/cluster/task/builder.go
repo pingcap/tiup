@@ -18,23 +18,35 @@ import (
 	"crypto/tls"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/crypto"
+	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/proxy"
 )
 
 // Builder is used to build TiUP task
 type Builder struct {
-	tasks []Task
+	tasks       []Task
+	DisplayMode log.DisplayMode
 }
 
 // NewBuilder returns a *Builder instance
-func NewBuilder() *Builder {
-	return &Builder{}
+func NewBuilder(mode string) *Builder {
+	var dp log.DisplayMode
+	switch strings.ToLower(mode) {
+	case "json":
+		dp = log.DisplayModeJSON
+	case "plain", "text":
+		dp = log.DisplayModePlain
+	default:
+		dp = log.DisplayModeDefault
+	}
+	return &Builder{DisplayMode: dp}
 }
 
 // RootSSH appends a RootSSH task to the current task collection
@@ -460,19 +472,19 @@ func (b *Builder) Build() Task {
 
 // Step appends a new StepDisplay task, which will print single line progress for inner tasks.
 func (b *Builder) Step(prefix string, inner Task) *Builder {
-	b.Serial(newStepDisplay(prefix, inner))
+	b.Serial(newStepDisplay(prefix, inner, b.DisplayMode))
 	return b
 }
 
 // ParallelStep appends a new ParallelStepDisplay task, which will print multi line progress in parallel
 // for inner tasks. Inner tasks must be a StepDisplay task.
 func (b *Builder) ParallelStep(prefix string, ignoreError bool, tasks ...*StepDisplay) *Builder {
-	b.tasks = append(b.tasks, newParallelStepDisplay(prefix, ignoreError, tasks...))
+	b.tasks = append(b.tasks, newParallelStepDisplay(prefix, ignoreError, tasks...).SetDisplayMode(b.DisplayMode))
 	return b
 }
 
 // BuildAsStep returns a task that is wrapped by a StepDisplay. The task will print single line progress.
 func (b *Builder) BuildAsStep(prefix string) *StepDisplay {
 	inner := b.Build()
-	return newStepDisplay(prefix, inner)
+	return newStepDisplay(prefix, inner, b.DisplayMode)
 }

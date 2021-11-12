@@ -14,11 +14,58 @@
 package log
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 
 	"go.uber.org/zap"
 )
+
+var (
+	outputFmt DisplayMode = DisplayModeDefault // global output format of logger
+)
+
+// DisplayMode control the output format
+type DisplayMode int
+
+// display modes
+const (
+	DisplayModeDefault DisplayMode = iota // default is the interactive output
+	DisplayModePlain                      // plain text
+	DisplayModeJSON                       // JSON
+)
+
+// SetDisplayMode changes the global output format of logger
+func SetDisplayMode(m DisplayMode) {
+	outputFmt = m
+}
+
+// GetDisplayMode returns the current global output format
+func GetDisplayMode() DisplayMode {
+	return outputFmt
+}
+
+func printLog(w io.Writer, level, format string, args ...interface{}) {
+	switch outputFmt {
+	case DisplayModeJSON:
+		obj := struct {
+			Level string `json:"level"`
+			Msg   string `json:"message"`
+		}{
+			Level: level,
+			Msg:   fmt.Sprintf(format, args...),
+		}
+		data, err := json.Marshal(obj)
+		if err != nil {
+			_, _ = fmt.Fprintf(w, "{\"error\":\"%s\"}", err)
+			return
+		}
+		_, _ = fmt.Fprint(w, string(data)+"\n")
+	default:
+		_, _ = fmt.Fprintf(w, format+"\n", args...)
+	}
+}
 
 // Debugf output the debug message to console
 func Debugf(format string, args ...interface{}) {
@@ -29,19 +76,19 @@ func Debugf(format string, args ...interface{}) {
 // Deprecated: Use zap.L().Info() instead
 func Infof(format string, args ...interface{}) {
 	zap.L().Info(fmt.Sprintf(format, args...))
-	fmt.Printf(format+"\n", args...)
+	printLog(os.Stdout, "info", format, args...)
 }
 
 // Warnf output the warning message to console
 // Deprecated: Use zap.L().Warn() instead
 func Warnf(format string, args ...interface{}) {
 	zap.L().Warn(fmt.Sprintf(format, args...))
-	_, _ = fmt.Fprintf(os.Stderr, format+"\n", args...)
+	printLog(os.Stderr, "warn", format, args...)
 }
 
 // Errorf output the error message to console
 // Deprecated: Use zap.L().Error() instead
 func Errorf(format string, args ...interface{}) {
 	zap.L().Error(fmt.Sprintf(format, args...))
-	_, _ = fmt.Fprintf(os.Stderr, format+"\n", args...)
+	printLog(os.Stderr, "error", format, args...)
 }

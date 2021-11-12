@@ -131,7 +131,7 @@ func (m *Manager) DestroyTombstone(
 	if err != nil {
 		return err
 	}
-	regenConfigTasks, _ := buildRegenConfigTasks(m, name, topo, base, nodes, true)
+	regenConfigTasks, _ := buildRegenConfigTasks(m, name, topo, base, gOpt, nodes, true)
 
 	t := b.
 		Func("FindTomestoneNodes", func(ctx context.Context) (err error) {
@@ -150,7 +150,7 @@ func (m *Manager) DestroyTombstone(
 		UpdateMeta(name, clusterMeta, nodes).
 		UpdateTopology(name, m.specManager.Path(name), clusterMeta, nodes).
 		ParallelStep("+ Refresh instance configs", true, regenConfigTasks...).
-		Parallel(true, buildReloadPromTasks(metadata.GetTopology())...).
+		Parallel(true, buildReloadPromTasks(metadata.GetTopology(), gOpt)...).
 		Build()
 
 	if err := t.Execute(ctx); err != nil {

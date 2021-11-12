@@ -41,8 +41,8 @@ import (
 func (m *Manager) ScaleOut(
 	name string,
 	topoFile string,
-	afterDeploy func(b *task.Builder, newPart spec.Topology),
-	final func(b *task.Builder, name string, meta spec.Metadata),
+	afterDeploy func(b *task.Builder, newPart spec.Topology, gOpt operator.Options),
+	final func(b *task.Builder, name string, meta spec.Metadata, gOpt operator.Options),
 	opt DeployOptions,
 	skipConfirm bool,
 	gOpt operator.Options,
