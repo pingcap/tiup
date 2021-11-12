@@ -780,7 +780,7 @@ func (i *TiFlashInstance) Ready(ctx context.Context, e ctxt.Executor, timeout ui
 			return nil
 		}
 
-		err = fmt.Errorf("tiflash store status '%s' not ready", string(body))
+		err = fmt.Errorf("tiflash store status is '%s', not fully running yet", string(body))
 		queryErr = err
 		return err
 	}, retryOpt); err != nil {
