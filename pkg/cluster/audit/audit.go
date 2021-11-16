@@ -31,6 +31,11 @@ import (
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 )
 
+const (
+	// EnvNameAuditID is the alternative ID appended to time based audit ID
+	EnvNameAuditID = "TIUP_AUDIT_ID"
+)
+
 // CommandArgs returns the original commands from the first line of a file
 func CommandArgs(fp string) ([]string, error) {
 	file, err := os.Open(fp)
@@ -140,7 +145,11 @@ func GetAuditList(dir string) ([]Item, error) {
 
 // OutputAuditLog outputs audit log.
 func OutputAuditLog(dir string, data []byte) error {
-	fname := filepath.Join(dir, base52.Encode(time.Now().UnixNano()+rand.Int63n(1000)))
+	auditID := base52.Encode(time.Now().UnixNano() + rand.Int63n(1000))
+	if customID := os.Getenv(EnvNameAuditID); customID != "" {
+		auditID = fmt.Sprintf("%s_%s", auditID, customID)
+	}
+	fname := filepath.Join(dir, auditID)
 	f, err := os.Create(fname)
 	if err != nil {
 		return errors.Annotate(err, "create audit log")
@@ -183,7 +192,11 @@ func ShowAuditLog(dir string, auditID string) error {
 
 // decodeAuditID decodes the auditID to unix timestamp
 func decodeAuditID(auditID string) (time.Time, error) {
-	ts, err := base52.Decode(auditID)
+	tsID := auditID
+	if strings.Contains(auditID, "_") {
+		tsID = strings.Split(auditID, "_")[0]
+	}
+	ts, err := base52.Decode(tsID)
 	if err != nil {
 		return time.Time{}, err
 	}

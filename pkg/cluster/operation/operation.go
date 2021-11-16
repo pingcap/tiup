@@ -51,8 +51,8 @@ type Options struct {
 	// Show uptime or not
 	ShowUptime bool
 
-	JSON      bool
-	Operation Operation
+	DisplayMode string // the output format
+	Operation   Operation
 }
 
 // Operation represents the type of cluster operation

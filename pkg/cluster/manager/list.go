@@ -14,10 +14,13 @@
 package manager
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/tui"
 )
@@ -38,21 +41,34 @@ func (m *Manager) ListCluster() error {
 		return err
 	}
 
-	clusterTable := [][]string{
-		// Header
-		{"Name", "User", "Version", "Path", "PrivateKey"},
+	switch log.GetDisplayMode() {
+	case log.DisplayModeJSON:
+		clusterObj := struct {
+			Clusters []Cluster `json:"clusters"`
+		}{
+			Clusters: clusters,
+		}
+		data, err := json.Marshal(clusterObj)
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(data))
+	default:
+		clusterTable := [][]string{
+			// Header
+			{"Name", "User", "Version", "Path", "PrivateKey"},
+		}
+		for _, v := range clusters {
+			clusterTable = append(clusterTable, []string{
+				v.Name,
+				v.User,
+				v.Version,
+				v.Path,
+				v.PrivateKey,
+			})
+		}
+		tui.PrintTable(clusterTable, true)
 	}
-	for _, v := range clusters {
-		clusterTable = append(clusterTable, []string{
-			v.Name,
-			v.User,
-			v.Version,
-			v.Path,
-			v.PrivateKey,
-		})
-	}
-
-	tui.PrintTable(clusterTable, true)
 	return nil
 }
 

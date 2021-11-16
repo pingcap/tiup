@@ -28,6 +28,11 @@ func (b ByteSize) MarshalJSON() ([]byte, error) {
 	return []byte(`"` + units.BytesSize(float64(b)) + `"`), nil
 }
 
+// MarshalString returns the size as a string.
+func (b ByteSize) MarshalString() string {
+	return units.BytesSize(float64(b))
+}
+
 // UnmarshalJSON parses a JSON string into the byte size.
 func (b *ByteSize) UnmarshalJSON(text []byte) error {
 	s, err := strconv.Unquote(string(text))

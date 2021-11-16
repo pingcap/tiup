@@ -51,7 +51,7 @@ func ImportConfig(name string, clsMeta *spec.ClusterMeta, gOpt operator.Options)
 		for _, inst := range comp.Instances() {
 			switch inst.ComponentName() {
 			case spec.ComponentPD, spec.ComponentTiKV, spec.ComponentPump, spec.ComponentTiDB, spec.ComponentDrainer:
-				t := task.NewBuilder().
+				t := task.NewBuilder("").
 					SSHKeySet(
 						spec.ClusterPath(name, "ssh", "id_rsa"),
 						spec.ClusterPath(name, "ssh", "id_rsa.pub")).
@@ -84,7 +84,7 @@ func ImportConfig(name string, clsMeta *spec.ClusterMeta, gOpt operator.Options)
 					Build()
 				copyFileTasks = append(copyFileTasks, t)
 			case spec.ComponentTiFlash:
-				t := task.NewBuilder().
+				t := task.NewBuilder("").
 					SSHKeySet(
 						spec.ClusterPath(name, "ssh", "id_rsa"),
 						spec.ClusterPath(name, "ssh", "id_rsa.pub")).
@@ -131,7 +131,7 @@ func ImportConfig(name string, clsMeta *spec.ClusterMeta, gOpt operator.Options)
 			}
 		}
 	}
-	t := task.NewBuilder().
+	t := task.NewBuilder("").
 		Parallel(false, copyFileTasks...).
 		Build()
 

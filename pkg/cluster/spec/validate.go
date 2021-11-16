@@ -22,6 +22,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pingcap/tiup/pkg/cluster/api"
+
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
@@ -434,7 +436,7 @@ func (e *TiKVLabelError) Error() string {
 
 // TiKVLabelProvider provides the store labels information
 type TiKVLabelProvider interface {
-	GetTiKVLabels() (map[string]map[string]string, error)
+	GetTiKVLabels() (map[string]map[string]string, []map[string]api.LabelInfo, error)
 }
 
 func getHostFromAddress(addr string) string {
@@ -449,7 +451,7 @@ func CheckTiKVLabels(pdLocLabels []string, slp TiKVLabelProvider) error {
 	lbs := set.NewStringSet(pdLocLabels...)
 	hosts := make(map[string]int)
 
-	storeLabels, err := slp.GetTiKVLabels()
+	storeLabels, _, err := slp.GetTiKVLabels()
 	if err != nil {
 		return err
 	}
@@ -557,9 +559,14 @@ func (s *Specification) portInvalidDetect() error {
 		for i := 0; i < compSpec.NumField(); i++ {
 			if strings.HasSuffix(compSpec.Type().Field(i).Name, "Port") {
 				port := int(compSpec.Field(i).Int())
-				if port <= 0 || port >= 65535 {
+				portTags := strings.Split(compSpec.Type().Field(i).Tag.Get("yaml"), ",")
+				// when use not specify ng_port, its default value is 0
+				if port == 0 && len(portTags) > 1 && portTags[1] == "omitempty" {
+					continue
+				}
+				if port < 1 || port > 65535 {
 					portField := strings.Split(compSpec.Type().Field(i).Tag.Get("yaml"), ",")[0]
-					return errors.Errorf("`%s` of %s=%d is invalid, port should be in the range [0, 65535]", cfg, portField, port)
+					return errors.Errorf("`%s` of %s=%d is invalid, port should be in the range [1, 65535]", cfg, portField, port)
 				}
 			}
 		}
@@ -610,6 +617,7 @@ func (s *Specification) portConflictsDetect() error {
 		"TCPPort",
 		"HTTPPort",
 		"ClusterPort",
+		"NgPort",
 	}
 
 	portStats := map[usedPort]conflict{}
@@ -917,6 +925,7 @@ func (s *Specification) validateTLSEnabled() error {
 		case ComponentPD,
 			ComponentTiDB,
 			ComponentTiKV,
+			ComponentTiFlash,
 			ComponentPump,
 			ComponentDrainer,
 			ComponentCDC,

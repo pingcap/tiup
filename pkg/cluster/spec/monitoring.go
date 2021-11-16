@@ -39,6 +39,7 @@ type PrometheusSpec struct {
 	Patched               bool                   `yaml:"patched,omitempty"`
 	IgnoreExporter        bool                   `yaml:"ignore_exporter,omitempty"`
 	Port                  int                    `yaml:"port" default:"9090"`
+	NgPort                int                    `yaml:"ng_port,omitempty" validate:"ng_port:editable"`
 	DeployDir             string                 `yaml:"deploy_dir,omitempty"`
 	DataDir               string                 `yaml:"data_dir,omitempty"`
 	LogDir                string                 `yaml:"log_dir,omitempty"`
@@ -108,7 +109,7 @@ func (c *MonitorComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(servers))
 
 	for _, s := range servers {
-		ins = append(ins, &MonitorInstance{BaseInstance{
+		mi := &MonitorInstance{BaseInstance{
 			InstanceSpec: s,
 			Name:         c.Name(),
 			Host:         s.Host,
@@ -128,7 +129,11 @@ func (c *MonitorComponent) Instances() []Instance {
 			UptimeFn: func(tlsCfg *tls.Config) time.Duration {
 				return UptimeByHost(s.Host, s.Port, tlsCfg)
 			},
-		}, c.Topology})
+		}, c.Topology}
+		if s.NgPort > 0 {
+			mi.BaseInstance.Ports = append(mi.BaseInstance.Ports, s.NgPort)
+		}
+		ins = append(ins, mi)
 	}
 	return ins
 }
@@ -163,7 +168,9 @@ func (i *MonitorInstance) InitConfig(
 		paths.Log,
 	).WithPort(spec.Port).
 		WithNumaNode(spec.NumaNode).
-		WithRetention(spec.Retention)
+		WithRetention(spec.Retention).
+		WithNG(spec.NgPort)
+
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_prometheus_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
@@ -184,18 +191,20 @@ func (i *MonitorInstance) InitConfig(
 	monitoredOptions := i.topo.GetMonitoredOptions()
 
 	// transfer config
-	fp = filepath.Join(paths.Cache, fmt.Sprintf("prometheus_%s_%d.yml", i.GetHost(), i.GetPort()))
 	cfig := config.NewPrometheusConfig(clusterName, clusterVersion, enableTLS)
 	if monitoredOptions != nil {
 		cfig.AddBlackbox(i.GetHost(), uint64(monitoredOptions.BlackboxExporterPort))
 	}
 	uniqueHosts := set.NewStringSet()
 
+	ngcfg := config.NewNgMonitoringConfig(clusterName, clusterVersion, enableTLS)
+
 	if servers, found := topoHasField("PDServers"); found {
 		for i := 0; i < servers.Len(); i++ {
 			pd := servers.Index(i).Interface().(*PDSpec)
 			uniqueHosts.Insert(pd.Host)
 			cfig.AddPD(pd.Host, uint64(pd.ClientPort))
+			ngcfg.AddPD(pd.Host, uint64(pd.ClientPort))
 		}
 	}
 	if servers, found := topoHasField("TiKVServers"); found {
@@ -308,6 +317,22 @@ func (i *MonitorInstance) InitConfig(
 		return err
 	}
 
+	ngcfg.AddIP(i.GetHost())
+	ngcfg.AddPort(spec.NgPort)
+	ngcfg.AddDeployDir(paths.Deploy)
+	ngcfg.AddDataDir(paths.Data[0])
+	ngcfg.AddLog(paths.Log)
+
+	fp = filepath.Join(paths.Cache, fmt.Sprintf("ngmonitoring_%s_%d.toml", i.GetHost(), i.GetPort()))
+	if err := ngcfg.ConfigToFile(fp); err != nil {
+		return err
+	}
+	dst = filepath.Join(paths.Deploy, "conf", "ngmonitoring.toml")
+	if err := e.Transfer(ctx, fp, dst, false, 0); err != nil {
+		return err
+	}
+
+	fp = filepath.Join(paths.Cache, fmt.Sprintf("prometheus_%s_%d.yml", i.GetHost(), i.GetPort()))
 	if err := cfig.ConfigToFile(fp); err != nil {
 		return err
 	}

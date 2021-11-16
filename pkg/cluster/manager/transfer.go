@@ -92,7 +92,7 @@ func (m *Manager) Transfer(name string, opt TransferOptions, gOpt operator.Optio
 	for hostKey, i := range uniqueHosts {
 		host := strings.Split(hostKey, "-")[0]
 		for _, p := range i.Slice() {
-			t := task.NewBuilder()
+			t := task.NewBuilder(gOpt.DisplayMode)
 			if opt.Pull {
 				t.CopyFile(p, srcPath, host, opt.Pull, opt.Limit)
 			} else {

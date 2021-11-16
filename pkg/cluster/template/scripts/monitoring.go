@@ -33,6 +33,7 @@ type PrometheusScript struct {
 	NumaNode  string
 	Retention string
 	tplFile   string
+	EnableNG  bool
 }
 
 // NewPrometheusScript returns a PrometheusScript with given arguments
@@ -72,6 +73,16 @@ func (c *PrometheusScript) WithRetention(retention string) *PrometheusScript {
 // WithTPLFile set the template file.
 func (c *PrometheusScript) WithTPLFile(fname string) *PrometheusScript {
 	c.tplFile = fname
+	return c
+}
+
+// WithNG set if enable ng-monitoring.
+func (c *PrometheusScript) WithNG(ngPort int) *PrometheusScript {
+	if ngPort > 0 {
+		c.EnableNG = true
+	} else {
+		c.EnableNG = false
+	}
 	return c
 }
 

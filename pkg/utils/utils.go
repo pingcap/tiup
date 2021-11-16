@@ -14,8 +14,10 @@
 package utils
 
 import (
+	"math"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/spf13/pflag"
 )
@@ -45,4 +47,18 @@ func IsFlagSetByUser(flagSet *pflag.FlagSet, flagName string) bool {
 func MustAtoI(a string) int {
 	v, _ := strconv.Atoi(a)
 	return v
+}
+
+// Base62Tag returns a tag based on time
+func Base62Tag() string {
+	const base = 62
+	const sets = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+	b := make([]byte, 0)
+	num := time.Now().UnixNano() / int64(time.Millisecond)
+	for num > 0 {
+		r := math.Mod(float64(num), float64(base))
+		num /= base
+		b = append([]byte{sets[int(r)]}, b...)
+	}
+	return string(b)
 }

@@ -20,6 +20,7 @@ exec bin/alertmanager/alertmanager \
     --data.retention=120h \
     --log.level="info" \
     --web.listen-address="{{.IP}}:{{.WebPort}}" \
+    --web.external-url="http://{{.IP}}:{{.WebPort}}" \
 {{- if .EndPoints}}
 {{- range $idx, $am := .EndPoints}}
     --cluster.peer="{{$am.IP}}:{{$am.ClusterPort}}" \

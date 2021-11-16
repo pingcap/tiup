@@ -137,7 +137,7 @@ func (m *Manager) sshTaskBuilder(name string, topo spec.Topology, user string, g
 		}
 	}
 
-	return task.NewBuilder().
+	return task.NewBuilder(gOpt.DisplayMode).
 		SSHKeySet(
 			m.specManager.Path(name, "ssh", "id_rsa"),
 			m.specManager.Path(name, "ssh", "id_rsa.pub"),
@@ -164,15 +164,15 @@ func (m *Manager) fillHostArch(s, p *tui.SSHConnectionProps, topo spec.Topology,
 	hostArch := map[string]string{}
 	var detectTasks []*task.StepDisplay
 	topo.IterInstance(func(inst spec.Instance) {
+		if inst.Arch() != "" {
+			return
+		}
 		if _, ok := hostArch[inst.GetHost()]; ok {
 			return
 		}
 		hostArch[inst.GetHost()] = ""
-		if inst.Arch() != "" {
-			return
-		}
 
-		tf := task.NewBuilder().
+		tf := task.NewBuilder(gOpt.DisplayMode).
 			RootSSH(
 				inst.GetHost(),
 				inst.GetSSHPort(),
@@ -201,7 +201,7 @@ func (m *Manager) fillHostArch(s, p *tui.SSHConnectionProps, topo spec.Topology,
 	}
 
 	ctx := ctxt.New(context.Background(), gOpt.Concurrency)
-	t := task.NewBuilder().
+	t := task.NewBuilder(gOpt.DisplayMode).
 		ParallelStep("+ Detect CPU Arch", false, detectTasks...).
 		Build()
 

@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"net/http"
 	_ "net/http/pprof"
-	"os"
 	"runtime"
+	"time"
 
+	"github.com/pingcap/go-tpc/pkg/measurement"
 	"github.com/pingcap/go-tpc/pkg/workload"
 	"github.com/pingcap/go-tpc/tpcc"
 	"github.com/spf13/cobra"
@@ -15,22 +16,20 @@ import (
 
 var tpccConfig tpcc.Config
 
-func executeTpcc(action string) {
+func executeTpcc(action string) error {
 	if pprofAddr != "" {
 		go func() {
-			err := http.ListenAndServe(pprofAddr, http.DefaultServeMux)
-			if err != nil {
-				fmt.Printf("failed to ListenAndServe: %s\n", err.Error())
-			}
+			_ = http.ListenAndServe(pprofAddr, http.DefaultServeMux)
 		}()
 	}
 	runtime.GOMAXPROCS(maxProcs)
 
 	if err := openDB(); err != nil {
-		fmt.Println(err)
 		fmt.Println("Cannot open database, pleae check it (ip/port/username/password)")
-		os.Exit(1)
+		closeDB()
+		return err
 	}
+	defer closeDB()
 
 	tpccConfig.DBName = dbName
 	tpccConfig.Threads = threads
@@ -42,24 +41,26 @@ func executeTpcc(action string) {
 	switch tpccConfig.OutputType {
 	case "csv", "CSV":
 		if tpccConfig.OutputDir == "" {
-			fmt.Printf("Output Directory cannot be empty when generating files")
-			os.Exit(1)
+			return fmt.Errorf("Output Directory cannot be empty when generating files")
 		}
 		w, err = tpcc.NewCSVWorkloader(globalDB, &tpccConfig)
 	default:
 		w, err = tpcc.NewWorkloader(globalDB, &tpccConfig)
 	}
-
 	if err != nil {
-		fmt.Printf("Failed to init work loader: %v\n", err)
-		os.Exit(1)
+		fmt.Println("Failed to init work loader")
+		return err
 	}
 
 	timeoutCtx, cancel := context.WithTimeout(globalCtx, totalTime)
 	defer cancel()
-	defer closeDB()
 
-	executeWorkload(timeoutCtx, w, action)
+	executeWorkload(timeoutCtx, w, threads, action)
+
+	fmt.Println("Finished")
+	w.OutputStats(true)
+
+	return nil
 }
 
 func registerTpcc(root *cobra.Command) {
@@ -70,42 +71,45 @@ func registerTpcc(root *cobra.Command) {
 	cmd.PersistentFlags().IntVar(&tpccConfig.Parts, "parts", 1, "Number to partition warehouses")
 	cmd.PersistentFlags().IntVar(&tpccConfig.Warehouses, "warehouses", 10, "Number of warehouses")
 	cmd.PersistentFlags().BoolVar(&tpccConfig.CheckAll, "check-all", false, "Run all consistency checks")
-
 	var cmdPrepare = &cobra.Command{
 		Use:   "prepare",
 		Short: "Prepare data for TPCC",
-		Run: func(cmd *cobra.Command, _ []string) {
-			executeTpcc("prepare")
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return executeTpcc("prepare")
 		},
 	}
+	cmdPrepare.PersistentFlags().BoolVar(&tpccConfig.NoCheck, "no-check", false, "TPCC prepare check, default false")
 	cmdPrepare.PersistentFlags().StringVar(&tpccConfig.OutputType, "output-type", "", "Output file type."+
 		" If empty, then load data to db. Current only support csv")
 	cmdPrepare.PersistentFlags().StringVar(&tpccConfig.OutputDir, "output-dir", "", "Output directory for generating file if specified")
 	cmdPrepare.PersistentFlags().StringVar(&tpccConfig.SpecifiedTables, "tables", "", "Specified tables for "+
 		"generating file, separated by ','. Valid only if output is set. If this flag is not set, generate all tables by default")
+	cmdPrepare.PersistentFlags().IntVar(&tpccConfig.PrepareRetryCount, "retry-count", 50, "Retry count when errors occur")
+	cmdPrepare.PersistentFlags().DurationVar(&tpccConfig.PrepareRetryInterval, "retry-interval", 10*time.Second, "The interval for each retry")
 
 	var cmdRun = &cobra.Command{
 		Use:   "run",
 		Short: "Run workload",
-		Run: func(cmd *cobra.Command, _ []string) {
-			executeTpcc("run")
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return executeTpcc("run")
 		},
 	}
 	cmdRun.PersistentFlags().BoolVar(&tpccConfig.Wait, "wait", false, "including keying & thinking time described on TPC-C Standard Specification")
+	cmdRun.PersistentFlags().DurationVar(&tpccConfig.MaxMeasureLatency, "max-measure-latency", measurement.DefaultMaxLatency, "max measure latency in millisecond")
 
 	var cmdCleanup = &cobra.Command{
 		Use:   "cleanup",
 		Short: "Cleanup data for the workload",
-		Run: func(cmd *cobra.Command, _ []string) {
-			executeTpcc("cleanup")
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return executeTpcc("cleanup")
 		},
 	}
 
 	var cmdCheck = &cobra.Command{
 		Use:   "check",
 		Short: "Check data consistency for the workload",
-		Run: func(cmd *cobra.Command, _ []string) {
-			executeTpcc("check")
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return executeTpcc("check")
 		},
 	}
 

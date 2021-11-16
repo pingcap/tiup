@@ -100,6 +100,15 @@ func init() {
 		SilenceErrors: true,
 		Version:       version.NewTiUPVersion().String(),
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			switch strings.ToLower(gOpt.DisplayMode) {
+			case "json":
+				log.SetDisplayMode(log.DisplayModeJSON)
+			case "plain", "text":
+				log.SetDisplayMode(log.DisplayModePlain)
+			default:
+				log.SetDisplayMode(log.DisplayModeDefault)
+			}
+
 			var err error
 			var env *tiupmeta.Environment
 			if err = spec.Initialize("cluster"); err != nil {
@@ -124,9 +133,11 @@ func init() {
 
 			if gOpt.NativeSSH {
 				gOpt.SSHType = executor.SSHTypeSystem
-				zap.L().Info("System ssh client will be used",
-					zap.String(localdata.EnvNameNativeSSHClient, os.Getenv(localdata.EnvNameNativeSSHClient)))
-				fmt.Println("The --native-ssh flag has been deprecated, please use --ssh=system")
+				log.Infof(
+					"System ssh client will be used (%s=%s)",
+					localdata.EnvNameNativeSSHClient,
+					os.Getenv(localdata.EnvNameNativeSSHClient))
+				log.Infof("The --native-ssh flag has been deprecated, please use --ssh=system")
 			}
 
 			err = proxy.MaybeStartProxy(gOpt.SSHProxyHost, gOpt.SSHProxyPort, gOpt.SSHProxyUser, gOpt.SSHProxyUsePassword, gOpt.SSHProxyIdentity)
@@ -152,6 +163,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&gOpt.NativeSSH, "native-ssh", gOpt.NativeSSH, "(EXPERIMENTAL) Use the native SSH client installed on local system instead of the build-in one.")
 	rootCmd.PersistentFlags().StringVar((*string)(&gOpt.SSHType), "ssh", "", "(EXPERIMENTAL) The executor type: 'builtin', 'system', 'none'.")
 	rootCmd.PersistentFlags().IntVarP(&gOpt.Concurrency, "concurrency", "c", 5, "max number of parallel tasks allowed")
+	rootCmd.PersistentFlags().StringVar(&gOpt.DisplayMode, "format", "default", "(EXPERIMENTAL) The format of output, available values are [default, json]")
 	rootCmd.PersistentFlags().StringVar(&gOpt.SSHProxyHost, "ssh-proxy-host", "", "The SSH proxy host used to connect to remote host.")
 	rootCmd.PersistentFlags().StringVar(&gOpt.SSHProxyUser, "ssh-proxy-user", utils.CurrentUser(), "The user name used to login the proxy host.")
 	rootCmd.PersistentFlags().IntVar(&gOpt.SSHProxyPort, "ssh-proxy-port", 22, "The port used to login the proxy host.")
@@ -324,7 +336,7 @@ func Execute() {
 				if err != nil {
 					log.Infof("report failed: %v", err)
 				}
-				fmt.Fprintf(os.Stderr, "report: %s\n", teleReport.String())
+				log.Errorf("report: %s\n", teleReport.String())
 				if data, err := json.Marshal(teleReport); err == nil {
 					log.Debugf("report: %s\n", string(data))
 				}
@@ -335,24 +347,41 @@ func Execute() {
 		f()
 	}
 
-	if err != nil {
-		if errx := errorx.Cast(err); errx != nil {
-			printErrorMessageForErrorX(errx)
-		} else {
-			printErrorMessageForNormalError(err)
+	switch log.GetDisplayMode() {
+	case log.DisplayModeJSON:
+		obj := struct {
+			Code int    `json:"exit_code"`
+			Err  string `json:"error,omitempty"`
+		}{
+			Code: code,
 		}
-
-		if !errorx.HasTrait(err, utils.ErrTraitPreCheck) {
-			logger.OutputDebugLog("tiup-cluster")
+		if err != nil {
+			obj.Err = err.Error()
 		}
+		data, err := json.Marshal(obj)
+		if err != nil {
+			fmt.Printf("{\"exit_code\":%d, \"error\":\"%s\"}", code, err)
+		}
+		fmt.Fprintln(os.Stderr, string(data))
+	default:
+		if err != nil {
+			if errx := errorx.Cast(err); errx != nil {
+				printErrorMessageForErrorX(errx)
+			} else {
+				printErrorMessageForNormalError(err)
+			}
 
-		if errx := errorx.Cast(err); errx != nil {
-			if suggestion := extractSuggestionFromErrorX(errx); len(suggestion) > 0 {
-				_, _ = fmt.Fprintf(os.Stderr, "\n%s\n", suggestion)
+			if !errorx.HasTrait(err, utils.ErrTraitPreCheck) {
+				logger.OutputDebugLog("tiup-cluster")
+			}
+
+			if errx := errorx.Cast(err); errx != nil {
+				if suggestion := extractSuggestionFromErrorX(errx); len(suggestion) > 0 {
+					log.Errorf("\n%s\n", suggestion)
+				}
 			}
 		}
 	}
-
 	err = logger.OutputAuditLogIfEnabled()
 	if err != nil {
 		zap.L().Warn("Write audit log file failed", zap.Error(err))

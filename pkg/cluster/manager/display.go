@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -54,6 +55,19 @@ type InstInfo struct {
 	Port          int
 }
 
+// LabelInfo represents an instance label info
+type LabelInfo struct {
+	Machine   string `json:"machine"`
+	Port      string `json:"port"`
+	Store     string `json:"store"`
+	Status    string `json:"status"`
+	Leaders   string `json:"leaders"`
+	Regions   string `json:"regions"`
+	Capacity  string `json:"capacity"`
+	Available string `json:"available"`
+	Labels    string `json:"labels"`
+}
+
 // ClusterMetaInfo hold the structure for the JSON output of the dashboard info
 type ClusterMetaInfo struct {
 	ClusterType    string `json:"cluster_type"`
@@ -71,7 +85,9 @@ type ClusterMetaInfo struct {
 // JSONOutput holds the structure for the JSON output of `tiup cluster display --json`
 type JSONOutput struct {
 	ClusterMetaInfo ClusterMetaInfo `json:"cluster_meta"`
-	InstanceInfos   []InstInfo      `json:"instances"`
+	InstanceInfos   []InstInfo      `json:"instances,omitempty"`
+	LocationLabel   string          `json:"location_label,omitempty"`
+	LabelInfos      []api.LabelInfo `json:"labels,omitempty"`
 }
 
 // Display cluster meta and topology.
@@ -91,7 +107,7 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 	cyan := color.New(color.FgCyan, color.Bold)
 	// display cluster meta
 	var j *JSONOutput
-	if opt.JSON {
+	if log.GetDisplayMode() == log.DisplayModeJSON {
 		j = &JSONOutput{
 			ClusterMetaInfo: ClusterMetaInfo{
 				m.sysName,
@@ -182,7 +198,7 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 			if tlsCfg != nil {
 				scheme = "https"
 			}
-			if opt.JSON {
+			if log.GetDisplayMode() == log.DisplayModeJSON {
 				j.ClusterMetaInfo.DashboardURL = fmt.Sprintf("%s://%s/dashboard", scheme, dashboardAddr)
 			} else {
 				fmt.Printf("Dashboard URL:      %s\n", cyan.Sprintf("%s://%s/dashboard", scheme, dashboardAddr))
@@ -190,7 +206,7 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 		}
 	}
 
-	if opt.JSON {
+	if log.GetDisplayMode() == log.DisplayModeJSON {
 		d, err := json.MarshalIndent(j, "", "  ")
 		if err != nil {
 			return err
@@ -221,6 +237,165 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 			color.Green("There are some nodes can be pruned: \n\tNodes: %+v\n\tYou can destroy them with the command: `tiup cluster prune %s`", nodes, name)
 		}
 	}
+
+	return nil
+}
+
+// DisplayTiKVLabels display cluster tikv labels
+func (m *Manager) DisplayTiKVLabels(name string, opt operator.Options) error {
+	if err := clusterutil.ValidateClusterNameOrError(name); err != nil {
+		return err
+	}
+
+	clusterInstInfos, err := m.GetClusterTopology(name, opt)
+	if err != nil {
+		return err
+	}
+
+	metadata, _ := m.meta(name)
+	topo := metadata.GetTopology()
+	base := metadata.GetBaseMeta()
+	// display cluster meta
+	cyan := color.New(color.FgCyan, color.Bold)
+
+	var j *JSONOutput
+	if strings.ToLower(opt.DisplayMode) == "json" {
+		j = &JSONOutput{
+			ClusterMetaInfo: ClusterMetaInfo{
+				m.sysName,
+				name,
+				base.Version,
+				topo.BaseTopo().GlobalOptions.User,
+				string(topo.BaseTopo().GlobalOptions.SSHType),
+				topo.BaseTopo().GlobalOptions.TLSEnabled,
+				"", // CA Cert
+				"", // Client Cert
+				"", // Client Key
+				"",
+			},
+		}
+
+		if topo.BaseTopo().GlobalOptions.TLSEnabled {
+			j.ClusterMetaInfo.TLSCACert = m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSCACert)
+			j.ClusterMetaInfo.TLSClientKey = m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSClientKey)
+			j.ClusterMetaInfo.TLSClientCert = m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSClientCert)
+		}
+	} else {
+		fmt.Printf("Cluster type:       %s\n", cyan.Sprint(m.sysName))
+		fmt.Printf("Cluster name:       %s\n", cyan.Sprint(name))
+		fmt.Printf("Cluster version:    %s\n", cyan.Sprint(base.Version))
+		fmt.Printf("SSH type:           %s\n", cyan.Sprint(topo.BaseTopo().GlobalOptions.SSHType))
+		fmt.Printf("Component name:     %s\n", cyan.Sprint("TiKV"))
+
+		// display TLS info
+		if topo.BaseTopo().GlobalOptions.TLSEnabled {
+			fmt.Printf("TLS encryption:  	%s\n", cyan.Sprint("enabled"))
+			fmt.Printf("CA certificate:     %s\n", cyan.Sprint(
+				m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSCACert),
+			))
+			fmt.Printf("Client private key: %s\n", cyan.Sprint(
+				m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSClientKey),
+			))
+			fmt.Printf("Client certificate: %s\n", cyan.Sprint(
+				m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSClientCert),
+			))
+		}
+	}
+
+	// display topology
+	var clusterTable [][]string
+	clusterTable = append(clusterTable, []string{"Machine", "Port", "Store", "Status", "Leaders", "Regions", "Capacity", "Available", "Labels"})
+
+	masterActive := make([]string, 0)
+	tikvStoreIP := make(map[string]struct{})
+	for _, v := range clusterInstInfos {
+		if v.ComponentName == spec.ComponentTiKV {
+			tikvStoreIP[v.Host] = struct{}{}
+		}
+	}
+
+	masterList := topo.BaseTopo().MasterList
+	tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
+	if err != nil {
+		return err
+	}
+	topo.IterInstance(func(ins spec.Instance) {
+		if ins.ComponentName() == spec.ComponentPD {
+			status := ins.Status(tlsCfg, masterList...)
+			if strings.HasPrefix(status, "Up") || strings.HasPrefix(status, "Healthy") {
+				instAddr := fmt.Sprintf("%s:%d", ins.GetHost(), ins.GetPort())
+				masterActive = append(masterActive, instAddr)
+			}
+		}
+	})
+
+	var (
+		labelInfoArr  []api.LabelInfo
+		locationLabel []string
+	)
+
+	if _, ok := topo.(*spec.Specification); ok {
+		// Check if TiKV's label set correctly
+		pdClient := api.NewPDClient(masterActive, 10*time.Second, tlsCfg)
+		// No
+		locationLabel, _, err = pdClient.GetLocationLabels()
+		if err != nil {
+			log.Debugf("get location labels from pd failed: %v", err)
+		}
+
+		_, storeInfos, err := pdClient.GetTiKVLabels()
+		if err != nil {
+			log.Debugf("get tikv state and labels from pd failed: %v", err)
+		}
+
+		for storeIP := range tikvStoreIP {
+			row := []string{
+				color.CyanString(storeIP),
+				"",
+				"",
+				"",
+				"",
+				"",
+				"",
+				"",
+				"",
+			}
+			clusterTable = append(clusterTable, row)
+
+			for _, val := range storeInfos {
+				if store, ok := val[storeIP]; ok {
+					row := []string{
+						"",
+						store.Port,
+						strconv.FormatUint(store.Store, 10),
+						color.CyanString(store.Status),
+						fmt.Sprintf("%v", store.Leaders),
+						fmt.Sprintf("%v", store.Regions),
+						store.Capacity,
+						store.Available,
+						store.Labels,
+					}
+					clusterTable = append(clusterTable, row)
+
+					labelInfoArr = append(labelInfoArr, store)
+				}
+			}
+		}
+	}
+
+	if strings.ToLower(opt.DisplayMode) == "json" {
+		j.LocationLabel = strings.Join(locationLabel, ",")
+		j.LabelInfos = labelInfoArr
+		d, err := json.MarshalIndent(j, "", "  ")
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(d))
+		return nil
+	}
+	fmt.Printf("Location labels:    %s\n", cyan.Sprint(strings.Join(locationLabel, ",")))
+	tui.PrintTable(clusterTable, true)
+	fmt.Printf("Total nodes: %d\n", len(clusterTable)-1)
 
 	return nil
 }

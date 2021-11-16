@@ -17,7 +17,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -144,19 +143,6 @@ func cleanDataDir(rm bool, dir string) {
 	}
 }
 
-func base62Tag() string {
-	const base = 62
-	const sets = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-	b := make([]byte, 0)
-	num := time.Now().UnixNano() / int64(time.Millisecond)
-	for num > 0 {
-		r := math.Mod(float64(num), float64(base))
-		num /= base
-		b = append([]byte{sets[int(r)]}, b...)
-	}
-	return string(b)
-}
-
 // PrepareCommandParams for PrepareCommand.
 type PrepareCommandParams struct {
 	Ctx          context.Context
@@ -256,9 +242,15 @@ func launchComponent(ctx context.Context, component string, version utils.Versio
 	if instanceDir == "" {
 		// Generate a tag for current instance if the tag doesn't specified
 		if tag == "" {
-			tag = base62Tag()
+			tag = utils.Base62Tag()
 		}
 		instanceDir = env.LocalPath(localdata.DataParentDir, tag)
+	}
+
+	if len(args) > 0 {
+		if args[0] == "--" {
+			args = args[1:]
+		}
 	}
 
 	params := &PrepareCommandParams{

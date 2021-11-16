@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/pingcap/go-tpc/tpch"
@@ -12,13 +11,18 @@ import (
 
 var tpchConfig tpch.Config
 
-func executeTpch(action string, _ []string) {
+func executeTpch(action string) error {
 	if err := openDB(); err != nil {
-		fmt.Println(err)
 		fmt.Println("Cannot open database, pleae check it (ip/port/username/password)")
-		os.Exit(1)
+		closeDB()
+		return err
 	}
 	defer closeDB()
+
+	// if globalDB == nil
+	if globalDB == nil {
+		return fmt.Errorf("cannot connect to the database")
+	}
 
 	tpchConfig.DBName = dbName
 	tpchConfig.QueryNames = strings.Split(tpchConfig.RawQueries, ",")
@@ -27,7 +31,10 @@ func executeTpch(action string, _ []string) {
 	timeoutCtx, cancel := context.WithTimeout(globalCtx, totalTime)
 	defer cancel()
 
-	executeWorkload(timeoutCtx, w, action)
+	executeWorkload(timeoutCtx, w, threads, action)
+	fmt.Println("Finished")
+	w.OutputStats(true)
+	return nil
 }
 
 func registerTpch(root *cobra.Command) {
@@ -45,6 +52,11 @@ func registerTpch(root *cobra.Command) {
 		1,
 		"scale factor")
 
+	cmd.PersistentFlags().BoolVar(&tpchConfig.ExecExplainAnalyze,
+		"use-explain",
+		false,
+		"execute explain analyze")
+
 	cmd.PersistentFlags().BoolVar(&tpchConfig.EnableOutputCheck,
 		"check",
 		false,
@@ -53,8 +65,8 @@ func registerTpch(root *cobra.Command) {
 	var cmdPrepare = &cobra.Command{
 		Use:   "prepare",
 		Short: "Prepare data for the workload",
-		Run: func(cmd *cobra.Command, args []string) {
-			executeTpch("prepare", args)
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return executeTpch("prepare")
 		},
 	}
 
@@ -84,16 +96,16 @@ func registerTpch(root *cobra.Command) {
 	var cmdRun = &cobra.Command{
 		Use:   "run",
 		Short: "Run workload",
-		Run: func(cmd *cobra.Command, args []string) {
-			executeTpch("run", args)
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return executeTpch("run")
 		},
 	}
 
 	var cmdCleanup = &cobra.Command{
 		Use:   "cleanup",
 		Short: "Cleanup data for the workload",
-		Run: func(cmd *cobra.Command, args []string) {
-			executeTpch("cleanup", args)
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return executeTpch("cleanup")
 		},
 	}
 
