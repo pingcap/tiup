@@ -182,7 +182,7 @@ func (i *BaseInstance) InitConfig(ctx context.Context, e ctxt.Executor, opt Glob
 		return errors.Trace(err)
 	}
 	tgt := filepath.Join("/tmp", comp+"_"+uuid.New().String()+".service")
-	if err := e.Transfer(ctx, sysCfg, tgt, false, 0); err != nil {
+	if err := e.Transfer(ctx, sysCfg, tgt, false, 0, false); err != nil {
 		return errors.Annotatef(err, "transfer from %s to %s failed", sysCfg, tgt)
 	}
 	cmd := fmt.Sprintf("mv %s /etc/systemd/system/%s-%d.service", tgt, comp, port)
@@ -203,7 +203,7 @@ func (i *BaseInstance) TransferLocalConfigFile(ctx context.Context, e ctxt.Execu
 		return errors.Annotatef(err, "execute: %s", cmd)
 	}
 
-	if err := e.Transfer(ctx, local, remote, false, 0); err != nil {
+	if err := e.Transfer(ctx, local, remote, false, 0, false); err != nil {
 		return errors.Annotatef(err, "transfer from %s to %s failed", local, remote)
 	}
 
@@ -255,7 +255,7 @@ func (i *BaseInstance) MergeServerConfig(ctx context.Context, e ctxt.Executor, g
 	}
 	dst := filepath.Join(paths.Deploy, "conf", fmt.Sprintf("%s.toml", i.ComponentName()))
 	// transfer config
-	return e.Transfer(ctx, fp, dst, false, 0)
+	return e.Transfer(ctx, fp, dst, false, 0, false)
 }
 
 // mergeTiFlashLearnerServerConfig merges the server configuration and overwrite the global configuration
@@ -271,7 +271,7 @@ func (i *BaseInstance) mergeTiFlashLearnerServerConfig(ctx context.Context, e ct
 	}
 	dst := filepath.Join(paths.Deploy, "conf", fmt.Sprintf("%s-learner.toml", i.ComponentName()))
 	// transfer config
-	return e.Transfer(ctx, fp, dst, false, 0)
+	return e.Transfer(ctx, fp, dst, false, 0, false)
 }
 
 // ID returns the identifier of this instance, the ID is constructed by host:port

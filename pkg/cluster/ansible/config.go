@@ -80,7 +80,8 @@ func ImportConfig(name string, clsMeta *spec.ClusterMeta, gOpt operator.Options)
 								inst.GetPort())),
 						inst.GetHost(),
 						true,
-						0).
+						0,
+						false).
 					Build()
 				copyFileTasks = append(copyFileTasks, t)
 			case spec.ComponentTiFlash:
@@ -113,7 +114,8 @@ func ImportConfig(name string, clsMeta *spec.ClusterMeta, gOpt operator.Options)
 								inst.GetPort())),
 						inst.GetHost(),
 						true,
-						0).
+						0,
+						false).
 					CopyFile(filepath.Join(inst.DeployDir(), "conf", inst.ComponentName()+"-learner.toml"),
 						spec.ClusterPath(name,
 							spec.AnsibleImportedConfigPath,
@@ -123,7 +125,8 @@ func ImportConfig(name string, clsMeta *spec.ClusterMeta, gOpt operator.Options)
 								inst.GetPort())),
 						inst.GetHost(),
 						true,
-						0).
+						0,
+						false).
 					Build()
 				copyFileTasks = append(copyFileTasks, t)
 			default:

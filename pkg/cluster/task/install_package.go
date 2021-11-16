@@ -42,7 +42,7 @@ func (c *InstallPackage) Execute(ctx context.Context) error {
 	dstDir := filepath.Join(c.dstDir, "bin")
 	dstPath := filepath.Join(dstDir, path.Base(c.srcPath))
 
-	err := exec.Transfer(ctx, c.srcPath, dstPath, false, 0)
+	err := exec.Transfer(ctx, c.srcPath, dstPath, false, 0, false)
 	if err != nil {
 		return errors.Annotatef(err, "failed to scp %s to %s:%s", c.srcPath, c.host, dstPath)
 	}

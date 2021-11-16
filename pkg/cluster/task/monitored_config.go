@@ -113,7 +113,7 @@ func (m *MonitoredConfig) syncMonitoredSystemConfig(ctx context.Context, exec ct
 		return err
 	}
 	tgt := filepath.Join("/tmp", comp+"_"+uuid.New().String()+".service")
-	if err := exec.Transfer(ctx, sysCfg, tgt, false, 0); err != nil {
+	if err := exec.Transfer(ctx, sysCfg, tgt, false, 0, false); err != nil {
 		return err
 	}
 	if outp, errp, err := exec.Execute(ctx, fmt.Sprintf("mv %s /etc/systemd/system/%s-%d.service", tgt, comp, port), true); err != nil {
@@ -134,7 +134,7 @@ func (m *MonitoredConfig) syncMonitoredScript(ctx context.Context, exec ctxt.Exe
 		return err
 	}
 	dst := filepath.Join(m.paths.Deploy, "scripts", fmt.Sprintf("run_%s.sh", comp))
-	if err := exec.Transfer(ctx, fp, dst, false, 0); err != nil {
+	if err := exec.Transfer(ctx, fp, dst, false, 0, false); err != nil {
 		return err
 	}
 	if _, _, err := exec.Execute(ctx, "chmod +x "+dst, false); err != nil {
@@ -150,7 +150,7 @@ func (m *MonitoredConfig) syncBlackboxConfig(ctx context.Context, exec ctxt.Exec
 		return err
 	}
 	dst := filepath.Join(m.paths.Deploy, "conf", "blackbox.yml")
-	return exec.Transfer(ctx, fp, dst, false, 0)
+	return exec.Transfer(ctx, fp, dst, false, 0, false)
 }
 
 // Rollback implements the Task interface

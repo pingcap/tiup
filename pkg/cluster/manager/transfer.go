@@ -35,10 +35,11 @@ import (
 
 // TransferOptions for exec shell commanm.
 type TransferOptions struct {
-	Local  string
-	Remote string
-	Pull   bool // default to push
-	Limit  int  // rate limit in Kbit/s
+	Local    string
+	Remote   string
+	Pull     bool // default to push
+	Limit    int  // rate limit in Kbit/s
+	Compress bool // enable compress
 }
 
 // Transfer copies files from or to host in the tidb cluster.
@@ -94,9 +95,9 @@ func (m *Manager) Transfer(name string, opt TransferOptions, gOpt operator.Optio
 		for _, p := range i.Slice() {
 			t := task.NewBuilder(gOpt.DisplayMode)
 			if opt.Pull {
-				t.CopyFile(p, srcPath, host, opt.Pull, opt.Limit)
+				t.CopyFile(p, srcPath, host, opt.Pull, opt.Limit, opt.Compress)
 			} else {
-				t.CopyFile(srcPath, p, host, opt.Pull, opt.Limit)
+				t.CopyFile(srcPath, p, host, opt.Pull, opt.Limit, opt.Compress)
 			}
 			shellTasks = append(shellTasks, t.Build())
 		}

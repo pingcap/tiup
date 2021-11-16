@@ -37,7 +37,7 @@ func (e *fakeExecutor) Execute(ctx context.Context, cmd string, sudo bool, timeo
 	return []byte{}, []byte{}, nil
 }
 
-func (e *fakeExecutor) Transfer(ctx context.Context, src, dst string, download bool, limit int) error {
+func (e *fakeExecutor) Transfer(ctx context.Context, src, dst string, download bool, limit int, compress bool) error {
 	return nil
 }
 

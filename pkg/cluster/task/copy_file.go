@@ -28,6 +28,7 @@ type CopyFile struct {
 	remote   string
 	download bool
 	limit    int
+	compress bool
 }
 
 // Execute implements the Task interface
@@ -37,7 +38,7 @@ func (c *CopyFile) Execute(ctx context.Context) error {
 		return ErrNoExecutor
 	}
 
-	err := e.Transfer(ctx, c.src, c.dst, c.download, c.limit)
+	err := e.Transfer(ctx, c.src, c.dst, c.download, c.limit, c.compress)
 	if err != nil {
 		return errors.Annotate(err, "failed to transfer file")
 	}

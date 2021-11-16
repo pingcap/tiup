@@ -86,7 +86,7 @@ func (c *CheckPointExecutor) Execute(ctx context.Context, cmd string, sudo bool,
 }
 
 // Transfer implements Executer interface.
-func (c *CheckPointExecutor) Transfer(ctx context.Context, src, dst string, download bool, limit int) (err error) {
+func (c *CheckPointExecutor) Transfer(ctx context.Context, src, dst string, download bool, limit int, compress bool) (err error) {
 	point := checkpoint.Acquire(ctx, scpPoint, map[string]interface{}{
 		"host":     c.config.Host,
 		"port":     c.config.Port,
@@ -95,6 +95,7 @@ func (c *CheckPointExecutor) Transfer(ctx context.Context, src, dst string, down
 		"dst":      dst,
 		"download": download,
 		"limit":    limit,
+		"compress": compress,
 	})
 	defer func() {
 		point.Release(err,
@@ -109,5 +110,5 @@ func (c *CheckPointExecutor) Transfer(ctx context.Context, src, dst string, down
 		return nil
 	}
 
-	return c.Executor.Transfer(ctx, src, dst, download, limit)
+	return c.Executor.Transfer(ctx, src, dst, download, limit, compress)
 }

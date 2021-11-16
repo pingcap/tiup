@@ -49,6 +49,7 @@ func newPullCmd() *cobra.Command {
 	cmd.Flags().StringSliceVarP(&gOpt.Roles, "role", "R", nil, "Only exec on host with specified roles")
 	cmd.Flags().StringSliceVarP(&gOpt.Nodes, "node", "N", nil, "Only exec on host with specified nodes")
 	cmd.Flags().IntVarP(&opt.Limit, "limit", "l", 0, "Limits the used bandwidth, specified in Kbit/s")
+	cmd.Flags().BoolVar(&opt.Compress, "compress", false, "Compression enable. Passes the -C flag to ssh(1) to enable compression.")
 
 	return cmd
 }

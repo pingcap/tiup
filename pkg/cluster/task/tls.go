@@ -104,19 +104,22 @@ func (c *TLSCert) Execute(ctx context.Context) error {
 	if err := e.Transfer(ctx, caFile,
 		filepath.Join(c.paths.Deploy, "tls", spec.TLSCACert),
 		false, /* download */
-		0 /* limit */); err != nil {
+		0,     /* limit */
+		false /* compress */); err != nil {
 		return errors.Annotate(err, "failed to transfer CA cert to server")
 	}
 	if err := e.Transfer(ctx, keyFile,
 		filepath.Join(c.paths.Deploy, "tls", fmt.Sprintf("%s.pem", c.role)),
 		false, /* download */
-		0 /* limit */); err != nil {
+		0,     /* limit */
+		false /* compress */); err != nil {
 		return errors.Annotate(err, "failed to transfer TLS private key to server")
 	}
 	if err := e.Transfer(ctx, certFile,
 		filepath.Join(c.paths.Deploy, "tls", fmt.Sprintf("%s.crt", c.role)),
 		false, /* download */
-		0 /* limit */); err != nil {
+		0,     /* limit */
+		false /* compress */); err != nil {
 		return errors.Annotate(err, "failed to transfer TLS cert to server")
 	}
 
