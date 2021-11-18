@@ -463,6 +463,7 @@ func DestroyClusterTombstone(
 
 	if forcePDEndpoints != "" {
 		pdEndpoints = strings.Split(forcePDEndpoints, ",")
+		log.Warnf("%s is set, using %s as PD endpoints", EnvNamePDEndpointOverwrite, pdEndpoints)
 	} else {
 		pdEndpoints = cluster.GetPDList()
 	}

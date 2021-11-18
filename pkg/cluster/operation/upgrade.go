@@ -70,6 +70,7 @@ func Upgrade(
 		case spec.ComponentTiKV:
 			if forcePDEndpoints != "" {
 				pdEndpoints = strings.Split(forcePDEndpoints, ",")
+				log.Warnf("%s is set, using %s as PD endpoints", EnvNamePDEndpointOverwrite, pdEndpoints)
 			} else {
 				pdEndpoints = topo.(*spec.Specification).GetPDList()
 			}

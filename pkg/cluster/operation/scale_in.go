@@ -30,6 +30,7 @@ import (
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/proxy"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -116,7 +117,12 @@ func ScaleInCluster(
 		skipTopoCheck = true
 	}
 
-	if !skipTopoCheck {
+	if skipTopoCheck {
+		log.Warnf("%s is set, topology checks ignored, the cluster might be broken after the operations!", EnvNameSkipScaleInTopoCheck)
+		if ok, input := tui.PromptForConfirmYes("Are you sure to continue? [y/N]"); !ok {
+			return errors.Errorf("user aborted with '%s'", input)
+		}
+	} else {
 		// Cannot delete all PD servers
 		if len(deletedDiff[spec.ComponentPD]) == len(cluster.PDServers) {
 			return errors.New("cannot delete all PD servers")
@@ -151,6 +157,7 @@ func ScaleInCluster(
 
 	if forcePDEndpoints != "" {
 		pdEndpoints = strings.Split(forcePDEndpoints, ",")
+		log.Warnf("%s is set, using %s as PD endpoints", EnvNamePDEndpointOverwrite, pdEndpoints)
 	} else {
 		for _, instance := range (&spec.PDComponent{Topology: cluster}).Instances() {
 			if !deletedNodes.Exist(instance.ID()) {
