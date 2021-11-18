@@ -150,7 +150,7 @@ func ScaleInCluster(
 	forcePDEndpoints := os.Getenv(EnvNamePDEndpointOverwrite) // custom set PD endpoint list
 
 	if forcePDEndpoints != "" {
-		pdEndpoints = append(pdEndpoints, strings.Split(forcePDEndpoints, ",")...)
+		pdEndpoints = strings.Split(forcePDEndpoints, ",")
 	} else {
 		for _, instance := range (&spec.PDComponent{Topology: cluster}).Instances() {
 			if !deletedNodes.Exist(instance.ID()) {
