@@ -18,7 +18,9 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/fatih/color"
@@ -109,38 +111,51 @@ func ScaleInCluster(
 		deletedDiff[inst.ComponentName()] = append(deletedDiff[inst.ComponentName()], inst)
 	}
 
-	// Cannot delete all PD servers
-	if len(deletedDiff[spec.ComponentPD]) == len(cluster.PDServers) {
-		return errors.New("cannot delete all PD servers")
+	skipTopoCheck := false
+	if v := os.Getenv(EnvNameSkipScaleInTopoCheck); v != "" { // any value except empty will work as "true"
+		skipTopoCheck = true
 	}
 
-	// Cannot delete all TiKV servers
-	if len(deletedDiff[spec.ComponentTiKV]) == len(cluster.TiKVServers) {
-		return errors.New("cannot delete all TiKV servers")
-	}
-
-	// Cannot delete TiSpark master server if there's any TiSpark worker remains
-	if len(deletedDiff[spec.ComponentTiSpark]) > 0 {
-		var cntDiffTiSparkMaster int
-		var cntDiffTiSparkWorker int
-		for _, inst := range deletedDiff[spec.ComponentTiSpark] {
-			switch inst.Role() {
-			case spec.RoleTiSparkMaster:
-				cntDiffTiSparkMaster++
-			case spec.RoleTiSparkWorker:
-				cntDiffTiSparkWorker++
-			}
+	if !skipTopoCheck {
+		// Cannot delete all PD servers
+		if len(deletedDiff[spec.ComponentPD]) == len(cluster.PDServers) {
+			return errors.New("cannot delete all PD servers")
 		}
-		if cntDiffTiSparkMaster == len(cluster.TiSparkMasters) &&
-			cntDiffTiSparkWorker < len(cluster.TiSparkWorkers) {
-			return errors.New("cannot delete tispark master when there are workers left")
+
+		// Cannot delete all TiKV servers
+		if len(deletedDiff[spec.ComponentTiKV]) == len(cluster.TiKVServers) {
+			return errors.New("cannot delete all TiKV servers")
+		}
+
+		// Cannot delete TiSpark master server if there's any TiSpark worker remains
+		if len(deletedDiff[spec.ComponentTiSpark]) > 0 {
+			var cntDiffTiSparkMaster int
+			var cntDiffTiSparkWorker int
+			for _, inst := range deletedDiff[spec.ComponentTiSpark] {
+				switch inst.Role() {
+				case spec.RoleTiSparkMaster:
+					cntDiffTiSparkMaster++
+				case spec.RoleTiSparkWorker:
+					cntDiffTiSparkWorker++
+				}
+			}
+			if cntDiffTiSparkMaster == len(cluster.TiSparkMasters) &&
+				cntDiffTiSparkWorker < len(cluster.TiSparkWorkers) {
+				return errors.New("cannot delete tispark master when there are workers left")
+			}
 		}
 	}
 
 	var pdEndpoints []string
-	for _, instance := range (&spec.PDComponent{Topology: cluster}).Instances() {
-		if !deletedNodes.Exist(instance.ID()) {
-			pdEndpoints = append(pdEndpoints, Addr(instance))
+	forcePDEndpoints := os.Getenv(EnvNamePDEndpointOverwrite) // custom set PD endpoint list
+
+	if forcePDEndpoints != "" {
+		pdEndpoints = append(pdEndpoints, strings.Split(forcePDEndpoints, ",")...)
+	} else {
+		for _, instance := range (&spec.PDComponent{Topology: cluster}).Instances() {
+			if !deletedNodes.Exist(instance.ID()) {
+				pdEndpoints = append(pdEndpoints, Addr(instance))
+			}
 		}
 	}
 
