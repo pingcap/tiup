@@ -180,7 +180,7 @@ func (im *Importer) fetchFile(ctx context.Context, host string, port int, fname 
 
 	tmp = filepath.Join(tmp, filepath.Base(fname))
 
-	err = e.Transfer(ctx, fname, tmp, true /*download*/, 0)
+	err = e.Transfer(ctx, fname, tmp, true /*download*/, 0, false)
 	if err != nil {
 		return nil, errors.Annotatef(err, "transfer %s from %s:%d", fname, host, port)
 	}
@@ -254,7 +254,7 @@ func (im *Importer) ScpSourceToMaster(ctx context.Context, topo *spec.Specificat
 				return errors.AddStack(err)
 			}
 
-			err = e.Transfer(ctx, f.Name(), filepath.Join(target, addr+".yml"), false, 0)
+			err = e.Transfer(ctx, f.Name(), filepath.Join(target, addr+".yml"), false, 0, false)
 			if err != nil {
 				return err
 			}

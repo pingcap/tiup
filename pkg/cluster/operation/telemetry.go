@@ -87,7 +87,7 @@ func GetNodeInfo(
 
 			dstDir := filepath.Join(dir, "bin")
 			dstPath := filepath.Join(dstDir, path.Base(srcPath))
-			err = exec.Transfer(nctx, srcPath, dstPath, false, 0)
+			err = exec.Transfer(nctx, srcPath, dstPath, false, 0, false)
 			if err != nil {
 				return err
 			}

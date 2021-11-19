@@ -29,7 +29,7 @@ import (
 
 // ScpDownload downloads a file from remote with SCP
 // The implementation is partially inspired by github.com/dtylman/scp
-func ScpDownload(session *ssh.Session, client *ssh.Client, src, dst string, limit int) error {
+func ScpDownload(session *ssh.Session, client *ssh.Client, src, dst string, limit int, compress bool) error {
 	r, err := session.StdoutPipe()
 	if err != nil {
 		return err
@@ -97,10 +97,15 @@ func ScpDownload(session *ssh.Session, client *ssh.Client, src, dst string, limi
 		copyErrC <- copyF()
 	}()
 
-	remoteCmd := fmt.Sprintf("scp -f %s", src)
-	if limit > 0 {
-		remoteCmd = fmt.Sprintf("scp -l %d -f %s", limit, src)
+	remoteArgs := make([]string, 0)
+	if compress {
+		remoteArgs = append(remoteArgs, "-C")
 	}
+	if limit > 0 {
+		remoteArgs = append(remoteArgs, fmt.Sprintf("-l %d", limit))
+	}
+	remoteCmd := fmt.Sprintf("scp %s -f %s", strings.Join(remoteArgs, " "), src)
+
 	err = session.Start(remoteCmd)
 	if err != nil {
 		return err
