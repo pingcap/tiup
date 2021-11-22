@@ -49,11 +49,15 @@ func (m *Manager) ScaleIn(
 	)
 	if !skipConfirm {
 		if force {
-			if err := tui.PromptForConfirmOrAbortError(
+			log.Warnf(color.HiRedString(tui.ASCIIArtWarning))
+			if err := tui.PromptForAnswerOrAbortError(
+				"Yes, I know my data might be lost.",
 				color.HiRedString("Forcing scale in is unsafe and may result in data loss for stateful components.\n"+
-					"The process is irreversible and could NOT be cancelled.\n") +
-					"Only use `--force` when some of the servers are already permanently offline.\n" +
-					"Are you sure to continue? [y/N]:",
+					"DO NOT use `--force` if you have any component in ")+
+					color.YellowString("Pending Offline")+color.HiRedString(" status.\n")+
+					color.HiRedString("The process is irreversible and could NOT be cancelled.\n")+
+					"Only use `--force` when some of the servers are already permanently offline.\n"+
+					"Are you sure to continue?",
 			); err != nil {
 				return err
 			}
