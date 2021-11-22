@@ -177,7 +177,7 @@ func (i *MonitorInstance) InitConfig(
 	}
 
 	dst := filepath.Join(paths.Deploy, "scripts", "run_prometheus.sh")
-	if err := e.Transfer(ctx, fp, dst, false, 0); err != nil {
+	if err := e.Transfer(ctx, fp, dst, false, 0, false); err != nil {
 		return err
 	}
 
@@ -328,7 +328,7 @@ func (i *MonitorInstance) InitConfig(
 		return err
 	}
 	dst = filepath.Join(paths.Deploy, "conf", "ngmonitoring.toml")
-	if err := e.Transfer(ctx, fp, dst, false, 0); err != nil {
+	if err := e.Transfer(ctx, fp, dst, false, 0, false); err != nil {
 		return err
 	}
 
@@ -337,7 +337,7 @@ func (i *MonitorInstance) InitConfig(
 		return err
 	}
 	dst = filepath.Join(paths.Deploy, "conf", "prometheus.yml")
-	if err := e.Transfer(ctx, fp, dst, false, 0); err != nil {
+	if err := e.Transfer(ctx, fp, dst, false, 0, false); err != nil {
 		return err
 	}
 
@@ -363,7 +363,7 @@ func (i *MonitorInstance) installRules(ctx context.Context, e ctxt.Executor, dep
 	srcPath := PackagePath(ComponentDMMaster, clusterVersion, i.OS(), i.Arch())
 	dstPath := filepath.Join(tmp, filepath.Base(srcPath))
 
-	err = e.Transfer(ctx, srcPath, dstPath, false, 0)
+	err = e.Transfer(ctx, srcPath, dstPath, false, 0, false)
 	if err != nil {
 		return err
 	}

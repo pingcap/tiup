@@ -223,7 +223,7 @@ func (i *TiSparkMasterInstance) InitConfig(
 		return errors.Trace(err)
 	}
 	tgt := filepath.Join("/tmp", comp+"_"+uuid.New().String()+".service")
-	if err := e.Transfer(ctx, sysCfg, tgt, false, 0); err != nil {
+	if err := e.Transfer(ctx, sysCfg, tgt, false, 0, false); err != nil {
 		return errors.Annotatef(err, "transfer from %s to %s failed", sysCfg, tgt)
 	}
 	cmd := fmt.Sprintf("mv %s /etc/systemd/system/%s-%d.service", tgt, comp, port)
@@ -249,7 +249,7 @@ func (i *TiSparkMasterInstance) InitConfig(
 		return err
 	}
 	dst := filepath.Join(paths.Deploy, "conf", "spark-defaults.conf")
-	if err := e.Transfer(ctx, fp, dst, false, 0); err != nil {
+	if err := e.Transfer(ctx, fp, dst, false, 0, false); err != nil {
 		return err
 	}
 
@@ -265,7 +265,7 @@ func (i *TiSparkMasterInstance) InitConfig(
 	}
 	// tispark files are all in a "spark" sub-directory of deploy dir
 	dst = filepath.Join(paths.Deploy, "conf", "spark-env.sh")
-	if err := e.Transfer(ctx, fp, dst, false, 0); err != nil {
+	if err := e.Transfer(ctx, fp, dst, false, 0, false); err != nil {
 		return err
 	}
 
@@ -279,7 +279,7 @@ func (i *TiSparkMasterInstance) InitConfig(
 		return err
 	}
 	dst = filepath.Join(paths.Deploy, "conf", "log4j.properties")
-	return e.Transfer(ctx, fp, dst, false, 0)
+	return e.Transfer(ctx, fp, dst, false, 0, false)
 }
 
 // ScaleConfig deploy temporary config on scaling
@@ -386,7 +386,7 @@ func (i *TiSparkWorkerInstance) InitConfig(
 		return errors.Trace(err)
 	}
 	tgt := filepath.Join("/tmp", comp+"_"+uuid.New().String()+".service")
-	if err := e.Transfer(ctx, sysCfg, tgt, false, 0); err != nil {
+	if err := e.Transfer(ctx, sysCfg, tgt, false, 0, false); err != nil {
 		return errors.Annotatef(err, "transfer from %s to %s failed", sysCfg, tgt)
 	}
 	cmd := fmt.Sprintf("mv %s /etc/systemd/system/%s-%d.service", tgt, comp, port)
@@ -412,7 +412,7 @@ func (i *TiSparkWorkerInstance) InitConfig(
 		return err
 	}
 	dst := filepath.Join(paths.Deploy, "conf", "spark-defaults.conf")
-	if err := e.Transfer(ctx, fp, dst, false, 0); err != nil {
+	if err := e.Transfer(ctx, fp, dst, false, 0, false); err != nil {
 		return err
 	}
 
@@ -429,7 +429,7 @@ func (i *TiSparkWorkerInstance) InitConfig(
 	}
 	// tispark files are all in a "spark" sub-directory of deploy dir
 	dst = filepath.Join(paths.Deploy, "conf", "spark-env.sh")
-	if err := e.Transfer(ctx, fp, dst, false, 0); err != nil {
+	if err := e.Transfer(ctx, fp, dst, false, 0, false); err != nil {
 		return err
 	}
 
@@ -443,7 +443,7 @@ func (i *TiSparkWorkerInstance) InitConfig(
 		return err
 	}
 	dst = filepath.Join(paths.Deploy, "sbin", "start-slave.sh")
-	if err := e.Transfer(ctx, fp, dst, false, 0); err != nil {
+	if err := e.Transfer(ctx, fp, dst, false, 0, false); err != nil {
 		return err
 	}
 
@@ -457,7 +457,7 @@ func (i *TiSparkWorkerInstance) InitConfig(
 		return err
 	}
 	dst = filepath.Join(paths.Deploy, "conf", "log4j.properties")
-	return e.Transfer(ctx, fp, dst, false, 0)
+	return e.Transfer(ctx, fp, dst, false, 0, false)
 }
 
 // ScaleConfig deploy temporary config on scaling

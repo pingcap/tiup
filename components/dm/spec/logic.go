@@ -135,7 +135,7 @@ func (i *MasterInstance) InitConfig(
 		return err
 	}
 	dst := filepath.Join(paths.Deploy, "scripts", "run_dm-master.sh")
-	if err := e.Transfer(ctx, fp, dst, false, 0); err != nil {
+	if err := e.Transfer(ctx, fp, dst, false, 0, false); err != nil {
 		return err
 	}
 	if _, _, err := e.Execute(ctx, "chmod +x "+dst, false); err != nil {
@@ -177,7 +177,7 @@ func (i *MasterInstance) ScaleConfig(
 	}
 
 	dst := filepath.Join(paths.Deploy, "scripts", "run_dm-master.sh")
-	if err := e.Transfer(ctx, fp, dst, false, 0); err != nil {
+	if err := e.Transfer(ctx, fp, dst, false, 0, false); err != nil {
 		return err
 	}
 	if _, _, err := e.Execute(ctx, "chmod +x "+dst, false); err != nil {
@@ -266,7 +266,7 @@ func (i *WorkerInstance) InitConfig(
 	}
 	dst := filepath.Join(paths.Deploy, "scripts", "run_dm-worker.sh")
 
-	if err := e.Transfer(ctx, fp, dst, false, 0); err != nil {
+	if err := e.Transfer(ctx, fp, dst, false, 0, false); err != nil {
 		return err
 	}
 

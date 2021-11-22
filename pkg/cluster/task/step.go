@@ -126,11 +126,11 @@ func (s *StepDisplay) Execute(ctx context.Context) error {
 
 	switch s.DisplayMode {
 	case log.DisplayModeJSON:
-		return printDp(dp)
+		_ = printDp(dp)
 	default:
 		s.progressBar.UpdateDisplay(dp)
 	}
-	return nil
+	return err
 }
 
 // Rollback implements the Task interface
