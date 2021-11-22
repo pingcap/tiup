@@ -74,6 +74,7 @@ func (m *Manager) EditConfig(name string, opt EditConfigOptions, skipConfirm boo
 	return nil
 }
 
+// If the flag --topology-file is specified, the first 2 steps will be skipped.
 // 1. Write Topology to a temporary file.
 // 2. Open file in editor.
 // 3. Check and update Topology.
