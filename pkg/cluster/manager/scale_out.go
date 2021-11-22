@@ -172,7 +172,7 @@ func (m *Manager) ScaleOut(
 	if opt.NoStart {
 		cyan := color.New(color.FgHiRed, color.Bold)
 		msg := cyan.Sprintf(`You use the parameter --no-start ! 
-The new instance will not start, need to manually execute cluster start %s.`, name)
+The new instance will not start, need to manually execute 'tiup-cluster start %s' .`, name)
 		log.Warnf(msg)
 
 		if err := tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: "); err != nil {
