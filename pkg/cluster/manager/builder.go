@@ -339,16 +339,19 @@ func buildScaleOutTask(
 		afterDeploy(builder, newPart, gOpt)
 	}
 
-	builder.
-		Func("Save meta", func(_ context.Context) error {
-			metadata.SetTopology(mergedTopo)
-			return m.specManager.SaveMeta(name, metadata)
-		}).
-		Func("StartCluster", func(ctx context.Context) error {
+	builder.Func("Save meta", func(_ context.Context) error {
+		metadata.SetTopology(mergedTopo)
+		return m.specManager.SaveMeta(name, metadata)
+	})
+
+	// don't start the new instance
+	if !opt.NoStart {
+		builder.Func("Start Cluster", func(ctx context.Context) error {
 			return operator.Start(ctx, newPart, operator.Options{OptTimeout: gOpt.OptTimeout, Operation: operator.ScaleOutOperation}, tlsCfg)
-		}).
-		Parallel(false, refreshConfigTasks...).
-		Parallel(false, buildReloadPromTasks(metadata.GetTopology(), gOpt)...)
+		}).Parallel(false, refreshConfigTasks...)
+	}
+
+	builder.Parallel(false, buildReloadPromTasks(metadata.GetTopology(), gOpt)...)
 
 	if final != nil {
 		final(builder, name, metadata, gOpt)

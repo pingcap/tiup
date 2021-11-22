@@ -49,6 +49,7 @@ type DeployOptions struct {
 	UsePassword       bool   // use password instead of identity file for ssh connection
 	IgnoreConfigCheck bool   // ignore config check result
 	NoLabels          bool   // don't check labels for TiKV instance
+	NoStart           bool   // don't start the new instance between deploy and refreshConfig
 }
 
 // DeployerInstance is a instance can deploy to a target deploy directory.
