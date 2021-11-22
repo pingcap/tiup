@@ -96,9 +96,9 @@ const (
 
 	// hosts
 	clusterHost = "host"
-	dbHost      = "db.Host"
-	dbPort      = "db.Port"
-	pdHost      = "pd.Host"
+	dbHost      = "db.host"
+	dbPort      = "db.port"
+	pdHost      = "pd.host"
 
 	// config paths
 	dbConfig      = "db.config"
