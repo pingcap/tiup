@@ -31,8 +31,12 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+type EditConfigOptions struct {
+	NewTopoFile string
+}
+
 // EditConfig lets the user edit the cluster's config.
-func (m *Manager) EditConfig(name string, skipConfirm bool) error {
+func (m *Manager) EditConfig(name string, opt EditConfigOptions, skipConfirm bool) error {
 	if err := clusterutil.ValidateClusterNameOrError(name); err != nil {
 		return err
 	}
@@ -49,7 +53,7 @@ func (m *Manager) EditConfig(name string, skipConfirm bool) error {
 		return perrs.AddStack(err)
 	}
 
-	newTopo, err := m.editTopo(topo, data, skipConfirm)
+	newTopo, err := m.editTopo(topo, data, opt, skipConfirm)
 	if err != nil {
 		return err
 	}
@@ -73,30 +77,35 @@ func (m *Manager) EditConfig(name string, skipConfirm bool) error {
 // 2. Open file in editor.
 // 3. Check and update Topology.
 // 4. Save meta file.
-func (m *Manager) editTopo(origTopo spec.Topology, data []byte, skipConfirm bool) (spec.Topology, error) {
-	file, err := os.CreateTemp(os.TempDir(), "*")
-	if err != nil {
-		return nil, perrs.AddStack(err)
+func (m *Manager) editTopo(origTopo spec.Topology, data []byte, opt EditConfigOptions, skipConfirm bool) (spec.Topology, error) {
+	var name string
+	if len(opt.NewTopoFile) == 0 {
+		file, err := os.CreateTemp(os.TempDir(), "*")
+		if err != nil {
+			return nil, perrs.AddStack(err)
+		}
+
+		name = file.Name()
+
+		_, err = io.Copy(file, bytes.NewReader(data))
+		if err != nil {
+			return nil, perrs.AddStack(err)
+		}
+
+		err = file.Close()
+		if err != nil {
+			return nil, perrs.AddStack(err)
+		}
+
+		err = utils.OpenFileInEditor(name)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		name = opt.NewTopoFile
 	}
 
-	name := file.Name()
-
-	_, err = io.Copy(file, bytes.NewReader(data))
-	if err != nil {
-		return nil, perrs.AddStack(err)
-	}
-
-	err = file.Close()
-	if err != nil {
-		return nil, perrs.AddStack(err)
-	}
-
-	err = utils.OpenFileInEditor(name)
-	if err != nil {
-		return nil, err
-	}
-
-	// Now user finish editing the file.
+	// Now user finish editing the file or user has provided the new topology file
 	newData, err := os.ReadFile(name)
 	if err != nil {
 		return nil, perrs.AddStack(err)
@@ -107,8 +116,10 @@ func (m *Manager) editTopo(origTopo spec.Topology, data []byte, skipConfirm bool
 	if err != nil {
 		fmt.Print(color.RedString("New topology could not be saved: "))
 		log.Infof("Failed to parse topology file: %v", err)
-		if pass, _ := tui.PromptForConfirmNo("Do you want to continue editing? [Y/n]: "); !pass {
-			return m.editTopo(origTopo, newData, skipConfirm)
+		if len(opt.NewTopoFile) == 0 {
+			if pass, _ := tui.PromptForConfirmNo("Do you want to continue editing? [Y/n]: "); !pass {
+				return m.editTopo(origTopo, newData, opt, skipConfirm)
+			}
 		}
 		log.Infof("Nothing changed.")
 		return nil, nil
@@ -118,8 +129,10 @@ func (m *Manager) editTopo(origTopo spec.Topology, data []byte, skipConfirm bool
 	if err := utils.ValidateSpecDiff(origTopo, newTopo); err != nil {
 		fmt.Print(color.RedString("New topology could not be saved: "))
 		log.Errorf("%s", err)
-		if pass, _ := tui.PromptForConfirmNo("Do you want to continue editing? [Y/n]: "); !pass {
-			return m.editTopo(origTopo, newData, skipConfirm)
+		if len(opt.NewTopoFile) == 0 {
+			if pass, _ := tui.PromptForConfirmNo("Do you want to continue editing? [Y/n]: "); !pass {
+				return m.editTopo(origTopo, newData, opt, skipConfirm)
+			}
 		}
 		log.Infof("Nothing changed.")
 		return nil, nil

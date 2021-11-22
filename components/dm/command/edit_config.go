@@ -14,10 +14,12 @@
 package command
 
 import (
+	"github.com/pingcap/tiup/pkg/cluster/manager"
 	"github.com/spf13/cobra"
 )
 
 func newEditConfigCmd() *cobra.Command {
+	opt := manager.EditConfigOptions{}
 	cmd := &cobra.Command{
 		Use:   "edit-config <cluster-name>",
 		Short: "Edit DM cluster config",
@@ -28,9 +30,11 @@ func newEditConfigCmd() *cobra.Command {
 
 			clusterName := args[0]
 
-			return cm.EditConfig(clusterName, skipConfirm)
+			return cm.EditConfig(clusterName, opt, skipConfirm)
 		},
 	}
+
+	cmd.Flags().StringVarP(&opt.NewTopoFile, "topology-file", "", opt.NewTopoFile, "Use provided topology file to substitute the original one instead of editing it.")
 
 	return cmd
 }
