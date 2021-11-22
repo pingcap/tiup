@@ -31,8 +31,9 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// EditConfigOptions contains the options for config edition.
 type EditConfigOptions struct {
-	NewTopoFile string
+	NewTopoFile string // path to new topology file to substitute the original one
 }
 
 // EditConfig lets the user edit the cluster's config.
