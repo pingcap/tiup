@@ -21,6 +21,7 @@ import (
 	"syscall"
 
 	"github.com/AstroProfundis/tabby"
+	"github.com/fatih/color"
 	"github.com/pingcap/tiup/pkg/utils/mock"
 	"golang.org/x/term"
 )
@@ -58,6 +59,17 @@ func addRow(t *tabby.Tabby, rawLine []string, header bool) {
 		t.AddLine(row...)
 	}
 }
+
+// pre-defined ascii art strings
+const (
+	ASCIIArtWarning = `
+  ██     ██  █████  ██████  ███    ██ ██ ███    ██  ██████
+  ██     ██ ██   ██ ██   ██ ████   ██ ██ ████   ██ ██
+  ██  █  ██ ███████ ██████  ██ ██  ██ ██ ██ ██  ██ ██   ███
+  ██ ███ ██ ██   ██ ██   ██ ██  ██ ██ ██ ██  ██ ██ ██    ██
+   ███ ███  ██   ██ ██   ██ ██   ████ ██ ██   ████  ██████
+`
+)
 
 // Prompt accepts input from console by user
 func Prompt(prompt string) string {
@@ -102,6 +114,25 @@ func PromptForConfirmNo(format string, a ...interface{}) (bool, string) {
 func PromptForConfirmOrAbortError(format string, a ...interface{}) error {
 	if pass, ans := PromptForConfirmYes(format, a...); !pass {
 		return errOperationAbort.New("Operation aborted by user (with answer '%s')", ans)
+	}
+	return nil
+}
+
+// PromptForConfirmAnswer accepts string from console by user, default to empty and only return
+// true if the user input is exactly the same as pre-defined answer.
+func PromptForConfirmAnswer(answer string, format string, a ...interface{}) (bool, string) {
+	ans := Prompt(fmt.Sprintf(format, a...) + fmt.Sprintf("\n(Type \"%s\" to continue)\n:", color.CyanString(answer)))
+	if ans == answer {
+		return true, ans
+	}
+	return false, ans
+}
+
+// PromptForAnswerOrAbortError accepts string from console by user, generates AbortError if user does
+// not input the pre-defined answer.
+func PromptForAnswerOrAbortError(answer string, format string, a ...interface{}) error {
+	if pass, ans := PromptForConfirmAnswer(answer, format, a...); !pass {
+		return errOperationAbort.New("Operation aborted by user (with incorrect answer '%s')", ans)
 	}
 	return nil
 }

@@ -18,7 +18,9 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/fatih/color"
@@ -28,6 +30,7 @@ import (
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/proxy"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -109,38 +112,57 @@ func ScaleInCluster(
 		deletedDiff[inst.ComponentName()] = append(deletedDiff[inst.ComponentName()], inst)
 	}
 
-	// Cannot delete all PD servers
-	if len(deletedDiff[spec.ComponentPD]) == len(cluster.PDServers) {
-		return errors.New("cannot delete all PD servers")
+	skipTopoCheck := false
+	if v := os.Getenv(EnvNameSkipScaleInTopoCheck); v != "" { // any value except empty will work as "true"
+		skipTopoCheck = true
 	}
 
-	// Cannot delete all TiKV servers
-	if len(deletedDiff[spec.ComponentTiKV]) == len(cluster.TiKVServers) {
-		return errors.New("cannot delete all TiKV servers")
-	}
-
-	// Cannot delete TiSpark master server if there's any TiSpark worker remains
-	if len(deletedDiff[spec.ComponentTiSpark]) > 0 {
-		var cntDiffTiSparkMaster int
-		var cntDiffTiSparkWorker int
-		for _, inst := range deletedDiff[spec.ComponentTiSpark] {
-			switch inst.Role() {
-			case spec.RoleTiSparkMaster:
-				cntDiffTiSparkMaster++
-			case spec.RoleTiSparkWorker:
-				cntDiffTiSparkWorker++
-			}
+	if skipTopoCheck {
+		log.Warnf("%s is set, topology checks ignored, the cluster might be broken after the operations!", EnvNameSkipScaleInTopoCheck)
+		if ok, input := tui.PromptForConfirmYes("Are you sure to continue? [y/N]"); !ok {
+			return errors.Errorf("user aborted with '%s'", input)
 		}
-		if cntDiffTiSparkMaster == len(cluster.TiSparkMasters) &&
-			cntDiffTiSparkWorker < len(cluster.TiSparkWorkers) {
-			return errors.New("cannot delete tispark master when there are workers left")
+	} else {
+		// Cannot delete all PD servers
+		if len(deletedDiff[spec.ComponentPD]) == len(cluster.PDServers) {
+			return errors.New("cannot delete all PD servers")
+		}
+
+		// Cannot delete all TiKV servers
+		if len(deletedDiff[spec.ComponentTiKV]) == len(cluster.TiKVServers) {
+			return errors.New("cannot delete all TiKV servers")
+		}
+
+		// Cannot delete TiSpark master server if there's any TiSpark worker remains
+		if len(deletedDiff[spec.ComponentTiSpark]) > 0 {
+			var cntDiffTiSparkMaster int
+			var cntDiffTiSparkWorker int
+			for _, inst := range deletedDiff[spec.ComponentTiSpark] {
+				switch inst.Role() {
+				case spec.RoleTiSparkMaster:
+					cntDiffTiSparkMaster++
+				case spec.RoleTiSparkWorker:
+					cntDiffTiSparkWorker++
+				}
+			}
+			if cntDiffTiSparkMaster == len(cluster.TiSparkMasters) &&
+				cntDiffTiSparkWorker < len(cluster.TiSparkWorkers) {
+				return errors.New("cannot delete tispark master when there are workers left")
+			}
 		}
 	}
 
 	var pdEndpoints []string
-	for _, instance := range (&spec.PDComponent{Topology: cluster}).Instances() {
-		if !deletedNodes.Exist(instance.ID()) {
-			pdEndpoints = append(pdEndpoints, Addr(instance))
+	forcePDEndpoints := os.Getenv(EnvNamePDEndpointOverwrite) // custom set PD endpoint list
+
+	if forcePDEndpoints != "" {
+		pdEndpoints = strings.Split(forcePDEndpoints, ",")
+		log.Warnf("%s is set, using %s as PD endpoints", EnvNamePDEndpointOverwrite, pdEndpoints)
+	} else {
+		for _, instance := range (&spec.PDComponent{Topology: cluster}).Instances() {
+			if !deletedNodes.Exist(instance.ID()) {
+				pdEndpoints = append(pdEndpoints, Addr(instance))
+			}
 		}
 	}
 

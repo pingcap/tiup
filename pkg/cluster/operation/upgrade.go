@@ -17,8 +17,10 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"os"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 
 	perrs "github.com/pingcap/errors"
@@ -60,9 +62,19 @@ func Upgrade(
 		var origLeaderScheduleLimit int
 		var origRegionScheduleLimit int
 		var err error
+
+		var pdEndpoints []string
+		forcePDEndpoints := os.Getenv(EnvNamePDEndpointOverwrite) // custom set PD endpoint list
+
 		switch component.Name() {
 		case spec.ComponentTiKV:
-			pdClient := api.NewPDClient(topo.(*spec.Specification).GetPDList(), 10*time.Second, tlsCfg)
+			if forcePDEndpoints != "" {
+				pdEndpoints = strings.Split(forcePDEndpoints, ",")
+				log.Warnf("%s is set, using %s as PD endpoints", EnvNamePDEndpointOverwrite, pdEndpoints)
+			} else {
+				pdEndpoints = topo.(*spec.Specification).GetPDList()
+			}
+			pdClient := api.NewPDClient(pdEndpoints, 10*time.Second, tlsCfg)
 			origLeaderScheduleLimit, origRegionScheduleLimit, err = increaseScheduleLimit(ctx, pdClient)
 			if err != nil {
 				// the config modifing error should be able to be safely ignored, as it will

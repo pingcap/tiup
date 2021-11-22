@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/pingcap/tiup/pkg/utils"
+	"golang.org/x/mod/semver"
 )
 
 // TiCDC represent a ticdc instance.
@@ -58,6 +59,15 @@ func (c *TiCDC) Start(ctx context.Context, version utils.Version) error {
 		fmt.Sprintf("--advertise-addr=%s:%d", AdvertiseHost(c.Host), c.Port),
 		fmt.Sprintf("--pd=%s", strings.Join(endpoints, ",")),
 		fmt.Sprintf("--log-file=%s", c.LogFile()),
+	}
+	clusterVersion := string(version)
+	if semver.Compare(clusterVersion, "v4.0.13") >= 0 {
+		if (semver.Major(clusterVersion) == "v4" && semver.Compare(clusterVersion, "v4.0.14") >= 0) ||
+			(semver.Major(clusterVersion) == "v5" && semver.Compare(clusterVersion, "v5.0.3") >= 0) {
+			args = append(args, fmt.Sprintf("--data-dir=%s", filepath.Join(c.Dir, "data")))
+		} else {
+			args = append(args, fmt.Sprintf("--sort-dir=%s/tmp/sorter", filepath.Join(c.Dir, "data")))
+		}
 	}
 
 	var err error

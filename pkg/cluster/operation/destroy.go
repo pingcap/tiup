@@ -458,7 +458,16 @@ func DestroyClusterTombstone(
 		}
 	}
 
-	pdEndpoints := cluster.GetPDList()
+	var pdEndpoints []string
+	forcePDEndpoints := os.Getenv(EnvNamePDEndpointOverwrite) // custom set PD endpoint list
+
+	if forcePDEndpoints != "" {
+		pdEndpoints = strings.Split(forcePDEndpoints, ",")
+		log.Warnf("%s is set, using %s as PD endpoints", EnvNamePDEndpointOverwrite, pdEndpoints)
+	} else {
+		pdEndpoints = cluster.GetPDList()
+	}
+
 	var pdClient = api.NewPDClient(pdEndpoints, 10*time.Second, tlsCfg)
 
 	tcpProxy := proxy.GetTCPProxy()
