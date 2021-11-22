@@ -21,6 +21,12 @@ import (
 	"github.com/pingcap/tiup/pkg/set"
 )
 
+// environment variable names that used to interrupt operations
+const (
+	EnvNameSkipScaleInTopoCheck = "SKIP_SCALEIN_TOPO_CHECK"
+	EnvNamePDEndpointOverwrite  = "FORCE_PD_ENDPOINTS"
+)
+
 // Options represents the operation options
 type Options struct {
 	Roles               []string
