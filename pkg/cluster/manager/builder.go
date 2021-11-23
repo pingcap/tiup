@@ -330,10 +330,14 @@ func buildScaleOutTask(
 	if err != nil {
 		return nil, err
 	}
-	builder.
-		Parallel(false, downloadCompTasks...).
-		Parallel(false, envInitTasks...).
-		Parallel(false, deployCompTasks...)
+
+	// stage2 just start and init config
+	if !opt.Stage2 {
+		builder.
+			Parallel(false, downloadCompTasks...).
+			Parallel(false, envInitTasks...).
+			Parallel(false, deployCompTasks...)
+	}
 
 	if afterDeploy != nil {
 		afterDeploy(builder, newPart, gOpt)
@@ -345,18 +349,29 @@ func buildScaleOutTask(
 	})
 
 	// don't start the new instance
-	if !opt.NoStart {
+	if opt.Stage1 {
+		// save scale out file lock
+		builder.Func("Crrate Scale-Out File Lock", func(_ context.Context) error {
+			return m.specManager.NewScaleOutLock(name, newPart)
+		})
+	} else {
 		builder.Func("Start Cluster", func(ctx context.Context) error {
 			return operator.Start(ctx, newPart, operator.Options{OptTimeout: gOpt.OptTimeout, Operation: operator.ScaleOutOperation}, tlsCfg)
-		}).Parallel(false, refreshConfigTasks...)
+		}).
+			Parallel(false, refreshConfigTasks...).
+			Parallel(false, buildReloadPromTasks(metadata.GetTopology(), gOpt)...)
 	}
 
-	builder.Parallel(false, buildReloadPromTasks(metadata.GetTopology(), gOpt)...)
+	// remove scale-out file lock
+	if opt.Stage2 {
+		builder.Func("Release Scale-Out File Lock", func(ctx context.Context) error {
+			return m.specManager.ReleaseScaleOutLock(name)
+		})
+	}
 
 	if final != nil {
 		final(builder, name, metadata, gOpt)
 	}
-
 	return builder.Build(), nil
 }
 

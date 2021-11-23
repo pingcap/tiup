@@ -169,13 +169,9 @@ func (m *Manager) ScaleOut(
 		}
 	}
 
-	if opt.NoStart {
-		cyan := color.New(color.FgHiRed, color.Bold)
-		msg := cyan.Sprintf(`You use the parameter --no-start ! 
-The new instance will not start, need to manually execute 'tiup-cluster start %s' .`, name)
-		log.Warnf(msg)
-
-		if err := tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: "); err != nil {
+	if opt.Stage1 {
+		err := checkEnvWithStage1(m, name)
+		if err != nil {
 			return err
 		}
 	}
@@ -198,7 +194,91 @@ The new instance will not start, need to manually execute 'tiup-cluster start %s
 		return perrs.Trace(err)
 	}
 
-	log.Infof("Scaled cluster `%s` out successfully", name)
+	if opt.Stage1 {
+		log.Infof(color.YellowString(`Scaled cluster %s out stage 1 successfully, but he new instance is not started!
+You need to execute 'tiup cluster scale-out %s --stage2' to start the new instance.`, name, name))
+	} else {
+		log.Infof("Scaled cluster `%s` out successfully", name)
+	}
+
+	return nil
+}
+
+// ScaleOutStage2 scale out the cluster stage2 , only start the new instance and init config after stage1
+func (m *Manager) ScaleOutStage2(
+	name string,
+	afterDeploy func(b *task.Builder, newPart spec.Topology, gOpt operator.Options),
+	final func(b *task.Builder, name string, meta spec.Metadata, gOpt operator.Options),
+	opt DeployOptions,
+	skipConfirm bool,
+	gOpt operator.Options,
+) error {
+	if err := clusterutil.ValidateClusterNameOrError(name); err != nil {
+		return err
+	}
+
+	metadata, err := m.meta(name)
+	// allow specific validation errors so that user can recover a broken
+	// cluster if it is somehow in a bad state.
+	if err != nil &&
+		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
+		return err
+	}
+
+	topo := metadata.GetTopology()
+	// Acquire the Scale-out file lock
+	newPart, err := m.specManager.ScaleOutLock(name)
+	if err != nil {
+		return err
+	}
+
+	var (
+		sshConnProps  *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
+		sshProxyProps *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
+	)
+	if gOpt.SSHType != executor.SSHTypeNone {
+		var err error
+		if sshConnProps, err = tui.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword); err != nil {
+			return err
+		}
+		if len(gOpt.SSHProxyHost) != 0 {
+			if sshProxyProps, err = tui.ReadIdentityFileOrPassword(gOpt.SSHProxyIdentity, gOpt.SSHProxyUsePassword); err != nil {
+				return err
+			}
+		}
+	}
+	if err := m.fillHostArch(sshConnProps, sshProxyProps, newPart, &gOpt, opt.User); err != nil {
+		return err
+	}
+
+	// only start, not need check patchedComponent
+	patchedComponents := set.NewStringSet()
+	if !skipConfirm {
+		// patchedComponents are components that have been patched and overwrited
+		if err := m.confirmTopology(name, metadata.GetBaseMeta().Version, newPart, patchedComponents); err != nil {
+			return err
+		}
+	}
+
+	// Build the scale out tasks
+	t, err := buildScaleOutTask(
+		m, name, metadata, topo, opt, sshConnProps, sshProxyProps, newPart,
+		patchedComponents, gOpt, afterDeploy, final)
+	if err != nil {
+		return err
+	}
+
+	ctx := ctxt.New(context.Background(), gOpt.Concurrency)
+	ctx = context.WithValue(ctx, ctxt.CtxBaseTopo, topo)
+	if err := t.Execute(ctx); err != nil {
+		if errorx.Cast(err) != nil {
+			// FIXME: Map possible task errors and give suggestions.
+			return err
+		}
+		return perrs.Trace(err)
+	}
+
+	log.Infof("Scaled cluster  `%s` out stage 2 successfully", name)
 
 	return nil
 }
@@ -246,6 +326,22 @@ set them in the specification fileds for each host.`))
 			}
 			return nil // user confirmed, skip further checks
 		}
+	}
+	return nil
+}
+
+func checkEnvWithStage1(m *Manager, name string) error {
+	cyan := color.New(color.FgHiYellow, color.Bold)
+	msg := cyan.Sprintf(`You use the parameter --stage1! 
+The new instance will not start, need to manually execute 'tiup cluster scale-out %s --stage2'.`, name)
+	log.Warnf(msg)
+
+	if err := tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: "); err != nil {
+		return err
+	}
+
+	if exist, _ := m.specManager.IsScaleOutLockExist(name); exist {
+		return fmt.Errorf("The scale out file lock is exist, please run tiup-cluster scale-out --stage2 to continue")
 	}
 	return nil
 }

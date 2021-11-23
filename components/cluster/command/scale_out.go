@@ -30,19 +30,48 @@ func newScaleOutCmd() *cobra.Command {
 		IdentityFile: filepath.Join(utils.UserHome(), ".ssh", "id_rsa"),
 	}
 	cmd := &cobra.Command{
-		Use:          "scale-out <cluster-name> <topology.yaml>",
+		Use:          "scale-out <cluster-name> [topology.yaml]",
 		Short:        "Scale out a TiDB cluster",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 2 {
-				return cmd.Help()
+			var (
+				clusterName string
+				topoFile    string
+			)
+
+			// stage1 and stage2 cannot be true at the same time
+			if opt.Stage1 && opt.Stage2 {
+				opt.Stage1 = false
+				opt.Stage2 = false
 			}
 
-			clusterName := args[0]
+			if opt.Stage2 && len(args) == 1 {
+				clusterName = args[0]
+			} else {
+				if len(args) == 2 {
+					clusterName = args[0]
+					topoFile = args[1]
+				} else {
+					return cmd.Help()
+				}
+			}
+
 			clusterReport.ID = scrubClusterName(clusterName)
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
-			topoFile := args[1]
+			// only start the new instance and init config after stage1
+			if opt.Stage2 {
+				return cm.ScaleOutStage2(
+					clusterName,
+					postScaleOutHook,
+					final,
+					opt,
+					skipConfirm,
+					gOpt,
+				)
+			}
+
+			// stage2: topoFile is ""
 			if data, err := os.ReadFile(topoFile); err == nil {
 				teleTopology = string(data)
 			}
@@ -64,7 +93,8 @@ func newScaleOutCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&opt.IdentityFile, "identity_file", "i", opt.IdentityFile, "The path of the SSH identity file. If specified, public key authentication will be used.")
 	cmd.Flags().BoolVarP(&opt.UsePassword, "password", "p", false, "Use password of target hosts. If specified, password authentication will be used.")
 	cmd.Flags().BoolVarP(&opt.NoLabels, "no-labels", "", false, "Don't check TiKV labels")
-	cmd.Flags().BoolVarP(&opt.NoStart, "no-start", "", false, "Don't start the new instance after scale-out, need to manually execute cluster start")
+	cmd.Flags().BoolVarP(&opt.Stage1, "stage1", "", false, "Don't start the new instance after scale-out, need to manually execute cluster scale-out --stage2")
+	cmd.Flags().BoolVarP(&opt.Stage2, "stage2", "", false, "Start the new instance and init config after scale-out --stage1")
 
 	return cmd
 }

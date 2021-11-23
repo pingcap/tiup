@@ -33,6 +33,8 @@ var (
 	ErrCreateDirFailed = errNS.NewType("create_dir_failed")
 	// ErrSaveMetaFailed is ErrSaveMetaFailed
 	ErrSaveMetaFailed = errNS.NewType("save_meta_failed")
+	// ErrSaveScaleOutFileFailed is ErrSaveMetaFailed
+	ErrSaveScaleOutFileFailed = errNS.NewType("save_scale-out_lock_failed")
 )
 
 const (
@@ -42,6 +44,8 @@ const (
 	PatchDirName = "patch"
 	// BackupDirName is the directory to save backup files.
 	BackupDirName = "backup"
+	// ScaleOutLockName scale_out snapshot file, like file lock
+	ScaleOutLockName = ".scale-out.yaml"
 )
 
 //revive:disable
@@ -201,4 +205,72 @@ func (s *SpecManager) ensureDir(clusterName string) error {
 			WithProperty(tui.SuggestionFromString("Please check file system permissions and try again."))
 	}
 	return nil
+}
+
+// ScaleOutLock tries to read the ScaleOutLock of a cluster from file
+func (s *SpecManager) ScaleOutLock(clusterName string) (Topology, error) {
+	if exist, err := s.IsScaleOutLockExist(clusterName); !exist {
+		return nil, ErrSaveScaleOutFileFailed.Wrap(err, "Scale-out file lock is not exist").
+			WithProperty(tui.SuggestionFromString("Please make sure to run tiup-cluster scale-out --stage1 and try again."))
+	}
+
+	fname := s.Path(clusterName, ScaleOutLockName)
+
+	// UnMarshal file lock
+	topo := &Specification{}
+	err := ParseTopologyYaml(fname, topo)
+	if err != nil {
+		return nil, err
+	}
+	return topo, nil
+}
+
+// IsScaleOutLockExist check if the cluster in scale-out stage1
+func (s *SpecManager) IsScaleOutLockExist(name string) (exist bool, err error) {
+	fname := s.Path(name, ScaleOutLockName)
+
+	_, err = os.Stat(fname)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, perrs.AddStack(err)
+	}
+
+	return true, nil
+}
+
+// NewScaleOutLock save the meta with specified cluster name.
+func (s *SpecManager) NewScaleOutLock(clusterName string, topo Topology) error {
+	wrapError := func(err error) *errorx.Error {
+		return ErrSaveScaleOutFileFailed.Wrap(err, "Failed to create scale-out file lock")
+	}
+
+	if exist, err := s.IsScaleOutLockExist(clusterName); exist {
+		return wrapError(err).
+			WithProperty(tui.SuggestionFromString("The scale out file lock is exist, please run tiup-cluster scale-out --stage2 to continue."))
+	}
+
+	lockFile := s.Path(clusterName, ScaleOutLockName)
+
+	if err := s.ensureDir(clusterName); err != nil {
+		return wrapError(err)
+	}
+
+	data, err := yaml.Marshal(topo)
+	if err != nil {
+		return wrapError(err)
+	}
+
+	err = os.WriteFile(lockFile, data, 0644)
+	if err != nil {
+		return wrapError(err)
+	}
+
+	return nil
+}
+
+// ReleaseScaleOutLock remove the scale-out file lock with specified cluster
+func (s *SpecManager) ReleaseScaleOutLock(name string) error {
+	return os.Remove(s.Path(name, ScaleOutLockName))
 }
