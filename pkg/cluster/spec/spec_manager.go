@@ -225,7 +225,16 @@ func (s *SpecManager) ScaleOutLock(clusterName string) (Topology, error) {
 	return topo, nil
 }
 
-// IsScaleOutLocked check if the cluster in scale-out stage1 status
+// CheckScaleOutLocked  Determine whether there is a lock, and report an error if it exists
+func (s *SpecManager) CheckScaleOutLocked(name string) error {
+	if locked, err := s.IsScaleOutLocked(name); locked {
+		return errNS.NewType("Scale-out file lock").Wrap(err, "Scale-out file lock is exist").
+			WithProperty(tui.SuggestionFromString("Please to run tiup-cluster scale-out --stage2 and try again."))
+	}
+	return nil
+}
+
+// IsScaleOutLocked:  judge the cluster scale-out file lock status
 func (s *SpecManager) IsScaleOutLocked(name string) (exist bool, err error) {
 	fname := s.Path(name, ScaleOutLockName)
 

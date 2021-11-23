@@ -59,18 +59,6 @@ func newScaleOutCmd() *cobra.Command {
 			clusterReport.ID = scrubClusterName(clusterName)
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
-			// only start the new instance and init config after stage1
-			if opt.Stage2 {
-				return cm.ScaleOutStage2(
-					clusterName,
-					postScaleOutHook,
-					final,
-					opt,
-					skipConfirm,
-					gOpt,
-				)
-			}
-
 			// stage2: topoFile is ""
 			if data, err := os.ReadFile(topoFile); err == nil {
 				teleTopology = string(data)
