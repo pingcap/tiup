@@ -195,6 +195,7 @@ func init() {
 		newAuditCmd(),
 		newImportCmd(),
 		newEditConfigCmd(),
+		newShowConfigCmd(),
 		newReloadCmd(),
 		newPatchCmd(),
 		newRenameCmd(),
