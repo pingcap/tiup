@@ -41,6 +41,6 @@ func (m *Manager) ShowConfig(name string) error {
 		return perrs.AddStack(err)
 	}
 
-	fmt.Print(data)
+	fmt.Print(string(data))
 	return nil
 }
