@@ -340,7 +340,7 @@ The new instance will not start, need to manually execute 'tiup cluster scale-ou
 		return err
 	}
 
-	if exist, _ := m.specManager.IsScaleOutLockExist(name); exist {
+	if locked, _ := m.specManager.IsScaleOutLocked(name); locked {
 		return fmt.Errorf("The scale out file lock is exist, please run tiup-cluster scale-out --stage2 to continue")
 	}
 	return nil

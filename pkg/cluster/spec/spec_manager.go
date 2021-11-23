@@ -209,7 +209,7 @@ func (s *SpecManager) ensureDir(clusterName string) error {
 
 // ScaleOutLock tries to read the ScaleOutLock of a cluster from file
 func (s *SpecManager) ScaleOutLock(clusterName string) (Topology, error) {
-	if exist, err := s.IsScaleOutLockExist(clusterName); !exist {
+	if locked, err := s.IsScaleOutLocked(clusterName); !locked {
 		return nil, ErrSaveScaleOutFileFailed.Wrap(err, "Scale-out file lock is not exist").
 			WithProperty(tui.SuggestionFromString("Please make sure to run tiup-cluster scale-out --stage1 and try again."))
 	}
@@ -225,8 +225,8 @@ func (s *SpecManager) ScaleOutLock(clusterName string) (Topology, error) {
 	return topo, nil
 }
 
-// IsScaleOutLockExist check if the cluster in scale-out stage1
-func (s *SpecManager) IsScaleOutLockExist(name string) (exist bool, err error) {
+// IsScaleOutLocked check if the cluster in scale-out stage1 status
+func (s *SpecManager) IsScaleOutLocked(name string) (exist bool, err error) {
 	fname := s.Path(name, ScaleOutLockName)
 
 	_, err = os.Stat(fname)
@@ -246,7 +246,7 @@ func (s *SpecManager) NewScaleOutLock(clusterName string, topo Topology) error {
 		return ErrSaveScaleOutFileFailed.Wrap(err, "Failed to create scale-out file lock")
 	}
 
-	if exist, err := s.IsScaleOutLockExist(clusterName); exist {
+	if locked, err := s.IsScaleOutLocked(clusterName); locked {
 		return wrapError(err).
 			WithProperty(tui.SuggestionFromString("The scale out file lock is exist, please run tiup-cluster scale-out --stage2 to continue."))
 	}
