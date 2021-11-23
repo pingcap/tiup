@@ -81,7 +81,7 @@ func (m *Manager) EditConfig(name string, opt EditConfigOptions, skipConfirm boo
 // 4. Save meta file.
 func (m *Manager) editTopo(origTopo spec.Topology, data []byte, opt EditConfigOptions, skipConfirm bool) (spec.Topology, error) {
 	var name string
-	if len(opt.NewTopoFile) == 0 {
+	if opt.NewTopoFile == "" {
 		file, err := os.CreateTemp(os.TempDir(), "*")
 		if err != nil {
 			return nil, perrs.AddStack(err)
@@ -118,7 +118,7 @@ func (m *Manager) editTopo(origTopo spec.Topology, data []byte, opt EditConfigOp
 	if err != nil {
 		fmt.Print(color.RedString("New topology could not be saved: "))
 		log.Infof("Failed to parse topology file: %v", err)
-		if len(opt.NewTopoFile) == 0 {
+		if opt.NewTopoFile == "" {
 			if pass, _ := tui.PromptForConfirmNo("Do you want to continue editing? [Y/n]: "); !pass {
 				return m.editTopo(origTopo, newData, opt, skipConfirm)
 			}
@@ -131,7 +131,7 @@ func (m *Manager) editTopo(origTopo spec.Topology, data []byte, opt EditConfigOp
 	if err := utils.ValidateSpecDiff(origTopo, newTopo); err != nil {
 		fmt.Print(color.RedString("New topology could not be saved: "))
 		log.Errorf("%s", err)
-		if len(opt.NewTopoFile) == 0 {
+		if opt.NewTopoFile == "" {
 			if pass, _ := tui.PromptForConfirmNo("Do you want to continue editing? [Y/n]: "); !pass {
 				return m.editTopo(origTopo, newData, opt, skipConfirm)
 			}
