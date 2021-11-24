@@ -271,12 +271,12 @@ func checkScaleOutLock(m *Manager, name string, opt DeployOptions) error {
 	locked, _ := m.specManager.IsScaleOutLocked(name)
 
 	if (!opt.Stage1 && !opt.Stage2) && locked {
-		return m.specManager.CheckScaleOutLocked(name)
+		return m.specManager.ScaleOutLockedErr(name)
 	}
 
 	if opt.Stage1 {
 		if locked {
-			return m.specManager.CheckScaleOutLocked(name)
+			return m.specManager.ScaleOutLockedErr(name)
 		}
 		log.Warnf(color.YellowString(`You use the parameter '--stage1'
 This means the new instance will not start, need to manually execute 'tiup cluster scale-out %s --stage2'.`, name))

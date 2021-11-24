@@ -138,8 +138,8 @@ func (s *SpecManager) Metadata(clusterName string, meta interface{}) error {
 }
 
 // Exist check if the cluster exist by checking the meta file.
-func (s *SpecManager) Exist(name string) (exist bool, err error) {
-	fname := s.Path(name, metaFileName)
+func (s *SpecManager) Exist(clusterName string) (exist bool, err error) {
+	fname := s.Path(clusterName, metaFileName)
 
 	_, err = os.Stat(fname)
 	if err != nil {
@@ -153,12 +153,12 @@ func (s *SpecManager) Exist(name string) (exist bool, err error) {
 }
 
 // Remove remove the data with specified cluster name.
-func (s *SpecManager) Remove(name string) error {
-	return os.RemoveAll(s.Path(name))
+func (s *SpecManager) Remove(clusterName string) error {
+	return os.RemoveAll(s.Path(clusterName))
 }
 
 // List return the cluster names.
-func (s *SpecManager) List() (names []string, err error) {
+func (s *SpecManager) List() (clusterNames []string, err error) {
 	fileInfos, err := os.ReadDir(s.base)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -171,7 +171,7 @@ func (s *SpecManager) List() (names []string, err error) {
 		if utils.IsNotExist(s.Path(info.Name(), metaFileName)) {
 			continue
 		}
-		names = append(names, info.Name())
+		clusterNames = append(clusterNames, info.Name())
 	}
 
 	return
@@ -225,18 +225,18 @@ func (s *SpecManager) ScaleOutLock(clusterName string) (Topology, error) {
 	return topo, nil
 }
 
-// CheckScaleOutLocked  Determine whether there is a lock, and report an error if it exists
-func (s *SpecManager) CheckScaleOutLocked(name string) error {
-	if locked, err := s.IsScaleOutLocked(name); locked {
+// ScaleOutLockedErr: Determine whether there is a lock, and report an error if it exists
+func (s *SpecManager) ScaleOutLockedErr(clusterName string) error {
+	if locked, err := s.IsScaleOutLocked(clusterName); locked {
 		return errNS.NewType("Scale-out file lock").Wrap(err, "Scale-out file lock is exist").
-			WithProperty(tui.SuggestionFromString("Please to run tiup-cluster scale-out --stage2 and try again."))
+			WithProperty(tui.SuggestionFromString("Please to run 'tiup-cluster scale-out --stage2' and try again."))
 	}
 	return nil
 }
 
 // IsScaleOutLocked:  judge the cluster scale-out file lock status
-func (s *SpecManager) IsScaleOutLocked(name string) (exist bool, err error) {
-	fname := s.Path(name, ScaleOutLockName)
+func (s *SpecManager) IsScaleOutLocked(clusterName string) (locked bool, err error) {
+	fname := s.Path(clusterName, ScaleOutLockName)
 
 	_, err = os.Stat(fname)
 	if err != nil {
@@ -280,6 +280,6 @@ func (s *SpecManager) NewScaleOutLock(clusterName string, topo Topology) error {
 }
 
 // ReleaseScaleOutLock remove the scale-out file lock with specified cluster
-func (s *SpecManager) ReleaseScaleOutLock(name string) error {
-	return os.Remove(s.Path(name, ScaleOutLockName))
+func (s *SpecManager) ReleaseScaleOutLock(clusterName string) error {
+	return os.Remove(s.Path(clusterName, ScaleOutLockName))
 }
