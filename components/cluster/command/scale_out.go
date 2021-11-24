@@ -39,7 +39,9 @@ func newScaleOutCmd() *cobra.Command {
 				topoFile    string
 			)
 
-			// stage1 and stage2 cannot be true at the same time
+			// tiup cluster scale-out --stage1 --stage2 
+			// is equivalent to
+			// tiup cluster scale-out 
 			if opt.Stage1 && opt.Stage2 {
 				opt.Stage1 = false
 				opt.Stage2 = false

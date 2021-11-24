@@ -278,18 +278,17 @@ func checkScaleOutLock(m *Manager, name string, opt DeployOptions) error {
 		if locked {
 			return m.specManager.ScaleOutLockedErr(name)
 		}
-		log.Warnf(color.YellowString(`You use the parameter '--stage1'
-This means the new instance will not start, need to manually execute 'tiup cluster scale-out %s --stage2'.`, name))
+		log.Warnf(color.YellowString(`The parameter '--stage1' is set, new instance will not be started
+Please manually execute 'tiup cluster scale-out %s --stage2' to finish the process.`, name))
 		return tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: ")
 	}
 
 	if opt.Stage2 {
 		if !locked {
-			return fmt.Errorf("The scale-out file lock is not exist, please make sure to run 'tiup-cluster scale-out %s --stage1'", name)
+			return fmt.Errorf("The scale-out file lock does not exist, please make sure to run 'tiup-cluster scale-out %s --stage1' first", name)
 		}
 
-		log.Warnf(color.YellowString(`You use the parameter '--stage2'
-This means only start the new instance and reload all instances config`))
+		log.Warnf(color.YellowString(`The parameter '--stage2' is set, only start the new instances and reload configs.`))
 		return tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: ")
 	}
 

@@ -351,7 +351,7 @@ func buildScaleOutTask(
 	// don't start the new instance
 	if opt.Stage1 {
 		// save scale out file lock
-		builder.Func("Crrate Scale-Out File Lock", func(_ context.Context) error {
+		builder.Func("Create Scale-Out File Lock", func(_ context.Context) error {
 			return m.specManager.NewScaleOutLock(name, newPart)
 		})
 	} else {
