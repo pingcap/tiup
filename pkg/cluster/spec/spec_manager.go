@@ -228,7 +228,7 @@ func (s *SpecManager) ScaleOutLock(clusterName string) (Topology, error) {
 // ScaleOutLockedErr: Determine whether there is a lock, and report an error if it exists
 func (s *SpecManager) ScaleOutLockedErr(clusterName string) error {
 	if locked, err := s.IsScaleOutLocked(clusterName); locked {
-		return errNS.NewType("Scale-out file lock").Wrap(err, "Scale-out file lock already exists").
+		return errNS.NewType("scale-out lock").Wrap(err, "Scale-out file lock already exists").
 			WithProperty(tui.SuggestionFromString("Please run 'tiup-cluster scale-out --stage2' to continue."))
 	}
 	return nil
