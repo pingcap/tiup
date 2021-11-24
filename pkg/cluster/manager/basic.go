@@ -85,6 +85,11 @@ func (m *Manager) EnableCluster(name string, gOpt operator.Options, isEnable boo
 func (m *Manager) StartCluster(name string, gOpt operator.Options, fn ...func(b *task.Builder, metadata spec.Metadata)) error {
 	log.Infof("Starting cluster %s...", name)
 
+	// check locked
+	if err := m.specManager.ScaleOutLockedErr(name); err != nil {
+		return err
+	}
+
 	metadata, err := m.meta(name)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 		return err
@@ -127,6 +132,11 @@ func (m *Manager) StartCluster(name string, gOpt operator.Options, fn ...func(b 
 
 // StopCluster stop the cluster.
 func (m *Manager) StopCluster(name string, gOpt operator.Options, skipConfirm bool) error {
+	// check locked
+	if err := m.specManager.ScaleOutLockedErr(name); err != nil {
+		return err
+	}
+
 	metadata, err := m.meta(name)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 		return err
@@ -177,6 +187,11 @@ func (m *Manager) StopCluster(name string, gOpt operator.Options, skipConfirm bo
 
 // RestartCluster restart the cluster.
 func (m *Manager) RestartCluster(name string, gOpt operator.Options, skipConfirm bool) error {
+	// check locked
+	if err := m.specManager.ScaleOutLockedErr(name); err != nil {
+		return err
+	}
+
 	metadata, err := m.meta(name)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 		return err

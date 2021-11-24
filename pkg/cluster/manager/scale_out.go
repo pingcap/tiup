@@ -51,9 +51,9 @@ func (m *Manager) ScaleOut(
 		return err
 	}
 
-	// check for the input topology to let user confirm if there're any
-	// global configs set
-	if err := checkForGlobalConfigs(topoFile); err != nil {
+	// check the scale out file lock is exist
+	err := checkScaleOutLock(m, name, opt)
+	if err != nil {
 		return err
 	}
 
@@ -71,28 +71,43 @@ func (m *Manager) ScaleOut(
 	// because some default value rely on the global options and monitored options.
 	newPart := topo.NewPart()
 
-	// The no tispark master error is ignored, as if the tispark master is removed from the topology
-	// file for some reason (manual edit, for example), it is still possible to scale-out it to make
-	// the whole topology back to normal state.
-	if err := spec.ParseTopologyYaml(topoFile, newPart); err != nil &&
-		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
-		return err
-	}
-
-	if clusterSpec, ok := topo.(*spec.Specification); ok {
-		if clusterSpec.GlobalOptions.TLSEnabled &&
-			semver.Compare(base.Version, "v4.0.5") < 0 &&
-			len(clusterSpec.TiFlashServers) > 0 {
-			return fmt.Errorf("TiFlash %s is not supported in TLS enabled cluster", base.Version)
+	// if stage2 is true, the new part data store in scale-out file lock
+	if opt.Stage2 {
+		// Acquire the Scale-out file lock
+		newPart, err = m.specManager.ScaleOutLock(name)
+		if err != nil {
+			return err
 		}
-	}
+	} else { // if stage2 is true, not need check topology or other
+		// check for the input topology to let user confirm if there're any
+		// global configs set
+		if err := checkForGlobalConfigs(topoFile); err != nil {
+			return err
+		}
 
-	if newPartTopo, ok := newPart.(*spec.Specification); ok {
-		newPartTopo.AdjustByVersion(base.Version)
-	}
+		// The no tispark master error is ignored, as if the tispark master is removed from the topology
+		// file for some reason (manual edit, for example), it is still possible to scale-out it to make
+		// the whole topology back to normal state.
+		if err := spec.ParseTopologyYaml(topoFile, newPart); err != nil &&
+			!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
+			return err
+		}
 
-	if err := validateNewTopo(newPart); err != nil {
-		return err
+		if clusterSpec, ok := topo.(*spec.Specification); ok {
+			if clusterSpec.GlobalOptions.TLSEnabled &&
+				semver.Compare(base.Version, "v4.0.5") < 0 &&
+				len(clusterSpec.TiFlashServers) > 0 {
+				return fmt.Errorf("TiFlash %s is not supported in TLS enabled cluster", base.Version)
+			}
+		}
+
+		if newPartTopo, ok := newPart.(*spec.Specification); ok {
+			newPartTopo.AdjustByVersion(base.Version)
+		}
+
+		if err := validateNewTopo(newPart); err != nil {
+			return err
+		}
 	}
 
 	var (
@@ -115,46 +130,53 @@ func (m *Manager) ScaleOut(
 		return err
 	}
 
-	// Abort scale out operation if the merged topology is invalid
-	mergedTopo := topo.MergeTopo(newPart)
-	if err := mergedTopo.Validate(); err != nil {
-		return err
-	}
-	spec.ExpandRelativeDir(mergedTopo)
+	var mergedTopo spec.Topology
+	// in satge2, not need mergedTopo
+	if opt.Stage2 {
+		mergedTopo = topo
+	} else {
+		// Abort scale out operation if the merged topology is invalid
+		mergedTopo = topo.MergeTopo(newPart)
+		if err := mergedTopo.Validate(); err != nil {
+			return err
+		}
+		spec.ExpandRelativeDir(mergedTopo)
 
-	if topo, ok := mergedTopo.(*spec.Specification); ok {
-		// Check if TiKV's label set correctly
-		if !opt.NoLabels {
-			pdList := topo.BaseTopo().MasterList
-			tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
-			if err != nil {
-				return err
-			}
-			pdClient := api.NewPDClient(pdList, 10*time.Second, tlsCfg)
-			lbs, placementRule, err := pdClient.GetLocationLabels()
-			if err != nil {
-				return err
-			}
-			if !placementRule {
-				if err := spec.CheckTiKVLabels(lbs, mergedTopo.(*spec.Specification)); err != nil {
-					return perrs.Errorf("check TiKV label failed, please fix that before continue:\n%s", err)
+		if topo, ok := mergedTopo.(*spec.Specification); ok {
+			// Check if TiKV's label set correctly
+			if !opt.NoLabels {
+				pdList := topo.BaseTopo().MasterList
+				tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
+				if err != nil {
+					return err
+				}
+				pdClient := api.NewPDClient(pdList, 10*time.Second, tlsCfg)
+				lbs, placementRule, err := pdClient.GetLocationLabels()
+				if err != nil {
+					return err
+				}
+				if !placementRule {
+					if err := spec.CheckTiKVLabels(lbs, mergedTopo.(*spec.Specification)); err != nil {
+						return perrs.Errorf("check TiKV label failed, please fix that before continue:\n%s", err)
+					}
 				}
 			}
 		}
-	}
 
-	clusterList, err := m.specManager.GetAllClusters()
-	if err != nil {
-		return err
-	}
-	if err := spec.CheckClusterPortConflict(clusterList, name, mergedTopo); err != nil {
-		return err
-	}
-	if err := spec.CheckClusterDirConflict(clusterList, name, mergedTopo); err != nil {
-		return err
+		clusterList, err := m.specManager.GetAllClusters()
+		if err != nil {
+			return err
+		}
+		if err := spec.CheckClusterPortConflict(clusterList, name, mergedTopo); err != nil {
+			return err
+		}
+		if err := spec.CheckClusterDirConflict(clusterList, name, mergedTopo); err != nil {
+			return err
+		}
 	}
 
 	patchedComponents := set.NewStringSet()
+	// if stage2 is true, this check is not work
 	newPart.IterInstance(func(instance spec.Instance) {
 		if utils.IsExist(m.specManager.Path(name, spec.PatchDirName, instance.ComponentName()+".tar.gz")) {
 			patchedComponents.Insert(instance.ComponentName())
@@ -185,6 +207,11 @@ func (m *Manager) ScaleOut(
 			return err
 		}
 		return perrs.Trace(err)
+	}
+
+	if opt.Stage1 {
+		log.Infof(color.YellowString(`The new instance is not started!
+You need to execute 'tiup cluster scale-out %s --stage2' to start the new instance.`, name))
 	}
 
 	log.Infof("Scaled cluster `%s` out successfully", name)
@@ -236,5 +263,34 @@ set them in the specification fileds for each host.`))
 			return nil // user confirmed, skip further checks
 		}
 	}
+	return nil
+}
+
+// checkEnvWithStage1 check environment in scale-out stage 1
+func checkScaleOutLock(m *Manager, name string, opt DeployOptions) error {
+	locked, _ := m.specManager.IsScaleOutLocked(name)
+
+	if (!opt.Stage1 && !opt.Stage2) && locked {
+		return m.specManager.ScaleOutLockedErr(name)
+	}
+
+	if opt.Stage1 {
+		if locked {
+			return m.specManager.ScaleOutLockedErr(name)
+		}
+		log.Warnf(color.YellowString(`The parameter '--stage1' is set, new instance will not be started
+Please manually execute 'tiup cluster scale-out %s --stage2' to finish the process.`, name))
+		return tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: ")
+	}
+
+	if opt.Stage2 {
+		if !locked {
+			return fmt.Errorf("The scale-out file lock does not exist, please make sure to run 'tiup-cluster scale-out %s --stage1' first", name)
+		}
+
+		log.Warnf(color.YellowString(`The parameter '--stage2' is set, only start the new instances and reload configs.`))
+		return tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: ")
+	}
+
 	return nil
 }

@@ -37,6 +37,11 @@ func (m *Manager) Reload(name string, gOpt operator.Options, skipRestart, skipCo
 		return err
 	}
 
+	// check locked
+	if err := m.specManager.ScaleOutLockedErr(name); err != nil {
+		return err
+	}
+
 	sshTimeout := gOpt.SSHTimeout
 	exeTimeout := gOpt.OptTimeout
 

@@ -43,6 +43,11 @@ func (m *Manager) ScaleIn(
 		return err
 	}
 
+	// check locked
+	if err := m.specManager.ScaleOutLockedErr(name); err != nil {
+		return err
+	}
+
 	var (
 		force bool     = gOpt.Force
 		nodes []string = gOpt.Nodes

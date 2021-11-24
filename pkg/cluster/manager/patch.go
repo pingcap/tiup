@@ -41,6 +41,14 @@ func (m *Manager) Patch(name string, packagePath string, opt operator.Options, o
 		return err
 	}
 
+	// check locked
+	if err := m.specManager.ScaleOutLockedErr(name); err != nil {
+		if !offline {
+			return errorx.Cast(err).
+				WithProperty(tui.SuggestionFromString("Please run tiup-cluster patch --offline to try again"))
+		}
+	}
+
 	metadata, err := m.meta(name)
 	if err != nil {
 		return err
