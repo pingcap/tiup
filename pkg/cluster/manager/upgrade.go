@@ -41,6 +41,11 @@ func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Optio
 		return err
 	}
 
+	// check locked
+	if err := m.specManager.ScaleOutLockedErr(name); err != nil {
+		return err
+	}
+
 	metadata, err := m.meta(name)
 	if err != nil {
 		return err
