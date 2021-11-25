@@ -33,7 +33,7 @@ Available Commands:
 
 Flags:
       --db int                   TiDB instance number
-      --db.Host host             Playground TiDB host. If not provided, TiDB will still use host flag as its host
+      --db.host host             Playground TiDB host. If not provided, TiDB will still use host flag as its host
       --db.Port int              Playground TiDB port. If not provided, TiDB will use 4000 as its port
       --db.binpath string        TiDB instance binary path
       --db.config string         TiDB instance configuration file
