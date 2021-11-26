@@ -131,7 +131,9 @@ func (m *Manager) DestroyTombstone(
 	if err != nil {
 		return err
 	}
-	regenConfigTasks, _ := buildRegenConfigTasks(m, name, topo, base, gOpt, nodes, true)
+
+	gOpt.IgnoreConfigCheck = true
+	regenConfigTasks, _ := buildInitConfigTasks(m, name, topo, base, gOpt, nodes)
 
 	t := b.
 		Func("FindTomestoneNodes", func(ctx context.Context) (err error) {

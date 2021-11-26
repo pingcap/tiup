@@ -32,7 +32,6 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/logger/log"
-	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
@@ -185,77 +184,72 @@ func (m *Manager) Deploy(
 	)
 
 	// Initialize environment
-	uniqueHosts := make(map[string]hostInfo) // host -> ssh-port, os, arch
-	noAgentHosts := set.NewStringSet()
+
 	globalOptions := base.GlobalOptions
 
+	metadata.SetUser(globalOptions.User)
+	metadata.SetVersion(clusterVersion)
+
+	var iterErr error // error when itering over instances
+	iterErr = nil
+
+	topo.IterInstance(func(inst spec.Instance) {
+		// check for "imported" parameter, it can not be true when deploying and scaling out
+		// only for tidb now, need to support dm
+		if inst.IsImported() && m.sysName == "tidb" {
+			iterErr = errors.New(
+				"'imported' is set to 'true' for new instance, this is only used " +
+					"for instances imported from tidb-ansible and make no sense when " +
+					"deploying new instances, please delete the line or set it to 'false' for new instances")
+			return // skip the host to avoid issues
+		}
+	})
+
 	// generate CA and client cert for TLS enabled cluster
-	ca, err := m.genAndSaveCertificate(name, globalOptions)
+	_, err = m.genAndSaveCertificate(name, globalOptions)
 	if err != nil {
 		return err
 	}
 
-	var iterErr error // error when itering over instances
-	iterErr = nil
-	topo.IterInstance(func(inst spec.Instance) {
-		if _, found := uniqueHosts[inst.GetHost()]; !found {
-			// check for "imported" parameter, it can not be true when deploying and scaling out
-			// only for tidb now, need to support dm
-			if inst.IsImported() && m.sysName == "tidb" {
-				iterErr = errors.New(
-					"'imported' is set to 'true' for new instance, this is only used " +
-						"for instances imported from tidb-ansible and make no sense when " +
-						"deploying new instances, please delete the line or set it to 'false' for new instances")
-				return // skip the host to avoid issues
-			}
+	uniqueHosts, noAgentHosts := getMonitorHosts(topo)
 
-			// add the instance to ignore list if it marks itself as ignore_exporter
-			if inst.IgnoreMonitorAgent() {
-				noAgentHosts.Insert(inst.GetHost())
+	for host, hostInfo := range uniqueHosts {
+		var dirs []string
+		for _, dir := range []string{globalOptions.DeployDir, globalOptions.LogDir} {
+			if dir == "" {
+				continue
 			}
-
-			uniqueHosts[inst.GetHost()] = hostInfo{
-				ssh:  inst.GetSSHPort(),
-				os:   inst.OS(),
-				arch: inst.Arch(),
-			}
-			var dirs []string
-			for _, dir := range []string{globalOptions.DeployDir, globalOptions.LogDir} {
-				if dir == "" {
-					continue
-				}
-				dirs = append(dirs, spec.Abs(globalOptions.User, dir))
-			}
-			// the default, relative path of data dir is under deploy dir
-			if strings.HasPrefix(globalOptions.DataDir, "/") {
-				dirs = append(dirs, globalOptions.DataDir)
-			}
-			t := task.NewBuilder(gOpt.DisplayMode).
-				RootSSH(
-					inst.GetHost(),
-					inst.GetSSHPort(),
-					opt.User,
-					sshConnProps.Password,
-					sshConnProps.IdentityFile,
-					sshConnProps.IdentityFilePassphrase,
-					gOpt.SSHTimeout,
-					gOpt.OptTimeout,
-					gOpt.SSHProxyHost,
-					gOpt.SSHProxyPort,
-					gOpt.SSHProxyUser,
-					sshProxyProps.Password,
-					sshProxyProps.IdentityFile,
-					sshProxyProps.IdentityFilePassphrase,
-					gOpt.SSHProxyTimeout,
-					gOpt.SSHType,
-					globalOptions.SSHType,
-				).
-				EnvInit(inst.GetHost(), globalOptions.User, globalOptions.Group, opt.SkipCreateUser || globalOptions.User == opt.User).
-				Mkdir(globalOptions.User, inst.GetHost(), dirs...).
-				BuildAsStep(fmt.Sprintf("  - Prepare %s:%d", inst.GetHost(), inst.GetSSHPort()))
-			envInitTasks = append(envInitTasks, t)
+			dirs = append(dirs, spec.Abs(globalOptions.User, dir))
 		}
-	})
+		// the default, relative path of data dir is under deploy dir
+		if strings.HasPrefix(globalOptions.DataDir, "/") {
+			dirs = append(dirs, globalOptions.DataDir)
+		}
+		t := task.NewBuilder(gOpt.DisplayMode).
+			RootSSH(
+				host,
+				hostInfo.ssh,
+				opt.User,
+				sshConnProps.Password,
+				sshConnProps.IdentityFile,
+				sshConnProps.IdentityFilePassphrase,
+				gOpt.SSHTimeout,
+				gOpt.OptTimeout,
+				gOpt.SSHProxyHost,
+				gOpt.SSHProxyPort,
+				gOpt.SSHProxyUser,
+				sshProxyProps.Password,
+				sshProxyProps.IdentityFile,
+				sshProxyProps.IdentityFilePassphrase,
+				gOpt.SSHProxyTimeout,
+				gOpt.SSHType,
+				globalOptions.SSHType,
+			).
+			EnvInit(host, globalOptions.User, globalOptions.Group, opt.SkipCreateUser || globalOptions.User == opt.User).
+			Mkdir(globalOptions.User, host, dirs...).
+			BuildAsStep(fmt.Sprintf("  - Prepare %s:%d", host, hostInfo.ssh))
+		envInitTasks = append(envInitTasks, t)
+	}
 
 	if iterErr != nil {
 		return iterErr
@@ -280,9 +274,7 @@ func (m *Manager) Deploy(
 			filepath.Join(deployDir, "conf"),
 			filepath.Join(deployDir, "scripts"),
 		}
-		if globalOptions.TLSEnabled {
-			deployDirs = append(deployDirs, filepath.Join(deployDir, "tls"))
-		}
+
 		t := task.NewBuilder(gOpt.DisplayMode).
 			UserSSH(
 				inst.GetHost(),
@@ -331,36 +323,6 @@ func (m *Manager) Deploy(
 			}
 		}
 
-		// generate and transfer tls cert for instance
-		if globalOptions.TLSEnabled {
-			t = t.TLSCert(
-				inst.GetHost(),
-				inst.ComponentName(),
-				inst.Role(),
-				inst.GetMainPort(),
-				ca,
-				meta.DirPaths{
-					Deploy: deployDir,
-					Cache:  m.specManager.Path(name, spec.TempConfigPath),
-				})
-		}
-
-		// generate configs for the component
-		t = t.InitConfig(
-			name,
-			clusterVersion,
-			m.specManager,
-			inst,
-			globalOptions.User,
-			opt.IgnoreConfigCheck,
-			meta.DirPaths{
-				Deploy: deployDir,
-				Data:   dataDirs,
-				Log:    logDir,
-				Cache:  m.specManager.Path(name, spec.TempConfigPath),
-			},
-		)
-
 		deployCompTasks = append(deployCompTasks,
 			t.BuildAsStep(fmt.Sprintf("  - Copy %s -> %s", inst.ComponentName(), inst.GetHost())),
 		)
@@ -369,6 +331,14 @@ func (m *Manager) Deploy(
 	if iterErr != nil {
 		return iterErr
 	}
+
+	// generates certificate for instance and transfers it to the server
+	certificateTasks, err := buildCertificateTasks(m, name, topo, metadata.GetBaseMeta(), gOpt, sshProxyProps)
+	if err != nil {
+		return err
+	}
+
+	refreshConfigTasks, _ := buildInitConfigTasks(m, name, topo, metadata.GetBaseMeta(), gOpt, nil)
 
 	// Deploy monitor relevant components to remote
 	dlTasks, dpTasks, err := buildMonitoredDeployTask(
@@ -393,7 +363,9 @@ func (m *Manager) Deploy(
 			task.NewBuilder(gOpt.DisplayMode).SSHKeyGen(m.specManager.Path(name, "ssh", "id_rsa")).Build()).
 		ParallelStep("+ Download TiDB components", false, downloadCompTasks...).
 		ParallelStep("+ Initialize target host environments", false, envInitTasks...).
-		ParallelStep("+ Copy files", false, deployCompTasks...)
+		ParallelStep("+ Copy files", false, deployCompTasks...).
+		ParallelStep("+ Copy certificate to remote host", gOpt.Force, certificateTasks...).
+		ParallelStep("+ Init instance configs", gOpt.Force, refreshConfigTasks...)
 
 	if afterDeploy != nil {
 		afterDeploy(builder, topo, gOpt)
@@ -409,8 +381,6 @@ func (m *Manager) Deploy(
 		return err
 	}
 
-	metadata.SetUser(globalOptions.User)
-	metadata.SetVersion(clusterVersion)
 	err = m.specManager.SaveMeta(name, metadata)
 
 	if err != nil {

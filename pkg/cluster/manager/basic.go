@@ -28,6 +28,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
 )
 
@@ -237,4 +238,45 @@ func (m *Manager) RestartCluster(name string, gOpt operator.Options, skipConfirm
 
 	log.Infof("Restarted cluster `%s` successfully", name)
 	return nil
+}
+
+// // monitor
+// uniqueHosts := make(map[string]hostInfo) // host -> ssh-port, os, arch
+// noAgentHosts := set.NewStringSet()
+// topo.IterInstance(func(inst spec.Instance) {
+// 	// add the instance to ignore list if it marks itself as ignore_exporter
+// 	if inst.IgnoreMonitorAgent() {
+// 		noAgentHosts.Insert(inst.GetHost())
+// 	}
+
+// 	if _, found := uniqueHosts[inst.GetHost()]; !found {
+// 		uniqueHosts[inst.GetHost()] = hostInfo{
+// 			ssh:  inst.GetSSHPort(),
+// 			os:   inst.OS(),
+// 			arch: inst.Arch(),
+// 		}
+// 	}
+// })
+
+// getMonitorHosts  get the instance to ignore list if it marks itself as ignore_exporter
+func getMonitorHosts(topo spec.Topology) (map[string]hostInfo, set.StringSet) {
+	// monitor
+	uniqueHosts := make(map[string]hostInfo) // host -> ssh-port, os, arch
+	noAgentHosts := set.NewStringSet()
+	topo.IterInstance(func(inst spec.Instance) {
+		// add the instance to ignore list if it marks itself as ignore_exporter
+		if inst.IgnoreMonitorAgent() {
+			noAgentHosts.Insert(inst.GetHost())
+		}
+
+		if _, found := uniqueHosts[inst.GetHost()]; !found {
+			uniqueHosts[inst.GetHost()] = hostInfo{
+				ssh:  inst.GetSSHPort(),
+				os:   inst.OS(),
+				arch: inst.Arch(),
+			}
+		}
+	})
+
+	return uniqueHosts, noAgentHosts
 }
