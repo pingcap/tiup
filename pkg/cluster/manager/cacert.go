@@ -101,3 +101,46 @@ func genAndSaveClientCert(ca *crypto.CertificateAuthority, name, tlsPath string)
 
 	return nil
 }
+
+// genAndSaveCertificate  generate CA and client cert for TLS enabled cluster
+func (m *Manager) genAndSaveCertificate(clusterName string, globalOptions *spec.GlobalOptions) (*crypto.CertificateAuthority, error) {
+	var ca *crypto.CertificateAuthority
+	if globalOptions.TLSEnabled {
+		// generate CA
+		tlsPath := m.specManager.Path(clusterName, spec.TLSCertKeyDir)
+		if err := utils.CreateDir(tlsPath); err != nil {
+			return nil, err
+		}
+		ca, err := genAndSaveClusterCA(clusterName, tlsPath)
+		if err != nil {
+			return nil, err
+		}
+
+		// generate client cert
+		if err = genAndSaveClientCert(ca, clusterName, tlsPath); err != nil {
+			return nil, err
+		}
+	}
+
+	return ca, nil
+}
+
+// checkCertificate  check if the certificate file exists
+// no need to determine whether to enable tls
+func (m *Manager) checkCertificate(clusterName string) error {
+
+	tlsFiles := []string{
+		m.specManager.Path(clusterName, spec.TLSCertKeyDir, spec.TLSCACert),
+		m.specManager.Path(clusterName, spec.TLSCertKeyDir, spec.TLSClientKey),
+		m.specManager.Path(clusterName, spec.TLSCertKeyDir, spec.TLSClientCert),
+	}
+
+	// check if the file exists
+	for _, file := range tlsFiles {
+		if !utils.IsExist(file) {
+			return perrs.Errorf("TLS file: %s does not exist", file)
+		}
+	}
+
+	return nil
+}

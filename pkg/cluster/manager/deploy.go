@@ -30,7 +30,6 @@ import (
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
-	"github.com/pingcap/tiup/pkg/crypto"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
@@ -191,23 +190,7 @@ func (m *Manager) Deploy(
 	globalOptions := base.GlobalOptions
 
 	// generate CA and client cert for TLS enabled cluster
-	var ca *crypto.CertificateAuthority
-	if globalOptions.TLSEnabled {
-		// generate CA
-		tlsPath := m.specManager.Path(name, spec.TLSCertKeyDir)
-		if err := utils.CreateDir(tlsPath); err != nil {
-			return err
-		}
-		ca, err = genAndSaveClusterCA(name, tlsPath)
-		if err != nil {
-			return err
-		}
-
-		// generate client cert
-		if err = genAndSaveClientCert(ca, name, tlsPath); err != nil {
-			return err
-		}
-	}
+	ca, err := m.genAndSaveCertificate(name, globalOptions)
 
 	var iterErr error // error when itering over instances
 	iterErr = nil

@@ -16,6 +16,7 @@ package manager
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
@@ -49,7 +50,15 @@ func (m *Manager) TLS(name string, gOpt operator.Options, enable, skipRestart, c
 	base := metadata.GetBaseMeta()
 
 	// set tls_enabled
-	topo.BaseTopo().GlobalOptions.TLSEnabled = enable
+	globalOptions := topo.BaseTopo().GlobalOptions
+	globalOptions.TLSEnabled = enable
+
+	//  load certificate file
+	if enable {
+		if err := loadCertificate(m, name, globalOptions, reloadCertificate); err != nil {
+			return err
+		}
+	}
 
 	// check tiflash version
 	if clusterSpec, ok := topo.(*spec.Specification); ok {
@@ -87,6 +96,13 @@ func (m *Manager) TLS(name string, gOpt operator.Options, enable, skipRestart, c
 		return perrs.Trace(err)
 	}
 
+	if !enable {
+		// the cleanCertificate parameter will only take effect when enable is false
+		if cleanCertificate {
+			os.RemoveAll(m.specManager.Path(name, spec.TLSCertKeyDir))
+		}
+	}
+
 	if enable {
 		log.Infof("Enable cluster `%s` TLS between TiDB components successfully", name)
 	} else {
@@ -94,4 +110,21 @@ func (m *Manager) TLS(name string, gOpt operator.Options, enable, skipRestart, c
 	}
 
 	return nil
+}
+
+// loadCertificate
+// certificate file exists and reload is true
+// will reload certificate file
+func loadCertificate(m *Manager, clusterName string, globalOptions *spec.GlobalOptions, reload bool) error {
+
+	err := m.checkCertificate(clusterName)
+
+	// no need to reload and the file already exists
+	if !reload && err == nil {
+		return nil
+	}
+
+	_, err = m.genAndSaveCertificate(clusterName, globalOptions)
+
+	return err
 }
