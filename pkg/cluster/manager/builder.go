@@ -319,7 +319,7 @@ func buildScaleOutTask(
 		base.Version,
 		gOpt,
 		p,
-	) 
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -725,7 +725,6 @@ func buildTLSTask(
 	if topo.BaseTopo().GlobalOptions.TLSEnabled {
 		// copy certificate to remote host
 		topo.IterInstance(func(inst spec.Instance) {
-
 			deployDir := spec.Abs(base.User, inst.DeployDir())
 			tlsDir := filepath.Join(deployDir, spec.TLSCertKeyDir)
 
@@ -826,11 +825,11 @@ func buildTLSTask(
 	}
 
 	builder.
-		Parallel(false, pushCertificateTasks...).
-		Parallel(false, refreshConfigTasks...).
 		Func("Save meta", func(_ context.Context) error {
 			return m.specManager.SaveMeta(name, metadata)
-		})
+		}).
+		Parallel(false, pushCertificateTasks...).
+		Parallel(false, refreshConfigTasks...)
 
 	if !skipRestart {
 		tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
@@ -844,5 +843,3 @@ func buildTLSTask(
 
 	return builder.Build(), nil
 }
-
-

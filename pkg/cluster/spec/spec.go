@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/creasty/defaults"
+	"github.com/joomcode/errorx"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
@@ -29,6 +30,7 @@ import (
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/proxy"
+	"github.com/pingcap/tiup/pkg/tui"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"golang.org/x/mod/semver"
 )
@@ -215,7 +217,13 @@ func (s *Specification) TLSConfig(dir string) (*tls.Config, error) {
 	if !s.GlobalOptions.TLSEnabled {
 		return nil, nil
 	}
-	return LoadClientCert(dir)
+	tlsConfig, err := LoadClientCert(dir)
+	if err != nil {
+		return nil, errorx.EnsureStackTrace(err).
+			WithProperty(tui.SuggestionFromString("TLS is enabled, but the TLS configuration cannot be obtained"))
+	}
+
+	return tlsConfig, nil
 }
 
 // Type implements Topology interface.

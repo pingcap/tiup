@@ -128,7 +128,6 @@ func (m *Manager) genAndSaveCertificate(clusterName string, globalOptions *spec.
 // checkCertificate  check if the certificate file exists
 // no need to determine whether to enable tls
 func (m *Manager) checkCertificate(clusterName string) error {
-
 	tlsFiles := []string{
 		m.specManager.Path(clusterName, spec.TLSCertKeyDir, spec.TLSCACert),
 		m.specManager.Path(clusterName, spec.TLSCertKeyDir, spec.TLSClientKey),
@@ -141,6 +140,5 @@ func (m *Manager) checkCertificate(clusterName string) error {
 			return perrs.Errorf("TLS file: %s does not exist", file)
 		}
 	}
-
 	return nil
 }

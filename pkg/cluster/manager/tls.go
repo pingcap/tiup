@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
@@ -69,6 +70,15 @@ func (m *Manager) TLS(name string, gOpt operator.Options, enable, skipRestart, c
 		}
 	}
 
+	if err := tui.PromptForConfirmOrAbortError(
+		fmt.Sprintf("Enable/Disable TLS %s will restart the cluster, the policy is %s.\nDo you want to continue? [y/N]:",
+			color.HiYellowString(name),
+			color.HiRedString(fmt.Sprintf("%v", !skipRestart)),
+		),
+	); err != nil {
+		return err
+	}
+
 	var (
 		sshProxyProps *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
 	)
@@ -96,6 +106,10 @@ func (m *Manager) TLS(name string, gOpt operator.Options, enable, skipRestart, c
 		return perrs.Trace(err)
 	}
 
+	if err := m.specManager.SaveMeta(name, metadata); err != nil {
+		return err
+	}
+
 	if !enable {
 		// the cleanCertificate parameter will only take effect when enable is false
 		if cleanCertificate {
@@ -109,6 +123,10 @@ func (m *Manager) TLS(name string, gOpt operator.Options, enable, skipRestart, c
 		log.Infof("Disable cluster `%s` TLS between TiDB components successfully", name)
 	}
 
+	if skipRestart {
+		log.Infof("Please restart the cluster `%s` to apply the TLS configuration", name)
+	}
+
 	return nil
 }
 
@@ -116,7 +134,6 @@ func (m *Manager) TLS(name string, gOpt operator.Options, enable, skipRestart, c
 // certificate file exists and reload is true
 // will reload certificate file
 func loadCertificate(m *Manager, clusterName string, globalOptions *spec.GlobalOptions, reload bool) error {
-
 	err := m.checkCertificate(clusterName)
 
 	// no need to reload and the file already exists

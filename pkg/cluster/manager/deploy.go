@@ -191,6 +191,9 @@ func (m *Manager) Deploy(
 
 	// generate CA and client cert for TLS enabled cluster
 	ca, err := m.genAndSaveCertificate(name, globalOptions)
+	if err != nil {
+		return err
+	}
 
 	var iterErr error // error when itering over instances
 	iterErr = nil
