@@ -207,6 +207,7 @@ func init() {
 		newTelemetryCmd(),
 		newReplayCmd(),
 		newTemplateCmd(),
+		newTLSCmd(),
 	)
 }
 

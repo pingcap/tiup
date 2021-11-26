@@ -1,0 +1,97 @@
+// Copyright 2020 PingCAP, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package manager
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/joomcode/errorx"
+	perrs "github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
+	operator "github.com/pingcap/tiup/pkg/cluster/operation"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/tui"
+	"golang.org/x/mod/semver"
+)
+
+// TLS set cluster enable/disable encrypt communication by tls
+func (m *Manager) TLS(name string, gOpt operator.Options, enable, skipRestart, cleanCertificate, reloadCertificate bool) error {
+	if err := clusterutil.ValidateClusterNameOrError(name); err != nil {
+		return err
+	}
+
+	// check locked
+	if err := m.specManager.ScaleOutLockedErr(name); err != nil {
+		return err
+	}
+
+	metadata, err := m.meta(name)
+	if err != nil {
+		return err
+	}
+
+	topo := metadata.GetTopology()
+	base := metadata.GetBaseMeta()
+
+	// set tls_enabled
+	topo.BaseTopo().GlobalOptions.TLSEnabled = enable
+
+	// check tiflash version
+	if clusterSpec, ok := topo.(*spec.Specification); ok {
+		if clusterSpec.GlobalOptions.TLSEnabled &&
+			semver.Compare(base.Version, "v4.0.5") < 0 &&
+			len(clusterSpec.TiFlashServers) > 0 {
+			return fmt.Errorf("TiFlash %s is not supported in TLS enabled cluster", base.Version)
+		}
+	}
+
+	var (
+		sshProxyProps *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
+	)
+	if gOpt.SSHType != executor.SSHTypeNone {
+		var err error
+		if len(gOpt.SSHProxyHost) != 0 {
+			if sshProxyProps, err = tui.ReadIdentityFileOrPassword(gOpt.SSHProxyIdentity, gOpt.SSHProxyUsePassword); err != nil {
+				return err
+			}
+		}
+	}
+
+	// Build the tls  tasks
+	t, err := buildTLSTask(
+		m, name, metadata, gOpt, sshProxyProps, skipRestart)
+	if err != nil {
+		return err
+	}
+
+	if err := t.Execute(ctxt.New(context.Background(), gOpt.Concurrency)); err != nil {
+		if errorx.Cast(err) != nil {
+			// FIXME: Map possible task errors and give suggestions.
+			return err
+		}
+		return perrs.Trace(err)
+	}
+
+	if enable {
+		log.Infof("Enable cluster `%s` TLS between TiDB components successfully", name)
+	} else {
+		log.Infof("Disable cluster `%s` TLS between TiDB components successfully", name)
+	}
+
+	return nil
+}
