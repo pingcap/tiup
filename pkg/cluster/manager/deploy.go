@@ -275,23 +275,7 @@ func (m *Manager) Deploy(
 			filepath.Join(deployDir, "scripts"),
 		}
 
-		t := task.NewBuilder(gOpt.DisplayMode).
-			UserSSH(
-				inst.GetHost(),
-				inst.GetSSHPort(),
-				globalOptions.User,
-				gOpt.SSHTimeout,
-				gOpt.OptTimeout,
-				gOpt.SSHProxyHost,
-				gOpt.SSHProxyPort,
-				gOpt.SSHProxyUser,
-				sshProxyProps.Password,
-				sshProxyProps.IdentityFile,
-				sshProxyProps.IdentityFilePassphrase,
-				gOpt.SSHProxyTimeout,
-				gOpt.SSHType,
-				globalOptions.SSHType,
-			).
+		t := task.NewSimpleUerSSH(inst.GetHost(), inst.GetSSHPort(), globalOptions.User, gOpt, sshProxyProps, globalOptions.SSHType).
 			Mkdir(globalOptions.User, inst.GetHost(), deployDirs...).
 			Mkdir(globalOptions.User, inst.GetHost(), dataDirs...)
 
@@ -358,14 +342,28 @@ func (m *Manager) Deploy(
 	downloadCompTasks = append(downloadCompTasks, dlTasks...)
 	deployCompTasks = append(deployCompTasks, dpTasks...)
 
+	monitorConfigTasks := buildInitMonitoredConfigTasks(
+		m.specManager,
+		name,
+		uniqueHosts,
+		noAgentHosts,
+		*topo.BaseTopo().GlobalOptions,
+		topo.GetMonitoredOptions(),
+		gOpt.SSHTimeout,
+		gOpt.OptTimeout,
+		gOpt,
+		sshProxyProps,
+	)
+
 	builder := task.NewBuilder(gOpt.DisplayMode).
 		Step("+ Generate SSH keys",
 			task.NewBuilder(gOpt.DisplayMode).SSHKeyGen(m.specManager.Path(name, "ssh", "id_rsa")).Build()).
 		ParallelStep("+ Download TiDB components", false, downloadCompTasks...).
 		ParallelStep("+ Initialize target host environments", false, envInitTasks...).
-		ParallelStep("+ Copy files", false, deployCompTasks...).
+		ParallelStep("+ Deploy TiDB instance", false, deployCompTasks...).
 		ParallelStep("+ Copy certificate to remote host", gOpt.Force, certificateTasks...).
-		ParallelStep("+ Init instance configs", gOpt.Force, refreshConfigTasks...)
+		ParallelStep("+ Init instance configs", gOpt.Force, refreshConfigTasks...).
+		ParallelStep("+ Init monitor configs", gOpt.Force, monitorConfigTasks...)
 
 	if afterDeploy != nil {
 		afterDeploy(builder, topo, gOpt)

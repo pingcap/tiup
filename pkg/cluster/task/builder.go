@@ -27,6 +27,7 @@ import (
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/proxy"
+	"github.com/pingcap/tiup/pkg/tui"
 )
 
 // Builder is used to build TiUP task
@@ -77,6 +78,27 @@ func (b *Builder) RootSSH(
 		sshType:         sshType,
 	})
 	return b
+}
+
+// NewSimpleUerSSH  append a UserSSH task to the current task collection with operator.Options and SSHConnectionProps
+func NewSimpleUerSSH(host string, port int, user string, gOpt operator.Options, p *tui.SSHConnectionProps, sshType executor.SSHType) *Builder {
+	return NewBuilder(gOpt.DisplayMode).
+		UserSSH(
+			host,
+			port,
+			user,
+			gOpt.SSHTimeout,
+			gOpt.OptTimeout,
+			gOpt.SSHProxyHost,
+			gOpt.SSHProxyPort,
+			gOpt.SSHProxyUser,
+			p.Password,
+			p.IdentityFile,
+			p.IdentityFilePassphrase,
+			gOpt.SSHProxyTimeout,
+			gOpt.SSHType,
+			sshType,
+		)
 }
 
 // UserSSH append a UserSSH task to the current task collection

@@ -68,9 +68,9 @@ func buildScaleOutTask(
 	final func(b *task.Builder, name string, meta spec.Metadata, gOpt operator.Options),
 ) (task.Task, error) {
 	var (
-		envInitTasks      []task.Task // tasks which are used to initialize environment
-		downloadCompTasks []task.Task // tasks which are used to download components
-		deployCompTasks   []task.Task // tasks which are used to copy components to remote host
+		envInitTasks      []*task.StepDisplay // tasks which are used to initialize environment
+		downloadCompTasks []*task.StepDisplay // tasks which are used to download components
+		deployCompTasks   []*task.StepDisplay // tasks which are used to copy components to remote host
 	)
 
 	topo := metadata.GetTopology()
@@ -114,6 +114,7 @@ func buildScaleOutTask(
 				dirs = append(dirs, spec.Abs(globalOptions.User, dirname))
 			}
 		}
+
 		t := task.NewBuilder(gOpt.DisplayMode).
 			RootSSH(
 				instance.GetHost(),
@@ -136,12 +137,12 @@ func buildScaleOutTask(
 			).
 			EnvInit(instance.GetHost(), base.User, base.Group, opt.SkipCreateUser || globalOptions.User == opt.User).
 			Mkdir(globalOptions.User, instance.GetHost(), dirs...).
-			Build()
+			BuildAsStep(fmt.Sprintf("  - Initialized host %s ", host))
 		envInitTasks = append(envInitTasks, t)
 	})
 
 	// Download missing component
-	downloadCompTasks = convertStepDisplaysToTasks(buildDownloadCompTasks(base.Version, newPart, gOpt, m.bindVersion))
+	downloadCompTasks = buildDownloadCompTasks(base.Version, newPart, gOpt, m.bindVersion)
 
 	sshType := topo.BaseTopo().GlobalOptions.SSHType
 
@@ -161,27 +162,8 @@ func buildScaleOutTask(
 			filepath.Join(deployDir, "conf"),
 			filepath.Join(deployDir, "scripts"),
 		}
-		if topo.BaseTopo().GlobalOptions.TLSEnabled {
-			deployDirs = append(deployDirs, filepath.Join(deployDir, "tls"))
-		}
 		// Deploy component
-		tb := task.NewBuilder(gOpt.DisplayMode).
-			UserSSH(
-				inst.GetHost(),
-				inst.GetSSHPort(),
-				base.User,
-				gOpt.SSHTimeout,
-				gOpt.OptTimeout,
-				gOpt.SSHProxyHost,
-				gOpt.SSHProxyPort,
-				gOpt.SSHProxyUser,
-				p.Password,
-				p.IdentityFile,
-				p.IdentityFilePassphrase,
-				gOpt.SSHProxyTimeout,
-				gOpt.SSHType,
-				sshType,
-			).
+		tb := task.NewSimpleUerSSH(inst.GetHost(), inst.GetSSHPort(), base.User, gOpt, p, sshType).
 			Mkdir(base.User, inst.GetHost(), deployDirs...).
 			Mkdir(base.User, inst.GetHost(), dataDirs...).
 			Mkdir(base.User, inst.GetHost(), logDir)
@@ -216,20 +198,9 @@ func buildScaleOutTask(
 			}
 		}
 
-		t := tb.ScaleConfig(name,
-			base.Version,
-			m.specManager,
-			topo,
-			inst,
-			base.User,
-			meta.DirPaths{
-				Deploy: deployDir,
-				Data:   dataDirs,
-				Log:    logDir,
-			},
-		).Build()
-		deployCompTasks = append(deployCompTasks, t)
+		deployCompTasks = append(deployCompTasks, tb.BuildAsStep(fmt.Sprintf("  - Deploy instance %s -> %s", inst.ComponentName(), inst.ID())))
 	})
+
 	if iterErr != nil {
 		return nil, iterErr
 	}
@@ -238,6 +209,9 @@ func buildScaleOutTask(
 	if err != nil {
 		return nil, err
 	}
+
+	// init scale out config
+	scaleOutConfigTasks := buildScaleConfigTasks(m, name, topo, newPart, base, gOpt, p)
 
 	// always ignore config check result in scale out
 	gOpt.IgnoreConfigCheck = true
@@ -267,8 +241,24 @@ func buildScaleOutTask(
 	if err != nil {
 		return nil, err
 	}
-	downloadCompTasks = append(downloadCompTasks, convertStepDisplaysToTasks(dlTasks)...)
-	deployCompTasks = append(deployCompTasks, convertStepDisplaysToTasks(dpTasks)...)
+
+	downloadCompTasks = append(downloadCompTasks, dlTasks...)
+	deployCompTasks = append(deployCompTasks, dpTasks...)
+
+	// monitor config
+	monitorConfigTasks := buildInitMonitoredConfigTasks(
+		m.specManager,
+		name,
+		uninitializedHosts,
+		noAgentHosts,
+		*topo.BaseTopo().GlobalOptions,
+		topo.GetMonitoredOptions(),
+		gOpt.SSHTimeout,
+		gOpt.OptTimeout,
+		gOpt,
+		p,
+	)
+	scaleOutConfigTasks = append(scaleOutConfigTasks, monitorConfigTasks...)
 
 	builder, err := m.sshTaskBuilder(name, topo, base.User, gOpt)
 	if err != nil {
@@ -278,10 +268,11 @@ func buildScaleOutTask(
 	// stage2 just start and init config
 	if !opt.Stage2 {
 		builder.
-			Parallel(false, downloadCompTasks...).
-			Parallel(false, envInitTasks...).
-			Parallel(false, deployCompTasks...).
-			ParallelStep("+ Copy certificate to remote host", gOpt.Force, certificateTasks...)
+			ParallelStep("+ Download TiDB components", gOpt.Force, downloadCompTasks...).
+			ParallelStep("+ Initialize target host environments", gOpt.Force, envInitTasks...).
+			ParallelStep("+ Deploy TiDB instance", gOpt.Force, deployCompTasks...).
+			ParallelStep("+ Copy certificate to remote host", gOpt.Force, certificateTasks...).
+			ParallelStep("+ Generate scale-out config", gOpt.Force, scaleOutConfigTasks...)
 	}
 
 	if afterDeploy != nil {
@@ -303,7 +294,7 @@ func buildScaleOutTask(
 		builder.Func("Start Cluster", func(ctx context.Context) error {
 			return operator.Start(ctx, newPart, operator.Options{OptTimeout: gOpt.OptTimeout, Operation: operator.ScaleOutOperation}, tlsCfg)
 		}).
-			ParallelStep("+ Refresh monitor configs", false, refreshConfigTasks...).
+			ParallelStep("+ Refresh configs", false, refreshConfigTasks...).
 			Parallel(false, buildReloadPromTasks(metadata.GetTopology(), gOpt)...)
 	}
 
@@ -320,20 +311,52 @@ func buildScaleOutTask(
 	return builder.Build(), nil
 }
 
+// buildScaleConfigTasks  generates certificate for instance and transfers it to the server
+func buildScaleConfigTasks(
+	m *Manager,
+	name string,
+	topo spec.Topology,
+	newPart spec.Topology,
+	base *spec.BaseMeta,
+	gOpt operator.Options,
+	p *tui.SSHConnectionProps) []*task.StepDisplay {
+	var (
+		scaleConfigTasks []*task.StepDisplay // tasks which are used to copy certificate to remote host
+	)
+
+	// copy certificate to remote host
+	newPart.IterInstance(func(inst spec.Instance) {
+		deployDir := spec.Abs(base.User, inst.DeployDir())
+		// data dir would be empty for components which don't need it
+		dataDirs := spec.MultiDirAbs(base.User, inst.DataDir())
+		// log dir will always be with values, but might not used by the component
+		logDir := spec.Abs(base.User, inst.LogDir())
+
+		t := task.NewSimpleUerSSH(inst.GetHost(), inst.GetSSHPort(), base.User, gOpt, p, topo.BaseTopo().GlobalOptions.SSHType).
+			ScaleConfig(
+				name,
+				base.Version,
+				m.specManager,
+				topo,
+				inst,
+				base.User,
+				meta.DirPaths{
+					Deploy: deployDir,
+					Data:   dataDirs,
+					Log:    logDir,
+				},
+			).BuildAsStep(fmt.Sprintf("  - Generate Scale Config %s -> %s", inst.ComponentName(), inst.ID()))
+		scaleConfigTasks = append(scaleConfigTasks, t)
+	})
+
+	return scaleConfigTasks
+}
+
 type hostInfo struct {
 	ssh  int    // ssh port of host
 	os   string // operating system
 	arch string // cpu architecture
 	// vendor string
-}
-
-// Deprecated
-func convertStepDisplaysToTasks(t []*task.StepDisplay) []task.Task {
-	tasks := make([]task.Task, 0, len(t))
-	for _, sd := range t {
-		tasks = append(tasks, sd)
-	}
-	return tasks
 }
 
 func buildMonitoredDeployTask(
@@ -355,7 +378,6 @@ func buildMonitoredDeployTask(
 	// monitoring agents
 	for _, comp := range []string{spec.ComponentNodeExporter, spec.ComponentBlackboxExporter} {
 		version := m.bindVersion(comp, version)
-
 		for host, info := range uniqueHosts {
 			// skip deploying monitoring agents if the instance is marked so
 			if noAgentHosts.Exist(host) {
@@ -394,23 +416,7 @@ func buildMonitoredDeployTask(
 			}
 
 			// Deploy component
-			tb := task.NewBuilder(gOpt.DisplayMode).
-				UserSSH(
-					host,
-					info.ssh,
-					globalOptions.User,
-					gOpt.SSHTimeout,
-					gOpt.OptTimeout,
-					gOpt.SSHProxyHost,
-					gOpt.SSHProxyPort,
-					gOpt.SSHProxyUser,
-					p.Password,
-					p.IdentityFile,
-					p.IdentityFilePassphrase,
-					gOpt.SSHProxyTimeout,
-					gOpt.SSHType,
-					globalOptions.SSHType,
-				).
+			tb := task.NewSimpleUerSSH(host, info.ssh, globalOptions.User, gOpt, p, globalOptions.SSHType).
 				Mkdir(globalOptions.User, host, deployDirs...).
 				CopyComponent(
 					comp,
@@ -420,53 +426,15 @@ func buildMonitoredDeployTask(
 					"",
 					host,
 					deployDir,
-				).
-				MonitoredConfig(
-					name,
-					comp,
-					host,
-					globalOptions.ResourceControl,
-					monitoredOptions,
-					globalOptions.User,
-					globalOptions.TLSEnabled,
-					meta.DirPaths{
-						Deploy: deployDir,
-						Data:   []string{dataDir},
-						Log:    logDir,
-						Cache:  m.specManager.Path(name, spec.TempConfigPath),
-					},
 				)
-
-			if globalOptions.TLSEnabled && comp == spec.ComponentBlackboxExporter {
-				ca, innerr := crypto.ReadCA(
-					name,
-					m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSCACert),
-					m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSCAKey),
-				)
-				if innerr != nil {
-					err = innerr
-					return
-				}
-				tb = tb.TLSCert(
-					host,
-					spec.ComponentBlackboxExporter,
-					spec.ComponentBlackboxExporter,
-					monitoredOptions.BlackboxExporterPort,
-					ca,
-					meta.DirPaths{
-						Deploy: deployDir,
-						Cache:  m.specManager.Path(name, spec.TempConfigPath),
-					})
-			}
-
 			deployCompTasks = append(deployCompTasks, tb.BuildAsStep(fmt.Sprintf("  - Copy %s -> %s", comp, host)))
 		}
 	}
 	return
 }
 
-// buildMonitoredCertificateTask  generates certificate for instance and transfers it to the server
-func buildMonitoredCertificateTask(
+// buildMonitoredCertificateTasks  generates certificate for instance and transfers it to the server
+func buildMonitoredCertificateTasks(
 	m *Manager,
 	name string,
 	uniqueHosts map[string]hostInfo, // host -> ssh-port, os, arch
@@ -495,23 +463,7 @@ func buildMonitoredCertificateTask(
 				tlsDir := filepath.Join(deployDir, "tls")
 
 				// Deploy component
-				tb := task.NewBuilder(gOpt.DisplayMode).
-					UserSSH(
-						host,
-						info.ssh,
-						globalOptions.User,
-						gOpt.SSHTimeout,
-						gOpt.OptTimeout,
-						gOpt.SSHProxyHost,
-						gOpt.SSHProxyPort,
-						gOpt.SSHProxyUser,
-						p.Password,
-						p.IdentityFile,
-						p.IdentityFilePassphrase,
-						gOpt.SSHProxyTimeout,
-						gOpt.SSHType,
-						globalOptions.SSHType,
-					).
+				tb := task.NewSimpleUerSSH(host, info.ssh, globalOptions.User, gOpt, p, globalOptions.SSHType).
 					Mkdir(globalOptions.User, host, tlsDir)
 
 				if comp == spec.ComponentBlackboxExporter {
@@ -575,23 +527,7 @@ func buildInitMonitoredConfigTasks(
 			// log dir will always be with values, but might not used by the component
 			logDir := spec.Abs(globalOptions.User, monitoredOptions.LogDir)
 			// Generate configs
-			t := task.NewBuilder(gOpt.DisplayMode).
-				UserSSH(
-					host,
-					info.ssh,
-					globalOptions.User,
-					sshTimeout,
-					exeTimeout,
-					gOpt.SSHProxyHost,
-					gOpt.SSHProxyPort,
-					gOpt.SSHProxyUser,
-					p.Password,
-					p.IdentityFile,
-					p.IdentityFilePassphrase,
-					gOpt.SSHProxyTimeout,
-					gOpt.SSHType,
-					globalOptions.SSHType,
-				).
+			t := task.NewSimpleUerSSH(host, info.ssh, globalOptions.User, gOpt, p, globalOptions.SSHType).
 				MonitoredConfig(
 					name,
 					comp,
@@ -607,7 +543,7 @@ func buildInitMonitoredConfigTasks(
 						Cache:  specManager.Path(name, spec.TempConfigPath),
 					},
 				).
-				BuildAsStep(fmt.Sprintf("  - Refresh config %s -> %s", comp, host))
+				BuildAsStep(fmt.Sprintf("  - Init config %s -> %s", comp, host))
 			tasks = append(tasks, t)
 		}
 	}
@@ -749,7 +685,7 @@ func buildTLSTask(
 
 	// monitor
 	uniqueHosts, noAgentHosts := getMonitorHosts(topo)
-	MoniterCertificateTasks, err := buildMonitoredCertificateTask(
+	MoniterCertificateTasks, err := buildMonitoredCertificateTasks(
 		m,
 		name,
 		uniqueHosts,
@@ -781,14 +717,11 @@ func buildTLSTask(
 		return nil, err
 	}
 
-	builder.
+	defer builder.
 		ParallelStep("+ Copy certificate to remote host", gOpt.Force, certificateTasks...).
 		ParallelStep("+ Refresh instance configs", gOpt.Force, refreshConfigTasks...).
-		ParallelStep("+ Copy certificate to remote host", gOpt.Force, MoniterCertificateTasks...).
-		ParallelStep("+ Refresh monitor configs", gOpt.Force, monitorConfigTasks...).
-		Func("Save meta", func(_ context.Context) error {
-			return m.specManager.SaveMeta(name, metadata)
-		})
+		ParallelStep("+ Copy monitor certificate to remote host", gOpt.Force, MoniterCertificateTasks...).
+		ParallelStep("+ Refresh monitor configs", gOpt.Force, monitorConfigTasks...)
 
 	if !skipRestart {
 		tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
@@ -799,6 +732,11 @@ func buildTLSTask(
 			return operator.Restart(ctx, topo, gOpt, tlsCfg)
 		})
 	}
+
+	// finally save metadata
+	builder.Func("Save meta", func(_ context.Context) error {
+		return m.specManager.SaveMeta(name, metadata)
+	})
 
 	return builder.Build(), nil
 }
@@ -822,24 +760,8 @@ func buildCertificateTasks(
 			deployDir := spec.Abs(base.User, inst.DeployDir())
 			tlsDir := filepath.Join(deployDir, spec.TLSCertKeyDir)
 
-			// generate and transfer tls cert for instance
-			tb := task.NewBuilder(gOpt.DisplayMode).
-				UserSSH(
-					inst.GetHost(),
-					inst.GetSSHPort(),
-					base.User,
-					gOpt.SSHTimeout,
-					gOpt.OptTimeout,
-					gOpt.SSHProxyHost,
-					gOpt.SSHProxyPort,
-					gOpt.SSHProxyUser,
-					p.Password,
-					p.IdentityFile,
-					p.IdentityFilePassphrase,
-					gOpt.SSHProxyTimeout,
-					gOpt.SSHType,
-					topo.BaseTopo().GlobalOptions.SSHType,
-				).Mkdir(base.User, inst.GetHost(), deployDir, tlsDir)
+			tb := task.NewSimpleUerSSH(inst.GetHost(), inst.GetSSHPort(), base.User, gOpt, p, topo.BaseTopo().GlobalOptions.SSHType).
+				Mkdir(base.User, inst.GetHost(), deployDir, tlsDir)
 
 			ca, err := crypto.ReadCA(
 				name,
