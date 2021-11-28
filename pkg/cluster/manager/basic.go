@@ -17,6 +17,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/fatih/color"
@@ -240,24 +242,6 @@ func (m *Manager) RestartCluster(name string, gOpt operator.Options, skipConfirm
 	return nil
 }
 
-// // monitor
-// uniqueHosts := make(map[string]hostInfo) // host -> ssh-port, os, arch
-// noAgentHosts := set.NewStringSet()
-// topo.IterInstance(func(inst spec.Instance) {
-// 	// add the instance to ignore list if it marks itself as ignore_exporter
-// 	if inst.IgnoreMonitorAgent() {
-// 		noAgentHosts.Insert(inst.GetHost())
-// 	}
-
-// 	if _, found := uniqueHosts[inst.GetHost()]; !found {
-// 		uniqueHosts[inst.GetHost()] = hostInfo{
-// 			ssh:  inst.GetSSHPort(),
-// 			os:   inst.OS(),
-// 			arch: inst.Arch(),
-// 		}
-// 	}
-// })
-
 // getMonitorHosts  get the instance to ignore list if it marks itself as ignore_exporter
 func getMonitorHosts(topo spec.Topology) (map[string]hostInfo, set.StringSet) {
 	// monitor
@@ -279,4 +263,64 @@ func getMonitorHosts(topo spec.Topology) (map[string]hostInfo, set.StringSet) {
 	})
 
 	return uniqueHosts, noAgentHosts
+}
+
+func getCleanupFile(topo spec.Topology, cleanupData, cleanupLog, cleanupTLS bool, retainDataRoles, retainDataNodes []string) map[string]set.StringSet {
+	// calculate file paths to be deleted before the prompt
+	delFileMap := make(map[string]set.StringSet)
+	for _, com := range topo.ComponentsByStopOrder() {
+		instances := com.Instances()
+		retainDataRoles := set.NewStringSet(retainDataRoles...)
+		retainDataNodes := set.NewStringSet(retainDataNodes...)
+
+		for _, ins := range instances {
+			// not cleaning files of monitor agents if the instance does not have one
+			switch ins.ComponentName() {
+			case spec.ComponentNodeExporter,
+				spec.ComponentBlackboxExporter:
+				if ins.IgnoreMonitorAgent() {
+					continue
+				}
+			}
+
+			// Some data of instances will be retained
+			dataRetained := retainDataRoles.Exist(ins.ComponentName()) ||
+				retainDataNodes.Exist(ins.ID()) || retainDataNodes.Exist(ins.GetHost())
+
+			if dataRetained {
+				continue
+			}
+
+			// prevent duplicate directories
+			dataPaths := set.NewStringSet()
+			logPaths := set.NewStringSet()
+			tlsPath := set.NewStringSet()
+
+			if cleanupData && len(ins.DataDir()) > 0 {
+				for _, dataDir := range strings.Split(ins.DataDir(), ",") {
+					dataPaths.Insert(path.Join(dataDir, "*"))
+				}
+			}
+
+			if cleanupLog && len(ins.LogDir()) > 0 {
+				for _, logDir := range strings.Split(ins.LogDir(), ",") {
+					logPaths.Insert(path.Join(logDir, "*.log"))
+				}
+			}
+
+			// clean tls data
+			if cleanupTLS && len(ins.LogDir()) > 0 {
+				deployDir := spec.Abs(topo.BaseTopo().GlobalOptions.User, ins.DeployDir())
+				tlsDir := filepath.Join(deployDir, spec.TLSCertKeyDir)
+				tlsPath.Insert(tlsDir)
+			}
+
+			if delFileMap[ins.GetHost()] == nil {
+				delFileMap[ins.GetHost()] = set.NewStringSet()
+			}
+			delFileMap[ins.GetHost()].Join(logPaths).Join(dataPaths).Join(tlsPath)
+		}
+	}
+
+	return delFileMap
 }

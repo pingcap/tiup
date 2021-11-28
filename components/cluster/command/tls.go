@@ -52,6 +52,18 @@ func newTLSCmd() *cobra.Command {
 				return perrs.New("enable or disable must be specified at least one")
 			}
 
+			if !enableTLS && skipRestart && cleanCertificate {
+				return perrs.New("disabling TLS and cleaning up TLS files without restart the cluster is not allowed")
+			}
+
+			if enableTLS && cleanCertificate {
+				return perrs.New("clean-certificate only works when tls disable")
+			}
+
+			if !enableTLS && reloadCertificate {
+				return perrs.New("reload-certificate only works when tls enable")
+			}
+
 			return cm.TLS(clusterName, gOpt, enableTLS, skipRestart, cleanCertificate, reloadCertificate)
 		},
 	}

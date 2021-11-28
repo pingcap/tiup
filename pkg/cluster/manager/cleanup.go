@@ -16,8 +16,6 @@ package manager
 import (
 	"context"
 	"fmt"
-	"path"
-	"strings"
 
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
@@ -27,7 +25,6 @@ import (
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
-	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
 )
 
@@ -49,53 +46,8 @@ func (m *Manager) CleanCluster(name string, gOpt operator.Options, cleanOpt oper
 	if err != nil {
 		return err
 	}
-
 	// calculate file paths to be deleted before the prompt
-	delFileMap := make(map[string]set.StringSet)
-	for _, com := range topo.ComponentsByStopOrder() {
-		instances := com.Instances()
-		retainDataRoles := set.NewStringSet(cleanOpt.RetainDataRoles...)
-		retainDataNodes := set.NewStringSet(cleanOpt.RetainDataNodes...)
-
-		for _, ins := range instances {
-			// not cleaning files of monitor agents if the instance does not have one
-			switch ins.ComponentName() {
-			case spec.ComponentNodeExporter,
-				spec.ComponentBlackboxExporter:
-				if ins.IgnoreMonitorAgent() {
-					continue
-				}
-			}
-
-			// Some data of instances will be retained
-			dataRetained := retainDataRoles.Exist(ins.ComponentName()) ||
-				retainDataNodes.Exist(ins.ID()) || retainDataNodes.Exist(ins.GetHost())
-
-			if dataRetained {
-				continue
-			}
-
-			dataPaths := set.NewStringSet()
-			logPaths := set.NewStringSet()
-
-			if cleanOpt.CleanupData && len(ins.DataDir()) > 0 {
-				for _, dataDir := range strings.Split(ins.DataDir(), ",") {
-					dataPaths.Insert(path.Join(dataDir, "*"))
-				}
-			}
-
-			if cleanOpt.CleanupLog && len(ins.LogDir()) > 0 {
-				for _, logDir := range strings.Split(ins.LogDir(), ",") {
-					logPaths.Insert(path.Join(logDir, "*.log"))
-				}
-			}
-
-			if delFileMap[ins.GetHost()] == nil {
-				delFileMap[ins.GetHost()] = set.NewStringSet()
-			}
-			delFileMap[ins.GetHost()].Join(logPaths).Join(dataPaths)
-		}
-	}
+	delFileMap := getCleanupFile(topo, cleanOpt.CleanupData, cleanOpt.CleanupLog, false, cleanOpt.RetainDataRoles, cleanOpt.RetainDataNodes)
 
 	if !skipConfirm {
 		target := ""

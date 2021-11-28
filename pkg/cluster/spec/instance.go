@@ -342,6 +342,11 @@ func (i *BaseInstance) DeployDir() string {
 	return reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("DeployDir").String()
 }
 
+// TLSDir implements Instance interface
+func (i *BaseInstance) TLSDir() string {
+	return filepath.Join(i.DeployDir())
+}
+
 // DataDir implements Instance interface
 func (i *BaseInstance) DataDir() string {
 	dataDir := reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("DataDir")

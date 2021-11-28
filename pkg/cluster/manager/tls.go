@@ -93,7 +93,7 @@ func (m *Manager) TLS(name string, gOpt operator.Options, enable, skipRestart, c
 
 	// Build the tls  tasks
 	t, err := buildTLSTask(
-		m, name, metadata, gOpt, sshProxyProps, skipRestart)
+		m, name, metadata, gOpt, sshProxyProps, skipRestart, cleanCertificate)
 	if err != nil {
 		return err
 	}

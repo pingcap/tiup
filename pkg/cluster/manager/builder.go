@@ -412,7 +412,7 @@ func buildMonitoredDeployTask(
 				filepath.Join(deployDir, "scripts"),
 			}
 			if globalOptions.TLSEnabled {
-				deployDirs = append(deployDirs, filepath.Join(deployDir, "tls"))
+				deployDirs = append(deployDirs, filepath.Join(deployDir, spec.TLSCertKeyDir))
 			}
 
 			// Deploy component
@@ -460,7 +460,7 @@ func buildMonitoredCertificateTasks(
 				}
 
 				deployDir := spec.Abs(globalOptions.User, monitoredOptions.DeployDir)
-				tlsDir := filepath.Join(deployDir, "tls")
+				tlsDir := filepath.Join(deployDir, spec.TLSCertKeyDir)
 
 				// Deploy component
 				tb := task.NewSimpleUerSSH(host, info.ssh, globalOptions.User, gOpt, p, globalOptions.SSHType).
@@ -664,7 +664,7 @@ func buildTLSTask(
 	metadata spec.Metadata,
 	gOpt operator.Options,
 	p *tui.SSHConnectionProps,
-	skipRestart bool,
+	skipRestart, cleanup bool,
 ) (task.Task, error) {
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
@@ -722,6 +722,14 @@ func buildTLSTask(
 		ParallelStep("+ Refresh instance configs", gOpt.Force, refreshConfigTasks...).
 		ParallelStep("+ Copy monitor certificate to remote host", gOpt.Force, MoniterCertificateTasks...).
 		ParallelStep("+ Refresh monitor configs", gOpt.Force, monitorConfigTasks...)
+
+		// disable tls: can cleanup tls files
+	if !topo.BaseTopo().GlobalOptions.TLSEnabled && cleanup {
+		delFileMap := getCleanupFile(topo, false, false, cleanup, []string{}, []string{})
+		builder.Func("CleanupCluster", func(ctx context.Context) error {
+			return operator.CleanupComponent(ctx, delFileMap)
+		})
+	}
 
 	if !skipRestart {
 		tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
