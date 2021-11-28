@@ -175,6 +175,12 @@ func (i *GrafanaInstance) InitConfig(
 		ConfigToFile(fp); err != nil {
 		return err
 	}
+
+	// doesn't work
+	if _, err := i.setTLSConfig(ctx, false, nil, paths); err != nil {
+		return err
+	}
+
 	dst = filepath.Join(paths.Deploy, "conf", "grafana.ini")
 	if err := e.Transfer(ctx, fp, dst, false, 0, false); err != nil {
 		return err
@@ -220,6 +226,11 @@ func (i *GrafanaInstance) InitConfig(
 	}
 	dst = filepath.Join(paths.Deploy, "provisioning", "datasources", "datasource.yml")
 	return i.TransferLocalConfigFile(ctx, e, fp, dst)
+}
+
+// setTLSConfig set TLS Config to support enable/disable TLS
+func (i *GrafanaInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
+	return nil, nil
 }
 
 func (i *GrafanaInstance) initDashboards(ctx context.Context, e ctxt.Executor, spec *GrafanaSpec, paths meta.DirPaths, clusterName string) error {

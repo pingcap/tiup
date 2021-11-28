@@ -194,7 +194,8 @@ func (i *PDInstance) InitConfig(
 	if err := e.Transfer(ctx, fp, dst, false, 0, false); err != nil {
 		return err
 	}
-	if _, _, err := e.Execute(ctx, "chmod +x "+dst, false); err != nil {
+	_, _, err := e.Execute(ctx, "chmod +x "+dst, false)
+	if err != nil {
 		return err
 	}
 
@@ -222,23 +223,9 @@ func (i *PDInstance) InitConfig(
 	}
 
 	// set TLS configs
-	if enableTLS {
-		if spec.Config == nil {
-			spec.Config = make(map[string]interface{})
-		}
-		spec.Config["security.cacert-path"] = fmt.Sprintf(
-			"%s/tls/%s",
-			paths.Deploy,
-			TLSCACert,
-		)
-		spec.Config["security.cert-path"] = fmt.Sprintf(
-			"%s/tls/%s.crt",
-			paths.Deploy,
-			i.Role())
-		spec.Config["security.key-path"] = fmt.Sprintf(
-			"%s/tls/%s.pem",
-			paths.Deploy,
-			i.Role())
+	spec.Config, err = i.setTLSConfig(ctx, enableTLS, spec.Config, paths)
+	if err != nil {
+		return err
 	}
 
 	if err := i.MergeServerConfig(ctx, e, globalConfig, spec.Config, paths); err != nil {
@@ -246,6 +233,44 @@ func (i *PDInstance) InitConfig(
 	}
 
 	return checkConfig(ctx, e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths, nil)
+}
+
+// setTLSConfig set TLS Config to support enable/disable TLS
+func (i *PDInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
+	// set TLS configs
+	if enableTLS {
+		if configs == nil {
+			configs = make(map[string]interface{})
+		}
+		configs["security.cacert-path"] = fmt.Sprintf(
+			"%s/tls/%s",
+			paths.Deploy,
+			TLSCACert,
+		)
+		configs["security.cert-path"] = fmt.Sprintf(
+			"%s/tls/%s.crt",
+			paths.Deploy,
+			i.Role())
+		configs["security.key-path"] = fmt.Sprintf(
+			"%s/tls/%s.pem",
+			paths.Deploy,
+			i.Role())
+	} else {
+		// drainer tls config list
+		tlsConfigs := []string{
+			"security.cacert-path",
+			"security.cert-path",
+			"security.key-path",
+		}
+		// delete TLS configs
+		if configs != nil {
+			for _, config := range tlsConfigs {
+				delete(configs, config)
+			}
+		}
+	}
+
+	return configs, nil
 }
 
 // ScaleConfig deploy temporary config on scaling
@@ -265,7 +290,6 @@ func (i *PDInstance) ScaleConfig(
 	}
 
 	cluster := mustBeClusterTopo(topo)
-
 	spec := i.InstanceSpec.(*PDSpec)
 	cfg0 := scripts.NewPDScript(
 		i.Name,

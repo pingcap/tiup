@@ -148,6 +148,11 @@ func (i *AlertManagerInstance) InitConfig(
 		WithWebPort(spec.WebPort).WithClusterPort(spec.ClusterPort).WithNumaNode(spec.NumaNode).
 		AppendEndpoints(AlertManagerEndpoints(alertmanagers, deployUser, enableTLS))
 
+	// doesn't work
+	if _, err := i.setTLSConfig(ctx, false, nil, paths); err != nil {
+		return err
+	}
+
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_alertmanager_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
@@ -190,4 +195,9 @@ func (i *AlertManagerInstance) ScaleConfig(
 	defer func() { i.topo = s }()
 	i.topo = topo
 	return i.InitConfig(ctx, e, clusterName, clusterVersion, deployUser, paths)
+}
+
+// setTLSConfig set TLS Config to support enable/disable TLS
+func (i *AlertManagerInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
+	return nil, nil
 }

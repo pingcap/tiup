@@ -178,6 +178,10 @@ func (i *CDCInstance) InitConfig(
 		spec.TZ,
 	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).AppendEndpoints(topo.Endpoints(deployUser)...)
 
+	// doesn't work
+	if _, err := i.setTLSConfig(ctx, false, nil, paths); err != nil {
+		return err
+	}
 	if len(paths.Data) != 0 {
 		cfg = cfg.PatchByVersion(clusterVersion, paths.Data[0])
 	}
@@ -197,4 +201,9 @@ func (i *CDCInstance) InitConfig(
 	}
 
 	return i.MergeServerConfig(ctx, e, globalConfig, instanceConfig, paths)
+}
+
+// setTLSConfig set TLS Config to support enable/disable TLS
+func (i *CDCInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
+	return nil, nil
 }

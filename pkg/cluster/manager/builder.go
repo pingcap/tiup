@@ -717,7 +717,7 @@ func buildTLSTask(
 		return nil, err
 	}
 
-	defer builder.
+	builder.
 		ParallelStep("+ Copy certificate to remote host", gOpt.Force, certificateTasks...).
 		ParallelStep("+ Refresh instance configs", gOpt.Force, refreshConfigTasks...).
 		ParallelStep("+ Copy monitor certificate to remote host", gOpt.Force, MoniterCertificateTasks...).

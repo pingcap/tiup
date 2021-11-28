@@ -230,7 +230,8 @@ func (i *TiKVInstance) InitConfig(
 		return err
 	}
 
-	if _, _, err := e.Execute(ctx, "chmod +x "+dst, false); err != nil {
+	_, _, err := e.Execute(ctx, "chmod +x "+dst, false)
+	if err != nil {
 		return err
 	}
 
@@ -258,23 +259,9 @@ func (i *TiKVInstance) InitConfig(
 	}
 
 	// set TLS configs
-	if enableTLS {
-		if spec.Config == nil {
-			spec.Config = make(map[string]interface{})
-		}
-		spec.Config["security.ca-path"] = fmt.Sprintf(
-			"%s/tls/%s",
-			paths.Deploy,
-			TLSCACert,
-		)
-		spec.Config["security.cert-path"] = fmt.Sprintf(
-			"%s/tls/%s.crt",
-			paths.Deploy,
-			i.Role())
-		spec.Config["security.key-path"] = fmt.Sprintf(
-			"%s/tls/%s.pem",
-			paths.Deploy,
-			i.Role())
+	spec.Config, err = i.setTLSConfig(ctx, enableTLS, spec.Config, paths)
+	if err != nil {
+		return err
 	}
 
 	if err := i.MergeServerConfig(ctx, e, globalConfig, spec.Config, paths); err != nil {
@@ -282,6 +269,43 @@ func (i *TiKVInstance) InitConfig(
 	}
 
 	return checkConfig(ctx, e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths, nil)
+}
+
+// setTLSConfig set TLS Config to support enable/disable TLS
+func (i *TiKVInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
+	if enableTLS {
+		if configs == nil {
+			configs = make(map[string]interface{})
+		}
+		configs["security.ca-path"] = fmt.Sprintf(
+			"%s/tls/%s",
+			paths.Deploy,
+			TLSCACert,
+		)
+		configs["security.cert-path"] = fmt.Sprintf(
+			"%s/tls/%s.crt",
+			paths.Deploy,
+			i.Role())
+		configs["security.key-path"] = fmt.Sprintf(
+			"%s/tls/%s.pem",
+			paths.Deploy,
+			i.Role())
+	} else {
+		// drainer tls config list
+		tlsConfigs := []string{
+			"security.ca-path",
+			"security.cert-path",
+			"security.key-path",
+		}
+		// delete TLS configs
+		if configs != nil {
+			for _, config := range tlsConfigs {
+				delete(configs, config)
+			}
+		}
+	}
+
+	return configs, nil
 }
 
 // ScaleConfig deploy temporary config on scaling

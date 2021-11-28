@@ -142,8 +142,19 @@ func (i *MasterInstance) InitConfig(
 		return err
 	}
 
+	// doesn't work
+	if _, err := i.setTLSConfig(ctx, false, nil, paths); err != nil {
+		return err
+	}
+
 	specConfig := spec.Config
 	return i.MergeServerConfig(ctx, e, i.topo.ServerConfigs.Master, specConfig, paths)
+}
+
+// setTLSConfig set TLS Config to support enable/disable TLS
+// MasterInstance no need to configure TLS
+func (i *MasterInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
+	return nil, nil
 }
 
 // ScaleConfig deploy temporary config on scaling
@@ -274,8 +285,19 @@ func (i *WorkerInstance) InitConfig(
 		return err
 	}
 
+	// doesn't work
+	if _, err := i.setTLSConfig(ctx, false, nil, paths); err != nil {
+		return err
+	}
+
 	specConfig := spec.Config
 	return i.MergeServerConfig(ctx, e, i.topo.ServerConfigs.Worker, specConfig, paths)
+}
+
+// setTLSConfig set TLS Config to support enable/disable TLS
+// workrsInstance no need to configure TLS
+func (i *WorkerInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
+	return nil, nil
 }
 
 // ScaleConfig deploy temporary config on scaling

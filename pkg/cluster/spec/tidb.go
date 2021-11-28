@@ -154,7 +154,8 @@ func (i *TiDBInstance) InitConfig(
 	if err := e.Transfer(ctx, fp, dst, false, 0, false); err != nil {
 		return err
 	}
-	if _, _, err := e.Execute(ctx, "chmod +x "+dst, false); err != nil {
+	_, _, err := e.Execute(ctx, "chmod +x "+dst, false)
+	if err != nil {
 		return err
 	}
 
@@ -182,23 +183,9 @@ func (i *TiDBInstance) InitConfig(
 	}
 
 	// set TLS configs
-	if enableTLS {
-		if spec.Config == nil {
-			spec.Config = make(map[string]interface{})
-		}
-		spec.Config["security.cluster-ssl-ca"] = fmt.Sprintf(
-			"%s/tls/%s",
-			paths.Deploy,
-			TLSCACert,
-		)
-		spec.Config["security.cluster-ssl-cert"] = fmt.Sprintf(
-			"%s/tls/%s.crt",
-			paths.Deploy,
-			i.Role())
-		spec.Config["security.cluster-ssl-key"] = fmt.Sprintf(
-			"%s/tls/%s.pem",
-			paths.Deploy,
-			i.Role())
+	spec.Config, err = i.setTLSConfig(ctx, enableTLS, spec.Config, paths)
+	if err != nil {
+		return err
 	}
 
 	if err := i.MergeServerConfig(ctx, e, globalConfig, spec.Config, paths); err != nil {
@@ -206,6 +193,44 @@ func (i *TiDBInstance) InitConfig(
 	}
 
 	return checkConfig(ctx, e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths, nil)
+}
+
+// setTLSConfig set TLS Config to support enable/disable TLS
+func (i *TiDBInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
+	// set TLS configs
+	if enableTLS {
+		if configs == nil {
+			configs = make(map[string]interface{})
+		}
+		configs["security.cluster-ssl-ca"] = fmt.Sprintf(
+			"%s/tls/%s",
+			paths.Deploy,
+			TLSCACert,
+		)
+		configs["security.cluster-ssl-cert"] = fmt.Sprintf(
+			"%s/tls/%s.crt",
+			paths.Deploy,
+			i.Role())
+		configs["security.cluster-ssl-key"] = fmt.Sprintf(
+			"%s/tls/%s.pem",
+			paths.Deploy,
+			i.Role())
+	} else {
+		// drainer tls config list
+		tlsConfigs := []string{
+			"security.cluster-ssl-ca",
+			"security.cluster-ssl-cert",
+			"security.cluster-ssl-key",
+		}
+		// delete TLS configs
+		if configs != nil {
+			for _, config := range tlsConfigs {
+				delete(configs, config)
+			}
+		}
+	}
+
+	return configs, nil
 }
 
 // ScaleConfig deploy temporary config on scaling
