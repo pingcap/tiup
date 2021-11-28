@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/fatih/color"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
@@ -725,7 +726,22 @@ func buildTLSTask(
 
 		// disable tls: can cleanup tls files
 	if !topo.BaseTopo().GlobalOptions.TLSEnabled && cleanup {
+		// get:  host: set(tlsdir)
 		delFileMap := getCleanupFile(topo, false, false, cleanup, []string{}, []string{})
+		// build file list string
+		delFileList := ""
+		for host, fileList := range delFileMap {
+			delFileList += fmt.Sprintf("\n%s:", color.CyanString(host))
+			for _, dfp := range fileList.Slice() {
+				delFileList += fmt.Sprintf("\n %s", dfp)
+			}
+		}
+
+		if err := tui.PromptForConfirmOrAbortError(
+			"The parameter `--clean-certificate` will delete the following files: %s \nDo you want to continue? [y/N]:", delFileList); err != nil {
+			return nil, err
+		}
+
 		builder.Func("CleanupCluster", func(ctx context.Context) error {
 			return operator.CleanupComponent(ctx, delFileMap)
 		})
