@@ -71,7 +71,7 @@ func (m *Manager) TLS(name string, gOpt operator.Options, enable, skipRestart, c
 	}
 
 	if err := tui.PromptForConfirmOrAbortError(
-		fmt.Sprintf("Enable/Disable TLS %s will restart the cluster, the policy is %s.\nDo you want to continue? [y/N]:",
+		fmt.Sprintf("Enable/Disable TLS will restart the cluster `%s` , the policy is %s.\nDo you want to continue? [y/N]:",
 			color.HiYellowString(name),
 			color.HiRedString(fmt.Sprintf("%v", !skipRestart)),
 		),
@@ -115,6 +115,7 @@ func (m *Manager) TLS(name string, gOpt operator.Options, enable, skipRestart, c
 		if cleanCertificate {
 			os.RemoveAll(m.specManager.Path(name, spec.TLSCertKeyDir))
 		}
+		log.Infof("\tCleanup localhost tls file success")
 	}
 
 	if enable {

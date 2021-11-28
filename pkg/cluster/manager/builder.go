@@ -25,6 +25,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/crypto"
 	"github.com/pingcap/tiup/pkg/environment"
+	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
@@ -729,7 +730,7 @@ func buildTLSTask(
 		// get:  host: set(tlsdir)
 		delFileMap := getCleanupFile(topo, false, false, cleanup, []string{}, []string{})
 		// build file list string
-		delFileList := ""
+		delFileList := fmt.Sprintf("\n%s:\n %s", color.CyanString("localhost"), m.specManager.Path(name, spec.TLSCertKeyDir))
 		for host, fileList := range delFileMap {
 			delFileList += fmt.Sprintf("\n%s:", color.CyanString(host))
 			for _, dfp := range fileList.Slice() {
@@ -737,8 +738,8 @@ func buildTLSTask(
 			}
 		}
 
-		if err := tui.PromptForConfirmOrAbortError(
-			"The parameter `--clean-certificate` will delete the following files: %s \nDo you want to continue? [y/N]:", delFileList); err != nil {
+		log.Warnf(color.YellowString("The parameter `--clean-certificate` will delete the following files: %s"), delFileList)
+		if err := tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]:"); err != nil {
 			return nil, err
 		}
 
