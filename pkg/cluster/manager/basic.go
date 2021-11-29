@@ -351,7 +351,7 @@ func (c *cleanUpFiles) instanceCleanupFiles(topo spec.Topology) {
 	}
 }
 
-// monitorCleanupFoles get the files that need to be deleted in the mointor
+// monitorCleanupFiles get the files that need to be deleted in the mointor
 func (c *cleanUpFiles) monitorCleanupFiles(topo spec.Topology) {
 	monitoredOptions := topo.BaseTopo().MonitoredOptions
 	if monitoredOptions == nil {
