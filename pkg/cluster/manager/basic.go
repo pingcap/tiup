@@ -275,6 +275,7 @@ type cleanUpFiles struct {
 	delFileMap      map[string]set.StringSet //
 }
 
+// getCleanupFiles  get the files that need to be deleted
 func getCleanupFiles(topo spec.Topology, cleanupData, cleanupLog, cleanupTLS bool, retainDataRoles, retainDataNodes []string) map[string]set.StringSet {
 	c := &cleanUpFiles{
 		cleanupData:     cleanupData,
@@ -287,11 +288,12 @@ func getCleanupFiles(topo spec.Topology, cleanupData, cleanupLog, cleanupTLS boo
 
 	// calculate file paths to be deleted before the prompt
 	c.instanceCleanupFiles(topo)
-	c.monitorCleanupFoles(topo)
+	c.monitorCleanupFiles(topo)
 
 	return c.delFileMap
 }
 
+// instanceCleanupFiles get the files that need to be deleted in the component
 func (c *cleanUpFiles) instanceCleanupFiles(topo spec.Topology) {
 	for _, com := range topo.ComponentsByStopOrder() {
 		instances := com.Instances()
@@ -349,7 +351,8 @@ func (c *cleanUpFiles) instanceCleanupFiles(topo spec.Topology) {
 	}
 }
 
-func (c *cleanUpFiles) monitorCleanupFoles(topo spec.Topology) {
+// monitorCleanupFoles get the files that need to be deleted in the mointor
+func (c *cleanUpFiles) monitorCleanupFiles(topo spec.Topology) {
 	monitoredOptions := topo.BaseTopo().MonitoredOptions
 	if monitoredOptions == nil {
 		return
