@@ -429,9 +429,6 @@ func buildMonitoredDeployTask(
 				filepath.Join(deployDir, "conf"),
 				filepath.Join(deployDir, "scripts"),
 			}
-			if globalOptions.TLSEnabled {
-				deployDirs = append(deployDirs, filepath.Join(deployDir, spec.TLSCertKeyDir))
-			}
 
 			// Deploy component
 			tb := task.NewSimpleUerSSH(host, info.ssh, globalOptions.User, gOpt, p, globalOptions.SSHType).

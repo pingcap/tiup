@@ -342,6 +342,22 @@ func (m *Manager) Deploy(
 	downloadCompTasks = append(downloadCompTasks, dlTasks...)
 	deployCompTasks = append(deployCompTasks, dpTasks...)
 
+	// monitor tls file
+	moniterCertificateTasks, err := buildMonitoredCertificateTasks(
+		m,
+		name,
+		uniqueHosts,
+		noAgentHosts,
+		topo.BaseTopo().GlobalOptions,
+		topo.GetMonitoredOptions(),
+		gOpt,
+		sshProxyProps,
+	)
+	if err != nil {
+		return err
+	}
+	certificateTasks = append(certificateTasks, moniterCertificateTasks...)
+
 	monitorConfigTasks := buildInitMonitoredConfigTasks(
 		m.specManager,
 		name,
