@@ -247,6 +247,22 @@ func buildScaleOutTask(
 	downloadCompTasks = append(downloadCompTasks, dlTasks...)
 	deployCompTasks = append(deployCompTasks, dpTasks...)
 
+	// monitor tls file
+	moniterCertificateTasks, err := buildMonitoredCertificateTasks(
+		m,
+		name,
+		uninitializedHosts,
+		noAgentHosts,
+		topo.BaseTopo().GlobalOptions,
+		topo.GetMonitoredOptions(),
+		gOpt,
+		p,
+	)
+	if err != nil {
+		return nil, err
+	}
+	certificateTasks = append(certificateTasks, moniterCertificateTasks...)
+
 	// monitor config
 	monitorConfigTasks := buildInitMonitoredConfigTasks(
 		m.specManager,
@@ -687,7 +703,7 @@ func buildTLSTask(
 
 	// monitor
 	uniqueHosts, noAgentHosts := getMonitorHosts(topo)
-	MoniterCertificateTasks, err := buildMonitoredCertificateTasks(
+	moniterCertificateTasks, err := buildMonitoredCertificateTasks(
 		m,
 		name,
 		uniqueHosts,
@@ -722,13 +738,13 @@ func buildTLSTask(
 	builder.
 		ParallelStep("+ Copy certificate to remote host", gOpt.Force, certificateTasks...).
 		ParallelStep("+ Refresh instance configs", gOpt.Force, refreshConfigTasks...).
-		ParallelStep("+ Copy monitor certificate to remote host", gOpt.Force, MoniterCertificateTasks...).
+		ParallelStep("+ Copy monitor certificate to remote host", gOpt.Force, moniterCertificateTasks...).
 		ParallelStep("+ Refresh monitor configs", gOpt.Force, monitorConfigTasks...)
 
 		// disable tls: can cleanup tls files
 	if !topo.BaseTopo().GlobalOptions.TLSEnabled && cleanup {
 		// get:  host: set(tlsdir)
-		delFileMap := getCleanupFile(topo, false, false, cleanup, []string{}, []string{})
+		delFileMap := getCleanupFiles(topo, false, false, cleanup, []string{}, []string{})
 		// build file list string
 		delFileList := fmt.Sprintf("\n%s:\n %s", color.CyanString("localhost"), m.specManager.Path(name, spec.TLSCertKeyDir))
 		for host, fileList := range delFileMap {

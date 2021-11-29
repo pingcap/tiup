@@ -347,7 +347,7 @@ func (topo *Specification) ComponentsByStartOrder() (comps []Component) {
 	// "dm-master", "dm-worker"
 	comps = append(comps, &DMMasterComponent{topo})
 	comps = append(comps, &DMWorkerComponent{topo})
-	comps = append(comps, &spec.MonitorComponent{Topology: topo})
+	comps = append(comps, &spec.MonitorComponent{Topology: topo}) // prometheus
 	comps = append(comps, &spec.GrafanaComponent{Topology: topo})
 	comps = append(comps, &spec.AlertManagerComponent{Topology: topo})
 	return

@@ -265,7 +265,7 @@ func getMonitorHosts(topo spec.Topology) (map[string]hostInfo, set.StringSet) {
 	return uniqueHosts, noAgentHosts
 }
 
-func getCleanupFile(topo spec.Topology, cleanupData, cleanupLog, cleanupTLS bool, retainDataRoles, retainDataNodes []string) map[string]set.StringSet {
+func getCleanupFiles(topo spec.Topology, cleanupData, cleanupLog, cleanupTLS bool, retainDataRoles, retainDataNodes []string) map[string]set.StringSet {
 	// calculate file paths to be deleted before the prompt
 	delFileMap := make(map[string]set.StringSet)
 	for _, com := range topo.ComponentsByStopOrder() {
