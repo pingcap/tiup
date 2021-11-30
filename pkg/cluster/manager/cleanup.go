@@ -61,41 +61,7 @@ func (m *Manager) CleanCluster(name string, gOpt operator.Options, cleanOpt oper
 		cleanOpt.CleanupData, cleanOpt.CleanupLog, false, cleanOpt.RetainDataRoles, cleanOpt.RetainDataNodes)
 
 	if !skipConfirm {
-		target := ""
-		switch {
-
-		case cleanOpt.CleanupData:
-			target = "data"
-		case cleanOpt.CleanupLog:
-			target += "log"
-		case cleanOpt.CleanupAuditLog:
-
-			target += "audit log"
-		}
-
-		// build file list string
-		delFileList := ""
-		for host, fileList := range delFileMap {
-			// target host has no files to delete
-			if len(fileList) == 0 {
-				continue
-			}
-
-			delFileList += fmt.Sprintf("\n%s:", color.CyanString(host))
-			for _, dfp := range fileList.Slice() {
-				delFileList += fmt.Sprintf("\n %s", dfp)
-			}
-		}
-
-		if err := tui.PromptForConfirmOrAbortError(
-			"This operation will stop %s %s cluster %s and clean its' %s.\nNodes will be ignored: %s\nRoles will be ignored: %s\nFiles to be deleted are: %s\nDo you want to continue? [y/N]:",
-			m.sysName,
-			color.HiYellowString(base.Version),
-			color.HiYellowString(name),
-			target,
-			cleanOpt.RetainDataNodes,
-			cleanOpt.RetainDataRoles,
-			delFileList); err != nil {
+		if err := cleanupConfirm(name, m.sysName, base.Version, cleanOpt, delFileMap); err != nil {
 			return err
 		}
 	}
@@ -125,6 +91,46 @@ func (m *Manager) CleanCluster(name string, gOpt operator.Options, cleanOpt oper
 
 	log.Infof("Cleanup cluster `%s` successfully", name)
 	return nil
+}
+
+// checkConfirm
+func cleanupConfirm(clusterName, sysName, version string, cleanOpt operator.Options, delFileMap map[string]set.StringSet) error {
+	target := ""
+	switch {
+	case cleanOpt.CleanupData:
+		target += " data"
+	case cleanOpt.CleanupLog:
+		target += " log"
+	case cleanOpt.CleanupAuditLog:
+
+		target += " audit log"
+	}
+
+	log.Warnf("This clean operation will %s %s %s cluster %s",
+		color.HiYellowString("stop"), sysName, version, color.HiYellowString(clusterName))
+	if err := tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]:"); err != nil {
+		return err
+	}
+
+	// build file list string
+	delFileList := ""
+	for host, fileList := range delFileMap {
+		// target host has no files to delete
+		if len(fileList) == 0 {
+			continue
+		}
+
+		delFileList += fmt.Sprintf("\n%s:", color.CyanString(host))
+		for _, dfp := range fileList.Slice() {
+			delFileList += fmt.Sprintf("\n %s", dfp)
+		}
+	}
+
+	log.Warnf("Clean the clutser %s's%s.\nNodes will be ignored: %s\nRoles will be ignored: %s\nFiles to be deleted are: %s",
+		color.HiYellowString(clusterName), target, cleanOpt.RetainDataNodes,
+		cleanOpt.RetainDataRoles,
+		delFileList)
+	return tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]:")
 }
 
 // cleanupFiles record the file that needs to be cleaned up
