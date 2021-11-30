@@ -56,7 +56,8 @@ func (m *Manager) CleanCluster(name string, gOpt operator.Options, cleanOpt oper
 		return err
 	}
 	// calculate file paths to be deleted before the prompt
-	delFileMap := getCleanupFiles(topo, cleanOpt.CleanupData, cleanOpt.CleanupLog, false, cleanOpt.RetainDataRoles, cleanOpt.RetainDataNodes)
+	delFileMap := getCleanupFiles(topo,
+		cleanOpt.CleanupData, cleanOpt.CleanupLog, false, cleanOpt.RetainDataRoles, cleanOpt.RetainDataNodes)
 
 	if !skipConfirm {
 		target := ""
