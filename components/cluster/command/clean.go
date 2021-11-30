@@ -62,7 +62,7 @@ You can retain some nodes and roles data when cleanup the cluster, eg:
 	cmd.Flags().StringArrayVar(&cleanOpt.RetainDataRoles, "ignore-role", nil, "Specify the roles whose data will be retained")
 	cmd.Flags().BoolVar(&cleanOpt.CleanupData, "data", false, "Cleanup data")
 	cmd.Flags().BoolVar(&cleanOpt.CleanupLog, "log", false, "Cleanup log")
-	cmd.Flags().BoolVar(&cleanOpt.CleanupAuditLog, "audit-log", false, "Cleanup TiUP audit log")
+	cmd.Flags().BoolVar(&cleanOpt.CleanupAuditLog, "audit-log", false, "Cleanup TiDB-server audit log")
 	cmd.Flags().BoolVar(&cleanALl, "all", false, "Cleanup both log and data")
 
 	return cmd
