@@ -100,17 +100,24 @@ func (m *Manager) CleanCluster(name string, gOpt operator.Options, cleanOpt oper
 	if !skipConfirm {
 		target := ""
 		switch {
-		case cleanOpt.CleanupData && cleanOpt.CleanupLog:
-			target = "data and log"
+
 		case cleanOpt.CleanupData:
 			target = "data"
 		case cleanOpt.CleanupLog:
-			target = "log"
+			target += "log"
+		case cleanOpt.CleanupAuditLog:
+
+			target += "audit log"
 		}
 
 		// build file list string
 		delFileList := ""
 		for host, fileList := range delFileMap {
+			// target host has no files to delete
+			if len(fileList) == 0 {
+				continue
+			}
+
 			delFileList += fmt.Sprintf("\n%s:", color.CyanString(host))
 			for _, dfp := range fileList.Slice() {
 				delFileList += fmt.Sprintf("\n %s", dfp)
@@ -128,8 +135,9 @@ func (m *Manager) CleanCluster(name string, gOpt operator.Options, cleanOpt oper
 			delFileList); err != nil {
 			return err
 		}
-		log.Infof("Cleanup cluster...")
 	}
+
+	log.Infof("Cleanup cluster...")
 
 	b, err := m.sshTaskBuilder(name, topo, base.User, gOpt)
 	if err != nil {
