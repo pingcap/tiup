@@ -1,4 +1,4 @@
-// Copyright 2020 PingCAP, Inc.
+// Copyright 2021 PingCAP, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,27 +14,25 @@
 package command
 
 import (
-	"github.com/pingcap/tiup/pkg/cluster/manager"
 	"github.com/spf13/cobra"
 )
 
-func newEditConfigCmd() *cobra.Command {
-	opt := manager.EditConfigOptions{}
+func newShowConfigCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "edit-config <cluster-name>",
-		Short: "Edit DM cluster config",
+		Use:   "show-config <cluster-name>",
+		Short: "Show TiDB cluster config",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return cmd.Help()
 			}
 
 			clusterName := args[0]
+			clusterReport.ID = scrubClusterName(clusterName)
+			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
-			return cm.EditConfig(clusterName, opt, skipConfirm)
+			return cm.ShowConfig(clusterName)
 		},
 	}
-
-	cmd.Flags().StringVarP(&opt.NewTopoFile, "topology-file", "", opt.NewTopoFile, "Use provided topology file to substitute the original one instead of editing it.")
 
 	return cmd
 }

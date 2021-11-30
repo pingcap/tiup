@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/fatih/color"
@@ -37,6 +38,11 @@ func (m *Manager) CleanCluster(name string, gOpt operator.Options, cleanOpt oper
 		return err
 	}
 
+	// check locked
+	if err := m.specManager.ScaleOutLockedErr(name); err != nil {
+		return err
+	}
+
 	metadata, err := m.meta(name)
 	if err != nil {
 		return err
@@ -51,51 +57,8 @@ func (m *Manager) CleanCluster(name string, gOpt operator.Options, cleanOpt oper
 	}
 
 	// calculate file paths to be deleted before the prompt
-	delFileMap := make(map[string]set.StringSet)
-	for _, com := range topo.ComponentsByStopOrder() {
-		instances := com.Instances()
-		retainDataRoles := set.NewStringSet(cleanOpt.RetainDataRoles...)
-		retainDataNodes := set.NewStringSet(cleanOpt.RetainDataNodes...)
-
-		for _, ins := range instances {
-			// not cleaning files of monitor agents if the instance does not have one
-			switch ins.ComponentName() {
-			case spec.ComponentNodeExporter,
-				spec.ComponentBlackboxExporter:
-				if ins.IgnoreMonitorAgent() {
-					continue
-				}
-			}
-
-			// Some data of instances will be retained
-			dataRetained := retainDataRoles.Exist(ins.ComponentName()) ||
-				retainDataNodes.Exist(ins.ID()) || retainDataNodes.Exist(ins.GetHost())
-
-			if dataRetained {
-				continue
-			}
-
-			dataPaths := set.NewStringSet()
-			logPaths := set.NewStringSet()
-
-			if cleanOpt.CleanupData && len(ins.DataDir()) > 0 {
-				for _, dataDir := range strings.Split(ins.DataDir(), ",") {
-					dataPaths.Insert(path.Join(dataDir, "*"))
-				}
-			}
-
-			if cleanOpt.CleanupLog && len(ins.LogDir()) > 0 {
-				for _, logDir := range strings.Split(ins.LogDir(), ",") {
-					logPaths.Insert(path.Join(logDir, "*.log"))
-				}
-			}
-
-			if delFileMap[ins.GetHost()] == nil {
-				delFileMap[ins.GetHost()] = set.NewStringSet()
-			}
-			delFileMap[ins.GetHost()].Join(logPaths).Join(dataPaths)
-		}
-	}
+	delFileMap := getCleanupFiles(topo,
+		cleanOpt.CleanupData, cleanOpt.CleanupLog, false, cleanOpt.RetainDataRoles, cleanOpt.RetainDataNodes)
 
 	if !skipConfirm {
 		target := ""
@@ -154,4 +117,147 @@ func (m *Manager) CleanCluster(name string, gOpt operator.Options, cleanOpt oper
 
 	log.Infof("Cleanup cluster `%s` successfully", name)
 	return nil
+}
+
+// cleanupFiles record the file that needs to be cleaned up
+type cleanupFiles struct {
+	cleanupData     bool     // whether to clean up the data
+	cleanupLog      bool     // whether to clean up the log
+	cleanupTLS      bool     // whether to clean up the tls files
+	retainDataRoles []string // roles that don't clean up
+	retainDataNodes []string // roles that don't clean up
+	delFileMap      map[string]set.StringSet
+}
+
+// getCleanupFiles  get the files that need to be deleted
+func getCleanupFiles(topo spec.Topology,
+	cleanupData, cleanupLog, cleanupTLS bool, retainDataRoles, retainDataNodes []string) map[string]set.StringSet {
+	c := &cleanupFiles{
+		cleanupData:     cleanupData,
+		cleanupLog:      cleanupLog,
+		cleanupTLS:      cleanupTLS,
+		retainDataRoles: retainDataRoles,
+		retainDataNodes: retainDataNodes,
+		delFileMap:      make(map[string]set.StringSet),
+	}
+
+	// calculate file paths to be deleted before the prompt
+	c.instanceCleanupFiles(topo)
+	c.monitorCleanupFiles(topo)
+
+	return c.delFileMap
+}
+
+// instanceCleanupFiles get the files that need to be deleted in the component
+func (c *cleanupFiles) instanceCleanupFiles(topo spec.Topology) {
+	for _, com := range topo.ComponentsByStopOrder() {
+		instances := com.Instances()
+		retainDataRoles := set.NewStringSet(c.retainDataRoles...)
+		retainDataNodes := set.NewStringSet(c.retainDataNodes...)
+
+		for _, ins := range instances {
+			// not cleaning files of monitor agents if the instance does not have one
+			// may not work
+			switch ins.ComponentName() {
+			case spec.ComponentNodeExporter,
+				spec.ComponentBlackboxExporter:
+				if ins.IgnoreMonitorAgent() {
+					continue
+				}
+			}
+
+			// Some data of instances will be retained
+			dataRetained := retainDataRoles.Exist(ins.ComponentName()) ||
+				retainDataNodes.Exist(ins.ID()) || retainDataNodes.Exist(ins.GetHost())
+
+			if dataRetained {
+				continue
+			}
+
+			// prevent duplicate directories
+			dataPaths := set.NewStringSet()
+			logPaths := set.NewStringSet()
+			tlsPath := set.NewStringSet()
+
+			if c.cleanupData && len(ins.DataDir()) > 0 {
+				for _, dataDir := range strings.Split(ins.DataDir(), ",") {
+					dataPaths.Insert(path.Join(dataDir, "*"))
+				}
+			}
+
+			if c.cleanupLog && len(ins.LogDir()) > 0 {
+				for _, logDir := range strings.Split(ins.LogDir(), ",") {
+					logPaths.Insert(path.Join(logDir, "*.log"))
+				}
+			}
+
+			// clean tls data
+			if c.cleanupTLS && !topo.BaseTopo().GlobalOptions.TLSEnabled {
+				deployDir := spec.Abs(topo.BaseTopo().GlobalOptions.User, ins.DeployDir())
+				tlsDir := filepath.Join(deployDir, spec.TLSCertKeyDir)
+				tlsPath.Insert(tlsDir)
+			}
+
+			if c.delFileMap[ins.GetHost()] == nil {
+				c.delFileMap[ins.GetHost()] = set.NewStringSet()
+			}
+			c.delFileMap[ins.GetHost()].Join(logPaths).Join(dataPaths).Join(tlsPath)
+		}
+	}
+}
+
+// monitorCleanupFiles get the files that need to be deleted in the mointor
+func (c *cleanupFiles) monitorCleanupFiles(topo spec.Topology) {
+	monitoredOptions := topo.BaseTopo().MonitoredOptions
+	if monitoredOptions == nil {
+		return
+	}
+	user := topo.BaseTopo().GlobalOptions.User
+
+	// get the host with monitor installed
+	uniqueHosts, noAgentHosts := getMonitorHosts(topo)
+	retainDataNodes := set.NewStringSet(c.retainDataNodes...)
+
+	// monitoring agents
+	for host := range uniqueHosts {
+		// determine if host don't need to delete
+		dataRetained := noAgentHosts.Exist(host) || retainDataNodes.Exist(host)
+		if dataRetained {
+			continue
+		}
+
+		deployDir := spec.Abs(user, monitoredOptions.DeployDir)
+
+		// prevent duplicate directories
+		dataPaths := set.NewStringSet()
+		logPaths := set.NewStringSet()
+		tlsPath := set.NewStringSet()
+
+		// data dir would be empty for components which don't need it
+		dataDir := monitoredOptions.DataDir
+		if c.cleanupData && len(dataDir) > 0 {
+			// the default data_dir is relative to deploy_dir
+			if !strings.HasPrefix(dataDir, "/") {
+				dataDir = filepath.Join(deployDir, dataDir)
+			}
+			dataPaths.Insert(path.Join(dataDir, "*"))
+		}
+
+		// log dir will always be with values, but might not used by the component
+		logDir := spec.Abs(user, monitoredOptions.LogDir)
+		if c.cleanupLog && len(logDir) > 0 {
+			logPaths.Insert(path.Join(logDir, "*.log"))
+		}
+
+		// clean tls data
+		if c.cleanupTLS && !topo.BaseTopo().GlobalOptions.TLSEnabled {
+			tlsDir := filepath.Join(deployDir, spec.TLSCertKeyDir)
+			tlsPath.Insert(tlsDir)
+		}
+
+		if c.delFileMap[host] == nil {
+			c.delFileMap[host] = set.NewStringSet()
+		}
+		c.delFileMap[host].Join(logPaths).Join(dataPaths).Join(tlsPath)
+	}
 }
