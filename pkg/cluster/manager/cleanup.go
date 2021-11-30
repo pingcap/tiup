@@ -58,7 +58,7 @@ func (m *Manager) CleanCluster(name string, gOpt operator.Options, cleanOpt oper
 
 	// calculate file paths to be deleted before the prompt
 	delFileMap := getCleanupFiles(topo,
-		cleanOpt.CleanupData, cleanOpt.CleanupLog, false, cleanOpt.RetainDataRoles, cleanOpt.RetainDataNodes)
+		cleanOpt.CleanupData, cleanOpt.CleanupLog, false, cleanOpt.CleanupAuditLog, cleanOpt.RetainDataRoles, cleanOpt.RetainDataNodes)
 
 	if !skipConfirm {
 		if err := cleanupConfirm(name, m.sysName, base.Version, cleanOpt, delFileMap); err != nil {
@@ -138,6 +138,7 @@ type cleanupFiles struct {
 	cleanupData     bool     // whether to clean up the data
 	cleanupLog      bool     // whether to clean up the log
 	cleanupTLS      bool     // whether to clean up the tls files
+	cleanupAuditLog bool     // whether to clean up the tidb server audit log
 	retainDataRoles []string // roles that don't clean up
 	retainDataNodes []string // roles that don't clean up
 	delFileMap      map[string]set.StringSet
@@ -145,11 +146,12 @@ type cleanupFiles struct {
 
 // getCleanupFiles  get the files that need to be deleted
 func getCleanupFiles(topo spec.Topology,
-	cleanupData, cleanupLog, cleanupTLS bool, retainDataRoles, retainDataNodes []string) map[string]set.StringSet {
+	cleanupData, cleanupLog, cleanupTLS, cleanupAuditLog bool, retainDataRoles, retainDataNodes []string) map[string]set.StringSet {
 	c := &cleanupFiles{
 		cleanupData:     cleanupData,
 		cleanupLog:      cleanupLog,
 		cleanupTLS:      cleanupTLS,
+		cleanupAuditLog: cleanupAuditLog,
 		retainDataRoles: retainDataRoles,
 		retainDataNodes: retainDataNodes,
 		delFileMap:      make(map[string]set.StringSet),
@@ -201,7 +203,19 @@ func (c *cleanupFiles) instanceCleanupFiles(topo spec.Topology) {
 
 			if c.cleanupLog && len(ins.LogDir()) > 0 {
 				for _, logDir := range strings.Split(ins.LogDir(), ",") {
-					logPaths.Insert(path.Join(logDir, "*.log"))
+					// need to judge the audit log of tidb server
+					if ins.ComponentName() == spec.ComponentTiDB {
+						logPaths.Insert(path.Join(logDir, "tidb?[!audit]*.log"))
+						logPaths.Insert(path.Join(logDir, "tidb.log")) // maybe no need deleted
+					} else {
+						logPaths.Insert(path.Join(logDir, "*.log"))
+					}
+				}
+			}
+
+			if c.cleanupAuditLog && ins.ComponentName() == spec.ComponentTiDB {
+				for _, logDir := range strings.Split(ins.LogDir(), ",") {
+					logPaths.Insert(path.Join(logDir, "tidb-audit*.log"))
 				}
 			}
 
