@@ -37,6 +37,11 @@ func (m *Manager) CleanCluster(name string, gOpt operator.Options, cleanOpt oper
 		return err
 	}
 
+	// check locked
+	if err := m.specManager.ScaleOutLockedErr(name); err != nil {
+		return err
+	}
+
 	metadata, err := m.meta(name)
 	if err != nil {
 		return err
