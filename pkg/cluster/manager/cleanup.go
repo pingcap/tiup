@@ -95,21 +95,8 @@ func (m *Manager) CleanCluster(name string, gOpt operator.Options, cleanOpt oper
 
 // checkConfirm
 func cleanupConfirm(clusterName, sysName, version string, cleanOpt operator.Options, delFileMap map[string]set.StringSet) error {
-	target := ""
-	switch {
-	case cleanOpt.CleanupData:
-		target += " data"
-		fallthrough
-	case cleanOpt.CleanupLog:
-		target += " log"
-		fallthrough
-	case cleanOpt.CleanupAuditLog:
-		target += " audit log"
-		// fallthrough
-	}
-
 	log.Warnf("This clean operation will %s %s %s cluster %s",
-		color.HiYellowString("stop"), sysName, version, color.HiYellowString(clusterName))
+		color.HiYellowString("stop["), sysName, version, color.HiYellowString(clusterName))
 	if err := tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]:"); err != nil {
 		return err
 	}
@@ -129,10 +116,28 @@ func cleanupConfirm(clusterName, sysName, version string, cleanOpt operator.Opti
 	}
 
 	log.Warnf("Clean the clutser %s's%s.\nNodes will be ignored: %s\nRoles will be ignored: %s\nFiles to be deleted are: %s",
-		color.HiYellowString(clusterName), target, cleanOpt.RetainDataNodes,
+		color.HiYellowString(clusterName), cleanTarget(cleanOpt), cleanOpt.RetainDataNodes,
 		cleanOpt.RetainDataRoles,
 		delFileList)
 	return tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]:")
+}
+
+func cleanTarget(cleanOpt operator.Options) string {
+	target := ""
+
+	if cleanOpt.CleanupData {
+		target += " data"
+	}
+
+	if cleanOpt.CleanupLog {
+		target += (" log")
+	}
+
+	if cleanOpt.CleanupAuditLog {
+		target += ("audit-log")
+	}
+
+	return color.HiYellowString(target)
 }
 
 // cleanupFiles record the file that needs to be cleaned up
