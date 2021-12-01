@@ -95,7 +95,7 @@ func (m *Manager) CleanCluster(name string, gOpt operator.Options, cleanOpt oper
 
 // checkConfirm
 func cleanupConfirm(clusterName, sysName, version string, cleanOpt operator.Options, delFileMap map[string]set.StringSet) error {
-	log.Warnf("This clean operation will %s %s %s cluster %s",
+	log.Warnf("The clean operation will %s %s %s cluster `%s`",
 		color.HiYellowString("stop"), sysName, version, color.HiYellowString(clusterName))
 	if err := tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]:"); err != nil {
 		return err
