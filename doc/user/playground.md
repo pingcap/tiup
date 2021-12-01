@@ -22,23 +22,48 @@ The command line arguments for playground state:
 ```bash
 Usage:
   tiup playground [version] [flags]
+  tiup [command]
+
+Available Commands:
+  completion  generate the autocompletion script for the specified shell
+  display
+  help        Help about any command
+  scale-in
+  scale-out
 
 Flags:
-      --db int                   TiDB instance number (default 1)
+      --db int                   TiDB instance number
+      --db.host host             Playground TiDB host. If not provided, TiDB will still use host flag as its host
+      --db.port int              Playground TiDB port. If not provided, TiDB will use 4000 as its port
       --db.binpath string        TiDB instance binary path
       --db.config string         TiDB instance configuration file
+      --db.timeout int           TiDB max wait time in seconds for starting, 0 means no limit
+      --drainer int              Drainer instance number
+      --drainer.binpath string   Drainer instance binary path
+      --drainer.config string    Drainer instance configuration file
   -h, --help                     help for tiup
-      --host string              Playground cluster host (default "127.0.0.1")
-      --kv int                   TiKV instance number (default 1)
+      --host string              Playground cluster host
+      --kv int                   TiKV instance number
       --kv.binpath string        TiKV instance binary path
       --kv.config string         TiKV instance configuration file
-      --monitor                  Start prometheus component
-      --pd int                   PD instance number (default 1)
+      --mode string              TiUP playground mode: 'tidb', 'tikv-slim' (default "tidb")
+      --pd int                   PD instance number
+      --pd.Host host             Playground PD host. If not provided, PD will still use host flag as its host
       --pd.binpath string        PD instance binary path
       --pd.config string         PD instance configuration file
+      --pump int                 Pump instance number
+      --pump.binpath string      Pump instance binary path
+      --pump.config string       Pump instance configuration file
+  -T, --tag string               Specify a tag for playground
+      --ticdc int                TiCDC instance number
+      --ticdc.binpath string     TiCDC instance binary path
+      --ticdc.config string      TiCDC instance configuration file
       --tiflash int              TiFlash instance number
       --tiflash.binpath string   TiFlash instance binary path
       --tiflash.config string    TiFlash instance configuration file
+      --tiflash.timeout int      TiFlash max wait time in seconds for starting, 0 means no limit
+  -v, --version                  version for tiup
+      --without-monitor          Don't start prometheus and grafana component
 ```
 
 ## Example
@@ -51,13 +76,19 @@ tiup playground nightly
 
 Nightly is the version number of this cluster, and similar ones can be `tiup playground v4.0.0-rc` etc.
 
-### Start a cluster with monitoring.
+### Start a cluster with or without monitoring.
 
 ```shell
-tiup playground nightly --monitor
+tiup playground nightly
 ```
 
-This command launches prometheus on port 9090 for displaying timing data within the cluster.
+This command launches Prometheus on port 9090 and Grafana on port 3000 for displaying timing data within the cluster.
+
+```shell
+tiup playground nightly --without-monitor
+```
+
+This won't launch Prometheus or Grafana. This can be used to save resources.
 
 ### Overrides the default configuration of the PD
 
