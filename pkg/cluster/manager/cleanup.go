@@ -89,14 +89,14 @@ func (m *Manager) CleanCluster(name string, gOpt operator.Options, cleanOpt oper
 		return perrs.Trace(err)
 	}
 
-	log.Infof("Cleanup cluster `%s` successfully", name)
+	log.Infof("Cleanup%s in cluster `%s` successfully", cleanTarget(cleanOpt), name)
 	return nil
 }
 
 // checkConfirm
 func cleanupConfirm(clusterName, sysName, version string, cleanOpt operator.Options, delFileMap map[string]set.StringSet) error {
 	log.Warnf("This clean operation will %s %s %s cluster %s",
-		color.HiYellowString("stop["), sysName, version, color.HiYellowString(clusterName))
+		color.HiYellowString("stop"), sysName, version, color.HiYellowString(clusterName))
 	if err := tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]:"); err != nil {
 		return err
 	}
@@ -134,7 +134,7 @@ func cleanTarget(cleanOpt operator.Options) string {
 	}
 
 	if cleanOpt.CleanupAuditLog {
-		target += ("audit-log")
+		target += (" audit-log")
 	}
 
 	return color.HiYellowString(target)
