@@ -126,7 +126,9 @@ func (s *StepDisplay) Execute(ctx context.Context) error {
 
 	switch s.DisplayMode {
 	case log.DisplayModeJSON:
-		_ = printDp(dp)
+		_ = printDpJSON(dp)
+	case log.DisplayModePlain:
+		_ = printDpPlain(dp)
 	default:
 		s.progressBar.UpdateDisplay(dp)
 	}
@@ -153,7 +155,9 @@ func (s *StepDisplay) handleTaskBegin(task Task) {
 	}
 	switch s.DisplayMode {
 	case log.DisplayModeJSON:
-		_ = printDp(dp)
+		_ = printDpJSON(dp)
+	case log.DisplayModePlain:
+		_ = printDpPlain(dp)
 	default:
 		s.progressBar.UpdateDisplay(dp)
 	}
@@ -169,7 +173,9 @@ func (s *StepDisplay) handleTaskProgress(task Task, p string) {
 	}
 	switch s.DisplayMode {
 	case log.DisplayModeJSON:
-		_ = printDp(dp)
+		_ = printDpJSON(dp)
+	case log.DisplayModePlain:
+		_ = printDpPlain(dp)
 	default:
 		s.progressBar.UpdateDisplay(dp)
 	}
@@ -229,11 +235,21 @@ func (ps *ParallelStepDisplay) String() string {
 	return ps.inner.String()
 }
 
-func printDp(dp *progress.DisplayProps) error {
+func printDpJSON(dp *progress.DisplayProps) error {
 	output, err := json.Marshal(dp)
 	if err != nil {
 		return err
 	}
 	fmt.Println(string(output))
+	return nil
+}
+
+func printDpPlain(dp *progress.DisplayProps) error {
+	switch dp.Mode {
+	case progress.ModeError:
+		log.Errorf("progress: %s", dp)
+	default:
+		log.Infof("progress: %s", dp)
+	}
 	return nil
 }
