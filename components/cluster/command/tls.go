@@ -22,7 +22,6 @@ import (
 
 func newTLSCmd() *cobra.Command {
 	var (
-		skipRestart       bool // skip restart cluster, but the tls option does not work
 		reloadCertificate bool // reload certificate when the cluster enable encrypted communication
 		cleanCertificate  bool // cleanup certificate when the cluster disable encrypted communication
 		enableTLS         bool
@@ -52,10 +51,6 @@ func newTLSCmd() *cobra.Command {
 				return perrs.New("enable or disable must be specified at least one")
 			}
 
-			if !enableTLS && skipRestart && cleanCertificate {
-				return perrs.New("disabling TLS and cleaning up TLS files without restart the cluster is not allowed")
-			}
-
 			if enableTLS && cleanCertificate {
 				return perrs.New("clean-certificate only works when tls disable")
 			}
@@ -64,13 +59,12 @@ func newTLSCmd() *cobra.Command {
 				return perrs.New("reload-certificate only works when tls enable")
 			}
 
-			return cm.TLS(clusterName, gOpt, enableTLS, skipRestart, cleanCertificate, reloadCertificate)
+			return cm.TLS(clusterName, gOpt, enableTLS, cleanCertificate, reloadCertificate, skipConfirm)
 		},
 	}
 
 	cmd.Flags().BoolVar(&cleanCertificate, "clean-certificate", false, "Clean up the certificate file if it already exists when disable encrypted communication")
 	cmd.Flags().BoolVar(&reloadCertificate, "reload-certificate", false, "Reload the certificate file if it already exists when enable encrypted communication")
-	cmd.Flags().BoolVar(&skipRestart, "skip-restart", false, "Only refresh configuration and load certificate to remote, but do not restart services")
 
 	return cmd
 }

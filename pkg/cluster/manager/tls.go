@@ -32,7 +32,7 @@ import (
 )
 
 // TLS set cluster enable/disable encrypt communication by tls
-func (m *Manager) TLS(name string, gOpt operator.Options, enable, skipRestart, cleanCertificate, reloadCertificate bool) error {
+func (m *Manager) TLS(name string, gOpt operator.Options, enable, cleanCertificate, reloadCertificate, skipConfirm bool) error {
 	if err := clusterutil.ValidateClusterNameOrError(name); err != nil {
 		return err
 	}
@@ -61,21 +61,7 @@ func (m *Manager) TLS(name string, gOpt operator.Options, enable, skipRestart, c
 		}
 	}
 
-	// check tiflash version
-	if clusterSpec, ok := topo.(*spec.Specification); ok {
-		if clusterSpec.GlobalOptions.TLSEnabled &&
-			semver.Compare(base.Version, "v4.0.5") < 0 &&
-			len(clusterSpec.TiFlashServers) > 0 {
-			return fmt.Errorf("TiFlash %s is not supported in TLS enabled cluster", base.Version)
-		}
-	}
-
-	if err := tui.PromptForConfirmOrAbortError(
-		fmt.Sprintf("Enable/Disable TLS will restart the cluster `%s` , the policy is %s.\nDo you want to continue? [y/N]:",
-			color.HiYellowString(name),
-			color.HiRedString(fmt.Sprintf("%v", !skipRestart)),
-		),
-	); err != nil {
+	if err := checkTLSEnv(topo, name, base.Version, skipConfirm); err != nil {
 		return err
 	}
 
@@ -93,7 +79,7 @@ func (m *Manager) TLS(name string, gOpt operator.Options, enable, skipRestart, c
 
 	// Build the tls  tasks
 	t, err := buildTLSTask(
-		m, name, metadata, gOpt, sshProxyProps, skipRestart, cleanCertificate)
+		m, name, metadata, gOpt, sshProxyProps, cleanCertificate)
 	if err != nil {
 		return err
 	}
@@ -123,11 +109,6 @@ func (m *Manager) TLS(name string, gOpt operator.Options, enable, skipRestart, c
 	} else {
 		log.Infof("Disable cluster `%s` TLS between TiDB components successfully", name)
 	}
-
-	if skipRestart {
-		log.Infof("Please restart the cluster `%s` to apply the TLS configuration", name)
-	}
-
 	return nil
 }
 
@@ -145,4 +126,24 @@ func loadCertificate(m *Manager, clusterName string, globalOptions *spec.GlobalO
 	_, err = m.genAndSaveCertificate(clusterName, globalOptions)
 
 	return err
+}
+
+func checkTLSEnv(topo spec.Topology, clusterName, version string, skipConfirm bool) error {
+	// check tiflash version
+	if clusterSpec, ok := topo.(*spec.Specification); ok {
+		if clusterSpec.GlobalOptions.TLSEnabled &&
+			semver.Compare(version, "v4.0.5") < 0 &&
+			len(clusterSpec.TiFlashServers) > 0 {
+			return fmt.Errorf("TiFlash %s is not supported in TLS enabled cluster", version)
+		}
+	}
+
+	if !skipConfirm {
+		return tui.PromptForConfirmOrAbortError(
+			fmt.Sprintf("Enable/Disable TLS will %s the cluster `%s`\nDo you want to continue? [y/N]:",
+				color.HiYellowString("restart"),
+				color.HiYellowString(clusterName),
+			))
+	}
+	return nil
 }

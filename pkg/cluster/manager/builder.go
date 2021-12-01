@@ -679,7 +679,7 @@ func buildTLSTask(
 	metadata spec.Metadata,
 	gOpt operator.Options,
 	p *tui.SSHConnectionProps,
-	skipRestart, cleanup bool,
+	cleanup bool,
 ) (task.Task, error) {
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
@@ -761,15 +761,13 @@ func buildTLSTask(
 		})
 	}
 
-	if !skipRestart {
-		tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
-		if err != nil {
-			return nil, err
-		}
-		builder.Func("Restart Cluster", func(ctx context.Context) error {
-			return operator.Restart(ctx, topo, gOpt, tlsCfg)
-		})
+	tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
+	if err != nil {
+		return nil, err
 	}
+	builder.Func("Restart Cluster", func(ctx context.Context) error {
+		return operator.Restart(ctx, topo, gOpt, tlsCfg)
+	})
 
 	// finally save metadata
 	builder.Func("Save meta", func(_ context.Context) error {
