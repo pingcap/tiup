@@ -99,11 +99,13 @@ func cleanupConfirm(clusterName, sysName, version string, cleanOpt operator.Opti
 	switch {
 	case cleanOpt.CleanupData:
 		target += " data"
+		fallthrough
 	case cleanOpt.CleanupLog:
 		target += " log"
+		fallthrough
 	case cleanOpt.CleanupAuditLog:
-
 		target += " audit log"
+		// fallthrough
 	}
 
 	log.Warnf("This clean operation will %s %s %s cluster %s",
