@@ -27,6 +27,7 @@ import (
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
 	"golang.org/x/mod/semver"
 )
@@ -77,9 +78,30 @@ func (m *Manager) TLS(name string, gOpt operator.Options, enable, cleanCertifica
 		}
 	}
 
+	delFileMap := make(map[string]set.StringSet)
+	if !enable && cleanCertificate {
+		// get:  host: set(tlsdir)
+		delFileMap := getCleanupFiles(topo, false, false, cleanCertificate, []string{}, []string{})
+		// build file list string
+		delFileList := fmt.Sprintf("\n%s:\n %s", color.CyanString("localhost"), m.specManager.Path(name, spec.TLSCertKeyDir))
+		for host, fileList := range delFileMap {
+			delFileList += fmt.Sprintf("\n%s:", color.CyanString(host))
+			for _, dfp := range fileList.Slice() {
+				delFileList += fmt.Sprintf("\n %s", dfp)
+			}
+		}
+
+		if !skipConfirm {
+			log.Warnf(color.YellowString("The parameter `--clean-certificate` will delete the following files: %s"), delFileList)
+			if err := tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]:"); err != nil {
+				return err
+			}
+		}
+	}
+
 	// Build the tls  tasks
 	t, err := buildTLSTask(
-		m, name, metadata, gOpt, sshProxyProps, cleanCertificate)
+		m, name, metadata, gOpt, sshProxyProps, delFileMap)
 	if err != nil {
 		return err
 	}
@@ -128,6 +150,7 @@ func loadCertificate(m *Manager, clusterName string, globalOptions *spec.GlobalO
 	return err
 }
 
+// checkTLSEnv check tiflash vserson and show confirm
 func checkTLSEnv(topo spec.Topology, clusterName, version string, skipConfirm bool) error {
 	// check tiflash version
 	if clusterSpec, ok := topo.(*spec.Specification); ok {

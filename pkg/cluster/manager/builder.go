@@ -19,13 +19,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/fatih/color"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/crypto"
 	"github.com/pingcap/tiup/pkg/environment"
-	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
@@ -679,7 +677,7 @@ func buildTLSTask(
 	metadata spec.Metadata,
 	gOpt operator.Options,
 	p *tui.SSHConnectionProps,
-	cleanup bool,
+	delFileMap map[string]set.StringSet,
 ) (task.Task, error) {
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
@@ -738,24 +736,8 @@ func buildTLSTask(
 		ParallelStep("+ Copy monitor certificate to remote host", gOpt.Force, moniterCertificateTasks...).
 		ParallelStep("+ Refresh monitor configs", gOpt.Force, monitorConfigTasks...)
 
-		// disable tls: can cleanup tls files
-	if !topo.BaseTopo().GlobalOptions.TLSEnabled && cleanup {
-		// get:  host: set(tlsdir)
-		delFileMap := getCleanupFiles(topo, false, false, cleanup, []string{}, []string{})
-		// build file list string
-		delFileList := fmt.Sprintf("\n%s:\n %s", color.CyanString("localhost"), m.specManager.Path(name, spec.TLSCertKeyDir))
-		for host, fileList := range delFileMap {
-			delFileList += fmt.Sprintf("\n%s:", color.CyanString(host))
-			for _, dfp := range fileList.Slice() {
-				delFileList += fmt.Sprintf("\n %s", dfp)
-			}
-		}
-
-		log.Warnf(color.YellowString("The parameter `--clean-certificate` will delete the following files: %s"), delFileList)
-		if err := tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]:"); err != nil {
-			return nil, err
-		}
-
+	// cleanup tls files only in tls disable
+	if !topo.BaseTopo().GlobalOptions.TLSEnabled {
 		builder.Func("CleanupCluster", func(ctx context.Context) error {
 			return operator.CleanupComponent(ctx, delFileMap)
 		})
