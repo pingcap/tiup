@@ -248,21 +248,20 @@ func checkForGlobalConfigs(topoFile string, skipConfirm bool) error {
 	}
 
 	// user confirmed, skip checks
-	if !skipConfirm {
-		for k := range newPart {
-			switch k {
-			case "global",
-				"monitored",
-				"server_configs":
-				log.Warnf(color.YellowString(
-					`You have one or more of ["global", "monitored", "server_configs"] fields configured in
+
+	for k := range newPart {
+		switch k {
+		case "global",
+			"monitored",
+			"server_configs":
+			log.Warnf(`You have one or more of %s fields configured in
 	the scale out topology, but they will be ignored during the scaling out process.
 	If you want to use configs different from the existing cluster, cancel now and
-	set them in the specification fileds for each host.`))
-				if err := tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: "); err != nil {
-					return err
-				}
+	set them in the specification fileds for each host.`, color.YellowString(`["global", "monitored", "server_configs"]`))
+			if err := tui.PromptForConfirmOrAbortErrorWithSkip(skipConfirm, "Do you want to continue? [y/N]: "); err != nil {
+				return err
 			}
+			return nil
 		}
 	}
 	return nil
@@ -281,10 +280,12 @@ func checkScaleOutLock(m *Manager, name string, opt DeployOptions, skipConfirm b
 			return m.specManager.ScaleOutLockedErr(name)
 		}
 
-		if !skipConfirm {
-			log.Warnf(color.YellowString(`The parameter '--stage1' is set, new instance will not be started
-			Please manually execute 'tiup cluster scale-out %s --stage2' to finish the process.`, name))
-			return tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: ")
+		log.Warnf(`The parameter '%s' is set, new instance will not be started
+	Please manually execute '%s' to finish the process.`,
+			color.YellowString("--stage1"),
+			color.YellowString("tiup cluster scale-out %s --stage2", name))
+		if err := tui.PromptForConfirmOrAbortErrorWithSkip(skipConfirm, "Do you want to continue? [y/N]: "); err != nil {
+			return err
 		}
 	}
 
@@ -293,9 +294,9 @@ func checkScaleOutLock(m *Manager, name string, opt DeployOptions, skipConfirm b
 			return fmt.Errorf("The scale-out file lock does not exist, please make sure to run 'tiup-cluster scale-out %s --stage1' first", name)
 		}
 
-		if !skipConfirm {
-			log.Warnf(color.YellowString(`The parameter '--stage2' is set, only start the new instances and reload configs.`))
-			return tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: ")
+		log.Warnf(`The parameter '%s' is set, only start the new instances and reload configs.`, color.YellowString("--stage2"))
+		if err := tui.PromptForConfirmOrAbortErrorWithSkip(skipConfirm, "Do you want to continue? [y/N]: "); err != nil {
+			return err
 		}
 	}
 

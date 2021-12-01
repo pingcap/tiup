@@ -118,6 +118,14 @@ func PromptForConfirmOrAbortError(format string, a ...interface{}) error {
 	return nil
 }
 
+// PromptForConfirmOrAbortErrorWithSkip encapsulation PromptForConfirmOrAbortError to make it possible to skip the Confirm
+func PromptForConfirmOrAbortErrorWithSkip(skip bool, format string, a ...interface{}) error {
+	if !skip {
+		return PromptForConfirmOrAbortError(format, a...)
+	}
+	return nil
+}
+
 // PromptForConfirmAnswer accepts string from console by user, default to empty and only return
 // true if the user input is exactly the same as pre-defined answer.
 func PromptForConfirmAnswer(answer string, format string, a ...interface{}) (bool, string) {
