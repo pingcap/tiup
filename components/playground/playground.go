@@ -71,8 +71,9 @@ type Playground struct {
 	// not nil iff we start the exec.Cmd successfully.
 	// we should and can safely call wait() to make sure the process quit
 	// before playground quit.
-	monitor *monitor
-	grafana *grafana
+	monitor      *monitor
+	ngmonitoring *ngMonitoring
+	grafana      *grafana
 }
 
 // MonitorInfo represent the monitor
@@ -800,41 +801,6 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 	fmt.Println("Playground Bootstrapping...")
 
-	var monitorInfo *MonitorInfo
-	if options.Monitor {
-		var err error
-
-		p.monitor, monitorInfo, err = p.bootMonitor(ctx, env)
-		if err != nil {
-			return err
-		}
-
-		p.instanceWaiter.Go(func() error {
-			err := p.monitor.wait()
-			if err != nil && atomic.LoadInt32(&p.curSig) == 0 {
-				fmt.Printf("Prometheus quit: %v\n", err)
-			} else {
-				fmt.Println("prometheus quit")
-			}
-			return err
-		})
-
-		p.grafana, err = p.bootGrafana(ctx, env, monitorInfo)
-		if err != nil {
-			return err
-		}
-
-		p.instanceWaiter.Go(func() error {
-			err := p.grafana.wait()
-			if err != nil && atomic.LoadInt32(&p.curSig) == 0 {
-				fmt.Printf("Grafana quit: %v\n", err)
-			} else {
-				fmt.Println("Grafana quit")
-			}
-			return err
-		})
-	}
-
 	anyPumpReady := false
 	// Start all instance except tiflash.
 	err := p.WalkInstances(func(cid string, ins instance.Instance) error {
@@ -867,6 +833,56 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 	p.booted = true
 
 	succ := p.waitAllTidbUp()
+
+	var monitorInfo *MonitorInfo
+	if options.Monitor {
+		var err error
+
+		p.monitor, monitorInfo, err = p.bootMonitor(ctx, env)
+		if err != nil {
+			return err
+		}
+
+		p.instanceWaiter.Go(func() error {
+			err := p.monitor.wait()
+			if err != nil && atomic.LoadInt32(&p.curSig) == 0 {
+				fmt.Printf("Prometheus quit: %v\n", err)
+			} else {
+				fmt.Println("prometheus quit")
+			}
+			return err
+		})
+
+		p.ngmonitoring, err = p.bootNGMonitoring(ctx, env)
+		if err != nil {
+			return err
+		}
+
+		p.instanceWaiter.Go(func() error {
+			err := p.ngmonitoring.wait()
+			if err != nil && atomic.LoadInt32(&p.curSig) == 0 {
+				fmt.Printf("ng-monitoring quit: %v\n", err)
+			} else {
+				fmt.Println("ng-monitoring quit")
+			}
+			return err
+		})
+
+		p.grafana, err = p.bootGrafana(ctx, env, monitorInfo)
+		if err != nil {
+			return err
+		}
+
+		p.instanceWaiter.Go(func() error {
+			err := p.grafana.wait()
+			if err != nil && atomic.LoadInt32(&p.curSig) == 0 {
+				fmt.Printf("Grafana quit: %v\n", err)
+			} else {
+				fmt.Println("Grafana quit")
+			}
+			return err
+		})
+	}
 
 	if len(succ) > 0 {
 		// start TiFlash after at least one TiDB is up.
@@ -1041,6 +1057,26 @@ func (p *Playground) bootMonitor(ctx context.Context, env *environment.Environme
 	}
 
 	return monitor, monitorInfo, nil
+}
+
+// return not error iff the Cmd is started successfully.
+// user must and can safely wait the Cmd
+func (p *Playground) bootNGMonitoring(ctx context.Context, env *environment.Environment) (*ngMonitoring, error) {
+	options := p.bootOptions
+
+	dataDir := p.dataDir
+	promDir := filepath.Join(dataDir, "prometheus")
+
+	ngm, err := newNGMonitoring(ctx, options.Version, options.Host, promDir, p.pds)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := ngm.cmd.Start(); err != nil {
+		return nil, err
+	}
+
+	return ngm, nil
 }
 
 // return not error iff the Cmd is started successfully.
