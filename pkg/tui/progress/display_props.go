@@ -15,6 +15,7 @@ package progress
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 )
 
@@ -72,9 +73,37 @@ func (m *Mode) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// String implements string
+func (m Mode) String() string {
+	var s string
+	switch m {
+	case ModeSpinner:
+		s = "spinner"
+	case ModeProgress:
+		s = "progress"
+	case ModeDone:
+		s = "done"
+	case ModeError:
+		s = "error"
+	default:
+		s = "unknown"
+	}
+	return s
+}
+
 // DisplayProps controls the display of the progress bar.
 type DisplayProps struct {
 	Prefix string `json:"prefix,omitempty"`
 	Suffix string `json:"suffix,omitempty"` // If `Mode == Done / Error`, Suffix is not printed
 	Mode   Mode   `json:"mode,omitempty"`
+}
+
+// String implements string
+func (dp *DisplayProps) String() string {
+	return fmt.Sprintf(
+		"(%s) %s: %s",
+		dp.Mode,
+		dp.Prefix,
+		dp.Suffix,
+	)
 }
