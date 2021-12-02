@@ -33,6 +33,7 @@ You can retain some nodes and roles data when cleanup the cluster, eg:
     $ tiup cluster clean <cluster-name> --all
     $ tiup cluster clean <cluster-name> --log
     $ tiup cluster clean <cluster-name> --data
+    $ tiup cluster clean <cluster-name> --audit-log
     $ tiup cluster clean <cluster-name> --all --ignore-role prometheus
     $ tiup cluster clean <cluster-name> --all --ignore-node 172.16.13.11:9000
     $ tiup cluster clean <cluster-name> --all --ignore-node 172.16.13.12`,
@@ -50,7 +51,7 @@ You can retain some nodes and roles data when cleanup the cluster, eg:
 				cleanOpt.CleanupLog = true
 			}
 
-			if !(cleanOpt.CleanupData || cleanOpt.CleanupLog) {
+			if !(cleanOpt.CleanupData || cleanOpt.CleanupLog || cleanOpt.CleanupAuditLog) {
 				return cmd.Help()
 			}
 
@@ -62,7 +63,8 @@ You can retain some nodes and roles data when cleanup the cluster, eg:
 	cmd.Flags().StringArrayVar(&cleanOpt.RetainDataRoles, "ignore-role", nil, "Specify the roles whose data will be retained")
 	cmd.Flags().BoolVar(&cleanOpt.CleanupData, "data", false, "Cleanup data")
 	cmd.Flags().BoolVar(&cleanOpt.CleanupLog, "log", false, "Cleanup log")
-	cmd.Flags().BoolVar(&cleanALl, "all", false, "Cleanup both log and data")
+	cmd.Flags().BoolVar(&cleanOpt.CleanupAuditLog, "audit-log", false, "Cleanup TiDB-server audit log")
+	cmd.Flags().BoolVar(&cleanALl, "all", false, "Cleanup both log and data (not include audit log)")
 
 	return cmd
 }

@@ -58,41 +58,15 @@ func (m *Manager) CleanCluster(name string, gOpt operator.Options, cleanOpt oper
 
 	// calculate file paths to be deleted before the prompt
 	delFileMap := getCleanupFiles(topo,
-		cleanOpt.CleanupData, cleanOpt.CleanupLog, false, cleanOpt.RetainDataRoles, cleanOpt.RetainDataNodes)
+		cleanOpt.CleanupData, cleanOpt.CleanupLog, false, cleanOpt.CleanupAuditLog, cleanOpt.RetainDataRoles, cleanOpt.RetainDataNodes)
 
 	if !skipConfirm {
-		target := ""
-		switch {
-		case cleanOpt.CleanupData && cleanOpt.CleanupLog:
-			target = "data and log"
-		case cleanOpt.CleanupData:
-			target = "data"
-		case cleanOpt.CleanupLog:
-			target = "log"
-		}
-
-		// build file list string
-		delFileList := ""
-		for host, fileList := range delFileMap {
-			delFileList += fmt.Sprintf("\n%s:", color.CyanString(host))
-			for _, dfp := range fileList.Slice() {
-				delFileList += fmt.Sprintf("\n %s", dfp)
-			}
-		}
-
-		if err := tui.PromptForConfirmOrAbortError(
-			"This operation will stop %s %s cluster %s and clean its' %s.\nNodes will be ignored: %s\nRoles will be ignored: %s\nFiles to be deleted are: %s\nDo you want to continue? [y/N]:",
-			m.sysName,
-			color.HiYellowString(base.Version),
-			color.HiYellowString(name),
-			target,
-			cleanOpt.RetainDataNodes,
-			cleanOpt.RetainDataRoles,
-			delFileList); err != nil {
+		if err := cleanupConfirm(name, m.sysName, base.Version, cleanOpt, delFileMap); err != nil {
 			return err
 		}
-		log.Infof("Cleanup cluster...")
 	}
+
+	log.Infof("Cleanup cluster...")
 
 	b, err := m.sshTaskBuilder(name, topo, base.User, gOpt)
 	if err != nil {
@@ -115,8 +89,55 @@ func (m *Manager) CleanCluster(name string, gOpt operator.Options, cleanOpt oper
 		return perrs.Trace(err)
 	}
 
-	log.Infof("Cleanup cluster `%s` successfully", name)
+	log.Infof("Cleanup%s in cluster `%s` successfully", cleanTarget(cleanOpt), name)
 	return nil
+}
+
+// checkConfirm
+func cleanupConfirm(clusterName, sysName, version string, cleanOpt operator.Options, delFileMap map[string]set.StringSet) error {
+	log.Warnf("The clean operation will %s %s %s cluster `%s`",
+		color.HiYellowString("stop"), sysName, version, color.HiYellowString(clusterName))
+	if err := tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]:"); err != nil {
+		return err
+	}
+
+	// build file list string
+	delFileList := ""
+	for host, fileList := range delFileMap {
+		// target host has no files to delete
+		if len(fileList) == 0 {
+			continue
+		}
+
+		delFileList += fmt.Sprintf("\n%s:", color.CyanString(host))
+		for _, dfp := range fileList.Slice() {
+			delFileList += fmt.Sprintf("\n %s", dfp)
+		}
+	}
+
+	log.Warnf("Clean the clutser %s's%s.\nNodes will be ignored: %s\nRoles will be ignored: %s\nFiles to be deleted are: %s",
+		color.HiYellowString(clusterName), cleanTarget(cleanOpt), cleanOpt.RetainDataNodes,
+		cleanOpt.RetainDataRoles,
+		delFileList)
+	return tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]:")
+}
+
+func cleanTarget(cleanOpt operator.Options) string {
+	target := ""
+
+	if cleanOpt.CleanupData {
+		target += " data"
+	}
+
+	if cleanOpt.CleanupLog {
+		target += (" log")
+	}
+
+	if cleanOpt.CleanupAuditLog {
+		target += (" audit-log")
+	}
+
+	return color.HiYellowString(target)
 }
 
 // cleanupFiles record the file that needs to be cleaned up
@@ -124,6 +145,7 @@ type cleanupFiles struct {
 	cleanupData     bool     // whether to clean up the data
 	cleanupLog      bool     // whether to clean up the log
 	cleanupTLS      bool     // whether to clean up the tls files
+	cleanupAuditLog bool     // whether to clean up the tidb server audit log
 	retainDataRoles []string // roles that don't clean up
 	retainDataNodes []string // roles that don't clean up
 	delFileMap      map[string]set.StringSet
@@ -131,11 +153,12 @@ type cleanupFiles struct {
 
 // getCleanupFiles  get the files that need to be deleted
 func getCleanupFiles(topo spec.Topology,
-	cleanupData, cleanupLog, cleanupTLS bool, retainDataRoles, retainDataNodes []string) map[string]set.StringSet {
+	cleanupData, cleanupLog, cleanupTLS, cleanupAuditLog bool, retainDataRoles, retainDataNodes []string) map[string]set.StringSet {
 	c := &cleanupFiles{
 		cleanupData:     cleanupData,
 		cleanupLog:      cleanupLog,
 		cleanupTLS:      cleanupTLS,
+		cleanupAuditLog: cleanupAuditLog,
 		retainDataRoles: retainDataRoles,
 		retainDataNodes: retainDataNodes,
 		delFileMap:      make(map[string]set.StringSet),
@@ -187,7 +210,19 @@ func (c *cleanupFiles) instanceCleanupFiles(topo spec.Topology) {
 
 			if c.cleanupLog && len(ins.LogDir()) > 0 {
 				for _, logDir := range strings.Split(ins.LogDir(), ",") {
-					logPaths.Insert(path.Join(logDir, "*.log"))
+					// need to judge the audit log of tidb server
+					if ins.ComponentName() == spec.ComponentTiDB {
+						logPaths.Insert(path.Join(logDir, "tidb?[!audit]*.log"))
+						logPaths.Insert(path.Join(logDir, "tidb.log")) // maybe no need deleted
+					} else {
+						logPaths.Insert(path.Join(logDir, "*.log"))
+					}
+				}
+			}
+
+			if c.cleanupAuditLog && ins.ComponentName() == spec.ComponentTiDB {
+				for _, logDir := range strings.Split(ins.LogDir(), ",") {
+					logPaths.Insert(path.Join(logDir, "tidb-audit*.log"))
 				}
 			}
 
