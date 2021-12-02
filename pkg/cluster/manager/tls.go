@@ -163,7 +163,7 @@ func getTLSFileMap(m *Manager, clusterName string, topo spec.Topology,
 
 	if !enableTLS && cleanCertificate {
 		// get:  host: set(tlsdir)
-		delFileMap = getCleanupFiles(topo, false, false, cleanCertificate, []string{}, []string{})
+		delFileMap = getCleanupFiles(topo, false, false, cleanCertificate, false, []string{}, []string{})
 		// build file list string
 		delFileList := fmt.Sprintf("\n%s:\n %s", color.CyanString("localhost"), m.specManager.Path(clusterName, spec.TLSCertKeyDir))
 		for host, fileList := range delFileMap {

@@ -259,7 +259,6 @@ func buildScaleOutTask(
 	if err != nil {
 		return nil, err
 	}
-	certificateTasks = append(certificateTasks, moniterCertificateTasks...)
 
 	// monitor config
 	monitorConfigTasks := buildInitMonitoredConfigTasks(
@@ -288,7 +287,8 @@ func buildScaleOutTask(
 			ParallelStep("+ Initialize target host environments", gOpt.Force, envInitTasks...).
 			ParallelStep("+ Deploy TiDB instance", gOpt.Force, deployCompTasks...).
 			ParallelStep("+ Copy certificate to remote host", gOpt.Force, certificateTasks...).
-			ParallelStep("+ Generate scale-out config", gOpt.Force, scaleOutConfigTasks...)
+			ParallelStep("+ Generate scale-out config", gOpt.Force, scaleOutConfigTasks...).
+			ParallelStep("+ Init monitor config", gOpt.Force, moniterCertificateTasks...)
 	}
 
 	if afterDeploy != nil {
@@ -361,7 +361,7 @@ func buildScaleConfigTasks(
 					Data:   dataDirs,
 					Log:    logDir,
 				},
-			).BuildAsStep(fmt.Sprintf("  - Generate Scale Config %s -> %s", inst.ComponentName(), inst.ID()))
+			).BuildAsStep(fmt.Sprintf("  - Generate scale-out config %s -> %s", inst.ComponentName(), inst.ID()))
 		scaleConfigTasks = append(scaleConfigTasks, t)
 	})
 
@@ -440,7 +440,7 @@ func buildMonitoredDeployTask(
 					host,
 					deployDir,
 				)
-			deployCompTasks = append(deployCompTasks, tb.BuildAsStep(fmt.Sprintf("  - Copy %s -> %s", comp, host)))
+			deployCompTasks = append(deployCompTasks, tb.BuildAsStep(fmt.Sprintf("  - Deploy %s -> %s", comp, host)))
 		}
 	}
 	return
