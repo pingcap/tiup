@@ -273,7 +273,6 @@ func buildScaleOutTask(
 		gOpt,
 		p,
 	)
-	scaleOutConfigTasks = append(scaleOutConfigTasks, monitorConfigTasks...)
 
 	builder, err := m.sshTaskBuilder(name, topo, base.User, gOpt)
 	if err != nil {
@@ -288,7 +287,7 @@ func buildScaleOutTask(
 			ParallelStep("+ Deploy TiDB instance", gOpt.Force, deployCompTasks...).
 			ParallelStep("+ Copy certificate to remote host", gOpt.Force, certificateTasks...).
 			ParallelStep("+ Generate scale-out config", gOpt.Force, scaleOutConfigTasks...).
-			ParallelStep("+ Init monitor config", gOpt.Force, moniterCertificateTasks...)
+			ParallelStep("+ Init monitor config", gOpt.Force, monitorConfigTasks...)
 	}
 
 	if afterDeploy != nil {
