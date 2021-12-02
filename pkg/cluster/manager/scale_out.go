@@ -210,11 +210,11 @@ func (m *Manager) ScaleOut(
 	}
 
 	if opt.Stage1 {
-		log.Infof(color.YellowString(`The new instance is not started!
-You need to execute 'tiup cluster scale-out %s --stage2' to start the new instance.`, name))
+		log.Infof(`The new instance is not started!
+You need to execute '%s' to start the new instance.`, color.YellowString("tiup cluster scale-out %s --stage2", name))
 	}
 
-	log.Infof("Scaled cluster `%s` out successfully", name)
+	log.Infof("Scaled cluster `%s` out successfully", color.YellowString(name))
 
 	return nil
 }
@@ -258,8 +258,10 @@ func checkForGlobalConfigs(topoFile string, skipConfirm bool) error {
 	the scale out topology, but they will be ignored during the scaling out process.
 	If you want to use configs different from the existing cluster, cancel now and
 	set them in the specification fileds for each host.`, color.YellowString(`["global", "monitored", "server_configs"]`))
-			if err := tui.PromptForConfirmOrAbortErrorWithSkip(skipConfirm, "Do you want to continue? [y/N]: "); err != nil {
-				return err
+			if !skipConfirm {
+				if err := tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: "); err != nil {
+					return err
+				}
 			}
 			return nil
 		}
@@ -284,8 +286,10 @@ func checkScaleOutLock(m *Manager, name string, opt DeployOptions, skipConfirm b
 	Please manually execute '%s' to finish the process.`,
 			color.YellowString("--stage1"),
 			color.YellowString("tiup cluster scale-out %s --stage2", name))
-		if err := tui.PromptForConfirmOrAbortErrorWithSkip(skipConfirm, "Do you want to continue? [y/N]: "); err != nil {
-			return err
+		if !skipConfirm {
+			if err := tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: "); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -295,8 +299,10 @@ func checkScaleOutLock(m *Manager, name string, opt DeployOptions, skipConfirm b
 		}
 
 		log.Warnf(`The parameter '%s' is set, only start the new instances and reload configs.`, color.YellowString("--stage2"))
-		if err := tui.PromptForConfirmOrAbortErrorWithSkip(skipConfirm, "Do you want to continue? [y/N]: "); err != nil {
-			return err
+		if !skipConfirm {
+			if err := tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: "); err != nil {
+				return err
+			}
 		}
 	}
 
