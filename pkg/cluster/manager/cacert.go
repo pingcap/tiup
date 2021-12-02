@@ -142,3 +142,19 @@ func (m *Manager) checkCertificate(clusterName string) error {
 	}
 	return nil
 }
+
+// loadCertificate
+// certificate file exists and reload is true
+// will reload certificate file
+func (m *Manager) loadCertificate(clusterName string, globalOptions *spec.GlobalOptions, reload bool) error {
+	err := m.checkCertificate(clusterName)
+
+	// no need to reload and the file already exists
+	if !reload && err == nil {
+		return nil
+	}
+
+	_, err = m.genAndSaveCertificate(clusterName, globalOptions)
+
+	return err
+}

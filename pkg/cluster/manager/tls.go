@@ -1,4 +1,4 @@
-// Copyright 2020 PingCAP, Inc.
+// Copyright 2021 PingCAP, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -55,13 +55,6 @@ func (m *Manager) TLS(name string, gOpt operator.Options, enable, cleanCertifica
 	globalOptions := topo.BaseTopo().GlobalOptions
 	globalOptions.TLSEnabled = enable
 
-	//  load certificate file
-	if enable {
-		if err := loadCertificate(m, name, globalOptions, reloadCertificate); err != nil {
-			return err
-		}
-	}
-
 	if err := checkTLSEnv(topo, name, base.Version, skipConfirm); err != nil {
 		return err
 	}
@@ -86,7 +79,7 @@ func (m *Manager) TLS(name string, gOpt operator.Options, enable, cleanCertifica
 
 	// Build the tls  tasks
 	t, err := buildTLSTask(
-		m, name, metadata, gOpt, sshProxyProps, delFileMap)
+		m, name, metadata, gOpt, reloadCertificate, sshProxyProps, delFileMap)
 	if err != nil {
 		return err
 	}
@@ -119,30 +112,19 @@ func (m *Manager) TLS(name string, gOpt operator.Options, enable, cleanCertifica
 	return nil
 }
 
-// loadCertificate
-// certificate file exists and reload is true
-// will reload certificate file
-func loadCertificate(m *Manager, clusterName string, globalOptions *spec.GlobalOptions, reload bool) error {
-	err := m.checkCertificate(clusterName)
-
-	// no need to reload and the file already exists
-	if !reload && err == nil {
-		return nil
-	}
-
-	_, err = m.genAndSaveCertificate(clusterName, globalOptions)
-
-	return err
-}
-
 // checkTLSEnv check tiflash vserson and show confirm
 func checkTLSEnv(topo spec.Topology, clusterName, version string, skipConfirm bool) error {
 	// check tiflash version
 	if clusterSpec, ok := topo.(*spec.Specification); ok {
-		if clusterSpec.GlobalOptions.TLSEnabled &&
-			semver.Compare(version, "v4.0.5") < 0 &&
-			len(clusterSpec.TiFlashServers) > 0 {
-			return fmt.Errorf("TiFlash %s is not supported in TLS enabled cluster", version)
+		if clusterSpec.GlobalOptions.TLSEnabled {
+			if semver.Compare(version, "v4.0.5") < 0 && len(clusterSpec.TiFlashServers) > 0 {
+				return fmt.Errorf("TiFlash %s is not supported in TLS enabled cluster", version)
+			}
+		}
+
+		if len(clusterSpec.PDServers) != 1 {
+			return errorx.EnsureStackTrace(fmt.Errorf("Multiple PD nodes is not supported enable/disable TLS")).
+				WithProperty(tui.SuggestionFromString("Please `scale-in` PD nodes to one and try again."))
 		}
 	}
 

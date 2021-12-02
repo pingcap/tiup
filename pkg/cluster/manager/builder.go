@@ -19,11 +19,13 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/fatih/color"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/crypto"
 	"github.com/pingcap/tiup/pkg/environment"
+	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
@@ -676,11 +678,21 @@ func buildTLSTask(
 	name string,
 	metadata spec.Metadata,
 	gOpt operator.Options,
+	reloadCertificate bool,
 	p *tui.SSHConnectionProps,
 	delFileMap map[string]set.StringSet,
 ) (task.Task, error) {
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
+
+	//  load certificate file
+	if topo.BaseTopo().GlobalOptions.TLSEnabled {
+		tlsDir := m.specManager.Path(name, spec.TLSCertKeyDir)
+		log.Infof("Reload certificate: %s", color.YellowString(tlsDir))
+		if err := m.loadCertificate(name, topo.BaseTopo().GlobalOptions, reloadCertificate); err != nil {
+			return nil, err
+		}
+	}
 
 	certificateTasks, err := buildCertificateTasks(m, name, topo, base, gOpt, p)
 	if err != nil {
@@ -734,7 +746,10 @@ func buildTLSTask(
 		ParallelStep("+ Copy certificate to remote host", gOpt.Force, certificateTasks...).
 		ParallelStep("+ Refresh instance configs", gOpt.Force, refreshConfigTasks...).
 		ParallelStep("+ Copy monitor certificate to remote host", gOpt.Force, moniterCertificateTasks...).
-		ParallelStep("+ Refresh monitor configs", gOpt.Force, monitorConfigTasks...)
+		ParallelStep("+ Refresh monitor configs", gOpt.Force, monitorConfigTasks...).
+		Func("Save meta", func(_ context.Context) error {
+			return m.specManager.SaveMeta(name, metadata)
+		})
 
 	// cleanup tls files only in tls disable
 	if !topo.BaseTopo().GlobalOptions.TLSEnabled {
@@ -747,14 +762,14 @@ func buildTLSTask(
 	if err != nil {
 		return nil, err
 	}
-	builder.Func("Restart Cluster", func(ctx context.Context) error {
-		return operator.Restart(ctx, topo, gOpt, tlsCfg)
-	})
 
-	// finally save metadata
-	builder.Func("Save meta", func(_ context.Context) error {
-		return m.specManager.SaveMeta(name, metadata)
-	})
+	builder.
+		Func("Restart Cluster", func(ctx context.Context) error {
+			return operator.Restart(ctx, topo, gOpt, tlsCfg)
+		}).
+		Func("Reload PD Members", func(ctx context.Context) error {
+			return operator.SetPDMember(ctx, name, topo.BaseTopo().GlobalOptions.TLSEnabled, tlsCfg, metadata)
+		})
 
 	return builder.Build(), nil
 }
