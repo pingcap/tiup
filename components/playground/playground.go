@@ -843,45 +843,15 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			return err
 		}
 
-		p.instanceWaiter.Go(func() error {
-			err := p.monitor.wait()
-			if err != nil && atomic.LoadInt32(&p.curSig) == 0 {
-				fmt.Printf("Prometheus quit: %v\n", err)
-			} else {
-				fmt.Println("prometheus quit")
-			}
-			return err
-		})
-
 		p.ngmonitoring, err = p.bootNGMonitoring(ctx, env)
 		if err != nil {
 			return err
 		}
 
-		p.instanceWaiter.Go(func() error {
-			err := p.ngmonitoring.wait()
-			if err != nil && atomic.LoadInt32(&p.curSig) == 0 {
-				fmt.Printf("ng-monitoring quit: %v\n", err)
-			} else {
-				fmt.Println("ng-monitoring quit")
-			}
-			return err
-		})
-
 		p.grafana, err = p.bootGrafana(ctx, env, monitorInfo)
 		if err != nil {
 			return err
 		}
-
-		p.instanceWaiter.Go(func() error {
-			err := p.grafana.wait()
-			if err != nil && atomic.LoadInt32(&p.curSig) == 0 {
-				fmt.Printf("Grafana quit: %v\n", err)
-			} else {
-				fmt.Println("Grafana quit")
-			}
-			return err
-		})
 	}
 
 	if len(succ) > 0 {
@@ -1056,6 +1026,16 @@ func (p *Playground) bootMonitor(ctx context.Context, env *environment.Environme
 		return nil, nil, err
 	}
 
+	p.instanceWaiter.Go(func() error {
+		err := p.monitor.wait()
+		if err != nil && atomic.LoadInt32(&p.curSig) == 0 {
+			fmt.Printf("Prometheus quit: %v\n", err)
+		} else {
+			fmt.Println("prometheus quit")
+		}
+		return err
+	})
+
 	return monitor, monitorInfo, nil
 }
 
@@ -1072,9 +1052,25 @@ func (p *Playground) bootNGMonitoring(ctx context.Context, env *environment.Envi
 		return nil, err
 	}
 
+	// ng-monitoring only exists when tidb >= 5.3.0
+	_, err = os.Stat(ngm.cmd.Path)
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+
 	if err := ngm.cmd.Start(); err != nil {
 		return nil, err
 	}
+
+	p.instanceWaiter.Go(func() error {
+		err := p.ngmonitoring.wait()
+		if err != nil && atomic.LoadInt32(&p.curSig) == 0 {
+			fmt.Printf("ng-monitoring quit: %v\n", err)
+		} else {
+			fmt.Println("ng-monitoring quit")
+		}
+		return err
+	})
 
 	return ngm, nil
 }
@@ -1134,6 +1130,16 @@ func (p *Playground) bootGrafana(ctx context.Context, env *environment.Environme
 	if err != nil {
 		return nil, err
 	}
+
+	p.instanceWaiter.Go(func() error {
+		err := p.grafana.wait()
+		if err != nil && atomic.LoadInt32(&p.curSig) == 0 {
+			fmt.Printf("Grafana quit: %v\n", err)
+		} else {
+			fmt.Println("Grafana quit")
+		}
+		return err
+	})
 
 	return grafana, nil
 }
