@@ -259,6 +259,7 @@ func buildScaleOutTask(
 	if err != nil {
 		return nil, err
 	}
+	certificateTasks = append(certificateTasks, moniterCertificateTasks...)
 
 	// monitor config
 	monitorConfigTasks := buildInitMonitoredConfigTasks(
