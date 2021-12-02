@@ -78,25 +78,10 @@ func (m *Manager) TLS(name string, gOpt operator.Options, enable, cleanCertifica
 		}
 	}
 
-	delFileMap := make(map[string]set.StringSet)
-	if !enable && cleanCertificate {
-		// get:  host: set(tlsdir)
-		delFileMap := getCleanupFiles(topo, false, false, cleanCertificate, []string{}, []string{})
-		// build file list string
-		delFileList := fmt.Sprintf("\n%s:\n %s", color.CyanString("localhost"), m.specManager.Path(name, spec.TLSCertKeyDir))
-		for host, fileList := range delFileMap {
-			delFileList += fmt.Sprintf("\n%s:", color.CyanString(host))
-			for _, dfp := range fileList.Slice() {
-				delFileList += fmt.Sprintf("\n %s", dfp)
-			}
-		}
-
-		if !skipConfirm {
-			log.Warnf(color.YellowString("The parameter `--clean-certificate` will delete the following files: %s"), delFileList)
-			if err := tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]:"); err != nil {
-				return err
-			}
-		}
+	// delFileMap: files that need to be cleaned up, if flag -- cleanCertificate are used
+	delFileMap, err := getTLSFileMap(m, name, topo, enable, cleanCertificate, skipConfirm)
+	if err != nil {
+		return err
 	}
 
 	// Build the tls  tasks
@@ -169,4 +154,33 @@ func checkTLSEnv(topo spec.Topology, clusterName, version string, skipConfirm bo
 			))
 	}
 	return nil
+}
+
+// getTLSFileMap
+func getTLSFileMap(m *Manager, clusterName string, topo spec.Topology,
+	enableTLS, cleanCertificate, skipConfirm bool) (map[string]set.StringSet, error) {
+	delFileMap := make(map[string]set.StringSet)
+
+	if !enableTLS && cleanCertificate {
+		// get:  host: set(tlsdir)
+		delFileMap = getCleanupFiles(topo, false, false, cleanCertificate, []string{}, []string{})
+		// build file list string
+		delFileList := fmt.Sprintf("\n%s:\n %s", color.CyanString("localhost"), m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+		for host, fileList := range delFileMap {
+			delFileList += fmt.Sprintf("\n%s:", color.CyanString(host))
+			for _, dfp := range fileList.Slice() {
+				delFileList += fmt.Sprintf("\n %s", dfp)
+			}
+		}
+
+		log.Warnf("The parameter `%s` will delete the following files: %s", color.YellowString("--clean-certificate"), delFileList)
+
+		if !skipConfirm {
+			if err := tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]:"); err != nil {
+				return delFileMap, err
+			}
+		}
+	}
+
+	return delFileMap, nil
 }
