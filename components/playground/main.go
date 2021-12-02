@@ -146,7 +146,7 @@ if you don't specified a version.
 Examples:
   $ tiup playground nightly                         # Start a TiDB nightly version local cluster
   $ tiup playground v5.0.1 --db 3 --pd 3 --kv 3     # Start a local cluster with 10 nodes
-  $ tiup playground nightly --monitor=false         # Start a local cluster and disable monitor system
+  $ tiup playground nightly --without-monitor       # Start a local cluster and disable monitor system
   $ tiup playground --pd.config ~/config/pd.toml    # Start a local cluster with specified configuration file
   $ tiup playground --db.binpath /xx/tidb-server    # Start a local cluster with component binary path
   $ tiup playground --mode tikv-slim                # Start a local tikv only cluster (No TiDB or TiFlash Available)
