@@ -226,6 +226,7 @@ Examples:
 
 			var booted uint32
 			ctx, cancel := context.WithCancel(context.Background())
+			ctx = context.WithValue(ctx, logprinter.ContextKeyLogger, log)
 			defer cancel()
 
 			go func() {

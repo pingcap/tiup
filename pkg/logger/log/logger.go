@@ -17,7 +17,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 
 	"go.uber.org/zap"
 )
@@ -41,19 +40,10 @@ type Logger struct {
 
 // NewLogger creates a Logger with default settings
 func NewLogger(m string) *Logger {
-	var dp DisplayMode
-	switch strings.ToLower(m) {
-	case "json":
-		dp = DisplayModeJSON
-	case "plain", "text":
-		dp = DisplayModePlain
-	default:
-		dp = DisplayModeDefault
-	}
 	return &Logger{
 		stdout:    os.Stdout,
 		stderr:    os.Stderr,
-		outputFmt: dp,
+		outputFmt: fmtDisplayMode(m),
 	}
 }
 
@@ -67,12 +57,17 @@ func (l *Logger) SetStderr(w io.Writer) {
 	l.stderr = w
 }
 
-// SetDisplayMode changes the global output format of logger
+// SetDisplayMode changes the output format of logger
 func (l *Logger) SetDisplayMode(m DisplayMode) {
 	l.outputFmt = m
 }
 
-// GetDisplayMode returns the current global output format
+// SetDisplayModeFromString changes the output format of logger
+func (l *Logger) SetDisplayModeFromString(m string) {
+	l.outputFmt = fmtDisplayMode(m)
+}
+
+// GetDisplayMode returns the current output format
 func (l *Logger) GetDisplayMode() DisplayMode {
 	return l.outputFmt
 }

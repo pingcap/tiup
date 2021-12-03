@@ -47,7 +47,7 @@ var (
 	rootCmd     *cobra.Command
 	gOpt        operator.Options
 	skipConfirm bool
-	log         *logprinter.Logger
+	log         = logprinter.NewLogger("") // init default logger
 )
 
 var dmspec *cspec.SpecManager
@@ -75,7 +75,7 @@ please backup your data before process.`,
 		Version:       version.NewTiUPVersion().String(),
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			// populate logger
-			log = logprinter.NewLogger(gOpt.DisplayMode)
+			log.SetDisplayModeFromString(gOpt.DisplayMode)
 
 			var err error
 			var env *tiupmeta.Environment

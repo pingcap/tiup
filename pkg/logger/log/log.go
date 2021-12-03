@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"go.uber.org/zap"
 )
@@ -38,6 +39,19 @@ const (
 	DisplayModePlain                      // plain text
 	DisplayModeJSON                       // JSON
 )
+
+func fmtDisplayMode(m string) DisplayMode {
+	var dp DisplayMode
+	switch strings.ToLower(m) {
+	case "json":
+		dp = DisplayModeJSON
+	case "plain", "text":
+		dp = DisplayModePlain
+	default:
+		dp = DisplayModeDefault
+	}
+	return dp
+}
 
 func printLog(w io.Writer, mode DisplayMode, level, format string, args ...interface{}) {
 	switch mode {
@@ -68,6 +82,11 @@ func SetDisplayMode(m DisplayMode) {
 // GetDisplayMode returns the current global output format
 func GetDisplayMode() DisplayMode {
 	return outputFmt
+}
+
+// SetDisplayModeFromString changes the global output format of logger
+func SetDisplayModeFromString(m string) {
+	outputFmt = fmtDisplayMode(m)
 }
 
 // Debugf output the debug message to console
