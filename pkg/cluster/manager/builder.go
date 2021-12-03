@@ -688,7 +688,7 @@ func buildTLSTask(
 	//  load certificate file
 	if topo.BaseTopo().GlobalOptions.TLSEnabled {
 		tlsDir := m.specManager.Path(name, spec.TLSCertKeyDir)
-		log.Infof("Reload certificate: %s", color.YellowString(tlsDir))
+		log.Infof("Generate certificate: %s", color.YellowString(tlsDir))
 		if err := m.loadCertificate(name, topo.BaseTopo().GlobalOptions, reloadCertificate); err != nil {
 			return nil, err
 		}
@@ -744,8 +744,8 @@ func buildTLSTask(
 
 	builder.
 		ParallelStep("+ Copy certificate to remote host", gOpt.Force, certificateTasks...).
-		ParallelStep("+ Refresh instance configs", gOpt.Force, refreshConfigTasks...).
 		ParallelStep("+ Copy monitor certificate to remote host", gOpt.Force, moniterCertificateTasks...).
+		ParallelStep("+ Refresh instance configs", gOpt.Force, refreshConfigTasks...).
 		ParallelStep("+ Refresh monitor configs", gOpt.Force, monitorConfigTasks...).
 		Func("Save meta", func(_ context.Context) error {
 			return m.specManager.SaveMeta(name, metadata)
@@ -753,7 +753,7 @@ func buildTLSTask(
 
 	// cleanup tls files only in tls disable
 	if !topo.BaseTopo().GlobalOptions.TLSEnabled {
-		builder.Func("CleanupCluster", func(ctx context.Context) error {
+		builder.Func("Cleanup TLS files", func(ctx context.Context) error {
 			return operator.CleanupComponent(ctx, delFileMap)
 		})
 	}
