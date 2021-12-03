@@ -78,7 +78,7 @@ func (m Mode) String() string {
 	var s string
 	switch m {
 	case ModeSpinner:
-		s = "spinner"
+		s = "running"
 	case ModeProgress:
 		s = "progress"
 	case ModeDone:
