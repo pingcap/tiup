@@ -74,7 +74,7 @@ func Test(t *testing.T) { check.TestingT(t) }
 var _ = check.Suite(&initConfigSuite{})
 
 func (s *initConfigSuite) TestCheckConfig(c *check.C) {
-	ctx := ctxt.New(context.Background(), 0, logprinter.NewLogger())
+	ctx := ctxt.New(context.Background(), 0, logprinter.NewLogger(""))
 	defer mock.With("FakeExecutor", &fakeExecutor{})()
 
 	t := &InitConfig{

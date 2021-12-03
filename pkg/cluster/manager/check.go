@@ -143,6 +143,7 @@ func checkSystemInfo(
 		applyFixTasks []*task.StepDisplay
 		downloadTasks []*task.StepDisplay
 	)
+	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 	insightVer := spec.TiDBComponentVersion(spec.ComponentCheckCollector, "")
 
 	uniqueHosts := map[string]int{}             // host -> ssh-port
@@ -163,7 +164,7 @@ func checkSystemInfo(
 			archKey := fmt.Sprintf("%s-%s", inst.OS(), inst.Arch())
 			if _, found := uniqueArchList[archKey]; !found {
 				uniqueArchList[archKey] = struct{}{}
-				t0 := task.NewBuilder(gOpt.DisplayMode).
+				t0 := task.NewBuilder(logger).
 					Download(
 						spec.ComponentCheckCollector,
 						inst.OS(),
@@ -174,7 +175,7 @@ func checkSystemInfo(
 				downloadTasks = append(downloadTasks, t0)
 			}
 
-			t1 := task.NewBuilder(gOpt.DisplayMode)
+			t1 := task.NewBuilder(logger)
 			// checks that applies to each instance
 			if opt.ExistCluster {
 				t1 = t1.CheckSys(
@@ -213,7 +214,7 @@ func checkSystemInfo(
 			if _, found := uniqueHosts[inst.GetHost()]; !found {
 				uniqueHosts[inst.GetHost()] = inst.GetSSHPort()
 				// build system info collecting tasks
-				t2 := task.NewBuilder(gOpt.DisplayMode).
+				t2 := task.NewBuilder(logger).
 					RootSSH(
 						inst.GetHost(),
 						inst.GetSSHPort(),
@@ -334,7 +335,7 @@ func checkSystemInfo(
 				t1.BuildAsStep(fmt.Sprintf("  - Checking node %s", inst.GetHost())),
 			)
 
-			t3 := task.NewBuilder(gOpt.DisplayMode).
+			t3 := task.NewBuilder(logger).
 				RootSSH(
 					inst.GetHost(),
 					inst.GetSSHPort(),
@@ -360,7 +361,7 @@ func checkSystemInfo(
 		}
 	}
 
-	t := task.NewBuilder(gOpt.DisplayMode).
+	t := task.NewBuilder(logger).
 		ParallelStep("+ Download necessary tools", false, downloadTasks...).
 		ParallelStep("+ Collect basic system information", false, collectTasks...).
 		ParallelStep("+ Check system requirements", false, checkSysTasks...).
@@ -382,7 +383,7 @@ func checkSystemInfo(
 	}
 	checkResults := make([]HostCheckResult, 0)
 	for host := range uniqueHosts {
-		tf := task.NewBuilder(gOpt.DisplayMode).
+		tf := task.NewBuilder(logger).
 			RootSSH(
 				host,
 				uniqueHosts[host],
@@ -417,7 +418,7 @@ func checkSystemInfo(
 	tui.PrintTable(checkResultTable, true)
 
 	if opt.ApplyFix {
-		tc := task.NewBuilder(gOpt.DisplayMode).
+		tc := task.NewBuilder(logger).
 			ParallelStep("+ Try to apply changes to fix failed checks", false, applyFixTasks...).
 			Build()
 		if err := tc.Execute(ctx); err != nil {

@@ -243,7 +243,7 @@ func (m *Manager) Deploy(
 			if strings.HasPrefix(globalOptions.DataDir, "/") {
 				dirs = append(dirs, globalOptions.DataDir)
 			}
-			t := task.NewBuilder(gOpt.DisplayMode).
+			t := task.NewBuilder(m.logger).
 				RootSSH(
 					inst.GetHost(),
 					inst.GetSSHPort(),
@@ -275,7 +275,7 @@ func (m *Manager) Deploy(
 	}
 
 	// Download missing component
-	downloadCompTasks = buildDownloadCompTasks(clusterVersion, topo, gOpt, m.bindVersion)
+	downloadCompTasks = buildDownloadCompTasks(clusterVersion, topo, m.logger, gOpt, m.bindVersion)
 
 	// Deploy components to remote
 	topo.IterInstance(func(inst spec.Instance) {
@@ -296,7 +296,7 @@ func (m *Manager) Deploy(
 		if globalOptions.TLSEnabled {
 			deployDirs = append(deployDirs, filepath.Join(deployDir, "tls"))
 		}
-		t := task.NewBuilder(gOpt.DisplayMode).
+		t := task.NewBuilder(m.logger).
 			UserSSH(
 				inst.GetHost(),
 				inst.GetSSHPort(),
@@ -401,9 +401,12 @@ func (m *Manager) Deploy(
 	downloadCompTasks = append(downloadCompTasks, dlTasks...)
 	deployCompTasks = append(deployCompTasks, dpTasks...)
 
-	builder := task.NewBuilder(gOpt.DisplayMode).
+	builder := task.NewBuilder(m.logger).
 		Step("+ Generate SSH keys",
-			task.NewBuilder(gOpt.DisplayMode).SSHKeyGen(m.specManager.Path(name, "ssh", "id_rsa")).Build()).
+			task.NewBuilder(m.logger).
+				SSHKeyGen(m.specManager.Path(name, "ssh", "id_rsa")).
+				Build(),
+			m.logger).
 		ParallelStep("+ Download TiDB components", false, downloadCompTasks...).
 		ParallelStep("+ Initialize target host environments", false, envInitTasks...).
 		ParallelStep("+ Copy files", false, deployCompTasks...)

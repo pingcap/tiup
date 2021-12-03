@@ -56,7 +56,7 @@ var (
 	teleNodeInfos []*telemetry.NodeInfo
 	teleTopology  string
 	teleCommand   []string
-	log           = logprinter.NewLogger()
+	log           *logprinter.Logger
 )
 
 var tidbSpec *spec.SpecManager
@@ -101,14 +101,8 @@ func init() {
 		SilenceErrors: true,
 		Version:       version.NewTiUPVersion().String(),
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			switch strings.ToLower(gOpt.DisplayMode) {
-			case "json":
-				log.SetDisplayMode(logprinter.DisplayModeJSON)
-			case "plain", "text":
-				log.SetDisplayMode(logprinter.DisplayModePlain)
-			default:
-				log.SetDisplayMode(logprinter.DisplayModeDefault)
-			}
+			// populate logger
+			log = logprinter.NewLogger(gOpt.DisplayMode)
 
 			var err error
 			var env *tiupmeta.Environment

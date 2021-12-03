@@ -98,6 +98,7 @@ func (m *Manager) Reload(name string, gOpt operator.Options, skipRestart, skipCo
 		noAgentHosts,
 		*topo.BaseTopo().GlobalOptions,
 		topo.GetMonitoredOptions(),
+		m.logger,
 		sshTimeout,
 		exeTimeout,
 		gOpt,

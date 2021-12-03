@@ -30,7 +30,7 @@ type StepDisplay struct {
 	inner       Task
 	prefix      string
 	children    map[Task]struct{}
-	DisplayMode logprinter.DisplayMode
+	Logger      *logprinter.Logger
 	progressBar progress.Bar
 }
 
@@ -56,14 +56,14 @@ func addChildren(m map[Task]struct{}, task Task) {
 	}
 }
 
-func newStepDisplay(prefix string, inner Task, m logprinter.DisplayMode) *StepDisplay {
+func newStepDisplay(prefix string, inner Task, logger *logprinter.Logger) *StepDisplay {
 	children := make(map[Task]struct{})
 	addChildren(children, inner)
 	return &StepDisplay{
 		inner:       inner,
 		prefix:      prefix,
 		children:    children,
-		DisplayMode: m,
+		Logger:      logger,
 		progressBar: progress.NewSingleBar(prefix),
 	}
 }
@@ -74,9 +74,9 @@ func (s *StepDisplay) SetHidden(h bool) *StepDisplay {
 	return s
 }
 
-// SetDisplayMode set the value of logprinter.DisplayMode flag
-func (s *StepDisplay) SetDisplayMode(m logprinter.DisplayMode) *StepDisplay {
-	s.DisplayMode = m
+// SetLogger set the logger of step
+func (s *StepDisplay) SetLogger(logger *logprinter.Logger) *StepDisplay {
+	s.Logger = logger
 	return s
 }
 
@@ -95,7 +95,7 @@ func (s *StepDisplay) Execute(ctx context.Context) error {
 		return err
 	}
 
-	switch s.DisplayMode {
+	switch s.Logger.GetDisplayMode() {
 	case logprinter.DisplayModeJSON,
 		logprinter.DisplayModePlain:
 		break
@@ -125,11 +125,11 @@ func (s *StepDisplay) Execute(ctx context.Context) error {
 		}
 	}
 
-	switch s.DisplayMode {
+	switch s.Logger.GetDisplayMode() {
 	case logprinter.DisplayModeJSON:
 		_ = printDpJSON(dp)
 	case logprinter.DisplayModePlain:
-		printDpPlain(ctx, dp)
+		printDpPlain(s.Logger, dp)
 	default:
 		s.progressBar.UpdateDisplay(dp)
 	}
@@ -146,7 +146,7 @@ func (s *StepDisplay) String() string {
 	return s.inner.String()
 }
 
-func (s *StepDisplay) handleTaskBegin(ctx context.Context, task Task) {
+func (s *StepDisplay) handleTaskBegin(task Task) {
 	if _, ok := s.children[task]; !ok {
 		return
 	}
@@ -154,17 +154,17 @@ func (s *StepDisplay) handleTaskBegin(ctx context.Context, task Task) {
 		Prefix: s.prefix,
 		Suffix: strings.Split(task.String(), "\n")[0],
 	}
-	switch s.DisplayMode {
+	switch s.Logger.GetDisplayMode() {
 	case logprinter.DisplayModeJSON:
 		_ = printDpJSON(dp)
 	case logprinter.DisplayModePlain:
-		printDpPlain(ctx, dp)
+		printDpPlain(s.Logger, dp)
 	default:
 		s.progressBar.UpdateDisplay(dp)
 	}
 }
 
-func (s *StepDisplay) handleTaskProgress(ctx context.Context, task Task, p string) {
+func (s *StepDisplay) handleTaskProgress(task Task, p string) {
 	if _, ok := s.children[task]; !ok {
 		return
 	}
@@ -172,11 +172,11 @@ func (s *StepDisplay) handleTaskProgress(ctx context.Context, task Task, p strin
 		Prefix: s.prefix,
 		Suffix: strings.Split(p, "\n")[0],
 	}
-	switch s.DisplayMode {
+	switch s.Logger.GetDisplayMode() {
 	case logprinter.DisplayModeJSON:
 		_ = printDpJSON(dp)
 	case logprinter.DisplayModePlain:
-		printDpPlain(ctx, dp)
+		printDpPlain(s.Logger, dp)
 	default:
 		s.progressBar.UpdateDisplay(dp)
 	}
@@ -187,7 +187,7 @@ func (s *StepDisplay) handleTaskProgress(ctx context.Context, task Task, p strin
 type ParallelStepDisplay struct {
 	inner       *Parallel
 	prefix      string
-	DisplayMode logprinter.DisplayMode
+	Logger      *logprinter.Logger
 	progressBar *progress.MultiBar
 }
 
@@ -207,15 +207,15 @@ func newParallelStepDisplay(prefix string, ignoreError bool, sdTasks ...*StepDis
 	}
 }
 
-// SetDisplayMode set the value of logprinter.DisplayMode flag
-func (ps *ParallelStepDisplay) SetDisplayMode(m logprinter.DisplayMode) *ParallelStepDisplay {
-	ps.DisplayMode = m
+// SetLogger set the logger of step
+func (ps *ParallelStepDisplay) SetLogger(logger *logprinter.Logger) *ParallelStepDisplay {
+	ps.Logger = logger
 	return ps
 }
 
 // Execute implements the Task interface
 func (ps *ParallelStepDisplay) Execute(ctx context.Context) error {
-	switch ps.DisplayMode {
+	switch ps.Logger.GetDisplayMode() {
 	case logprinter.DisplayModeJSON,
 		logprinter.DisplayModePlain:
 		break
@@ -246,13 +246,11 @@ func printDpJSON(dp *progress.DisplayProps) error {
 	return nil
 }
 
-func printDpPlain(ctx context.Context, dp *progress.DisplayProps) {
+func printDpPlain(logger *logprinter.Logger, dp *progress.DisplayProps) {
 	switch dp.Mode {
 	case progress.ModeError:
-		ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger).
-			Errorf("progress: %s", dp)
+		logger.Errorf("progress: %s", dp)
 	default:
-		ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger).
-			Infof("progress: %s", dp)
+		logger.Infof("progress: %s", dp)
 	}
 }

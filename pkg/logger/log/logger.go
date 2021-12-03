@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"go.uber.org/zap"
 )
@@ -39,11 +40,20 @@ type Logger struct {
 }
 
 // NewLogger creates a Logger with default settings
-func NewLogger() *Logger {
+func NewLogger(m string) *Logger {
+	var dp DisplayMode
+	switch strings.ToLower(m) {
+	case "json":
+		dp = DisplayModeJSON
+	case "plain", "text":
+		dp = DisplayModePlain
+	default:
+		dp = DisplayModeDefault
+	}
 	return &Logger{
 		stdout:    os.Stdout,
 		stderr:    os.Stderr,
-		outputFmt: DisplayModeDefault,
+		outputFmt: dp,
 	}
 }
 
@@ -75,17 +85,17 @@ func (l *Logger) Debugf(format string, args ...interface{}) {
 // Infof output the log message to console
 func (l *Logger) Infof(format string, args ...interface{}) {
 	zap.L().Info(fmt.Sprintf(format, args...))
-	printLog(l.stdout, "info", format, args...)
+	printLog(l.stdout, l.outputFmt, "info", format, args...)
 }
 
 // Warnf output the warning message to console
 func (l *Logger) Warnf(format string, args ...interface{}) {
 	zap.L().Warn(fmt.Sprintf(format, args...))
-	printLog(l.stderr, "warn", format, args...)
+	printLog(l.stderr, l.outputFmt, "warn", format, args...)
 }
 
 // Errorf output the error message to console
 func (l *Logger) Errorf(format string, args ...interface{}) {
 	zap.L().Error(fmt.Sprintf(format, args...))
-	printLog(l.stderr, "error", format, args...)
+	printLog(l.stderr, l.outputFmt, "error", format, args...)
 }

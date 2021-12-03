@@ -82,7 +82,7 @@ func supportVersion(vs string) error {
 }
 
 func postDeployHook(builder *task.Builder, topo spec.Topology, gOpt operator.Options) {
-	enableTask := task.NewBuilder(gOpt.DisplayMode).Func("Setting service auto start on boot", func(ctx context.Context) error {
+	enableTask := task.NewBuilder(builder.Logger).Func("Setting service auto start on boot", func(ctx context.Context) error {
 		return operator.Enable(ctx, topo, operator.Options{}, true)
 	}).BuildAsStep("Enable service").SetHidden(true)
 

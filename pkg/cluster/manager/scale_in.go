@@ -115,7 +115,7 @@ func (m *Manager) ScaleIn(
 
 	t := b.
 		ParallelStep("+ Refresh instance configs", force, regenConfigTasks...).
-		Parallel(force, buildReloadPromTasks(metadata.GetTopology(), gOpt, nodes...)...).
+		Parallel(force, buildReloadPromTasks(metadata.GetTopology(), m.logger, gOpt, nodes...)...).
 		Build()
 
 	ctx := ctxt.New(

@@ -74,7 +74,7 @@ var (
 	tag              string
 	tiupDataDir      string
 	dataDir          string
-	log              = logprinter.NewLogger()
+	log              = logprinter.NewLogger("")
 )
 
 const (

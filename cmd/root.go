@@ -41,7 +41,7 @@ var (
 	reportEnabled bool // is telemetry report enabled
 	eventUUID     = uuid.New().String()
 	teleCommand   string
-	log           = logprinter.NewLogger() // use the default logger
+	log           *logprinter.Logger
 )
 
 // arguments
@@ -67,11 +67,10 @@ the latest stable version will be downloaded from the repository.`,
 
 		SilenceErrors:      true,
 		FParseErrWhitelist: cobra.FParseErrWhitelist{UnknownFlags: true},
-		Args: func(cmd *cobra.Command, args []string) error {
-			// Support `tiup <component>`
-			return nil
-		},
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			// populate logger
+			log = logprinter.NewLogger("") // use default logger
+
 			teleCommand = cmd.CommandPath()
 			if printVersion && len(args) == 0 {
 				return nil

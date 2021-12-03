@@ -158,7 +158,7 @@ func (m *Manager) DestroyTombstone(
 		UpdateMeta(name, clusterMeta, nodes).
 		UpdateTopology(name, m.specManager.Path(name), clusterMeta, nodes).
 		ParallelStep("+ Refresh instance configs", true, regenConfigTasks...).
-		Parallel(true, buildReloadPromTasks(metadata.GetTopology(), gOpt)...).
+		Parallel(true, buildReloadPromTasks(metadata.GetTopology(), m.logger, gOpt)...).
 		Build()
 
 	if err := t.Execute(ctx); err != nil {

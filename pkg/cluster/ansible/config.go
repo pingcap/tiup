@@ -37,6 +37,7 @@ func ImportConfig(ctx context.Context, name string, clsMeta *spec.ClusterMeta, g
 	// 	 return err
 	// }
 
+	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 	var sshProxyProps *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
 	if gOpt.SSHType != executor.SSHTypeNone && len(gOpt.SSHProxyHost) != 0 {
 		var err error
@@ -50,7 +51,7 @@ func ImportConfig(ctx context.Context, name string, clsMeta *spec.ClusterMeta, g
 		for _, inst := range comp.Instances() {
 			switch inst.ComponentName() {
 			case spec.ComponentPD, spec.ComponentTiKV, spec.ComponentPump, spec.ComponentTiDB, spec.ComponentDrainer:
-				t := task.NewBuilder("").
+				t := task.NewBuilder(logger).
 					SSHKeySet(
 						spec.ClusterPath(name, "ssh", "id_rsa"),
 						spec.ClusterPath(name, "ssh", "id_rsa.pub")).
@@ -84,7 +85,7 @@ func ImportConfig(ctx context.Context, name string, clsMeta *spec.ClusterMeta, g
 					Build()
 				copyFileTasks = append(copyFileTasks, t)
 			case spec.ComponentTiFlash:
-				t := task.NewBuilder("").
+				t := task.NewBuilder(logger).
 					SSHKeySet(
 						spec.ClusterPath(name, "ssh", "id_rsa"),
 						spec.ClusterPath(name, "ssh", "id_rsa.pub")).
@@ -133,7 +134,7 @@ func ImportConfig(ctx context.Context, name string, clsMeta *spec.ClusterMeta, g
 			}
 		}
 	}
-	t := task.NewBuilder("").
+	t := task.NewBuilder(logger).
 		Parallel(false, copyFileTasks...).
 		Build()
 

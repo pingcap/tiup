@@ -146,7 +146,7 @@ func TestImportFromAnsible(t *testing.T) {
 	clusterName, meta, err := im.ImportFromAnsibleDir(ctxt.New(
 		context.Background(),
 		0,
-		logprinter.NewLogger(),
+		logprinter.NewLogger(""),
 	))
 	assert.Nil(err, "verbose: %+v", err)
 	assert.Equal("test-cluster", clusterName)
