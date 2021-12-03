@@ -611,6 +611,16 @@ It conflicts to a directory in the existing cluster:
 
 Please change to use another directory or another host.`)
 
+	// no dir conflict error if one of the instance is marked as ignore_exporter
+	err = yaml.Unmarshal([]byte(`
+tidb_servers:
+  - host: 172.16.5.138
+    ignore_exporter: true
+`), &topo3)
+	c.Assert(err, IsNil)
+	err = CheckClusterDirConflict(clsList, "topo", &topo3)
+	c.Assert(err, IsNil)
+
 	// component with different port has no dir conflict
 	topo4 := Specification{}
 	err = yaml.Unmarshal([]byte(`
