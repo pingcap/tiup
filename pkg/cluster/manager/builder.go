@@ -305,11 +305,11 @@ func buildScaleOutTask(
 	// don't start the new instance
 	if opt.Stage1 {
 		// save scale out file lock
-		builder.Func("Create Scale-Out File Lock", func(_ context.Context) error {
+		builder.Func("Create scale-out file lock", func(_ context.Context) error {
 			return m.specManager.NewScaleOutLock(name, newPart)
 		})
 	} else {
-		builder.Func("Start Cluster", func(ctx context.Context) error {
+		builder.Func("Start new instances", func(ctx context.Context) error {
 			return operator.Start(ctx, newPart, operator.Options{OptTimeout: gOpt.OptTimeout, Operation: operator.ScaleOutOperation}, tlsCfg)
 		}).
 			ParallelStep("+ Refresh configs", false, refreshConfigTasks...).
