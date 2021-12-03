@@ -26,7 +26,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/log"
 )
 
 var (
@@ -34,9 +34,8 @@ var (
 )
 
 // parseDirs sets values of directories of component
-func parseDirs(user string, ins spec.InstanceSpec, sshTimeout uint64, sshType executor.SSHType) (spec.InstanceSpec, error) {
+func parseDirs(ctx context.Context, user string, ins spec.InstanceSpec, sshTimeout uint64, sshType executor.SSHType) (spec.InstanceSpec, error) {
 	hostName, sshPort := ins.SSH()
-	ctx := ctxt.New(context.Background(), 0)
 
 	e, err := executor.New(sshType, false, executor.SSHConfig{
 		Host:    hostName,
@@ -48,7 +47,7 @@ func parseDirs(user string, ins spec.InstanceSpec, sshTimeout uint64, sshType ex
 	if err != nil {
 		return nil, err
 	}
-	log.Debugf("Detecting deploy paths on %s...", hostName)
+	logprinter.Debugf("Detecting deploy paths on %s...", hostName)
 
 	stdout, err := readStartScript(ctx, e, ins.Role(), hostName, ins.GetMainPort())
 	if len(stdout) <= 1 || err != nil {

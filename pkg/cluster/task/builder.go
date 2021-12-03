@@ -24,7 +24,7 @@ import (
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/crypto"
-	"github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/proxy"
 )
@@ -32,19 +32,19 @@ import (
 // Builder is used to build TiUP task
 type Builder struct {
 	tasks       []Task
-	DisplayMode log.DisplayMode
+	DisplayMode logprinter.DisplayMode
 }
 
 // NewBuilder returns a *Builder instance
 func NewBuilder(mode string) *Builder {
-	var dp log.DisplayMode
+	var dp logprinter.DisplayMode
 	switch strings.ToLower(mode) {
 	case "json":
-		dp = log.DisplayModeJSON
+		dp = logprinter.DisplayModeJSON
 	case "plain", "text":
-		dp = log.DisplayModePlain
+		dp = logprinter.DisplayModePlain
 	default:
-		dp = log.DisplayModeDefault
+		dp = logprinter.DisplayModeDefault
 	}
 	return &Builder{DisplayMode: dp}
 }

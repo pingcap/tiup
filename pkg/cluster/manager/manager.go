@@ -26,7 +26,7 @@ import (
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
-	"github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
@@ -46,14 +46,21 @@ type Manager struct {
 	sysName     string
 	specManager *spec.SpecManager
 	bindVersion spec.BindVersion
+	logger      *logprinter.Logger
 }
 
 // NewManager create a Manager.
-func NewManager(sysName string, specManager *spec.SpecManager, bindVersion spec.BindVersion) *Manager {
+func NewManager(
+	sysName string,
+	specManager *spec.SpecManager,
+	bindVersion spec.BindVersion,
+	logger *logprinter.Logger,
+) *Manager {
 	return &Manager{
 		sysName:     sysName,
 		specManager: specManager,
 		bindVersion: bindVersion,
+		logger:      logger,
 	}
 }
 
@@ -77,7 +84,7 @@ func (m *Manager) meta(name string) (metadata spec.Metadata, err error) {
 }
 
 func (m *Manager) confirmTopology(name, version string, topo spec.Topology, patchedRoles set.StringSet) error {
-	log.Infof("Please confirm your topology:")
+	m.logger.Infof("Please confirm your topology:")
 
 	cyan := color.New(color.FgCyan, color.Bold)
 	fmt.Printf("Cluster type:    %s\n", cyan.Sprint(m.sysName))
@@ -108,11 +115,11 @@ func (m *Manager) confirmTopology(name, version string, topo spec.Topology, patc
 
 	tui.PrintTable(clusterTable, true)
 
-	log.Warnf("Attention:")
-	log.Warnf("    1. If the topology is not what you expected, check your yaml file.")
-	log.Warnf("    2. Please confirm there is no port/directory conflicts in same host.")
+	m.logger.Warnf("Attention:")
+	m.logger.Warnf("    1. If the topology is not what you expected, check your yaml file.")
+	m.logger.Warnf("    2. Please confirm there is no port/directory conflicts in same host.")
 	if len(patchedRoles) != 0 {
-		log.Errorf("    3. The component marked as `patched` has been replaced by previous patch commanm.")
+		m.logger.Errorf("    3. The component marked as `patched` has been replaced by previous patch commanm.")
 	}
 
 	if spec, ok := topo.(*spec.Specification); ok {
@@ -121,7 +128,7 @@ func (m *Manager) confirmTopology(name, version string, topo spec.Topology, patc
 			msg := cyan.Sprint(`There are TiSpark nodes defined in the topology, please note that you'll need to manually install Java Runtime Environment (JRE) 8 on the host, otherwise the TiSpark nodes will fail to start.
 You may read the OpenJDK doc for a reference: https://openjdk.java.net/install/
 			`)
-			log.Warnf(msg)
+			m.logger.Warnf(msg)
 		}
 	}
 
@@ -200,7 +207,11 @@ func (m *Manager) fillHostArch(s, p *tui.SSHConnectionProps, topo spec.Topology,
 		return nil
 	}
 
-	ctx := ctxt.New(context.Background(), gOpt.Concurrency)
+	ctx := ctxt.New(
+		context.Background(),
+		gOpt.Concurrency,
+		m.logger,
+	)
 	t := task.NewBuilder(gOpt.DisplayMode).
 		ParallelStep("+ Detect CPU Arch", false, detectTasks...).
 		Build()

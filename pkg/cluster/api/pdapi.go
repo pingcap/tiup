@@ -30,7 +30,7 @@ import (
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/kvproto/pkg/metapb"
 	"github.com/pingcap/kvproto/pkg/pdpb"
-	"github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/mod/semver"
 )
@@ -41,6 +41,7 @@ type PDClient struct {
 	addrs      []string
 	tlsEnabled bool
 	httpClient *utils.HTTPClient
+	ctx        context.Context
 }
 
 // LabelInfo represents an instance label info
@@ -56,17 +57,28 @@ type LabelInfo struct {
 	Labels    string `json:"labels"`
 }
 
-// NewPDClient returns a new PDClient
-func NewPDClient(addrs []string, timeout time.Duration, tlsConfig *tls.Config) *PDClient {
+// NewPDClient returns a new PDClient, the context must have
+// a *logprinter.Logger as value of "logger"
+func NewPDClient(
+	ctx context.Context,
+	addrs []string,
+	timeout time.Duration,
+	tlsConfig *tls.Config,
+) *PDClient {
 	enableTLS := false
 	if tlsConfig != nil {
 		enableTLS = true
+	}
+
+	if _, ok := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger); !ok {
+		panic("the context must have logger inside")
 	}
 
 	cli := &PDClient{
 		addrs:      addrs,
 		tlsEnabled: enableTLS,
 		httpClient: utils.NewHTTPClient(timeout, tlsConfig),
+		ctx:        ctx,
 	}
 
 	cli.tryIdentifyVersion()
@@ -77,7 +89,7 @@ func (pc *PDClient) tryIdentifyVersion() {
 	endpoints := pc.getEndpoints(pdVersionURI)
 	response := map[string]string{}
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, err := pc.httpClient.Get(context.TODO(), endpoint)
+		body, err := pc.httpClient.Get(pc.ctx, endpoint)
 		if err != nil {
 			return body, err
 		}
@@ -165,7 +177,7 @@ func (pc *PDClient) CheckHealth() error {
 	endpoints := pc.getEndpoints(pdPingURI)
 
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, err := pc.httpClient.Get(context.TODO(), endpoint)
+		body, err := pc.httpClient.Get(pc.ctx, endpoint)
 		if err != nil {
 			return body, err
 		}
@@ -189,7 +201,7 @@ func (pc *PDClient) GetStores() (*StoresInfo, error) {
 	storesInfo := StoresInfo{}
 
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, err := pc.httpClient.Get(context.TODO(), endpoint)
+		body, err := pc.httpClient.Get(pc.ctx, endpoint)
 		if err != nil {
 			return body, err
 		}
@@ -267,7 +279,8 @@ func (pc *PDClient) WaitLeader(retryOpt *utils.RetryOption) error {
 		}
 
 		// return error by default, to make the retry work
-		log.Debugf("Still waitting for the PD leader to be elected")
+		pc.ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger).
+			Debugf("Still waitting for the PD leader to be elected")
 		return perrs.New("still waitting for the PD leader to be elected")
 	}, *retryOpt); err != nil {
 		return fmt.Errorf("error getting PD leader, %v", err)
@@ -282,7 +295,7 @@ func (pc *PDClient) GetLeader() (*pdpb.Member, error) {
 	leader := pdpb.Member{}
 
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, err := pc.httpClient.Get(context.TODO(), endpoint)
+		body, err := pc.httpClient.Get(pc.ctx, endpoint)
 		if err != nil {
 			return body, err
 		}
@@ -303,7 +316,7 @@ func (pc *PDClient) GetMembers() (*pdpb.GetMembersResponse, error) {
 	members := pdpb.GetMembersResponse{}
 
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, err := pc.httpClient.Get(context.TODO(), endpoint)
+		body, err := pc.httpClient.Get(pc.ctx, endpoint)
 		if err != nil {
 			return body, err
 		}
@@ -327,7 +340,7 @@ func (pc *PDClient) GetConfig() (map[string]interface{}, error) {
 	pdConfig := map[string]interface{}{}
 
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, err := pc.httpClient.Get(context.TODO(), endpoint)
+		body, err := pc.httpClient.Get(pc.ctx, endpoint)
 		if err != nil {
 			return body, err
 		}
@@ -347,7 +360,7 @@ func (pc *PDClient) GetClusterID() (int64, error) {
 	clusterID := map[string]interface{}{}
 
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, err := pc.httpClient.Get(context.TODO(), endpoint)
+		body, err := pc.httpClient.Get(pc.ctx, endpoint)
 		if err != nil {
 			return body, err
 		}
@@ -384,7 +397,8 @@ func (pc *PDClient) EvictPDLeader(retryOpt *utils.RetryOption) error {
 	}
 
 	if len(members.Members) == 1 {
-		log.Warnf("Only 1 member in the PD cluster, skip leader evicting")
+		pc.ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger).
+			Warnf("Only 1 member in the PD cluster, skip leader evicting")
 		return nil
 	}
 
@@ -393,7 +407,7 @@ func (pc *PDClient) EvictPDLeader(retryOpt *utils.RetryOption) error {
 	endpoints := pc.getEndpoints(cmd)
 
 	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, err := pc.httpClient.Post(context.TODO(), endpoint, nil)
+		body, err := pc.httpClient.Post(pc.ctx, endpoint, nil)
 		if err != nil {
 			return body, err
 		}
@@ -423,7 +437,8 @@ func (pc *PDClient) EvictPDLeader(retryOpt *utils.RetryOption) error {
 		}
 
 		// return error by default, to make the retry work
-		log.Debugf("Still waitting for the PD leader to transfer")
+		pc.ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger).
+			Debugf("Still waitting for the PD leader to transfer")
 		return perrs.New("still waitting for the PD leader to transfer")
 	}, *retryOpt); err != nil {
 		return fmt.Errorf("error evicting PD leader, %v", err)
@@ -459,7 +474,8 @@ func (pc *PDClient) EvictStoreLeader(host string, retryOpt *utils.RetryOption, c
 		return nil
 	}
 
-	log.Infof("\tEvicting %d leaders from store %s...", leaderCount, latestStore.Store.Address)
+	pc.ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger).
+		Infof("\tEvicting %d leaders from store %s...", leaderCount, latestStore.Store.Address)
 
 	// set scheduler for stores
 	scheduler, err := json.Marshal(pdSchedulerRequest{
@@ -473,7 +489,7 @@ func (pc *PDClient) EvictStoreLeader(host string, retryOpt *utils.RetryOption, c
 	endpoints := pc.getEndpoints(pdSchedulersURI)
 
 	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		return pc.httpClient.Post(context.TODO(), endpoint, bytes.NewBuffer(scheduler))
+		return pc.httpClient.Post(pc.ctx, endpoint, bytes.NewBuffer(scheduler))
 	})
 	if err != nil {
 		return err
@@ -502,10 +518,11 @@ func (pc *PDClient) EvictStoreLeader(host string, retryOpt *utils.RetryOption, c
 		if leaderCount == 0 {
 			return nil
 		}
-		log.Infof(
-			"\t  Still waitting for %d store leaders to transfer...",
-			leaderCount,
-		)
+		pc.ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger).
+			Infof(
+				"\t  Still waitting for %d store leaders to transfer...",
+				leaderCount,
+			)
 
 		// return error by default, to make the retry work
 		return perrs.New("still waiting for the store leaders to transfer")
@@ -532,23 +549,24 @@ func (pc *PDClient) RemoveStoreEvict(host string) error {
 	)
 	endpoints := pc.getEndpoints(cmd)
 
+	logger := pc.ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, statusCode, err := pc.httpClient.Delete(context.TODO(), endpoint, nil)
+		body, statusCode, err := pc.httpClient.Delete(pc.ctx, endpoint, nil)
 		if err != nil {
 			if statusCode == http.StatusNotFound || bytes.Contains(body, []byte("scheduler not found")) {
-				log.Debugf("Store leader evicting scheduler does not exist, ignore.")
+				logger.Debugf("Store leader evicting scheduler does not exist, ignore.")
 				return body, nil
 			}
 			return body, err
 		}
-		log.Debugf("Delete leader evicting scheduler of store %d success", latestStore.Store.Id)
+		logger.Debugf("Delete leader evicting scheduler of store %d success", latestStore.Store.Id)
 		return body, nil
 	})
 	if err != nil {
 		return err
 	}
 
-	log.Debugf("Removed store leader evicting scheduler from %s.", latestStore.Store.Address)
+	logger.Debugf("Removed store leader evicting scheduler from %s.", latestStore.Store.Address)
 	return nil
 }
 
@@ -567,16 +585,17 @@ func (pc *PDClient) DelPD(name string, retryOpt *utils.RetryOption) error {
 	cmd := fmt.Sprintf("%s/name/%s", pdMembersURI, name)
 	endpoints := pc.getEndpoints(cmd)
 
+	logger := pc.ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, statusCode, err := pc.httpClient.Delete(context.TODO(), endpoint, nil)
+		body, statusCode, err := pc.httpClient.Delete(pc.ctx, endpoint, nil)
 		if err != nil {
 			if statusCode == http.StatusNotFound || bytes.Contains(body, []byte("not found, pd")) {
-				log.Debugf("PD node does not exist, ignore: %s", body)
+				logger.Debugf("PD node does not exist, ignore: %s", body)
 				return body, nil
 			}
 			return body, err
 		}
-		log.Debugf("Delete PD %s from the cluster success", name)
+		logger.Debugf("Delete PD %s from the cluster success", name)
 		return body, nil
 	})
 	if err != nil {
@@ -654,16 +673,17 @@ func (pc *PDClient) DelStore(host string, retryOpt *utils.RetryOption) error {
 	cmd := fmt.Sprintf("%s/%d", pdStoreURI, storeID)
 	endpoints := pc.getEndpoints(cmd)
 
+	logger := pc.ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, statusCode, err := pc.httpClient.Delete(context.TODO(), endpoint, nil)
+		body, statusCode, err := pc.httpClient.Delete(pc.ctx, endpoint, nil)
 		if err != nil {
 			if statusCode == http.StatusNotFound || bytes.Contains(body, []byte("not found")) {
-				log.Debugf("store %d %s does not exist, ignore: %s", storeID, host, body)
+				logger.Debugf("store %d %s does not exist, ignore: %s", storeID, host, body)
 				return body, nil
 			}
 			return body, err
 		}
-		log.Debugf("Delete store %d %s from the cluster success", storeID, host)
+		logger.Debugf("Delete store %d %s from the cluster success", storeID, host)
 		return body, nil
 	})
 	if err != nil {
@@ -708,7 +728,7 @@ func (pc *PDClient) DelStore(host string, retryOpt *utils.RetryOption) error {
 func (pc *PDClient) updateConfig(url string, body io.Reader) error {
 	endpoints := pc.getEndpoints(url)
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		return pc.httpClient.Post(context.TODO(), endpoint, body)
+		return pc.httpClient.Post(pc.ctx, endpoint, body)
 	})
 	return err
 }
@@ -722,7 +742,7 @@ func (pc *PDClient) UpdateReplicateConfig(body io.Reader) error {
 func (pc *PDClient) GetReplicateConfig() ([]byte, error) {
 	endpoints := pc.getEndpoints(pdConfigReplicate)
 	return tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		return pc.httpClient.Get(context.TODO(), endpoint)
+		return pc.httpClient.Get(pc.ctx, endpoint)
 	})
 }
 
@@ -800,7 +820,7 @@ func (pc *PDClient) CheckRegion(state string) (*RegionsInfo, error) {
 	regionsInfo := RegionsInfo{}
 
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, err := pc.httpClient.Get(context.TODO(), endpoint)
+		body, err := pc.httpClient.Get(pc.ctx, endpoint)
 		if err != nil {
 			return body, err
 		}
@@ -823,7 +843,8 @@ func (pc *PDClient) SetReplicationConfig(key string, value int) error {
 	if err != nil {
 		return err
 	}
-	log.Debugf("setting replication config: %s=%d", key, value)
+	pc.ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger).
+		Debugf("setting replication config: %s=%d", key, value)
 	return pc.updateConfig(pdReplicationModeURI, bytes.NewBuffer(body))
 }
 
@@ -840,6 +861,7 @@ func (pc *PDClient) SetAllStoreLimits(value int) error {
 	if err != nil {
 		return err
 	}
-	log.Debugf("setting store limit: %d", value)
+	pc.ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger).
+		Debugf("setting store limit: %d", value)
 	return pc.updateConfig(pdStoresLimitURI, bytes.NewBuffer(body))
 }

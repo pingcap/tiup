@@ -31,7 +31,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/module"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/proxy"
 	"github.com/pingcap/tiup/pkg/set"
 )
@@ -93,6 +93,7 @@ func StopAndDestroyInstance(ctx context.Context, cluster spec.Topology, instance
 	ignoreErr := options.Force
 	compName := instance.ComponentName()
 	noAgentHosts := set.NewStringSet()
+	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 
 	cluster.IterInstance(func(inst spec.Instance) {
 		if inst.IgnoreMonitorAgent() {
@@ -105,13 +106,13 @@ func StopAndDestroyInstance(ctx context.Context, cluster spec.Topology, instance
 		if !ignoreErr {
 			return errors.Annotatef(err, "failed to stop %s", compName)
 		}
-		log.Warnf("failed to stop %s: %v", compName, err)
+		logger.Warnf("failed to stop %s: %v", compName, err)
 	}
 	if err := DestroyComponent(ctx, []spec.Instance{instance}, cluster, options); err != nil {
 		if !ignoreErr {
 			return errors.Annotatef(err, "failed to destroy %s", compName)
 		}
-		log.Warnf("failed to destroy %s: %v", compName, err)
+		logger.Warnf("failed to destroy %s: %v", compName, err)
 	}
 
 	if destroyNode {
@@ -123,13 +124,13 @@ func StopAndDestroyInstance(ctx context.Context, cluster spec.Topology, instance
 				if !ignoreErr {
 					return errors.Annotatef(err, "failed to stop monitor")
 				}
-				log.Warnf("failed to stop %s: %v", "monitor", err)
+				logger.Warnf("failed to stop %s: %v", "monitor", err)
 			}
 			if err := DestroyMonitored(ctx, instance, monitoredOptions, options.OptTimeout); err != nil {
 				if !ignoreErr {
 					return errors.Annotatef(err, "failed to destroy monitor")
 				}
-				log.Warnf("failed to destroy %s: %v", "monitor", err)
+				logger.Warnf("failed to destroy %s: %v", "monitor", err)
 			}
 		}
 
@@ -137,7 +138,7 @@ func StopAndDestroyInstance(ctx context.Context, cluster spec.Topology, instance
 			if !ignoreErr {
 				return errors.Annotatef(err, "failed to delete public key")
 			}
-			log.Warnf("failed to delete public key")
+			logger.Warnf("failed to delete public key")
 		}
 	}
 	return nil
@@ -150,14 +151,15 @@ func DeleteGlobalDirs(ctx context.Context, host string, options *spec.GlobalOpti
 	}
 
 	e := ctxt.GetInner(ctx).Get(host)
-	log.Infof("Clean global directories %s", host)
+	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
+	logger.Infof("Clean global directories %s", host)
 	for _, dir := range []string{options.LogDir, options.DeployDir, options.DataDir} {
 		if dir == "" {
 			continue
 		}
 		dir = spec.Abs(options.User, dir)
 
-		log.Infof("\tClean directory %s on instance %s", dir, host)
+		logger.Infof("\tClean directory %s on instance %s", dir, host)
 
 		c := module.ShellModuleConfig{
 			Command:  fmt.Sprintf("rmdir %s > /dev/null 2>&1 || true", dir),
@@ -171,7 +173,7 @@ func DeleteGlobalDirs(ctx context.Context, host string, options *spec.GlobalOpti
 			fmt.Println(string(stdout))
 		}
 		if len(stderr) > 0 {
-			log.Errorf(string(stderr))
+			logger.Errorf(string(stderr))
 		}
 
 		if err != nil {
@@ -179,14 +181,15 @@ func DeleteGlobalDirs(ctx context.Context, host string, options *spec.GlobalOpti
 		}
 	}
 
-	log.Infof("Clean global directories %s success", host)
+	logger.Infof("Clean global directories %s success", host)
 	return nil
 }
 
 // DeletePublicKey deletes the SSH public key from host
 func DeletePublicKey(ctx context.Context, host string) error {
 	e := ctxt.GetInner(ctx).Get(host)
-	log.Infof("Delete public key %s", host)
+	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
+	logger.Infof("Delete public key %s", host)
 	_, pubKeyPath := ctxt.GetInner(ctx).GetSSHKeySet()
 	publicKey, err := os.ReadFile(pubKeyPath)
 	if err != nil {
@@ -209,23 +212,24 @@ func DeletePublicKey(ctx context.Context, host string) error {
 		fmt.Println(string(stdout))
 	}
 	if len(stderr) > 0 {
-		log.Errorf(string(stderr))
+		logger.Errorf(string(stderr))
 	}
 
 	if err != nil {
 		return errors.Annotatef(err, "failed to delete pulblic key on: %s", host)
 	}
 
-	log.Infof("Delete public key %s success", host)
+	logger.Infof("Delete public key %s success", host)
 	return nil
 }
 
 // DestroyMonitored destroy the monitored service.
 func DestroyMonitored(ctx context.Context, inst spec.Instance, options *spec.MonitoredOptions, timeout uint64) error {
 	e := ctxt.GetInner(ctx).Get(inst.GetHost())
-	log.Infof("Destroying monitored %s", inst.GetHost())
+	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 
-	log.Infof("\tDestroying instance %s", inst.GetHost())
+	logger.Infof("Destroying monitored %s", inst.GetHost())
+	logger.Infof("\tDestroying instance %s", inst.GetHost())
 
 	// Stop by systemd.
 	delPaths := make([]string, 0)
@@ -238,7 +242,7 @@ func DestroyMonitored(ctx context.Context, inst spec.Instance, options *spec.Mon
 	if !inst.IsImported() {
 		delPaths = append(delPaths, options.DeployDir)
 	} else {
-		log.Warnf("Monitored deploy dir %s not deleted for TiDB-Ansible imported instance %s.",
+		logger.Warnf("Monitored deploy dir %s not deleted for TiDB-Ansible imported instance %s.",
 			options.DeployDir, inst.InstanceName())
 	}
 
@@ -258,7 +262,7 @@ func DestroyMonitored(ctx context.Context, inst spec.Instance, options *spec.Mon
 		fmt.Println(string(stdout))
 	}
 	if len(stderr) > 0 {
-		log.Errorf(string(stderr))
+		logger.Errorf(string(stderr))
 	}
 
 	if err != nil {
@@ -267,26 +271,27 @@ func DestroyMonitored(ctx context.Context, inst spec.Instance, options *spec.Mon
 
 	if err := spec.PortStopped(ctx, e, options.NodeExporterPort, timeout); err != nil {
 		str := fmt.Sprintf("%s failed to destroy node exportoer: %s", inst.GetHost(), err)
-		log.Errorf(str)
+		logger.Errorf(str)
 		return errors.Annotatef(err, str)
 	}
 	if err := spec.PortStopped(ctx, e, options.BlackboxExporterPort, timeout); err != nil {
 		str := fmt.Sprintf("%s failed to destroy blackbox exportoer: %s", inst.GetHost(), err)
-		log.Errorf(str)
+		logger.Errorf(str)
 		return errors.Annotatef(err, str)
 	}
 
-	log.Infof("Destroy monitored on %s success", inst.GetHost())
+	logger.Infof("Destroy monitored on %s success", inst.GetHost())
 
 	return nil
 }
 
 // CleanupComponent cleanup the instances
 func CleanupComponent(ctx context.Context, delFileMaps map[string]set.StringSet) error {
+	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 	for host, delFiles := range delFileMaps {
 		e := ctxt.GetInner(ctx).Get(host)
-		log.Infof("Cleanup instance %s", host)
-		log.Debugf("Deleting paths on %s: %s", host, strings.Join(delFiles.Slice(), " "))
+		logger.Infof("Cleanup instance %s", host)
+		logger.Debugf("Deleting paths on %s: %s", host, strings.Join(delFiles.Slice(), " "))
 		c := module.ShellModuleConfig{
 			Command:  fmt.Sprintf("rm -rf %s;", strings.Join(delFiles.Slice(), " ")),
 			Sudo:     true, // the .service files are in a directory owned by root
@@ -300,14 +305,14 @@ func CleanupComponent(ctx context.Context, delFileMaps map[string]set.StringSet)
 			fmt.Println(string(stdout))
 		}
 		if len(stderr) > 0 {
-			log.Errorf(string(stderr))
+			logger.Errorf(string(stderr))
 		}
 
 		if err != nil {
 			return errors.Annotatef(err, "failed to cleanup: %s", host)
 		}
 
-		log.Infof("Cleanup %s success", host)
+		logger.Infof("Cleanup %s success", host)
 	}
 
 	return nil
@@ -319,8 +324,9 @@ func DestroyComponent(ctx context.Context, instances []spec.Instance, cls spec.T
 		return nil
 	}
 
+	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 	name := instances[0].ComponentName()
-	log.Infof("Destroying component %s", name)
+	logger.Infof("Destroying component %s", name)
 
 	retainDataRoles := set.NewStringSet(options.RetainDataRoles...)
 	retainDataNodes := set.NewStringSet(options.RetainDataNodes...)
@@ -331,7 +337,7 @@ func DestroyComponent(ctx context.Context, instances []spec.Instance, cls spec.T
 			retainDataNodes.Exist(ins.ID()) || retainDataNodes.Exist(ins.GetHost())
 
 		e := ctxt.GetInner(ctx).Get(ins.GetHost())
-		log.Infof("Destroying instance %s", ins.GetHost())
+		logger.Infof("Destroying instance %s", ins.GetHost())
 
 		var dataDirs []string
 		if len(ins.DataDir()) > 0 {
@@ -363,7 +369,7 @@ func DestroyComponent(ctx context.Context, instances []spec.Instance, cls spec.T
 			if !strings.HasPrefix(logDir, ins.DeployDir()) && cls.CountDir(ins.GetHost(), logDir) == 1 {
 				delPaths.Insert(logDir)
 			}
-			log.Warnf("Deploy dir %s not deleted for TiDB-Ansible imported instance %s.",
+			logger.Warnf("Deploy dir %s not deleted for TiDB-Ansible imported instance %s.",
 				ins.DeployDir(), ins.InstanceName())
 		} else {
 			if keepDeployDir {
@@ -402,7 +408,7 @@ func DestroyComponent(ctx context.Context, instances []spec.Instance, cls spec.T
 		if svc := ins.ServiceName(); svc != "" {
 			delPaths.Insert(fmt.Sprintf("/etc/systemd/system/%s", svc))
 		}
-		log.Debugf("Deleting paths on %s: %s", ins.GetHost(), strings.Join(delPaths.Slice(), " "))
+		logger.Debugf("Deleting paths on %s: %s", ins.GetHost(), strings.Join(delPaths.Slice(), " "))
 		c := module.ShellModuleConfig{
 			Command:  fmt.Sprintf("rm -rf %s;", strings.Join(delPaths.Slice(), " ")),
 			Sudo:     true, // the .service files are in a directory owned by root
@@ -416,15 +422,15 @@ func DestroyComponent(ctx context.Context, instances []spec.Instance, cls spec.T
 			fmt.Println(string(stdout))
 		}
 		if len(stderr) > 0 {
-			log.Errorf(string(stderr))
+			logger.Errorf(string(stderr))
 		}
 
 		if err != nil {
 			return errors.Annotatef(err, "failed to destroy: %s", ins.GetHost())
 		}
 
-		log.Infof("Destroy %s success", ins.GetHost())
-		log.Infof("- Destroy %s paths: %v", ins.ComponentName(), delPaths.Slice())
+		logger.Infof("Destroy %s success", ins.GetHost())
+		logger.Infof("- Destroy %s paths: %v", ins.ComponentName(), delPaths.Slice())
 	}
 
 	return nil
@@ -451,6 +457,7 @@ func DestroyClusterTombstone(
 	options Options,
 	tlsCfg *tls.Config,
 ) (nodes []string, err error) {
+	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 	instCount := map[string]int{}
 	for _, component := range cluster.ComponentsByStartOrder() {
 		for _, instance := range component.Instances() {
@@ -463,12 +470,12 @@ func DestroyClusterTombstone(
 
 	if forcePDEndpoints != "" {
 		pdEndpoints = strings.Split(forcePDEndpoints, ",")
-		log.Warnf("%s is set, using %s as PD endpoints", EnvNamePDEndpointOverwrite, pdEndpoints)
+		logger.Warnf("%s is set, using %s as PD endpoints", EnvNamePDEndpointOverwrite, pdEndpoints)
 	} else {
 		pdEndpoints = cluster.GetPDList()
 	}
 
-	var pdClient = api.NewPDClient(pdEndpoints, 10*time.Second, tlsCfg)
+	var pdClient = api.NewPDClient(ctx, pdEndpoints, 10*time.Second, tlsCfg)
 
 	tcpProxy := proxy.GetTCPProxy()
 	if tcpProxy != nil {
@@ -498,7 +505,7 @@ func DestroyClusterTombstone(
 			err := StopAndDestroyInstance(ctx, cluster, instance, options, instCount[instance.GetHost()] == 0)
 			if err != nil {
 				if options.Force {
-					log.Warnf("failed to stop and destroy instance %s (%s), ignored as --force is set, you may need to manually cleanup the files",
+					logger.Warnf("failed to stop and destroy instance %s (%s), ignored as --force is set, you may need to manually cleanup the files",
 						instance, err)
 				} else {
 					return err

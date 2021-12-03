@@ -30,11 +30,12 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
-	"github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/utils"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/prom2json"
+	"go.uber.org/zap"
 )
 
 const (
@@ -66,11 +67,11 @@ type TiKVSpec struct {
 }
 
 // checkStoreStatus checks the store status in current cluster
-func checkStoreStatus(storeAddr string, tlsCfg *tls.Config, pdList ...string) string {
+func checkStoreStatus(ctx context.Context, storeAddr string, tlsCfg *tls.Config, pdList ...string) string {
 	if len(pdList) < 1 {
 		return "N/A"
 	}
-	pdapi := api.NewPDClient(pdList, statusQueryTimeout, tlsCfg)
+	pdapi := api.NewPDClient(ctx, pdList, statusQueryTimeout, tlsCfg)
 	store, err := pdapi.GetCurrentStore(storeAddr)
 	if err != nil {
 		if errors.Is(err, api.ErrNoStore) {
@@ -83,9 +84,9 @@ func checkStoreStatus(storeAddr string, tlsCfg *tls.Config, pdList ...string) st
 }
 
 // Status queries current status of the instance
-func (s *TiKVSpec) Status(tlsCfg *tls.Config, pdList ...string) string {
+func (s *TiKVSpec) Status(ctx context.Context, tlsCfg *tls.Config, pdList ...string) string {
 	storeAddr := addr(s)
-	state := checkStoreStatus(storeAddr, tlsCfg, pdList...)
+	state := checkStoreStatus(ctx, storeAddr, tlsCfg, pdList...)
 	if s.Offline && strings.ToLower(state) == "offline" {
 		state = "Pending Offline" // avoid misleading
 	}
@@ -182,7 +183,7 @@ func (c *TiKVComponent) Instances() []Instance {
 				s.DataDir,
 			},
 			StatusFn: s.Status,
-			UptimeFn: func(tlsCfg *tls.Config) time.Duration {
+			UptimeFn: func(_ context.Context, tlsCfg *tls.Config) time.Duration {
 				return UptimeByHost(s.Host, s.StatusPort, tlsCfg)
 			},
 		}, c.Topology})
@@ -305,7 +306,7 @@ func (i *TiKVInstance) ScaleConfig(
 var _ RollingUpdateInstance = &TiKVInstance{}
 
 // PreRestart implements RollingUpdateInstance interface.
-func (i *TiKVInstance) PreRestart(topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config) error {
+func (i *TiKVInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config) error {
 	timeoutOpt := &utils.RetryOption{
 		Timeout: time.Second * time.Duration(apiTimeoutSeconds),
 		Delay:   time.Second * 2,
@@ -320,7 +321,7 @@ func (i *TiKVInstance) PreRestart(topo Topology, apiTimeoutSeconds int, tlsCfg *
 		return nil
 	}
 
-	pdClient := api.NewPDClient(tidbTopo.GetPDList(), 5*time.Second, tlsCfg)
+	pdClient := api.NewPDClient(ctx, tidbTopo.GetPDList(), 5*time.Second, tlsCfg)
 
 	// Make sure there's leader of PD.
 	// Although we evict pd leader when restart pd,
@@ -332,7 +333,8 @@ func (i *TiKVInstance) PreRestart(topo Topology, apiTimeoutSeconds int, tlsCfg *
 
 	if err := pdClient.EvictStoreLeader(addr(i.InstanceSpec.(*TiKVSpec)), timeoutOpt, genLeaderCounter(tidbTopo, tlsCfg)); err != nil {
 		if utils.IsTimeoutOrMaxRetry(err) {
-			log.Warnf("Ignore evicting store leader from %s, %v", i.ID(), err)
+			ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger).
+				Warnf("Ignore evicting store leader from %s, %v", i.ID(), err)
 		} else {
 			return perrs.Annotatef(err, "failed to evict store leader %s", i.GetHost())
 		}
@@ -341,7 +343,7 @@ func (i *TiKVInstance) PreRestart(topo Topology, apiTimeoutSeconds int, tlsCfg *
 }
 
 // PostRestart implements RollingUpdateInstance interface.
-func (i *TiKVInstance) PostRestart(topo Topology, tlsCfg *tls.Config) error {
+func (i *TiKVInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tls.Config) error {
 	tidbTopo, ok := topo.(*Specification)
 	if !ok {
 		panic("should be type of tidb topology")
@@ -351,7 +353,7 @@ func (i *TiKVInstance) PostRestart(topo Topology, tlsCfg *tls.Config) error {
 		return nil
 	}
 
-	pdClient := api.NewPDClient(tidbTopo.GetPDList(), 5*time.Second, tlsCfg)
+	pdClient := api.NewPDClient(ctx, tidbTopo.GetPDList(), 5*time.Second, tlsCfg)
 
 	// remove store leader evict scheduler after restart
 	if err := pdClient.RemoveStoreEvict(addr(i.InstanceSpec.(*TiKVSpec))); err != nil {
@@ -401,7 +403,11 @@ func genLeaderCounter(topo *Specification, tlsCfg *tls.Config) func(string) (int
 			}
 
 			if err := prom2json.FetchMetricFamilies(addr, mfChan, transport); err != nil {
-				log.Errorf("failed counting leader on %s (status addr %s), %v", id, addr, err)
+				zap.L().Error("failed counting leader",
+					zap.String("host", id),
+					zap.String("status addr", addr),
+					zap.Error(err),
+				)
 			}
 		}()
 

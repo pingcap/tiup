@@ -26,7 +26,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/relex/aini"
 )
@@ -42,13 +42,13 @@ func ReadInventory(dir, inventoryFileName string) (string, *spec.ClusterMeta, *a
 	}
 	defer inventoryFile.Close()
 
-	log.Infof("Found inventory file %s, parsing...", inventoryFile.Name())
+	logprinter.Infof("Found inventory file %s, parsing...", inventoryFile.Name())
 	clsName, clsMeta, inventory, err := parseInventoryFile(inventoryFile)
 	if err != nil {
 		return "", nil, inventory, err
 	}
 
-	log.Infof("Found cluster \"%s\" (%s), deployed with user %s.",
+	logprinter.Infof("Found cluster \"%s\" (%s), deployed with user %s.",
 		clsName, clsMeta.Version, clsMeta.User)
 	return clsName, clsMeta, inventory, err
 }

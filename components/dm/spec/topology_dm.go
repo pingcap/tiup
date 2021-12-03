@@ -14,6 +14,7 @@
 package spec
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"path/filepath"
@@ -139,7 +140,7 @@ type MasterSpec struct {
 }
 
 // Status queries current status of the instance
-func (s *MasterSpec) Status(tlsCfg *tls.Config, _ ...string) string {
+func (s *MasterSpec) Status(_ context.Context, tlsCfg *tls.Config, _ ...string) string {
 	addr := fmt.Sprintf("%s:%d", s.Host, s.Port)
 	dc := api.NewDMMasterClient([]string{addr}, statusQueryTimeout, tlsCfg)
 	isFound, isActive, isLeader, err := dc.GetMaster(s.Name)
@@ -205,7 +206,7 @@ type WorkerSpec struct {
 }
 
 // Status queries current status of the instance
-func (s *WorkerSpec) Status(tlsCfg *tls.Config, masterList ...string) string {
+func (s *WorkerSpec) Status(_ context.Context, tlsCfg *tls.Config, masterList ...string) string {
 	if len(masterList) < 1 {
 		return "N/A"
 	}

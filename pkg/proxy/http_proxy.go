@@ -24,6 +24,7 @@ import (
 
 	"github.com/appleboy/easyssh-proxy"
 	perrs "github.com/pingcap/errors"
+	logprinter "github.com/pingcap/tiup/pkg/logger/log"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/ssh"
 )
@@ -34,10 +35,15 @@ type HTTPProxy struct {
 	config *easyssh.MakeConfig
 	l      sync.RWMutex
 	tr     *http.Transport
+	logger *logprinter.Logger
 }
 
 // NewHTTPProxy creates and initializes a new http proxy
-func NewHTTPProxy(host string, port int, user, password, keyFile, passphrase string) *HTTPProxy {
+func NewHTTPProxy(host string,
+	port int,
+	user, password, keyFile, passphrase string,
+	logger *logprinter.Logger,
+) *HTTPProxy {
 	p := &HTTPProxy{
 		config: &easyssh.MakeConfig{
 			Server:  host,
@@ -45,6 +51,7 @@ func NewHTTPProxy(host string, port int, user, password, keyFile, passphrase str
 			User:    user,
 			Timeout: 10 * time.Second,
 		},
+		logger: logger,
 	}
 
 	if len(keyFile) > 0 {

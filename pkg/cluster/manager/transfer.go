@@ -29,8 +29,8 @@ import (
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
-	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/set"
+	"go.uber.org/zap"
 )
 
 // TransferOptions for exec shell commanm.
@@ -77,7 +77,7 @@ func (m *Manager) Transfer(name string, opt TransferOptions, gOpt operator.Optio
 			instPath := opt.Remote
 			paths, err := renderInstanceSpec(instPath, inst)
 			if err != nil {
-				log.Debugf("error rendering remote path with spec: %s", err)
+				m.logger.Debugf("error rendering remote path with spec: %s", err)
 				return // skip
 			}
 			pathSet := set.NewStringSet(paths...)
@@ -112,7 +112,11 @@ func (m *Manager) Transfer(name string, opt TransferOptions, gOpt operator.Optio
 		Parallel(false, shellTasks...).
 		Build()
 
-	execCtx := ctxt.New(context.Background(), gOpt.Concurrency)
+	execCtx := ctxt.New(
+		context.Background(),
+		gOpt.Concurrency,
+		m.logger,
+	)
 	if err := t.Execute(execCtx); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
@@ -137,7 +141,7 @@ func renderInstanceSpec(t string, inst spec.Instance) ([]string, error) {
 			key := inst.ID() + d + uuid.New().String()
 			s, err := renderSpec(t, inst.(*spec.TiFlashInstance), key)
 			if err != nil {
-				log.Debugf("error rendering tiflash spec: %s", err)
+				zap.L().Debug("error rendering tiflash spec", zap.Error(err))
 			}
 			result = append(result, s)
 		}
@@ -173,7 +177,7 @@ func renderSpec(t string, s interface{}, id string) (string, error) {
 
 	result := bytes.NewBufferString("")
 	if err := tpl.Execute(result, s); err != nil {
-		log.Debugf("missing key when parsing: %s", err)
+		zap.L().Debug("missing key when parsing: %s", zap.Error(err))
 		return "", err
 	}
 	return result.String(), nil

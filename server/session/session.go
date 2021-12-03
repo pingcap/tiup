@@ -22,7 +22,7 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/localdata"
-	"github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/log"
 )
 
 // Max alive time of a session
@@ -56,7 +56,7 @@ func (s *sessionManager) Write(id, name string, reader io.Reader) error {
 	if _, ok := s.m.Load(id); ok {
 		return ErrorSessionConflict
 	}
-	log.Debugf("Begin new session: %s", id)
+	logprinter.Debugf("Begin new session: %s", id)
 	s.m.Store(id, name)
 	go s.gc(id)
 
@@ -113,7 +113,7 @@ func (s *sessionManager) Read(id string) (string, io.ReadCloser, error) {
 
 // Delele delete a session
 func (s *sessionManager) Delete(id string) {
-	log.Debugf("Delete session: %s", id)
+	logprinter.Debugf("Delete session: %s", id)
 	n, ok := s.m.Load(id)
 	if !ok {
 		return

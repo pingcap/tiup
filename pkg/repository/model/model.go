@@ -20,12 +20,12 @@ import (
 
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/repository/store"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/version"
+	"go.uber.org/zap"
 )
 
 // Backend defines operations on the manifests
@@ -343,7 +343,11 @@ func (m *model) updateComponentManifest(manifest *v1manifest.Manifest) error {
 	snapSigned := snap.Signed.(*v1manifest.Snapshot)
 	lastVersion := snapSigned.Meta["/"+signed.Filename()].Version
 	if signed.Version != lastVersion+1 {
-		log.Debugf("Component version not expected, expect %d, got %d", lastVersion+1, signed.Version)
+		zap.L().Debug(
+			"Component version not expected",
+			zap.Uint("expected", lastVersion+1),
+			zap.Uint("got", signed.Version),
+		)
 		return ErrorConflict
 	}
 	return m.txn.WriteManifest(fmt.Sprintf("%d.%s.json", signed.Version, signed.ID), manifest)

@@ -106,10 +106,10 @@ func (c *AlertManagerComponent) Instances() []Instance {
 					s.DeployDir,
 					s.DataDir,
 				},
-				StatusFn: func(_ *tls.Config, _ ...string) string {
+				StatusFn: func(_ context.Context, _ *tls.Config, _ ...string) string {
 					return statusByHost(s.Host, s.WebPort, "/-/ready", nil)
 				},
-				UptimeFn: func(tlsCfg *tls.Config) time.Duration {
+				UptimeFn: func(_ context.Context, tlsCfg *tls.Config) time.Duration {
 					return UptimeByHost(s.Host, s.WebPort, tlsCfg)
 				},
 			},

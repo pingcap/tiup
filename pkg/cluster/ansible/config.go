@@ -19,17 +19,16 @@ import (
 	"path/filepath"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
-	"github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/tui"
 )
 
 // ImportConfig copies config files from cluster which deployed through tidb-ansible
-func ImportConfig(name string, clsMeta *spec.ClusterMeta, gOpt operator.Options) error {
+func ImportConfig(ctx context.Context, name string, clsMeta *spec.ClusterMeta, gOpt operator.Options) error {
 	// there may be already cluster dir, skip create
 	// if err := os.MkdirAll(meta.ClusterPath(name), 0755); err != nil {
 	// 	 return err
@@ -47,7 +46,7 @@ func ImportConfig(name string, clsMeta *spec.ClusterMeta, gOpt operator.Options)
 	}
 	var copyFileTasks []task.Task
 	for _, comp := range clsMeta.Topology.ComponentsByStartOrder() {
-		log.Infof("Copying config file(s) of %s...", comp.Name())
+		logprinter.Infof("Copying config file(s) of %s...", comp.Name())
 		for _, inst := range comp.Instances() {
 			switch inst.ComponentName() {
 			case spec.ComponentPD, spec.ComponentTiKV, spec.ComponentPump, spec.ComponentTiDB, spec.ComponentDrainer:
@@ -138,9 +137,9 @@ func ImportConfig(name string, clsMeta *spec.ClusterMeta, gOpt operator.Options)
 		Parallel(false, copyFileTasks...).
 		Build()
 
-	if err := t.Execute(ctxt.New(context.Background(), 0)); err != nil {
+	if err := t.Execute(ctx); err != nil {
 		return errors.Trace(err)
 	}
-	log.Infof("Finished copying configs.")
+	logprinter.Infof("Finished copying configs.")
 	return nil
 }

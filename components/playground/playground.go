@@ -38,6 +38,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/environment"
+	logprinter "github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/tui/progress"
 	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/mod/semver"
@@ -143,7 +144,10 @@ func (p *Playground) pdClient() *api.PDClient {
 		addrs = append(addrs, inst.Addr())
 	}
 
-	return api.NewPDClient(addrs, 10*time.Second, nil)
+	return api.NewPDClient(
+		context.WithValue(context.TODO(), logprinter.ContextKeyLogger, log),
+		addrs, 10*time.Second, nil,
+	)
 }
 
 func (p *Playground) killKVIfTombstone(inst *instance.TiKVInstance) {
@@ -452,7 +456,10 @@ func (p *Playground) handleScaleOut(w io.Writer, cmd *Command) error {
 		return err
 	}
 
-	err = p.startInstance(context.TODO(), inst)
+	err = p.startInstance(
+		context.WithValue(context.TODO(), logprinter.ContextKeyLogger, log),
+		inst,
+	)
 	if err != nil {
 		return err
 	}
@@ -710,7 +717,10 @@ func (p *Playground) waitAllTiFlashUp() {
 		for _, pd := range p.pds {
 			endpoints = append(endpoints, pd.Addr())
 		}
-		pdClient := api.NewPDClient(endpoints, 10*time.Second, nil)
+		pdClient := api.NewPDClient(
+			context.WithValue(context.TODO(), logprinter.ContextKeyLogger, log),
+			endpoints, 10*time.Second, nil,
+		)
 
 		var wg sync.WaitGroup
 		bars := progress.NewMultiBar(color.YellowString("Waiting for tiflash instances ready\n"))

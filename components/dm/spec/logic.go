@@ -21,12 +21,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pingcap/tiup/pkg/logger/log"
-	"github.com/pingcap/tiup/pkg/meta"
-
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
+	"github.com/pingcap/tiup/pkg/meta"
 )
 
 // Components names supported by TiUP
@@ -91,7 +89,7 @@ func (c *DMMasterComponent) Instances() []Instance {
 					s.DataDir,
 				},
 				StatusFn: s.Status,
-				UptimeFn: func(tlsCfg *tls.Config) time.Duration {
+				UptimeFn: func(_ context.Context, tlsCfg *tls.Config) time.Duration {
 					return spec.UptimeByHost(s.Host, s.Port, tlsCfg)
 				},
 			},
@@ -171,7 +169,6 @@ func (i *MasterInstance) ScaleConfig(
 	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).WithPeerPort(spec.PeerPort).AppendEndpoints(c.Endpoints(deployUser)...)
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_dm-master_%s_%d.sh", i.GetHost(), i.GetPort()))
-	log.Infof("script path: %s", fp)
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
 	}
@@ -222,7 +219,7 @@ func (c *DMWorkerComponent) Instances() []Instance {
 					s.DataDir,
 				},
 				StatusFn: s.Status,
-				UptimeFn: func(tlsCfg *tls.Config) time.Duration {
+				UptimeFn: func(_ context.Context, tlsCfg *tls.Config) time.Duration {
 					return spec.UptimeByHost(s.Host, s.Port, tlsCfg)
 				},
 			},

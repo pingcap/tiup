@@ -27,9 +27,9 @@ import (
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
-	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/utils"
+	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
 )
 
@@ -321,7 +321,7 @@ func HandleImportPathMigration(clsName string) error {
 	targetPath := path.Join(dirPath, AnsibleImportedConfigPath)
 	_, err := os.Stat(targetPath)
 	if os.IsNotExist(err) {
-		log.Warnf("renaming '%s/config' to '%s'", dirPath, targetPath)
+		zap.L().Warn("renaming config dir", zap.String("orig", dirPath), zap.String("new", targetPath))
 
 		if lckErr := utils.Retry(func() error {
 			_, lckErr := os.Stat(path.Join(dirPath, migrateLockName))
@@ -338,7 +338,7 @@ func HandleImportPathMigration(clsName string) error {
 		defer func() {
 			rmErr := os.Remove(path.Join(dirPath, migrateLockName))
 			if rmErr != nil {
-				log.Errorf("error unlocking config dir, %s", rmErr)
+				zap.L().Error("error unlocking config dir", zap.Error(rmErr))
 			}
 		}()
 

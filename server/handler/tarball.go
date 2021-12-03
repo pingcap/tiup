@@ -18,7 +18,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/pingcap/fn"
-	"github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/server/session"
 )
 
@@ -40,7 +40,7 @@ func (h *tarballUploader) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (h *tarballUploader) upload(r *http.Request) (*simpleResponse, statusError) {
 	sid := mux.Vars(r)["sid"]
-	log.Infof("Uploading tarball, sid: %s", sid)
+	logprinter.Infof("Uploading tarball, sid: %s", sid)
 
 	if err := r.ParseMultipartForm(MaxMemory); err != nil {
 		// TODO: log error here
@@ -55,7 +55,7 @@ func (h *tarballUploader) upload(r *http.Request) (*simpleResponse, statusError)
 	defer file.Close()
 
 	if err := h.sm.Write(sid, handler.Filename, file); err != nil {
-		log.Errorf("Error to write tarball: %s", err.Error())
+		logprinter.Errorf("Error to write tarball: %s", err.Error())
 		return nil, ErrorInternalError
 	}
 

@@ -17,7 +17,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
 )
@@ -49,6 +49,6 @@ func main() {
 	cmd.Flags().StringVarP(&upstream, "upstream", "", upstream, "specify the upstream mirror")
 
 	if err := cmd.Execute(); err != nil {
-		log.Errorf("Execute command: %s", err.Error())
+		logprinter.Errorf("Execute command: %s", err.Error())
 	}
 }

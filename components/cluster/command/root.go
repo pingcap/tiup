@@ -34,7 +34,7 @@ import (
 	tiupmeta "github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/logger"
-	"github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/proxy"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/telemetry"
@@ -56,6 +56,7 @@ var (
 	teleNodeInfos []*telemetry.NodeInfo
 	teleTopology  string
 	teleCommand   []string
+	log           = logprinter.NewLogger()
 )
 
 var tidbSpec *spec.SpecManager
@@ -102,11 +103,11 @@ func init() {
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			switch strings.ToLower(gOpt.DisplayMode) {
 			case "json":
-				log.SetDisplayMode(log.DisplayModeJSON)
+				log.SetDisplayMode(logprinter.DisplayModeJSON)
 			case "plain", "text":
-				log.SetDisplayMode(log.DisplayModePlain)
+				log.SetDisplayMode(logprinter.DisplayModePlain)
 			default:
-				log.SetDisplayMode(log.DisplayModeDefault)
+				log.SetDisplayMode(logprinter.DisplayModeDefault)
 			}
 
 			var err error
@@ -116,7 +117,7 @@ func init() {
 			}
 
 			tidbSpec = spec.GetSpecManager()
-			cm = manager.NewManager("tidb", tidbSpec, spec.TiDBComponentVersion)
+			cm = manager.NewManager("tidb", tidbSpec, spec.TiDBComponentVersion, log)
 			logger.EnableAuditLog(spec.AuditDir())
 
 			// Running in other OS/ARCH Should be fine we only download manifest file.
@@ -140,7 +141,14 @@ func init() {
 				log.Infof("The --native-ssh flag has been deprecated, please use --ssh=system")
 			}
 
-			err = proxy.MaybeStartProxy(gOpt.SSHProxyHost, gOpt.SSHProxyPort, gOpt.SSHProxyUser, gOpt.SSHProxyUsePassword, gOpt.SSHProxyIdentity)
+			err = proxy.MaybeStartProxy(
+				gOpt.SSHProxyHost,
+				gOpt.SSHProxyPort,
+				gOpt.SSHProxyUser,
+				gOpt.SSHProxyUsePassword,
+				gOpt.SSHProxyIdentity,
+				log,
+			)
 			if err != nil {
 				return perrs.Annotate(err, "start http-proxy")
 			}
@@ -349,7 +357,7 @@ func Execute() {
 	}
 
 	switch log.GetDisplayMode() {
-	case log.DisplayModeJSON:
+	case logprinter.DisplayModeJSON:
 		obj := struct {
 			Code int    `json:"exit_code"`
 			Err  string `json:"error,omitempty"`

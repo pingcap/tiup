@@ -25,6 +25,7 @@ import (
 	"github.com/pingcap/tiup/components/dm/spec"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
+	logprinter "github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/stretchr/testify/require"
 )
 
@@ -142,7 +143,11 @@ func TestImportFromAnsible(t *testing.T) {
 	im, err := NewImporter(dir, "inventory.ini", executor.SSHTypeBuiltin, 0)
 	assert.Nil(err)
 	im.testExecutorGetter = &executorGetter{}
-	clusterName, meta, err := im.ImportFromAnsibleDir(ctxt.New(context.Background(), 0))
+	clusterName, meta, err := im.ImportFromAnsibleDir(ctxt.New(
+		context.Background(),
+		0,
+		logprinter.NewLogger(),
+	))
 	assert.Nil(err, "verbose: %+v", err)
 	assert.Equal("test-cluster", clusterName)
 

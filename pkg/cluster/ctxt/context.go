@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/pingcap/tiup/pkg/checkpoint"
+	logprinter "github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/utils/mock"
 )
 
@@ -80,29 +81,36 @@ type (
 )
 
 // New create a context instance.
-func New(ctx context.Context, limit int) context.Context {
+func New(ctx context.Context, limit int, logger *logprinter.Logger) context.Context {
 	concurrency := runtime.NumCPU()
 	if limit > 0 {
 		concurrency = limit
 	}
 
-	ctx = checkpoint.NewContext(ctx)
-	return context.WithValue(ctx, ctxKey, &Context{
-		mutex: sync.RWMutex{},
-		Ev:    NewEventBus(),
-		exec: struct {
-			executors    map[string]Executor
-			stdouts      map[string][]byte
-			stderrs      map[string][]byte
-			checkResults map[string][]interface{}
-		}{
-			executors:    make(map[string]Executor),
-			stdouts:      make(map[string][]byte),
-			stderrs:      make(map[string][]byte),
-			checkResults: make(map[string][]interface{}),
+	return context.WithValue(
+		context.WithValue(
+			checkpoint.NewContext(ctx),
+			logprinter.ContextKeyLogger,
+			logger,
+		),
+		ctxKey,
+		&Context{
+			mutex: sync.RWMutex{},
+			Ev:    NewEventBus(),
+			exec: struct {
+				executors    map[string]Executor
+				stdouts      map[string][]byte
+				stderrs      map[string][]byte
+				checkResults map[string][]interface{}
+			}{
+				executors:    make(map[string]Executor),
+				stdouts:      make(map[string][]byte),
+				stderrs:      make(map[string][]byte),
+				checkResults: make(map[string][]interface{}),
+			},
+			Concurrency: concurrency, // default to CPU count
 		},
-		Concurrency: concurrency, // default to CPU count
-	})
+	)
 }
 
 // GetInner return *Context from context.Context's value

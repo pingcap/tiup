@@ -11,7 +11,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/fn"
-	"github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/pkg/tui/progress"
 )
@@ -80,7 +80,7 @@ func Serve(addr string, root *v1manifest.Root) (*v1manifest.Manifest, error) {
 	srv := &http.Server{Addr: addr, Handler: r}
 	go func() {
 		if err := srv.ListenAndServe(); err != nil {
-			log.Errorf("server closed: %s", err.Error())
+			logprinter.Errorf("server closed: %s", err.Error())
 		}
 		close(sigCh)
 	}()

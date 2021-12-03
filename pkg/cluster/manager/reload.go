@@ -26,7 +26,6 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
 )
@@ -142,7 +141,12 @@ func (m *Manager) Reload(name string, gOpt operator.Options, skipRestart, skipCo
 
 	t := b.Build()
 
-	if err := t.Execute(ctxt.New(context.Background(), gOpt.Concurrency)); err != nil {
+	ctx := ctxt.New(
+		context.Background(),
+		gOpt.Concurrency,
+		m.logger,
+	)
+	if err := t.Execute(ctx); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err
@@ -150,7 +154,7 @@ func (m *Manager) Reload(name string, gOpt operator.Options, skipRestart, skipCo
 		return perrs.Trace(err)
 	}
 
-	log.Infof("Reloaded cluster `%s` successfully", name)
+	m.logger.Infof("Reloaded cluster `%s` successfully", name)
 
 	return nil
 }

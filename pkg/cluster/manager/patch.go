@@ -108,7 +108,12 @@ func (m *Manager) Patch(name string, packagePath string, opt operator.Options, o
 		}).
 		Build()
 
-	if err := t.Execute(ctxt.New(context.Background(), opt.Concurrency)); err != nil {
+	ctx := ctxt.New(
+		context.Background(),
+		opt.Concurrency,
+		m.logger,
+	)
+	if err := t.Execute(ctx); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err

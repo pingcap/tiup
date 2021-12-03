@@ -21,11 +21,12 @@ import (
 	"testing"
 
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
+	logprinter "github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/stretchr/testify/require"
 )
 
 func TestLocal(t *testing.T) {
-	ctx := ctxt.New(context.Background(), 0)
+	ctx := ctxt.New(context.Background(), 0, logprinter.NewLogger())
 
 	assert := require.New(t)
 	user, err := user.Current()
@@ -72,7 +73,7 @@ func TestWrongIP(t *testing.T) {
 }
 
 func TestLocalExecuteWithQuotes(t *testing.T) {
-	ctx := ctxt.New(context.Background(), 0)
+	ctx := ctxt.New(context.Background(), 0, logprinter.NewLogger())
 
 	assert := require.New(t)
 	user, err := user.Current()

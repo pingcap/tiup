@@ -31,6 +31,7 @@ import (
 	tiupmeta "github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/logger"
+	logprinter "github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/proxy"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/tui"
@@ -46,6 +47,7 @@ var (
 	rootCmd     *cobra.Command
 	gOpt        operator.Options
 	skipConfirm bool
+	log         = logprinter.NewLogger()
 )
 
 var dmspec *cspec.SpecManager
@@ -80,7 +82,7 @@ please backup your data before process.`,
 
 			dmspec = spec.GetSpecManager()
 			logger.EnableAuditLog(cspec.AuditDir())
-			cm = manager.NewManager("dm", dmspec, spec.DMComponentVersion)
+			cm = manager.NewManager("dm", dmspec, spec.DMComponentVersion, log)
 
 			// Running in other OS/ARCH Should be fine we only download manifest file.
 			env, err = tiupmeta.InitEnv(repository.Options{
@@ -99,7 +101,14 @@ please backup your data before process.`,
 				fmt.Println("The --native-ssh flag has been deprecated, please use --ssh=system")
 			}
 
-			err = proxy.MaybeStartProxy(gOpt.SSHProxyHost, gOpt.SSHProxyPort, gOpt.SSHProxyUser, gOpt.SSHProxyUsePassword, gOpt.SSHProxyIdentity)
+			err = proxy.MaybeStartProxy(
+				gOpt.SSHProxyHost,
+				gOpt.SSHProxyPort,
+				gOpt.SSHProxyUser,
+				gOpt.SSHProxyUsePassword,
+				gOpt.SSHProxyIdentity,
+				log,
+			)
 			if err != nil {
 				return perrs.Annotate(err, "start http-proxy")
 			}

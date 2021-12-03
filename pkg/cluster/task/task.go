@@ -22,7 +22,7 @@ import (
 
 	"github.com/pingcap/tiup/pkg/checkpoint"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
-	"github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/log"
 )
 
 var (
@@ -78,7 +78,8 @@ func (s *Serial) Execute(ctx context.Context) error {
 	for _, t := range s.inner {
 		if !isDisplayTask(t) {
 			if !s.hideDetailDisplay {
-				log.Infof("+ [ Serial ] - %s", t.String())
+				ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger).
+					Infof("+ [ Serial ] - %s", t.String())
 			}
 		}
 		ctxt.GetInner(ctx).Ev.PublishTaskBegin(t)
@@ -135,7 +136,8 @@ func (pt *Parallel) Execute(ctx context.Context) error {
 			}()
 			if !isDisplayTask(t) {
 				if !pt.hideDetailDisplay {
-					log.Infof("+ [Parallel] - %s", t.String())
+					ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger).
+						Infof("+ [Parallel] - %s", t.String())
 				}
 			}
 			ctxt.GetInner(ctx).Ev.PublishTaskBegin(t)
