@@ -53,7 +53,8 @@ func (m *Manager) TLS(name string, gOpt operator.Options, enable, cleanCertifica
 
 	// set tls_enabled
 	globalOptions := topo.BaseTopo().GlobalOptions
-	if globalOptions.TLSEnabled == enable {
+	// if force is true, skip this check
+	if globalOptions.TLSEnabled == enable && !gOpt.Force {
 		if enable {
 			log.Infof("cluster `%s` TLS status is already enable", name)
 		} else {

@@ -63,8 +63,9 @@ func newTLSCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVar(&cleanCertificate, "clean-certificate", false, "Clean up the certificate file if it already exists when disable encrypted communication")
-	cmd.Flags().BoolVar(&reloadCertificate, "reload-certificate", false, "Reload the certificate file if it already exists when enable encrypted communication")
+	cmd.Flags().BoolVar(&cleanCertificate, "clean-certificate", false, "Cleanup the certificate file if it already exists when tls disable")
+	cmd.Flags().BoolVar(&reloadCertificate, "reload-certificate", false, "Load the certificate file whether it exists or not when tls enable")
+	cmd.Flags().BoolVar(&gOpt.Force, "force", false, "Force enable/disable tls regardless of the current state")
 
 	return cmd
 }
