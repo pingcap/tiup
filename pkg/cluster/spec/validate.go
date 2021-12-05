@@ -173,6 +173,14 @@ func CheckClusterDirConflict(clusterList map[string]Metadata, clusterName string
 				continue
 			}
 
+			// ignore conflict in the case when both sides are monitor and either one of them
+			// is marked as ignore exporter.
+			if strings.HasPrefix(d1.dirKind, "monitor") &&
+				strings.HasPrefix(d2.dirKind, "monitor") &&
+				(d1.instance.IgnoreMonitorAgent() || d2.instance.IgnoreMonitorAgent()) {
+				continue
+			}
+
 			if d1.dir == d2.dir && d1.dir != "" {
 				properties := map[string]string{
 					"ThisDirKind":    d1.dirKind,
@@ -229,6 +237,7 @@ func CheckClusterDirOverlap(entries []DirEntry) error {
 				if d1.instance.IsImported() && d2.instance.IsImported() {
 					continue
 				}
+
 				// overlap is allowed in the case one side is imported and the other is monitor,
 				// we assume that the monitor is deployed with the first instance in that host,
 				// it implies that the monitor is imported too.
