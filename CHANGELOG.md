@@ -7,6 +7,7 @@ TiUP Changelog
 - Add `data-dir` support for TiCDC in `tiup-playground` ([#1631](https://github.com/pingcap/tiup/pull/1631), [@nexustar](https://github.com/nexustar))
 - Add support of using custom files as input of `edit-config`, and support dumping the current full config to a file with `show-config` command in `tiup-cluster` ([#1637](https://github.com/pingcap/tiup/pull/1637), [@haiboumich](https://github.com/haiboumich))
 - Add support of next-generation monitor (`ng-monitor`) in `tiup-playground` ([#1648](https://github.com/pingcap/tiup/pull/1648), [@nexustar](https://github.com/nexustar))
+- Add support of inserting custom `scrape_configs` to Prometheus configs in `tiup-cluster` ([#1641](https://github.com/pingcap/tiup/pull/1641), [@nexustar](https://github.com/nexustar))
 - [experimental] Support 2-staged scaling out for `tiup-cluster` ([#1638](https://github.com/pingcap/tiup/pull/1638) [#1642](https://github.com/pingcap/tiup/pull/1642), [@srstack](https://github.com/srstack))
   - Scaling out of a TiDB cluster can be devided with `--stage1` and `--stage2` arguments, the stage 1 deploys files and configs but not starting the new instances, and the stage 2 actually starts the new instances and reload necessary configs
   - This could be useful if you want to modify config of the new instances or use a custom binary with `patch` **before** the first start of the new instances
@@ -19,10 +20,11 @@ TiUP Changelog
 - Fix files of monitoring agents and TiDB audit log not cleaned with `clean` command of `tiup-cluster` ([#1643](https://github.com/pingcap/tiup/pull/1643) [#1644](https://github.com/pingcap/tiup/pull/1644), [@srstack](https://github.com/srstack))
 - Fix confirmation prompt in `scale-out` can not be skipped with `--yes` argument in `tiup-cluster` ([#1645](https://github.com/pingcap/tiup/pull/1645), [@srstack](https://github.com/srstack))
 - Fix directory conflict error in some circumstances even when node is marked as `ignore_exporter` ([#1649](https://github.com/pingcap/tiup/pull/1649), [@AstroProfundis](https://github.com/AstroProfundis))
+- Fix DM nodes not added to node_exporter target list in Prometheus config in `tiup-dm` ([#1654](https://github.com/pingcap/tiup/pull/1654), [@AstroProfundis](https://github.com/AstroProfundis))
 
 ### Improvements
 
-- Add significant warning when `--force` is set for `scale-in` command in `tiup-cluster` ([#1629](https://github.com/pingcap/tiup/pull/1629), [@AstroProfundis](https://github.com/AstroProfundis))
+- Add significant warning when `--force` argument is set for `scale-in` command in `tiup-cluster` ([#1629](https://github.com/pingcap/tiup/pull/1629), [@AstroProfundis](https://github.com/AstroProfundis))
 - Add environment variables to skip topology sanity check in `scale-in` command in `tiup-cluster` ([#1627](https://github.com/pingcap/tiup/pull/1627), [@AstroProfundis](https://github.com/AstroProfundis))
 - Update examples to use `--without-monitor` instead of `--monitor` for `tiup-playground` ([#1639](https://github.com/pingcap/tiup/pull/1639), [@dveeden](https://github.com/dveeden))
 
