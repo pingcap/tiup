@@ -1,20 +1,9 @@
 #!/usr/bin/env bash
 
-set -eu
+set -eux
 
 TEST_DIR=$(cd "$(dirname "$0")"; pwd)
-TMP_DIR=$TEST_DIR/_tmp
-
-rm -rf $TMP_DIR/data
-
-# Profile home directory
-mkdir -p $TMP_DIR/home/bin/
-export TIUP_HOME=$TMP_DIR/home
-curl https://tiup-mirrors.pingcap.com/root.json -o $TMP_DIR/home/bin/root.json
-
-# Prepare data directory
-mkdir -p $TMP_DIR/data
-export TIUP_INSTANCE_DATA_DIR=$TMP_DIR/data
+TMP_DIR=`mktemp -d`
 
 mkdir -p $TEST_DIR/cover
 
@@ -27,10 +16,17 @@ function tiup() {
     fi
 }
 
+rm -rf $TMP_DIR/data
+
+# Profile home directory
+mkdir -p $TMP_DIR/home/bin/
+export TIUP_HOME=$TMP_DIR/home
+tiup mirror set --reset
+
 tiup list
 tiup
 tiup help
-tiup install tidb:v3.0.13
+tiup install tidb:v5.2.2
 tiup update tidb
 tiup update tidb --nightly
 tiup --binary tidb:nightly
@@ -41,30 +37,33 @@ tiup env
 TIUP_SSHPASS_PROMPT="password" tiup env TIUP_SSHPASS_PROMPT | grep password
 
 # test mirror
-cat > /tmp/hello.sh << EOF
+CMP_TMP_DIR=`mktemp -d`
+cat > $CMP_TMP_DIR/hello.sh << EOF
 #! /bin/sh
 
 echo "hello, TiDB"
 EOF
-chmod 755 /tmp/hello.sh
-tar -C /tmp -czf /tmp/hello.tar.gz hello.sh
+chmod 755 $CMP_TMP_DIR/hello.sh
+tar -C $CMP_TMP_DIR -czf $CMP_TMP_DIR/hello.tar.gz hello.sh
 
 tiup mirror genkey
 
-tiup mirror init /tmp/test-mirror-a
-tiup mirror set /tmp/test-mirror-a
+TEST_MIRROR_A=`mktemp -d`
+tiup mirror init $TEST_MIRROR_A
+tiup mirror set $TEST_MIRROR_A
 tiup mirror grant pingcap
 echo "should fail"
 ! tiup mirror grant pingcap # this should failed
-tiup mirror publish hello v0.0.1 /tmp/hello.tar.gz hello.sh
+tiup mirror publish hello v0.0.1 $CMP_TMP_DIR/hello.tar.gz hello.sh
 tiup hello:v0.0.1 | grep TiDB
 
-tiup mirror init /tmp/test-mirror-b
-tiup mirror set /tmp/test-mirror-b
+TEST_MIRROR_B=`mktemp -d`
+tiup mirror init $TEST_MIRROR_B
+tiup mirror set $TEST_MIRROR_B
 tiup mirror grant pingcap
-tiup mirror publish hello v0.0.2 /tmp/hello.tar.gz hello.sh
-tiup mirror set /tmp/test-mirror-a
-tiup mirror merge /tmp/test-mirror-b
+tiup mirror publish hello v0.0.2 $CMP_TMP_DIR/hello.tar.gz hello.sh
+tiup mirror set $TEST_MIRROR_A
+tiup mirror merge $TEST_MIRROR_B
 tiup hello:v0.0.2 | grep TiDB
 
 tiup uninstall
@@ -72,3 +71,5 @@ tiup uninstall tidb:v3.0.13
 tiup uninstall tidb --all
 tiup uninstall --all
 tiup uninstall --self
+
+rm -rf $TMP_DIR $CMP_TMP_DIR $TEST_MIRROR_A $TEST_MIRROR_B

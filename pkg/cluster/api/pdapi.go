@@ -85,6 +85,10 @@ func NewPDClient(
 	return cli
 }
 
+func (pc *PDClient) l() *logprinter.Logger {
+	return pc.ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
+}
+
 func (pc *PDClient) tryIdentifyVersion() {
 	endpoints := pc.getEndpoints(pdVersionURI)
 	response := map[string]string{}
@@ -279,8 +283,7 @@ func (pc *PDClient) WaitLeader(retryOpt *utils.RetryOption) error {
 		}
 
 		// return error by default, to make the retry work
-		pc.ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger).
-			Debugf("Still waitting for the PD leader to be elected")
+		pc.l().Debugf("Still waitting for the PD leader to be elected")
 		return perrs.New("still waitting for the PD leader to be elected")
 	}, *retryOpt); err != nil {
 		return fmt.Errorf("error getting PD leader, %v", err)
@@ -397,8 +400,7 @@ func (pc *PDClient) EvictPDLeader(retryOpt *utils.RetryOption) error {
 	}
 
 	if len(members.Members) == 1 {
-		pc.ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger).
-			Warnf("Only 1 member in the PD cluster, skip leader evicting")
+		pc.l().Warnf("Only 1 member in the PD cluster, skip leader evicting")
 		return nil
 	}
 
@@ -437,8 +439,7 @@ func (pc *PDClient) EvictPDLeader(retryOpt *utils.RetryOption) error {
 		}
 
 		// return error by default, to make the retry work
-		pc.ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger).
-			Debugf("Still waitting for the PD leader to transfer")
+		pc.l().Debugf("Still waitting for the PD leader to transfer")
 		return perrs.New("still waitting for the PD leader to transfer")
 	}, *retryOpt); err != nil {
 		return fmt.Errorf("error evicting PD leader, %v", err)
@@ -474,8 +475,7 @@ func (pc *PDClient) EvictStoreLeader(host string, retryOpt *utils.RetryOption, c
 		return nil
 	}
 
-	pc.ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger).
-		Infof("\tEvicting %d leaders from store %s...", leaderCount, latestStore.Store.Address)
+	pc.l().Infof("\tEvicting %d leaders from store %s...", leaderCount, latestStore.Store.Address)
 
 	// set scheduler for stores
 	scheduler, err := json.Marshal(pdSchedulerRequest{
@@ -518,11 +518,10 @@ func (pc *PDClient) EvictStoreLeader(host string, retryOpt *utils.RetryOption, c
 		if leaderCount == 0 {
 			return nil
 		}
-		pc.ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger).
-			Infof(
-				"\t  Still waitting for %d store leaders to transfer...",
-				leaderCount,
-			)
+		pc.l().Infof(
+			"\t  Still waitting for %d store leaders to transfer...",
+			leaderCount,
+		)
 
 		// return error by default, to make the retry work
 		return perrs.New("still waiting for the store leaders to transfer")
@@ -549,7 +548,7 @@ func (pc *PDClient) RemoveStoreEvict(host string) error {
 	)
 	endpoints := pc.getEndpoints(cmd)
 
-	logger := pc.ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
+	logger := pc.l()
 	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		body, statusCode, err := pc.httpClient.Delete(pc.ctx, endpoint, nil)
 		if err != nil {
@@ -585,7 +584,7 @@ func (pc *PDClient) DelPD(name string, retryOpt *utils.RetryOption) error {
 	cmd := fmt.Sprintf("%s/name/%s", pdMembersURI, name)
 	endpoints := pc.getEndpoints(cmd)
 
-	logger := pc.ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
+	logger := pc.l()
 	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		body, statusCode, err := pc.httpClient.Delete(pc.ctx, endpoint, nil)
 		if err != nil {
@@ -673,7 +672,7 @@ func (pc *PDClient) DelStore(host string, retryOpt *utils.RetryOption) error {
 	cmd := fmt.Sprintf("%s/%d", pdStoreURI, storeID)
 	endpoints := pc.getEndpoints(cmd)
 
-	logger := pc.ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
+	logger := pc.l()
 	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		body, statusCode, err := pc.httpClient.Delete(pc.ctx, endpoint, nil)
 		if err != nil {
@@ -843,8 +842,7 @@ func (pc *PDClient) SetReplicationConfig(key string, value int) error {
 	if err != nil {
 		return err
 	}
-	pc.ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger).
-		Debugf("setting replication config: %s=%d", key, value)
+	pc.l().Debugf("setting replication config: %s=%d", key, value)
 	return pc.updateConfig(pdReplicationModeURI, bytes.NewBuffer(body))
 }
 
@@ -861,7 +859,6 @@ func (pc *PDClient) SetAllStoreLimits(value int) error {
 	if err != nil {
 		return err
 	}
-	pc.ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger).
-		Debugf("setting store limit: %d", value)
+	pc.l().Debugf("setting store limit: %d", value)
 	return pc.updateConfig(pdStoresLimitURI, bytes.NewBuffer(body))
 }
