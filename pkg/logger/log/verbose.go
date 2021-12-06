@@ -31,5 +31,5 @@ func Verbose(format string, args ...interface{}) {
 	if !verbose {
 		return
 	}
-	fmt.Fprintln(os.Stderr, "Verbose:", fmt.Sprintf(format, args...))
+	fmt.Fprintln(stderr, "Verbose:", fmt.Sprintf(format, args...))
 }
