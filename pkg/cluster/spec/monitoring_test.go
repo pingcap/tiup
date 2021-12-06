@@ -138,7 +138,7 @@ func TestMergeAdditionalScrapeConf(t *testing.T) {
 	}
 	defer os.Remove(file.Name())
 
-	file.WriteString(`---
+	_, err = file.WriteString(`---
 global:
   scrape_interval:     15s # By default, scrape targets every 15 seconds.
   evaluation_interval: 15s # By default, scrape targets every 15 seconds.
@@ -158,6 +158,7 @@ scrape_configs:
     static_configs:
     - targets:
       - '192.168.122.25:20180'`)
+	assert.Nil(t, err)
 
 	expected := `global:
     evaluation_interval: 15s
@@ -203,7 +204,7 @@ scrape_configs:
 `
 
 	var addition map[string]interface{}
-	yaml.Unmarshal([]byte(`metric_relabel_configs:
+	err = yaml.Unmarshal([]byte(`metric_relabel_configs:
   - source_labels: [__name__]
     separator: ;
     regex: tikv_thread_nonvoluntary_context_switches|tikv_thread_voluntary_context_switches|tikv_threads_io_bytes_total
@@ -212,9 +213,12 @@ scrape_configs:
     separator: ;
     regex: tikv_thread_cpu_seconds_total;(tokio|rocksdb).+
     action: drop`), &addition)
+	assert.Nil(t, err)
 
-	mergeAdditionalScrapeConf(file.Name(), addition)
-	result, _ := os.ReadFile(file.Name())
+	err = mergeAdditionalScrapeConf(file.Name(), addition)
+	assert.Nil(t, err)
+	result, err := os.ReadFile(file.Name())
+	assert.Nil(t, err)
 
 	assert.Equal(t, expected, string(result))
 }
