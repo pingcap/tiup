@@ -17,6 +17,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"os"
 	"path"
 	"path/filepath"
 	"reflect"
@@ -29,6 +30,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
+	"gopkg.in/yaml.v3"
 )
 
 // PrometheusSpec represents the Prometheus Server topology specification in topology.yaml
@@ -51,6 +53,7 @@ type PrometheusSpec struct {
 	Arch                  string                 `yaml:"arch,omitempty"`
 	OS                    string                 `yaml:"os,omitempty"`
 	RuleDir               string                 `yaml:"rule_dir,omitempty" validate:"rule_dir:editable"`
+	AdditionalScrapeConf  map[string]interface{} `yaml:"additional_scrape_conf,omitempty" validate:"additional_scrape_conf:ignore"`
 }
 
 // Remote prometheus remote config
@@ -336,6 +339,12 @@ func (i *MonitorInstance) InitConfig(
 	if err := cfig.ConfigToFile(fp); err != nil {
 		return err
 	}
+	if spec.AdditionalScrapeConf != nil {
+		err = mergeAdditionalScrapeConf(fp, spec.AdditionalScrapeConf)
+		if err != nil {
+			return err
+		}
+	}
 	dst = filepath.Join(paths.Deploy, "conf", "prometheus.yml")
 	if err := e.Transfer(ctx, fp, dst, false, 0, false); err != nil {
 		return err
@@ -427,4 +436,27 @@ func (i *MonitorInstance) ScaleConfig(
 	defer func() { i.topo = s }()
 	i.topo = topo
 	return i.InitConfig(ctx, e, clusterName, clusterVersion, deployUser, paths)
+}
+
+func mergeAdditionalScrapeConf(source string, addition map[string]interface{}) error {
+	var result map[string]interface{}
+	bytes, err := os.ReadFile(source)
+	if err != nil {
+		return err
+	}
+	err = yaml.Unmarshal(bytes, &result)
+	if err != nil {
+		return err
+	}
+
+	for _, job := range result["scrape_configs"].([]interface{}) {
+		for k, v := range addition {
+			job.(map[string]interface{})[k] = v
+		}
+	}
+	bytes, err = yaml.Marshal(result)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(source, bytes, 0644)
 }
