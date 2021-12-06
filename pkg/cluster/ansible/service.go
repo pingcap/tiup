@@ -26,7 +26,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	logprinter "github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 )
 
 var (

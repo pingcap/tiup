@@ -20,7 +20,7 @@ import (
 	"os"
 	"path"
 
-	logprinter "github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 )
 
 // staticServer start a static web server

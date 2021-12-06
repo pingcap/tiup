@@ -27,7 +27,7 @@ import (
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/localdata"
-	logprinter "github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/pkg/telemetry"

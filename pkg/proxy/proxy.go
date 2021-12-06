@@ -21,7 +21,7 @@ import (
 	"sync/atomic"
 
 	"github.com/fatih/color"
-	logprinter "github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 )

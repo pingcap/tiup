@@ -32,7 +32,7 @@ import (
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/localdata"
-	logprinter "github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/mod/semver"

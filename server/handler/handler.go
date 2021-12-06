@@ -17,7 +17,7 @@ import (
 	"context"
 
 	"github.com/pingcap/fn"
-	logprinter "github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 )
 
 // errorMessage is used for error response

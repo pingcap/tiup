@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/pingcap/tiup/pkg/checkpoint"
-	logprinter "github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/utils/mock"
 )
 

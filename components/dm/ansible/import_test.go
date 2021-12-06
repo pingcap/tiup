@@ -25,7 +25,7 @@ import (
 	"github.com/pingcap/tiup/components/dm/spec"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
-	logprinter "github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/stretchr/testify/require"
 )
 

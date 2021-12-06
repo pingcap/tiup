@@ -27,7 +27,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/template/config"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	system "github.com/pingcap/tiup/pkg/cluster/template/systemd"
-	logprinter "github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/meta"
 	"go.uber.org/zap"
 )

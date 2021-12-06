@@ -17,7 +17,7 @@ import (
 	"fmt"
 	"os"
 
-	logprinter "github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
 )

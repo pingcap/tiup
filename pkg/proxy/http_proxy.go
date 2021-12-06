@@ -24,7 +24,7 @@ import (
 
 	"github.com/appleboy/easyssh-proxy"
 	perrs "github.com/pingcap/errors"
-	logprinter "github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/ssh"
 )

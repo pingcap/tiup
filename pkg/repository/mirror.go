@@ -32,7 +32,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/crypto/rand"
-	logprinter "github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/repository/model"
 	"github.com/pingcap/tiup/pkg/repository/store"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"

@@ -23,7 +23,7 @@ import (
 	"github.com/creasty/defaults"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	logprinter "github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/relex/aini"
 	"gopkg.in/ini.v1"
 	"gopkg.in/yaml.v2"

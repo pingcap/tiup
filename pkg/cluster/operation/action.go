@@ -26,7 +26,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/module"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	logprinter "github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/set"
 	"golang.org/x/sync/errgroup"
 )

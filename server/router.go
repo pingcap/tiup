@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	logprinter "github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/server/handler"
 )
 

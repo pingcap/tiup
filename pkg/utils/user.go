@@ -3,7 +3,7 @@ package utils
 import (
 	"os/user"
 
-	logprinter "github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 )
 
 // CurrentUser returns current login user

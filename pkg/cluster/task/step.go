@@ -20,7 +20,7 @@ import (
 	"strings"
 
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
-	logprinter "github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/tui/progress"
 )
 

@@ -20,7 +20,7 @@ import (
 
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	logprinter "github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/tui"
 )
