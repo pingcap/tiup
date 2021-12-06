@@ -271,6 +271,7 @@ func (i *MonitorInstance) InitConfig(
 		for i := 0; i < servers.Len(); i++ {
 			master := reflect.Indirect(servers.Index(i))
 			host, port := master.FieldByName("Host").String(), master.FieldByName("Port").Int()
+			uniqueHosts.Insert(host)
 			cfig.AddDMMaster(host, uint64(port))
 		}
 	}
@@ -279,6 +280,7 @@ func (i *MonitorInstance) InitConfig(
 		for i := 0; i < servers.Len(); i++ {
 			worker := reflect.Indirect(servers.Index(i))
 			host, port := worker.FieldByName("Host").String(), worker.FieldByName("Port").Int()
+			uniqueHosts.Insert(host)
 			cfig.AddDMWorker(host, uint64(port))
 		}
 	}
