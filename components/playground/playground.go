@@ -966,6 +966,10 @@ func (p *Playground) terminate(sig syscall.Signal) {
 		kill(p.monitor.cmd.Process.Pid, p.monitor.wait)
 	}
 
+	if p.ngmonitoring != nil {
+		kill(p.ngmonitoring.cmd.Process.Pid, p.ngmonitoring.wait)
+	}
+
 	if p.grafana != nil {
 		kill(p.grafana.cmd.Process.Pid, p.grafana.wait)
 	}
