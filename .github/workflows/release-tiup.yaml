@@ -16,11 +16,6 @@ on:
   release:
     types:
       - published
-  workflow_dispatch:
-    inputs:
-      git-ref:
-        description: git ref
-        required: true
 
 jobs:
   release:
@@ -47,7 +42,7 @@ jobs:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
         with:
-          ref: ${{ github.event.inputs.git-ref || github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.sha }}
           path: go/src/github.com/${{ github.repository }}
           fetch-depth: 0
 
