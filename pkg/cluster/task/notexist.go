@@ -21,8 +21,8 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 )
 
-// Exist is used to determine path if it exists on the target host
-type Exist struct {
+// NotExist is used to determine path if it exists on the target host
+type NotExist struct {
 	host        string
 	path        string
 	isFile      bool
@@ -30,19 +30,19 @@ type Exist struct {
 }
 
 // Execute implements the Task interface
-func (e *Exist) Execute(ctx context.Context) error {
+func (e *NotExist) Execute(ctx context.Context) error {
 	exec, found := ctxt.GetInner(ctx).GetExecutor(e.host)
 	if !found {
 		return ErrNoExecutor
 	}
 
-	cmd := fmt.Sprintf(`[ -e %s ] && echo 1`, e.path)
+	cmd := fmt.Sprintf(`[ ! -e %s ] && echo 1`, e.path)
 
 	switch {
 	case e.isFile:
-		cmd = fmt.Sprintf(`[ -f %s ] && echo 1`, e.path)
+		cmd = fmt.Sprintf(`[ ! -f %s ] && echo 1`, e.path)
 	case e.isDirectory:
-		cmd = fmt.Sprintf(`[ -d %s ] && echo 1`, e.path)
+		cmd = fmt.Sprintf(`[ ! -d %s ] && echo 1`, e.path)
 	}
 
 	req, _, err := exec.Execute(ctx, cmd, false)
@@ -50,18 +50,18 @@ func (e *Exist) Execute(ctx context.Context) error {
 		return errors.Trace(err)
 	}
 	if string(req) != "1" {
-		return fmt.Errorf("`%s` does not exist on the target host `%s`", e.path, e.host)
+		return fmt.Errorf("`%s` is exist on the target host `%s`", e.path, e.host)
 	}
 
 	return nil
 }
 
 // Rollback implements the Task interface
-func (e *Exist) Rollback(ctx context.Context) error {
+func (e *NotExist) Rollback(ctx context.Context) error {
 	return nil
 }
 
 // String implements the fmt.Stringer interface
-func (e *Exist) String() string {
-	return fmt.Sprintf("Exist: host=%s, path='%s'", e.host, e.path)
+func (e *NotExist) String() string {
+	return fmt.Sprintf("NotExist: host=%s, path='%s'", e.host, e.path)
 }
