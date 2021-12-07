@@ -71,8 +71,8 @@ func (b *Builder) RootSSH(
 }
 
 // NewSimpleUerSSH  append a UserSSH task to the current task collection with operator.Options and SSHConnectionProps
-func NewSimpleUerSSH(host string, port int, user string, gOpt operator.Options, p *tui.SSHConnectionProps, sshType executor.SSHType) *Builder {
-	return NewBuilder(gOpt.DisplayMode).
+func NewSimpleUerSSH(logger *logprinter.Logger, host string, port int, user string, gOpt operator.Options, p *tui.SSHConnectionProps, sshType executor.SSHType) *Builder {
+	return NewBuilder(logger).
 		UserSSH(
 			host,
 			port,

@@ -150,14 +150,13 @@ func buildScaleOutTask(
 
 	// Download missing component
 
-	downloadCompTasks = convertStepDisplaysToTasks(buildDownloadCompTasks(
+	downloadCompTasks = buildDownloadCompTasks(
 		base.Version,
 		newPart,
 		m.logger,
 		gOpt,
 		m.bindVersion,
-	))
-
+	)
 
 	sshType := topo.BaseTopo().GlobalOptions.SSHType
 
@@ -238,33 +237,10 @@ func buildScaleOutTask(
 		return nil, iterErr
 	}
 
-
 	certificateTasks, err := buildCertificateTasks(m, name, newPart, base, gOpt, p)
 	if err != nil {
 		return nil, err
 	}
-
-	hasImported := false
-	noAgentHosts := set.NewStringSet()
-
-	mergedTopo.IterInstance(func(inst spec.Instance) {
-		deployDir := spec.Abs(base.User, inst.DeployDir())
-		// data dir would be empty for components which don't need it
-		dataDirs := spec.MultiDirAbs(base.User, inst.DataDir())
-		// log dir will always be with values, but might not used by the component
-		logDir := spec.Abs(base.User, inst.LogDir())
-
-		// Download and copy the latest component to remote if the cluster is imported from Ansible
-		tb := task.NewBuilder(m.logger)
-		if inst.IsImported() {
-			switch compName := inst.ComponentName(); compName {
-			case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertmanager:
-				version := m.bindVersion(compName, base.Version)
-				tb.Download(compName, inst.OS(), inst.Arch(), version).
-					CopyComponent(compName, inst.OS(), inst.Arch(), version, "", inst.GetHost(), deployDir)
-			}
-			hasImported = true
-		}
 
 	// init scale out config
 	scaleOutConfigTasks := buildScaleConfigTasks(m, name, topo, newPart, base, gOpt, p)
@@ -324,6 +300,7 @@ func buildScaleOutTask(
 		noAgentHosts,
 		*topo.BaseTopo().GlobalOptions,
 		topo.GetMonitoredOptions(),
+		m.logger,
 		gOpt.SSHTimeout,
 		gOpt.OptTimeout,
 		gOpt,
@@ -402,7 +379,7 @@ func buildScaleConfigTasks(
 		// log dir will always be with values, but might not used by the component
 		logDir := spec.Abs(base.User, inst.LogDir())
 
-		t := task.NewSimpleUerSSH(inst.GetHost(), inst.GetSSHPort(), base.User, gOpt, p, topo.BaseTopo().GlobalOptions.SSHType).
+		t := task.NewSimpleUerSSH(m.logger, inst.GetHost(), inst.GetSSHPort(), base.User, gOpt, p, topo.BaseTopo().GlobalOptions.SSHType).
 			ScaleConfig(
 				name,
 				base.Version,
@@ -548,7 +525,7 @@ func buildMonitoredCertificateTasks(
 				tlsDir := filepath.Join(deployDir, spec.TLSCertKeyDir)
 
 				// Deploy component
-				tb := task.NewSimpleUerSSH(host, info.ssh, globalOptions.User, gOpt, p, globalOptions.SSHType).
+				tb := task.NewSimpleUerSSH(m.logger, host, info.ssh, globalOptions.User, gOpt, p, globalOptions.SSHType).
 					Mkdir(globalOptions.User, host, tlsDir)
 
 				if comp == spec.ComponentBlackboxExporter {
@@ -777,7 +754,7 @@ func buildTLSTask(
 	//  load certificate file
 	if topo.BaseTopo().GlobalOptions.TLSEnabled {
 		tlsDir := m.specManager.Path(name, spec.TLSCertKeyDir)
-		log.Infof("Generate certificate: %s", color.YellowString(tlsDir))
+		m.logger.Infof("Generate certificate: %s", color.YellowString(tlsDir))
 		if err := m.loadCertificate(name, topo.BaseTopo().GlobalOptions, reloadCertificate); err != nil {
 			return nil, err
 		}
@@ -793,7 +770,7 @@ func buildTLSTask(
 	// handle dir scheme changes
 	if hasImported {
 		if err := spec.HandleImportPathMigration(name); err != nil {
-			return task.NewBuilder(gOpt.DisplayMode).Build(), err
+			return task.NewBuilder(m.logger).Build(), err
 		}
 	}
 
@@ -820,6 +797,7 @@ func buildTLSTask(
 		noAgentHosts,
 		*topo.BaseTopo().GlobalOptions,
 		topo.GetMonitoredOptions(),
+		m.logger,
 		gOpt.SSHTimeout,
 		gOpt.OptTimeout,
 		gOpt,
@@ -882,7 +860,7 @@ func buildCertificateTasks(
 			deployDir := spec.Abs(base.User, inst.DeployDir())
 			tlsDir := filepath.Join(deployDir, spec.TLSCertKeyDir)
 
-			tb := task.NewSimpleUerSSH(inst.GetHost(), inst.GetSSHPort(), base.User, gOpt, p, topo.BaseTopo().GlobalOptions.SSHType).
+			tb := task.NewSimpleUerSSH(m.logger, inst.GetHost(), inst.GetSSHPort(), base.User, gOpt, p, topo.BaseTopo().GlobalOptions.SSHType).
 				Mkdir(base.User, inst.GetHost(), deployDir, tlsDir)
 
 			ca, err := crypto.ReadCA(

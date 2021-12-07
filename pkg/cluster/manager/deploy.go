@@ -228,8 +228,8 @@ func (m *Manager) Deploy(
 
 		t := task.NewBuilder(m.logger).
 			RootSSH(
-				inst.GetHost(),
-				inst.GetSSHPort(),
+				host,
+				hostInfo.ssh,
 				opt.User,
 				sshConnProps.Password,
 				sshConnProps.IdentityFile,
@@ -246,9 +246,9 @@ func (m *Manager) Deploy(
 				gOpt.SSHType,
 				globalOptions.SSHType,
 			).
-			EnvInit(inst.GetHost(), globalOptions.User, globalOptions.Group, opt.SkipCreateUser || globalOptions.User == opt.User).
-			Mkdir(globalOptions.User, inst.GetHost(), dirs...).
-			BuildAsStep(fmt.Sprintf("  - Prepare %s:%d", inst.GetHost(), inst.GetSSHPort()))
+			EnvInit(host, globalOptions.User, globalOptions.Group, opt.SkipCreateUser || globalOptions.User == opt.User).
+			Mkdir(globalOptions.User, host, dirs...).
+			BuildAsStep(fmt.Sprintf("  - Prepare %s:%d", host, hostInfo.ssh))
 		envInitTasks = append(envInitTasks, t)
 	}
 
@@ -384,6 +384,7 @@ func (m *Manager) Deploy(
 		noAgentHosts,
 		*topo.BaseTopo().GlobalOptions,
 		topo.GetMonitoredOptions(),
+		m.logger,
 		gOpt.SSHTimeout,
 		gOpt.OptTimeout,
 		gOpt,

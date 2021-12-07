@@ -26,7 +26,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/logger/log"
+
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
 	"golang.org/x/mod/semver"
@@ -56,11 +56,10 @@ func (m *Manager) TLS(name string, gOpt operator.Options, enable, cleanCertifica
 	// if force is true, skip this check
 	if globalOptions.TLSEnabled == enable && !gOpt.Force {
 		if enable {
-			log.Infof("cluster `%s` TLS status is already enable", name)
+			return perrs.Errorf("cluster `%s` TLS status is already enable\n", name)
 		} else {
-			log.Infof("cluster `%s` TLS status is already disable", name)
+			return perrs.Errorf("cluster `%s` TLS status is already disable\n", name)
 		}
-		return nil
 	}
 	globalOptions.TLSEnabled = enable
 
@@ -93,7 +92,12 @@ func (m *Manager) TLS(name string, gOpt operator.Options, enable, cleanCertifica
 		return err
 	}
 
-	if err := t.Execute(ctxt.New(context.Background(), gOpt.Concurrency)); err != nil {
+	ctx := ctxt.New(
+		context.Background(),
+		gOpt.Concurrency,
+		m.logger,
+	)
+	if err := t.Execute(ctx); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err
@@ -110,13 +114,13 @@ func (m *Manager) TLS(name string, gOpt operator.Options, enable, cleanCertifica
 		if cleanCertificate {
 			os.RemoveAll(m.specManager.Path(name, spec.TLSCertKeyDir))
 		}
-		log.Infof("\tCleanup localhost tls file success")
+		m.logger.Infof("\tCleanup localhost tls file success")
 	}
 
 	if enable {
-		log.Infof("Enable cluster `%s` TLS between TiDB components successfully", name)
+		m.logger.Infof("Enable cluster `%s` TLS between TiDB components successfully", name)
 	} else {
-		log.Infof("Disable cluster `%s` TLS between TiDB components successfully", name)
+		m.logger.Infof("Disable cluster `%s` TLS between TiDB components successfully", name)
 	}
 	return nil
 }
@@ -164,7 +168,7 @@ func getTLSFileMap(m *Manager, clusterName string, topo spec.Topology,
 			}
 		}
 
-		log.Warnf("The parameter `%s` will delete the following files: %s", color.YellowString("--clean-certificate"), delFileList)
+		m.logger.Warnf("The parameter `%s` will delete the following files: %s", color.YellowString("--clean-certificate"), delFileList)
 
 		if !skipConfirm {
 			if err := tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]:"); err != nil {
