@@ -47,7 +47,7 @@ func ImportConfig(ctx context.Context, name string, clsMeta *spec.ClusterMeta, g
 	}
 	var copyFileTasks []task.Task
 	for _, comp := range clsMeta.Topology.ComponentsByStartOrder() {
-		logprinter.Infof("Copying config file(s) of %s...", comp.Name())
+		logger.Infof("Copying config file(s) of %s...", comp.Name())
 		for _, inst := range comp.Instances() {
 			switch inst.ComponentName() {
 			case spec.ComponentPD, spec.ComponentTiKV, spec.ComponentPump, spec.ComponentTiDB, spec.ComponentDrainer:
@@ -141,6 +141,6 @@ func ImportConfig(ctx context.Context, name string, clsMeta *spec.ClusterMeta, g
 	if err := t.Execute(ctx); err != nil {
 		return errors.Trace(err)
 	}
-	logprinter.Infof("Finished copying configs.")
+	logger.Infof("Finished copying configs.")
 	return nil
 }

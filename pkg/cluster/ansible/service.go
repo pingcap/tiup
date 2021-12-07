@@ -35,6 +35,7 @@ var (
 
 // parseDirs sets values of directories of component
 func parseDirs(ctx context.Context, user string, ins spec.InstanceSpec, sshTimeout uint64, sshType executor.SSHType) (spec.InstanceSpec, error) {
+	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 	hostName, sshPort := ins.SSH()
 
 	e, err := executor.New(sshType, false, executor.SSHConfig{
@@ -47,7 +48,7 @@ func parseDirs(ctx context.Context, user string, ins spec.InstanceSpec, sshTimeo
 	if err != nil {
 		return nil, err
 	}
-	logprinter.Debugf("Detecting deploy paths on %s...", hostName)
+	logger.Debugf("Detecting deploy paths on %s...", hostName)
 
 	stdout, err := readStartScript(ctx, e, ins.Role(), hostName, ins.GetMainPort())
 	if len(stdout) <= 1 || err != nil {

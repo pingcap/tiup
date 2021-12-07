@@ -50,8 +50,14 @@ func newImportCmd() *cobra.Command {
 				ansibleDir = cwd
 			}
 
+			ctx := ctxt.New(
+				context.Background(),
+				gOpt.Concurrency,
+				log,
+			)
+
 			// migrate cluster metadata from Ansible inventory
-			clsName, clsMeta, inv, err := ansible.ReadInventory(ansibleDir, inventoryFileName)
+			clsName, clsMeta, inv, err := ansible.ReadInventory(ctx, ansibleDir, inventoryFileName)
 			if err != nil {
 				return err
 			}
@@ -102,12 +108,6 @@ func newImportCmd() *cobra.Command {
 					return err
 				}
 			}
-
-			ctx := ctxt.New(
-				context.Background(),
-				gOpt.Concurrency,
-				log,
-			)
 
 			// parse config and import nodes
 			if err = ansible.ParseAndImportInventory(
