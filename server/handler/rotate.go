@@ -18,7 +18,7 @@ import (
 	"net/http"
 
 	"github.com/pingcap/fn"
-	"github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/repository/model"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
@@ -40,7 +40,7 @@ func (h *rootSigner) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (h *rootSigner) sign(m *v1manifest.RawManifest) (sr *simpleResponse, err statusError) {
 	root := v1manifest.Root{}
 	if err := json.Unmarshal(m.Signed, &root); err != nil {
-		log.Errorf("Unmarshal manifest %s", err.Error())
+		logprinter.Errorf("Unmarshal manifest %s", err.Error())
 		return nil, ErrorInvalidManifest
 	}
 
@@ -55,7 +55,7 @@ func (h *rootSigner) sign(m *v1manifest.RawManifest) (sr *simpleResponse, err st
 	case nil:
 		return nil, nil
 	default:
-		log.Errorf("Rotate root manifest: %s", err.Error())
+		logprinter.Errorf("Rotate root manifest: %s", err.Error())
 		return nil, ErrorInternalError
 	}
 }

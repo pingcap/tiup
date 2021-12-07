@@ -14,17 +14,11 @@
 package command
 
 import (
-	"crypto/tls"
 	"errors"
 	"fmt"
-	"net/url"
-	"time"
 
-	"github.com/fatih/color"
 	perrs "github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/crypto"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/spf13/cobra"
 )
@@ -73,7 +67,7 @@ func newDisplayCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				return displayDashboardInfo(clusterName, tlsCfg)
+				return cm.DisplayDashboardInfo(clusterName, tlsCfg)
 			}
 			if showTiKVLabels {
 				return cm.DisplayTiKVLabels(clusterName, gOpt)
@@ -90,52 +84,4 @@ func newDisplayCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&showTiKVLabels, "labels", false, "Only display labels of specified TiKV role or nodes")
 
 	return cmd
-}
-
-func displayDashboardInfo(clusterName string, tlsCfg *tls.Config) error {
-	metadata, err := spec.ClusterMetadata(clusterName)
-	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
-		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
-		return err
-	}
-
-	pdEndpoints := make([]string, 0)
-	for _, pd := range metadata.Topology.PDServers {
-		pdEndpoints = append(pdEndpoints, fmt.Sprintf("%s:%d", pd.Host, pd.ClientPort))
-	}
-
-	pdAPI := api.NewPDClient(pdEndpoints, 2*time.Second, tlsCfg)
-	dashboardAddr, err := pdAPI.GetDashboardAddress()
-	if err != nil {
-		return fmt.Errorf("failed to retrieve TiDB Dashboard instance from PD: %s", err)
-	}
-	if dashboardAddr == "auto" {
-		return fmt.Errorf("TiDB Dashboard is not initialized, please start PD and try again")
-	} else if dashboardAddr == "none" {
-		return fmt.Errorf("TiDB Dashboard is disabled")
-	}
-
-	u, err := url.Parse(dashboardAddr)
-	if err != nil {
-		return fmt.Errorf("unknown TiDB Dashboard PD instance: %s", dashboardAddr)
-	}
-
-	u.Path = "/dashboard/"
-
-	if tlsCfg != nil {
-		fmt.Println(
-			"Client certificate:",
-			color.CyanString(tidbSpec.Path(clusterName, spec.TLSCertKeyDir, spec.PFXClientCert)),
-		)
-		fmt.Println(
-			"Certificate password:",
-			color.CyanString(crypto.PKCS12Password),
-		)
-	}
-	fmt.Println(
-		"Dashboard URL:",
-		color.CyanString(u.String()),
-	)
-
-	return nil
 }

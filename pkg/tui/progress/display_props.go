@@ -38,7 +38,7 @@ func (m Mode) MarshalJSON() ([]byte, error) {
 	var s string
 	switch m {
 	case ModeSpinner:
-		s = "spinner"
+		s = "running"
 	case ModeProgress:
 		s = "progress"
 	case ModeDone:
@@ -58,7 +58,7 @@ func (m *Mode) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	switch strings.ToLower(s) {
-	case "spinner":
+	case "spinner", "running": // keep "spinner" for compatiability
 		*m = ModeSpinner
 	case "progress":
 		*m = ModeProgress
@@ -78,7 +78,7 @@ func (m Mode) String() string {
 	var s string
 	switch m {
 	case ModeSpinner:
-		s = "spinner"
+		s = "running"
 	case ModeProgress:
 		s = "progress"
 	case ModeDone:

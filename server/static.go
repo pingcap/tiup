@@ -20,7 +20,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 )
 
 // staticServer start a static web server
@@ -32,10 +32,10 @@ func staticServer(local string, upstream string) http.Handler {
 			f.Close()
 		} else if os.IsNotExist(err) && upstream != "" {
 			if err := proxyUpstream(w, r, path.Join(local, path.Clean(r.URL.Path)), upstream); err != nil {
-				log.Errorf("Proxy upstream: %s", err.Error())
+				logprinter.Errorf("Proxy upstream: %s", err.Error())
 				fsh.ServeHTTP(w, r)
 			}
-			log.Errorf("Handle file: %s", err.Error())
+			logprinter.Errorf("Handle file: %s", err.Error())
 			return
 		}
 		fsh.ServeHTTP(w, r)

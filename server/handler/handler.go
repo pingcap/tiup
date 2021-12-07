@@ -17,7 +17,7 @@ import (
 	"context"
 
 	"github.com/pingcap/fn"
-	"github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 )
 
 // errorMessage is used for error response
@@ -28,15 +28,15 @@ type errorMessage struct {
 
 func init() {
 	fn.SetErrorEncoder(func(ctx context.Context, err error) interface{} {
-		log.Debugf("Response an error message to client")
+		logprinter.Debugf("Response an error message to client")
 		if e, ok := err.(statusError); ok {
-			log.Debugf("Response status error to client: %s", e.Error())
+			logprinter.Debugf("Response status error to client: %s", e.Error())
 			return &errorMessage{
 				Status:  e.Status(),
 				Message: e.Error(),
 			}
 		}
-		log.Debugf("Unknow error occurred: %s", err.Error())
+		logprinter.Debugf("Unknow error occurred: %s", err.Error())
 		return &errorMessage{
 			Status:  "UNKNOWN_ERROR",
 			Message: "make sure your request is valid",

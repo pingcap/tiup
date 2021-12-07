@@ -26,7 +26,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/module"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/set"
 	"golang.org/x/sync/errgroup"
 )
@@ -266,20 +266,21 @@ func EnableMonitored(ctx context.Context, hosts []string, noAgentHosts set.Strin
 }
 
 func systemctlMonitor(ctx context.Context, hosts []string, noAgentHosts set.StringSet, options *spec.MonitoredOptions, action string, timeout uint64) error {
+	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 	ports := monitorPortMap(options)
 	for _, comp := range []string{spec.ComponentNodeExporter, spec.ComponentBlackboxExporter} {
-		log.Infof("%s component %s", actionPrevMsgs[action], comp)
+		logger.Infof("%s component %s", actionPrevMsgs[action], comp)
 
 		errg, _ := errgroup.WithContext(ctx)
 		for _, host := range hosts {
 			host := host
 			if noAgentHosts.Exist(host) {
-				log.Debugf("Ignored %s component %s for %s", action, comp, host)
+				logger.Debugf("Ignored %s component %s for %s", action, comp, host)
 				continue
 			}
 			nctx := checkpoint.NewContext(ctx)
 			errg.Go(func() error {
-				log.Infof("\t%s instance %s", actionPrevMsgs[action], host)
+				logger.Infof("\t%s instance %s", actionPrevMsgs[action], host)
 				e := ctxt.GetInner(nctx).Get(host)
 				service := fmt.Sprintf("%s-%d.service", comp, ports[comp])
 
@@ -298,7 +299,7 @@ func systemctlMonitor(ctx context.Context, hosts []string, noAgentHosts set.Stri
 				if err != nil {
 					return toFailedActionError(err, action, host, service, "")
 				}
-				log.Infof("\t%s %s success", actionPostMsgs[action], host)
+				logger.Infof("\t%s %s success", actionPostMsgs[action], host)
 				return nil
 			})
 		}
@@ -312,7 +313,8 @@ func systemctlMonitor(ctx context.Context, hosts []string, noAgentHosts set.Stri
 
 func restartInstance(ctx context.Context, ins spec.Instance, timeout uint64, tlsCfg *tls.Config) error {
 	e := ctxt.GetInner(ctx).Get(ins.GetHost())
-	log.Infof("\tRestarting instance %s", ins.ID())
+	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
+	logger.Infof("\tRestarting instance %s", ins.ID())
 
 	if err := systemctl(ctx, e, ins.ServiceName(), "restart", timeout); err != nil {
 		return toFailedActionError(err, "restart", ins.GetHost(), ins.ServiceName(), ins.LogDir())
@@ -323,33 +325,35 @@ func restartInstance(ctx context.Context, ins spec.Instance, timeout uint64, tls
 		return toFailedActionError(err, "restart", ins.GetHost(), ins.ServiceName(), ins.LogDir())
 	}
 
-	log.Infof("\tRestart instance %s success", ins.ID())
+	logger.Infof("\tRestart instance %s success", ins.ID())
 
 	return nil
 }
 
 func enableInstance(ctx context.Context, ins spec.Instance, timeout uint64, isEnable bool) error {
 	e := ctxt.GetInner(ctx).Get(ins.GetHost())
+	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 
 	action := "disable"
 	if isEnable {
 		action = "enable"
 	}
-	log.Infof("\t%s instance %s", actionPrevMsgs[action], ins.ID())
+	logger.Infof("\t%s instance %s", actionPrevMsgs[action], ins.ID())
 
 	// Enable/Disable by systemd.
 	if err := systemctl(ctx, e, ins.ServiceName(), action, timeout); err != nil {
 		return toFailedActionError(err, action, ins.GetHost(), ins.ServiceName(), ins.LogDir())
 	}
 
-	log.Infof("\t%s instance %s success", actionPostMsgs[action], ins.ID())
+	logger.Infof("\t%s instance %s success", actionPostMsgs[action], ins.ID())
 
 	return nil
 }
 
 func startInstance(ctx context.Context, ins spec.Instance, timeout uint64, tlsCfg *tls.Config) error {
 	e := ctxt.GetInner(ctx).Get(ins.GetHost())
-	log.Infof("\tStarting instance %s", ins.ID())
+	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
+	logger.Infof("\tStarting instance %s", ins.ID())
 
 	if err := systemctl(ctx, e, ins.ServiceName(), "start", timeout); err != nil {
 		return toFailedActionError(err, "start", ins.GetHost(), ins.ServiceName(), ins.LogDir())
@@ -360,12 +364,13 @@ func startInstance(ctx context.Context, ins spec.Instance, timeout uint64, tlsCf
 		return toFailedActionError(err, "start", ins.GetHost(), ins.ServiceName(), ins.LogDir())
 	}
 
-	log.Infof("\tStart instance %s success", ins.ID())
+	logger.Infof("\tStart instance %s success", ins.ID())
 
 	return nil
 }
 
 func systemctl(ctx context.Context, executor ctxt.Executor, service string, action string, timeout uint64) error {
+	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 	c := module.SystemdModuleConfig{
 		Unit:         service,
 		ReloadDaemon: true,
@@ -379,7 +384,7 @@ func systemctl(ctx context.Context, executor ctxt.Executor, service string, acti
 		fmt.Println(string(stdout))
 	}
 	if len(stderr) > 0 && !bytes.Contains(stderr, []byte("Created symlink ")) && !bytes.Contains(stderr, []byte("Removed symlink ")) {
-		log.Errorf(string(stderr))
+		logger.Errorf(string(stderr))
 	}
 	if len(stderr) > 0 && action == "stop" {
 		// ignore "unit not loaded" error, as this means the unit is not
@@ -387,10 +392,10 @@ func systemctl(ctx context.Context, executor ctxt.Executor, service string, acti
 		// NOTE: there will be a potential bug if the unit name is set
 		// wrong and the real unit still remains started.
 		if bytes.Contains(stderr, []byte(" not loaded.")) {
-			log.Warnf(string(stderr))
+			logger.Warnf(string(stderr))
 			return nil // reset the error to avoid exiting
 		}
-		log.Errorf(string(stderr))
+		logger.Errorf(string(stderr))
 	}
 	return err
 }
@@ -401,11 +406,12 @@ func EnableComponent(ctx context.Context, instances []spec.Instance, noAgentHost
 		return nil
 	}
 
+	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 	name := instances[0].ComponentName()
 	if isEnable {
-		log.Infof("Enabling component %s", name)
+		logger.Infof("Enabling component %s", name)
 	} else {
-		log.Infof("Disabling component %s", name)
+		logger.Infof("Disabling component %s", name)
 	}
 
 	errg, _ := errgroup.WithContext(ctx)
@@ -418,7 +424,7 @@ func EnableComponent(ctx context.Context, instances []spec.Instance, noAgentHost
 		case spec.ComponentNodeExporter,
 			spec.ComponentBlackboxExporter:
 			if noAgentHosts.Exist(ins.GetHost()) {
-				log.Debugf("Ignored enabling/disabling %s for %s:%d", name, ins.GetHost(), ins.GetPort())
+				logger.Debugf("Ignored enabling/disabling %s for %s:%d", name, ins.GetHost(), ins.GetPort())
 				continue
 			}
 		}
@@ -445,8 +451,9 @@ func StartComponent(ctx context.Context, instances []spec.Instance, noAgentHosts
 		return nil
 	}
 
+	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 	name := instances[0].ComponentName()
-	log.Infof("Starting component %s", name)
+	logger.Infof("Starting component %s", name)
 
 	// start instances in serial for Raft related components
 	// eg: PD has more strict restrictions on the capacity expansion process,
@@ -469,7 +476,7 @@ func StartComponent(ctx context.Context, instances []spec.Instance, noAgentHosts
 		case spec.ComponentNodeExporter,
 			spec.ComponentBlackboxExporter:
 			if noAgentHosts.Exist(ins.GetHost()) {
-				log.Debugf("Ignored starting %s for %s:%d", name, ins.GetHost(), ins.GetPort())
+				logger.Debugf("Ignored starting %s for %s:%d", name, ins.GetHost(), ins.GetPort())
 				continue
 			}
 		}
@@ -503,13 +510,14 @@ func serialStartInstances(ctx context.Context, instances []spec.Instance, option
 
 func stopInstance(ctx context.Context, ins spec.Instance, timeout uint64) error {
 	e := ctxt.GetInner(ctx).Get(ins.GetHost())
-	log.Infof("\tStopping instance %s", ins.GetHost())
+	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
+	logger.Infof("\tStopping instance %s", ins.GetHost())
 
 	if err := systemctl(ctx, e, ins.ServiceName(), "stop", timeout); err != nil {
 		return toFailedActionError(err, "stop", ins.GetHost(), ins.ServiceName(), ins.LogDir())
 	}
 
-	log.Infof("\tStop %s %s success", ins.ComponentName(), ins.ID())
+	logger.Infof("\tStop %s %s success", ins.ComponentName(), ins.ID())
 
 	return nil
 }
@@ -520,8 +528,9 @@ func StopComponent(ctx context.Context, instances []spec.Instance, noAgentHosts 
 		return nil
 	}
 
+	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 	name := instances[0].ComponentName()
-	log.Infof("Stopping component %s", name)
+	logger.Infof("Stopping component %s", name)
 
 	errg, _ := errgroup.WithContext(ctx)
 
@@ -531,7 +540,7 @@ func StopComponent(ctx context.Context, instances []spec.Instance, noAgentHosts 
 		case spec.ComponentNodeExporter,
 			spec.ComponentBlackboxExporter:
 			if noAgentHosts.Exist(ins.GetHost()) {
-				log.Debugf("Ignored stopping %s for %s:%d", name, ins.GetHost(), ins.GetPort())
+				logger.Debugf("Ignored stopping %s for %s:%d", name, ins.GetHost(), ins.GetPort())
 				continue
 			}
 		}
@@ -555,13 +564,14 @@ func StopComponent(ctx context.Context, instances []spec.Instance, noAgentHosts 
 // PrintClusterStatus print cluster status into the io.Writer.
 func PrintClusterStatus(ctx context.Context, cluster *spec.Specification) (health bool) {
 	health = true
+	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 
 	for _, com := range cluster.ComponentsByStartOrder() {
 		if len(com.Instances()) == 0 {
 			continue
 		}
 
-		log.Infof("Checking service state of %s", com.Name())
+		logger.Infof("Checking service state of %s", com.Name())
 		errg, _ := errgroup.WithContext(ctx)
 		for _, ins := range com.Instances() {
 			ins := ins
@@ -575,9 +585,9 @@ func PrintClusterStatus(ctx context.Context, cluster *spec.Specification) (healt
 				active, err := GetServiceStatus(nctx, e, ins.ServiceName())
 				if err != nil {
 					health = false
-					log.Errorf("\t%s\t%v", ins.GetHost(), err)
+					logger.Errorf("\t%s\t%v", ins.GetHost(), err)
 				} else {
-					log.Infof("\t%s\t%s", ins.GetHost(), active)
+					logger.Infof("\t%s\t%s", ins.GetHost(), active)
 				}
 				return nil
 			})

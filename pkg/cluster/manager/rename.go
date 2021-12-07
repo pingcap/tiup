@@ -21,7 +21,6 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -63,7 +62,7 @@ func (m *Manager) Rename(name string, opt operator.Options, newName string, skip
 		return err
 	}
 
-	log.Infof("Rename cluster `%s` -> `%s` successfully", name, newName)
+	m.logger.Infof("Rename cluster `%s` -> `%s` successfully", name, newName)
 
 	opt.Roles = []string{spec.ComponentGrafana, spec.ComponentPrometheus}
 	return m.Reload(newName, opt, false, skipConfirm)

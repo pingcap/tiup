@@ -109,7 +109,7 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version utils.Version) e
 	}
 
 	// Wait for PD
-	pdClient := api.NewPDClient(endpoints, 10*time.Second, nil)
+	pdClient := api.NewPDClient(ctx, endpoints, 10*time.Second, nil)
 	// set low-space-ratio to 1 to avoid low disk space
 	lowSpaceRatio, err := json.Marshal(scheduleConfig{
 		LowSpaceRatio: 0.99,

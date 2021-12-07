@@ -24,7 +24,6 @@ import (
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
@@ -63,14 +62,14 @@ func (m *Manager) EditConfig(name string, opt EditConfigOptions, skipConfirm boo
 		return nil
 	}
 
-	log.Infof("Applying changes...")
+	m.logger.Infof("Applying changes...")
 	metadata.SetTopology(newTopo)
 	err = m.specManager.SaveMeta(name, metadata)
 	if err != nil {
 		return perrs.Annotate(err, "failed to save meta")
 	}
 
-	log.Infof("Applied successfully, please use `%s reload %s [-N <nodes>] [-R <roles>]` to reload config.", tui.OsArgs0(), name)
+	m.logger.Infof("Applied successfully, please use `%s reload %s [-N <nodes>] [-R <roles>]` to reload config.", tui.OsArgs0(), name)
 	return nil
 }
 
@@ -117,26 +116,26 @@ func (m *Manager) editTopo(origTopo spec.Topology, data []byte, opt EditConfigOp
 	err = yaml.UnmarshalStrict(newData, newTopo)
 	if err != nil {
 		fmt.Print(color.RedString("New topology could not be saved: "))
-		log.Infof("Failed to parse topology file: %v", err)
+		m.logger.Infof("Failed to parse topology file: %v", err)
 		if opt.NewTopoFile == "" {
 			if pass, _ := tui.PromptForConfirmNo("Do you want to continue editing? [Y/n]: "); !pass {
 				return m.editTopo(origTopo, newData, opt, skipConfirm)
 			}
 		}
-		log.Infof("Nothing changed.")
+		m.logger.Infof("Nothing changed.")
 		return nil, nil
 	}
 
 	// report error if immutable field has been changed
 	if err := utils.ValidateSpecDiff(origTopo, newTopo); err != nil {
 		fmt.Print(color.RedString("New topology could not be saved: "))
-		log.Errorf("%s", err)
+		m.logger.Errorf("%s", err)
 		if opt.NewTopoFile == "" {
 			if pass, _ := tui.PromptForConfirmNo("Do you want to continue editing? [Y/n]: "); !pass {
 				return m.editTopo(origTopo, newData, opt, skipConfirm)
 			}
 		}
-		log.Infof("Nothing changed.")
+		m.logger.Infof("Nothing changed.")
 		return nil, nil
 	}
 
@@ -146,7 +145,7 @@ func (m *Manager) editTopo(origTopo spec.Topology, data []byte, opt EditConfigOp
 	}
 
 	if bytes.Equal(origData, newData) {
-		log.Infof("The file has nothing changed")
+		m.logger.Infof("The file has nothing changed")
 		return nil, nil
 	}
 

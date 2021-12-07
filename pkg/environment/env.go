@@ -23,10 +23,10 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/localdata"
-	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/pkg/utils"
+	"go.uber.org/zap"
 	"golang.org/x/mod/semver"
 )
 
@@ -107,7 +107,7 @@ func InitEnv(options repository.Options) (*Environment, error) {
 	}
 	v1repo = repository.NewV1Repo(mirror, options, local)
 
-	log.Verbose("Initialize repository finished in %s", time.Since(initRepo))
+	zap.L().Debug("Initialize repository finished", zap.Duration("duration", time.Since(initRepo)))
 
 	return &Environment{profile, v1repo}, nil
 }

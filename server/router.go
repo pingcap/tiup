@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/server/handler"
 )
 
@@ -34,11 +34,11 @@ func (w *traceResponseWriter) WriteHeader(code int) {
 
 func httpRequestMiddleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Infof("Request : %s - %s - %s", r.RemoteAddr, r.Method, r.URL)
+		logprinter.Infof("Request : %s - %s - %s", r.RemoteAddr, r.Method, r.URL)
 		start := time.Now()
 		tw := &traceResponseWriter{w, http.StatusOK}
 		h.ServeHTTP(tw, r)
-		log.Infof("Response [%d] : %s - %s - %s (%.3f sec)",
+		logprinter.Infof("Response [%d] : %s - %s - %s (%.3f sec)",
 			tw.statusCode, r.RemoteAddr, r.Method, r.URL, time.Since(start).Seconds())
 	})
 }

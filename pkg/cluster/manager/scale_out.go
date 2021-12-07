@@ -29,7 +29,7 @@ import (
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
-	"github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
@@ -81,7 +81,7 @@ func (m *Manager) ScaleOut(
 	} else { // if stage2 is true, not need check topology or other
 		// check for the input topology to let user confirm if there're any
 		// global configs set
-		if err := checkForGlobalConfigs(topoFile, skipConfirm); err != nil {
+		if err := checkForGlobalConfigs(m.logger, topoFile, skipConfirm); err != nil {
 			return err
 		}
 
@@ -150,7 +150,10 @@ func (m *Manager) ScaleOut(
 				if err != nil {
 					return err
 				}
-				pdClient := api.NewPDClient(pdList, 10*time.Second, tlsCfg)
+				pdClient := api.NewPDClient(
+					context.WithValue(context.TODO(), logprinter.ContextKeyLogger, m.logger),
+					pdList, 10*time.Second, tlsCfg,
+				)
 				lbs, placementRule, err := pdClient.GetLocationLabels()
 				if err != nil {
 					return err
@@ -199,7 +202,11 @@ func (m *Manager) ScaleOut(
 		return err
 	}
 
-	ctx := ctxt.New(context.Background(), gOpt.Concurrency)
+	ctx := ctxt.New(
+		context.Background(),
+		gOpt.Concurrency,
+		m.logger,
+	)
 	ctx = context.WithValue(ctx, ctxt.CtxBaseTopo, topo)
 	if err := t.Execute(ctx); err != nil {
 		if errorx.Cast(err) != nil {
@@ -210,11 +217,11 @@ func (m *Manager) ScaleOut(
 	}
 
 	if opt.Stage1 {
-		log.Infof(`The new instance is not started!
+		m.logger.Infof(`The new instance is not started!
 You need to execute '%s' to start the new instance.`, color.YellowString("tiup cluster scale-out %s --stage2", name))
 	}
 
-	log.Infof("Scaled cluster `%s` out successfully", color.YellowString(name))
+	m.logger.Infof("Scaled cluster `%s` out successfully", color.YellowString(name))
 
 	return nil
 }
@@ -236,7 +243,7 @@ func validateNewTopo(topo spec.Topology) (err error) {
 
 // checkForGlobalConfigs checks the input scale out topology to make sure users are aware
 // of the global config fields in it will be ignored.
-func checkForGlobalConfigs(topoFile string, skipConfirm bool) error {
+func checkForGlobalConfigs(logger *logprinter.Logger, topoFile string, skipConfirm bool) error {
 	yamlFile, err := spec.ReadYamlFile(topoFile)
 	if err != nil {
 		return err
@@ -254,7 +261,7 @@ func checkForGlobalConfigs(topoFile string, skipConfirm bool) error {
 		case "global",
 			"monitored",
 			"server_configs":
-			log.Warnf(`You have one or more of %s fields configured in
+			logger.Warnf(`You have one or more of %s fields configured in
 	the scale out topology, but they will be ignored during the scaling out process.
 	If you want to use configs different from the existing cluster, cancel now and
 	set them in the specification fileds for each host.`, color.YellowString(`["global", "monitored", "server_configs"]`))
@@ -282,7 +289,7 @@ func checkScaleOutLock(m *Manager, name string, opt DeployOptions, skipConfirm b
 			return m.specManager.ScaleOutLockedErr(name)
 		}
 
-		log.Warnf(`The parameter '%s' is set, new instance will not be started
+		m.logger.Warnf(`The parameter '%s' is set, new instance will not be started
 	Please manually execute '%s' to finish the process.`,
 			color.YellowString("--stage1"),
 			color.YellowString("tiup cluster scale-out %s --stage2", name))
@@ -298,7 +305,7 @@ func checkScaleOutLock(m *Manager, name string, opt DeployOptions, skipConfirm b
 			return fmt.Errorf("The scale-out file lock does not exist, please make sure to run 'tiup-cluster scale-out %s --stage1' first", name)
 		}
 
-		log.Warnf(`The parameter '%s' is set, only start the new instances and reload configs.`, color.YellowString("--stage2"))
+		m.logger.Warnf(`The parameter '%s' is set, only start the new instances and reload configs.`, color.YellowString("--stage2"))
 		if !skipConfirm {
 			if err := tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: "); err != nil {
 				return err

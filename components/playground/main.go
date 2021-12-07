@@ -39,7 +39,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
-	"github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/telemetry"
 	"github.com/pingcap/tiup/pkg/utils"
@@ -74,6 +74,7 @@ var (
 	tag              string
 	tiupDataDir      string
 	dataDir          string
+	log              = logprinter.NewLogger("")
 )
 
 const (
@@ -225,6 +226,7 @@ Examples:
 
 			var booted uint32
 			ctx, cancel := context.WithCancel(context.Background())
+			ctx = context.WithValue(ctx, logprinter.ContextKeyLogger, log)
 			defer cancel()
 
 			go func() {
