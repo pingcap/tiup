@@ -38,7 +38,7 @@ func buildReloadPromTasks(
 	logger *logprinter.Logger,
 	gOpt operator.Options,
 	nodes ...string,
-) []task.Task {
+) []*task.StepDisplay {
 	monitor := spec.FindComponent(topo, spec.ComponentPrometheus)
 	if monitor == nil {
 		return nil
@@ -47,7 +47,7 @@ func buildReloadPromTasks(
 	if len(instances) == 0 {
 		return nil
 	}
-	var tasks []task.Task
+	var tasks []*task.StepDisplay
 	deletedNodes := set.NewStringSet(nodes...)
 	for _, inst := range monitor.Instances() {
 		if deletedNodes.Exist(inst.ID()) {
@@ -55,7 +55,7 @@ func buildReloadPromTasks(
 		}
 		t := task.NewBuilder(logger).
 			SystemCtl(inst.GetHost(), inst.ServiceName(), "reload", true).
-			Build()
+			BuildAsStep(fmt.Sprintf("  - Reload prometheus %s -> %s", inst.ComponentName(), inst.ID()))
 		tasks = append(tasks, t)
 	}
 	return tasks
@@ -149,7 +149,6 @@ func buildScaleOutTask(
 	})
 
 	// Download missing component
-
 	downloadCompTasks = buildDownloadCompTasks(
 		base.Version,
 		newPart,
@@ -177,25 +176,7 @@ func buildScaleOutTask(
 			filepath.Join(deployDir, "scripts"),
 		}
 		// Deploy component
-
-		// tb := task.NewSimpleUerSSH(inst.GetHost(), inst.GetSSHPort(), base.User, gOpt, p, sshType).
-		tb := task.NewBuilder(m.logger).
-			UserSSH(
-				inst.GetHost(),
-				inst.GetSSHPort(),
-				base.User,
-				gOpt.SSHTimeout,
-				gOpt.OptTimeout,
-				gOpt.SSHProxyHost,
-				gOpt.SSHProxyPort,
-				gOpt.SSHProxyUser,
-				p.Password,
-				p.IdentityFile,
-				p.IdentityFilePassphrase,
-				gOpt.SSHProxyTimeout,
-				gOpt.SSHType,
-				sshType,
-			).
+		tb := task.NewSimpleUerSSH(m.logger, inst.GetHost(), inst.GetSSHPort(), base.User, gOpt, p, sshType).
 			Mkdir(base.User, inst.GetHost(), deployDirs...).
 			Mkdir(base.User, inst.GetHost(), dataDirs...).
 			Mkdir(base.User, inst.GetHost(), logDir)
@@ -241,6 +222,21 @@ func buildScaleOutTask(
 	if err != nil {
 		return nil, err
 	}
+
+	mergedTopo.IterInstance(func(inst spec.Instance) {
+		if inst.IsImported() {
+			deployDir := spec.Abs(base.User, inst.DeployDir())
+			// data dir would be empty for components which don't need it
+			// Download and copy the latest component to remote if the cluster is imported from Ansible
+			tb := task.NewBuilder(m.logger)
+			switch compName := inst.ComponentName(); compName {
+			case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertmanager:
+				version := m.bindVersion(compName, base.Version)
+				tb.Download(compName, inst.OS(), inst.Arch(), version).
+					CopyComponent(compName, inst.OS(), inst.Arch(), version, "", inst.GetHost(), deployDir)
+			}
+		}
+	})
 
 	// init scale out config
 	scaleOutConfigTasks := buildScaleConfigTasks(m, name, topo, newPart, base, gOpt, p)
@@ -342,7 +338,8 @@ func buildScaleOutTask(
 		builder.Func("Start new instances", func(ctx context.Context) error {
 			return operator.Start(ctx, newPart, operator.Options{OptTimeout: gOpt.OptTimeout, Operation: operator.ScaleOutOperation}, tlsCfg)
 		}).
-			ParallelStep("+ Refresh configs", false, refreshConfigTasks...)
+			ParallelStep("+ Refresh conifg", gOpt.Force, refreshConfigTasks...).
+			ParallelStep("+ Reload Prometheus", gOpt.Force, buildReloadPromTasks(metadata.GetTopology(), m.logger, gOpt)...)
 	}
 
 	// remove scale-out file lock
@@ -460,25 +457,7 @@ func buildMonitoredDeployTask(
 			}
 
 			// Deploy component
-
-			// tb := task.NewSimpleUerSSH(host, info.ssh, globalOptions.User, gOpt, p, globalOptions.SSHType).
-			tb := task.NewBuilder(m.logger).
-				UserSSH(
-					host,
-					info.ssh,
-					globalOptions.User,
-					gOpt.SSHTimeout,
-					gOpt.OptTimeout,
-					gOpt.SSHProxyHost,
-					gOpt.SSHProxyPort,
-					gOpt.SSHProxyUser,
-					p.Password,
-					p.IdentityFile,
-					p.IdentityFilePassphrase,
-					gOpt.SSHProxyTimeout,
-					gOpt.SSHType,
-					globalOptions.SSHType,
-				).
+			tb := task.NewSimpleUerSSH(m.logger, host, info.ssh, globalOptions.User, gOpt, p, globalOptions.SSHType).
 				Mkdir(globalOptions.User, host, deployDirs...).
 				CopyComponent(
 					comp,
@@ -590,24 +569,8 @@ func buildInitMonitoredConfigTasks(
 			// log dir will always be with values, but might not used by the component
 			logDir := spec.Abs(globalOptions.User, monitoredOptions.LogDir)
 			// Generate configs
-			// t := task.NewSimpleUerSSH(host, info.ssh, globalOptions.User, gOpt, p, globalOptions.SSHType).
-			t := task.NewBuilder(logger).
-				UserSSH(
-					host,
-					info.ssh,
-					globalOptions.User,
-					sshTimeout,
-					exeTimeout,
-					gOpt.SSHProxyHost,
-					gOpt.SSHProxyPort,
-					gOpt.SSHProxyUser,
-					p.Password,
-					p.IdentityFile,
-					p.IdentityFilePassphrase,
-					gOpt.SSHProxyTimeout,
-					gOpt.SSHType,
-					globalOptions.SSHType,
-				).
+
+			t := task.NewSimpleUerSSH(logger, host, info.ssh, globalOptions.User, gOpt, p, globalOptions.SSHType).
 				MonitoredConfig(
 					name,
 					comp,

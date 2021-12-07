@@ -219,6 +219,7 @@ func (m *Manager) Deploy(
 			if dir == "" {
 				continue
 			}
+
 			dirs = append(dirs, spec.Abs(globalOptions.User, dir))
 		}
 		// the default, relative path of data dir is under deploy dir
@@ -276,25 +277,7 @@ func (m *Manager) Deploy(
 			filepath.Join(deployDir, "scripts"),
 		}
 
-		//t := task.NewSimpleUerSSH(inst.GetHost(), inst.GetSSHPort(), globalOptions.User, gOpt, sshProxyProps, globalOptions.SSHType).
-
-		t := task.NewBuilder(m.logger).
-			UserSSH(
-				inst.GetHost(),
-				inst.GetSSHPort(),
-				globalOptions.User,
-				gOpt.SSHTimeout,
-				gOpt.OptTimeout,
-				gOpt.SSHProxyHost,
-				gOpt.SSHProxyPort,
-				gOpt.SSHProxyUser,
-				sshProxyProps.Password,
-				sshProxyProps.IdentityFile,
-				sshProxyProps.IdentityFilePassphrase,
-				gOpt.SSHProxyTimeout,
-				gOpt.SSHType,
-				globalOptions.SSHType,
-			).
+		t := task.NewSimpleUerSSH(m.logger, inst.GetHost(), inst.GetSSHPort(), globalOptions.User, gOpt, sshProxyProps, globalOptions.SSHType).
 			Mkdir(globalOptions.User, inst.GetHost(), deployDirs...).
 			Mkdir(globalOptions.User, inst.GetHost(), dataDirs...)
 
@@ -390,9 +373,6 @@ func (m *Manager) Deploy(
 		gOpt,
 		sshProxyProps,
 	)
-
-	// builder := task.NewBuilder(gOpt.DisplayMode).
-
 	builder := task.NewBuilder(m.logger).
 		Step("+ Generate SSH keys",
 			task.NewBuilder(m.logger).

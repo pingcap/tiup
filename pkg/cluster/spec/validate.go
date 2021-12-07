@@ -642,10 +642,7 @@ func (s *Specification) portConflictsDetect() error {
 		compSpecs := topoSpec.Field(i)
 		for index := 0; index < compSpecs.Len(); index++ {
 			compSpec := reflect.Indirect(compSpecs.Index(index))
-			// skip nodes imported from TiDB-Ansible
-			if compSpec.Addr().Interface().(InstanceSpec).IsImported() {
-				continue
-			}
+
 			// check hostname
 			host := compSpec.FieldByName("Host").String()
 			cfg := strings.Split(topoType.Field(i).Tag.Get("yaml"), ",")[0] // without meta
