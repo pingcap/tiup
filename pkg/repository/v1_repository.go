@@ -32,7 +32,7 @@ import (
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/localdata"
-	"github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/mod/semver"
@@ -203,7 +203,7 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 // ensureManifests ensures that the snapshot, root, and index manifests are up to date and saved in r.local.
 func (r *V1Repository) ensureManifests() error {
 	defer func(start time.Time) {
-		log.Verbose("Ensure manifests finished in %s", time.Since(start))
+		logprinter.Verbose("Ensure manifests finished in %s", time.Since(start))
 	}(time.Now())
 
 	// Update snapshot.
@@ -218,7 +218,7 @@ func (r *V1Repository) ensureManifests() error {
 // Postcondition: if returned error is nil, then the local snapshot and timestamp are up to date and return the snapshot
 func (r *V1Repository) updateLocalSnapshot() (*v1manifest.Snapshot, error) {
 	defer func(start time.Time) {
-		log.Verbose("Update local snapshot finished in %s", time.Since(start))
+		logprinter.Verbose("Update local snapshot finished in %s", time.Since(start))
 	}(time.Now())
 
 	timestampChanged, tsManifest, err := r.fetchTimestamp()
@@ -308,7 +308,7 @@ func FnameWithVersion(fname string, version uint) string {
 
 func (r *V1Repository) updateLocalRoot() error {
 	defer func(start time.Time) {
-		log.Verbose("Update local root finished in %s", time.Since(start))
+		logprinter.Verbose("Update local root finished in %s", time.Since(start))
 	}(time.Now())
 
 	oldRoot, err := r.loadRoot()
@@ -372,7 +372,7 @@ func (r *V1Repository) updateLocalRoot() error {
 // Precondition: the root manifest has been updated if necessary.
 func (r *V1Repository) updateLocalIndex(snapshot *v1manifest.Snapshot) error {
 	defer func(start time.Time) {
-		log.Verbose("Update local index finished in %s", time.Since(start))
+		logprinter.Verbose("Update local index finished in %s", time.Since(start))
 	}(time.Now())
 
 	// Update index (if needed).
@@ -414,7 +414,7 @@ func (r *V1Repository) updateLocalIndex(snapshot *v1manifest.Snapshot) error {
 // Precondition: the snapshot and index manifests exist and are up to date.
 func (r *V1Repository) updateComponentManifest(id string, withYanked bool) (*v1manifest.Component, error) {
 	defer func(start time.Time) {
-		log.Verbose("update component '%s' manifest finished in %s", id, time.Since(start))
+		logprinter.Verbose("update component '%s' manifest finished in %s", id, time.Since(start))
 	}(time.Now())
 
 	// Find the component's entry in the index and snapshot manifests.
@@ -527,7 +527,7 @@ func (r *V1Repository) fetchTimestamp() (changed bool, manifest *v1manifest.Mani
 	}
 
 	defer func(start time.Time) {
-		log.Verbose("Fetch timestamp finished in %s", time.Since(start))
+		logprinter.Verbose("Fetch timestamp finished in %s", time.Since(start))
 		r.timestamp = manifest
 	}(time.Now())
 

@@ -32,7 +32,6 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/crypto"
 	"github.com/pingcap/tiup/pkg/environment"
-	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/set"
@@ -244,7 +243,7 @@ func (m *Manager) Deploy(
 			if strings.HasPrefix(globalOptions.DataDir, "/") {
 				dirs = append(dirs, globalOptions.DataDir)
 			}
-			t := task.NewBuilder(gOpt.DisplayMode).
+			t := task.NewBuilder(m.logger).
 				RootSSH(
 					inst.GetHost(),
 					inst.GetSSHPort(),
@@ -276,7 +275,7 @@ func (m *Manager) Deploy(
 	}
 
 	// Download missing component
-	downloadCompTasks = buildDownloadCompTasks(clusterVersion, topo, gOpt, m.bindVersion)
+	downloadCompTasks = buildDownloadCompTasks(clusterVersion, topo, m.logger, gOpt, m.bindVersion)
 
 	// Deploy components to remote
 	topo.IterInstance(func(inst spec.Instance) {
@@ -297,7 +296,7 @@ func (m *Manager) Deploy(
 		if globalOptions.TLSEnabled {
 			deployDirs = append(deployDirs, filepath.Join(deployDir, "tls"))
 		}
-		t := task.NewBuilder(gOpt.DisplayMode).
+		t := task.NewBuilder(m.logger).
 			UserSSH(
 				inst.GetHost(),
 				inst.GetSSHPort(),
@@ -402,9 +401,12 @@ func (m *Manager) Deploy(
 	downloadCompTasks = append(downloadCompTasks, dlTasks...)
 	deployCompTasks = append(deployCompTasks, dpTasks...)
 
-	builder := task.NewBuilder(gOpt.DisplayMode).
+	builder := task.NewBuilder(m.logger).
 		Step("+ Generate SSH keys",
-			task.NewBuilder(gOpt.DisplayMode).SSHKeyGen(m.specManager.Path(name, "ssh", "id_rsa")).Build()).
+			task.NewBuilder(m.logger).
+				SSHKeyGen(m.specManager.Path(name, "ssh", "id_rsa")).
+				Build(),
+			m.logger).
 		ParallelStep("+ Download TiDB components", false, downloadCompTasks...).
 		ParallelStep("+ Initialize target host environments", false, envInitTasks...).
 		ParallelStep("+ Copy files", false, deployCompTasks...)
@@ -415,7 +417,12 @@ func (m *Manager) Deploy(
 
 	t := builder.Build()
 
-	if err := t.Execute(ctxt.New(context.Background(), gOpt.Concurrency)); err != nil {
+	ctx := ctxt.New(
+		context.Background(),
+		gOpt.Concurrency,
+		m.logger,
+	)
+	if err := t.Execute(ctx); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err
@@ -432,6 +439,6 @@ func (m *Manager) Deploy(
 	}
 
 	hint := color.New(color.Bold).Sprintf("%s start %s", tui.OsArgs0(), name)
-	log.Infof("Cluster `%s` deployed successfully, you can start it with command: `%s`", name, hint)
+	m.logger.Infof("Cluster `%s` deployed successfully, you can start it with command: `%s`", name, hint)
 	return nil
 }

@@ -21,7 +21,7 @@ import (
 	"sync/atomic"
 
 	"github.com/fatih/color"
-	"github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -32,7 +32,14 @@ var (
 )
 
 // MaybeStartProxy maybe starts an inner http/tcp proxies
-func MaybeStartProxy(host string, port int, user string, usePass bool, identity string) error {
+func MaybeStartProxy(
+	host string,
+	port int,
+	user string,
+	usePass bool,
+	identity string,
+	logger *logprinter.Logger,
+) error {
 	if len(host) == 0 {
 		return nil
 	}
@@ -58,13 +65,14 @@ func MaybeStartProxy(host string, port int, user string, usePass bool, identity 
 			sshProps.Password,
 			sshProps.IdentityFile,
 			sshProps.IdentityFilePassphrase,
+			logger,
 		),
 	}
 
-	log.Infof(color.HiGreenString("Start HTTP inner proxy %s", httpProxy.Addr))
+	logger.Infof(color.HiGreenString("Start HTTP inner proxy %s", httpProxy.Addr))
 	go func() {
 		if err := httpProxy.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Errorf("Failed to listen HTTP proxy: %v", err)
+			logger.Errorf("Failed to listen HTTP proxy: %v", err)
 		}
 	}()
 
@@ -72,10 +80,12 @@ func MaybeStartProxy(host string, port int, user string, usePass bool, identity 
 		host, port, user,
 		sshProps.Password,
 		sshProps.IdentityFile,
-		sshProps.IdentityFilePassphrase)
+		sshProps.IdentityFilePassphrase,
+		logger,
+	)
 	tcpProxy.Store(p)
 
-	log.Infof(color.HiGreenString("Start TCP inner proxy %s", p.endpoint))
+	logger.Infof(color.HiGreenString("Start TCP inner proxy %s", p.endpoint))
 
 	return nil
 }

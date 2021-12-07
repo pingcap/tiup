@@ -27,7 +27,6 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/environment"
-	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/tui"
@@ -74,7 +73,7 @@ func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Optio
 			color.HiYellowString(clusterVersion)); err != nil {
 			return err
 		}
-		log.Infof("Upgrading cluster...")
+		m.logger.Infof("Upgrading cluster...")
 	}
 
 	hasImported := false
@@ -97,7 +96,7 @@ func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Optio
 			key := fmt.Sprintf("%s-%s-%s-%s", compName, version, inst.OS(), inst.Arch())
 			if _, found := uniqueComps[key]; !found {
 				uniqueComps[key] = struct{}{}
-				t := task.NewBuilder(opt.DisplayMode).
+				t := task.NewBuilder(m.logger).
 					Download(inst.ComponentName(), inst.OS(), inst.Arch(), version).
 					Build()
 				downloadCompTasks = append(downloadCompTasks, t)
@@ -110,7 +109,7 @@ func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Optio
 			logDir := spec.Abs(base.User, inst.LogDir())
 
 			// Deploy component
-			tb := task.NewBuilder(opt.DisplayMode)
+			tb := task.NewBuilder(m.logger)
 
 			// for some component, dataDirs might need to be created due to upgrade
 			// eg: TiCDC support DataDir since v4.0.13
@@ -207,7 +206,12 @@ func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Optio
 		}).
 		Build()
 
-	if err := t.Execute(ctxt.New(context.Background(), opt.Concurrency)); err != nil {
+	ctx := ctxt.New(
+		context.Background(),
+		opt.Concurrency,
+		m.logger,
+	)
+	if err := t.Execute(ctx); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err
@@ -231,7 +235,7 @@ func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Optio
 		return err
 	}
 
-	log.Infof("Upgraded cluster `%s` successfully", name)
+	m.logger.Infof("Upgraded cluster `%s` successfully", name)
 
 	return nil
 }

@@ -26,7 +26,6 @@ import (
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
-	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/set"
 )
 
@@ -68,7 +67,7 @@ func (m *Manager) Exec(name string, opt ExecOptions, gOpt operator.Options) erro
 
 			cmds, err := renderInstanceSpec(opt.Command, inst)
 			if err != nil {
-				log.Debugf("error rendering command with spec: %s", err)
+				m.logger.Debugf("error rendering command with spec: %s", err)
 				return // skip
 			}
 			cmdSet := set.NewStringSet(cmds...)
@@ -84,7 +83,7 @@ func (m *Manager) Exec(name string, opt ExecOptions, gOpt operator.Options) erro
 		host := strings.Split(hostKey, "-")[0]
 		for _, cmd := range i.Slice() {
 			shellTasks = append(shellTasks,
-				task.NewBuilder(gOpt.DisplayMode).
+				task.NewBuilder(m.logger).
 					Shell(host, cmd, hostKey+cmd, opt.Sudo).
 					Build())
 		}
@@ -99,7 +98,11 @@ func (m *Manager) Exec(name string, opt ExecOptions, gOpt operator.Options) erro
 		Parallel(false, shellTasks...).
 		Build()
 
-	execCtx := ctxt.New(context.Background(), gOpt.Concurrency)
+	execCtx := ctxt.New(
+		context.Background(),
+		gOpt.Concurrency,
+		m.logger,
+	)
 	if err := t.Execute(execCtx); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
@@ -116,14 +119,14 @@ func (m *Manager) Exec(name string, opt ExecOptions, gOpt operator.Options) erro
 			if !ok {
 				continue
 			}
-			log.Infof("Outputs of %s on %s:",
+			m.logger.Infof("Outputs of %s on %s:",
 				color.CyanString(cmd),
 				color.CyanString(host))
 			if len(stdout) > 0 {
-				log.Infof("%s:\n%s", color.GreenString("stdout"), stdout)
+				m.logger.Infof("%s:\n%s", color.GreenString("stdout"), stdout)
 			}
 			if len(stderr) > 0 {
-				log.Infof("%s:\n%s", color.RedString("stderr"), stderr)
+				m.logger.Infof("%s:\n%s", color.RedString("stderr"), stderr)
 			}
 		}
 	}

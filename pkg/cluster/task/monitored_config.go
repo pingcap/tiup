@@ -27,7 +27,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/template/config"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	system "github.com/pingcap/tiup/pkg/cluster/template/systemd"
-	"github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/meta"
 	"go.uber.org/zap"
 )
@@ -121,7 +121,8 @@ func (m *MonitoredConfig) syncMonitoredSystemConfig(ctx context.Context, exec ct
 			fmt.Println(string(outp))
 		}
 		if len(errp) > 0 {
-			log.Errorf(string(errp))
+			ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger).
+				Errorf(string(errp))
 		}
 		return err
 	}

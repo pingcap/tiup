@@ -14,6 +14,7 @@
 package ansible
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"io/fs"
@@ -26,13 +27,15 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/relex/aini"
 )
 
 // ReadInventory reads the inventory files of a TiDB cluster deployed by TiDB-Ansible
-func ReadInventory(dir, inventoryFileName string) (string, *spec.ClusterMeta, *aini.InventoryData, error) {
+func ReadInventory(ctx context.Context, dir, inventoryFileName string) (string, *spec.ClusterMeta, *aini.InventoryData, error) {
+	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
+
 	if inventoryFileName == "" {
 		inventoryFileName = AnsibleInventoryFile
 	}
@@ -42,13 +45,13 @@ func ReadInventory(dir, inventoryFileName string) (string, *spec.ClusterMeta, *a
 	}
 	defer inventoryFile.Close()
 
-	log.Infof("Found inventory file %s, parsing...", inventoryFile.Name())
+	logger.Infof("Found inventory file %s, parsing...", inventoryFile.Name())
 	clsName, clsMeta, inventory, err := parseInventoryFile(inventoryFile)
 	if err != nil {
 		return "", nil, inventory, err
 	}
 
-	log.Infof("Found cluster \"%s\" (%s), deployed with user %s.",
+	logger.Infof("Found cluster \"%s\" (%s), deployed with user %s.",
 		clsName, clsMeta.Version, clsMeta.User)
 	return clsName, clsMeta, inventory, err
 }

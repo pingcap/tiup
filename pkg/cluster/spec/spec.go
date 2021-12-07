@@ -14,6 +14,7 @@
 package spec
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"path/filepath"
@@ -26,10 +27,10 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
-	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/proxy"
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.uber.org/zap"
 	"golang.org/x/mod/semver"
 )
 
@@ -336,7 +337,11 @@ func (s *Specification) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			return err
 		}
 		if s.TiFlashServers[i].DataDir != dataDir {
-			log.Infof("'tiflash_server:%s.data_dir' is overwritten by its storage configuration. Now the data_dir is %s", s.TiFlashServers[i].Host, dataDir)
+			zap.L().Info(
+				"tiflash data dir is overwritten by its storage configuration",
+				zap.String("host", s.TiFlashServers[i].Host),
+				zap.String("dir", dataDir),
+			)
 			s.TiFlashServers[i].DataDir = dataDir
 		}
 	}
@@ -391,8 +396,8 @@ func (s *Specification) AdjustByVersion(clusterVersion string) {
 }
 
 // GetDashboardAddress returns the cluster's dashboard addr
-func (s *Specification) GetDashboardAddress(tlsCfg *tls.Config, pdList ...string) (string, error) {
-	pc := api.NewPDClient(pdList, statusQueryTimeout, tlsCfg)
+func (s *Specification) GetDashboardAddress(ctx context.Context, tlsCfg *tls.Config, pdList ...string) (string, error) {
+	pc := api.NewPDClient(ctx, pdList, statusQueryTimeout, tlsCfg)
 	dashboardAddr, err := pc.GetDashboardAddress()
 	if err != nil {
 		return "", err

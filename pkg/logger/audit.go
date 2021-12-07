@@ -17,7 +17,7 @@ import (
 	"bytes"
 
 	"github.com/pingcap/tiup/pkg/cluster/audit"
-	utils2 "github.com/pingcap/tiup/pkg/utils"
+	"github.com/pingcap/tiup/pkg/utils"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -50,7 +50,7 @@ func OutputAuditLogIfEnabled() error {
 		return nil
 	}
 
-	if err := utils2.CreateDir(auditDir); err != nil {
+	if err := utils.CreateDir(auditDir); err != nil {
 		return err
 	}
 

@@ -66,9 +66,9 @@ type TiFlashSpec struct {
 }
 
 // Status queries current status of the instance
-func (s *TiFlashSpec) Status(tlsCfg *tls.Config, pdList ...string) string {
+func (s *TiFlashSpec) Status(ctx context.Context, tlsCfg *tls.Config, pdList ...string) string {
 	storeAddr := fmt.Sprintf("%s:%d", s.Host, s.FlashServicePort)
-	state := checkStoreStatus(storeAddr, tlsCfg, pdList...)
+	state := checkStoreStatus(ctx, storeAddr, tlsCfg, pdList...)
 	if s.Offline && strings.ToLower(state) == "offline" {
 		state = "Pending Offline" // avoid misleading
 	}
@@ -234,7 +234,7 @@ func (c *TiFlashComponent) Instances() []Instance {
 				s.DataDir,
 			},
 			StatusFn: s.Status,
-			UptimeFn: func(tlsCfg *tls.Config) time.Duration {
+			UptimeFn: func(_ context.Context, tlsCfg *tls.Config) time.Duration {
 				return 0
 			},
 		}, c.Topology})
@@ -735,7 +735,7 @@ func (i *TiFlashInstance) PrepareStart(ctx context.Context, tlsCfg *tls.Config) 
 	}
 
 	endpoints := i.getEndpoints(topo)
-	pdClient := api.NewPDClient(endpoints, 10*time.Second, tlsCfg)
+	pdClient := api.NewPDClient(ctx, endpoints, 10*time.Second, tlsCfg)
 	return pdClient.UpdateReplicateConfig(bytes.NewBuffer(enablePlacementRules))
 }
 

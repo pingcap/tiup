@@ -24,12 +24,13 @@ import (
 	"github.com/google/uuid"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestLocalDashboards(t *testing.T) {
-	ctx := ctxt.New(context.Background(), 0)
+	ctx := ctxt.New(context.Background(), 0, logprinter.NewLogger(""))
 
 	deployDir, err := os.MkdirTemp("", "tiup-*")
 	assert.Nil(t, err)

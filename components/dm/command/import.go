@@ -49,7 +49,7 @@ func newImportCmd() *cobra.Command {
 				return err
 			}
 
-			ctx := ctxt.New(context.Background(), 0)
+			ctx := ctxt.New(context.Background(), 0, log)
 			clusterName, meta, err := importer.ImportFromAnsibleDir(ctx)
 			if err != nil {
 				return err

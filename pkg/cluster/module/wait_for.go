@@ -21,8 +21,8 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
-	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/utils"
+	"go.uber.org/zap"
 )
 
 // WaitForConfig is the configurations of WaitFor module.
@@ -87,7 +87,7 @@ func (w *WaitFor) Execute(ctx context.Context, e ctxt.Executor) (err error) {
 		}
 		return err
 	}, retryOpt); err != nil {
-		log.Debugf("retry error: %s", err)
+		zap.L().Debug("retry error", zap.Error(err))
 		return errors.Errorf("timed out waiting for port %d to be %s after %s", w.c.Port, w.c.State, w.c.Timeout)
 	}
 	return nil

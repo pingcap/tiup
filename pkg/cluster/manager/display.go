@@ -15,10 +15,12 @@ package manager
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -32,11 +34,13 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/crypto"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
+	"go.uber.org/zap"
 )
 
 // InstInfo represents an instance info
@@ -107,7 +111,7 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 	cyan := color.New(color.FgCyan, color.Bold)
 	// display cluster meta
 	var j *JSONOutput
-	if log.GetDisplayMode() == log.DisplayModeJSON {
+	if m.logger.GetDisplayMode() == logprinter.DisplayModeJSON {
 		j = &JSONOutput{
 			ClusterMetaInfo: ClusterMetaInfo{
 				m.sysName,
@@ -190,15 +194,20 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 	}
 
 	var dashboardAddr string
+	ctx := ctxt.New(
+		context.Background(),
+		opt.Concurrency,
+		m.logger,
+	)
 	if t, ok := topo.(*spec.Specification); ok {
 		var err error
-		dashboardAddr, err = t.GetDashboardAddress(tlsCfg, masterActive...)
+		dashboardAddr, err = t.GetDashboardAddress(ctx, tlsCfg, masterActive...)
 		if err == nil && !set.NewStringSet("", "auto", "none").Exist(dashboardAddr) {
 			scheme := "http"
 			if tlsCfg != nil {
 				scheme = "https"
 			}
-			if log.GetDisplayMode() == log.DisplayModeJSON {
+			if m.logger.GetDisplayMode() == logprinter.DisplayModeJSON {
 				j.ClusterMetaInfo.DashboardURL = fmt.Sprintf("%s://%s/dashboard", scheme, dashboardAddr)
 			} else {
 				fmt.Printf("Dashboard URL:      %s\n", cyan.Sprintf("%s://%s/dashboard", scheme, dashboardAddr))
@@ -206,7 +215,7 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 		}
 	}
 
-	if log.GetDisplayMode() == log.DisplayModeJSON {
+	if m.logger.GetDisplayMode() == logprinter.DisplayModeJSON {
 		d, err := json.MarshalIndent(j, "", "  ")
 		if err != nil {
 			return err
@@ -218,13 +227,17 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 	tui.PrintTable(clusterTable, true)
 	fmt.Printf("Total nodes: %d\n", len(clusterTable)-1)
 
-	ctx := ctxt.New(context.Background(), opt.Concurrency)
 	if t, ok := topo.(*spec.Specification); ok {
 		// Check if TiKV's label set correctly
-		pdClient := api.NewPDClient(masterActive, 10*time.Second, tlsCfg)
+		pdClient := api.NewPDClient(
+			context.WithValue(ctx, logprinter.ContextKeyLogger, m.logger),
+			masterActive,
+			10*time.Second,
+			tlsCfg,
+		)
 
 		if lbs, placementRule, err := pdClient.GetLocationLabels(); err != nil {
-			log.Debugf("get location labels from pd failed: %v", err)
+			m.logger.Debugf("get location labels from pd failed: %v", err)
 		} else if !placementRule {
 			if err := spec.CheckTiKVLabels(lbs, pdClient); err != nil {
 				color.Yellow("\nWARN: there is something wrong with TiKV labels, which may cause data losing:\n%v", err)
@@ -314,6 +327,12 @@ func (m *Manager) DisplayTiKVLabels(name string, opt operator.Options) error {
 		}
 	}
 
+	ctx := ctxt.New(
+		context.Background(),
+		opt.Concurrency,
+		m.logger,
+	)
+
 	masterList := topo.BaseTopo().MasterList
 	tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
 	if err != nil {
@@ -321,7 +340,7 @@ func (m *Manager) DisplayTiKVLabels(name string, opt operator.Options) error {
 	}
 	topo.IterInstance(func(ins spec.Instance) {
 		if ins.ComponentName() == spec.ComponentPD {
-			status := ins.Status(tlsCfg, masterList...)
+			status := ins.Status(ctx, tlsCfg, masterList...)
 			if strings.HasPrefix(status, "Up") || strings.HasPrefix(status, "Healthy") {
 				instAddr := fmt.Sprintf("%s:%d", ins.GetHost(), ins.GetPort())
 				masterActive = append(masterActive, instAddr)
@@ -336,16 +355,16 @@ func (m *Manager) DisplayTiKVLabels(name string, opt operator.Options) error {
 
 	if _, ok := topo.(*spec.Specification); ok {
 		// Check if TiKV's label set correctly
-		pdClient := api.NewPDClient(masterActive, 10*time.Second, tlsCfg)
+		pdClient := api.NewPDClient(ctx, masterActive, 10*time.Second, tlsCfg)
 		// No
 		locationLabel, _, err = pdClient.GetLocationLabels()
 		if err != nil {
-			log.Debugf("get location labels from pd failed: %v", err)
+			m.logger.Debugf("get location labels from pd failed: %v", err)
 		}
 
 		_, storeInfos, err := pdClient.GetTiKVLabels()
 		if err != nil {
-			log.Debugf("get tikv state and labels from pd failed: %v", err)
+			m.logger.Debugf("get tikv state and labels from pd failed: %v", err)
 		}
 
 		for storeIP := range tikvStoreIP {
@@ -402,7 +421,11 @@ func (m *Manager) DisplayTiKVLabels(name string, opt operator.Options) error {
 
 // GetClusterTopology get the topology of the cluster.
 func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstInfo, error) {
-	ctx := ctxt.New(context.Background(), opt.Concurrency)
+	ctx := ctxt.New(
+		context.Background(),
+		opt.Concurrency,
+		m.logger,
+	)
 	metadata, err := m.meta(name)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
 		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
@@ -437,7 +460,7 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 		if ins.ComponentName() != spec.ComponentPD && ins.ComponentName() != spec.ComponentDMMaster {
 			return
 		}
-		status := ins.Status(tlsCfg, masterList...)
+		status := ins.Status(ctx, tlsCfg, masterList...)
 		if strings.HasPrefix(status, "Up") || strings.HasPrefix(status, "Healthy") {
 			instAddr := fmt.Sprintf("%s:%d", ins.GetHost(), ins.GetPort())
 			masterActive = append(masterActive, instAddr)
@@ -447,7 +470,7 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 
 	var dashboardAddr string
 	if t, ok := topo.(*spec.Specification); ok {
-		dashboardAddr, _ = t.GetDashboardAddress(tlsCfg, masterActive...)
+		dashboardAddr, _ = t.GetDashboardAddress(ctx, tlsCfg, masterActive...)
 	}
 
 	clusterInstInfos := []InstInfo{}
@@ -480,12 +503,12 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 		case spec.ComponentDMMaster:
 			status = masterStatus[ins.ID()]
 		default:
-			status = ins.Status(tlsCfg, masterActive...)
+			status = ins.Status(ctx, tlsCfg, masterActive...)
 		}
 
 		since := "-"
 		if opt.ShowUptime {
-			since = formatInstanceSince(ins.Uptime(tlsCfg))
+			since = formatInstanceSince(ins.Uptime(ctx, tlsCfg))
 		}
 
 		// Query the service status and uptime
@@ -612,7 +635,7 @@ func parseSystemctlSince(str string) (dur time.Duration) {
 	}
 	defer func() {
 		if dur == 0 {
-			log.Warnf("failed to parse systemctl since '%s'", str)
+			zap.L().Warn("failed to parse systemctl since", zap.String("value", str))
 		}
 	}()
 	parts := strings.Split(str, ";")
@@ -667,6 +690,56 @@ func SetClusterSSH(ctx context.Context, topo spec.Topology, deployUser string, s
 			ctxt.GetInner(ctx).SetExecutor(in.GetHost(), e)
 		}
 	}
+
+	return nil
+}
+
+// DisplayDashboardInfo prints the dashboard address of cluster
+func (m *Manager) DisplayDashboardInfo(clusterName string, tlsCfg *tls.Config) error {
+	metadata, err := spec.ClusterMetadata(clusterName)
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
+		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
+		return err
+	}
+
+	pdEndpoints := make([]string, 0)
+	for _, pd := range metadata.Topology.PDServers {
+		pdEndpoints = append(pdEndpoints, fmt.Sprintf("%s:%d", pd.Host, pd.ClientPort))
+	}
+
+	ctx := context.WithValue(context.Background(), logprinter.ContextKeyLogger, m.logger)
+	pdAPI := api.NewPDClient(ctx, pdEndpoints, 2*time.Second, tlsCfg)
+	dashboardAddr, err := pdAPI.GetDashboardAddress()
+	if err != nil {
+		return fmt.Errorf("failed to retrieve TiDB Dashboard instance from PD: %s", err)
+	}
+	if dashboardAddr == "auto" {
+		return fmt.Errorf("TiDB Dashboard is not initialized, please start PD and try again")
+	} else if dashboardAddr == "none" {
+		return fmt.Errorf("TiDB Dashboard is disabled")
+	}
+
+	u, err := url.Parse(dashboardAddr)
+	if err != nil {
+		return fmt.Errorf("unknown TiDB Dashboard PD instance: %s", dashboardAddr)
+	}
+
+	u.Path = "/dashboard/"
+
+	if tlsCfg != nil {
+		fmt.Println(
+			"Client certificate:",
+			color.CyanString(m.specManager.Path(clusterName, spec.TLSCertKeyDir, spec.PFXClientCert)),
+		)
+		fmt.Println(
+			"Certificate password:",
+			color.CyanString(crypto.PKCS12Password),
+		)
+	}
+	fmt.Println(
+		"Dashboard URL:",
+		color.CyanString(u.String()),
+	)
 
 	return nil
 }
