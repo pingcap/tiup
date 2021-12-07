@@ -27,7 +27,6 @@ import (
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
-	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/tui"
 )
@@ -54,7 +53,7 @@ func (m *Manager) ScaleIn(
 	)
 	if !skipConfirm {
 		if force {
-			log.Warnf(color.HiRedString(tui.ASCIIArtWarning))
+			m.logger.Warnf(color.HiRedString(tui.ASCIIArtWarning))
 			if err := tui.PromptForAnswerOrAbortError(
 				"Yes, I know my data might be lost.",
 				color.HiRedString("Forcing scale in is unsafe and may result in data loss for stateful components.\n"+
@@ -75,7 +74,7 @@ func (m *Manager) ScaleIn(
 			return err
 		}
 
-		log.Infof("Scale-in nodes...")
+		m.logger.Infof("Scale-in nodes...")
 	}
 
 	metadata, err := m.meta(name)
@@ -117,10 +116,15 @@ func (m *Manager) ScaleIn(
 
 	t := b.
 		ParallelStep("+ Refresh instance configs", force, regenConfigTasks...).
-		Parallel(force, buildReloadPromTasks(metadata.GetTopology(), gOpt, nodes...)...).
+		Parallel(force, buildReloadPromTasks(metadata.GetTopology(), m.logger, gOpt, nodes...)...).
 		Build()
 
-	if err := t.Execute(ctxt.New(context.Background(), gOpt.Concurrency)); err != nil {
+	ctx := ctxt.New(
+		context.Background(),
+		gOpt.Concurrency,
+		m.logger,
+	)
+	if err := t.Execute(ctx); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err
@@ -128,7 +132,7 @@ func (m *Manager) ScaleIn(
 		return perrs.Trace(err)
 	}
 
-	log.Infof("Scaled cluster `%s` in successfully", name)
+	m.logger.Infof("Scaled cluster `%s` in successfully", name)
 
 	return nil
 }

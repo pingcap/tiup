@@ -27,7 +27,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
 )
@@ -60,12 +60,12 @@ func (m *Manager) CleanCluster(name string, gOpt operator.Options, cleanOpt oper
 		cleanOpt.CleanupData, cleanOpt.CleanupLog, false, cleanOpt.CleanupAuditLog, cleanOpt.RetainDataRoles, cleanOpt.RetainDataNodes)
 
 	if !skipConfirm {
-		if err := cleanupConfirm(name, m.sysName, base.Version, cleanOpt, delFileMap); err != nil {
+		if err := cleanupConfirm(m.logger, name, m.sysName, base.Version, cleanOpt, delFileMap); err != nil {
 			return err
 		}
 	}
 
-	log.Infof("Cleanup cluster...")
+	m.logger.Infof("Cleanup cluster...")
 
 	b, err := m.sshTaskBuilder(name, topo, base.User, gOpt)
 	if err != nil {
@@ -80,7 +80,12 @@ func (m *Manager) CleanCluster(name string, gOpt operator.Options, cleanOpt oper
 		}).
 		Build()
 
-	if err := t.Execute(ctxt.New(context.Background(), gOpt.Concurrency)); err != nil {
+	ctx := ctxt.New(
+		context.Background(),
+		gOpt.Concurrency,
+		m.logger,
+	)
+	if err := t.Execute(ctx); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err
@@ -88,13 +93,13 @@ func (m *Manager) CleanCluster(name string, gOpt operator.Options, cleanOpt oper
 		return perrs.Trace(err)
 	}
 
-	log.Infof("Cleanup%s in cluster `%s` successfully", cleanTarget(cleanOpt), name)
+	m.logger.Infof("Cleanup%s in cluster `%s` successfully", cleanTarget(cleanOpt), name)
 	return nil
 }
 
 // checkConfirm
-func cleanupConfirm(clusterName, sysName, version string, cleanOpt operator.Options, delFileMap map[string]set.StringSet) error {
-	log.Warnf("The clean operation will %s %s %s cluster `%s`",
+func cleanupConfirm(logger *logprinter.Logger, clusterName, sysName, version string, cleanOpt operator.Options, delFileMap map[string]set.StringSet) error {
+	logger.Warnf("The clean operation will %s %s %s cluster `%s`",
 		color.HiYellowString("stop"), sysName, version, color.HiYellowString(clusterName))
 	if err := tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]:"); err != nil {
 		return err
@@ -114,7 +119,7 @@ func cleanupConfirm(clusterName, sysName, version string, cleanOpt operator.Opti
 		}
 	}
 
-	log.Warnf("Clean the clutser %s's%s.\nNodes will be ignored: %s\nRoles will be ignored: %s\nFiles to be deleted are: %s",
+	logger.Warnf("Clean the clutser %s's%s.\nNodes will be ignored: %s\nRoles will be ignored: %s\nFiles to be deleted are: %s",
 		color.HiYellowString(clusterName), cleanTarget(cleanOpt), cleanOpt.RetainDataNodes,
 		cleanOpt.RetainDataRoles,
 		delFileList)

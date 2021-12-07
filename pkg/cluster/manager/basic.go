@@ -26,7 +26,6 @@ import (
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
-	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
@@ -35,9 +34,9 @@ import (
 // EnableCluster enable/disable the service in a cluster
 func (m *Manager) EnableCluster(name string, gOpt operator.Options, isEnable bool) error {
 	if isEnable {
-		log.Infof("Enabling cluster %s...", name)
+		m.logger.Infof("Enabling cluster %s...", name)
 	} else {
-		log.Infof("Disabling cluster %s...", name)
+		m.logger.Infof("Disabling cluster %s...", name)
 	}
 
 	metadata, err := m.meta(name)
@@ -65,7 +64,12 @@ func (m *Manager) EnableCluster(name string, gOpt operator.Options, isEnable boo
 
 	t := b.Build()
 
-	if err := t.Execute(ctxt.New(context.Background(), gOpt.Concurrency)); err != nil {
+	ctx := ctxt.New(
+		context.Background(),
+		gOpt.Concurrency,
+		m.logger,
+	)
+	if err := t.Execute(ctx); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err
@@ -74,9 +78,9 @@ func (m *Manager) EnableCluster(name string, gOpt operator.Options, isEnable boo
 	}
 
 	if isEnable {
-		log.Infof("Enabled cluster `%s` successfully", name)
+		m.logger.Infof("Enabled cluster `%s` successfully", name)
 	} else {
-		log.Infof("Disabled cluster `%s` successfully", name)
+		m.logger.Infof("Disabled cluster `%s` successfully", name)
 	}
 
 	return nil
@@ -84,7 +88,7 @@ func (m *Manager) EnableCluster(name string, gOpt operator.Options, isEnable boo
 
 // StartCluster start the cluster with specified name.
 func (m *Manager) StartCluster(name string, gOpt operator.Options, fn ...func(b *task.Builder, metadata spec.Metadata)) error {
-	log.Infof("Starting cluster %s...", name)
+	m.logger.Infof("Starting cluster %s...", name)
 
 	// check locked
 	if err := m.specManager.ScaleOutLockedErr(name); err != nil {
@@ -119,7 +123,12 @@ func (m *Manager) StartCluster(name string, gOpt operator.Options, fn ...func(b 
 
 	t := b.Build()
 
-	if err := t.Execute(ctxt.New(context.Background(), gOpt.Concurrency)); err != nil {
+	ctx := ctxt.New(
+		context.Background(),
+		gOpt.Concurrency,
+		m.logger,
+	)
+	if err := t.Execute(ctx); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err
@@ -127,7 +136,7 @@ func (m *Manager) StartCluster(name string, gOpt operator.Options, fn ...func(b 
 		return perrs.Trace(err)
 	}
 
-	log.Infof("Started cluster `%s` successfully", name)
+	m.logger.Infof("Started cluster `%s` successfully", name)
 	return nil
 }
 
@@ -174,7 +183,12 @@ func (m *Manager) StopCluster(name string, gOpt operator.Options, skipConfirm bo
 		}).
 		Build()
 
-	if err := t.Execute(ctxt.New(context.Background(), gOpt.Concurrency)); err != nil {
+	ctx := ctxt.New(
+		context.Background(),
+		gOpt.Concurrency,
+		m.logger,
+	)
+	if err := t.Execute(ctx); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err
@@ -182,7 +196,7 @@ func (m *Manager) StopCluster(name string, gOpt operator.Options, skipConfirm bo
 		return perrs.Trace(err)
 	}
 
-	log.Infof("Stopped cluster `%s` successfully", name)
+	m.logger.Infof("Stopped cluster `%s` successfully", name)
 	return nil
 }
 
@@ -228,7 +242,12 @@ func (m *Manager) RestartCluster(name string, gOpt operator.Options, skipConfirm
 		}).
 		Build()
 
-	if err := t.Execute(ctxt.New(context.Background(), gOpt.Concurrency)); err != nil {
+	ctx := ctxt.New(
+		context.Background(),
+		gOpt.Concurrency,
+		m.logger,
+	)
+	if err := t.Execute(ctx); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err
@@ -236,7 +255,7 @@ func (m *Manager) RestartCluster(name string, gOpt operator.Options, skipConfirm
 		return perrs.Trace(err)
 	}
 
-	log.Infof("Restarted cluster `%s` successfully", name)
+	m.logger.Infof("Restarted cluster `%s` successfully", name)
 	return nil
 }
 

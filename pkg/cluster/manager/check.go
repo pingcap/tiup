@@ -29,7 +29,7 @@ import (
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
-	"github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
 )
@@ -47,6 +47,12 @@ type CheckOptions struct {
 // CheckCluster check cluster before deploying or upgrading
 func (m *Manager) CheckCluster(clusterOrTopoName string, opt CheckOptions, gOpt operator.Options) error {
 	var topo spec.Specification
+	ctx := ctxt.New(
+		context.Background(),
+		gOpt.Concurrency,
+		m.logger,
+	)
+
 	if opt.ExistCluster { // check for existing cluster
 		clusterName := clusterOrTopoName
 
@@ -109,7 +115,7 @@ func (m *Manager) CheckCluster(clusterOrTopoName string, opt CheckOptions, gOpt 
 		return err
 	}
 
-	if err := checkSystemInfo(sshConnProps, sshProxyProps, &topo, &gOpt, &opt); err != nil {
+	if err := checkSystemInfo(ctx, sshConnProps, sshProxyProps, &topo, &gOpt, &opt); err != nil {
 		return err
 	}
 
@@ -123,7 +129,13 @@ func (m *Manager) CheckCluster(clusterOrTopoName string, opt CheckOptions, gOpt 
 }
 
 // checkSystemInfo performs series of checks and tests of the deploy server
-func checkSystemInfo(s, p *tui.SSHConnectionProps, topo *spec.Specification, gOpt *operator.Options, opt *CheckOptions) error {
+func checkSystemInfo(
+	ctx context.Context,
+	s, p *tui.SSHConnectionProps,
+	topo *spec.Specification,
+	gOpt *operator.Options,
+	opt *CheckOptions,
+) error {
 	var (
 		collectTasks  []*task.StepDisplay
 		checkSysTasks []*task.StepDisplay
@@ -131,6 +143,7 @@ func checkSystemInfo(s, p *tui.SSHConnectionProps, topo *spec.Specification, gOp
 		applyFixTasks []*task.StepDisplay
 		downloadTasks []*task.StepDisplay
 	)
+	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 	insightVer := spec.TiDBComponentVersion(spec.ComponentCheckCollector, "")
 
 	uniqueHosts := map[string]int{}             // host -> ssh-port
@@ -151,7 +164,7 @@ func checkSystemInfo(s, p *tui.SSHConnectionProps, topo *spec.Specification, gOp
 			archKey := fmt.Sprintf("%s-%s", inst.OS(), inst.Arch())
 			if _, found := uniqueArchList[archKey]; !found {
 				uniqueArchList[archKey] = struct{}{}
-				t0 := task.NewBuilder(gOpt.DisplayMode).
+				t0 := task.NewBuilder(logger).
 					Download(
 						spec.ComponentCheckCollector,
 						inst.OS(),
@@ -162,7 +175,7 @@ func checkSystemInfo(s, p *tui.SSHConnectionProps, topo *spec.Specification, gOp
 				downloadTasks = append(downloadTasks, t0)
 			}
 
-			t1 := task.NewBuilder(gOpt.DisplayMode)
+			t1 := task.NewBuilder(logger)
 			// checks that applies to each instance
 			if opt.ExistCluster {
 				t1 = t1.CheckSys(
@@ -201,7 +214,7 @@ func checkSystemInfo(s, p *tui.SSHConnectionProps, topo *spec.Specification, gOp
 			if _, found := uniqueHosts[inst.GetHost()]; !found {
 				uniqueHosts[inst.GetHost()] = inst.GetSSHPort()
 				// build system info collecting tasks
-				t2 := task.NewBuilder(gOpt.DisplayMode).
+				t2 := task.NewBuilder(logger).
 					RootSSH(
 						inst.GetHost(),
 						inst.GetSSHPort(),
@@ -322,7 +335,7 @@ func checkSystemInfo(s, p *tui.SSHConnectionProps, topo *spec.Specification, gOp
 				t1.BuildAsStep(fmt.Sprintf("  - Checking node %s", inst.GetHost())),
 			)
 
-			t3 := task.NewBuilder(gOpt.DisplayMode).
+			t3 := task.NewBuilder(logger).
 				RootSSH(
 					inst.GetHost(),
 					inst.GetSSHPort(),
@@ -348,14 +361,13 @@ func checkSystemInfo(s, p *tui.SSHConnectionProps, topo *spec.Specification, gOp
 		}
 	}
 
-	t := task.NewBuilder(gOpt.DisplayMode).
+	t := task.NewBuilder(logger).
 		ParallelStep("+ Download necessary tools", false, downloadTasks...).
 		ParallelStep("+ Collect basic system information", false, collectTasks...).
 		ParallelStep("+ Check system requirements", false, checkSysTasks...).
 		ParallelStep("+ Cleanup check files", false, cleanTasks...).
 		Build()
 
-	ctx := ctxt.New(context.Background(), gOpt.Concurrency)
 	if err := t.Execute(ctx); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
@@ -371,7 +383,7 @@ func checkSystemInfo(s, p *tui.SSHConnectionProps, topo *spec.Specification, gOp
 	}
 	checkResults := make([]HostCheckResult, 0)
 	for host := range uniqueHosts {
-		tf := task.NewBuilder(gOpt.DisplayMode).
+		tf := task.NewBuilder(logger).
 			RootSSH(
 				host,
 				uniqueHosts[host],
@@ -406,7 +418,7 @@ func checkSystemInfo(s, p *tui.SSHConnectionProps, topo *spec.Specification, gOp
 	tui.PrintTable(checkResultTable, true)
 
 	if opt.ApplyFix {
-		tc := task.NewBuilder(gOpt.DisplayMode).
+		tc := task.NewBuilder(logger).
 			ParallelStep("+ Try to apply changes to fix failed checks", false, applyFixTasks...).
 			Build()
 		if err := tc.Execute(ctx); err != nil {
@@ -441,7 +453,7 @@ func handleCheckResults(ctx context.Context, host string, opt *CheckOptions, t *
 	}
 
 	items := make([]HostCheckResult, 0)
-	// log.Infof("Check results of %s: (only errors and important info are displayed)", color.HiCyanString(host))
+	// m.logger.Infof("Check results of %s: (only errors and important info are displayed)", color.HiCyanString(host))
 	for _, r := range results {
 		var item HostCheckResult
 		if r.Err != nil {
@@ -456,7 +468,8 @@ func handleCheckResults(ctx context.Context, host string, opt *CheckOptions, t *
 			}
 			msg, err := fixFailedChecks(host, r, t)
 			if err != nil {
-				log.Debugf("%s: fail to apply fix to %s (%s)", host, r.Name, err)
+				ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger).
+					Debugf("%s: fail to apply fix to %s (%s)", host, r.Name, err)
 			}
 			if msg != "" {
 				// show auto fixing info
@@ -546,13 +559,14 @@ func fixFailedChecks(host string, res *operator.CheckResult, t *task.Builder) (s
 
 // checkRegionsInfo checks peer status from PD
 func (m *Manager) checkRegionsInfo(clusterName string, topo *spec.Specification, gOpt *operator.Options) error {
-	log.Infof("Checking region status of the cluster %s...", clusterName)
+	m.logger.Infof("Checking region status of the cluster %s...", clusterName)
 
 	tlsConfig, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
 	if err != nil {
 		return err
 	}
 	pdClient := api.NewPDClient(
+		context.WithValue(context.TODO(), logprinter.ContextKeyLogger, m.logger),
 		topo.GetPDList(),
 		time.Second*time.Duration(gOpt.APITimeout),
 		tlsConfig,
@@ -568,7 +582,7 @@ func (m *Manager) checkRegionsInfo(clusterName string, topo *spec.Specification,
 			return err
 		}
 		if rInfo.Count > 0 {
-			log.Warnf(
+			m.logger.Warnf(
 				"Regions are not fully healthy: %s",
 				color.YellowString("%d %s", rInfo.Count, state),
 			)
@@ -576,9 +590,9 @@ func (m *Manager) checkRegionsInfo(clusterName string, topo *spec.Specification,
 		}
 	}
 	if hasUnhealthy {
-		log.Warnf("Please fix unhealthy regions before other operations.")
+		m.logger.Warnf("Please fix unhealthy regions before other operations.")
 	} else {
-		log.Infof("All regions are healthy.")
+		m.logger.Infof("All regions are healthy.")
 	}
 	return nil
 }

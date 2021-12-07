@@ -25,7 +25,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/crypto"
 	"github.com/pingcap/tiup/pkg/environment"
-	"github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
@@ -33,7 +33,12 @@ import (
 )
 
 // buildReloadPromTasks reloads Prometheus configuration
-func buildReloadPromTasks(topo spec.Topology, gOpt operator.Options, nodes ...string) []task.Task {
+func buildReloadPromTasks(
+	topo spec.Topology,
+	logger *logprinter.Logger,
+	gOpt operator.Options,
+	nodes ...string,
+) []task.Task {
 	monitor := spec.FindComponent(topo, spec.ComponentPrometheus)
 	if monitor == nil {
 		return nil
@@ -48,7 +53,7 @@ func buildReloadPromTasks(topo spec.Topology, gOpt operator.Options, nodes ...st
 		if deletedNodes.Exist(inst.ID()) {
 			continue
 		}
-		t := task.NewBuilder(gOpt.DisplayMode).
+		t := task.NewBuilder(logger).
 			SystemCtl(inst.GetHost(), inst.ServiceName(), "reload", true).
 			Build()
 		tasks = append(tasks, t)
@@ -117,7 +122,7 @@ func buildScaleOutTask(
 			}
 		}
 
-		t := task.NewBuilder(gOpt.DisplayMode).
+		t := task.NewBuilder(m.logger).
 			RootSSH(
 				instance.GetHost(),
 				instance.GetSSHPort(),
@@ -144,7 +149,15 @@ func buildScaleOutTask(
 	})
 
 	// Download missing component
-	downloadCompTasks = buildDownloadCompTasks(base.Version, newPart, gOpt, m.bindVersion)
+
+	downloadCompTasks = convertStepDisplaysToTasks(buildDownloadCompTasks(
+		base.Version,
+		newPart,
+		m.logger,
+		gOpt,
+		m.bindVersion,
+	))
+
 
 	sshType := topo.BaseTopo().GlobalOptions.SSHType
 
@@ -165,7 +178,25 @@ func buildScaleOutTask(
 			filepath.Join(deployDir, "scripts"),
 		}
 		// Deploy component
-		tb := task.NewSimpleUerSSH(inst.GetHost(), inst.GetSSHPort(), base.User, gOpt, p, sshType).
+
+		// tb := task.NewSimpleUerSSH(inst.GetHost(), inst.GetSSHPort(), base.User, gOpt, p, sshType).
+		tb := task.NewBuilder(m.logger).
+			UserSSH(
+				inst.GetHost(),
+				inst.GetSSHPort(),
+				base.User,
+				gOpt.SSHTimeout,
+				gOpt.OptTimeout,
+				gOpt.SSHProxyHost,
+				gOpt.SSHProxyPort,
+				gOpt.SSHProxyUser,
+				p.Password,
+				p.IdentityFile,
+				p.IdentityFilePassphrase,
+				gOpt.SSHProxyTimeout,
+				gOpt.SSHType,
+				sshType,
+			).
 			Mkdir(base.User, inst.GetHost(), deployDirs...).
 			Mkdir(base.User, inst.GetHost(), dataDirs...).
 			Mkdir(base.User, inst.GetHost(), logDir)
@@ -207,10 +238,33 @@ func buildScaleOutTask(
 		return nil, iterErr
 	}
 
+
 	certificateTasks, err := buildCertificateTasks(m, name, newPart, base, gOpt, p)
 	if err != nil {
 		return nil, err
 	}
+
+	hasImported := false
+	noAgentHosts := set.NewStringSet()
+
+	mergedTopo.IterInstance(func(inst spec.Instance) {
+		deployDir := spec.Abs(base.User, inst.DeployDir())
+		// data dir would be empty for components which don't need it
+		dataDirs := spec.MultiDirAbs(base.User, inst.DataDir())
+		// log dir will always be with values, but might not used by the component
+		logDir := spec.Abs(base.User, inst.LogDir())
+
+		// Download and copy the latest component to remote if the cluster is imported from Ansible
+		tb := task.NewBuilder(m.logger)
+		if inst.IsImported() {
+			switch compName := inst.ComponentName(); compName {
+			case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertmanager:
+				version := m.bindVersion(compName, base.Version)
+				tb.Download(compName, inst.OS(), inst.Arch(), version).
+					CopyComponent(compName, inst.OS(), inst.Arch(), version, "", inst.GetHost(), deployDir)
+			}
+			hasImported = true
+		}
 
 	// init scale out config
 	scaleOutConfigTasks := buildScaleConfigTasks(m, name, topo, newPart, base, gOpt, p)
@@ -218,11 +272,10 @@ func buildScaleOutTask(
 	// always ignore config check result in scale out
 	gOpt.IgnoreConfigCheck = true
 	refreshConfigTasks, hasImported := buildInitConfigTasks(m, name, mergedTopo, base, gOpt, nil)
-
 	// handle dir scheme changes
 	if hasImported {
 		if err := spec.HandleImportPathMigration(name); err != nil {
-			return task.NewBuilder(gOpt.DisplayMode).Build(), err
+			return task.NewBuilder(m.logger).Build(), err
 		}
 	}
 
@@ -312,8 +365,7 @@ func buildScaleOutTask(
 		builder.Func("Start new instances", func(ctx context.Context) error {
 			return operator.Start(ctx, newPart, operator.Options{OptTimeout: gOpt.OptTimeout, Operation: operator.ScaleOutOperation}, tlsCfg)
 		}).
-			ParallelStep("+ Refresh configs", false, refreshConfigTasks...).
-			Parallel(false, buildReloadPromTasks(metadata.GetTopology(), gOpt)...)
+			ParallelStep("+ Refresh configs", false, refreshConfigTasks...)
 	}
 
 	// remove scale-out file lock
@@ -406,7 +458,7 @@ func buildMonitoredDeployTask(
 			key := fmt.Sprintf("%s-%s-%s", comp, info.os, info.arch)
 			if found := uniqueCompOSArch.Exist(key); !found {
 				uniqueCompOSArch.Insert(key)
-				downloadCompTasks = append(downloadCompTasks, task.NewBuilder(gOpt.DisplayMode).
+				downloadCompTasks = append(downloadCompTasks, task.NewBuilder(m.logger).
 					Download(comp, info.os, info.arch, version).
 					BuildAsStep(fmt.Sprintf("  - Download %s:%s (%s/%s)", comp, version, info.os, info.arch)))
 			}
@@ -431,7 +483,25 @@ func buildMonitoredDeployTask(
 			}
 
 			// Deploy component
-			tb := task.NewSimpleUerSSH(host, info.ssh, globalOptions.User, gOpt, p, globalOptions.SSHType).
+
+			// tb := task.NewSimpleUerSSH(host, info.ssh, globalOptions.User, gOpt, p, globalOptions.SSHType).
+			tb := task.NewBuilder(m.logger).
+				UserSSH(
+					host,
+					info.ssh,
+					globalOptions.User,
+					gOpt.SSHTimeout,
+					gOpt.OptTimeout,
+					gOpt.SSHProxyHost,
+					gOpt.SSHProxyPort,
+					gOpt.SSHProxyUser,
+					p.Password,
+					p.IdentityFile,
+					p.IdentityFilePassphrase,
+					gOpt.SSHProxyTimeout,
+					gOpt.SSHType,
+					globalOptions.SSHType,
+				).
 				Mkdir(globalOptions.User, host, deployDirs...).
 				CopyComponent(
 					comp,
@@ -516,6 +586,7 @@ func buildInitMonitoredConfigTasks(
 	noAgentHosts set.StringSet,
 	globalOptions spec.GlobalOptions,
 	monitoredOptions *spec.MonitoredOptions,
+	logger *logprinter.Logger,
 	sshTimeout, exeTimeout uint64,
 	gOpt operator.Options,
 	p *tui.SSHConnectionProps,
@@ -542,7 +613,24 @@ func buildInitMonitoredConfigTasks(
 			// log dir will always be with values, but might not used by the component
 			logDir := spec.Abs(globalOptions.User, monitoredOptions.LogDir)
 			// Generate configs
-			t := task.NewSimpleUerSSH(host, info.ssh, globalOptions.User, gOpt, p, globalOptions.SSHType).
+			// t := task.NewSimpleUerSSH(host, info.ssh, globalOptions.User, gOpt, p, globalOptions.SSHType).
+			t := task.NewBuilder(logger).
+				UserSSH(
+					host,
+					info.ssh,
+					globalOptions.User,
+					sshTimeout,
+					exeTimeout,
+					gOpt.SSHProxyHost,
+					gOpt.SSHProxyPort,
+					gOpt.SSHProxyUser,
+					p.Password,
+					p.IdentityFile,
+					p.IdentityFilePassphrase,
+					gOpt.SSHProxyTimeout,
+					gOpt.SSHType,
+					globalOptions.SSHType,
+				).
 				MonitoredConfig(
 					name,
 					comp,
@@ -589,7 +677,7 @@ func buildInitConfigTasks(
 		logDir := spec.Abs(base.User, instance.LogDir())
 
 		// Download and copy the latest component to remote if the cluster is imported from Ansible
-		tb := task.NewBuilder(gOpt.DisplayMode)
+		tb := task.NewBuilder(m.logger)
 		if instance.IsImported() {
 			switch compName {
 			case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertmanager:
@@ -634,6 +722,7 @@ func buildInitConfigTasks(
 func buildDownloadCompTasks(
 	clusterVersion string,
 	topo spec.Topology,
+	logger *logprinter.Logger,
 	gOpt operator.Options,
 	bindVersion spec.BindVersion,
 ) []*task.StepDisplay {
@@ -648,12 +737,12 @@ func buildDownloadCompTasks(
 			var version string
 			if inst.ComponentName() == spec.ComponentTiSpark {
 				// download spark as dependency of tispark
-				tasks = append(tasks, buildDownloadSparkTask(inst, gOpt))
+				tasks = append(tasks, buildDownloadSparkTask(inst, logger, gOpt))
 			} else {
 				version = bindVersion(inst.ComponentName(), clusterVersion)
 			}
 
-			t := task.NewBuilder(gOpt.DisplayMode).
+			t := task.NewBuilder(logger).
 				Download(inst.ComponentName(), inst.OS(), inst.Arch(), version).
 				BuildAsStep(fmt.Sprintf("  - Download %s:%s (%s/%s)",
 					inst.ComponentName(), version, inst.OS(), inst.Arch()))
@@ -665,8 +754,8 @@ func buildDownloadCompTasks(
 
 // buildDownloadSparkTask build download task for spark, which is a dependency of tispark
 // FIXME: this is a hack and should be replaced by dependency handling in manifest processing
-func buildDownloadSparkTask(inst spec.Instance, gOpt operator.Options) *task.StepDisplay {
-	return task.NewBuilder(gOpt.DisplayMode).
+func buildDownloadSparkTask(inst spec.Instance, logger *logprinter.Logger, gOpt operator.Options) *task.StepDisplay {
+	return task.NewBuilder(logger).
 		Download(spec.ComponentSpark, inst.OS(), inst.Arch(), "").
 		BuildAsStep(fmt.Sprintf("  - Download %s: (%s/%s)",
 			spec.ComponentSpark, inst.OS(), inst.Arch()))

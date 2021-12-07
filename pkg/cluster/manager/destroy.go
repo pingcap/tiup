@@ -25,7 +25,6 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/tui"
 )
@@ -60,7 +59,7 @@ func (m *Manager) DestroyCluster(name string, gOpt operator.Options, destroyOpt 
 			color.HiYellowString(name)); err != nil {
 			return err
 		}
-		log.Infof("Destroying cluster...")
+		m.logger.Infof("Destroying cluster...")
 	}
 
 	b, err := m.sshTaskBuilder(name, topo, base.User, gOpt)
@@ -76,7 +75,12 @@ func (m *Manager) DestroyCluster(name string, gOpt operator.Options, destroyOpt 
 		}).
 		Build()
 
-	if err := t.Execute(ctxt.New(context.Background(), gOpt.Concurrency)); err != nil {
+	ctx := ctxt.New(
+		context.Background(),
+		gOpt.Concurrency,
+		m.logger,
+	)
+	if err := t.Execute(ctx); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err
@@ -88,7 +92,7 @@ func (m *Manager) DestroyCluster(name string, gOpt operator.Options, destroyOpt 
 		return perrs.Trace(err)
 	}
 
-	log.Infof("Destroyed cluster `%s` successfully", name)
+	m.logger.Infof("Destroyed cluster `%s` successfully", name)
 	return nil
 }
 
@@ -126,7 +130,11 @@ func (m *Manager) DestroyTombstone(
 		return err
 	}
 
-	ctx := ctxt.New(context.Background(), gOpt.Concurrency)
+	ctx := ctxt.New(
+		context.Background(),
+		gOpt.Concurrency,
+		m.logger,
+	)
 	nodes, err := operator.DestroyTombstone(ctx, cluster, true /* returnNodesOnly */, gOpt, tlsCfg)
 	if err != nil {
 		return err
@@ -145,14 +153,14 @@ func (m *Manager) DestroyTombstone(
 					return err
 				}
 			}
-			log.Infof("Start destroy Tombstone nodes: %v ...", nodes)
+			m.logger.Infof("Start destroy Tombstone nodes: %v ...", nodes)
 			return err
 		}).
 		ClusterOperate(cluster, operator.DestroyTombstoneOperation, gOpt, tlsCfg).
 		UpdateMeta(name, clusterMeta, nodes).
 		UpdateTopology(name, m.specManager.Path(name), clusterMeta, nodes).
 		ParallelStep("+ Refresh instance configs", true, regenConfigTasks...).
-		Parallel(true, buildReloadPromTasks(metadata.GetTopology(), gOpt)...).
+		Parallel(true, buildReloadPromTasks(metadata.GetTopology(), m.logger, gOpt)...).
 		Build()
 
 	if err := t.Execute(ctx); err != nil {
@@ -163,7 +171,7 @@ func (m *Manager) DestroyTombstone(
 		return perrs.Trace(err)
 	}
 
-	log.Infof("Destroy success")
+	m.logger.Infof("Destroy success")
 
 	return nil
 }

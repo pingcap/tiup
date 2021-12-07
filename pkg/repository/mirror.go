@@ -32,7 +32,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/crypto/rand"
-	"github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/repository/model"
 	"github.com/pingcap/tiup/pkg/repository/store"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
@@ -289,7 +289,7 @@ func (l *httpMirror) Open() error {
 
 func (l *httpMirror) download(url string, to string, maxSize int64) (io.ReadCloser, error) {
 	defer func(start time.Time) {
-		log.Verbose("Download resource %s in %s", url, time.Since(start))
+		logprinter.Verbose("Download resource %s in %s", url, time.Since(start))
 	}(time.Now())
 
 	client := grab.NewClient()
@@ -486,7 +486,7 @@ func (l *httpMirror) Download(resource, targetDir string) error {
 	_ = utils.Retry(func() error {
 		var r io.ReadCloser
 		if err != nil && l.isRetryable(err) {
-			log.Warnf("failed to download %s(%s), retrying...", resource, err.Error())
+			logprinter.Warnf("failed to download %s(%s), retrying...", resource, err.Error())
 		}
 		if r, err = l.download(l.prepareURL(resource), tmpFilePath, 0); err != nil {
 			if l.isRetryable(err) {

@@ -15,6 +15,7 @@ package spec
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/user"
 	"path"
@@ -25,6 +26,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/yaml.v3"
 )
 
 func TestLocalRuleDirs(t *testing.T) {
@@ -127,4 +129,96 @@ groups:
 	for _, f := range fs {
 		assert.NoFileExists(t, path.Join(deployDir, "conf", f.Name()))
 	}
+}
+
+func TestMergeAdditionalScrapeConf(t *testing.T) {
+	file, err := os.CreateTemp("", "tiup-cluster-spec-test")
+	if err != nil {
+		panic(fmt.Sprintf("create temp file: %s", err))
+	}
+	defer os.Remove(file.Name())
+
+	_, err = file.WriteString(`---
+global:
+  scrape_interval:     15s # By default, scrape targets every 15 seconds.
+  evaluation_interval: 15s # By default, scrape targets every 15 seconds.
+  # scrape_timeout is set to the global default (10s).
+  external_labels:
+    cluster: 'test'
+    monitor: "prometheus"
+
+scrape_configs:
+  - job_name: "tidb"
+    honor_labels: true # don't overwrite job & instance labels
+    static_configs:
+    - targets:
+      - '192.168.122.215:10080'
+  - job_name: "tikv"
+    honor_labels: true # don't overwrite job & instance labels
+    static_configs:
+    - targets:
+      - '192.168.122.25:20180'`)
+	assert.Nil(t, err)
+
+	expected := `global:
+    evaluation_interval: 15s
+    external_labels:
+        cluster: test
+        monitor: prometheus
+    scrape_interval: 15s
+scrape_configs:
+    - honor_labels: true
+      job_name: tidb
+      metric_relabel_configs:
+        - action: drop
+          regex: tikv_thread_nonvoluntary_context_switches|tikv_thread_voluntary_context_switches|tikv_threads_io_bytes_total
+          separator: ;
+          source_labels:
+            - __name__
+        - action: drop
+          regex: tikv_thread_cpu_seconds_total;(tokio|rocksdb).+
+          separator: ;
+          source_labels:
+            - __name__
+            - name
+      static_configs:
+        - targets:
+            - 192.168.122.215:10080
+    - honor_labels: true
+      job_name: tikv
+      metric_relabel_configs:
+        - action: drop
+          regex: tikv_thread_nonvoluntary_context_switches|tikv_thread_voluntary_context_switches|tikv_threads_io_bytes_total
+          separator: ;
+          source_labels:
+            - __name__
+        - action: drop
+          regex: tikv_thread_cpu_seconds_total;(tokio|rocksdb).+
+          separator: ;
+          source_labels:
+            - __name__
+            - name
+      static_configs:
+        - targets:
+            - 192.168.122.25:20180
+`
+
+	var addition map[string]interface{}
+	err = yaml.Unmarshal([]byte(`metric_relabel_configs:
+  - source_labels: [__name__]
+    separator: ;
+    regex: tikv_thread_nonvoluntary_context_switches|tikv_thread_voluntary_context_switches|tikv_threads_io_bytes_total
+    action: drop
+  - source_labels: [__name__,name]
+    separator: ;
+    regex: tikv_thread_cpu_seconds_total;(tokio|rocksdb).+
+    action: drop`), &addition)
+	assert.Nil(t, err)
+
+	err = mergeAdditionalScrapeConf(file.Name(), addition)
+	assert.Nil(t, err)
+	result, err := os.ReadFile(file.Name())
+	assert.Nil(t, err)
+
+	assert.Equal(t, expected, string(result))
 }

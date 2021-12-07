@@ -27,7 +27,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/module"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/logger/log"
+	"go.uber.org/zap"
 )
 
 // CheckOptions control the list of checks to be performed
@@ -197,7 +197,7 @@ func checkNTP(ntpInfo *insight.TimeStat) *CheckResult {
 	}
 
 	if ntpInfo.Status == "none" {
-		log.Infof("The NTPd daemon may be not installed, skip.")
+		zap.L().Info("The NTPd daemon may be not installed, skip.")
 		return result
 	}
 

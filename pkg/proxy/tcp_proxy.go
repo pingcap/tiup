@@ -24,7 +24,7 @@ import (
 
 	"github.com/appleboy/easyssh-proxy"
 	perrs "github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/utils"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/ssh"
@@ -39,10 +39,16 @@ type TCPProxy struct {
 	config   *easyssh.MakeConfig
 	closed   int32
 	endpoint string
+	logger   *logprinter.Logger
 }
 
 // NewTCPProxy starts a 1to1 TCP proxy
-func NewTCPProxy(host string, port int, user, password, keyFile, passphrase string) *TCPProxy {
+func NewTCPProxy(
+	host string,
+	port int,
+	user, password, keyFile, passphrase string,
+	logger *logprinter.Logger,
+) *TCPProxy {
 	p := &TCPProxy{
 		config: &easyssh.MakeConfig{
 			Server:  host,
@@ -50,6 +56,7 @@ func NewTCPProxy(host string, port int, user, password, keyFile, passphrase stri
 			User:    user,
 			Timeout: 10 * time.Second,
 		},
+		logger: logger,
 	}
 
 	if len(keyFile) > 0 {
@@ -61,14 +68,14 @@ func NewTCPProxy(host string, port int, user, password, keyFile, passphrase stri
 
 	port, err := utils.GetFreePort("127.0.0.1", 22345)
 	if err != nil {
-		log.Errorf("get free port error: %v", err)
+		logger.Errorf("get free port error: %v", err)
 		return nil
 	}
 	p.endpoint = fmt.Sprintf("127.0.0.1:%d", port)
 
 	listener, err := net.Listen("tcp", p.endpoint)
 	if err != nil {
-		log.Errorf("net.Listen error: %v", err)
+		logger.Errorf("net.Listen error: %v", err)
 		return nil
 	}
 	p.listener = listener
@@ -102,7 +109,7 @@ func (p *TCPProxy) Run(upstream []string) chan struct{} {
 					if atomic.LoadInt32(&p.closed) == 1 {
 						break FOR_LOOP
 					}
-					log.Errorf("tcp proxy accept error: %v", err)
+					p.logger.Errorf("tcp proxy accept error: %v", err)
 					continue FOR_LOOP
 				}
 				go p.forward(localConn, upstream)

@@ -14,14 +14,15 @@
 package command
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/fatih/color"
 	"github.com/pingcap/tiup/pkg/cluster/ansible"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/tui"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
@@ -49,8 +50,14 @@ func newImportCmd() *cobra.Command {
 				ansibleDir = cwd
 			}
 
+			ctx := ctxt.New(
+				context.Background(),
+				gOpt.Concurrency,
+				log,
+			)
+
 			// migrate cluster metadata from Ansible inventory
-			clsName, clsMeta, inv, err := ansible.ReadInventory(ansibleDir, inventoryFileName)
+			clsName, clsMeta, inv, err := ansible.ReadInventory(ctx, ansibleDir, inventoryFileName)
 			if err != nil {
 				return err
 			}
@@ -103,7 +110,15 @@ func newImportCmd() *cobra.Command {
 			}
 
 			// parse config and import nodes
-			if err = ansible.ParseAndImportInventory(ansibleDir, ansibleCfgFile, clsMeta, inv, gOpt.SSHTimeout, gOpt.SSHType); err != nil {
+			if err = ansible.ParseAndImportInventory(
+				ctx,
+				ansibleDir,
+				ansibleCfgFile,
+				clsMeta,
+				inv,
+				gOpt.SSHTimeout,
+				gOpt.SSHType,
+			); err != nil {
 				return err
 			}
 
@@ -123,7 +138,7 @@ func newImportCmd() *cobra.Command {
 			}
 
 			// copy config files form deployment servers
-			if err = ansible.ImportConfig(clsName, clsMeta, gOpt); err != nil {
+			if err = ansible.ImportConfig(ctx, clsName, clsMeta, gOpt); err != nil {
 				return err
 			}
 

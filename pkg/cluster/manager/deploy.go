@@ -31,7 +31,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/environment"
-	"github.com/pingcap/tiup/pkg/logger/log"
+
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
@@ -225,10 +225,11 @@ func (m *Manager) Deploy(
 		if strings.HasPrefix(globalOptions.DataDir, "/") {
 			dirs = append(dirs, globalOptions.DataDir)
 		}
-		t := task.NewBuilder(gOpt.DisplayMode).
+
+		t := task.NewBuilder(m.logger).
 			RootSSH(
-				host,
-				hostInfo.ssh,
+				inst.GetHost(),
+				inst.GetSSHPort(),
 				opt.User,
 				sshConnProps.Password,
 				sshConnProps.IdentityFile,
@@ -245,9 +246,9 @@ func (m *Manager) Deploy(
 				gOpt.SSHType,
 				globalOptions.SSHType,
 			).
-			EnvInit(host, globalOptions.User, globalOptions.Group, opt.SkipCreateUser || globalOptions.User == opt.User).
-			Mkdir(globalOptions.User, host, dirs...).
-			BuildAsStep(fmt.Sprintf("  - Prepare %s:%d", host, hostInfo.ssh))
+			EnvInit(inst.GetHost(), globalOptions.User, globalOptions.Group, opt.SkipCreateUser || globalOptions.User == opt.User).
+			Mkdir(globalOptions.User, inst.GetHost(), dirs...).
+			BuildAsStep(fmt.Sprintf("  - Prepare %s:%d", inst.GetHost(), inst.GetSSHPort()))
 		envInitTasks = append(envInitTasks, t)
 	}
 
@@ -256,7 +257,7 @@ func (m *Manager) Deploy(
 	}
 
 	// Download missing component
-	downloadCompTasks = buildDownloadCompTasks(clusterVersion, topo, gOpt, m.bindVersion)
+	downloadCompTasks = buildDownloadCompTasks(clusterVersion, topo, m.logger, gOpt, m.bindVersion)
 
 	// Deploy components to remote
 	topo.IterInstance(func(inst spec.Instance) {
@@ -275,7 +276,25 @@ func (m *Manager) Deploy(
 			filepath.Join(deployDir, "scripts"),
 		}
 
-		t := task.NewSimpleUerSSH(inst.GetHost(), inst.GetSSHPort(), globalOptions.User, gOpt, sshProxyProps, globalOptions.SSHType).
+		//t := task.NewSimpleUerSSH(inst.GetHost(), inst.GetSSHPort(), globalOptions.User, gOpt, sshProxyProps, globalOptions.SSHType).
+
+		t := task.NewBuilder(m.logger).
+			UserSSH(
+				inst.GetHost(),
+				inst.GetSSHPort(),
+				globalOptions.User,
+				gOpt.SSHTimeout,
+				gOpt.OptTimeout,
+				gOpt.SSHProxyHost,
+				gOpt.SSHProxyPort,
+				gOpt.SSHProxyUser,
+				sshProxyProps.Password,
+				sshProxyProps.IdentityFile,
+				sshProxyProps.IdentityFilePassphrase,
+				gOpt.SSHProxyTimeout,
+				gOpt.SSHType,
+				globalOptions.SSHType,
+			).
 			Mkdir(globalOptions.User, inst.GetHost(), deployDirs...).
 			Mkdir(globalOptions.User, inst.GetHost(), dataDirs...)
 
@@ -371,9 +390,14 @@ func (m *Manager) Deploy(
 		sshProxyProps,
 	)
 
-	builder := task.NewBuilder(gOpt.DisplayMode).
+	// builder := task.NewBuilder(gOpt.DisplayMode).
+
+	builder := task.NewBuilder(m.logger).
 		Step("+ Generate SSH keys",
-			task.NewBuilder(gOpt.DisplayMode).SSHKeyGen(m.specManager.Path(name, "ssh", "id_rsa")).Build()).
+			task.NewBuilder(m.logger).
+				SSHKeyGen(m.specManager.Path(name, "ssh", "id_rsa")).
+				Build(),
+			m.logger).
 		ParallelStep("+ Download TiDB components", false, downloadCompTasks...).
 		ParallelStep("+ Initialize target host environments", false, envInitTasks...).
 		ParallelStep("+ Deploy TiDB instance", false, deployCompTasks...).
@@ -387,7 +411,12 @@ func (m *Manager) Deploy(
 
 	t := builder.Build()
 
-	if err := t.Execute(ctxt.New(context.Background(), gOpt.Concurrency)); err != nil {
+	ctx := ctxt.New(
+		context.Background(),
+		gOpt.Concurrency,
+		m.logger,
+	)
+	if err := t.Execute(ctx); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err
@@ -402,6 +431,6 @@ func (m *Manager) Deploy(
 	}
 
 	hint := color.New(color.Bold).Sprintf("%s start %s", tui.OsArgs0(), name)
-	log.Infof("Cluster `%s` deployed successfully, you can start it with command: `%s`", name, hint)
+	m.logger.Infof("Cluster `%s` deployed successfully, you can start it with command: `%s`", name, hint)
 	return nil
 }

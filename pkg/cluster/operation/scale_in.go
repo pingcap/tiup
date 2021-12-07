@@ -27,7 +27,7 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/proxy"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
@@ -89,6 +89,7 @@ func ScaleInCluster(
 	options Options,
 	tlsCfg *tls.Config,
 ) error {
+	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 	// instances by uuid
 	instances := map[string]spec.Instance{}
 	instCount := map[string]int{}
@@ -118,7 +119,7 @@ func ScaleInCluster(
 	}
 
 	if skipTopoCheck {
-		log.Warnf("%s is set, topology checks ignored, the cluster might be broken after the operations!", EnvNameSkipScaleInTopoCheck)
+		logger.Warnf("%s is set, topology checks ignored, the cluster might be broken after the operations!", EnvNameSkipScaleInTopoCheck)
 		if ok, input := tui.PromptForConfirmYes("Are you sure to continue? [y/N]"); !ok {
 			return errors.Errorf("user aborted with '%s'", input)
 		}
@@ -157,7 +158,7 @@ func ScaleInCluster(
 
 	if forcePDEndpoints != "" {
 		pdEndpoints = strings.Split(forcePDEndpoints, ",")
-		log.Warnf("%s is set, using %s as PD endpoints", EnvNamePDEndpointOverwrite, pdEndpoints)
+		logger.Warnf("%s is set, using %s as PD endpoints", EnvNamePDEndpointOverwrite, pdEndpoints)
 	} else {
 		for _, instance := range (&spec.PDComponent{Topology: cluster}).Instances() {
 			if !deletedNodes.Exist(instance.ID()) {
@@ -171,7 +172,7 @@ func ScaleInCluster(
 		return errors.New("cannot find available PD instance")
 	}
 
-	pdClient := api.NewPDClient(pdEndpoints, 10*time.Second, tlsCfg)
+	pdClient := api.NewPDClient(ctx, pdEndpoints, 10*time.Second, tlsCfg)
 
 	tcpProxy := proxy.GetTCPProxy()
 	if tcpProxy != nil {
@@ -194,13 +195,13 @@ func ScaleInCluster(
 
 				if compName != spec.ComponentPump && compName != spec.ComponentDrainer {
 					if err := deleteMember(ctx, component, instance, pdClient, binlogClient, options.APITimeout); err != nil {
-						log.Warnf("failed to delete %s: %v", compName, err)
+						logger.Warnf("failed to delete %s: %v", compName, err)
 					}
 				}
 
 				instCount[instance.GetHost()]--
 				if err := StopAndDestroyInstance(ctx, cluster, instance, options, instCount[instance.GetHost()] == 0); err != nil {
-					log.Warnf("failed to stop/destroy %s: %v", compName, err)
+					logger.Warnf("failed to stop/destroy %s: %v", compName, err)
 				}
 
 				// directly update pump&drainer 's state as offline in etcd.
@@ -208,11 +209,11 @@ func ScaleInCluster(
 					id := instance.ID()
 					if compName == spec.ComponentPump {
 						if err := binlogClient.UpdatePumpState(ctx, id, "offline"); err != nil {
-							log.Warnf("failed to update %s state as offline: %v", compName, err)
+							logger.Warnf("failed to update %s state as offline: %v", compName, err)
 						}
 					} else if compName == spec.ComponentDrainer {
 						if err := binlogClient.UpdateDrainerState(ctx, id, "offline"); err != nil {
-							log.Warnf("failed to update %s state as offline: %v", compName, err)
+							logger.Warnf("failed to update %s state as offline: %v", compName, err)
 						}
 					}
 				}
@@ -254,7 +255,7 @@ func ScaleInCluster(
 		maxReplicas := config.MaxReplicas
 
 		if len(tikvInstances) < maxReplicas {
-			log.Warnf(fmt.Sprintf("TiKV instance number %d will be less than max-replicas setting after scale-in. TiFlash won't be able to receive data from leader before TiKV instance number reach %d", len(tikvInstances), maxReplicas))
+			logger.Warnf(fmt.Sprintf("TiKV instance number %d will be less than max-replicas setting after scale-in. TiFlash won't be able to receive data from leader before TiKV instance number reach %d", len(tikvInstances), maxReplicas))
 		}
 	}
 
@@ -276,7 +277,7 @@ func ScaleInCluster(
 					return err
 				}
 			} else {
-				log.Warnf(color.YellowString("The component `%s` will become tombstone, maybe exists in several minutes or hours, after that you can use the prune command to clean it",
+				logger.Warnf(color.YellowString("The component `%s` will become tombstone, maybe exists in several minutes or hours, after that you can use the prune command to clean it",
 					component.Name()))
 			}
 		}

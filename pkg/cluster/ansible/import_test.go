@@ -14,6 +14,7 @@
 package ansible
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -24,6 +25,7 @@ import (
 	"github.com/creasty/defaults"
 	. "github.com/pingcap/check"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"gopkg.in/yaml.v3"
 )
 
@@ -147,7 +149,9 @@ func (s *ansSuite) TestParseGroupVars(c *C) {
 	_, clsMeta, inv, err := parseInventoryFile(invData)
 	c.Assert(err, IsNil)
 
-	err = parseGroupVars(dir, ansCfgFile, clsMeta, inv)
+	err = parseGroupVars(context.WithValue(
+		context.TODO(), logprinter.ContextKeyLogger, logprinter.NewLogger(""),
+	), dir, ansCfgFile, clsMeta, inv)
 	c.Assert(err, IsNil)
 	err = defaults.Set(clsMeta)
 	c.Assert(err, IsNil)

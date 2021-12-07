@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package log
+package logprinter
 
 import (
 	"fmt"
@@ -32,4 +32,12 @@ func Verbose(format string, args ...interface{}) {
 		return
 	}
 	fmt.Fprintln(stderr, "Verbose:", fmt.Sprintf(format, args...))
+}
+
+// Verbose logs verbose messages
+func (l *Logger) Verbose(format string, args ...interface{}) {
+	if !verbose {
+		return
+	}
+	fmt.Fprintln(l.stderr, "Verbose:", fmt.Sprintf(format, args...))
 }

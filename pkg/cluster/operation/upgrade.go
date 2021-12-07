@@ -27,7 +27,7 @@ import (
 	"github.com/pingcap/tiup/pkg/checkpoint"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/set"
 	"go.uber.org/zap"
 )
@@ -49,6 +49,7 @@ func Upgrade(
 	nodeFilter := set.NewStringSet(options.Nodes...)
 	components := topo.ComponentsByUpdateOrder()
 	components = FilterComponent(components, roleFilter)
+	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 
 	for _, component := range components {
 		instances := FilterInstance(component.Instances(), nodeFilter)
@@ -56,7 +57,7 @@ func Upgrade(
 			continue
 		}
 
-		log.Infof("Upgrading component %s", component.Name())
+		logger.Infof("Upgrading component %s", component.Name())
 
 		// perform pre-upgrade actions of component
 		var origLeaderScheduleLimit int
@@ -70,21 +71,21 @@ func Upgrade(
 		case spec.ComponentTiKV:
 			if forcePDEndpoints != "" {
 				pdEndpoints = strings.Split(forcePDEndpoints, ",")
-				log.Warnf("%s is set, using %s as PD endpoints", EnvNamePDEndpointOverwrite, pdEndpoints)
+				logger.Warnf("%s is set, using %s as PD endpoints", EnvNamePDEndpointOverwrite, pdEndpoints)
 			} else {
 				pdEndpoints = topo.(*spec.Specification).GetPDList()
 			}
-			pdClient := api.NewPDClient(pdEndpoints, 10*time.Second, tlsCfg)
+			pdClient := api.NewPDClient(ctx, pdEndpoints, 10*time.Second, tlsCfg)
 			origLeaderScheduleLimit, origRegionScheduleLimit, err = increaseScheduleLimit(ctx, pdClient)
 			if err != nil {
 				// the config modifing error should be able to be safely ignored, as it will
 				// be processed with current settings anyway.
-				log.Warnf("failed increasing schedule limit: %s, ignore", err)
+				logger.Warnf("failed increasing schedule limit: %s, ignore", err)
 			} else {
 				defer func() {
 					upgErr := decreaseScheduleLimit(pdClient, origLeaderScheduleLimit, origRegionScheduleLimit)
 					if upgErr != nil {
-						log.Warnf(
+						logger.Warnf(
 							"failed decreasing schedule limit (original values should be: %s, %s), please check if their current values are reasonable: %s",
 							fmt.Sprintf("leader-schedule-limit=%d", origLeaderScheduleLimit),
 							fmt.Sprintf("region-schedule-limit=%d", origRegionScheduleLimit),
@@ -104,13 +105,13 @@ func Upgrade(
 			switch component.Name() {
 			case spec.ComponentPD:
 				// defer PD leader to be upgraded after others
-				isLeader, err := instance.(*spec.PDInstance).IsLeader(topo, int(options.APITimeout), tlsCfg)
+				isLeader, err := instance.(*spec.PDInstance).IsLeader(ctx, topo, int(options.APITimeout), tlsCfg)
 				if err != nil {
 					return err
 				}
 				if isLeader {
 					deferInstances = append(deferInstances, instance)
-					log.Debugf("Defferred upgrading of PD leader %s", instance.ID())
+					logger.Debugf("Defferred upgrading of PD leader %s", instance.ID())
 					continue
 				}
 			default:
@@ -124,7 +125,7 @@ func Upgrade(
 
 		// process defferred instances
 		for _, instance := range deferInstances {
-			log.Debugf("Upgrading defferred instance %s...", instance.ID())
+			logger.Debugf("Upgrading defferred instance %s...", instance.ID())
 			if err := upgradeInstance(ctx, topo, instance, options, tlsCfg); err != nil {
 				return err
 			}
@@ -153,7 +154,7 @@ func upgradeInstance(ctx context.Context, topo spec.Topology, instance spec.Inst
 	}
 
 	if isRollingInstance {
-		err := rollingInstance.PreRestart(topo, int(options.APITimeout), tlsCfg)
+		err := rollingInstance.PreRestart(ctx, topo, int(options.APITimeout), tlsCfg)
 		if err != nil && !options.Force {
 			return err
 		}
@@ -164,7 +165,7 @@ func upgradeInstance(ctx context.Context, topo spec.Topology, instance spec.Inst
 	}
 
 	if isRollingInstance {
-		err := rollingInstance.PostRestart(topo, tlsCfg)
+		err := rollingInstance.PostRestart(ctx, topo, tlsCfg)
 		if err != nil && !options.Force {
 			return err
 		}

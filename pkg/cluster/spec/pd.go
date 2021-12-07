@@ -25,7 +25,6 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
-	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -55,9 +54,9 @@ type PDSpec struct {
 }
 
 // Status queries current status of the instance
-func (s *PDSpec) Status(tlsCfg *tls.Config, _ ...string) string {
+func (s *PDSpec) Status(ctx context.Context, tlsCfg *tls.Config, _ ...string) string {
 	addr := fmt.Sprintf("%s:%d", s.Host, s.ClientPort)
-	pc := api.NewPDClient([]string{addr}, statusQueryTimeout, tlsCfg)
+	pc := api.NewPDClient(ctx, []string{addr}, statusQueryTimeout, tlsCfg)
 
 	// check health
 	err := pc.CheckHealth()
@@ -139,7 +138,7 @@ func (c *PDComponent) Instances() []Instance {
 					s.DataDir,
 				},
 				StatusFn: s.Status,
-				UptimeFn: func(tlsCfg *tls.Config) time.Duration {
+				UptimeFn: func(_ context.Context, tlsCfg *tls.Config) time.Duration {
 					return UptimeByHost(s.Host, s.ClientPort, tlsCfg)
 				},
 			},
@@ -310,7 +309,6 @@ func (i *PDInstance) ScaleConfig(
 	cfg := scripts.NewPDScaleScript(cfg0)
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pd_%s_%d.sh", i.GetHost(), i.GetPort()))
-	log.Infof("script path: %s", fp)
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
 	}
@@ -328,12 +326,12 @@ func (i *PDInstance) ScaleConfig(
 var _ RollingUpdateInstance = &PDInstance{}
 
 // IsLeader checks if the instance is PD leader
-func (i *PDInstance) IsLeader(topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config) (bool, error) {
+func (i *PDInstance) IsLeader(ctx context.Context, topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config) (bool, error) {
 	tidbTopo, ok := topo.(*Specification)
 	if !ok {
 		panic("topo should be type of tidb topology")
 	}
-	pdClient := api.NewPDClient(tidbTopo.GetPDList(), time.Second*5, tlsCfg)
+	pdClient := api.NewPDClient(ctx, tidbTopo.GetPDList(), time.Second*5, tlsCfg)
 
 	return i.isLeader(pdClient)
 }
@@ -348,7 +346,7 @@ func (i *PDInstance) isLeader(pdClient *api.PDClient) (bool, error) {
 }
 
 // PreRestart implements RollingUpdateInstance interface.
-func (i *PDInstance) PreRestart(topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config) error {
+func (i *PDInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config) error {
 	timeoutOpt := &utils.RetryOption{
 		Timeout: time.Second * time.Duration(apiTimeoutSeconds),
 		Delay:   time.Second * 2,
@@ -358,7 +356,7 @@ func (i *PDInstance) PreRestart(topo Topology, apiTimeoutSeconds int, tlsCfg *tl
 	if !ok {
 		panic("topo should be type of tidb topology")
 	}
-	pdClient := api.NewPDClient(tidbTopo.GetPDList(), time.Second*5, tlsCfg)
+	pdClient := api.NewPDClient(ctx, tidbTopo.GetPDList(), time.Second*5, tlsCfg)
 
 	isLeader, err := i.isLeader(pdClient)
 	if err != nil {
@@ -374,7 +372,7 @@ func (i *PDInstance) PreRestart(topo Topology, apiTimeoutSeconds int, tlsCfg *tl
 }
 
 // PostRestart implements RollingUpdateInstance interface.
-func (i *PDInstance) PostRestart(topo Topology, tlsCfg *tls.Config) error {
+func (i *PDInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tls.Config) error {
 	// When restarting the next PD, if the PD has not been fully started and has become the target of
 	// the transfer leader, this may cause the PD service to be unavailable for about 10 seconds.
 
@@ -384,7 +382,7 @@ func (i *PDInstance) PostRestart(topo Topology, tlsCfg *tls.Config) error {
 		Timeout:  120 * time.Second,
 	}
 	currentPDAddrs := []string{fmt.Sprintf("%s:%d", i.Host, i.Port)}
-	pdClient := api.NewPDClient(currentPDAddrs, 5*time.Second, tlsCfg)
+	pdClient := api.NewPDClient(ctx, currentPDAddrs, 5*time.Second, tlsCfg)
 
 	if err := utils.Retry(pdClient.CheckHealth, timeoutOpt); err != nil {
 		return errors.Annotatef(err, "failed to start PD peer %s", i.GetHost())

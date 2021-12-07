@@ -20,7 +20,7 @@ import (
 
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/tui"
 )
@@ -41,8 +41,8 @@ func (m *Manager) ListCluster() error {
 		return err
 	}
 
-	switch log.GetDisplayMode() {
-	case log.DisplayModeJSON:
+	switch m.logger.GetDisplayMode() {
+	case logprinter.DisplayModeJSON:
 		clusterObj := struct {
 			Clusters []Cluster `json:"clusters"`
 		}{

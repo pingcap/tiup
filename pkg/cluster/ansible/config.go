@@ -19,17 +19,16 @@ import (
 	"path/filepath"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
-	"github.com/pingcap/tiup/pkg/logger/log"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/tui"
 )
 
 // ImportConfig copies config files from cluster which deployed through tidb-ansible
-func ImportConfig(name string, clsMeta *spec.ClusterMeta, gOpt operator.Options) error {
+func ImportConfig(ctx context.Context, name string, clsMeta *spec.ClusterMeta, gOpt operator.Options) error {
 	// there may be already cluster dir, skip create
 	// if err := os.MkdirAll(meta.ClusterPath(name), 0755); err != nil {
 	// 	 return err
@@ -38,6 +37,7 @@ func ImportConfig(name string, clsMeta *spec.ClusterMeta, gOpt operator.Options)
 	// 	 return err
 	// }
 
+	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 	var sshProxyProps *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
 	if gOpt.SSHType != executor.SSHTypeNone && len(gOpt.SSHProxyHost) != 0 {
 		var err error
@@ -47,11 +47,11 @@ func ImportConfig(name string, clsMeta *spec.ClusterMeta, gOpt operator.Options)
 	}
 	var copyFileTasks []task.Task
 	for _, comp := range clsMeta.Topology.ComponentsByStartOrder() {
-		log.Infof("Copying config file(s) of %s...", comp.Name())
+		logger.Infof("Copying config file(s) of %s...", comp.Name())
 		for _, inst := range comp.Instances() {
 			switch inst.ComponentName() {
 			case spec.ComponentPD, spec.ComponentTiKV, spec.ComponentPump, spec.ComponentTiDB, spec.ComponentDrainer:
-				t := task.NewBuilder("").
+				t := task.NewBuilder(logger).
 					SSHKeySet(
 						spec.ClusterPath(name, "ssh", "id_rsa"),
 						spec.ClusterPath(name, "ssh", "id_rsa.pub")).
@@ -85,7 +85,7 @@ func ImportConfig(name string, clsMeta *spec.ClusterMeta, gOpt operator.Options)
 					Build()
 				copyFileTasks = append(copyFileTasks, t)
 			case spec.ComponentTiFlash:
-				t := task.NewBuilder("").
+				t := task.NewBuilder(logger).
 					SSHKeySet(
 						spec.ClusterPath(name, "ssh", "id_rsa"),
 						spec.ClusterPath(name, "ssh", "id_rsa.pub")).
@@ -134,13 +134,13 @@ func ImportConfig(name string, clsMeta *spec.ClusterMeta, gOpt operator.Options)
 			}
 		}
 	}
-	t := task.NewBuilder("").
+	t := task.NewBuilder(logger).
 		Parallel(false, copyFileTasks...).
 		Build()
 
-	if err := t.Execute(ctxt.New(context.Background(), 0)); err != nil {
+	if err := t.Execute(ctx); err != nil {
 		return errors.Trace(err)
 	}
-	log.Infof("Finished copying configs.")
+	logger.Infof("Finished copying configs.")
 	return nil
 }

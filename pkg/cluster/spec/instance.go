@@ -73,8 +73,8 @@ type Component interface {
 // RollingUpdateInstance represent a instance need to transfer state when restart.
 // e.g transfer leader.
 type RollingUpdateInstance interface {
-	PreRestart(topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config) error
-	PostRestart(topo Topology, tlsCfg *tls.Config) error
+	PreRestart(ctx context.Context, topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config) error
+	PostRestart(ctx context.Context, topo Topology, tlsCfg *tls.Config) error
 }
 
 // Instance represents the instance.
@@ -94,8 +94,8 @@ type Instance interface {
 	DeployDir() string
 	UsedPorts() []int
 	UsedDirs() []string
-	Status(tlsCfg *tls.Config, pdList ...string) string
-	Uptime(tlsCfg *tls.Config) time.Duration
+	Status(ctx context.Context, tlsCfg *tls.Config, pdList ...string) string
+	Uptime(ctx context.Context, tlsCfg *tls.Config) time.Duration
 	DataDir() string
 	LogDir() string
 	OS() string // only linux supported now
@@ -139,8 +139,8 @@ type BaseInstance struct {
 
 	Ports    []int
 	Dirs     []string
-	StatusFn func(tlsCfg *tls.Config, pdHosts ...string) string
-	UptimeFn func(tlsCfg *tls.Config) time.Duration
+	StatusFn func(ctx context.Context, tlsCfg *tls.Config, pdHosts ...string) string
+	UptimeFn func(ctx context.Context, tlsCfg *tls.Config) time.Duration
 }
 
 // Ready implements Instance interface
@@ -464,11 +464,11 @@ func (i *BaseInstance) UsedDirs() []string {
 }
 
 // Status implements Instance interface
-func (i *BaseInstance) Status(tlsCfg *tls.Config, pdList ...string) string {
-	return i.StatusFn(tlsCfg, pdList...)
+func (i *BaseInstance) Status(ctx context.Context, tlsCfg *tls.Config, pdList ...string) string {
+	return i.StatusFn(ctx, tlsCfg, pdList...)
 }
 
 // Uptime implements Instance interface
-func (i *BaseInstance) Uptime(tlsCfg *tls.Config) time.Duration {
-	return i.UptimeFn(tlsCfg)
+func (i *BaseInstance) Uptime(ctx context.Context, tlsCfg *tls.Config) time.Duration {
+	return i.UptimeFn(ctx, tlsCfg)
 }

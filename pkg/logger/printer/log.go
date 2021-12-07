@@ -11,13 +11,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package log
+package logprinter
 
 import (
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"go.uber.org/zap"
 )
@@ -39,18 +40,21 @@ const (
 	DisplayModeJSON                       // JSON
 )
 
-// SetDisplayMode changes the global output format of logger
-func SetDisplayMode(m DisplayMode) {
-	outputFmt = m
+func fmtDisplayMode(m string) DisplayMode {
+	var dp DisplayMode
+	switch strings.ToLower(m) {
+	case "json":
+		dp = DisplayModeJSON
+	case "plain", "text":
+		dp = DisplayModePlain
+	default:
+		dp = DisplayModeDefault
+	}
+	return dp
 }
 
-// GetDisplayMode returns the current global output format
-func GetDisplayMode() DisplayMode {
-	return outputFmt
-}
-
-func printLog(w io.Writer, level, format string, args ...interface{}) {
-	switch outputFmt {
+func printLog(w io.Writer, mode DisplayMode, level, format string, args ...interface{}) {
+	switch mode {
 	case DisplayModeJSON:
 		obj := struct {
 			Level string `json:"level"`
@@ -70,6 +74,21 @@ func printLog(w io.Writer, level, format string, args ...interface{}) {
 	}
 }
 
+// SetDisplayMode changes the global output format of logger
+func SetDisplayMode(m DisplayMode) {
+	outputFmt = m
+}
+
+// GetDisplayMode returns the current global output format
+func GetDisplayMode() DisplayMode {
+	return outputFmt
+}
+
+// SetDisplayModeFromString changes the global output format of logger
+func SetDisplayModeFromString(m string) {
+	outputFmt = fmtDisplayMode(m)
+}
+
 // Debugf output the debug message to console
 func Debugf(format string, args ...interface{}) {
 	zap.L().Debug(fmt.Sprintf(format, args...))
@@ -79,21 +98,21 @@ func Debugf(format string, args ...interface{}) {
 // Deprecated: Use zap.L().Info() instead
 func Infof(format string, args ...interface{}) {
 	zap.L().Info(fmt.Sprintf(format, args...))
-	printLog(stdout, "info", format, args...)
+	printLog(stdout, outputFmt, "info", format, args...)
 }
 
 // Warnf output the warning message to console
 // Deprecated: Use zap.L().Warn() instead
 func Warnf(format string, args ...interface{}) {
 	zap.L().Warn(fmt.Sprintf(format, args...))
-	printLog(stderr, "warn", format, args...)
+	printLog(stderr, outputFmt, "warn", format, args...)
 }
 
 // Errorf output the error message to console
 // Deprecated: Use zap.L().Error() instead
 func Errorf(format string, args ...interface{}) {
 	zap.L().Error(fmt.Sprintf(format, args...))
-	printLog(stderr, "error", format, args...)
+	printLog(stderr, outputFmt, "error", format, args...)
 }
 
 // SetStdout redirect stdout to a custom writer
