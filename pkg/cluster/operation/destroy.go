@@ -337,7 +337,7 @@ func DestroyComponent(ctx context.Context, instances []spec.Instance, cls spec.T
 			retainDataNodes.Exist(ins.ID()) || retainDataNodes.Exist(ins.GetHost())
 
 		e := ctxt.GetInner(ctx).Get(ins.GetHost())
-		logger.Infof("Destroying instance %s", ins.GetHost())
+		logger.Infof("\tDestroying instance %s", ins.GetHost())
 
 		var dataDirs []string
 		if len(ins.DataDir()) > 0 {

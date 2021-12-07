@@ -56,10 +56,11 @@ func (m *Manager) TLS(name string, gOpt operator.Options, enable, cleanCertifica
 	// if force is true, skip this check
 	if globalOptions.TLSEnabled == enable && !gOpt.Force {
 		if enable {
-			return perrs.Errorf("cluster `%s` TLS status is already enable\n", name)
+			m.logger.Infof("cluster `%s` TLS status is already enable\n", name)
 		} else {
-			return perrs.Errorf("cluster `%s` TLS status is already disable\n", name)
+			m.logger.Infof("cluster `%s` TLS status is already disable\n", name)
 		}
+		return nil
 	}
 	globalOptions.TLSEnabled = enable
 

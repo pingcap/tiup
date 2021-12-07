@@ -55,7 +55,7 @@ func buildReloadPromTasks(
 		}
 		t := task.NewBuilder(logger).
 			SystemCtl(inst.GetHost(), inst.ServiceName(), "reload", true).
-			BuildAsStep(fmt.Sprintf("  - Reload prometheus %s -> %s", inst.ComponentName(), inst.ID()))
+			BuildAsStep(fmt.Sprintf("  - Reload %s -> %s", inst.ComponentName(), inst.ID()))
 		tasks = append(tasks, t)
 	}
 	return tasks
@@ -218,11 +218,7 @@ func buildScaleOutTask(
 		return nil, iterErr
 	}
 
-	certificateTasks, err := buildCertificateTasks(m, name, newPart, base, gOpt, p)
-	if err != nil {
-		return nil, err
-	}
-
+	// Download and copy the latest component to remote if the cluster is imported from Ansible
 	mergedTopo.IterInstance(func(inst spec.Instance) {
 		if inst.IsImported() {
 			deployDir := spec.Abs(base.User, inst.DeployDir())
@@ -235,11 +231,17 @@ func buildScaleOutTask(
 				tb.Download(compName, inst.OS(), inst.Arch(), version).
 					CopyComponent(compName, inst.OS(), inst.Arch(), version, "", inst.GetHost(), deployDir)
 			}
+			deployCompTasks = append(deployCompTasks, tb.BuildAsStep(fmt.Sprintf("  - Deploy instance %s -> %s", inst.ComponentName(), inst.ID())))
 		}
 	})
 
 	// init scale out config
 	scaleOutConfigTasks := buildScaleConfigTasks(m, name, topo, newPart, base, gOpt, p)
+
+	certificateTasks, err := buildCertificateTasks(m, name, newPart, base, gOpt, p)
+	if err != nil {
+		return nil, err
+	}
 
 	// always ignore config check result in scale out
 	gOpt.IgnoreConfigCheck = true
@@ -272,6 +274,21 @@ func buildScaleOutTask(
 	downloadCompTasks = append(downloadCompTasks, dlTasks...)
 	deployCompTasks = append(deployCompTasks, dpTasks...)
 
+	// monitor config
+	monitorConfigTasks := buildInitMonitoredConfigTasks(
+		m.specManager,
+		name,
+		uninitializedHosts,
+		noAgentHosts,
+		*topo.BaseTopo().GlobalOptions,
+		topo.GetMonitoredOptions(),
+		m.logger,
+		gOpt.SSHTimeout,
+		gOpt.OptTimeout,
+		gOpt,
+		p,
+	)
+
 	// monitor tls file
 	moniterCertificateTasks, err := buildMonitoredCertificateTasks(
 		m,
@@ -287,21 +304,6 @@ func buildScaleOutTask(
 		return nil, err
 	}
 	certificateTasks = append(certificateTasks, moniterCertificateTasks...)
-
-	// monitor config
-	monitorConfigTasks := buildInitMonitoredConfigTasks(
-		m.specManager,
-		name,
-		uninitializedHosts,
-		noAgentHosts,
-		*topo.BaseTopo().GlobalOptions,
-		topo.GetMonitoredOptions(),
-		m.logger,
-		gOpt.SSHTimeout,
-		gOpt.OptTimeout,
-		gOpt,
-		p,
-	)
 
 	builder, err := m.sshTaskBuilder(name, topo, base.User, gOpt)
 	if err != nil {
@@ -338,8 +340,8 @@ func buildScaleOutTask(
 		builder.Func("Start new instances", func(ctx context.Context) error {
 			return operator.Start(ctx, newPart, operator.Options{OptTimeout: gOpt.OptTimeout, Operation: operator.ScaleOutOperation}, tlsCfg)
 		}).
-			ParallelStep("+ Refresh conifg", gOpt.Force, refreshConfigTasks...).
-			ParallelStep("+ Reload Prometheus", gOpt.Force, buildReloadPromTasks(metadata.GetTopology(), m.logger, gOpt)...)
+			ParallelStep("+ Refresh components conifgs", gOpt.Force, refreshConfigTasks...).
+			ParallelStep("+ Reload prometheus", gOpt.Force, buildReloadPromTasks(metadata.GetTopology(), m.logger, gOpt)...)
 	}
 
 	// remove scale-out file lock
@@ -586,7 +588,7 @@ func buildInitMonitoredConfigTasks(
 						Cache:  specManager.Path(name, spec.TempConfigPath),
 					},
 				).
-				BuildAsStep(fmt.Sprintf("  - Init config %s -> %s", comp, host))
+				BuildAsStep(fmt.Sprintf("  - Generate config %s -> %s", comp, host))
 			tasks = append(tasks, t)
 		}
 	}
