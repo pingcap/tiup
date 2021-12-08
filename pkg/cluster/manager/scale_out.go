@@ -65,6 +65,9 @@ func (m *Manager) ScaleOut(
 		return err
 	}
 
+	m.logger.Infof(`It is recommended to check the scale-out topology before executing scale-out operations
+	'%s'`, color.YellowString("tiup cluster check %s %s --cluster", name, topoFile))
+
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
 	// Inherit existing global configuration. We must assign the inherited values before unmarshalling
