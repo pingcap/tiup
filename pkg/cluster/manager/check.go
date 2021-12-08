@@ -45,7 +45,7 @@ type CheckOptions struct {
 }
 
 // CheckCluster check cluster before deploying or upgrading
-func (m *Manager) CheckCluster(clusterOrTopoName string, opt CheckOptions, gOpt operator.Options) error {
+func (m *Manager) CheckCluster(clusterOrTopoName, scaleoutTopo string, opt CheckOptions, gOpt operator.Options) error {
 	var topo spec.Specification
 	ctx := ctxt.New(
 		context.Background(),
@@ -69,10 +69,36 @@ func (m *Manager) CheckCluster(clusterOrTopoName string, opt CheckOptions, gOpt 
 		if err != nil {
 			return err
 		}
-		opt.User = metadata.User
-		opt.IdentityFile = m.specManager.Path(clusterName, "ssh", "id_rsa")
 
-		topo = *metadata.Topology
+		if scaleoutTopo != "" {
+			currTopo := *metadata.Topology
+			if err := spec.ParseTopologyYaml(scaleoutTopo, &topo); err != nil {
+				return err
+			}
+			spec.ExpandRelativeDir(&topo)
+
+			mergedTopo := currTopo.MergeTopo(&topo)
+			if err := mergedTopo.Validate(); err != nil {
+				return err
+			}
+			if err := checkConflict(m, clusterName, mergedTopo); err != nil {
+				return err
+			}
+
+			// complete global configuration
+			topo.GlobalOptions = currTopo.GlobalOptions
+			topo.MonitoredOptions = currTopo.MonitoredOptions
+			topo.ServerConfigs = currTopo.ServerConfigs
+
+			// scaleOutTopo also is not exists instacne
+			opt.ExistCluster = false
+		} else {
+			opt.User = metadata.User
+			opt.IdentityFile = m.specManager.Path(clusterName, "ssh", "id_rsa")
+
+			topo = *metadata.Topology
+		}
+
 		topo.AdjustByVersion(metadata.Version)
 	} else { // check before cluster is deployed
 		topoFileName := clusterOrTopoName
@@ -82,15 +108,7 @@ func (m *Manager) CheckCluster(clusterOrTopoName string, opt CheckOptions, gOpt 
 		}
 		spec.ExpandRelativeDir(&topo)
 
-		clusterList, err := m.specManager.GetAllClusters()
-		if err != nil {
-			return err
-		}
-		// use a dummy cluster name, the real cluster name is set during deploy
-		if err := spec.CheckClusterPortConflict(clusterList, "nonexist-dummy-tidb-cluster", &topo); err != nil {
-			return err
-		}
-		if err := spec.CheckClusterDirConflict(clusterList, "nonexist-dummy-tidb-cluster", &topo); err != nil {
+		if err := checkConflict(m, "nonexist-dummy-tidb-cluster", &topo); err != nil {
 			return err
 		}
 	}
@@ -196,6 +214,34 @@ func checkSystemInfo(
 						inst.GetHost(),
 						dataDir,
 						task.CheckTypeFIO,
+						topo,
+						opt.Opr,
+					).
+					CheckSys(
+						inst.GetHost(),
+						inst.DeployDir(),
+						task.ChecktypeIsExist,
+						topo,
+						opt.Opr,
+					).
+					CheckSys(
+						inst.GetHost(),
+						inst.DataDir(),
+						task.ChecktypeIsExist,
+						topo,
+						opt.Opr,
+					).
+					CheckSys(
+						inst.GetHost(),
+						inst.LogDir(),
+						task.ChecktypeIsExist,
+						topo,
+						opt.Opr,
+					).
+					CheckSys(
+						inst.GetHost(),
+						fmt.Sprintf("/etc/systemd/system/%s-%d.service", inst.ComponentName(), inst.GetPort()),
+						task.ChecktypeIsExist,
 						topo,
 						opt.Opr,
 					)
@@ -595,4 +641,18 @@ func (m *Manager) checkRegionsInfo(clusterName string, topo *spec.Specification,
 		m.logger.Infof("All regions are healthy.")
 	}
 	return nil
+}
+
+// checkConflict checks cluster conflict
+func checkConflict(m *Manager, clusterName string, topo spec.Topology) error {
+	clusterList, err := m.specManager.GetAllClusters()
+	if err != nil {
+		return err
+	}
+	// use a dummy cluster name, the real cluster name is set during deploy
+	if err := spec.CheckClusterPortConflict(clusterList, clusterName, topo); err != nil {
+		return err
+	}
+	err = spec.CheckClusterDirConflict(clusterList, clusterName, topo)
+	return err
 }

@@ -17,9 +17,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
-	"encoding/binary"
 	"fmt"
-	"net"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -211,110 +209,4 @@ func MultiDirAbs(user, paths string) []string {
 func PackagePath(comp string, version string, os string, arch string) string {
 	fileName := fmt.Sprintf("%s-%s-%s-%s.tar.gz", comp, version, os, arch)
 	return ProfilePath(TiUPPackageCacheDir, fileName)
-}
-
-// IsValidIP Determine whether the IP is legal
-func IsValidIP(str string) (bool, net.IP) {
-	address := net.ParseIP(str) // Parse the IP if it is legal, it will return the legal IP format
-	if address == nil {
-		return false, nil
-	}
-	return true, address
-}
-
-// IsPortOpen 判断端口是否开
-func IsPortOpen(ip string, port int) bool {
-	isValid, _ := IsValidIP(ip)
-
-	if isValid {
-		if ping, _ := IsPing(ip); !ping {
-			return ping
-		}
-
-		netIP := net.ParseIP(ip)
-		tcpAddr := net.TCPAddr{
-			IP:   netIP,
-			Port: port,
-		}
-		// initiate a TCP conn to test whether the corresponding port exists
-		conn, err := net.DialTCP("tcp", nil, &tcpAddr)
-		if err != nil {
-			return false
-		}
-		// 否则则存在该端口，关闭连接句柄
-		_ = conn.Close()
-		return true
-	}
-	return false
-}
-
-// ICMP icmp package info
-type ICMP struct {
-	Type        uint8
-	Code        uint8
-	Checksum    uint16
-	Identifier  uint16
-	SequenceNum uint16
-}
-
-// IsPing  Check IP connectivity
-func IsPing(ip string) (bool, error) {
-	var icmp ICMP
-	//开始填充数据包
-	icmp.Type = 8 //8->echo message  0->reply message
-	icmp.Code = 0
-	icmp.Checksum = 0
-	icmp.Identifier = 0
-	icmp.SequenceNum = 0
-
-	recvBuf := make([]byte, 32)
-	var buffer bytes.Buffer
-
-	// First write the icmp datagram in the buffer for checksum
-	binary.Write(&buffer, binary.BigEndian, icmp)
-	icmp.Checksum = checkSum(buffer.Bytes())
-	buffer.Reset()
-	binary.Write(&buffer, binary.BigEndian, icmp)
-
-	conn, err := net.DialTimeout("ip4:icmp", ip, time.Second*2)
-	if err != nil {
-		return false, err
-	}
-	_, err = conn.Write(buffer.Bytes())
-	if err != nil {
-		return false, err
-	}
-	conn.SetReadDeadline(time.Now().Add(time.Second * 2))
-	num, err := conn.Read(recvBuf)
-	if err != nil {
-		return false, err
-	}
-
-	conn.SetReadDeadline(time.Time{})
-
-	if string(recvBuf[0:num]) != "" {
-		return true, nil
-	}
-	return false, fmt.Errorf("ping %v failed", ip)
-
-}
-
-// checkSum
-func checkSum(data []byte) uint16 {
-	var (
-		sum    uint32
-		length int = len(data)
-		index  int
-	)
-	for length > 1 {
-		sum += uint32(data[index])<<8 + uint32(data[index+1])
-		index += 2
-		length -= 2
-	}
-	if length > 0 {
-		sum += uint32(data[index])
-	}
-	sum += (sum >> 16)
-
-	return uint16(^sum)
 }

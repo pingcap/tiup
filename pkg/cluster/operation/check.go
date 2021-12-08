@@ -62,6 +62,7 @@ var (
 	CheckNameFio           = "fio"
 	CheckNameTHP           = "thp"
 	CheckNameDirPermission = "permission"
+	CheckNameDirExist      = "exist"
 )
 
 // CheckResult is the result of a check
@@ -848,6 +849,32 @@ func CheckDirPermission(ctx context.Context, e ctxt.Executor, user, path string)
 		results = append(results, &CheckResult{
 			Name: CheckNameDirPermission,
 			Msg:  fmt.Sprintf("%s is writable", path),
+		})
+	}
+
+	return results
+}
+
+// CheckDirIsExist check if the directory exists
+func CheckDirIsExist(ctx context.Context, e ctxt.Executor, path string) []*CheckResult {
+	var results []*CheckResult
+
+	if path == "" {
+		return results
+	}
+
+	req, _, _ := e.Execute(ctx,
+		fmt.Sprintf(
+			"[ -e %s ] && echo 1",
+			path,
+		),
+		false)
+
+	if strings.ReplaceAll(string(req), "\n", "") == "1" {
+		results = append(results, &CheckResult{
+			Name: CheckNameDirExist,
+			Err:  fmt.Errorf("%s already exists", path),
+			Msg:  fmt.Sprintf("%s already exists", path),
 		})
 	}
 
