@@ -72,23 +72,23 @@ func (m *Manager) CheckCluster(clusterOrTopoName, scaleoutTopo string, opt Check
 
 		if scaleoutTopo != "" {
 			currTopo := *metadata.Topology
-			if err := spec.ParseTopologyYaml(scaleoutTopo, &topo); err != nil {
-				return err
-			}
-			spec.ExpandRelativeDir(&topo)
-
-			mergedTopo := currTopo.MergeTopo(&topo)
-			if err := mergedTopo.Validate(); err != nil {
-				return err
-			}
-			if err := checkConflict(m, clusterName, mergedTopo); err != nil {
-				return err
-			}
-
 			// complete global configuration
 			topo.GlobalOptions = currTopo.GlobalOptions
 			topo.MonitoredOptions = currTopo.MonitoredOptions
 			topo.ServerConfigs = currTopo.ServerConfigs
+
+			if err := spec.ParseTopologyYaml(scaleoutTopo, &topo); err != nil {
+				return err
+			}
+			mergedTopo := currTopo.MergeTopo(&topo)
+			if err := mergedTopo.Validate(); err != nil {
+				return err
+			}
+
+			spec.ExpandRelativeDir(&topo)
+			if err := checkConflict(m, clusterName, mergedTopo); err != nil {
+				return err
+			}
 
 			// scaleOutTopo also is not exists instacne
 			opt.ExistCluster = false
