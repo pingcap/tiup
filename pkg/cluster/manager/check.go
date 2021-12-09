@@ -93,12 +93,11 @@ func (m *Manager) CheckCluster(clusterOrTopoName, scaleoutTopo string, opt Check
 			// scaleOutTopo also is not exists instacne
 			opt.ExistCluster = false
 		} else {
-			opt.User = metadata.User
 			opt.IdentityFile = m.specManager.Path(clusterName, "ssh", "id_rsa")
-
 			topo = *metadata.Topology
 		}
 
+		opt.User = metadata.User
 		topo.AdjustByVersion(metadata.Version)
 	} else { // check before cluster is deployed
 		topoFileName := clusterOrTopoName
