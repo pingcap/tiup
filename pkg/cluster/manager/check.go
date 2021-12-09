@@ -52,6 +52,7 @@ func (m *Manager) CheckCluster(clusterOrTopoName, scaleoutTopo string, opt Check
 		gOpt.Concurrency,
 		m.logger,
 	)
+	var currTopo *spec.Specification
 
 	if opt.ExistCluster { // check for existing cluster
 		clusterName := clusterOrTopoName
@@ -71,7 +72,7 @@ func (m *Manager) CheckCluster(clusterOrTopoName, scaleoutTopo string, opt Check
 		}
 
 		if scaleoutTopo != "" {
-			currTopo := *metadata.Topology
+			currTopo = metadata.Topology
 			// complete global configuration
 			topo.GlobalOptions = currTopo.GlobalOptions
 			topo.MonitoredOptions = currTopo.MonitoredOptions
@@ -80,23 +81,15 @@ func (m *Manager) CheckCluster(clusterOrTopoName, scaleoutTopo string, opt Check
 			if err := spec.ParseTopologyYaml(scaleoutTopo, &topo); err != nil {
 				return err
 			}
-			mergedTopo := currTopo.MergeTopo(&topo)
-			if err := mergedTopo.Validate(); err != nil {
-				return err
-			}
-
 			spec.ExpandRelativeDir(&topo)
-			if err := checkConflict(m, clusterName, mergedTopo); err != nil {
-				return err
-			}
 
 			// scaleOutTopo also is not exists instacne
 			opt.ExistCluster = false
 		} else {
 			opt.IdentityFile = m.specManager.Path(clusterName, "ssh", "id_rsa")
+
 			topo = *metadata.Topology
 		}
-
 		opt.User = metadata.User
 		topo.AdjustByVersion(metadata.Version)
 	} else { // check before cluster is deployed
@@ -130,6 +123,19 @@ func (m *Manager) CheckCluster(clusterOrTopoName, scaleoutTopo string, opt Check
 
 	if err := m.fillHostArch(sshConnProps, sshProxyProps, &topo, &gOpt, opt.User); err != nil {
 		return err
+	}
+
+	// Abort scale out operation if the merged topology is invalid
+	if opt.ExistCluster && scaleoutTopo != "" {
+		if currTopo != nil {
+			mergedTopo := currTopo.MergeTopo(&topo)
+			if err := mergedTopo.Validate(); err != nil {
+				return err
+			}
+			if err := checkConflict(m, clusterOrTopoName, mergedTopo); err != nil {
+				return err
+			}
+		}
 	}
 
 	if err := checkSystemInfo(ctx, sshConnProps, sshProxyProps, &topo, &gOpt, &opt); err != nil {
