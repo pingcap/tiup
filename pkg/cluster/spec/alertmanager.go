@@ -43,6 +43,7 @@ type AlertmanagerSpec struct {
 	Arch            string               `yaml:"arch,omitempty"`
 	OS              string               `yaml:"os,omitempty"`
 	ConfigFilePath  string               `yaml:"config_file,omitempty" validate:"config_file:editable"`
+	ListenHost      string               `yaml:"listen_host,omitempty" validate:"listen_host:editable"`
 }
 
 // Role returns the component role of the instance
@@ -144,7 +145,7 @@ func (i *AlertManagerInstance) InitConfig(
 	enableTLS := gOpts.TLSEnabled
 	// Transfer start script
 	spec := i.InstanceSpec.(*AlertmanagerSpec)
-	cfg := scripts.NewAlertManagerScript(spec.Host, paths.Deploy, paths.Data[0], paths.Log, enableTLS).
+	cfg := scripts.NewAlertManagerScript(spec.Host, spec.ListenHost, paths.Deploy, paths.Data[0], paths.Log, enableTLS).
 		WithWebPort(spec.WebPort).WithClusterPort(spec.ClusterPort).WithNumaNode(spec.NumaNode).
 		AppendEndpoints(AlertManagerEndpoints(alertmanagers, deployUser, enableTLS))
 
