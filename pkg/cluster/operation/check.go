@@ -224,11 +224,26 @@ func checkCPU(opt *CheckOptions, cpuInfo *sysinfo.CPU) []*CheckResult {
 	}
 
 	// check for CPU frequency governor
-	if cpuInfo.Governor != "" && cpuInfo.Governor != "performance" {
-		results = append(results, &CheckResult{
-			Name: CheckNameCPUGovernor,
-			Err:  fmt.Errorf("CPU frequency governor is %s, should use performance", cpuInfo.Governor),
-		})
+	if cpuInfo.Governor != "" {
+		if cpuInfo.Governor != "performance" {
+			results = append(results, &CheckResult{
+				Name: CheckNameCPUGovernor,
+				Err:  fmt.Errorf("CPU frequency governor is %s, should use performance", cpuInfo.Governor),
+			})
+		} else {
+			results = append(results, &CheckResult{
+				Name: CheckNameCPUGovernor,
+				Msg:  fmt.Sprintf("CPU frequency governor is %s", cpuInfo.Governor),
+			})
+		}
+	} else {
+		if cpuInfo.Governor == "" {
+			results = append(results, &CheckResult{
+				Name: CheckNameCPUGovernor,
+				Err:  fmt.Errorf("Unable to determine current CPU frequency governor policy"),
+				Warn: true,
+			})
+		}
 	}
 
 	return results
