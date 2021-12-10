@@ -126,7 +126,7 @@ func (m *Manager) CheckCluster(clusterOrTopoName, scaleoutTopo string, opt Check
 	}
 
 	// Abort scale out operation if the merged topology is invalid
-	if currTopo != nil {
+	if currTopo != nil && scaleoutTopo != "" {
 		mergedTopo := currTopo.MergeTopo(&topo)
 		if err := mergedTopo.Validate(); err != nil {
 			return err
