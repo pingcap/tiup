@@ -26,4 +26,4 @@ exec bin/alertmanager/alertmanager \
     --cluster.peer="{{$am.IP}}:{{$am.ClusterPort}}" \
 {{- end}}
 {{- end}}
-    --cluster.listen-address="{{.IP}}:{{.ClusterPort}}"
+    --cluster.listen-address="{{.ListenHost}}:{{.ClusterPort}}"
