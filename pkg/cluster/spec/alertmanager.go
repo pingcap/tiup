@@ -35,6 +35,7 @@ type AlertmanagerSpec struct {
 	IgnoreExporter  bool                 `yaml:"ignore_exporter,omitempty"`
 	WebPort         int                  `yaml:"web_port" default:"9093"`
 	ClusterPort     int                  `yaml:"cluster_port" default:"9094"`
+	ListenHost      string               `yaml:"listen_host,omitempty" validate:"listen_host:editable"`
 	DeployDir       string               `yaml:"deploy_dir,omitempty"`
 	DataDir         string               `yaml:"data_dir,omitempty"`
 	LogDir          string               `yaml:"log_dir,omitempty"`
@@ -43,7 +44,6 @@ type AlertmanagerSpec struct {
 	Arch            string               `yaml:"arch,omitempty"`
 	OS              string               `yaml:"os,omitempty"`
 	ConfigFilePath  string               `yaml:"config_file,omitempty" validate:"config_file:editable"`
-	ListenHost      string               `yaml:"listen_host,omitempty" validate:"listen_host:editable"`
 }
 
 // Role returns the component role of the instance
