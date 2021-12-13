@@ -37,8 +37,8 @@ cloud.google.com/go/storage v1.6.0/go.mod h1:N7U0C8pVQ/+NIKOBQyamJIeKQKkZ+mxpohl
 cloud.google.com/go/storage v1.8.0/go.mod h1:Wv1Oy7z6Yz3DshWRJFhqM/UCfaWIRTdp0RXyy7KQOVs=
 cloud.google.com/go/storage v1.10.0/go.mod h1:FLPqc6j+Ki4BU591ie1oL6qBQGu2Bl/tZ9ullr3+Kg0=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
-github.com/AstroProfundis/easyssh-proxy v1.3.10-0.20210615044136-d52fc631316d h1:jsOHh5HJR1sYE1wYxuYQa2nSc01V0/6ZNRIS2qNW1zg=
-github.com/AstroProfundis/easyssh-proxy v1.3.10-0.20210615044136-d52fc631316d/go.mod h1:SnOlkuIAoaj8FvRIGcWp2BbLOwvHZnNNOva+DBMbHWU=
+github.com/AstroProfundis/easyssh-proxy v1.3.10-0.20211209071554-9910ebdf514e h1:4j6hTmpAhrJYt8XhG/mLJYywzsclH6pqAim1H7HBM/o=
+github.com/AstroProfundis/easyssh-proxy v1.3.10-0.20211209071554-9910ebdf514e/go.mod h1:SnOlkuIAoaj8FvRIGcWp2BbLOwvHZnNNOva+DBMbHWU=
 github.com/AstroProfundis/sysinfo v0.0.0-20210901042104-765f00aa1304 h1:xjoJdgLCgiPv8CNEnsHP+W6UJ/JiNbALll6csqw3hbg=
 github.com/AstroProfundis/sysinfo v0.0.0-20210901042104-765f00aa1304/go.mod h1:4m15VhW6ZffaqJNAK/HtN3Qvf97aCe1T39u3UXaA2lA=
 github.com/AstroProfundis/tabby v1.1.1-color h1:gi/Fs4W2KVcC1m29lqa39tDnsGfZG/PYvZmwOhAH5m0=
