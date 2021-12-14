@@ -2,6 +2,9 @@
 name: integrate-playground
 
 on:
+  schedule:
+    # times are in UTC
+    - cron: '19 21 * * *'
   pull_request:
     branches:
       - master
