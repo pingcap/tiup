@@ -240,7 +240,7 @@ func (inst *TiFlashInstance) checkConfig(deployDir, clusterManagerPath string, v
 		return errors.Trace(err)
 	}
 	defer cf2.Close()
-	if err := writeTiFlashConfig(cf, inst.TCPPort, inst.Port, inst.ServicePort, inst.StatusPort,
+	if err := writeTiFlashConfig(cf, version, inst.TCPPort, inst.Port, inst.ServicePort, inst.StatusPort,
 		inst.Host, deployDir, clusterManagerPath, tidbStatusAddrs, endpoints); err != nil {
 		return errors.Trace(err)
 	}
