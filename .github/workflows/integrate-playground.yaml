@@ -93,4 +93,6 @@ jobs:
       - name: Upload coverage to Codecov
         working-directory: ${{ env.working-directory }}
         run: |
-          curl -s https://codecov.io/bash | bash -s - -F integrate,playground -s ${{ env.working-directory }}/tests/tiup-playground/cover -f '*.out'
+          curl -Os https://uploader.codecov.io/latest/linux/codecov
+          chmod +x codecov
+          ./codecov -F playground -s ${{ env.working-directory }}/tests/tiup-playground/cover -f '*.out'

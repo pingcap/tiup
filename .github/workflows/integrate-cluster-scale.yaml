@@ -113,4 +113,6 @@ jobs:
       - name: Upload coverage to Codecov
         working-directory: ${{ env.working-directory }}
         run: |
-          curl -s https://codecov.io/bash | bash -s - -F integrate,cluster -s ${{ env.working-directory }}/tests/tiup-cluster/cover -f '*.out'
+          curl -Os https://uploader.codecov.io/latest/linux/codecov
+          chmod +x codecov
+          ./codecov -F cluster -s ${{ env.working-directory }}/tests/tiup-cluster/cover -f '*.out'
