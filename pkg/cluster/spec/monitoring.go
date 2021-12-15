@@ -411,6 +411,12 @@ func (i *MonitorInstance) initRules(ctx context.Context, e ctxt.Executor, spec *
 		`find %[1]s/conf -maxdepth 1 -type f -name "*.rules.yml" -exec sed -i -e "s/ENV_LABELS_ENV/%[2]s/g" {} \;`,
 	}
 
+	_, stderr, err := e.Execute(ctx, fmt.Sprintf(strings.Join(cmds, " && "), paths.Deploy, clusterName), false)
+	if err != nil {
+		return errors.Annotatef(err, "stderr: %s", string(stderr))
+	}
+
+	// rander cluster name when monitoring_servers.rule_dir is set
 	if spec.RuleDir != "" {
 		err := i.TransferLocalConfigDir(ctx, e, spec.RuleDir, path.Join(paths.Deploy, "conf"), func(name string) bool {
 			return strings.HasSuffix(name, ".rules.yml")
@@ -423,11 +429,10 @@ func (i *MonitorInstance) initRules(ctx context.Context, e ctxt.Executor, spec *
 			`find %[1]s/conf -maxdepth 1 -type f -name "*.rules.yml" -exec sed -i -e "s/env: [^ ]*/env: %[2]s/g" {} \;`,
 			`find %[1]s/conf -maxdepth 1 -type f -name "*.rules.yml" -exec sed -i -e "s/cluster: [^ ]*,/cluster: %[2]s,/g" {} \;`,
 		}
-	}
-
-	_, stderr, err := e.Execute(ctx, fmt.Sprintf(strings.Join(cmds, " && "), paths.Deploy, clusterName), false)
-	if err != nil {
-		return errors.Annotatef(err, "stderr: %s", string(stderr))
+		_, stderr, err := e.Execute(ctx, fmt.Sprintf(strings.Join(cmds, " && "), paths.Deploy, clusterName), false)
+		if err != nil {
+			return errors.Annotatef(err, "stderr: %s", string(stderr))
+		}
 	}
 
 	return nil
