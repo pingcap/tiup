@@ -416,7 +416,7 @@ func (i *MonitorInstance) initRules(ctx context.Context, e ctxt.Executor, spec *
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}
 
-	// rander cluster name when monitoring_servers.rule_dir is set
+	// render cluster name when monitoring_servers.rule_dir is set
 	if spec.RuleDir != "" {
 		err := i.TransferLocalConfigDir(ctx, e, spec.RuleDir, path.Join(paths.Deploy, "conf"), func(name string) bool {
 			return strings.HasSuffix(name, ".rules.yml")
