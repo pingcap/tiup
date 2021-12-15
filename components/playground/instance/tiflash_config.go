@@ -17,7 +17,17 @@ import (
 	"fmt"
 	"io"
 	"strings"
+
+	"github.com/pingcap/tiup/pkg/utils"
+	"golang.org/x/mod/semver"
 )
+
+const tiflashDaemonConfig = `
+
+[application]
+runAsDaemon = true
+
+`
 
 const tiflashConfig = `
 default_profile = "default"
@@ -28,10 +38,7 @@ mark_cache_size = 5368709120
 path = "%[5]s"
 tcp_port = %[3]d
 tmp_path = "%[6]s"
-
-[application]
-runAsDaemon = true
-
+%[13]s
 [flash]
 service_addr = "%[10]s:%[8]d"
 tidb_status_addr = "%[11]s"
@@ -90,14 +97,21 @@ quota = "default"
 ip = "::/0"
 `
 
-func writeTiFlashConfig(w io.Writer, tcpPort, httpPort, servicePort, metricsPort int, ip, deployDir, clusterManagerPath string, tidbStatusAddrs, endpoints []string) error {
+func writeTiFlashConfig(w io.Writer, version utils.Version, tcpPort, httpPort, servicePort, metricsPort int, ip, deployDir, clusterManagerPath string, tidbStatusAddrs, endpoints []string) error {
 	pdAddrs := strings.Join(endpoints, ",")
 	dataDir := fmt.Sprintf("%s/data", deployDir)
 	tmpDir := fmt.Sprintf("%s/tmp", deployDir)
 	logDir := fmt.Sprintf("%s/log", deployDir)
-	conf := fmt.Sprintf(tiflashConfig, pdAddrs, httpPort, tcpPort,
-		deployDir, dataDir, tmpDir, logDir, servicePort, metricsPort,
-		ip, strings.Join(tidbStatusAddrs, ","), clusterManagerPath)
+	var conf string
+	if semver.Compare(version.String(), "v5.4.0") >= 0 || version.IsNightly() {
+		conf = fmt.Sprintf(tiflashConfig, pdAddrs, httpPort, tcpPort,
+			deployDir, dataDir, tmpDir, logDir, servicePort, metricsPort,
+			ip, strings.Join(tidbStatusAddrs, ","), clusterManagerPath, "")
+	} else {
+		conf = fmt.Sprintf(tiflashConfig, pdAddrs, httpPort, tcpPort,
+			deployDir, dataDir, tmpDir, logDir, servicePort, metricsPort,
+			ip, strings.Join(tidbStatusAddrs, ","), clusterManagerPath, tiflashDaemonConfig)
+	}
 	_, err := w.Write([]byte(conf))
 	return err
 }
