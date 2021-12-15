@@ -4,8 +4,19 @@ codecov:
     wait_for_ci: no
 
 coverage:
+  round: nearest
   range: 30..70
 
 ignore:
   - "pkg/cluster/api/dmpb"
   - "pkg/cluster/api/typeutil"
+
+flags:
+  tiup:
+    carryforward: true
+  cluster:
+    carryforward: true
+  dm:
+    carryforward: true
+  playground:
+    carryforward: true

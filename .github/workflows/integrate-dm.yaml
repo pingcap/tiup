@@ -2,6 +2,9 @@
 name: integrate-dm
 
 on:
+  schedule:
+    # times are in UTC
+    - cron: '19 21 * * *'
   pull_request:
     branches:
       - master
@@ -114,4 +117,6 @@ jobs:
       - name: Upload coverage to Codecov
         working-directory: ${{ env.working-directory }}
         run: |
-          curl -s https://codecov.io/bash | bash -s - -F integrate,dm -s ${{ env.working-directory }}/tests/tiup-dm/cover -f '*.out'
+          curl -Os https://uploader.codecov.io/latest/linux/codecov
+          chmod +x codecov
+          ./codecov -F dm -s ${{ env.working-directory }}/tests/tiup-dm/cover -f '*.out'
