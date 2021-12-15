@@ -197,12 +197,17 @@ func (m *model) Publish(manifest *v1manifest.Manifest, info ComponentInfo) error
 			signed := im.Signed.(*v1manifest.Index)
 			if compItem, compExist = signed.Components[componentName]; compExist {
 				// Find the owner of target component
-				o := signed.Owners[compItem.Owner]
+				var o v1manifest.Owner
+				if info.OwnerID() != "" {
+					o = signed.Owners[info.OwnerID()]
+				} else {
+					o = signed.Owners[compItem.Owner]
+				}
 				owner = &o
 				if info.Yanked() == nil &&
 					info.Hidden() == nil &&
 					info.Standalone() == nil &&
-					info.OwnerName() == "" {
+					info.OwnerID() == "" {
 					// No changes on index.json
 					return nil, nil
 				}
@@ -228,8 +233,8 @@ func (m *model) Publish(manifest *v1manifest.Manifest, info ComponentInfo) error
 			if info.Standalone() != nil {
 				compItem.Standalone = *info.Standalone()
 			}
-			if info.OwnerName() != "" {
-				compItem.Owner = info.OwnerName()
+			if info.OwnerID() != "" {
+				compItem.Owner = info.OwnerID()
 			}
 
 			signed.Components[componentName] = compItem

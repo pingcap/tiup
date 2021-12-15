@@ -27,7 +27,7 @@ type statusRender struct {
 	bars map[string]*progress.MultiBarItem
 }
 
-func newStatusRender(manifest *v1manifest.Manifest, addr string) *statusRender {
+func newStatusRender(keys map[string]*v1manifest.KeyInfo, addr, uri string) *statusRender {
 	ss := strings.Split(addr, ":")
 	if strings.Trim(ss[0], " ") == "" || strings.Trim(ss[0], " ") == "0.0.0.0" {
 		addrs, _ := net.InterfaceAddrs()
@@ -40,11 +40,10 @@ func newStatusRender(manifest *v1manifest.Manifest, addr string) *statusRender {
 	}
 
 	status := &statusRender{
-		mbar: progress.NewMultiBar(fmt.Sprintf("Waiting all administrators to sign http://%s/rotate/root.json", strings.Join(ss, ":"))),
+		mbar: progress.NewMultiBar(fmt.Sprintf("Waiting all key holders to sign http://%s%s", strings.Join(ss, ":"), uri)),
 		bars: make(map[string]*progress.MultiBarItem),
 	}
-	root := manifest.Signed.(*v1manifest.Root)
-	for key := range root.Roles[v1manifest.ManifestTypeRoot].Keys {
+	for key := range keys {
 		status.bars[key] = status.mbar.AddBar(fmt.Sprintf("  - Waiting key %s", key))
 	}
 	status.mbar.StartRenderLoop()

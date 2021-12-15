@@ -56,7 +56,7 @@ func ServeComponent(addr string, owner *v1manifest.Owner, comp *v1manifest.Compo
 	}()
 
 	manifest := &v1manifest.Manifest{Signed: comp}
-	status := newStatusRender(manifest, addr)
+	status := newStatusRender(owner.Keys, addr, uri)
 	defer status.stop()
 
 SIGLOOP:

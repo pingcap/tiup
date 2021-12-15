@@ -30,7 +30,7 @@ type ComponentInfo interface {
 	Standalone() *bool
 	Yanked() *bool
 	Hidden() *bool
-	OwnerName() string
+	OwnerID() string
 }
 
 // PublishInfo implements ComponentInfo
@@ -76,7 +76,7 @@ func (i *PublishInfo) Hidden() *bool {
 	return i.Hide
 }
 
-// OwnerName implements ComponentInfo
-func (i *PublishInfo) OwnerName() string {
+// OwnerID implements ComponentInfo
+func (i *PublishInfo) OwnerID() string {
 	return i.Owner
 }

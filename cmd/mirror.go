@@ -431,7 +431,7 @@ func newTransferOwnerCmd() *cobra.Command {
 
 			// update owner info
 			return env.V1Repository().Mirror().Publish(newCompManifest, &model.PublishInfo{
-				Owner: newOwner.Name,
+				Owner: newOwnerName,
 			})
 		},
 	}

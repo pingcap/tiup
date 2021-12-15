@@ -56,7 +56,7 @@ func ServeRoot(addr string, root *v1manifest.Root) (*v1manifest.Manifest, error)
 	}()
 
 	manifest := &v1manifest.Manifest{Signed: root}
-	status := newStatusRender(manifest, addr)
+	status := newStatusRender(root.Roles[v1manifest.ManifestTypeRoot].Keys, addr, uri)
 	defer status.stop()
 
 SIGLOOP:
