@@ -74,6 +74,7 @@ of components or the repository itself.`,
 		newMirrorRenewCmd(),
 		newMirrorGrantCmd(),
 		newMirrorRotateCmd(),
+		newTransferOwnerCmd(),
 	)
 
 	return cmd
@@ -388,6 +389,58 @@ func newMirrorRenewCmd() *cobra.Command {
 	return cmd
 }
 
+// the `mirror transfer-owner` sub command
+func newTransferOwnerCmd() *cobra.Command {
+	addr := "0.0.0.0:8080"
+
+	cmd := &cobra.Command{
+		Use:   "transfer-owner <component> <new-owner>",
+		Short: "Transfer component to another owner",
+		Long:  "Transfer component to another owner, this must be done on the server.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			teleCommand = cmd.CommandPath()
+			if len(args) != 2 {
+				return cmd.Help()
+			}
+
+			component := args[0]
+			newOwnerName := args[1]
+			env := environment.GlobalEnv()
+
+			// read current manifests
+			index, err := env.V1Repository().FetchIndexManifest()
+			if err != nil {
+				return err
+			}
+			newOwner, found := index.Owners[newOwnerName]
+			if !found {
+				return fmt.Errorf("new owner '%s' is not in the available owner list", newOwnerName)
+			}
+
+			m, err := env.V1Repository().FetchComponentManifest(component, true)
+			if err != nil {
+				return err
+			}
+			v1manifest.RenewManifest(m, time.Now())
+
+			// validate new owner's authorization
+			newCompManifest, err := rotate.ServeComponent(addr, &newOwner, m)
+			if err != nil {
+				return err
+			}
+
+			// update owner info
+			return env.V1Repository().Mirror().Publish(newCompManifest, &model.PublishInfo{
+				Owner: newOwner.Name,
+			})
+		},
+	}
+
+	cmd.Flags().StringVarP(&addr, "addr", "", addr, "listen address:port when starting the temp server for signing")
+
+	return cmd
+}
+
 // the `mirror rotate` sub command
 func newMirrorRotateCmd() *cobra.Command {
 	addr := "0.0.0.0:8080"
@@ -403,7 +456,7 @@ func newMirrorRotateCmd() *cobra.Command {
 				return err
 			}
 
-			manifest, err := rotate.Serve(addr, root)
+			manifest, err := rotate.ServeRoot(addr, root)
 			if err != nil {
 				return err
 			}

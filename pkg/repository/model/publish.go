@@ -30,6 +30,7 @@ type ComponentInfo interface {
 	Standalone() *bool
 	Yanked() *bool
 	Hidden() *bool
+	OwnerName() string
 }
 
 // PublishInfo implements ComponentInfo
@@ -38,6 +39,7 @@ type PublishInfo struct {
 	Stand *bool
 	Yank  *bool
 	Hide  *bool
+	Owner string
 }
 
 // TarInfo implements ComponentData
@@ -72,4 +74,9 @@ func (i *PublishInfo) Yanked() *bool {
 // Hidden implements ComponentInfo
 func (i *PublishInfo) Hidden() *bool {
 	return i.Hide
+}
+
+// OwnerName implements ComponentInfo
+func (i *PublishInfo) OwnerName() string {
+	return i.Owner
 }

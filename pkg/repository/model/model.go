@@ -170,7 +170,7 @@ func (m *model) Rotate(manifest *v1manifest.Manifest) error {
 func (m *model) Publish(manifest *v1manifest.Manifest, info ComponentInfo) error {
 	signed := manifest.Signed.(*v1manifest.Component)
 	initTime := time.Now()
-	return utils.RetryUntil(func() error {
+	pf := func() error {
 		// Write the component manifest (component.json)
 		if err := m.updateComponentManifest(manifest); err != nil {
 			return err
@@ -186,7 +186,8 @@ func (m *model) Publish(manifest *v1manifest.Manifest, info ComponentInfo) error
 		var owner *v1manifest.Owner
 		if err := m.updateIndexManifest(initTime, func(im *v1manifest.Manifest) (*v1manifest.Manifest, error) {
 			// We only update index.json when it's a new component
-			// or the yanked, standalone, hidden fileds changed
+			// or the yanked, standalone, hidden fileds changed,
+			// or the owner of component changed
 			var (
 				compItem  v1manifest.ComponentItem
 				compExist bool
@@ -198,7 +199,10 @@ func (m *model) Publish(manifest *v1manifest.Manifest, info ComponentInfo) error
 				// Find the owner of target component
 				o := signed.Owners[compItem.Owner]
 				owner = &o
-				if info.Yanked() == nil && info.Hidden() == nil && info.Standalone() == nil {
+				if info.Yanked() == nil &&
+					info.Hidden() == nil &&
+					info.Standalone() == nil &&
+					info.OwnerName() == "" {
 					// No changes on index.json
 					return nil, nil
 				}
@@ -223,6 +227,9 @@ func (m *model) Publish(manifest *v1manifest.Manifest, info ComponentInfo) error
 			}
 			if info.Standalone() != nil {
 				compItem.Standalone = *info.Standalone()
+			}
+			if info.OwnerName() != "" {
+				compItem.Owner = info.OwnerName()
 			}
 
 			signed.Components[componentName] = compItem
@@ -276,7 +283,9 @@ func (m *model) Publish(manifest *v1manifest.Manifest, info ComponentInfo) error
 			}
 		}
 		return m.txn.Commit()
-	}, func(err error) bool {
+	}
+
+	return utils.RetryUntil(pf, func(err error) bool {
 		return err == store.ErrorFsCommitConflict && m.txn.ResetManifest() == nil
 	})
 }
