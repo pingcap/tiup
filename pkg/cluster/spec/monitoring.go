@@ -403,12 +403,6 @@ func (i *MonitorInstance) installRules(ctx context.Context, e ctxt.Executor, dep
 }
 
 func (i *MonitorInstance) initRules(ctx context.Context, e ctxt.Executor, spec *PrometheusSpec, paths meta.DirPaths, clusterName string) error {
-	if spec.RuleDir != "" {
-		return i.TransferLocalConfigDir(ctx, e, spec.RuleDir, path.Join(paths.Deploy, "conf"), func(name string) bool {
-			return strings.HasSuffix(name, ".rules.yml")
-		})
-	}
-
 	// To make this step idempotent, we need cleanup old rules first
 	cmds := []string{
 		"mkdir -p %[1]s/conf",
@@ -416,6 +410,21 @@ func (i *MonitorInstance) initRules(ctx context.Context, e ctxt.Executor, spec *
 		`find %[1]s/bin/prometheus -maxdepth 1 -type f -name "*.rules.yml" -exec cp {} %[1]s/conf/ \;`,
 		`find %[1]s/conf -maxdepth 1 -type f -name "*.rules.yml" -exec sed -i -e "s/ENV_LABELS_ENV/%[2]s/g" {} \;`,
 	}
+
+	if spec.RuleDir != "" {
+		err := i.TransferLocalConfigDir(ctx, e, spec.RuleDir, path.Join(paths.Deploy, "conf"), func(name string) bool {
+			return strings.HasSuffix(name, ".rules.yml")
+		})
+		if err != nil {
+			return err
+		}
+		// only need to render the cluster name
+		cmds = []string{
+			`find %[1]s/conf -maxdepth 1 -type f -name "*.rules.yml" -exec sed -i -e "s/env: [^ ]*/env: %[2]s/g" {} \;`,
+			`find %[1]s/conf -maxdepth 1 -type f -name "*.rules.yml" -exec sed -i -e "s/cluster: [^ ]*,/cluster: %[2]s,/g" {} \;`,
+		}
+	}
+
 	_, stderr, err := e.Execute(ctx, fmt.Sprintf(strings.Join(cmds, " && "), paths.Deploy, clusterName), false)
 	if err != nil {
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
