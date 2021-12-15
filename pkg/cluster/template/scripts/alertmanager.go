@@ -25,6 +25,7 @@ import (
 // AlertManagerScript represent the data to generate AlertManager start script
 type AlertManagerScript struct {
 	IP          string
+	ListenHost  string
 	WebPort     int
 	ClusterPort int
 	DeployDir   string
@@ -36,9 +37,13 @@ type AlertManagerScript struct {
 }
 
 // NewAlertManagerScript returns a AlertManagerScript with given arguments
-func NewAlertManagerScript(ip, deployDir, dataDir, logDir string, enableTLS bool) *AlertManagerScript {
+func NewAlertManagerScript(ip, listenHost, deployDir, dataDir, logDir string, enableTLS bool) *AlertManagerScript {
+	if listenHost == "" {
+		listenHost = ip
+	}
 	return &AlertManagerScript{
 		IP:          ip,
+		ListenHost:  listenHost,
 		WebPort:     9093,
 		ClusterPort: 9094,
 		DeployDir:   deployDir,

@@ -375,6 +375,7 @@ func (i *TiFlashInstance) initTiFlashConfig(cfg *scripts.TiFlashScript, clusterV
 		pathConfig            string
 		isStorageDirsDefined  bool
 		deprecatedUsersConfig string
+		daemonConfig          string
 		err                   error
 	)
 	if isStorageDirsDefined, err = checkTiFlashStorageConfigWithVersion(clusterVersion, src); err != nil {
@@ -438,6 +439,13 @@ func (i *TiFlashInstance) initTiFlashConfig(cfg *scripts.TiFlashScript, clusterV
 	}
 
 	topo := Specification{}
+
+	if semver.Compare(clusterVersion, "v5.4.0") >= 0 || utils.Version(clusterVersion).IsNightly() {
+		// For 5.4.0 or later, TiFlash can ignore application.runAsDaemon setting
+		daemonConfig = "#"
+	} else {
+		daemonConfig = `application.runAsDaemon: true`
+	}
 	err = yaml.Unmarshal([]byte(fmt.Sprintf(`
 server_configs:
   tiflash:
@@ -463,12 +471,12 @@ server_configs:
     logger.count: 20
     logger.level: "debug"
     logger.size: "1000M"
-    application.runAsDaemon: true
+    %[13]s
     raft.pd_addr: "%[9]s"
     profiles.default.max_memory_usage: 0
     %[12]s
 `, pathConfig, cfg.LogDir, cfg.TCPPort, cfg.HTTPPort, cfg.TiDBStatusAddrs, cfg.IP, cfg.FlashServicePort,
-		cfg.StatusPort, cfg.PDAddrs, cfg.DeployDir, cfg.TmpDir, deprecatedUsersConfig)), &topo)
+		cfg.StatusPort, cfg.PDAddrs, cfg.DeployDir, cfg.TmpDir, deprecatedUsersConfig, daemonConfig)), &topo)
 
 	if err != nil {
 		return nil, err
