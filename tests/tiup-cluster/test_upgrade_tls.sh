@@ -2,8 +2,8 @@
 
 set -eu
 
-old_version=${old_version-v3.0.20}
-version=${version-v4.0.12}
+old_version=${old_version-v4.0.15}
+version=${version-v5.3.0}
 
 source script/upgrade.sh
 

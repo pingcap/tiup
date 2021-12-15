@@ -35,6 +35,7 @@ type AlertmanagerSpec struct {
 	IgnoreExporter  bool                 `yaml:"ignore_exporter,omitempty"`
 	WebPort         int                  `yaml:"web_port" default:"9093"`
 	ClusterPort     int                  `yaml:"cluster_port" default:"9094"`
+	ListenHost      string               `yaml:"listen_host,omitempty" validate:"listen_host:editable"`
 	DeployDir       string               `yaml:"deploy_dir,omitempty"`
 	DataDir         string               `yaml:"data_dir,omitempty"`
 	LogDir          string               `yaml:"log_dir,omitempty"`
@@ -144,7 +145,7 @@ func (i *AlertManagerInstance) InitConfig(
 	enableTLS := gOpts.TLSEnabled
 	// Transfer start script
 	spec := i.InstanceSpec.(*AlertmanagerSpec)
-	cfg := scripts.NewAlertManagerScript(spec.Host, paths.Deploy, paths.Data[0], paths.Log, enableTLS).
+	cfg := scripts.NewAlertManagerScript(spec.Host, spec.ListenHost, paths.Deploy, paths.Data[0], paths.Log, enableTLS).
 		WithWebPort(spec.WebPort).WithClusterPort(spec.ClusterPort).WithNumaNode(spec.NumaNode).
 		AppendEndpoints(AlertManagerEndpoints(alertmanagers, deployUser, enableTLS))
 

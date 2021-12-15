@@ -781,6 +781,7 @@ func AlertManagerEndpoints(alertmanager []*AlertmanagerSpec, user string, enable
 
 		script := scripts.NewAlertManagerScript(
 			spec.Host,
+			spec.ListenHost,
 			deployDir,
 			dataDir,
 			logDir,

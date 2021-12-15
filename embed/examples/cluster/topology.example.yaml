@@ -308,6 +308,8 @@ alertmanager_servers:
   - host: 10.0.1.21
     # # SSH port of the server.
     # ssh_port: 22
+    # Alertmanager web service listen host.
+    # listen_host: 0.0.0.0
     # # Alertmanager web service port.
     # web_port: 9093
     # # Alertmanager communication port.

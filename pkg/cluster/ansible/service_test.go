@@ -28,9 +28,6 @@ path = "/data1/test-cluster/leiysky-ansible-test-deploy/tiflash/data/db"
 tcp_port = 11315
 tmp_path = "/data1/test-cluster/leiysky-ansible-test-deploy/tiflash/data/db/tmp"
 
-[application]
-runAsDaemon = true
-
 [flash]
 service_addr = "172.16.5.85:11317"
 tidb_status_addr = "172.16.5.85:11310"
