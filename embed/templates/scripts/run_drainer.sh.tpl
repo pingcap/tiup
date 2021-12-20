@@ -30,4 +30,4 @@ exec bin/drainer \
     --data-dir="{{.DataDir}}" \
     --log-file="{{.LogDir}}/drainer.log" \
     --config=conf/drainer.toml \
-    --initial-commit-ts="{{.CommitTs}}" 2>> "{{.LogDir}}/drainer_stderr.log"
+    --initial-commit-ts={{.CommitTs}} 2>> "{{.LogDir}}/drainer_stderr.log"
