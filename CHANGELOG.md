@@ -1,5 +1,17 @@
 TiUP Changelog
 
+## [1.8.1] 2021-12-20
+
+### Fixes
+
+- Fix port conflict not checked for TiDB clusters imported from `tidb-ansible` on `scale-out` in `tiup-cluster` ([#1656](https://github.com/pingcap/tiup/pull/1656), [@srstack](https://github.com/srstack))
+- Fix SSH commands stale in some circumstances ([#1664](https://github.com/pingcap/tiup/pull/1664), [@nexustar](https://github.com/nexustar))
+- Fix default value of `initial-commit-ts` for drainer in `tiup-cluster` ([#1678](https://github.com/pingcap/tiup/pull/1678), [@nexustar](https://github.com/nexustar))
+
+### Improvements
+
+- Display check result of CPU frequency governor even when it's not available ([#1663](https://github.com/pingcap/tiup/pull/1663), [@srstack](https://github.com/srstack))
+
 ## [1.8.0] 2021-12-06
 
 ### New Features
