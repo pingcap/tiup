@@ -19,6 +19,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
+	"syscall"
 	"time"
 
 	"github.com/fatih/color"
@@ -142,6 +144,36 @@ the latest stable version will be downloaded from the repository.`,
 			return nil
 		},
 		SilenceUsage: true,
+		// implement auto completion for tiup components
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			env := environment.GlobalEnv()
+			if len(args) == 0 {
+				var result []string
+				installed, _ := env.Profile().InstalledComponents()
+				for _, comp := range installed {
+					if strings.HasPrefix(comp, toComplete) {
+						result = append(result, comp)
+					}
+				}
+				return result, cobra.ShellCompDirectiveNoFileComp
+			}
+
+			component, version := environment.ParseCompVersion(args[0])
+
+			selectedVer, err := env.SelectInstalledVersion(component, version)
+			if err != nil {
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+			binaryPath, err := env.BinaryPath(component, selectedVer)
+			if err != nil {
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+
+			argv := []string{binaryPath, "__complete"}
+			argv = append(append(argv, args[1:]...), toComplete)
+			_ = syscall.Exec(binaryPath, argv, os.Environ())
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		},
 	}
 
 	rootCmd.PersistentFlags().BoolVarP(&repoOpts.SkipVersionCheck, "skip-version-check", "", false, "Skip the strict version check, by default a version must be a valid SemVer string")
