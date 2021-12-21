@@ -19,7 +19,7 @@ exec bin/alertmanager/alertmanager \
     --storage.path="{{.DataDir}}" \
     --data.retention=120h \
     --log.level="info" \
-    --web.listen-address="{{.IP}}:{{.WebPort}}" \
+    --web.listen-address="{{.ListenHost}}:{{.WebPort}}" \
     --web.external-url="http://{{.IP}}:{{.WebPort}}" \
 {{- if .EndPoints}}
 {{- range $idx, $am := .EndPoints}}
