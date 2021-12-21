@@ -63,7 +63,7 @@ func TestLocalRuleDirs(t *testing.T) {
 	err = promInstance.initRules(ctx, e, promInstance.InstanceSpec.(*PrometheusSpec), meta.DirPaths{Deploy: deployDir}, "dummy-cluster")
 	assert.Nil(t, err)
 
-	// assert.NoFileExists(t, path.Join(deployDir, "conf", "dummy.rules.yml"))
+	assert.FileExists(t, path.Join(deployDir, "conf", "dummy.rules.yml"))
 	fs, err := os.ReadDir(localDir)
 	assert.Nil(t, err)
 	for _, f := range fs {
