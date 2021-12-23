@@ -122,7 +122,7 @@ func checkTiUPBinary(env *environment.Environment) error {
 	if utils.IsNotExist(tiUPHomePath) || tiUPHomePath != realTiUPPath {
 		fmt.Printf("Tiup install directory is: %s\n", filepath.Dir(realTiUPPath))
 		if strings.Contains(strings.ToLower(realTiUPPath), "homebrew") {
-			fmt.Printf("Maybe you are using `%s` TiUP installed, you can try to use `%s` to upgrade.\n",
+			fmt.Printf("Maybe you used `%s` to install TiUP, you can try to use `%s` to upgrade.\n",
 				color.HiYellowString("brew install pingcap/brew/tiup"),
 				color.HiYellowString("brew upgrade pingcap/brew/tiup"),
 			)
