@@ -406,6 +406,12 @@ func (i *TiSparkWorkerInstance) InitConfig(
 
 	cfg := config.NewTiSparkConfig(pdList).WithMasters(strings.Join(masterList, ",")).
 		WithCustomFields(topo.TiSparkMasters[0].SparkConfigs)
+
+	// doesn't work
+	if _, err := i.setTLSConfig(ctx, false, nil, paths); err != nil {
+		return err
+	}
+
 	// transfer spark-defaults.conf
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("spark-defaults-%s-%d.conf", host, port))
 	if err := cfg.ConfigToFile(fp); err != nil {
@@ -458,6 +464,12 @@ func (i *TiSparkWorkerInstance) InitConfig(
 	}
 	dst = filepath.Join(paths.Deploy, "conf", "log4j.properties")
 	return e.Transfer(ctx, fp, dst, false, 0, false)
+}
+
+// setTLSConfig set TLS Config to support enable/disable TLS
+// TiSparkWorkerInstance no need to configure TLS
+func (i *TiSparkWorkerInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
+	return nil, nil
 }
 
 // ScaleConfig deploy temporary config on scaling

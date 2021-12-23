@@ -31,7 +31,7 @@ const (
 type Options struct {
 	Roles               []string
 	Nodes               []string
-	Force               bool             // Option for upgrade subcommand
+	Force               bool             // Option for upgrade/tls subcommand
 	SSHTimeout          uint64           // timeout in seconds when connecting an SSH server
 	OptTimeout          uint64           // timeout in seconds for operations that support it, not to confuse with SSH timeout
 	APITimeout          uint64           // timeout in seconds for API operations that support it, like transferring store leader

@@ -297,6 +297,12 @@ func (i *MonitorInstance) InitConfig(
 	if err != nil {
 		return err
 	}
+
+	// doesn't work
+	if _, err := i.setTLSConfig(ctx, false, nil, paths); err != nil {
+		return err
+	}
+
 	cfig.SetRemoteConfig(string(remoteCfg))
 
 	for _, alertmanager := range spec.ExternalAlertmanagers {
@@ -353,6 +359,11 @@ func (i *MonitorInstance) InitConfig(
 	}
 
 	return checkConfig(ctx, e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".yml", paths, nil)
+}
+
+// setTLSConfig set TLS Config to support enable/disable TLS
+func (i *MonitorInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
+	return nil, nil
 }
 
 // We only really installRules for dm cluster because the rules(*.rules.yml) packed with the prometheus

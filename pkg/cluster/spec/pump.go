@@ -176,7 +176,8 @@ func (i *PumpInstance) InitConfig(
 		return err
 	}
 
-	if _, _, err := e.Execute(ctx, "chmod +x "+dst, false); err != nil {
+	_, _, err := e.Execute(ctx, "chmod +x "+dst, false)
+	if err != nil {
 		return err
 	}
 
@@ -204,24 +205,48 @@ func (i *PumpInstance) InitConfig(
 	}
 
 	// set TLS configs
+	spec.Config, err = i.setTLSConfig(ctx, enableTLS, spec.Config, paths)
+	if err != nil {
+		return err
+	}
+
+	return i.MergeServerConfig(ctx, e, globalConfig, spec.Config, paths)
+}
+
+// setTLSConfig set TLS Config to support enable/disable TLS
+func (i *PumpInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
+	// set TLS configs
 	if enableTLS {
-		if spec.Config == nil {
-			spec.Config = make(map[string]interface{})
+		if configs == nil {
+			configs = make(map[string]interface{})
 		}
-		spec.Config["security.ssl-ca"] = fmt.Sprintf(
+		configs["security.ssl-ca"] = fmt.Sprintf(
 			"%s/tls/%s",
 			paths.Deploy,
 			TLSCACert,
 		)
-		spec.Config["security.ssl-cert"] = fmt.Sprintf(
+		configs["security.ssl-cert"] = fmt.Sprintf(
 			"%s/tls/%s.crt",
 			paths.Deploy,
 			i.Role())
-		spec.Config["security.ssl-key"] = fmt.Sprintf(
+		configs["security.ssl-key"] = fmt.Sprintf(
 			"%s/tls/%s.pem",
 			paths.Deploy,
 			i.Role())
+	} else {
+		// drainer tls config list
+		tlsConfigs := []string{
+			"security.ssl-ca",
+			"security.ssl-cert",
+			"security.ssl-key",
+		}
+		// delete TLS configs
+		if configs != nil {
+			for _, config := range tlsConfigs {
+				delete(configs, config)
+			}
+		}
 	}
 
-	return i.MergeServerConfig(ctx, e, globalConfig, spec.Config, paths)
+	return configs, nil
 }

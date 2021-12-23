@@ -139,7 +139,11 @@ func (m *Manager) DestroyTombstone(
 	if err != nil {
 		return err
 	}
-	regenConfigTasks, _ := buildRegenConfigTasks(m, name, topo, base, gOpt, nodes, true)
+
+	// Destroy ignore error and force exec
+	gOpt.IgnoreConfigCheck = true
+	gOpt.Force = true
+	regenConfigTasks, _ := buildInitConfigTasks(m, name, topo, base, gOpt, nodes)
 
 	t := b.
 		Func("FindTomestoneNodes", func(ctx context.Context) (err error) {
@@ -157,8 +161,8 @@ func (m *Manager) DestroyTombstone(
 		ClusterOperate(cluster, operator.DestroyTombstoneOperation, gOpt, tlsCfg).
 		UpdateMeta(name, clusterMeta, nodes).
 		UpdateTopology(name, m.specManager.Path(name), clusterMeta, nodes).
-		ParallelStep("+ Refresh instance configs", true, regenConfigTasks...).
-		Parallel(true, buildReloadPromTasks(metadata.GetTopology(), m.logger, gOpt)...).
+		ParallelStep("+ Refresh instance configs", gOpt.Force, regenConfigTasks...).
+		ParallelStep("+ Reloda prometheus", gOpt.Force, buildReloadPromTasks(metadata.GetTopology(), m.logger, gOpt)...).
 		Build()
 
 	if err := t.Execute(ctx); err != nil {
