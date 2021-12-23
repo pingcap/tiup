@@ -16,7 +16,10 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
+	"github.com/fatih/color"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
@@ -47,6 +50,10 @@ latest version. All other flags will be ignored if the flag --self is given.
 
 			env := environment.GlobalEnv()
 			if self {
+				if err := checkTiUPBinary(env); err != nil {
+					return err
+				}
+
 				originFile := env.LocalPath("bin", "tiup")
 				renameFile := env.LocalPath("bin", "tiup.tmp")
 				if err := os.Rename(originFile, renameFile); err != nil {
@@ -99,4 +106,30 @@ func updateComponents(env *environment.Environment, components []string, nightly
 	}
 
 	return env.UpdateComponents(components, nightly, force)
+}
+
+// checkTiUPBinary check if TiUP exists in TiUP_HOME
+func checkTiUPBinary(env *environment.Environment) error {
+	tiUPHomePath, _ := filepath.Abs(env.LocalPath("bin", "tiup"))
+
+	realTiUPPath, err := os.Executable()
+	if err != nil {
+		// Ignore the problem that the execution directory cannot be obtained
+		return nil
+	}
+	realTiUPPath, _ = filepath.Abs(realTiUPPath)
+
+	if utils.IsNotExist(tiUPHomePath) || tiUPHomePath != realTiUPPath {
+		fmt.Printf("Tiup install directory is: %s\n", filepath.Dir(realTiUPPath))
+		if strings.Contains(strings.ToLower(realTiUPPath), "homebrew") {
+			fmt.Printf("Maybe you are using `%s` TiUP installed, you can try to use `%s` to upgrade.\n",
+				color.HiYellowString("brew install pingcap/brew/tiup"),
+				color.HiYellowString("brew upgrade pingcap/brew/tiup"),
+			)
+		}
+
+		return fmt.Errorf("failed to upgrade TiUP, please use the install method to upgrade")
+	}
+
+	return nil
 }
