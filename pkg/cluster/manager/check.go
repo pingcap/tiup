@@ -83,14 +83,15 @@ func (m *Manager) CheckCluster(clusterOrTopoName, scaleoutTopo string, opt Check
 			}
 			spec.ExpandRelativeDir(&topo)
 
+			// checkConflict after fillHostArch
 			// scaleOutTopo also is not exists instacne
 			opt.ExistCluster = false
 		} else {
 			opt.IdentityFile = m.specManager.Path(clusterName, "ssh", "id_rsa")
-
 			topo = *metadata.Topology
+			opt.User = metadata.User
 		}
-		opt.User = metadata.User
+
 		topo.AdjustByVersion(metadata.Version)
 	} else { // check before cluster is deployed
 		topoFileName := clusterOrTopoName
@@ -207,19 +208,9 @@ func checkSystemInfo(
 					opt.Opr,
 				)
 			}
-			// if the data dir set in topology is relative, and the home dir of deploy user
-			// and the user run the check command is on different partitions, the disk detection
-			// may be using incorrect partition for validations.
-			for _, dataDir := range spec.MultiDirAbs(opt.User, inst.DataDir()) {
-				// build checking tasks
+
+			if !opt.ExistCluster {
 				t1 = t1.
-					CheckSys(
-						inst.GetHost(),
-						dataDir,
-						task.CheckTypeFIO,
-						topo,
-						opt.Opr,
-					).
 					CheckSys(
 						inst.GetHost(),
 						inst.DeployDir(),
@@ -248,6 +239,21 @@ func checkSystemInfo(
 						topo,
 						opt.Opr,
 					)
+			}
+			// if the data dir set in topology is relative, and the home dir of deploy user
+			// and the user run the check command is on different partitions, the disk detection
+			// may be using incorrect partition for validations.
+			for _, dataDir := range spec.MultiDirAbs(opt.User, inst.DataDir()) {
+				// build checking tasks
+				t1 = t1.
+					CheckSys(
+						inst.GetHost(),
+						dataDir,
+						task.CheckTypeFIO,
+						topo,
+						opt.Opr,
+					)
+
 				if opt.ExistCluster {
 					t1 = t1.CheckSys(
 						inst.GetHost(),
@@ -319,20 +325,6 @@ func checkSystemInfo(
 						topo,
 						opt.Opr,
 					).
-					// check for listening port
-					Shell(
-						inst.GetHost(),
-						"ss -lnt",
-						"",
-						false,
-					).
-					CheckSys(
-						inst.GetHost(),
-						"",
-						task.CheckTypePort,
-						topo,
-						opt.Opr,
-					).
 					// check for system limits
 					Shell(
 						inst.GetHost(),
@@ -377,6 +369,24 @@ func checkSystemInfo(
 						topo,
 						opt.Opr,
 					)
+
+				if !opt.ExistCluster {
+					t1 = t1.
+						// check for listening port
+						Shell(
+							inst.GetHost(),
+							"ss -lnt",
+							"",
+							false,
+						).
+						CheckSys(
+							inst.GetHost(),
+							"",
+							task.CheckTypePort,
+							topo,
+							opt.Opr,
+						)
+				}
 			}
 
 			checkSysTasks = append(
