@@ -68,6 +68,23 @@ func ParseTopologyYaml(file string, out Topology) error {
 		return err
 	}
 
+	// if {
+	// 	// // keep the global config in out
+	// 	var newTopo map[string]interface{}
+	// 	if err := yaml.Unmarshal(yamlFile, &newTopo); err != nil {
+	// 		return err
+	// 	}
+	// 	for k := range newTopo {
+	// 		switch k {
+	// 		case "global",
+	// 			"monitored",
+	// 			"server_configs":
+	// 			delete(newTopo, k)
+	// 		}
+	// 	}
+	// 	yamlFile, _ = yaml.Marshal(newTopo)
+	// }
+
 	if err = yaml.UnmarshalStrict(yamlFile, out); err != nil {
 		return ErrTopologyParseFailed.
 			Wrap(err, "Failed to parse topology file %s", file).
