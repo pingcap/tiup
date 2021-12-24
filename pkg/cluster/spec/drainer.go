@@ -38,7 +38,7 @@ type DrainerSpec struct {
 	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
 	DataDir         string                 `yaml:"data_dir,omitempty"`
 	LogDir          string                 `yaml:"log_dir,omitempty"`
-	CommitTS        int64                  `yaml:"commit_ts,omitempty"`
+	CommitTS        int64                  `yaml:"commit_ts" default:"-1" validate:"commit_ts:editable"`
 	Offline         bool                   `yaml:"offline,omitempty"`
 	NumaNode        string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
 	Config          map[string]interface{} `yaml:"config,omitempty" validate:"config:ignore"`
@@ -153,7 +153,6 @@ func (i *DrainerInstance) InitConfig(
 	if err := i.BaseInstance.InitConfig(ctx, e, topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
-
 	enableTLS := topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(*DrainerSpec)
 	nodeID := i.GetHost() + ":" + strconv.Itoa(i.GetPort())
@@ -181,7 +180,8 @@ func (i *DrainerInstance) InitConfig(
 		return err
 	}
 
-	if _, _, err := e.Execute(ctx, "chmod +x "+dst, false); err != nil {
+	_, _, err := e.Execute(ctx, "chmod +x "+dst, false)
+	if err != nil {
 		return err
 	}
 
@@ -209,23 +209,9 @@ func (i *DrainerInstance) InitConfig(
 	}
 
 	// set TLS configs
-	if enableTLS {
-		if spec.Config == nil {
-			spec.Config = make(map[string]interface{})
-		}
-		spec.Config["security.ssl-ca"] = fmt.Sprintf(
-			"%s/tls/%s",
-			paths.Deploy,
-			TLSCACert,
-		)
-		spec.Config["security.ssl-cert"] = fmt.Sprintf(
-			"%s/tls/%s.crt",
-			paths.Deploy,
-			i.Role())
-		spec.Config["security.ssl-key"] = fmt.Sprintf(
-			"%s/tls/%s.pem",
-			paths.Deploy,
-			i.Role())
+	spec.Config, err = i.setTLSConfig(ctx, enableTLS, spec.Config, paths)
+	if err != nil {
+		return err
 	}
 
 	if err := i.MergeServerConfig(ctx, e, globalConfig, spec.Config, paths); err != nil {
@@ -233,4 +219,41 @@ func (i *DrainerInstance) InitConfig(
 	}
 
 	return checkConfig(ctx, e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths, nil)
+}
+
+// setTLSConfig set TLS Config to support enable/disable TLS
+func (i *DrainerInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
+	if enableTLS {
+		if configs == nil {
+			configs = make(map[string]interface{})
+		}
+		configs["security.ssl-ca"] = fmt.Sprintf(
+			"%s/tls/%s",
+			paths.Deploy,
+			TLSCACert,
+		)
+		configs["security.ssl-cert"] = fmt.Sprintf(
+			"%s/tls/%s.crt",
+			paths.Deploy,
+			i.Role())
+		configs["security.ssl-key"] = fmt.Sprintf(
+			"%s/tls/%s.pem",
+			paths.Deploy,
+			i.Role())
+	} else {
+		// drainer tls config list
+		tlsConfigs := []string{
+			"security.ssl-ca",
+			"security.ssl-cert",
+			"security.ssl-key",
+		}
+		// delete TLS configs
+		if configs != nil {
+			for _, config := range tlsConfigs {
+				delete(configs, config)
+			}
+		}
+	}
+
+	return configs, nil
 }

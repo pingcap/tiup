@@ -297,6 +297,12 @@ func (i *MonitorInstance) InitConfig(
 	if err != nil {
 		return err
 	}
+
+	// doesn't work
+	if _, err := i.setTLSConfig(ctx, false, nil, paths); err != nil {
+		return err
+	}
+
 	cfig.SetRemoteConfig(string(remoteCfg))
 
 	for _, alertmanager := range spec.ExternalAlertmanagers {
@@ -355,6 +361,11 @@ func (i *MonitorInstance) InitConfig(
 	return checkConfig(ctx, e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".yml", paths, nil)
 }
 
+// setTLSConfig set TLS Config to support enable/disable TLS
+func (i *MonitorInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
+	return nil, nil
+}
+
 // We only really installRules for dm cluster because the rules(*.rules.yml) packed with the prometheus
 // component is designed for tidb cluster (the dm cluster use the same prometheus component with tidb
 // cluster), and the rules for dm cluster is packed in the dm-master component. So if deploying tidb
@@ -403,12 +414,6 @@ func (i *MonitorInstance) installRules(ctx context.Context, e ctxt.Executor, dep
 }
 
 func (i *MonitorInstance) initRules(ctx context.Context, e ctxt.Executor, spec *PrometheusSpec, paths meta.DirPaths, clusterName string) error {
-	if spec.RuleDir != "" {
-		return i.TransferLocalConfigDir(ctx, e, spec.RuleDir, path.Join(paths.Deploy, "conf"), func(name string) bool {
-			return strings.HasSuffix(name, ".rules.yml")
-		})
-	}
-
 	// To make this step idempotent, we need cleanup old rules first
 	cmds := []string{
 		"mkdir -p %[1]s/conf",
@@ -416,9 +421,29 @@ func (i *MonitorInstance) initRules(ctx context.Context, e ctxt.Executor, spec *
 		`find %[1]s/bin/prometheus -maxdepth 1 -type f -name "*.rules.yml" -exec cp {} %[1]s/conf/ \;`,
 		`find %[1]s/conf -maxdepth 1 -type f -name "*.rules.yml" -exec sed -i -e "s/ENV_LABELS_ENV/%[2]s/g" {} \;`,
 	}
+
 	_, stderr, err := e.Execute(ctx, fmt.Sprintf(strings.Join(cmds, " && "), paths.Deploy, clusterName), false)
 	if err != nil {
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
+	}
+
+	// render cluster name when monitoring_servers.rule_dir is set
+	if spec.RuleDir != "" {
+		err := i.TransferLocalConfigDir(ctx, e, spec.RuleDir, path.Join(paths.Deploy, "conf"), func(name string) bool {
+			return strings.HasSuffix(name, ".rules.yml")
+		})
+		if err != nil {
+			return err
+		}
+		// only need to render the cluster name
+		cmds = []string{
+			`find %[1]s/conf -maxdepth 1 -type f -name "*.rules.yml" -exec sed -i -e "s/env: [^ ]*/env: %[2]s/g" {} \;`,
+			`find %[1]s/conf -maxdepth 1 -type f -name "*.rules.yml" -exec sed -i -e "s/cluster: [^ ]*,/cluster: %[2]s,/g" {} \;`,
+		}
+		_, stderr, err := e.Execute(ctx, fmt.Sprintf(strings.Join(cmds, " && "), paths.Deploy, clusterName), false)
+		if err != nil {
+			return errors.Annotatef(err, "stderr: %s", string(stderr))
+		}
 	}
 
 	return nil
