@@ -177,14 +177,10 @@ the latest stable version will be downloaded from the repository.`,
 	}
 
 	rootCmd.PersistentFlags().BoolVarP(&repoOpts.SkipVersionCheck, "skip-version-check", "", false, "Skip the strict version check, by default a version must be a valid SemVer string")
-	rootCmd.Flags().StringVarP(&binary, "binary", "B", "", "Print binary path of a specific version of a component `<component>[:version]`\n"+
+	rootCmd.Flags().StringVar(&binary, "binary", "", "Print binary path of a specific version of a component `<component>[:version]`\n"+
 		"and the latest version installed will be selected if no version specified")
 	rootCmd.Flags().StringVarP(&tag, "tag", "T", "", "[Deprecated] Specify a tag for component instance")
 	rootCmd.Flags().StringVar(&binPath, "binpath", "", "Specify the binary path of component instance")
-	// Some components will define themself -h flag, eg:
-	// $ tiup dumpling -h ${host}.
-	// We try to leave the handling of `-h` flag to the component.
-	rootCmd.PersistentFlags().Bool("help", false, "Help for this command")
 	rootCmd.Flags().BoolVarP(&printVersion, "version", "v", false, "Print the version of tiup")
 
 	rootCmd.AddCommand(
@@ -201,18 +197,15 @@ the latest stable version will be downloaded from the repository.`,
 
 	originHelpFunc := rootCmd.HelpFunc()
 	rootCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
-		if len(args) < 2 {
+		cmd, _, _ = cmd.Root().Find(args)
+		if len(args) < 2 || cmd != rootCmd {
 			originHelpFunc(cmd, args)
 			return
 		}
-		env, err := environment.InitEnv(repoOpts)
-		cmd, n, e := cmd.Root().Find(args)
-		if (cmd == rootCmd || e != nil) && len(n) > 0 && err == nil {
-			externalHelp(env, n[0], n[1:]...)
-		} else {
-			cmd.InitDefaultHelpFlag() // make possible 'help' flag to be shown
-			_ = cmd.Help()
-		}
+
+		env, _ := environment.InitEnv(repoOpts)
+		environment.SetGlobalEnv(env)
+		_ = cmd.RunE(cmd, args)
 	})
 
 	rootCmd.SetHelpCommand(newHelpCmd())
