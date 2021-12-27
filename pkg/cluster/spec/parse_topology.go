@@ -56,7 +56,8 @@ To generate a sample topology file:
 }
 
 // ParseTopologyYaml read yaml content from `file` and unmarshal it to `out`
-func ParseTopologyYaml(file string, out Topology) error {
+// ignoreGlobal ignore global variables in file, only ignoreGlobal with a index of 0 is effective
+func ParseTopologyYaml(file string, out Topology, ignoreGlobal ...bool) error {
 	suggestionProps := map[string]string{
 		"File": file,
 	}
@@ -68,22 +69,22 @@ func ParseTopologyYaml(file string, out Topology) error {
 		return err
 	}
 
-	// if {
-	// 	// // keep the global config in out
-	// 	var newTopo map[string]interface{}
-	// 	if err := yaml.Unmarshal(yamlFile, &newTopo); err != nil {
-	// 		return err
-	// 	}
-	// 	for k := range newTopo {
-	// 		switch k {
-	// 		case "global",
-	// 			"monitored",
-	// 			"server_configs":
-	// 			delete(newTopo, k)
-	// 		}
-	// 	}
-	// 	yamlFile, _ = yaml.Marshal(newTopo)
-	// }
+	if len(ignoreGlobal) > 0 && ignoreGlobal[0] {
+		// // keep the global config in out
+		var newTopo map[string]interface{}
+		if err := yaml.Unmarshal(yamlFile, &newTopo); err != nil {
+			return err
+		}
+		for k := range newTopo {
+			switch k {
+			case "global",
+				"monitored",
+				"server_configs":
+				delete(newTopo, k)
+			}
+		}
+		yamlFile, _ = yaml.Marshal(newTopo)
+	}
 
 	if err = yaml.UnmarshalStrict(yamlFile, out); err != nil {
 		return ErrTopologyParseFailed.
