@@ -56,9 +56,9 @@ func (m *Manager) TLS(name string, gOpt operator.Options, enable, cleanCertifica
 	// if force is true, skip this check
 	if globalOptions.TLSEnabled == enable && !gOpt.Force {
 		if enable {
-			m.logger.Infof("cluster `%s` TLS status is already enable\n", name)
+			m.logger.Infof("cluster `%s` TLS status is already enabled\n", name)
 		} else {
-			m.logger.Infof("cluster `%s` TLS status is already disable\n", name)
+			m.logger.Infof("cluster `%s` TLS status is already disabled\n", name)
 		}
 		return nil
 	}
@@ -119,9 +119,9 @@ func (m *Manager) TLS(name string, gOpt operator.Options, enable, cleanCertifica
 	}
 
 	if enable {
-		m.logger.Infof("Enable cluster `%s` TLS between TiDB components successfully", name)
+		m.logger.Infof("Enabled TLS between TiDB components for cluster `%s` successfully", name)
 	} else {
-		m.logger.Infof("Disable cluster `%s` TLS between TiDB components successfully", name)
+		m.logger.Infof("Disabled TLS between TiDB components for cluster `%s` successfully", name)
 	}
 	return nil
 }
@@ -137,7 +137,7 @@ func checkTLSEnv(topo spec.Topology, clusterName, version string, skipConfirm bo
 		}
 
 		if len(clusterSpec.PDServers) != 1 {
-			return errorx.EnsureStackTrace(fmt.Errorf("Multiple PD nodes is not supported enable/disable TLS")).
+			return errorx.EnsureStackTrace(fmt.Errorf("Having multiple PD nodes is not supported when enable/disable TLS")).
 				WithProperty(tui.SuggestionFromString("Please `scale-in` PD nodes to one and try again."))
 		}
 	}
@@ -145,7 +145,7 @@ func checkTLSEnv(topo spec.Topology, clusterName, version string, skipConfirm bo
 	if !skipConfirm {
 		return tui.PromptForConfirmOrAbortError(
 			fmt.Sprintf("Enable/Disable TLS will %s the cluster `%s`\nDo you want to continue? [y/N]:",
-				color.HiYellowString("restart"),
+				color.HiYellowString("stop and restart"),
 				color.HiYellowString(clusterName),
 			))
 	}
