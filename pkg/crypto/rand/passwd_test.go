@@ -20,7 +20,7 @@ import (
 func TestPasswd(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		l := Intn(64)
-		if l < 8 { // make suer it's greater than 8
+		if l < 8 { // make sure it's greater than 8
 			l += 8
 		}
 		t.Logf("generating random password of length %d", l)

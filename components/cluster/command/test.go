@@ -15,7 +15,6 @@ package command
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 
@@ -70,13 +69,6 @@ func newTestCmd() *cobra.Command {
 	}
 
 	return cmd
-}
-
-func createDB(endpoint string) (db *sql.DB, err error) {
-	dsn := fmt.Sprintf("root:@tcp(%s)/?charset=utf8mb4,utf8&multiStatements=true", endpoint)
-	db, err = sql.Open("mysql", dsn)
-
-	return
 }
 
 // To check if test.ti_cluster has data
