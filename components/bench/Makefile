@@ -91,7 +91,7 @@ run-tests: unit-test
 unit-test:
 	@# Target: run the code coverage test phase
 	mkdir -p ../../cover
-	TIUP_HOME=$(shell pwd)/../../tests/tiup $(GOTEST) ./... -covermode=count -coverprofile ../../cover/cov.unit-test.out
+	TIUP_HOME=$(shell pwd)/../../tests/tiup $(GOTEST) ./... -covermode=count -coverprofile ../../cover/cov.unit-test.bench.out
 
 race: failpoint-enable
 	@# Target: run race check with failpoint enabled
