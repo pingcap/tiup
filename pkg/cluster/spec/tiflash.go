@@ -370,7 +370,7 @@ func checkTiFlashStorageConfigWithVersion(clusterVersion string, config map[stri
 }
 
 // InitTiFlashConfig initializes TiFlash config file with the configurations in server_configs
-func (i *TiFlashInstance) initTiFlashConfig(cfg *scripts.TiFlashScript, clusterVersion string, src map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
+func (i *TiFlashInstance) initTiFlashConfig(ctx context.Context, cfg *scripts.TiFlashScript, clusterVersion string, src map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
 	var (
 		pathConfig            string
 		isStorageDirsDefined  bool
@@ -416,26 +416,15 @@ func (i *TiFlashInstance) initTiFlashConfig(cfg *scripts.TiFlashScript, clusterV
 
 	spec := i.InstanceSpec.(*TiFlashSpec)
 	port := "http_port"
-	// set TLS configs
 	enableTLS := i.topo.(*Specification).GlobalOptions.TLSEnabled
+
 	if enableTLS {
 		port = "https_port"
-		if spec.Config == nil {
-			spec.Config = make(map[string]interface{})
-		}
-		spec.Config["security.ca_path"] = fmt.Sprintf(
-			"%s/tls/%s",
-			paths.Deploy,
-			TLSCACert,
-		)
-		spec.Config["security.cert_path"] = fmt.Sprintf(
-			"%s/tls/%s.crt",
-			paths.Deploy,
-			i.Role())
-		spec.Config["security.key_path"] = fmt.Sprintf(
-			"%s/tls/%s.pem",
-			paths.Deploy,
-			i.Role())
+	}
+	// set TLS configs
+	spec.Config, err = i.setTLSConfig(ctx, enableTLS, spec.Config, paths)
+	if err != nil {
+		return nil, err
 	}
 
 	topo := Specification{}
@@ -504,7 +493,7 @@ func (i *TiFlashInstance) mergeTiFlashInstanceConfig(clusterVersion string, glob
 }
 
 // InitTiFlashLearnerConfig initializes TiFlash learner config file
-func (i *TiFlashInstance) InitTiFlashLearnerConfig(cfg *scripts.TiFlashScript, clusterVersion string, src map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
+func (i *TiFlashInstance) InitTiFlashLearnerConfig(ctx context.Context, cfg *scripts.TiFlashScript, clusterVersion string, src map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
 	topo := Specification{}
 	var statusAddr string
 
@@ -541,27 +530,87 @@ server_configs:
 	enableTLS := i.topo.(*Specification).GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(*TiFlashSpec)
 	// set TLS configs
-	if enableTLS {
-		if spec.Config == nil {
-			spec.Config = make(map[string]interface{})
-		}
-		spec.Config["security.ca-path"] = fmt.Sprintf(
-			"%s/tls/%s",
-			paths.Deploy,
-			TLSCACert,
-		)
-		spec.Config["security.cert-path"] = fmt.Sprintf(
-			"%s/tls/%s.crt",
-			paths.Deploy,
-			i.Role())
-		spec.Config["security.key-path"] = fmt.Sprintf(
-			"%s/tls/%s.pem",
-			paths.Deploy,
-			i.Role())
+	spec.Config, err = i.setTLSConfigWithTiFlashLearner(ctx, enableTLS, spec.Config, paths)
+	if err != nil {
+		return nil, err
 	}
 
 	conf := MergeConfig(topo.ServerConfigs.TiFlashLearner, spec.Config, src)
 	return conf, nil
+}
+
+// setTLSConfigWithTiFlashLearner set TLS Config to support enable/disable TLS
+func (i *TiFlashInstance) setTLSConfigWithTiFlashLearner(ctx context.Context, enableTLS bool, configs map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
+	if enableTLS {
+		if configs == nil {
+			configs = make(map[string]interface{})
+		}
+		configs["security.ca-path"] = fmt.Sprintf(
+			"%s/tls/%s",
+			paths.Deploy,
+			TLSCACert,
+		)
+		configs["security.cert-path"] = fmt.Sprintf(
+			"%s/tls/%s.crt",
+			paths.Deploy,
+			i.Role())
+		configs["security.key-path"] = fmt.Sprintf(
+			"%s/tls/%s.pem",
+			paths.Deploy,
+			i.Role())
+	} else {
+		// drainer tls config list
+		tlsConfigs := []string{
+			"security.ca-path",
+			"security.cert-path",
+			"security.key-path",
+		}
+		// delete TLS configs
+		if configs != nil {
+			for _, config := range tlsConfigs {
+				delete(configs, config)
+			}
+		}
+	}
+
+	return configs, nil
+}
+
+// setTLSConfig set TLS Config to support enable/disable TLS
+func (i *TiFlashInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
+	if enableTLS {
+		if configs == nil {
+			configs = make(map[string]interface{})
+		}
+		configs["security.ca_path"] = fmt.Sprintf(
+			"%s/tls/%s",
+			paths.Deploy,
+			TLSCACert,
+		)
+		configs["security.cert_path"] = fmt.Sprintf(
+			"%s/tls/%s.crt",
+			paths.Deploy,
+			i.Role())
+		configs["security.key_path"] = fmt.Sprintf(
+			"%s/tls/%s.pem",
+			paths.Deploy,
+			i.Role())
+	} else {
+		// drainer tls config list
+		tlsConfigs := []string{
+			"security.ca_path",
+			"security.cert_path",
+			"security.key_path",
+		}
+		// delete TLS configs
+		if configs != nil {
+			for _, config := range tlsConfigs {
+				delete(configs, config)
+			}
+		}
+	}
+
+	return configs, nil
 }
 
 // InitConfig implement Instance interface
@@ -619,7 +668,7 @@ func (i *TiFlashInstance) InitConfig(
 		return err
 	}
 
-	conf, err := i.InitTiFlashLearnerConfig(cfg, clusterVersion, topo.ServerConfigs.TiFlashLearner, paths)
+	conf, err := i.InitTiFlashLearnerConfig(ctx, cfg, clusterVersion, topo.ServerConfigs.TiFlashLearner, paths)
 	if err != nil {
 		return err
 	}
@@ -652,7 +701,7 @@ func (i *TiFlashInstance) InitConfig(
 	}
 
 	// Init the configuration using cfg and server_configs
-	if conf, err = i.initTiFlashConfig(cfg, clusterVersion, topo.ServerConfigs.TiFlash, paths); err != nil {
+	if conf, err = i.initTiFlashConfig(ctx, cfg, clusterVersion, topo.ServerConfigs.TiFlash, paths); err != nil {
 		return err
 	}
 

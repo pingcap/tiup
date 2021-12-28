@@ -92,7 +92,8 @@ func (m *Manager) ScaleIn(
 	base := metadata.GetBaseMeta()
 
 	// Regenerate configuration
-	regenConfigTasks, hasImported := buildRegenConfigTasks(m, name, topo, base, gOpt, nodes, true)
+	gOpt.IgnoreConfigCheck = true
+	regenConfigTasks, hasImported := buildInitConfigTasks(m, name, topo, base, gOpt, nodes)
 
 	// handle dir scheme changes
 	if hasImported {
@@ -115,7 +116,7 @@ func (m *Manager) ScaleIn(
 
 	t := b.
 		ParallelStep("+ Refresh instance configs", force, regenConfigTasks...).
-		Parallel(force, buildReloadPromTasks(metadata.GetTopology(), m.logger, gOpt, nodes...)...).
+		ParallelStep("+ Reloda prometheus", gOpt.Force, buildReloadPromTasks(metadata.GetTopology(), m.logger, gOpt, nodes...)...).
 		Build()
 
 	ctx := ctxt.New(

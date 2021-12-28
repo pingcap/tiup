@@ -337,7 +337,7 @@ func DestroyComponent(ctx context.Context, instances []spec.Instance, cls spec.T
 			retainDataNodes.Exist(ins.ID()) || retainDataNodes.Exist(ins.GetHost())
 
 		e := ctxt.GetInner(ctx).Get(ins.GetHost())
-		logger.Infof("Destroying instance %s", ins.GetHost())
+		logger.Infof("\tDestroying instance %s", ins.GetHost())
 
 		var dataDirs []string
 		if len(ins.DataDir()) > 0 {
@@ -377,7 +377,7 @@ func DestroyComponent(ctx context.Context, instances []spec.Instance, cls spec.T
 				delPaths.Insert(filepath.Join(deployDir, "bin"))
 				delPaths.Insert(filepath.Join(deployDir, "scripts"))
 				if cls.BaseTopo().GlobalOptions.TLSEnabled {
-					delPaths.Insert(filepath.Join(deployDir, "tls"))
+					delPaths.Insert(filepath.Join(deployDir, spec.TLSCertKeyDir))
 				}
 				// only delete path if it is not used by any other instance in the cluster
 				if strings.HasPrefix(logDir, deployDir) && cls.CountDir(ins.GetHost(), logDir) == 1 {

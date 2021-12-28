@@ -15,6 +15,7 @@ package spec
 
 import (
 	"bytes"
+	"context"
 	"strings"
 	"testing"
 
@@ -585,6 +586,7 @@ pd_servers:
 }
 
 func (s *metaSuiteTopo) TestTiFlashStorageSection(c *C) {
+	ctx := context.Background()
 	spec := &Specification{}
 	err := yaml.Unmarshal([]byte(`
 tiflash_servers:
@@ -605,7 +607,7 @@ tiflash_servers:
 		// This should be the same with tiflash_server instance's "data_dir"
 		dataDir := "/hdd0/tiflash,/hdd1/tiflash"
 		cfg := scripts.NewTiFlashScript(ins.GetHost(), "", dataDir, "", "", "")
-		conf, err := ins.(*TiFlashInstance).initTiFlashConfig(cfg, "v4.0.8", spec.ServerConfigs.TiFlash, meta.DirPaths{})
+		conf, err := ins.(*TiFlashInstance).initTiFlashConfig(ctx, cfg, "v4.0.8", spec.ServerConfigs.TiFlash, meta.DirPaths{})
 		c.Assert(err, IsNil)
 
 		path, ok := conf["path"]
@@ -617,7 +619,7 @@ tiflash_servers:
 		ins := instances[0].(*TiFlashInstance)
 		dataDir := "/ssd0/tiflash"
 		cfg := scripts.NewTiFlashScript(ins.GetHost(), "", dataDir, "", "", "")
-		conf, err := ins.initTiFlashConfig(cfg, ver, spec.ServerConfigs.TiFlash, meta.DirPaths{})
+		conf, err := ins.initTiFlashConfig(ctx, cfg, ver, spec.ServerConfigs.TiFlash, meta.DirPaths{})
 		c.Assert(err, IsNil)
 
 		_, ok := conf["path"]
@@ -768,6 +770,8 @@ tiflash_servers:
 `), spec)
 	c.Assert(err, IsNil)
 
+	ctx := context.Background()
+
 	flashComp := FindComponent(spec, ComponentTiFlash)
 	instances := flashComp.Instances()
 	c.Assert(len(instances), Equals, 1)
@@ -777,7 +781,7 @@ tiflash_servers:
 		ins := instances[0].(*TiFlashInstance)
 		dataDir := "/ssd0/tiflash"
 		cfg := scripts.NewTiFlashScript(ins.GetHost(), "", dataDir, "", "", "")
-		conf, err := ins.initTiFlashConfig(cfg, ver, spec.ServerConfigs.TiFlash, meta.DirPaths{})
+		conf, err := ins.initTiFlashConfig(ctx, cfg, ver, spec.ServerConfigs.TiFlash, meta.DirPaths{})
 		c.Assert(err, IsNil)
 
 		// We need an empty string for 'users.default.password' for backward compatibility. Or the TiFlash process will fail to start with older versions
@@ -800,7 +804,7 @@ tiflash_servers:
 		ins := instances[0].(*TiFlashInstance)
 		dataDir := "/ssd0/tiflash"
 		cfg := scripts.NewTiFlashScript(ins.GetHost(), "", dataDir, "", "", "")
-		conf, err := ins.initTiFlashConfig(cfg, ver, spec.ServerConfigs.TiFlash, meta.DirPaths{})
+		conf, err := ins.initTiFlashConfig(ctx, cfg, ver, spec.ServerConfigs.TiFlash, meta.DirPaths{})
 		c.Assert(err, IsNil)
 
 		// Those deprecated settings are ignored in newer versions

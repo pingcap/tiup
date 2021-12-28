@@ -55,7 +55,6 @@ func (m *Manager) CleanCluster(name string, gOpt operator.Options, cleanOpt oper
 	if err != nil {
 		return err
 	}
-
 	// calculate file paths to be deleted before the prompt
 	delFileMap := getCleanupFiles(topo,
 		cleanOpt.CleanupData, cleanOpt.CleanupLog, false, cleanOpt.CleanupAuditLog, cleanOpt.RetainDataRoles, cleanOpt.RetainDataNodes)
@@ -153,6 +152,7 @@ type cleanupFiles struct {
 	cleanupAuditLog bool     // whether to clean up the tidb server audit log
 	retainDataRoles []string // roles that don't clean up
 	retainDataNodes []string // roles that don't clean up
+	ansibleImport   bool     // cluster is ansible deploy
 	delFileMap      map[string]set.StringSet
 }
 
@@ -236,6 +236,13 @@ func (c *cleanupFiles) instanceCleanupFiles(topo spec.Topology) {
 				deployDir := spec.Abs(topo.BaseTopo().GlobalOptions.User, ins.DeployDir())
 				tlsDir := filepath.Join(deployDir, spec.TLSCertKeyDir)
 				tlsPath.Insert(tlsDir)
+
+				// ansible deploy
+				if ins.IsImported() {
+					ansibleTLSDir := filepath.Join(deployDir, spec.TLSCertKeyDirWithAnsible)
+					tlsPath.Insert(ansibleTLSDir)
+					c.ansibleImport = true
+				}
 			}
 
 			if c.delFileMap[ins.GetHost()] == nil {
@@ -293,6 +300,11 @@ func (c *cleanupFiles) monitorCleanupFiles(topo spec.Topology) {
 		if c.cleanupTLS && !topo.BaseTopo().GlobalOptions.TLSEnabled {
 			tlsDir := filepath.Join(deployDir, spec.TLSCertKeyDir)
 			tlsPath.Insert(tlsDir)
+			// ansible deploy
+			if c.ansibleImport {
+				ansibleTLSDir := filepath.Join(deployDir, spec.TLSCertKeyDirWithAnsible)
+				tlsPath.Insert(ansibleTLSDir)
+			}
 		}
 
 		if c.delFileMap[host] == nil {
