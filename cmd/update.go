@@ -119,7 +119,7 @@ func checkTiUPBinary(env *environment.Environment) error {
 
 	if utils.IsNotExist(tiUPHomePath) || tiUPHomePath != realTiUPPath {
 		fmt.Printf("Tiup install directory is: %s\n", filepath.Dir(realTiUPPath))
-		return fmt.Errorf("If you used some external package manager to install TiUP (e.g., brew), try upgrade with that.")
+		return fmt.Errorf("If you used some external package manager to install TiUP (e.g., brew), try upgrade with that")
 	}
 
 	return nil
