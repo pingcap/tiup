@@ -47,6 +47,9 @@ worker_servers:
     # # Config is used to overwrite the `server_configs.dm-worker` values
     config:
       log-level: info
+      # keepalive-ttl: 60
+      # relay-keepalive-ttl: 1800 # since v2.0.2
+      # relay-dir: "" # since v5.4.0
   - host: 10.0.1.19
 
 monitoring_servers:
