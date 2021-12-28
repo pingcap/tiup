@@ -102,6 +102,7 @@ type Instance interface {
 	Arch() string
 	IsPatched() bool
 	SetPatched(bool)
+	setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error)
 }
 
 // PortStarted wait until a port is being listened
@@ -190,7 +191,18 @@ func (i *BaseInstance) InitConfig(ctx context.Context, e ctxt.Executor, opt Glob
 		return errors.Annotatef(err, "execute: %s", cmd)
 	}
 
+	// doesn't work
+	if _, err := i.setTLSConfig(ctx, false, nil, paths); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+// setTLSConfig set TLS Config to support enable/disable TLS
+// baseInstance no need to configure TLS
+func (i *BaseInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
+	return nil, nil
 }
 
 // TransferLocalConfigFile scp local config file to remote
@@ -328,6 +340,11 @@ func (i *BaseInstance) GetSSHPort() int {
 // DeployDir implements Instance interface
 func (i *BaseInstance) DeployDir() string {
 	return reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("DeployDir").String()
+}
+
+// TLSDir implements Instance interface
+func (i *BaseInstance) TLSDir() string {
+	return filepath.Join(i.DeployDir())
 }
 
 // DataDir implements Instance interface

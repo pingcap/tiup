@@ -26,7 +26,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/set"
+
 	"github.com/pingcap/tiup/pkg/tui"
 )
 
@@ -73,25 +73,20 @@ func (m *Manager) Reload(name string, gOpt operator.Options, skipRestart, skipCo
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
 
-	uniqueHosts := make(map[string]hostInfo) // host -> ssh-port, os, arch
-	noAgentHosts := set.NewStringSet()
-	topo.IterInstance(func(inst spec.Instance) {
-		// add the instance to ignore list if it marks itself as ignore_exporter
-		if inst.IgnoreMonitorAgent() {
-			noAgentHosts.Insert(inst.GetHost())
-		}
+	// monitor
+	uniqueHosts, noAgentHosts := getMonitorHosts(topo)
 
-		if _, found := uniqueHosts[inst.GetHost()]; !found {
-			uniqueHosts[inst.GetHost()] = hostInfo{
-				ssh:  inst.GetSSHPort(),
-				os:   inst.OS(),
-				arch: inst.Arch(),
-			}
-		}
-	})
+	// init config
+	refreshConfigTasks, hasImported := buildInitConfigTasks(m, name, topo, base, gOpt, nil)
 
-	refreshConfigTasks, hasImported := buildRegenConfigTasks(m, name, topo, base, gOpt, nil, gOpt.IgnoreConfigCheck)
-	monitorConfigTasks := buildRefreshMonitoredConfigTasks(
+	// handle dir scheme changes
+	if hasImported {
+		if err := spec.HandleImportPathMigration(name); err != nil {
+			return err
+		}
+	}
+
+	monitorConfigTasks := buildInitMonitoredConfigTasks(
 		m.specManager,
 		name,
 		uniqueHosts,
@@ -104,13 +99,6 @@ func (m *Manager) Reload(name string, gOpt operator.Options, skipRestart, skipCo
 		gOpt,
 		sshProxyProps,
 	)
-
-	// handle dir scheme changes
-	if hasImported {
-		if err := spec.HandleImportPathMigration(name); err != nil {
-			return err
-		}
-	}
 
 	b, err := m.sshTaskBuilder(name, topo, base.User, gOpt)
 	if err != nil {
@@ -135,7 +123,7 @@ func (m *Manager) Reload(name string, gOpt operator.Options, skipRestart, skipCo
 		if err != nil {
 			return err
 		}
-		b.Func("UpgradeCluster", func(ctx context.Context) error {
+		b.Func("Upgrade Cluster", func(ctx context.Context) error {
 			return operator.Upgrade(ctx, topo, gOpt, tlsCfg)
 		})
 	}
