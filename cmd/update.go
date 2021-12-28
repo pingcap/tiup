@@ -17,9 +17,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
-	"github.com/fatih/color"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
@@ -121,14 +119,7 @@ func checkTiUPBinary(env *environment.Environment) error {
 
 	if utils.IsNotExist(tiUPHomePath) || tiUPHomePath != realTiUPPath {
 		fmt.Printf("Tiup install directory is: %s\n", filepath.Dir(realTiUPPath))
-		if strings.Contains(strings.ToLower(realTiUPPath), "homebrew") {
-			fmt.Printf("Maybe you used `%s` to install TiUP, try to use `%s` to upgrade.\n",
-				color.HiYellowString("brew install pingcap/brew/tiup"),
-				color.HiYellowString("brew upgrade pingcap/brew/tiup"),
-			)
-		}
-
-		return fmt.Errorf("failed to upgrade TiUP, please use the install method to upgrade")
+		return fmt.Errorf("If you used some external package manager to install TiUP (e.g., brew), try upgrade with that.")
 	}
 
 	return nil
