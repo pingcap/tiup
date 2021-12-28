@@ -16,6 +16,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/utils"
@@ -47,6 +48,10 @@ latest version. All other flags will be ignored if the flag --self is given.
 
 			env := environment.GlobalEnv()
 			if self {
+				if err := checkTiUPBinary(env); err != nil {
+					return err
+				}
+
 				originFile := env.LocalPath("bin", "tiup")
 				renameFile := env.LocalPath("bin", "tiup.tmp")
 				if err := os.Rename(originFile, renameFile); err != nil {
@@ -99,4 +104,23 @@ func updateComponents(env *environment.Environment, components []string, nightly
 	}
 
 	return env.UpdateComponents(components, nightly, force)
+}
+
+// checkTiUPBinary check if TiUP exists in TiUP_HOME
+func checkTiUPBinary(env *environment.Environment) error {
+	tiUPHomePath, _ := filepath.Abs(env.LocalPath("bin", "tiup"))
+
+	realTiUPPath, err := os.Executable()
+	if err != nil {
+		// Ignore the problem that the execution directory cannot be obtained
+		return nil
+	}
+	realTiUPPath, _ = filepath.Abs(realTiUPPath)
+
+	if utils.IsNotExist(tiUPHomePath) || tiUPHomePath != realTiUPPath {
+		fmt.Printf("Tiup install directory is: %s\n", filepath.Dir(realTiUPPath))
+		return fmt.Errorf("If you used some external package manager to install TiUP (e.g., brew), try upgrade with that")
+	}
+
+	return nil
 }
