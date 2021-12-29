@@ -49,6 +49,7 @@ require (
 	github.com/r3labs/diff/v2 v2.14.0
 	github.com/relex/aini v1.5.0
 	github.com/sergi/go-diff v1.2.0
+	github.com/sethvargo/go-password v0.2.0
 	github.com/shirou/gopsutil v3.21.8+incompatible
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/spf13/cobra v1.2.1
