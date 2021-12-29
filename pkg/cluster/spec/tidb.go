@@ -140,7 +140,7 @@ func (i *TiDBInstance) InitConfig(
 	spec := i.InstanceSpec.(*TiDBSpec)
 	// check if the tidb version has --initialize-insecure support
 	hasSecbootSupport := false
-	if vc := semver.Compare(clusterVersion, "5.3.0"); vc >= 0 {
+	if vc := semver.Compare(clusterVersion, "v5.3.0"); vc >= 0 {
 		hasSecbootSupport = true
 	}
 	cfg := scripts.
