@@ -401,6 +401,13 @@ func (s *Specification) AdjustByVersion(clusterVersion string) {
 			server.DataDir = ""
 		}
 	}
+	if semver.Compare(clusterVersion, "v5.4.0") >= 0 {
+		for _, m := range s.Monitors {
+			if m.NgPort == 0 {
+				m.NgPort = 12020
+			}
+		}
+	}
 }
 
 // GetDashboardAddress returns the cluster's dashboard addr

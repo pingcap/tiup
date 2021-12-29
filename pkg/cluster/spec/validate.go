@@ -569,8 +569,8 @@ func (s *Specification) portInvalidDetect() error {
 			if strings.HasSuffix(compSpec.Type().Field(i).Name, "Port") {
 				port := int(compSpec.Field(i).Int())
 				portTags := strings.Split(compSpec.Type().Field(i).Tag.Get("yaml"), ",")
-				// when use not specify ng_port, its default value is 0
-				if port == 0 && len(portTags) > 1 && portTags[1] == "omitempty" {
+				// when port has omitempty tag, it means it is a optional port whice 0 means default and -1 means diable
+				if len(portTags) > 1 && portTags[1] == "omitempty" {
 					continue
 				}
 				if port < 1 || port > 65535 {
