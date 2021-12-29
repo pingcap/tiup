@@ -24,15 +24,16 @@ import (
 
 // TiDBScript represent the data to generate TiDB config
 type TiDBScript struct {
-	IP            string
-	ListenHost    string
-	AdvertiseAddr string
-	Port          int
-	StatusPort    int
-	DeployDir     string
-	LogDir        string
-	NumaNode      string
-	Endpoints     []*PDScript
+	IP             string
+	ListenHost     string
+	AdvertiseAddr  string
+	Port           int
+	StatusPort     int
+	DeployDir      string
+	LogDir         string
+	NumaNode       string
+	SupportSecboot bool
+	Endpoints      []*PDScript
 }
 
 // NewTiDBScript returns a TiDBScript with given arguments
@@ -76,6 +77,12 @@ func (c *TiDBScript) WithStatusPort(port int) *TiDBScript {
 // WithNumaNode set NumaNode field of TiDBScript
 func (c *TiDBScript) WithNumaNode(numa string) *TiDBScript {
 	c.NumaNode = numa
+	return c
+}
+
+// SupportSecureBootstrap set SupportSecboot field of TiDBScript
+func (c *TiDBScript) SupportSecureBootstrap(s bool) *TiDBScript {
+	c.SupportSecboot = s
 	return c
 }
 
