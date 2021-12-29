@@ -138,11 +138,6 @@ func (i *TiDBInstance) InitConfig(
 
 	enableTLS := topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(*TiDBSpec)
-	// check if the tidb version has --initialize-insecure support
-	hasSecbootSupport := false
-	if vc := semver.Compare(clusterVersion, "v5.3.0"); vc >= 0 {
-		hasSecbootSupport = true
-	}
 	cfg := scripts.
 		NewTiDBScript(i.GetHost(), paths.Deploy, paths.Log).
 		WithPort(spec.Port).
@@ -151,7 +146,7 @@ func (i *TiDBInstance) InitConfig(
 		AppendEndpoints(topo.Endpoints(deployUser)...).
 		WithListenHost(i.GetListenHost()).
 		WithAdvertiseAddr(spec.Host).
-		SupportSecureBootstrap(hasSecbootSupport)
+		SupportSecureBootstrap(semver.Compare(clusterVersion, "v5.3.0") >= 0)
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tidb_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err

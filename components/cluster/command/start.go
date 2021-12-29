@@ -65,7 +65,8 @@ func newStartCmd() *cobra.Command {
 					log.Errorf("failed to set root password of TiDB database to '%s'", pwd)
 					return err
 				}
-				log.Warnf("The root password of TiDB database has been changed to '%s'.", color.HiYellowString(pwd))
+				log.Warnf("The root password of TiDB database has been changed.")
+				fmt.Printf("The new password is: '%s'.", color.HiYellowString(pwd)) // use fmt to avoid printing to audit log
 				log.Warnf("Copy and record it to somewhere safe, %s, and will not be stored.", color.HiRedString("it is only displayed once"))
 				log.Warnf("The generated password %s.", color.HiRedString("could NOT be get and shown again"))
 			}
