@@ -73,7 +73,7 @@ func newStartCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVar(&initPasswd, "init-passwd", false, "Initialize a secure root password for the database")
+	cmd.Flags().BoolVar(&initPasswd, "init", false, "Initialize a secure root password for the database")
 	cmd.Flags().StringSliceVarP(&gOpt.Roles, "role", "R", nil, "Only start specified roles")
 	cmd.Flags().StringSliceVarP(&gOpt.Nodes, "node", "N", nil, "Only start specified nodes")
 
@@ -88,7 +88,7 @@ func initPassword(clusterName string) (string, error) {
 	tcpProxy := proxy.GetTCPProxy()
 
 	// generate password
-	pwd, err := rand.Password(16)
+	pwd, err := rand.Password(18)
 	if err != nil {
 		return pwd, err
 	}

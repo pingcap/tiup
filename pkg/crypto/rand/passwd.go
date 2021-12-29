@@ -47,7 +47,7 @@ func Password(length int) (string, error) {
 	numDigits := length / 3
 	numSymbols := length / 4
 	// allow repeat if the length is longer than the shortest charset
-	allowRepeat := (length >= 10)
+	allowRepeat := (numDigits > len(digits) || numSymbols > len(symbols))
 
 	return g.Generate(length, numDigits, numSymbols, false, allowRepeat)
 }
