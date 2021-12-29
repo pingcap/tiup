@@ -51,11 +51,6 @@ func (m *Manager) ScaleOut(
 		return err
 	}
 
-	if !opt.Stage2 {
-		m.logger.Infof(`It is recommended to check the scale-out topology before executing scale-out operations
-	'%s'`, color.YellowString("tiup cluster check %s %s --cluster", name, topoFile))
-	}
-
 	// check the scale out file lock is exist
 	err := checkScaleOutLock(m, name, opt, skipConfirm)
 	if err != nil {
