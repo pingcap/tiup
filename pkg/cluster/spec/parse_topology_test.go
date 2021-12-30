@@ -61,6 +61,16 @@ func (s *topoSuite) TestParseTopologyYaml(c *check.C) {
 	c.Assert(err, check.IsNil)
 }
 
+func (s *topoSuite) TestParseTopologyYamlIgnoreGlobal(c *check.C) {
+	file := filepath.Join("testdata", "topology_err.yaml")
+	topo := Specification{}
+	err := ParseTopologyYaml(file, &topo, true)
+	if topo.GlobalOptions.DeployDir == "/tidb/deploy" {
+		c.Error("Can not Ignore Global variables")
+	}
+	c.Assert(err, check.IsNil)
+}
+
 func (s *topoSuite) TestRelativePath(c *check.C) {
 	// test relative path
 	withTempFile(`
