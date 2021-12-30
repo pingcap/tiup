@@ -166,14 +166,7 @@ func (m *Manager) ScaleOut(
 			}
 		}
 
-		clusterList, err := m.specManager.GetAllClusters()
-		if err != nil {
-			return err
-		}
-		if err := spec.CheckClusterPortConflict(clusterList, name, mergedTopo); err != nil {
-			return err
-		}
-		if err := spec.CheckClusterDirConflict(clusterList, name, mergedTopo); err != nil {
+		if err := checkConflict(m, name, mergedTopo); err != nil {
 			return err
 		}
 	}
