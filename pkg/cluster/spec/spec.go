@@ -101,6 +101,7 @@ type (
 		Pump           map[string]interface{} `yaml:"pump"`
 		Drainer        map[string]interface{} `yaml:"drainer"`
 		CDC            map[string]interface{} `yaml:"cdc"`
+		Grafana        map[string]string      `yaml:"grafana"`
 	}
 
 	// Specification represents the specification of topology.yaml

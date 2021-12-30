@@ -17,6 +17,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -27,6 +28,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/template/config"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
+	"gopkg.in/ini.v1"
 )
 
 // GrafanaSpec represents the Grafana topology specification in topology.yaml
@@ -181,11 +183,16 @@ func (i *GrafanaInstance) InitConfig(
 		return err
 	}
 
+	userconfig := i.topo.(*Specification).ServerConfigs.Grafana
+	err := mergeAdditionalGrafanaConf(fp, userconfig)
+	if err != nil {
+		return err
+	}
+
 	dst = filepath.Join(paths.Deploy, "conf", "grafana.ini")
 	if err := e.Transfer(ctx, fp, dst, false, 0, false); err != nil {
 		return err
 	}
-
 	if err := i.installDashboards(ctx, e, paths.Deploy, clusterName, clusterVersion); err != nil {
 		return errors.Annotate(err, "install dashboards")
 	}
@@ -329,4 +336,24 @@ func (i *GrafanaInstance) ScaleConfig(
 	defer func() { i.topo = s }()
 	i.topo = topo.Merge(i.topo)
 	return i.InitConfig(ctx, e, clusterName, clusterVersion, deployUser, paths)
+}
+
+func mergeAdditionalGrafanaConf(source string, addition map[string]string) error {
+	bytes, err := os.ReadFile(source)
+	if err != nil {
+		return err
+	}
+	result, err := ini.Load(bytes)
+	if err != nil {
+		return err
+	}
+	for k, v := range addition {
+		// convert "log.file.level to [log.file] level"
+		for i := len(k) - 1; i >= 0; i-- {
+			if k[i] == '.' {
+				result.Section(k[:i]).Key(k[i+1:]).SetValue(v)
+			}
+		}
+	}
+	return result.SaveTo(source)
 }
