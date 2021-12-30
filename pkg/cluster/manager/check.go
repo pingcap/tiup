@@ -78,7 +78,7 @@ func (m *Manager) CheckCluster(clusterOrTopoName, scaleoutTopo string, opt Check
 			topo.MonitoredOptions = currTopo.MonitoredOptions
 			topo.ServerConfigs = currTopo.ServerConfigs
 
-			if err := spec.ParseTopologyYaml(scaleoutTopo, &topo); err != nil {
+			if err := spec.ParseTopologyYaml(scaleoutTopo, &topo, true); err != nil {
 				return err
 			}
 			spec.ExpandRelativeDir(&topo)
