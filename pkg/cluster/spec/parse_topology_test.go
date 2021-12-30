@@ -66,7 +66,7 @@ func (s *topoSuite) TestParseTopologyYamlIgnoreGlobal(c *check.C) {
 	topo := Specification{}
 	err := ParseTopologyYaml(file, &topo, true)
 	if topo.GlobalOptions.DeployDir == "/tidb/deploy" {
-		c.Error("Can not Ignore Global variables")
+		c.Error("Can not ignore global variables")
 	}
 	c.Assert(err, check.IsNil)
 }
