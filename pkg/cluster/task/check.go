@@ -36,6 +36,7 @@ var (
 	CheckTypePartitions   = "partitions"
 	CheckTypeFIO          = "fio"
 	CheckTypePermission   = "permission"
+	ChecktypeIsExist      = "exist"
 )
 
 // place the check utilities are stored
@@ -147,6 +148,13 @@ func (c *CheckSys) Execute(ctx context.Context) error {
 			return ErrNoExecutor
 		}
 		storeResults(ctx, c.host, operator.CheckDirPermission(ctx, e, c.topo.GlobalOptions.User, c.checkDir))
+	case ChecktypeIsExist:
+		e, ok := ctxt.GetInner(ctx).GetExecutor(c.host)
+		if !ok {
+			return ErrNoExecutor
+		}
+		// check partition mount options for data_dir
+		storeResults(ctx, c.host, operator.CheckDirIsExist(ctx, e, c.checkDir))
 	}
 
 	return nil
