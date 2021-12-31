@@ -162,9 +162,19 @@ func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Optio
 				}
 			}
 
+			// get nightly version
+			var componentVersion utils.Version
+			if clusterVersion == utils.NightlyVersionAlias {
+				componentVersion, _, err = environment.GlobalEnv().V1Repository().LatestNightlyVersion(inst.ComponentName())
+				if err != nil {
+					componentVersion = utils.Version(clusterVersion)
+				}
+			} else {
+				componentVersion = utils.Version(clusterVersion)
+			}
 			tb.InitConfig(
 				name,
-				clusterVersion,
+				string(componentVersion),
 				m.specManager,
 				inst,
 				base.User,
