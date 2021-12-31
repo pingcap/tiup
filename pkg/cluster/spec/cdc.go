@@ -164,7 +164,6 @@ func (i *CDCInstance) InitConfig(
 	instanceConfig := spec.Config
 
 	if semver.Compare(clusterVersion, "v4.0.13") == -1 {
-		fmt.Println(clusterVersion)
 		if len(globalConfig)+len(instanceConfig) > 0 {
 			return perrs.New("server_config is only supported with TiCDC version v4.0.13 or later")
 		}
