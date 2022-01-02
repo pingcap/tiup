@@ -246,14 +246,25 @@ func (b *Builder) BackupComponent(component, fromVer string, host, deployDir str
 func (b *Builder) InitConfig(clusterName, clusterVersion string, specManager *spec.SpecManager, inst spec.Instance, deployUser string, ignoreCheck bool, paths meta.DirPaths) *Builder {
 	// get nightly version
 	var componentVersion utils.Version
-	var err error
-	if clusterVersion == utils.NightlyVersionAlias {
-		componentVersion, _, err = environment.GlobalEnv().V1Repository().LatestNightlyVersion(inst.ComponentName())
-		if err != nil {
+	meta := specManager.NewMetadata()
+
+	//  full version
+	componentVersion = utils.Version(clusterVersion)
+	if err := specManager.Metadata(clusterName, meta); err == nil {
+		// get nightly version
+		if clusterVersion == utils.NightlyVersionAlias {
+			componentVersion, _, err = environment.GlobalEnv().V1Repository().LatestNightlyVersion(inst.ComponentName())
+			if err != nil {
+				componentVersion = utils.Version(clusterVersion)
+			}
+		} else {
 			componentVersion = utils.Version(clusterVersion)
 		}
-	} else {
-		componentVersion = utils.Version(clusterVersion)
+
+		// dm cluster does not require a full nightly version
+		if meta.GetTopology().Type() == spec.TopoTypeDM {
+			componentVersion = utils.Version(clusterVersion)
+		}
 	}
 
 	b.tasks = append(b.tasks, &InitConfig{
