@@ -146,11 +146,6 @@ func (i *GrafanaInstance) InitConfig(
 		return err
 	}
 
-	topo := reflect.ValueOf(i.topo)
-	if topo.Kind() == reflect.Ptr {
-		topo = topo.Elem()
-	}
-
 	// transfer run script
 	cfg := scripts.NewGrafanaScript(clusterName, paths.Deploy)
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_grafana_%s_%d.sh", i.GetHost(), i.GetPort()))
@@ -189,16 +184,12 @@ func (i *GrafanaInstance) InitConfig(
 		return err
 	}
 
-	userConfig := spec.Config
+	userConfig := i.topo.GetGrafanaConfig()
 	if userConfig == nil {
 		userConfig = make(map[string]string)
 	}
-	val := topo.FieldByName("ServerConfigs")
-	if (val != reflect.Value{}) {
-		globalConfig := val.Interface().(ServerConfigs).Grafana
-		for k, v := range globalConfig {
-			userConfig[k] = v
-		}
+	for k, v := range spec.Config {
+		userConfig[k] = v
 	}
 	err := mergeAdditionalGrafanaConf(fp, userConfig)
 	if err != nil {
@@ -228,7 +219,11 @@ func (i *GrafanaInstance) InitConfig(
 		return err
 	}
 
-	val = topo.FieldByName("Monitors")
+	topo := reflect.ValueOf(i.topo)
+	if topo.Kind() == reflect.Ptr {
+		topo = topo.Elem()
+	}
+	val := topo.FieldByName("Monitors")
 	if (val == reflect.Value{}) {
 		return errors.Errorf("field Monitors not found in topology: %v", topo)
 	}
