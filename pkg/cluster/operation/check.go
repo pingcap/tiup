@@ -202,6 +202,12 @@ func checkNTP(ntpInfo *insight.TimeStat) *CheckResult {
 		return result
 	}
 
+	if ntpInfo.Sync == "none" {
+		result.Err = fmt.Errorf("The NTPd daemon may be not start")
+		result.Warn = true
+		return result
+	}
+
 	// check if time offset greater than +- 500ms
 	if math.Abs(ntpInfo.Offset) >= 500 {
 		result.Err = fmt.Errorf("time offet %fms too high", ntpInfo.Offset)
