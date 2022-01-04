@@ -71,7 +71,7 @@ func (m *Manager) CheckCluster(clusterOrTopoName string, opt CheckOptions, gOpt 
 	} else { // check before cluster is deployed
 		topoFileName := clusterOrTopoName
 
-		if err := spec.ParseTopologyYaml(topoFileName, &topo); err != nil {
+		if err := spec.ParseTopologyYaml(topoFileName, &topo, true); err != nil {
 			return err
 		}
 		spec.ExpandRelativeDir(&topo)
