@@ -69,8 +69,8 @@ func ParseTopologyYaml(file string, out Topology, ignoreGlobal ...bool) error {
 		return err
 	}
 
+	// keep the global config in out
 	if len(ignoreGlobal) > 0 && ignoreGlobal[0] {
-		// // keep the global config in out
 		var newTopo map[string]interface{}
 		if err := yaml.Unmarshal(yamlFile, &newTopo); err != nil {
 			return err
