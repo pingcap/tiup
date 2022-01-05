@@ -77,8 +77,7 @@ tidy:
 clean:
 	@# Target: run the build cleanup steps
 	@rm -rf bin
-	@rm -rf cover
-	@rm -rf tests/*/{bin/*.test,logs,cover/*.out}
+	@rm -rf tests/*/{bin/*.test,logs}
 
 test: failpoint-enable run-tests failpoint-disable
 	@# Target: run tests with failpoint enabled
@@ -91,8 +90,8 @@ run-tests: unit-test
 # Run tests
 unit-test:
 	@# Target: run the code coverage test phase
-	mkdir -p cover
-	TIUP_HOME=$(shell pwd)/../../tests/tiup $(GOTEST) ./... -covermode=count -coverprofile ../../cover/cov.unit-test.out
+	mkdir -p ../../cover
+	TIUP_HOME=$(shell pwd)/../../tests/tiup $(GOTEST) ./... -covermode=count -coverprofile ../../cover/cov.unit-test.bench.out
 
 race: failpoint-enable
 	@# Target: run race check with failpoint enabled

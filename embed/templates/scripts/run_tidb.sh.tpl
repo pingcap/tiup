@@ -27,6 +27,9 @@ exec env GODEBUG=madvdontneed=1 bin/tidb-server \
     --host="{{.ListenHost}}" \
     --advertise-address="{{.AdvertiseAddr}}" \
     --store="tikv" \
+{{- if .SupportSecboot}}
+    --initialize-insecure \
+{{- end}}
     --path="{{template "PDList" .Endpoints}}" \
     --log-slow-query="{{.LogDir}}/tidb_slow_query.log" \
     --config=conf/tidb.toml \

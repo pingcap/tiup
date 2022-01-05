@@ -28,22 +28,34 @@ func newCheckCmd() *cobra.Command {
 		IdentityFile: path.Join(utils.UserHome(), ".ssh", "id_rsa"),
 	}
 	cmd := &cobra.Command{
-		Use:   "check <topology.yml | cluster-name>",
+		Use:   "check <topology.yml | cluster-name> [scale-out.yml]",
 		Short: "Perform preflight checks for the cluster.",
 		Long: `Perform preflight checks for the cluster. By default, it checks deploy servers
 before a cluster is deployed, the input is the topology.yaml for the cluster.
 If '--cluster' is set, it will perform checks for an existing cluster, the input
 is the cluster name. Some checks are ignore in this mode, such as port and dir
-conflict checks with other clusters`,
+conflict checks with other clusters
+If you want to check the scale-out topology, please use execute the following command
+'	check <cluster-name> <scale-out.yml> --cluster	'
+it will the new instances `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 1 {
+			if len(args) != 1 && len(args) != 2 {
 				return cmd.Help()
 			}
+			scaleOutTopo := ""
 
 			if opt.ExistCluster {
 				clusterReport.ID = scrubClusterName(args[0])
 			}
-			return cm.CheckCluster(args[0], opt, gOpt)
+
+			if len(args) == 2 {
+				if !opt.ExistCluster {
+					return cmd.Help()
+				}
+				scaleOutTopo = args[1]
+			}
+
+			return cm.CheckCluster(args[0], scaleOutTopo, opt, gOpt)
 		},
 	}
 
