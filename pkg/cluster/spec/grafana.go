@@ -359,6 +359,7 @@ func mergeAdditionalGrafanaConf(source string, addition map[string]string) error
 		for i := len(k) - 1; i >= 0; i-- {
 			if k[i] == '.' {
 				result.Section(k[:i]).Key(k[i+1:]).SetValue(v)
+				break
 			}
 		}
 	}
