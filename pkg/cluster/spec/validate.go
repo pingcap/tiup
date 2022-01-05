@@ -568,7 +568,7 @@ func (s *Specification) portInvalidDetect() error {
 		for i := 0; i < compSpec.NumField(); i++ {
 			if strings.HasSuffix(compSpec.Type().Field(i).Name, "Port") {
 				port := int(compSpec.Field(i).Int())
-				// for NgPort, 0 means default and -1 means diable
+				// for NgPort, 0 means default and -1 means disable
 				if compSpec.Type().Field(i).Name == "NgPort" && (port == -1 || port == 0) {
 					continue
 				}
