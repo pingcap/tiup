@@ -257,8 +257,6 @@ func (b *Builder) InitConfig(clusterName, clusterVersion string, specManager *sp
 			if err != nil {
 				componentVersion = utils.Version(clusterVersion)
 			}
-		} else {
-			componentVersion = utils.Version(clusterVersion)
 		}
 
 		// dm cluster does not require a full nightly version
