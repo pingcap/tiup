@@ -57,7 +57,7 @@ If `--full` is specified, the official image will be cloned intact.
 ### 3. Platform limitation
 
 If you only want to clone packages for a particular platform, you can use `-os` and `-arch` to qualify:
-- `tiup mirror <target-dir> ---os=linux`
+- `tiup mirror clone <target-dir> ---os=linux`
 - Just want to clone amd64 architecture: `tiup mirror <target-dir> --arch=amd64`
 - Just want to clone linux/amd64: `tiup mirror <target-dir> --os=linux --arch=amd64`
 
