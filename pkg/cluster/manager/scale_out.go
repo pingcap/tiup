@@ -88,7 +88,7 @@ func (m *Manager) ScaleOut(
 		// The no tispark master error is ignored, as if the tispark master is removed from the topology
 		// file for some reason (manual edit, for example), it is still possible to scale-out it to make
 		// the whole topology back to normal state.
-		if err := spec.ParseTopologyYaml(topoFile, newPart); err != nil &&
+		if err := spec.ParseTopologyYaml(topoFile, newPart, true); err != nil &&
 			!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
 			return err
 		}
@@ -166,14 +166,7 @@ func (m *Manager) ScaleOut(
 			}
 		}
 
-		clusterList, err := m.specManager.GetAllClusters()
-		if err != nil {
-			return err
-		}
-		if err := spec.CheckClusterPortConflict(clusterList, name, mergedTopo); err != nil {
-			return err
-		}
-		if err := spec.CheckClusterDirConflict(clusterList, name, mergedTopo); err != nil {
+		if err := checkConflict(m, name, mergedTopo); err != nil {
 			return err
 		}
 	}
