@@ -101,6 +101,7 @@ type (
 		Pump           map[string]interface{} `yaml:"pump"`
 		Drainer        map[string]interface{} `yaml:"drainer"`
 		CDC            map[string]interface{} `yaml:"cdc"`
+		Grafana        map[string]string      `yaml:"grafana"`
 	}
 
 	// Specification represents the specification of topology.yaml
@@ -153,6 +154,7 @@ type Topology interface {
 	TLSConfig(dir string) (*tls.Config, error)
 	Merge(that Topology) Topology
 	FillHostArch(hostArchmap map[string]string) error
+	GetGrafanaConfig() map[string]string
 
 	ScaleOutTopology
 }
@@ -862,4 +864,9 @@ func setHostArch(field reflect.Value, hostArch map[string]string) error {
 	}
 
 	return nil
+}
+
+// GetGrafanaConfig returns global grafana configurations
+func (s *Specification) GetGrafanaConfig() map[string]string {
+	return s.ServerConfigs.Grafana
 }
