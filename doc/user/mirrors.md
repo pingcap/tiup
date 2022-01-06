@@ -38,7 +38,7 @@ Global Flags:
 Use "tiup mirror [command] --help" for more information about a command.
 ```
 
-Its basic use is `tiup mirror <target-dir> [global-version] [flags]`, the target-dir is the directory in which the cloned data needs to be placed. global-version is used to quickly set a common version for all components.
+Its basic use is `tiup mirror clone <target-dir> [global-version] [flags]`, the target-dir is the directory in which the cloned data needs to be placed. global-version is used to quickly set a common version for all components.
 
 Then this order has very scary dozens of flags and even more later. But there is no need to be intimidated by the number of these flags, which are in fact of four types.
 
@@ -58,15 +58,15 @@ If `--full` is specified, the official image will be cloned intact.
 
 If you only want to clone packages for a particular platform, you can use `-os` and `-arch` to qualify:
 - `tiup mirror clone <target-dir> ---os=linux`
-- Just want to clone amd64 architecture: `tiup mirror <target-dir> --arch=amd64`
-- Just want to clone linux/amd64: `tiup mirror <target-dir> --os=linux --arch=amd64`
+- Just want to clone amd64 architecture: `tiup mirror clone <target-dir> --arch=amd64`
+- Just want to clone linux/amd64: `tiup mirror clone <target-dir> --os=linux --arch=amd64`
 
 ### 4. Component version limited
 
 If you want to clone only one version of a component and not all versions, use `--<component>=<version>` to qualify, for example "
-- Just want to clone the v4 version of tidb: `tiup mirror <target-dir> --tidb v4`
-- Just want to clone the v4 version of tidb, and all versions of tikv: `tiup mirror <target-dir> --tidb v4 --tikv all` 
-- Clone specific versions of all components that start a cluster: `tiup mirror <target-dir> v4.0.0-rc`
+- Just want to clone the v4 version of tidb: `tiup mirror clone <target-dir> --tidb v4`
+- Just want to clone the v4 version of tidb, and all versions of tikv: `tiup mirror clone <target-dir> --tidb v4 --tikv all` 
+- Clone specific versions of all components that start a cluster: `tiup mirror clone <target-dir> v4.0.0-rc`
 
 ## The real thing
 
@@ -99,7 +99,7 @@ export TIUP_MIRRORS=/path/to/mirror
 tiup cluster xxx
 ```
 
-`/path/to/mirror` is the location of <target-dir> in `tiup mirror <target-dir>`, or if in /tmp/package:
+`/path/to/mirror` is the location of <target-dir> in `tiup mirror clone <target-dir>`, or if in /tmp/package:
 ```bash
 export TIUP_MIRRORS=/tmp/package
 ```
