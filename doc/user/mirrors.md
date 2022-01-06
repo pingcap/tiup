@@ -1,10 +1,10 @@
 # Build a private mirror
 
-When building a private cloud, it is common to use an isolated network environment where the official mirror of TiUP is not accessible, so we provide a solution for building a private mirror, which is mainly implemented by the mirrors component, which can also be used for offline deployment.
+When building a private cloud, it is common to use an isolated network environment where the official mirror of TiUP is not accessible, so we provide a solution for building a private mirror, which is mainly implemented by the mirror component, which can also be used for offline deployment.
 
 ## Mirrors component introduction
 
-First, let's look at the `mirrors' help file.
+First, let's look at the `mirror' help file.
 
 ```bash
 $ tiup mirror --help
