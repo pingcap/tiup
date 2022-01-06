@@ -15,6 +15,7 @@ package spec
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/user"
 	"path"
@@ -66,4 +67,94 @@ func TestLocalDashboards(t *testing.T) {
 	for _, f := range fs {
 		assert.FileExists(t, path.Join(deployDir, "dashboards", f.Name()))
 	}
+}
+
+func TestMergeAdditionalGrafanaConf(t *testing.T) {
+	file, err := os.CreateTemp("", "tiup-cluster-spec-test")
+	if err != nil {
+		panic(fmt.Sprintf("create temp file: %s", err))
+	}
+	defer os.Remove(file.Name())
+
+	_, err = file.WriteString(`#################################### SMTP / Emailing ##########################
+[smtp]
+;enabled = false
+;host = localhost:25
+;user =
+;password =
+;cert_file =
+;key_file =
+;skip_verify = false
+;from_address = admin@grafana.localhost
+
+[emails]
+;welcome_email_on_sign_up = false
+
+#################################### Logging ##########################
+[log]
+# Either "console", "file", "syslog". Default is console and  file
+# Use space to separate multiple modes, e.g. "console file"
+mode = file
+
+# Either "trace", "debug", "info", "warn", "error", "critical", default is "info"
+;level = info
+# For "console" mode only
+[log.console]
+;level =
+
+# log line format, valid options are text, console and json
+;format = console
+
+# For "file" mode only
+[log.file]
+level = info
+`)
+	assert.Nil(t, err)
+
+	expected := `# ################################### SMTP / Emailing ##########################
+[smtp]
+enabled = true
+
+; enabled = false
+; host = localhost:25
+; user =
+; password =
+; cert_file =
+; key_file =
+; skip_verify = false
+; from_address = admin@grafana.localhost
+[emails]
+
+; welcome_email_on_sign_up = false
+# ################################### Logging ##########################
+[log]
+# Either "console", "file", "syslog". Default is console and  file
+# Use space to separate multiple modes, e.g. "console file"
+mode = file
+
+# Either "trace", "debug", "info", "warn", "error", "critical", default is "info"
+; level = info
+# For "console" mode only
+[log.console]
+
+; level =
+# log line format, valid options are text, console and json
+; format = console
+# For "file" mode only
+[log.file]
+level = warning
+
+`
+
+	addition := map[string]string{
+		"log.file.level": "warning",
+		"smtp.enabled":   "true",
+	}
+
+	err = mergeAdditionalGrafanaConf(file.Name(), addition)
+	assert.Nil(t, err)
+	result, err := os.ReadFile(file.Name())
+	assert.Nil(t, err)
+
+	assert.Equal(t, expected, string(result))
 }

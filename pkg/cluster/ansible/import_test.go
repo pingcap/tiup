@@ -129,6 +129,7 @@ server_configs:
     pump: {}
     drainer: {}
     cdc: {}
+    grafana: {}
 tidb_servers: []
 tikv_servers: []
 tiflash_servers: []

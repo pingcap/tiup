@@ -53,6 +53,11 @@ func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Optio
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
 
+	// Adjust topo by new version
+	if clusterTopo, ok := topo.(*spec.Specification); ok {
+		clusterTopo.AdjustByVersion(clusterVersion)
+	}
+
 	var (
 		downloadCompTasks []task.Task // tasks which are used to download components
 		copyCompTasks     []task.Task // tasks which are used to copy components to remote host

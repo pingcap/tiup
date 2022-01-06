@@ -101,6 +101,7 @@ type (
 		Pump           map[string]interface{} `yaml:"pump"`
 		Drainer        map[string]interface{} `yaml:"drainer"`
 		CDC            map[string]interface{} `yaml:"cdc"`
+		Grafana        map[string]string      `yaml:"grafana"`
 	}
 
 	// Specification represents the specification of topology.yaml
@@ -153,6 +154,7 @@ type Topology interface {
 	TLSConfig(dir string) (*tls.Config, error)
 	Merge(that Topology) Topology
 	FillHostArch(hostArchmap map[string]string) error
+	GetGrafanaConfig() map[string]string
 
 	ScaleOutTopology
 }
@@ -402,6 +404,13 @@ func (s *Specification) AdjustByVersion(clusterVersion string) {
 	if semver.Compare(clusterVersion, "v4.0.13") == -1 || clusterVersion == "v5.0.0-rc" {
 		for _, server := range s.CDCServers {
 			server.DataDir = ""
+		}
+	}
+	if semver.Compare(clusterVersion, "v5.4.0") >= 0 {
+		for _, m := range s.Monitors {
+			if m.NgPort == 0 {
+				m.NgPort = 12020
+			}
 		}
 	}
 }
@@ -873,4 +882,9 @@ func (s *Specification) removeCommitTS() {
 		}
 		spec.CommitTS = nil
 	}
+}
+
+// GetGrafanaConfig returns global grafana configurations
+func (s *Specification) GetGrafanaConfig() map[string]string {
+	return s.ServerConfigs.Grafana
 }
