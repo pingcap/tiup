@@ -24,6 +24,7 @@ topology:
     pump: {}
     drainer: {}
     cdc: {}
+    grafana: {}
   tidb_servers:
     - host: 172.16.1.218
       ssh_port: 9999
