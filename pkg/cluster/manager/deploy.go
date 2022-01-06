@@ -411,7 +411,7 @@ func (m *Manager) Deploy(
 		return err
 	}
 
-	hint := color.New(color.Bold).Sprintf("%s start %s", tui.OsArgs0(), name)
+	hint := color.New(color.Bold).Sprintf("%s start %s --init", tui.OsArgs0(), name)
 	m.logger.Infof("Cluster `%s` deployed successfully, you can start it with command: `%s`", name, hint)
 	return nil
 }
