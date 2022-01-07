@@ -82,15 +82,15 @@ func CloneMirror(repo *V1Repository,
 	}
 
 	var (
-		initTime = time.Now()
-		expirsAt = initTime.Add(50 * 365 * 24 * time.Hour)
-		root     = v1manifest.NewRoot(initTime)
-		index    = v1manifest.NewIndex(initTime)
+		initTime  = time.Now()
+		expiresAt = initTime.Add(50 * 365 * 24 * time.Hour)
+		root      = v1manifest.NewRoot(initTime)
+		index     = v1manifest.NewIndex(initTime)
 	)
 
 	// All offline expires at 50 years to prevent manifests stale
-	root.SetExpiresAt(expirsAt)
-	index.SetExpiresAt(expirsAt)
+	root.SetExpiresAt(expiresAt)
+	index.SetExpiresAt(expiresAt)
 
 	keys := map[string][]*v1manifest.KeyInfo{}
 	for _, ty := range []string{
@@ -148,7 +148,7 @@ func CloneMirror(repo *V1Repository,
 	}
 
 	snapshot := v1manifest.NewSnapshot(initTime)
-	snapshot.SetExpiresAt(expirsAt)
+	snapshot.SetExpiresAt(expiresAt)
 
 	componentManifests, err := cloneComponents(repo, components, selectedVersions, tidbClusterVersionMapper, targetDir, tmpDir, options)
 	if err != nil {
@@ -156,7 +156,7 @@ func CloneMirror(repo *V1Repository,
 	}
 
 	for name, component := range componentManifests {
-		component.SetExpiresAt(expirsAt)
+		component.SetExpiresAt(expiresAt)
 		fname := fmt.Sprintf("%s.json", name)
 		// TODO: support external owner
 		signedManifests[component.ID], err = v1manifest.SignManifest(component, ownerkeyInfo)
@@ -179,7 +179,7 @@ func CloneMirror(repo *V1Repository,
 
 	// Initialize timestamp
 	timestamp := v1manifest.NewTimestamp(initTime)
-	timestamp.SetExpiresAt(expirsAt)
+	timestamp.SetExpiresAt(expiresAt)
 
 	manifests[v1manifest.ManifestTypeTimestamp] = timestamp
 	manifests[v1manifest.ManifestTypeSnapshot] = snapshot

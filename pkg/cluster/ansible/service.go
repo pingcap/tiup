@@ -196,7 +196,8 @@ func parseDirs(ctx context.Context, user string, ins spec.InstanceSpec, sshTimeo
 			if strings.Contains(line, "--initial-commit-ts=") {
 				tsArg := strings.Split(line, " ")[4] // 4 whitespaces ahead
 				tmpTs, _ := strconv.Atoi(strings.TrimPrefix(tsArg, "--initial-commit-ts="))
-				newIns.CommitTS = int64(tmpTs)
+				newIns.Config = make(map[string]interface{})
+				newIns.Config["initial_commit_ts"] = int64(tmpTs)
 			}
 		}
 		return newIns, nil
