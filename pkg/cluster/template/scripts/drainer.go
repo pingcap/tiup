@@ -31,7 +31,6 @@ type DrainerScript struct {
 	DataDir   string
 	LogDir    string
 	NumaNode  string
-	CommitTs  int64
 	Endpoints []*PDScript
 }
 
@@ -44,7 +43,6 @@ func NewDrainerScript(nodeID, ip, deployDir, dataDir, logDir string) *DrainerScr
 		DeployDir: deployDir,
 		DataDir:   dataDir,
 		LogDir:    logDir,
-		CommitTs:  -1,
 	}
 }
 
@@ -57,12 +55,6 @@ func (c *DrainerScript) WithPort(port int) *DrainerScript {
 // WithNumaNode set NumaNode field of DrainerScript
 func (c *DrainerScript) WithNumaNode(numa string) *DrainerScript {
 	c.NumaNode = numa
-	return c
-}
-
-// WithCommitTs set CommitTs field of DrainerScript
-func (c *DrainerScript) WithCommitTs(ts int64) *DrainerScript {
-	c.CommitTs = ts
 	return c
 }
 

@@ -38,7 +38,7 @@ type DrainerSpec struct {
 	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
 	DataDir         string                 `yaml:"data_dir,omitempty"`
 	LogDir          string                 `yaml:"log_dir,omitempty"`
-	CommitTS        int64                  `yaml:"commit_ts" default:"-1" validate:"commit_ts:editable"`
+	CommitTS        *int64                 `yaml:"commit_ts,omitempty" validate:"commit_ts:editable"` // do not use it anymore, exist for compatibility
 	Offline         bool                   `yaml:"offline,omitempty"`
 	NumaNode        string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
 	Config          map[string]interface{} `yaml:"config,omitempty" validate:"config:ignore"`
@@ -167,8 +167,6 @@ func (i *DrainerInstance) InitConfig(
 		paths.Data[0],
 		paths.Log,
 	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).AppendEndpoints(topo.Endpoints(deployUser)...)
-
-	cfg.WithCommitTs(spec.CommitTS)
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_drainer_%s_%d.sh", i.GetHost(), i.GetPort()))
 

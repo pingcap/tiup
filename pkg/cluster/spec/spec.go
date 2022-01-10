@@ -356,6 +356,9 @@ func (s *Specification) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		}
 	}
 
+	// --initial-commit-ts should not be recorded at run_drainer.sh #1682
+	s.removeCommitTS()
+
 	return s.Validate()
 }
 
@@ -864,6 +867,21 @@ func setHostArch(field reflect.Value, hostArch map[string]string) error {
 	}
 
 	return nil
+}
+
+// when upgrade form old tiup-cluster, replace spec.CommitTS with spec.Config["initial_commit_ts"]
+func (s *Specification) removeCommitTS() {
+	_, ok1 := s.ServerConfigs.Drainer["initial_commit_ts"]
+	for _, spec := range s.Drainers {
+		_, ok2 := spec.Config["initial_commit_ts"]
+		if !ok1 && !ok2 && spec.CommitTS != nil && *spec.CommitTS != -1 {
+			if spec.Config == nil {
+				spec.Config = make(map[string]interface{})
+			}
+			spec.Config["initial_commit_ts"] = *spec.CommitTS
+		}
+		spec.CommitTS = nil
+	}
 }
 
 // GetGrafanaConfig returns global grafana configurations
