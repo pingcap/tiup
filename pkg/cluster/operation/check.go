@@ -235,7 +235,7 @@ func checkChrony(chronyInfo *insight.ChronyStat) *CheckResult {
 	}
 
 	if chronyInfo.LeapStatus == "none" {
-		zap.L().Info("The NTPd daemon may be not installed, skip.")
+		zap.L().Info("The Chrony daemon may be not installed, skip.")
 		return result
 	}
 
