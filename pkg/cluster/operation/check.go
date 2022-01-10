@@ -225,10 +225,7 @@ func checkNTP(ntpInfo *insight.TimeStat) *CheckResult {
 	// check if time offset greater than +- 500ms
 	if math.Abs(ntpInfo.Offset) >= 500 {
 		result.Err = fmt.Errorf("time offset %fms too high", ntpInfo.Offset)
-	} else {
-		result.Msg = fmt.Sprintf("time offset is %fms", ntpInfo.Offset)
 	}
-
 	return result
 }
 
@@ -245,10 +242,7 @@ func checkChrony(chronyInfo *insight.ChronyStat) *CheckResult {
 	// check if time offset greater than +- 500ms
 	if math.Abs(chronyInfo.LastOffset) >= 500 {
 		result.Err = fmt.Errorf("time offset %fms too high", chronyInfo.LastOffset)
-	} else {
-		result.Msg = fmt.Sprintf("time offset is %fms", chronyInfo.LastOffset)
 	}
-
 	return result
 }
 
