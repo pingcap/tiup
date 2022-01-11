@@ -17,6 +17,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -27,6 +28,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/template/config"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
+	"gopkg.in/ini.v1"
 )
 
 // GrafanaSpec represents the Grafana topology specification in topology.yaml
@@ -38,6 +40,7 @@ type GrafanaSpec struct {
 	IgnoreExporter  bool                 `yaml:"ignore_exporter,omitempty"`
 	Port            int                  `yaml:"port" default:"3000"`
 	DeployDir       string               `yaml:"deploy_dir,omitempty"`
+	Config          map[string]string    `yaml:"config,omitempty" validate:"config:ignore"`
 	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
 	Arch            string               `yaml:"arch,omitempty"`
 	OS              string               `yaml:"os,omitempty"`
@@ -181,11 +184,22 @@ func (i *GrafanaInstance) InitConfig(
 		return err
 	}
 
+	userConfig := i.topo.GetGrafanaConfig()
+	if userConfig == nil {
+		userConfig = make(map[string]string)
+	}
+	for k, v := range spec.Config {
+		userConfig[k] = v
+	}
+	err := mergeAdditionalGrafanaConf(fp, userConfig)
+	if err != nil {
+		return err
+	}
+
 	dst = filepath.Join(paths.Deploy, "conf", "grafana.ini")
 	if err := e.Transfer(ctx, fp, dst, false, 0, false); err != nil {
 		return err
 	}
-
 	if err := i.installDashboards(ctx, e, paths.Deploy, clusterName, clusterVersion); err != nil {
 		return errors.Annotate(err, "install dashboards")
 	}
@@ -329,4 +343,25 @@ func (i *GrafanaInstance) ScaleConfig(
 	defer func() { i.topo = s }()
 	i.topo = topo.Merge(i.topo)
 	return i.InitConfig(ctx, e, clusterName, clusterVersion, deployUser, paths)
+}
+
+func mergeAdditionalGrafanaConf(source string, addition map[string]string) error {
+	bytes, err := os.ReadFile(source)
+	if err != nil {
+		return err
+	}
+	result, err := ini.Load(bytes)
+	if err != nil {
+		return err
+	}
+	for k, v := range addition {
+		// convert "log.file.level to [log.file] level"
+		for i := len(k) - 1; i >= 0; i-- {
+			if k[i] == '.' {
+				result.Section(k[:i]).Key(k[i+1:]).SetValue(v)
+				break
+			}
+		}
+	}
+	return result.SaveTo(source)
 }

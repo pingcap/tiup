@@ -116,6 +116,9 @@ func (t *TestTopology) CountDir(host string, dir string) int {
 	return 0
 }
 
+func (t *TestTopology) GetGrafanaConfig() map[string]string {
+	return nil
+}
 func TestSpec(t *testing.T) {
 	dir, err := os.MkdirTemp("", "test-*")
 	assert.Nil(t, err)

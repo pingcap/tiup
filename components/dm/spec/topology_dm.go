@@ -89,8 +89,9 @@ type (
 type (
 	// DMServerConfigs represents the server runtime configuration
 	DMServerConfigs struct {
-		Master map[string]interface{} `yaml:"master"`
-		Worker map[string]interface{} `yaml:"worker"`
+		Master  map[string]interface{} `yaml:"master"`
+		Worker  map[string]interface{} `yaml:"worker"`
+		Grafana map[string]string      `yaml:"grafana"`
 	}
 
 	// Specification represents the specification of topology.yaml
@@ -837,4 +838,9 @@ func getPort(v reflect.Value) string {
 		}
 	}
 	return ""
+}
+
+// GetGrafanaConfig returns global grafana configurations
+func (s *Specification) GetGrafanaConfig() map[string]string {
+	return s.ServerConfigs.Grafana
 }
