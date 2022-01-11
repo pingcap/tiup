@@ -112,7 +112,9 @@ func init() {
 
 			tidbSpec = spec.GetSpecManager()
 			cm = manager.NewManager("tidb", tidbSpec, spec.TiDBComponentVersion, log)
-			logger.EnableAuditLog(spec.AuditDir())
+			if cmd.Name() != "__complete" {
+				logger.EnableAuditLog(spec.AuditDir())
+			}
 
 			// Running in other OS/ARCH Should be fine we only download manifest file.
 			env, err = tiupmeta.InitEnv(repository.Options{
