@@ -243,6 +243,9 @@ func Execute() {
 			teleReport.InstallationUUID = teleMeta.UUID
 		} // default to false on errors
 	}
+	if teleCommand == "tiup __complete" {
+		reportEnabled = false
+	}
 
 	if reportEnabled {
 		teleReport.EventUUID = eventUUID
