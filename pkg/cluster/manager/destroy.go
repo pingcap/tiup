@@ -52,11 +52,15 @@ func (m *Manager) DestroyCluster(name string, gOpt operator.Options, destroyOpt 
 	}
 
 	if !skipConfirm {
-		if err := tui.PromptForConfirmOrAbortError(
-			"This operation will destroy %s %s cluster %s and its data.\nDo you want to continue? [y/N]:",
-			m.sysName,
-			color.HiYellowString(base.Version),
-			color.HiYellowString(name)); err != nil {
+		m.logger.Warnf(color.HiRedString(tui.ASCIIArtWarning))
+		if err := tui.PromptForAnswerOrAbortError(
+			"Yes, I know my cluster and data will be deleted.",
+			fmt.Sprintf("This operation will destroy %s %s cluster %s and its data.",
+				m.sysName,
+				color.HiYellowString(base.Version),
+				color.HiYellowString(name),
+			)+"\nAre you sure to continue?",
+		); err != nil {
 			return err
 		}
 		m.logger.Infof("Destroying cluster...")
