@@ -16,6 +16,7 @@ package command
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"github.com/fatih/color"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -62,7 +63,11 @@ func newStartCmd() *cobra.Command {
 			if initPasswd {
 				pwd, err := initPassword(clusterName)
 				if err != nil {
-					log.Errorf("failed to set root password of TiDB database to '%s'", pwd)
+					log.Errorf("Failed to set root password of TiDB database to '%s'", pwd)
+					if strings.Contains(strings.ToLower(err.Error()), "error 1045") {
+						log.Errorf("Initializing is only working when the root password is empty")
+						log.Errorf(color.YellowString("Did you already set root password before?"))
+					}
 					return err
 				}
 				log.Warnf("The root password of TiDB database has been changed.")
