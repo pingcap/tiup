@@ -44,8 +44,8 @@ func RunComponent(env *environment.Environment, tag, spec, binPath string, args 
 		updateC := make(chan string)
 		// timeout for check update
 		go func() {
-			time.Sleep(10 * time.Second)
-			updateC <- "timeout!"
+			time.Sleep(2 * time.Second)
+			updateC <- color.RedString("timeout!")
 		}()
 
 		go func() {
