@@ -45,6 +45,7 @@ type CheckOptions struct {
 var (
 	CheckNameGeneral       = "general" // errors that don't fit any specific check
 	CheckNameNTP           = "ntp"
+	CheckNameChrony        = "chrony"
 	CheckNameOSVer         = "os-version"
 	CheckNameSwap          = "swap"
 	CheckNameSysctl        = "sysctl"
@@ -112,8 +113,21 @@ func CheckSystemInfo(opt *CheckOptions, rawData []byte) []*CheckResult {
 	// check basic system info
 	results = append(results, checkSysInfo(opt, &insightInfo.SysInfo)...)
 
-	// check NTP sync status
-	results = append(results, checkNTP(&insightInfo.NTP))
+	// check time sync status
+	switch {
+	case insightInfo.ChronyStat.LeapStatus != "none":
+		results = append(results, checkChrony(&insightInfo.ChronyStat))
+	case insightInfo.NTP.Status != "none":
+		results = append(results, checkNTP(&insightInfo.NTP))
+	default:
+		results = append(results,
+			&CheckResult{
+				Name: CheckNameNTP,
+				Err:  fmt.Errorf("The NTPd daemon or Chronyd daemon may be not installed"),
+				Warn: true,
+			},
+		)
+	}
 
 	epollResult := &CheckResult{
 		Name: CheckNameEpoll,
@@ -202,11 +216,33 @@ func checkNTP(ntpInfo *insight.TimeStat) *CheckResult {
 		return result
 	}
 
-	// check if time offset greater than +- 500ms
-	if math.Abs(ntpInfo.Offset) >= 500 {
-		result.Err = fmt.Errorf("time offet %fms too high", ntpInfo.Offset)
+	if ntpInfo.Sync == "none" {
+		result.Err = fmt.Errorf("The NTPd daemon may be not start")
+		result.Warn = true
+		return result
 	}
 
+	// check if time offset greater than +- 500ms
+	if math.Abs(ntpInfo.Offset) >= 500 {
+		result.Err = fmt.Errorf("time offset %fms too high", ntpInfo.Offset)
+	}
+	return result
+}
+
+func checkChrony(chronyInfo *insight.ChronyStat) *CheckResult {
+	result := &CheckResult{
+		Name: CheckNameChrony,
+	}
+
+	if chronyInfo.LeapStatus == "none" {
+		zap.L().Info("The Chrony daemon may be not installed, skip.")
+		return result
+	}
+
+	// check if time offset greater than +- 500ms
+	if math.Abs(chronyInfo.LastOffset) >= 500 {
+		result.Err = fmt.Errorf("time offset %fms too high", chronyInfo.LastOffset)
+	}
 	return result
 }
 
