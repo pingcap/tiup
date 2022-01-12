@@ -8,7 +8,7 @@ replace (
 )
 
 require (
-	github.com/AstroProfundis/sysinfo v0.0.0-20210901042104-765f00aa1304
+	github.com/AstroProfundis/sysinfo v0.0.0-20211201040748-b52c88acb418
 	github.com/AstroProfundis/tabby v1.1.1-color
 	github.com/BurntSushi/toml v0.4.1
 	github.com/ScaleFT/sshkeys v0.0.0-20200327173127-6142f742bca5
@@ -42,7 +42,7 @@ require (
 	github.com/pingcap/failpoint v0.0.0-20210918120811-547c13e3eb00
 	github.com/pingcap/fn v0.0.0-20200306044125-d5540d389059
 	github.com/pingcap/kvproto v0.0.0-20210915062418-0f5764a128ad
-	github.com/pingcap/tidb-insight/collector v0.0.0-20210923072556-14ae4968ce78
+	github.com/pingcap/tidb-insight/collector v0.0.0-20220104095042-8dad166491c2
 	github.com/prometheus/client_model v0.2.0
 	github.com/prometheus/common v0.30.0
 	github.com/prometheus/prom2json v1.3.0
@@ -50,7 +50,7 @@ require (
 	github.com/relex/aini v1.5.0
 	github.com/sergi/go-diff v1.2.0
 	github.com/sethvargo/go-password v0.2.0
-	github.com/shirou/gopsutil v3.21.8+incompatible
+	github.com/shirou/gopsutil v3.21.10+incompatible
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/pflag v1.0.5
@@ -64,7 +64,7 @@ require (
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 	golang.org/x/mod v0.5.1
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/sys v0.0.0-20210923061019-b8560ed6a9b7
+	golang.org/x/sys v0.0.0-20211124211545-fe61309f8881
 	golang.org/x/term v0.0.0-20210916214954-140adaaadfaf
 	google.golang.org/genproto v0.0.0-20210921142501-181ce0d877f6
 	google.golang.org/grpc v1.40.0
