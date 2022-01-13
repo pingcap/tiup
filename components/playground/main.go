@@ -267,29 +267,13 @@ Examples:
 
 			// expand version string
 			if !semver.IsValid(options.Version) {
-				var version utils.Version
-				var err error
-				// If any of the binpath arguments is set (which indicates the user is
-				// using a self build binary) and version number is not set, we assume
-				// it is a developer and use the latest release version by default.
-				// The platform string used to resolve the full version number is set
-				// to "linux/amd64" as this is the platform that every released version
-				// is available.
-				// For platforms lacks of support for some versions, e.g., darwin-amd64,
-				// specifically set a valid version for it, or use custom binpath for
-				// all components used.
-				// If none of the binpath arguments is set, use the platform of the
-				// playground binary itself.
-				if (options.TiDB.BinPath != "" || options.TiKV.BinPath != "" ||
-					options.PD.BinPath != "" || options.TiFlash.BinPath != "" ||
-					options.TiCDC.BinPath != "" || options.Pump.BinPath != "" ||
-					options.Drainer.BinPath != "") && options.Version == "" {
-					version, err = env.V1Repository().ResolveComponentVersionWithPlatform(spec.ComponentTiDB, options.Version, "linux/amd64")
-				} else {
-					version, err = env.V1Repository().ResolveComponentVersion(spec.ComponentTiDB, options.Version)
-				}
+				version, err := env.V1Repository().ResolveComponentVersion(spec.ComponentTiDB, options.Version)
 				if err != nil {
 					return errors.Annotate(err, fmt.Sprintf("can not expand version %s to a valid semver string", options.Version))
+				}
+				// for nightly, may not use the same version for cluster
+				if options.Version == "nightly" {
+					version = "nightly"
 				}
 				fmt.Println(color.YellowString(`Using the version %s for version constraint "%s".
 		
