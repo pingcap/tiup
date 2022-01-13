@@ -142,6 +142,10 @@ func checkTLSEnv(topo spec.Topology, clusterName, version string, skipConfirm bo
 		}
 	}
 
+	if err := topo.Validate(); err != nil {
+		return err
+	}
+
 	if !skipConfirm {
 		return tui.PromptForConfirmOrAbortError(
 			fmt.Sprintf("Enable/Disable TLS will %s the cluster `%s`\nDo you want to continue? [y/N]:",
