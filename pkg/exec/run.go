@@ -38,6 +38,42 @@ import (
 // RunComponent start a component and wait it
 func RunComponent(env *environment.Environment, tag, spec, binPath string, args []string) error {
 	component, version := environment.ParseCompVersion(spec)
+
+	if version == "" {
+		fmt.Fprintf(os.Stderr, "tiup is checking updates for component %s ...", component)
+		updateC := make(chan string)
+		// timeout for check update
+		go func() {
+			time.Sleep(2 * time.Second)
+			updateC <- color.RedString("timeout!")
+		}()
+
+		go func() {
+			var updateInfo string
+			if version.IsEmpty() {
+				latestV, _, err := env.V1Repository().LatestStableVersion(component, false)
+				if err != nil {
+					return
+				}
+				selectVer, _ := env.SelectInstalledVersion(component, version)
+
+				if semver.Compare(selectVer.String(), latestV.String()) < 0 {
+					updateInfo = fmt.Sprint(color.YellowString(`
+Found %[1]s newer version:
+   	The latest version:         %[2]s
+   	Local installed version:    %[3]s
+   	Update current component:   tiup update %[1]s
+   	Update all components:      tiup update --all
+`,
+						component, latestV.String(), selectVer.String()))
+				}
+			}
+			updateC <- updateInfo
+		}()
+
+		fmt.Fprintln(os.Stderr, <-updateC)
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -66,7 +102,6 @@ func RunComponent(env *environment.Environment, tag, spec, binPath string, args 
 	var sig syscall.Signal
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-	updateC := make(chan string)
 
 	defer func() {
 		for err := range ch {
@@ -87,35 +122,6 @@ func RunComponent(env *environment.Environment, tag, spec, binPath string, args 
 		ch <- p.Cmd.Wait()
 	}()
 
-	// timeout for check update
-	go func() {
-		time.Sleep(2 * time.Second)
-		updateC <- ""
-	}()
-
-	go func() {
-		var updateInfo string
-		if version.IsEmpty() {
-			latestV, _, err := env.V1Repository().LatestStableVersion(p.Component, false)
-			if err != nil {
-				return
-			}
-			selectVer, _ := env.SelectInstalledVersion(component, version)
-
-			if semver.Compare(selectVer.String(), latestV.String()) < 0 {
-				updateInfo = fmt.Sprint(color.YellowString(`
-Found %[1]s newer version:
-	The latest version:         %[2]s
-	Local installed version:    %[3]s
-	Update current component:   tiup update %[1]s
-	Update all components:      tiup update --all
-`,
-					p.Component, latestV.String(), selectVer.String()))
-			}
-		}
-		updateC <- updateInfo
-	}()
-
 	select {
 	case s := <-sc:
 		sig = s.(syscall.Signal)
@@ -129,7 +135,6 @@ Found %[1]s newer version:
 		return nil
 
 	case err := <-ch:
-		defer fmt.Fprint(os.Stderr, <-updateC)
 		return errors.Annotatef(err, "run `%s` (wd:%s) failed", p.Exec, p.Dir)
 	}
 }

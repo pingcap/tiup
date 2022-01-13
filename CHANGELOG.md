@@ -1,5 +1,17 @@
 TiUP Changelog
 
+## [1.8.2] 2022-01-11
+
+### Fixes
+
+- Fix global configuration not inherited correctly in `scale-out` command of `tiup-cluster` ([#1701](https://github.com/pingcap/tiup/pull/1701), [@srstack](https://github.com/srstack))
+- Fix errors starting `tiup-playground` in some circumstances ([#1712](https://github.com/pingcap/tiup/pull/1712) [#1715](https://github.com/pingcap/tiup/pull/1715), [@nexustar](https://github.com/nexustar))
+- Fix error comparing nightly versions in `tiup-cluster` ([#1702](https://github.com/pingcap/tiup/pull/1702), [@srstack](https://github.com/srstack))
+
+### Improvements
+
+- Update out-of-date documents of `tiup mirror` ([#1705](https://github.com/pingcap/tiup/pull/1705), [@dveeden](https://github.com/dveeden))
+
 ## [1.8.1] 2021-12-20
 
 ### Fixes

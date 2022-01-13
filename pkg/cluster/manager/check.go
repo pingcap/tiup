@@ -15,6 +15,7 @@ package manager
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -148,6 +149,14 @@ func (m *Manager) CheckCluster(clusterOrTopoName, scaleoutTopo string, opt Check
 
 	// check PD status
 	return m.checkRegionsInfo(clusterOrTopoName, &topo, &gOpt)
+}
+
+// HostCheckResult represents the check result of each node
+type HostCheckResult struct {
+	Node    string `json:"node"`
+	Name    string `json:"name"`
+	Status  string `json:"status"`
+	Message string `json:"message"`
 }
 
 // checkSystemInfo performs series of checks and tests of the deploy server
@@ -435,7 +444,6 @@ func checkSystemInfo(
 		return perrs.Trace(err)
 	}
 
-	// FIXME: add fix result to output
 	checkResultTable := [][]string{
 		// Header
 		{"Node", "Check", "Result", "Message"},
@@ -469,12 +477,32 @@ func checkSystemInfo(
 		checkResults = append(checkResults, res...)
 		applyFixTasks = append(applyFixTasks, tf.BuildAsStep(fmt.Sprintf("  - Applying changes on %s", host)))
 	}
-	resLines := formatHostCheckResults(checkResults)
-	checkResultTable = append(checkResultTable, resLines...)
 
-	// print check results *before* trying to applying checks
-	// FIXME: add fix result to output, and display the table after fixing
-	tui.PrintTable(checkResultTable, true)
+	if gOpt.DisplayMode == "json" {
+		checkResultStruct := make([]HostCheckResult, 0)
+
+		for _, r := range checkResults {
+			checkResultStruct = append(checkResultStruct, HostCheckResult{
+				r.Node,
+				r.Name,
+				r.Status,
+				r.Message,
+			})
+		}
+		data, err := json.Marshal(struct {
+			Result []HostCheckResult `json:"result"`
+		}{Result: checkResultStruct})
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(data))
+	} else {
+		resLines := formatHostCheckResults(checkResults)
+		checkResultTable = append(checkResultTable, resLines...)
+		// print check results *before* trying to applying checks
+		// FIXME: add fix result to output, and display the table after fixing
+		tui.PrintTable(checkResultTable, true)
+	}
 
 	if opt.ApplyFix {
 		tc := task.NewBuilder(logger).
@@ -490,14 +518,6 @@ func checkSystemInfo(
 	}
 
 	return nil
-}
-
-// HostCheckResult represents the check result of each node
-type HostCheckResult struct {
-	Node    string `json:"node"`
-	Name    string `json:"name"`
-	Status  string `json:"status"`
-	Message string `json:"message"`
 }
 
 // handleCheckResults parses the result of checks
