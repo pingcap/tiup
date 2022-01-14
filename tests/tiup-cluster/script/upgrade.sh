@@ -48,5 +48,5 @@ EOEX
 
     tiup-cluster _test $name writable
 
-    yes | tiup-cluster destroy $name
+    tiup-cluster --yes destroy $name
 }
