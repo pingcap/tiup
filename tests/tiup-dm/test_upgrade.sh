@@ -38,4 +38,4 @@ tiup-dm exec $name -N "$ipprefix.104:8261" --command "grep '31s' /home/tidb/depl
 ./script/task/run.sh
 
 
-yes | tiup-dm destroy $name
+tiup-dm --yes destroy $name
