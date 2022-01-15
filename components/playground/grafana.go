@@ -205,12 +205,10 @@ http_port = %d
 		Component:   "grafana",
 		Version:     utils.Version(g.version),
 		InstanceDir: dir,
-		WD:          dir,
 		Args:        args,
-		SysProcAttr: instance.SysProcAttr,
 		Env:         env,
 	}
-	cmd, err := tiupexec.PrepareCommand(params)
+	cmd, err := instance.PrepareCommandForPlayground(params, dir)
 	if err != nil {
 		return err
 	}

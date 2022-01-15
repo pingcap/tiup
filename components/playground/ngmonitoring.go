@@ -81,12 +81,10 @@ func newNGMonitoring(ctx context.Context, version string, host, dir string, pds 
 		BinPath:     filepath.Join(binDir, "ng-monitoring-server"),
 		Version:     utils.Version(version),
 		InstanceDir: dir,
-		WD:          dir,
 		Args:        args,
-		SysProcAttr: instance.SysProcAttr,
 		Env:         env,
 	}
-	cmd, err := tiupexec.PrepareCommand(params)
+	cmd, err := instance.PrepareCommandForPlayground(params, dir)
 	if err != nil {
 		return nil, err
 	}

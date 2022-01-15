@@ -101,10 +101,8 @@ func NewComponentProcessWithEnvs(ctx context.Context, dir, binPath, component st
 		Version:      version,
 		BinPath:      binPath,
 		InstanceDir:  dir,
-		WD:           dir,
 		Args:         arg,
 		EnvVariables: make([]string, 0),
-		SysProcAttr:  SysProcAttr,
 		Env:          env,
 	}
 	for k, v := range envs {
@@ -112,7 +110,7 @@ func NewComponentProcessWithEnvs(ctx context.Context, dir, binPath, component st
 		params.EnvVariables = append(params.EnvVariables, pair)
 	}
 
-	cmd, err := tiupexec.PrepareCommand(params)
+	cmd, err := PrepareCommandForPlayground(params, dir)
 	if err != nil {
 		return nil, err
 	}
@@ -123,4 +121,15 @@ func NewComponentProcessWithEnvs(ctx context.Context, dir, binPath, component st
 // NewComponentProcess create a Process instance.
 func NewComponentProcess(ctx context.Context, dir, binPath, component string, version utils.Version, arg ...string) (Process, error) {
 	return NewComponentProcessWithEnvs(ctx, dir, binPath, component, version, nil, arg...)
+}
+
+// PrepareCommandForPlayground call PrepareCommand and set SysProcAttr
+func PrepareCommandForPlayground(p *tiupexec.PrepareCommandParams, dir string) (*exec.Cmd, error) {
+	cmd, err := tiupexec.PrepareCommand(p)
+	if err != nil {
+		return nil, err
+	}
+	cmd.Dir = dir
+	cmd.SysProcAttr = SysProcAttr
+	return cmd, nil
 }

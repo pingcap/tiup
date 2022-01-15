@@ -156,12 +156,9 @@ type PrepareCommandParams struct {
 	BinPath      string
 	Tag          string
 	InstanceDir  string
-	WD           string
 	Args         []string
 	EnvVariables []string
-	SysProcAttr  *syscall.SysProcAttr
 	Env          *environment.Environment
-	CheckUpdate  bool
 }
 
 // PrepareCommand will download necessary component and returns a *exec.Cmd
@@ -236,8 +233,6 @@ func PrepareCommand(p *PrepareCommandParams) (*exec.Cmd, error) {
 	c.Stdin = os.Stdin
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
-	c.Dir = p.WD
-	c.SysProcAttr = p.SysProcAttr
 
 	return c, nil
 }
@@ -265,11 +260,8 @@ func launchComponent(ctx context.Context, component string, version utils.Versio
 		BinPath:     binPath,
 		Tag:         tag,
 		InstanceDir: instanceDir,
-		WD:          "",
 		Args:        args,
-		SysProcAttr: nil,
 		Env:         env,
-		CheckUpdate: true,
 	}
 	c, err := PrepareCommand(params)
 	if err != nil {
