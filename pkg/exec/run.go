@@ -150,15 +150,14 @@ func cleanDataDir(rm bool, dir string) {
 
 // PrepareCommandParams for PrepareCommand.
 type PrepareCommandParams struct {
-	Ctx          context.Context
-	Component    string
-	Version      utils.Version
-	BinPath      string
-	Tag          string
-	InstanceDir  string
-	Args         []string
-	EnvVariables []string
-	Env          *environment.Environment
+	Ctx         context.Context
+	Component   string
+	Version     utils.Version
+	BinPath     string
+	Tag         string
+	InstanceDir string
+	Args        []string
+	Env         *environment.Environment
 }
 
 // PrepareCommand will download necessary component and returns a *exec.Cmd
@@ -225,7 +224,6 @@ func PrepareCommand(p *PrepareCommandParams) (*exec.Cmd, error) {
 		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, p.InstanceDir),
 	}
 	envs = append(envs, os.Environ()...)
-	envs = append(envs, p.EnvVariables...)
 
 	// init the command
 	c := exec.CommandContext(p.Ctx, binPath, p.Args...)

@@ -2,7 +2,6 @@ package instance
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -86,7 +85,7 @@ func (p *process) Cmd() *exec.Cmd {
 }
 
 // NewComponentProcessWithEnvs create a Process instance with given environment variables.
-func NewComponentProcessWithEnvs(ctx context.Context, dir, binPath, component string, version utils.Version, envs map[string]string, arg ...string) (Process, error) {
+func NewComponentProcessWithEnvs(ctx context.Context, dir, binPath, component string, version utils.Version, envs []string, arg ...string) (Process, error) {
 	if dir == "" {
 		panic("dir must be set")
 	}
@@ -96,24 +95,19 @@ func NewComponentProcessWithEnvs(ctx context.Context, dir, binPath, component st
 
 	env := environment.GlobalEnv()
 	params := &tiupexec.PrepareCommandParams{
-		Ctx:          ctx,
-		Component:    component,
-		Version:      version,
-		BinPath:      binPath,
-		InstanceDir:  dir,
-		Args:         arg,
-		EnvVariables: make([]string, 0),
-		Env:          env,
+		Ctx:         ctx,
+		Component:   component,
+		Version:     version,
+		BinPath:     binPath,
+		InstanceDir: dir,
+		Args:        arg,
+		Env:         env,
 	}
-	for k, v := range envs {
-		pair := fmt.Sprintf("%s=%s", k, v)
-		params.EnvVariables = append(params.EnvVariables, pair)
-	}
-
 	cmd, err := PrepareCommandForPlayground(params, dir)
 	if err != nil {
 		return nil, err
 	}
+	cmd.Env = append(cmd.Env, envs...)
 
 	return &process{cmd: cmd}, nil
 }
