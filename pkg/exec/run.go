@@ -43,13 +43,10 @@ func RunComponent(env *environment.Environment, tag, spec, binPath string, args 
 		cmdCheckUpdate(component, version, 2)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	// Clean data if current instance is a temporary
 	clean := tag == "" && os.Getenv(localdata.EnvNameInstanceDataDir) == ""
 
-	p, err := launchComponent(ctx, component, version, binPath, tag, args, env)
+	p, err := launchComponent(component, version, binPath, tag, args, env)
 	// If the process has been launched, we must save the process info to meta directory
 	if err == nil || (p != nil && p.Pid != 0) {
 		defer cleanDataDir(clean, p.Dir)
@@ -195,7 +192,12 @@ func PrepareCommand(p *PrepareCommandParams) (*exec.Cmd, error) {
 	envs = append(envs, os.Environ()...)
 
 	// init the command
-	c := exec.CommandContext(p.Ctx, binPath, p.Args...)
+	var c *exec.Cmd
+	if p.Ctx == nil {
+		c = exec.Command(binPath, p.Args...)
+	} else {
+		c = exec.CommandContext(p.Ctx, binPath, p.Args...)
+	}
 	c.Env = envs
 	c.Stdin = os.Stdin
 	c.Stdout = os.Stdout
@@ -204,7 +206,7 @@ func PrepareCommand(p *PrepareCommandParams) (*exec.Cmd, error) {
 	return c, nil
 }
 
-func launchComponent(ctx context.Context, component string, version utils.Version, binPath string, tag string, args []string, env *environment.Environment) (*localdata.Process, error) {
+func launchComponent(component string, version utils.Version, binPath string, tag string, args []string, env *environment.Environment) (*localdata.Process, error) {
 	instanceDir := os.Getenv(localdata.EnvNameInstanceDataDir)
 	if instanceDir == "" {
 		// Generate a tag for current instance if the tag doesn't specified
@@ -221,7 +223,6 @@ func launchComponent(ctx context.Context, component string, version utils.Versio
 	}
 
 	params := &PrepareCommandParams{
-		Ctx:         ctx,
 		Component:   component,
 		Version:     version,
 		BinPath:     binPath,
