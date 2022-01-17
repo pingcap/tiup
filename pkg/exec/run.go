@@ -40,38 +40,7 @@ func RunComponent(env *environment.Environment, tag, spec, binPath string, args 
 	component, version := environment.ParseCompVersion(spec)
 
 	if version == "" {
-		fmt.Fprintf(os.Stderr, "tiup is checking updates for component %s ...", component)
-		updateC := make(chan string)
-		// timeout for check update
-		go func() {
-			time.Sleep(2 * time.Second)
-			updateC <- color.RedString("timeout!")
-		}()
-
-		go func() {
-			var updateInfo string
-			if version.IsEmpty() {
-				latestV, _, err := env.V1Repository().LatestStableVersion(component, false)
-				if err != nil {
-					return
-				}
-				selectVer, _ := env.SelectInstalledVersion(component, version)
-
-				if semver.Compare(selectVer.String(), latestV.String()) < 0 {
-					updateInfo = fmt.Sprint(color.YellowString(`
-Found %[1]s newer version:
-   	The latest version:         %[2]s
-   	Local installed version:    %[3]s
-   	Update current component:   tiup update %[1]s
-   	Update all components:      tiup update --all
-`,
-						component, latestV.String(), selectVer.String()))
-				}
-			}
-			updateC <- updateInfo
-		}()
-
-		fmt.Fprintln(os.Stderr, <-updateC)
+		cmdCheckUpdate(component, version, 2)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -282,4 +251,39 @@ func launchComponent(ctx context.Context, component string, version utils.Versio
 		p.Pid = p.Cmd.Process.Pid
 	}
 	return p, err
+}
+
+func cmdCheckUpdate(component string, version utils.Version, timeoutSec int) {
+	fmt.Fprintf(os.Stderr, "tiup is checking updates for component %s ...", component)
+	updateC := make(chan string)
+	// timeout for check update
+	go func() {
+		time.Sleep(time.Duration(timeoutSec) * time.Second)
+		updateC <- color.RedString("timeout!")
+	}()
+
+	go func() {
+		var updateInfo string
+		if version.IsEmpty() {
+			latestV, _, err := environment.GlobalEnv().V1Repository().LatestStableVersion(component, false)
+			if err != nil {
+				return
+			}
+			selectVer, _ := environment.GlobalEnv().SelectInstalledVersion(component, version)
+
+			if semver.Compare(selectVer.String(), latestV.String()) < 0 {
+				updateInfo = fmt.Sprint(color.YellowString(`
+Found %[1]s newer version:
+   The latest version:         %[2]s
+   Local installed version:    %[3]s
+   Update current component:   tiup update %[1]s
+   Update all components:      tiup update --all
+`,
+					component, latestV.String(), selectVer.String()))
+			}
+		}
+		updateC <- updateInfo
+	}()
+
+	fmt.Fprintln(os.Stderr, <-updateC)
 }
