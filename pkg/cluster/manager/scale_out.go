@@ -33,7 +33,6 @@ import (
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
-	"golang.org/x/mod/semver"
 	"gopkg.in/yaml.v3"
 )
 
@@ -93,12 +92,8 @@ func (m *Manager) ScaleOut(
 			return err
 		}
 
-		if clusterSpec, ok := topo.(*spec.Specification); ok {
-			if clusterSpec.GlobalOptions.TLSEnabled &&
-				semver.Compare(base.Version, "v4.0.5") < 0 &&
-				len(clusterSpec.TiFlashServers) > 0 {
-				return fmt.Errorf("TiFlash %s is not supported in TLS enabled cluster", base.Version)
-			}
+		if err := checkTiFlashWithTLS(topo, base.Version); err != nil {
+			return err
 		}
 
 		if newPartTopo, ok := newPart.(*spec.Specification); ok {
