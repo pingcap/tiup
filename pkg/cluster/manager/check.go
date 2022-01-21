@@ -702,12 +702,12 @@ func deduplicateCheckResult(checkResults []HostCheckResult) (uniqueResults []Hos
 		if tmpResultMap[result.Node] == nil {
 			tmpResultMap[result.Node] = make(map[string]set.StringSet)
 		}
-		tmpSet := tmpResultMap[result.Node][fmt.Sprintf("%s|%s", result.Name, result.Status)]
-		if tmpSet == nil {
-			tmpSet = set.NewStringSet()
+		// insert msg into set
+		msgKey := fmt.Sprintf("%s|%s", result.Name, result.Status)
+		if tmpResultMap[result.Node][msgKey] == nil {
+			tmpResultMap[result.Node][msgKey] = set.NewStringSet()
 		}
-		tmpSet.Insert(result.Message)
-		tmpResultMap[result.Node][fmt.Sprintf("%s|%s", result.Name, result.Status)] = tmpSet
+		tmpResultMap[result.Node][msgKey].Insert(result.Message)
 	}
 
 	for node, msgMap := range tmpResultMap {
