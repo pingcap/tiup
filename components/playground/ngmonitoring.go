@@ -25,7 +25,6 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/playground/instance"
 	"github.com/pingcap/tiup/pkg/environment"
-	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -75,19 +74,8 @@ func newNGMonitoring(ctx context.Context, version string, host, dir string, pds 
 	if err != nil {
 		return nil, err
 	}
-	params := &tiupexec.PrepareCommandParams{
-		Ctx:         ctx,
-		Component:   "prometheus",
-		BinPath:     filepath.Join(binDir, "ng-monitoring-server"),
-		Version:     utils.Version(version),
-		InstanceDir: dir,
-		Args:        args,
-		Env:         env,
-	}
-	cmd, err := instance.PrepareCommandForPlayground(params, dir)
-	if err != nil {
-		return nil, err
-	}
+
+	cmd := instance.PrepareCommand(ctx, filepath.Join(binDir, "ng-monitoring-server"), args, nil, dir)
 
 	m.port = port
 	m.cmd = cmd

@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/mod/semver"
 )
@@ -71,11 +72,12 @@ func (c *TiCDC) Start(ctx context.Context, version utils.Version) error {
 	}
 
 	var err error
-	if c.Process, err = NewComponentProcess(ctx, c.Dir, c.BinPath, "cdc", version, args...); err != nil {
+	if c.BinPath, err = tiupexec.PrepareBinary("cdc", version, c.BinPath); err != nil {
 		return err
 	}
-	logIfErr(c.Process.SetOutputFile(c.LogFile()))
+	c.Process = &process{cmd: PrepareCommand(ctx, c.BinPath, args, nil, c.Dir)}
 
+	logIfErr(c.Process.SetOutputFile(c.LogFile()))
 	return c.Process.Start()
 }
 

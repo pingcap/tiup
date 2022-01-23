@@ -621,6 +621,9 @@ func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins i
 
 	id := p.allocID(componentID)
 	dir := filepath.Join(dataDir, fmt.Sprintf("%s-%d", componentID, id))
+	if err = os.MkdirAll(dir, 0755); err != nil {
+		return nil, err
+	}
 	// look more like listen ip?
 	host := p.bootOptions.Host
 	if cfg.Host != "" {

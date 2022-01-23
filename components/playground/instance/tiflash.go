@@ -22,13 +22,11 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
-	"runtime"
 	"time"
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
-	"github.com/pingcap/tiup/pkg/environment"
-	"github.com/pingcap/tiup/pkg/repository"
+	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -141,24 +139,8 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version utils.Version) e
 		return err
 	}
 
-	// TiFlash needs to obtain absolute path of cluster_manager
-	if inst.BinPath == "" {
-		env, err := environment.InitEnv(repository.Options{
-			SkipVersionCheck:  false,
-			GOOS:              runtime.GOOS,
-			GOARCH:            runtime.GOARCH,
-			DisableDecompress: false,
-		})
-		if err != nil {
-			return err
-		}
-		if version, err = env.DownloadComponentIfMissing("tiflash", version); err != nil {
-			return err
-		}
-		// version may be empty, we will use the latest stable version later in Start cmd.
-		if inst.BinPath, err = env.BinaryPath("tiflash", version); err != nil {
-			return err
-		}
+	if inst.BinPath, err = tiupexec.PrepareBinary("tiflash", version, inst.BinPath); err != nil {
+		return err
 	}
 
 	dirPath := filepath.Dir(inst.BinPath)
@@ -167,20 +149,16 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version utils.Version) e
 		return err
 	}
 
-	if err = os.Setenv("LD_LIBRARY_PATH", fmt.Sprintf("%s:$LD_LIBRARY_PATH", dirPath)); err != nil {
-		return err
-	}
-
 	args := []string{
 		"server",
 		fmt.Sprintf("--config-file=%s", inst.ConfigPath),
 	}
-
-	if inst.Process, err = NewComponentProcess(ctx, inst.Dir, inst.BinPath, "tiflash", version, args...); err != nil {
-		return err
+	envs := []string{
+		fmt.Sprintf("LD_LIBRARY_PATH=%s:$LD_LIBRARY_PATH", dirPath),
 	}
-	logIfErr(inst.Process.SetOutputFile(inst.LogFile()))
+	inst.Process = &process{cmd: PrepareCommand(ctx, inst.BinPath, args, envs, inst.Dir)}
 
+	logIfErr(inst.Process.SetOutputFile(inst.LogFile()))
 	return inst.Process.Start()
 }
 

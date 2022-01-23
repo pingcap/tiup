@@ -14,7 +14,6 @@
 package exec
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -43,7 +42,10 @@ func RunComponent(env *environment.Environment, tag, spec, binPath string, args 
 		cmdCheckUpdate(component, version, 2)
 	}
 
-	binPath, _ = prepareBinary(component, version, binPath)
+	binPath, err := PrepareBinary(component, version, binPath)
+	if err != nil {
+		return err
+	}
 
 	// Clean data if current instance is a temporary
 	clean := tag == "" && os.Getenv(localdata.EnvNameInstanceDataDir) == ""
@@ -106,7 +108,6 @@ func cleanDataDir(rm bool, dir string) {
 
 // PrepareCommandParams for PrepareCommand.
 type PrepareCommandParams struct {
-	Ctx         context.Context
 	Component   string
 	Version     utils.Version
 	BinPath     string
@@ -159,12 +160,8 @@ func PrepareCommand(p *PrepareCommandParams) (*exec.Cmd, error) {
 	envs = append(envs, os.Environ()...)
 
 	// init the command
-	var c *exec.Cmd
-	if p.Ctx == nil {
-		c = exec.Command(binPath, p.Args...)
-	} else {
-		c = exec.CommandContext(p.Ctx, binPath, p.Args...)
-	}
+	c := exec.Command(binPath, p.Args...)
+
 	c.Env = envs
 	c.Stdin = os.Stdin
 	c.Stdout = os.Stdout
@@ -206,7 +203,8 @@ Found %[1]s newer version:
 	fmt.Fprintln(os.Stderr, <-updateC)
 }
 
-func prepareBinary(component string, version utils.Version, binPath string) (string, error) {
+// PrepareBinary use given binpath or download from tiup mirror
+func PrepareBinary(component string, version utils.Version, binPath string) (string, error) {
 	if binPath != "" {
 		tmp, err := filepath.Abs(binPath)
 		if err != nil {
