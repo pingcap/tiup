@@ -189,7 +189,7 @@ func cmdCheckUpdate(component string, version utils.Version, timeoutSec int) {
 
 		if semver.Compare(selectVer.String(), latestV.String()) < 0 {
 			updateInfo = fmt.Sprint(color.YellowString(`
-Found %[1]s newer version:
+A new version of %[1]s is available:
    The latest version:         %[2]s
    Local installed version:    %[3]s
    Update current component:   tiup update %[1]s
