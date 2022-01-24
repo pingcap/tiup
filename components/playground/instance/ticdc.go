@@ -83,7 +83,7 @@ func (c *TiCDC) Start(ctx context.Context, version utils.Version) error {
 
 // Component return component name.
 func (c *TiCDC) Component() string {
-	return "ticdc"
+	return "cdc"
 }
 
 // LogFile return the log file.

@@ -417,8 +417,12 @@ func (p *Playground) sanitizeComponentConfig(cid string, cfg *instance.Config) e
 }
 
 func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) error {
-	fmt.Printf("Start %s instance\n", inst.Component())
-	err := inst.Start(ctx, utils.Version(p.bootOptions.Version))
+	version, err := environment.GlobalEnv().V1Repository().ResolveComponentVersion(inst.Component(), p.bootOptions.Version)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Start %s instance:%s\n", inst.Component(), version)
+	err = inst.Start(ctx, version)
 	if err != nil {
 		return err
 	}
