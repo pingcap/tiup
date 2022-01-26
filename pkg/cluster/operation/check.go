@@ -165,6 +165,14 @@ func checkOSInfo(opt *CheckOptions, osInfo *sysinfo.OS) *CheckResult {
 
 	// check OS vendor
 	switch osInfo.Vendor {
+	case "amzn":
+		// Amazon Linux 2 is based on CentOS 7 and is recommended for
+		// AWS Graviton 2 (ARM64) deployments.
+		if ver, _ := strconv.ParseFloat(osInfo.Version, 64); ver < 2 || ver >= 3 {
+			result.Err = fmt.Errorf("%s %s not supported, use version 2 please",
+				osInfo.Name, osInfo.Release)
+			return result
+		}
 	case "centos", "redhat", "rhel":
 		// check version
 		// CentOS 8 is known to be not working, and we don't have plan to support it
