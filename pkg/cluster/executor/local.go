@@ -43,11 +43,16 @@ var _ ctxt.Executor = &Local{}
 func (l *Local) Execute(ctx context.Context, cmd string, sudo bool, timeout ...time.Duration) ([]byte, []byte, error) {
 	// change wd to default home
 	cmd = fmt.Sprintf("cd; %s", cmd)
+	// get current user name
+	user, err := user.Current()
+	if err != nil {
+		return nil, nil, err
+	}
 
 	// try to acquire root permission
 	if l.Sudo || sudo {
 		cmd = fmt.Sprintf("/usr/bin/sudo -H -u root bash -c \"%s\"", strings.ReplaceAll(cmd, "\"", "\\\""))
-	} else {
+	} else if l.Config.User != user.Name {
 		cmd = fmt.Sprintf("/usr/bin/sudo -H -u %s bash -c \"%s\"", l.Config.User, strings.ReplaceAll(cmd, "\"", "\\\""))
 	}
 
