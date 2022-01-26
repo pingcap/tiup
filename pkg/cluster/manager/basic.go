@@ -29,6 +29,8 @@ import (
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
+	"github.com/pingcap/tiup/pkg/utils"
+	"golang.org/x/mod/semver"
 )
 
 // EnableCluster enable/disable the service in a cluster
@@ -280,4 +282,18 @@ func getMonitorHosts(topo spec.Topology) (map[string]hostInfo, set.StringSet) {
 	})
 
 	return uniqueHosts, noAgentHosts
+}
+
+// checkTiFlashWithTLS check tiflash vserson
+func checkTiFlashWithTLS(topo spec.Topology, version string) error {
+	if clusterSpec, ok := topo.(*spec.Specification); ok {
+		if clusterSpec.GlobalOptions.TLSEnabled {
+			if (semver.Compare(version, "v4.0.5") < 0 &&
+				len(clusterSpec.TiFlashServers) > 0) &&
+				version != utils.NightlyVersionAlias {
+				return fmt.Errorf("TiFlash %s is not supported in TLS enabled cluster", version)
+			}
+		}
+	}
+	return nil
 }
