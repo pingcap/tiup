@@ -91,6 +91,7 @@ func (c *AlertManagerComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(alertmanagers))
 
 	for _, s := range alertmanagers {
+		s := s
 		ins = append(ins, &AlertManagerInstance{
 			BaseInstance: BaseInstance{
 				InstanceSpec: s,
