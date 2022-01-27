@@ -135,6 +135,7 @@ func (c *TiSparkMasterComponent) Role() string {
 func (c *TiSparkMasterComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.TiSparkMasters))
 	for _, s := range c.Topology.TiSparkMasters {
+		s := s
 		ins = append(ins, &TiSparkMasterInstance{
 			BaseInstance: BaseInstance{
 				InstanceSpec: s,

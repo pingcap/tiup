@@ -112,6 +112,7 @@ func (c *MonitorComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(servers))
 
 	for _, s := range servers {
+		s := s
 		mi := &MonitorInstance{BaseInstance{
 			InstanceSpec: s,
 			Name:         c.Name(),
