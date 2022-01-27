@@ -82,7 +82,7 @@ func (l *Local) Execute(ctx context.Context, cmd string, sudo bool, timeout ...t
 	command.Stdout = stdout
 	command.Stderr = stderr
 
-	err := command.Run()
+	err = command.Run()
 
 	zap.L().Info("LocalCommand",
 		zap.String("cmd", cmd),
