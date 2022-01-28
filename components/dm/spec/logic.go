@@ -119,6 +119,7 @@ func (i *MasterInstance) InitConfig(
 		return err
 	}
 
+	enableTLS := i.topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(*MasterSpec)
 	cfg := scripts.NewDMMasterScript(
 		spec.Name,
@@ -136,12 +137,12 @@ func (i *MasterInstance) InitConfig(
 	if err := e.Transfer(ctx, fp, dst, false, 0, false); err != nil {
 		return err
 	}
-	if _, _, err := e.Execute(ctx, "chmod +x "+dst, false); err != nil {
+	_, _, err := e.Execute(ctx, "chmod +x "+dst, false)
+	if err != nil {
 		return err
 	}
 
-	// doesn't work
-	if _, err := i.setTLSConfig(ctx, false, nil, paths); err != nil {
+	if spec.Config, err = i.setTLSConfig(ctx, enableTLS, spec.Config, paths); err != nil {
 		return err
 	}
 
@@ -152,7 +153,40 @@ func (i *MasterInstance) InitConfig(
 // setTLSConfig set TLS Config to support enable/disable TLS
 // MasterInstance no need to configure TLS
 func (i *MasterInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
-	return nil, nil
+	// set TLS configs
+	if enableTLS {
+		if configs == nil {
+			configs = make(map[string]interface{})
+		}
+		configs["ssl-ca"] = fmt.Sprintf(
+			"%s/tls/%s",
+			paths.Deploy,
+			"ca.crt",
+		)
+		configs["ssl-cert"] = fmt.Sprintf(
+			"%s/tls/%s.crt",
+			paths.Deploy,
+			i.Role())
+		configs["ssl-key"] = fmt.Sprintf(
+			"%s/tls/%s.pem",
+			paths.Deploy,
+			i.Role())
+	} else {
+		// dm-master tls config list
+		tlsConfigs := []string{
+			"ssl-ca",
+			"ssl-cert",
+			"ssl-key",
+		}
+		// delete TLS configs
+		if configs != nil {
+			for _, config := range tlsConfigs {
+				delete(configs, config)
+			}
+		}
+	}
+
+	return configs, nil
 }
 
 // ScaleConfig deploy temporary config on scaling
@@ -261,6 +295,7 @@ func (i *WorkerInstance) InitConfig(
 		return err
 	}
 
+	enableTLS := i.topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(*WorkerSpec)
 	cfg := scripts.NewDMWorkerScript(
 		i.Name,
@@ -278,12 +313,12 @@ func (i *WorkerInstance) InitConfig(
 		return err
 	}
 
-	if _, _, err := e.Execute(ctx, "chmod +x "+dst, false); err != nil {
+	_, _, err := e.Execute(ctx, "chmod +x "+dst, false)
+	if err != nil {
 		return err
 	}
 
-	// doesn't work
-	if _, err := i.setTLSConfig(ctx, false, nil, paths); err != nil {
+	if spec.Config, err = i.setTLSConfig(ctx, enableTLS, spec.Config, paths); err != nil {
 		return err
 	}
 
@@ -294,7 +329,40 @@ func (i *WorkerInstance) InitConfig(
 // setTLSConfig set TLS Config to support enable/disable TLS
 // workrsInstance no need to configure TLS
 func (i *WorkerInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
-	return nil, nil
+	// set TLS configs
+	if enableTLS {
+		if configs == nil {
+			configs = make(map[string]interface{})
+		}
+		configs["ssl-ca"] = fmt.Sprintf(
+			"%s/tls/%s",
+			paths.Deploy,
+			"ca.crt",
+		)
+		configs["ssl-cert"] = fmt.Sprintf(
+			"%s/tls/%s.crt",
+			paths.Deploy,
+			i.Role())
+		configs["ssl-key"] = fmt.Sprintf(
+			"%s/tls/%s.pem",
+			paths.Deploy,
+			i.Role())
+	} else {
+		// dm-worker tls config list
+		tlsConfigs := []string{
+			"ssl-ca",
+			"ssl-cert",
+			"ssl-key",
+		}
+		// delete TLS configs
+		if configs != nil {
+			for _, config := range tlsConfigs {
+				delete(configs, config)
+			}
+		}
+	}
+
+	return configs, nil
 }
 
 // ScaleConfig deploy temporary config on scaling

@@ -25,7 +25,7 @@ exec bin/dm-master/dm-master \
     --v1-sources-path="{{.V1SourcePath}}" \
 {{- end}}
     --name="{{.Name}}" \
-    --master-addr="0.0.0.0:{{.Port}}" \
+    --master-addr="{{.IP}}:{{.Port}}" \
     --advertise-addr="{{.IP}}:{{.Port}}" \
     --peer-urls="{{.IP}}:{{.PeerPort}}" \
     --advertise-peer-urls="{{.IP}}:{{.PeerPort}}" \
