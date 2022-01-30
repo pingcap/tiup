@@ -28,6 +28,7 @@ import (
 // HTTPClient is a wrap of http.Client
 type HTTPClient struct {
 	client *http.Client
+	header http.Header
 }
 
 // NewHTTPClient returns a new HTTP client with timeout and HTTPS support
@@ -57,12 +58,22 @@ func NewHTTPClient(timeout time.Duration, tlsConfig *tls.Config) *HTTPClient {
 	}
 }
 
+// SetRequestHeader set http request header
+func (c *HTTPClient) SetRequestHeader(key, value string) {
+	if c.header == nil {
+		c.header = http.Header{}
+	}
+	c.header.Add(key, value)
+}
+
 // Get fetch an URL with GET method and returns the response
 func (c *HTTPClient) Get(ctx context.Context, url string) ([]byte, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
+
+	req.Header = c.header
 
 	if ctx != nil {
 		req = req.WithContext(ctx)
@@ -82,7 +93,12 @@ func (c *HTTPClient) Post(ctx context.Context, url string, body io.Reader) ([]by
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Content-Type", "application/json")
+
+	if c.header == nil {
+		req.Header.Set("Content-Type", "application/json")
+	} else {
+		req.Header = c.header
+	}
 
 	if ctx != nil {
 		req = req.WithContext(ctx)
