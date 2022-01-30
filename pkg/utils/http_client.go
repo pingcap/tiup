@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -85,6 +86,48 @@ func (c *HTTPClient) Get(ctx context.Context, url string) ([]byte, error) {
 	defer res.Body.Close()
 
 	return checkHTTPResponse(res)
+}
+
+// Download fetch an URL with GET method and Downloa the response to filePath
+func (c *HTTPClient) Download(ctx context.Context, url, filePath string) error {
+	//  IsExist
+	if IsExist(filePath) {
+		return fmt.Errorf("target file %s already exists", filePath)
+	}
+
+	if err := CreateDir(filepath.Dir(filePath)); err != nil {
+		return err
+	}
+
+	// create target file
+	f, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return err
+	}
+
+	req.Header = c.header
+
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+	res, err := c.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	_, err = io.Copy(f, res.Body)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Post send a POST request to the url and returns the response
