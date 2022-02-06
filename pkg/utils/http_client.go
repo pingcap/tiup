@@ -88,7 +88,7 @@ func (c *HTTPClient) Get(ctx context.Context, url string) ([]byte, error) {
 	return checkHTTPResponse(res)
 }
 
-// Download fetch an URL with GET method and Downloa the response to filePath
+// Download fetch an URL with GET method and Download the response to filePath
 func (c *HTTPClient) Download(ctx context.Context, url, filePath string) error {
 	//  IsExist
 	if IsExist(filePath) {
