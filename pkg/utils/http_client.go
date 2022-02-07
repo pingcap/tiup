@@ -22,12 +22,14 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"time"
 )
 
 // HTTPClient is a wrap of http.Client
 type HTTPClient struct {
 	client *http.Client
+	header http.Header
 }
 
 // NewHTTPClient returns a new HTTP client with timeout and HTTPS support
@@ -57,12 +59,22 @@ func NewHTTPClient(timeout time.Duration, tlsConfig *tls.Config) *HTTPClient {
 	}
 }
 
+// SetRequestHeader set http request header
+func (c *HTTPClient) SetRequestHeader(key, value string) {
+	if c.header == nil {
+		c.header = http.Header{}
+	}
+	c.header.Add(key, value)
+}
+
 // Get fetch an URL with GET method and returns the response
 func (c *HTTPClient) Get(ctx context.Context, url string) ([]byte, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
+
+	req.Header = c.header
 
 	if ctx != nil {
 		req = req.WithContext(ctx)
@@ -76,13 +88,60 @@ func (c *HTTPClient) Get(ctx context.Context, url string) ([]byte, error) {
 	return checkHTTPResponse(res)
 }
 
+// Download fetch an URL with GET method and Download the response to filePath
+func (c *HTTPClient) Download(ctx context.Context, url, filePath string) error {
+	//  IsExist
+	if IsExist(filePath) {
+		return fmt.Errorf("target file %s already exists", filePath)
+	}
+
+	if err := CreateDir(filepath.Dir(filePath)); err != nil {
+		return err
+	}
+
+	// create target file
+	f, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return err
+	}
+
+	req.Header = c.header
+
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+	res, err := c.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	_, err = io.Copy(f, res.Body)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Post send a POST request to the url and returns the response
 func (c *HTTPClient) Post(ctx context.Context, url string, body io.Reader) ([]byte, error) {
 	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Content-Type", "application/json")
+
+	if c.header == nil {
+		req.Header.Set("Content-Type", "application/json")
+	} else {
+		req.Header = c.header
+	}
 
 	if ctx != nil {
 		req = req.WithContext(ctx)
