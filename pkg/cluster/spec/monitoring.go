@@ -404,7 +404,7 @@ func (i *MonitorInstance) installRules(ctx context.Context, e ctxt.Executor, dep
 		`find %[1]s -type f -name "*.rules.yml" -delete`,
 		`find %[2]s/dm-master/conf -type f -name "*.rules.yml" -exec cp {} %[1]s \;`,
 		"rm -rf %[2]s",
-		`find %[1]s -maxdepth 1 -type f -name "*.rules.yml" -exec sed -i "s/ENV_LABELS_ENV/%[3]s/g" {} \;`,
+		`find %[1]s -maxdepth 1 -type f -name "*.rules.yml" -exec sed -i 's/ENV_LABELS_ENV/%[3]s/g' {} \;`,
 	}
 	_, stderr, err = e.Execute(ctx, fmt.Sprintf(strings.Join(cmds, " && "), targetDir, tmp, clusterName), false)
 	if err != nil {
@@ -420,7 +420,7 @@ func (i *MonitorInstance) initRules(ctx context.Context, e ctxt.Executor, spec *
 		"mkdir -p %[1]s/conf",
 		`find %[1]s/conf -type f -name "*.rules.yml" -delete`,
 		`find %[1]s/bin/prometheus -maxdepth 1 -type f -name "*.rules.yml" -exec cp {} %[1]s/conf/ \;`,
-		`find %[1]s/conf -maxdepth 1 -type f -name "*.rules.yml" -exec sed -i -e "s/ENV_LABELS_ENV/%[2]s/g" {} \;`,
+		`find %[1]s/conf -maxdepth 1 -type f -name "*.rules.yml" -exec sed -i -e 's/ENV_LABELS_ENV/%[2]s/g' {} \;`,
 	}
 
 	_, stderr, err := e.Execute(ctx, fmt.Sprintf(strings.Join(cmds, " && "), paths.Deploy, clusterName), false)
@@ -438,8 +438,8 @@ func (i *MonitorInstance) initRules(ctx context.Context, e ctxt.Executor, spec *
 		}
 		// only need to render the cluster name
 		cmds = []string{
-			`find %[1]s/conf -maxdepth 1 -type f -name "*.rules.yml" -exec sed -i -e "s/env: [^ ]*/env: %[2]s/g" {} \;`,
-			`find %[1]s/conf -maxdepth 1 -type f -name "*.rules.yml" -exec sed -i -e "s/cluster: [^ ]*,/cluster: %[2]s,/g" {} \;`,
+			`find %[1]s/conf -maxdepth 1 -type f -name "*.rules.yml" -exec sed -i -e 's/env: [^ ]*/env: %[2]s/g' {} \;`,
+			`find %[1]s/conf -maxdepth 1 -type f -name "*.rules.yml" -exec sed -i -e 's/cluster: [^ ]*,/cluster: %[2]s,/g' {} \;`,
 		}
 		_, stderr, err := e.Execute(ctx, fmt.Sprintf(strings.Join(cmds, " && "), paths.Deploy, clusterName), false)
 		if err != nil {

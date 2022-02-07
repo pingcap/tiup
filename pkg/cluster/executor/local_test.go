@@ -86,8 +86,8 @@ func TestLocalExecuteWithQuotes(t *testing.T) {
 	defer os.RemoveAll(deployDir)
 
 	cmds := []string{
-		fmt.Sprintf(`find %s -type f -exec sed -i "s/\${DS_.*-CLUSTER}/hello/g" {} \;`, deployDir),
-		fmt.Sprintf(`find %s -type f -exec sed -i "s/DS_.*-CLUSTER/hello/g" {} \;`, deployDir),
+		fmt.Sprintf(`find %s -type f -exec sed -i 's/\${DS_.*-CLUSTER}/hello/g' {} \;`, deployDir),
+		fmt.Sprintf(`find %s -type f -exec sed -i 's/DS_.*-CLUSTER/hello/g' {} \;`, deployDir),
 		`ls '/tmp'`,
 	}
 	for _, cmd := range cmds {
