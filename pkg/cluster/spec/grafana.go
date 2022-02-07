@@ -99,6 +99,7 @@ func (c *GrafanaComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(servers))
 
 	for _, s := range servers {
+		s := s
 		ins = append(ins, &GrafanaInstance{
 			BaseInstance: BaseInstance{
 				InstanceSpec: s,
@@ -267,12 +268,12 @@ func (i *GrafanaInstance) initDashboards(ctx context.Context, e ctxt.Executor, s
 
 	// Deal with the cluster name
 	for _, cmd := range []string{
-		`find %s -type f -exec sed -i "s/\${DS_.*-CLUSTER}/%s/g" {} \;`,
-		`find %s -type f -exec sed -i "s/DS_.*-CLUSTER/%s/g" {} \;`,
-		`find %s -type f -exec sed -i "s/\${DS_LIGHTNING}/%s/g" {} \;`,
-		`find %s -type f -exec sed -i "s/DS_LIGHTNING/%s/g" {} \;`,
-		`find %s -type f -exec sed -i "s/test-cluster/%s/g" {} \;`,
-		`find %s -type f -exec sed -i "s/Test-Cluster/%s/g" {} \;`,
+		`find %s -type f -exec sed -i 's/\${DS_.*-CLUSTER}/%s/g' {} \;`,
+		`find %s -type f -exec sed -i 's/DS_.*-CLUSTER/%s/g' {} \;`,
+		`find %s -type f -exec sed -i 's/\${DS_LIGHTNING}/%s/g' {} \;`,
+		`find %s -type f -exec sed -i 's/DS_LIGHTNING/%s/g' {} \;`,
+		`find %s -type f -exec sed -i 's/test-cluster/%s/g' {} \;`,
+		`find %s -type f -exec sed -i 's/Test-Cluster/%s/g' {} \;`,
 	} {
 		cmd := fmt.Sprintf(cmd, dashboardsDir, clusterName)
 		_, stderr, err := e.Execute(ctx, cmd, false)

@@ -478,6 +478,8 @@ func checkSystemInfo(
 		applyFixTasks = append(applyFixTasks, tf.BuildAsStep(fmt.Sprintf("  - Applying changes on %s", host)))
 	}
 
+	checkResults = deduplicateCheckResult(checkResults)
+
 	if gOpt.DisplayMode == "json" {
 		checkResultStruct := make([]HostCheckResult, 0)
 
@@ -688,4 +690,39 @@ func checkConflict(m *Manager, clusterName string, topo spec.Topology) error {
 	}
 	err = spec.CheckClusterDirConflict(clusterList, clusterName, topo)
 	return err
+}
+
+// deduplicateCheckResult deduplicate check results
+func deduplicateCheckResult(checkResults []HostCheckResult) (uniqueResults []HostCheckResult) {
+	// node: {name|status: set(msg)}
+	tmpResultMap := map[string]map[string]set.StringSet{}
+
+	// deduplicate
+	for _, result := range checkResults {
+		if tmpResultMap[result.Node] == nil {
+			tmpResultMap[result.Node] = make(map[string]set.StringSet)
+		}
+		// insert msg into set
+		msgKey := fmt.Sprintf("%s|%s", result.Name, result.Status)
+		if tmpResultMap[result.Node][msgKey] == nil {
+			tmpResultMap[result.Node][msgKey] = set.NewStringSet()
+		}
+		tmpResultMap[result.Node][msgKey].Insert(result.Message)
+	}
+
+	for node, msgMap := range tmpResultMap {
+		for checkInfo, msgSet := range msgMap {
+			nameAndstatus := strings.Split(checkInfo, "|")
+			for _, msg := range msgSet.Slice() {
+				uniqueResults = append(uniqueResults,
+					HostCheckResult{
+						Node:    node,
+						Name:    nameAndstatus[0],
+						Status:  nameAndstatus[1],
+						Message: msg,
+					})
+			}
+		}
+	}
+	return
 }
