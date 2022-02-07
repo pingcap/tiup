@@ -127,6 +127,7 @@ func (i *MasterInstance) InitConfig(
 		paths.Deploy,
 		paths.Data[0],
 		paths.Log,
+		enableTLS,
 	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).WithPeerPort(spec.PeerPort).AppendEndpoints(i.topo.Endpoints(deployUser)...).WithV1SourcePath(spec.V1SourcePath)
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_dm-master_%s_%d.sh", i.GetHost(), i.GetPort()))
@@ -203,6 +204,7 @@ func (i *MasterInstance) ScaleConfig(
 		return err
 	}
 
+	enableTLS := i.topo.GlobalOptions.TLSEnabled
 	c := topo.(*Specification)
 	spec := i.InstanceSpec.(*MasterSpec)
 	cfg := scripts.NewDMMasterScaleScript(
@@ -211,6 +213,7 @@ func (i *MasterInstance) ScaleConfig(
 		paths.Deploy,
 		paths.Data[0],
 		paths.Log,
+		enableTLS,
 	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).WithPeerPort(spec.PeerPort).AppendEndpoints(c.Endpoints(deployUser)...)
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_dm-master_%s_%d.sh", i.GetHost(), i.GetPort()))
@@ -302,6 +305,7 @@ func (i *WorkerInstance) InitConfig(
 		i.GetHost(),
 		paths.Deploy,
 		paths.Log,
+		enableTLS,
 	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).AppendEndpoints(i.topo.Endpoints(deployUser)...)
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_dm-worker_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
@@ -479,7 +483,8 @@ func (topo *Specification) Endpoints(user string) []*scripts.DMMasterScript {
 			s.Host,
 			deployDir,
 			dataDir,
-			logDir).
+			logDir,
+			topo.GlobalOptions.TLSEnabled).
 			WithPort(s.Port).
 			WithPeerPort(s.PeerPort)
 		ends = append(ends, script)

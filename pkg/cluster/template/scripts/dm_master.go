@@ -21,6 +21,7 @@ import (
 	"text/template"
 
 	"github.com/pingcap/tiup/embed"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // DMMasterScript represent the data to generate TiDB config
@@ -39,10 +40,10 @@ type DMMasterScript struct {
 }
 
 // NewDMMasterScript returns a DMMasterScript with given arguments
-func NewDMMasterScript(name, ip, deployDir, dataDir, logDir string) *DMMasterScript {
+func NewDMMasterScript(name, ip, deployDir, dataDir, logDir string, enableTLS bool) *DMMasterScript {
 	return &DMMasterScript{
 		Name:      name,
-		Scheme:    "http",
+		Scheme:    utils.Ternary(enableTLS, "https", "http").(string),
 		IP:        ip,
 		Port:      8261,
 		PeerPort:  8291,
@@ -137,8 +138,8 @@ type DMMasterScaleScript struct {
 }
 
 // NewDMMasterScaleScript return a new DMMasterScaleScript
-func NewDMMasterScaleScript(name, ip, deployDir, dataDir, logDir string) *DMMasterScaleScript {
-	return &DMMasterScaleScript{*NewDMMasterScript(name, ip, deployDir, dataDir, logDir)}
+func NewDMMasterScaleScript(name, ip, deployDir, dataDir, logDir string, enableTLS bool) *DMMasterScaleScript {
+	return &DMMasterScaleScript{*NewDMMasterScript(name, ip, deployDir, dataDir, logDir, enableTLS)}
 }
 
 // WithScheme set Scheme field of DMMasterScaleScript
