@@ -133,10 +133,8 @@ the latest stable version will be downloaded from the repository.`,
 						break
 					}
 				}
-				if len(transparentParams) > 0 {
-					if transparentParams[0] == "--" {
-						transparentParams = transparentParams[1:]
-					}
+				if len(transparentParams) > 0 && transparentParams[0] == "--" {
+					transparentParams = transparentParams[1:]
 				}
 
 				teleCommand = fmt.Sprintf("%s %s", cmd.CommandPath(), componentSpec)
@@ -229,7 +227,8 @@ func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
 		// use exit code from component
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
 			code = exitErr.ExitCode()
 		} else {
 			fmt.Fprintln(os.Stderr, color.RedString("Error: %v", err))
