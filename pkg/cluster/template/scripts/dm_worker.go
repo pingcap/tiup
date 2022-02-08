@@ -20,13 +20,11 @@ import (
 	"text/template"
 
 	"github.com/pingcap/tiup/embed"
-	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // DMWorkerScript represent the data to generate TiDB config
 type DMWorkerScript struct {
 	Name      string
-	Scheme    string
 	IP        string
 	Port      int
 	DeployDir string
@@ -36,10 +34,9 @@ type DMWorkerScript struct {
 }
 
 // NewDMWorkerScript returns a DMWorkerScript with given arguments
-func NewDMWorkerScript(name, ip, deployDir, logDir string, enableTLS bool) *DMWorkerScript {
+func NewDMWorkerScript(name, ip, deployDir, logDir string) *DMWorkerScript {
 	return &DMWorkerScript{
 		Name:      name,
-		Scheme:    utils.Ternary(enableTLS, "https", "http").(string),
 		IP:        ip,
 		Port:      8262,
 		DeployDir: deployDir,

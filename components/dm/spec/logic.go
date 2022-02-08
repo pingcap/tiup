@@ -305,7 +305,6 @@ func (i *WorkerInstance) InitConfig(
 		i.GetHost(),
 		paths.Deploy,
 		paths.Log,
-		enableTLS,
 	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).AppendEndpoints(i.topo.Endpoints(deployUser)...)
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_dm-worker_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {

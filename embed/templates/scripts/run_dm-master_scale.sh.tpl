@@ -23,7 +23,7 @@ exec bin/dm-master/dm-master \
 {{- end}}
     --name="{{.Name}}" \
     --master-addr="{{.IP}}:{{.Port}}" \
-    --advertise-addr="{{.Scheme}}://{{.IP}}:{{.Port}}" \
+    --advertise-addr="{{.IP}}:{{.Port}}" \
     --peer-urls="{{.Scheme}}://{{.IP}}:{{.PeerPort}}" \
     --advertise-peer-urls="{{.Scheme}}://{{.IP}}:{{.PeerPort}}" \
     --log-file="{{.LogDir}}/dm-master.log" \
