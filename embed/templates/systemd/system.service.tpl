@@ -27,7 +27,7 @@ AmbientCapabilities=CAP_NET_RAW
 User={{.User}}
 ExecStart={{.DeployDir}}/scripts/run_{{.ServiceName}}.sh
 {{- if eq .ServiceName "prometheus"}}
-ExecReload=/bin/kill -HUP $MAINPID
+ExecReload=/bin/bash -c 'kill -HUP $MAINPID $(pidof {{.DeployDir}}/bin/ng-monitoring-server)'
 {{end}}
 
 {{- if .Restart}}

@@ -86,3 +86,24 @@ pd_servers:
 	err = validateNewTopo(&topo)
 	assert.NotNil(err)
 }
+
+func TestDeduplicateCheckResult(t *testing.T) {
+	checkResults := []HostCheckResult{}
+
+	for i := 0; i <= 10; i++ {
+		checkResults = append(checkResults,
+			HostCheckResult{
+				Node:    "127.0.0.1",
+				Status:  "Warn",
+				Name:    "disk",
+				Message: "mount point /home does not have 'noatime' option set",
+			},
+		)
+	}
+
+	checkResults = deduplicateCheckResult(checkResults)
+
+	if len(checkResults) != 1 {
+		t.Errorf("Deduplicate Check Result Failed")
+	}
+}

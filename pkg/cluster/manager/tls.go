@@ -29,7 +29,6 @@ import (
 
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
-	"golang.org/x/mod/semver"
 )
 
 // TLS set cluster enable/disable encrypt communication by tls
@@ -129,13 +128,11 @@ func (m *Manager) TLS(name string, gOpt operator.Options, enable, cleanCertifica
 // checkTLSEnv check tiflash vserson and show confirm
 func checkTLSEnv(topo spec.Topology, clusterName, version string, skipConfirm bool) error {
 	// check tiflash version
-	if clusterSpec, ok := topo.(*spec.Specification); ok {
-		if clusterSpec.GlobalOptions.TLSEnabled {
-			if semver.Compare(version, "v4.0.5") < 0 && len(clusterSpec.TiFlashServers) > 0 {
-				return fmt.Errorf("TiFlash %s is not supported in TLS enabled cluster", version)
-			}
-		}
+	if err := checkTiFlashWithTLS(topo, version); err != nil {
+		return err
+	}
 
+	if clusterSpec, ok := topo.(*spec.Specification); ok {
 		if len(clusterSpec.PDServers) != 1 {
 			return errorx.EnsureStackTrace(fmt.Errorf("Having multiple PD nodes is not supported when enable/disable TLS")).
 				WithProperty(tui.SuggestionFromString("Please `scale-in` PD nodes to one and try again."))
