@@ -373,6 +373,14 @@ scrape_configs:
 {{- if .DMMasterAddrs}}
   - job_name: "dm_master"
     honor_labels: true # don't overwrite job & instance labels
+{{- if .TLSEnabled}}
+    scheme: https
+    tls_config:
+      insecure_skip_verify: false
+      ca_file: ../tls/ca.crt
+      cert_file: ../tls/prometheus.crt
+      key_file: ../tls/prometheus.pem
+{{- end}}
     static_configs:
     - targets:
     {{- range .DMMasterAddrs}}
@@ -383,6 +391,14 @@ scrape_configs:
 {{- if .DMWorkerAddrs}}
   - job_name: "dm_worker"
     honor_labels: true # don't overwrite job & instance labels
+{{- if .TLSEnabled}}
+    scheme: https
+    tls_config:
+      insecure_skip_verify: false
+      ca_file: ../tls/ca.crt
+      cert_file: ../tls/prometheus.crt
+      key_file: ../tls/prometheus.pem
+{{- end}}
     static_configs:
     - targets:
     {{- range .DMWorkerAddrs}}
