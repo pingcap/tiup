@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 	"syscall"
 	"time"
@@ -27,7 +28,7 @@ import (
 	"github.com/google/uuid"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/environment"
-	"github.com/pingcap/tiup/pkg/exec"
+	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/localdata"
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/repository"
@@ -132,8 +133,12 @@ the latest stable version will be downloaded from the repository.`,
 						break
 					}
 				}
+				if len(transparentParams) > 0 && transparentParams[0] == "--" {
+					transparentParams = transparentParams[1:]
+				}
+
 				teleCommand = fmt.Sprintf("%s %s", cmd.CommandPath(), componentSpec)
-				return exec.RunComponent(env, tag, componentSpec, binPath, transparentParams)
+				return tiupexec.RunComponent(env, tag, componentSpec, binPath, transparentParams)
 			}
 			return cmd.Help()
 		},
@@ -221,8 +226,14 @@ func Execute() {
 
 	err := rootCmd.Execute()
 	if err != nil {
-		fmt.Println(color.RedString("Error: %v", err))
-		code = 1
+		// use exit code from component
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			code = exitErr.ExitCode()
+		} else {
+			fmt.Fprintln(os.Stderr, color.RedString("Error: %v", err))
+			code = 1
+		}
 	}
 
 	teleReport := new(telemetry.Report)

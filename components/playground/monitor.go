@@ -24,7 +24,6 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/playground/instance"
-	"github.com/pingcap/tiup/pkg/environment"
 	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -136,21 +135,11 @@ scrape_configs:
 		fmt.Sprintf("--storage.tsdb.path=%s", filepath.Join(dir, "data")),
 	}
 
-	env := environment.GlobalEnv()
-	params := &tiupexec.PrepareCommandParams{
-		Ctx:         ctx,
-		Component:   "prometheus",
-		Version:     utils.Version(version),
-		InstanceDir: dir,
-		WD:          dir,
-		Args:        args,
-		SysProcAttr: instance.SysProcAttr,
-		Env:         env,
-	}
-	cmd, err := tiupexec.PrepareCommand(params)
-	if err != nil {
+	var binPath string
+	if binPath, err = tiupexec.PrepareBinary("prometheus", utils.Version(version), binPath); err != nil {
 		return nil, err
 	}
+	cmd := instance.PrepareCommand(ctx, binPath, args, nil, dir)
 
 	m.port = port
 	m.cmd = cmd

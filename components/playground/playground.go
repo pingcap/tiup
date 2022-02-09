@@ -417,8 +417,12 @@ func (p *Playground) sanitizeComponentConfig(cid string, cfg *instance.Config) e
 }
 
 func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) error {
-	fmt.Printf("Start %s instance\n", inst.Component())
-	err := inst.Start(ctx, utils.Version(p.bootOptions.Version))
+	version, err := environment.GlobalEnv().V1Repository().ResolveComponentVersion(inst.Component(), p.bootOptions.Version)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Start %s instance:%s\n", inst.Component(), version)
+	err = inst.Start(ctx, version)
 	if err != nil {
 		return err
 	}
@@ -621,6 +625,9 @@ func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins i
 
 	id := p.allocID(componentID)
 	dir := filepath.Join(dataDir, fmt.Sprintf("%s-%d", componentID, id))
+	if err = os.MkdirAll(dir, 0755); err != nil {
+		return nil, err
+	}
 	// look more like listen ip?
 	host := p.bootOptions.Host
 	if cfg.Host != "" {
