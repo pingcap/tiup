@@ -250,11 +250,6 @@ func (i *GrafanaInstance) setTLSConfig(ctx context.Context, enableTLS bool, conf
 
 func (i *GrafanaInstance) initDashboards(ctx context.Context, e ctxt.Executor, spec *GrafanaSpec, paths meta.DirPaths, clusterName string) error {
 	dashboardsDir := filepath.Join(paths.Deploy, "dashboards")
-	if spec.DashboardDir != "" {
-		return i.TransferLocalConfigDir(ctx, e, spec.DashboardDir, dashboardsDir, func(name string) bool {
-			return strings.HasSuffix(name, ".json")
-		})
-	}
 
 	cmds := []string{
 		"mkdir -p %[1]s",
@@ -264,6 +259,12 @@ func (i *GrafanaInstance) initDashboards(ctx context.Context, e ctxt.Executor, s
 	_, stderr, err := e.Execute(ctx, fmt.Sprintf(strings.Join(cmds, " && "), dashboardsDir, paths.Deploy), false)
 	if err != nil {
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
+	}
+
+	if spec.DashboardDir != "" {
+		return i.TransferLocalConfigDir(ctx, e, spec.DashboardDir, dashboardsDir, func(name string) bool {
+			return strings.HasSuffix(name, ".json")
+		})
 	}
 
 	// Deal with the cluster name
