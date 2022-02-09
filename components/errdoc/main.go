@@ -153,7 +153,7 @@ func loadIndex() (bleve.Index, map[string]*spec.ErrorSpec, error) {
 		}
 		// Ignore file if cannot be unmarshalled to error specification
 		file := tomlFile{}
-		if _, err := toml.DecodeReader(reader, &file); err != nil {
+		if _, err := toml.NewDecoder(reader).Decode(&file); err != nil {
 			return nil
 		}
 		for code, spec := range file {
