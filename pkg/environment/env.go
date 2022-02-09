@@ -204,9 +204,6 @@ func (env *Environment) SelectInstalledVersion(component string, ver utils.Versi
 		if vi.Yanked {
 			continue
 		}
-		if (string(ver) == utils.NightlyVersionAlias) != utils.Version(v).IsNightly() {
-			continue
-		}
 		versions = append(versions, v)
 	}
 	// Reverse sort: v5.0.0-rc,v5.0.0-nightly-20210305,v4.0.11
@@ -219,6 +216,10 @@ func (env *Environment) SelectInstalledVersion(component string, ver utils.Versi
 	if ver.IsEmpty() || string(ver) == utils.NightlyVersionAlias {
 		var selected utils.Version
 		for _, v := range versions {
+			// only select nightly for nightly
+			if (string(ver) == utils.NightlyVersionAlias) != utils.Version(v).IsNightly() {
+				continue
+			}
 			if semver.Prerelease(v) == "" {
 				return utils.Version(v), nil
 			}

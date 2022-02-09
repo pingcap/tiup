@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -103,11 +104,12 @@ func (p *Pump) Start(ctx context.Context, version utils.Version) error {
 	}
 
 	var err error
-	if p.Process, err = NewComponentProcess(ctx, p.Dir, p.BinPath, "pump", version, args...); err != nil {
+	if p.BinPath, err = tiupexec.PrepareBinary("pump", version, p.BinPath); err != nil {
 		return err
 	}
-	logIfErr(p.Process.SetOutputFile(p.LogFile()))
+	p.Process = &process{cmd: PrepareCommand(ctx, p.BinPath, args, nil, p.Dir)}
 
+	logIfErr(p.Process.SetOutputFile(p.LogFile()))
 	return p.Process.Start()
 }
 

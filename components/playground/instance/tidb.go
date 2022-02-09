@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"strings"
 
+	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -71,11 +72,12 @@ func (inst *TiDBInstance) Start(ctx context.Context, version utils.Version) erro
 	}
 
 	var err error
-	if inst.Process, err = NewComponentProcess(ctx, inst.Dir, inst.BinPath, "tidb", version, args...); err != nil {
+	if inst.BinPath, err = tiupexec.PrepareBinary("tidb", version, inst.BinPath); err != nil {
 		return err
 	}
-	logIfErr(inst.Process.SetOutputFile(inst.LogFile()))
+	inst.Process = &process{cmd: PrepareCommand(ctx, inst.BinPath, args, nil, inst.Dir)}
 
+	logIfErr(inst.Process.SetOutputFile(inst.LogFile()))
 	return inst.Process.Start()
 }
 

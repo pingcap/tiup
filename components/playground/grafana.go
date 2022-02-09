@@ -26,7 +26,6 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/playground/instance"
-	"github.com/pingcap/tiup/pkg/environment"
 	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -199,23 +198,11 @@ http_port = %d
 		fmt.Sprintf("cfg:default.paths.logs=%s", path.Join(dir, "log")),
 	}
 
-	env := environment.GlobalEnv()
-	params := &tiupexec.PrepareCommandParams{
-		Ctx:         ctx,
-		Component:   "grafana",
-		Version:     utils.Version(g.version),
-		InstanceDir: dir,
-		WD:          dir,
-		Args:        args,
-		SysProcAttr: instance.SysProcAttr,
-		Env:         env,
-	}
-	cmd, err := tiupexec.PrepareCommand(params)
-	if err != nil {
+	var binPath string
+	if binPath, err = tiupexec.PrepareBinary("grafana", utils.Version(g.version), binPath); err != nil {
 		return err
 	}
-	cmd.Stdout = nil
-	cmd.Stderr = nil
+	cmd := instance.PrepareCommand(ctx, binPath, args, nil, dir)
 
 	g.cmd = cmd
 

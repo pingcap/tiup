@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/pingcap/errors"
+	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -70,14 +71,14 @@ func (inst *TiKVInstance) Start(ctx context.Context, version utils.Version) erro
 		fmt.Sprintf("--log-file=%s", inst.LogFile()),
 	}
 
+	envs := []string{"MALLOC_CONF=prof:true,prof_active:false"}
 	var err error
-	envs := make(map[string]string)
-	envs["MALLOC_CONF"] = "prof:true,prof_active:false"
-	if inst.Process, err = NewComponentProcessWithEnvs(ctx, inst.Dir, inst.BinPath, "tikv", version, envs, args...); err != nil {
+	if inst.BinPath, err = tiupexec.PrepareBinary("tikv", version, inst.BinPath); err != nil {
 		return err
 	}
-	logIfErr(inst.Process.SetOutputFile(inst.LogFile()))
+	inst.Process = &process{cmd: PrepareCommand(ctx, inst.BinPath, args, envs, inst.Dir)}
 
+	logIfErr(inst.Process.SetOutputFile(inst.LogFile()))
 	return inst.Process.Start()
 }
 

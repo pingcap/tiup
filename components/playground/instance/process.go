@@ -2,7 +2,6 @@ package instance
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -10,9 +9,6 @@ import (
 	"time"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/environment"
-	tiupexec "github.com/pingcap/tiup/pkg/exec"
-	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // Process represent process to be run by playground
@@ -85,42 +81,13 @@ func (p *process) Cmd() *exec.Cmd {
 	return p.cmd
 }
 
-// NewComponentProcessWithEnvs create a Process instance with given environment variables.
-func NewComponentProcessWithEnvs(ctx context.Context, dir, binPath, component string, version utils.Version, envs map[string]string, arg ...string) (Process, error) {
-	if dir == "" {
-		panic("dir must be set")
-	}
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return nil, err
-	}
+// PrepareCommand return command for playground
+func PrepareCommand(ctx context.Context, binPath string, args, envs []string, workDir string) *exec.Cmd {
+	c := exec.CommandContext(ctx, binPath, args...)
 
-	env := environment.GlobalEnv()
-	params := &tiupexec.PrepareCommandParams{
-		Ctx:          ctx,
-		Component:    component,
-		Version:      version,
-		BinPath:      binPath,
-		InstanceDir:  dir,
-		WD:           dir,
-		Args:         arg,
-		EnvVariables: make([]string, 0),
-		SysProcAttr:  SysProcAttr,
-		Env:          env,
-	}
-	for k, v := range envs {
-		pair := fmt.Sprintf("%s=%s", k, v)
-		params.EnvVariables = append(params.EnvVariables, pair)
-	}
-
-	cmd, err := tiupexec.PrepareCommand(params)
-	if err != nil {
-		return nil, err
-	}
-
-	return &process{cmd: cmd}, nil
-}
-
-// NewComponentProcess create a Process instance.
-func NewComponentProcess(ctx context.Context, dir, binPath, component string, version utils.Version, arg ...string) (Process, error) {
-	return NewComponentProcessWithEnvs(ctx, dir, binPath, component, version, nil, arg...)
+	c.Env = os.Environ()
+	c.Env = append(c.Env, envs...)
+	c.Dir = workDir
+	c.SysProcAttr = SysProcAttr
+	return c
 }
