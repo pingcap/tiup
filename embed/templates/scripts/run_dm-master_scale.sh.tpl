@@ -22,7 +22,7 @@ exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/dm-master/d
 exec bin/dm-master/dm-master \
 {{- end}}
     --name="{{.Name}}" \
-    --master-addr="0.0.0.0:{{.Port}}" \
+    --master-addr="{{.IP}}:{{.Port}}" \
     --advertise-addr="{{.IP}}:{{.Port}}" \
     --peer-urls="{{.Scheme}}://{{.IP}}:{{.PeerPort}}" \
     --advertise-peer-urls="{{.Scheme}}://{{.IP}}:{{.PeerPort}}" \

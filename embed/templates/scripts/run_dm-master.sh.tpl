@@ -25,10 +25,10 @@ exec bin/dm-master/dm-master \
     --v1-sources-path="{{.V1SourcePath}}" \
 {{- end}}
     --name="{{.Name}}" \
-    --master-addr="0.0.0.0:{{.Port}}" \
+    --master-addr="{{.IP}}:{{.Port}}" \
     --advertise-addr="{{.IP}}:{{.Port}}" \
-    --peer-urls="{{.IP}}:{{.PeerPort}}" \
-    --advertise-peer-urls="{{.IP}}:{{.PeerPort}}" \
+    --peer-urls="{{.Scheme}}://{{.IP}}:{{.PeerPort}}" \
+    --advertise-peer-urls="{{.Scheme}}://{{.IP}}:{{.PeerPort}}" \
     --log-file="{{.LogDir}}/dm-master.log" \
     --data-dir="{{.DataDir}}" \
     --initial-cluster="{{template "MasterList" .Endpoints}}" \

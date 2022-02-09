@@ -46,7 +46,7 @@ func newScaleInCmd() *cobra.Command {
 				b.Func(
 					fmt.Sprintf("ScaleInCluster: options=%+v", gOpt),
 					func(ctx context.Context) error {
-						return ScaleInDMCluster(ctx, metadata.Topology, gOpt)
+						return ScaleInDMCluster(ctx, metadata.Topology, gOpt, tlsCfg)
 					},
 				).Serial(dmtask.NewUpdateDMMeta(clusterName, metadata, gOpt.Nodes))
 			}
@@ -68,6 +68,7 @@ func ScaleInDMCluster(
 	ctx context.Context,
 	topo *dm.Specification,
 	options operator.Options,
+	tlsCfg *tls.Config,
 ) error {
 	// instances by uuid
 	instances := map[string]dm.Instance{}
@@ -125,7 +126,7 @@ func ScaleInDMCluster(
 		return errors.New("cannot find available dm-master instance")
 	}
 
-	dmMasterClient = api.NewDMMasterClient(dmMasterEndpoint, 10*time.Second, nil)
+	dmMasterClient = api.NewDMMasterClient(dmMasterEndpoint, 10*time.Second, tlsCfg)
 
 	noAgentHosts := set.NewStringSet()
 	topo.IterInstance(func(inst dm.Instance) {
