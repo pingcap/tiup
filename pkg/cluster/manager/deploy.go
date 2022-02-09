@@ -407,7 +407,12 @@ func (m *Manager) Deploy(
 		return err
 	}
 
-	hint := color.New(color.Bold).Sprintf("%s start %s --init", tui.OsArgs0(), name)
+	var hint string
+	if topo.Type() == spec.TopoTypeTiDB {
+		hint = color.New(color.Bold).Sprintf("%s start %s --init", tui.OsArgs0(), name)
+	} else {
+		hint = color.New(color.Bold).Sprintf("%s start %s", tui.OsArgs0(), name)
+	}
 	m.logger.Infof("Cluster `%s` deployed successfully, you can start it with command: `%s`", name, hint)
 	return nil
 }
