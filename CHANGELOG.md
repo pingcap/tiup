@@ -1,5 +1,44 @@
 TiUP Changelog
 
+## [1.9.0] 2022-02-10
+
+### New Features
+
+- Enable next-generation monitor (`ng-monitor`) by default for TiDB versions equal or later than `v5.4.0` in `tiup-cluster` ([#1699](https://github.com/pingcap/tiup/pull/1699) [#1743](https://github.com/pingcap/tiup/pull/1743), [@nexustar](https://github.com/nexustar))
+- Add support of enabling and disabling TLS encryption for deployed TiDB cluster in `tiup-cluster` ([#1657](https://github.com/pingcap/tiup/pull/1657), [@srstack](https://github.com/srstack))
+- Add support of deploying TLS enabled DM clusters in `tiup-dm` ([#1745](https://github.com/pingcap/tiup/pull/1745), [@nexustar](https://github.com/nexustar))
+- Add support of changing owner of a component in `tiup mirror` and `tiup-server` ([#1676](https://github.com/pingcap/tiup/pull/1676), [@AstroProfundis](https://github.com/AstroProfundis))
+- Add support of specifing IP address to bind for AlertManager in `tiup-cluster` ([#1665](https://github.com/pingcap/tiup/pull/1665) [#1669](https://github.com/pingcap/tiup/pull/1669), [@srstack](https://github.com/srstack))
+- Add support of initialing random root password for TiDB in `tiup-cluster` ([#1700](https://github.com/pingcap/tiup/pull/1700), [@AstroProfundis](https://github.com/AstroProfundis))
+- Add support of `check` before scaling out a cluster in `tiup-cluster` ([#1659](https://github.com/pingcap/tiup/pull/1659), [@srstack](https://github.com/srstack))
+- Add support of customizing Grafana configurations in `server_configs` section in `tiup-cluster` and `tiup-dm` ([#1703](https://github.com/pingcap/tiup/pull/1703), [@nexustar](https://github.com/nexustar))
+- Add support of Chrony as valid NTP daemon for `check` in `tiup-cluster` ([#1714](https://github.com/pingcap/tiup/pull/1714), [@srstack](https://github.com/srstack))
+- Add Amazon Linux 2 as supported OS for `check` in `tiup-cluster` ([#1740](https://github.com/pingcap/tiup/pull/1740), [@dveeden](https://github.com/dveeden))
+- Add significant warning destroying a cluster in `tiup-cluster` and `tiup-dm` ([#1723](https://github.com/pingcap/tiup/pull/1723), [@AstroProfundis](https://github.com/AstroProfundis))
+
+### Fixes
+
+- Fix DM hosts not added to node_exporter list of Prometheus configuration in `tiup-dm` ([#1654](https://github.com/pingcap/tiup/pull/1654), [@AstroProfundis](https://github.com/AstroProfundis))
+- Adjust command argument of `tiup` to workaround conflict with some components ([#1698](https://github.com/pingcap/tiup/pull/1698), [@nexustar](https://github.com/nexustar))
+- Fix global configs not correctly set for new instances during scaling out in `tiup-cluster` ([#1701](https://github.com/pingcap/tiup/pull/1701), [@srstack](https://github.com/srstack))
+- Fix incorrect `initial_commit_ts` set in start up script of Drainer in `tiup-cluster` ([#1706](https://github.com/pingcap/tiup/pull/1706), [@nexustar](https://github.com/nexustar))
+- Fix JSON output for `check` results in `tiup-cluster` ([#1720](https://github.com/pingcap/tiup/pull/1720), [@AstroProfundis](https://github.com/AstroProfundis))
+- Fix incorrect instance status for `display` in `tiup-cluster` ([#1742](https://github.com/pingcap/tiup/pull/1742), [@nexustar](https://github.com/nexustar))
+- Fix malformed commands in local executor in `tiup-cluster` ([#1734](https://github.com/pingcap/tiup/pull/1734), [@AstroProfundis](https://github.com/AstroProfundis))
+- Fix incorrect exit code for `tiup` ([#1738](https://github.com/pingcap/tiup/issues/1738), [@nexustar](https://github.com/nexustar))
+- Remove duplicate `check` results in `tiup-cluster` ([#1737](https://github.com/pingcap/tiup/pull/1737), [@srstack](https://github.com/srstack))
+- Fix version check of TiFlash nightly builds for TLS enabled clusters in `tiup-cluster` ([#1735](https://github.com/pingcap/tiup/pull/1735), [@srstack](https://github.com/srstack))
+
+### Improvements
+
+- Adjust configuration template for TiFlash to support new versions in `tiup-cluster` ([#1673](https://github.com/pingcap/tiup/pull/1673), [@hehechen](https://github.com/hehechen))
+- Adjust configuration sample for DM in `tiup-dm` ([#1692](https://github.com/pingcap/tiup/pull/1692), [@lance6716](https://github.com/lance6716))
+- Reder cluster name for custom Prometheus alert rules in `tiup-cluster` ([#1674](https://github.com/pingcap/tiup/pull/1674), [@srstack](https://github.com/srstack))
+- Improve shell auto-completion to support cli of components ([#1678](https://github.com/pingcap/tiup/pull/1687), [@nexustar](https://github.com/nexustar))
+- Add checks for `tiup` installed with 3rd party package manager when running `tiup update --self` ([#1693](https://github.com/pingcap/tiup/issues/1693), [@srstack](https://github.com/srstack))
+- Check for component updates before actually run it ([#1718](https://github.com/pingcap/tiup/pull/1718), [@nexustar](https://github.com/nexustar))
+- Use latest nightly build for each component in `tiup-playground` ([#1727](https://github.com/pingcap/tiup/pull/1727), [@nexustar](https://github.com/nexustar))
+
 ## [1.8.2] 2022-01-11
 
 ### Fixes
