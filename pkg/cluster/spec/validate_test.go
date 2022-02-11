@@ -155,9 +155,11 @@ global:
 tidb_servers:
   - host: 172.16.5.138
     arch: "arm64"
+    os: "linux"
 tikv_servers:
   - host: 172.16.5.138
     arch: "arm64"
+    os: "linux"
 `), &topo)
 	c.Assert(err, IsNil)
 
@@ -169,9 +171,11 @@ global:
 tidb_servers:
   - host: 172.16.5.138
     arch: "aarch64"
+    os: "linux"
 tikv_servers:
   - host: 172.16.5.138
     arch: "amd64"
+    os: "linux"
 `), &topo)
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "platform mismatch for '172.16.5.138' between 'tidb_servers:linux/arm64' and 'tikv_servers:linux/amd64'")
@@ -189,6 +193,7 @@ tidb_servers:
 tikv_servers:
   - host: 172.16.5.138
     arch: "arm64"
+    os: "linux"
 `), &topo)
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "platform mismatch for '172.16.5.138' between 'tidb_servers:darwin/arm64' and 'tikv_servers:linux/arm64'")
