@@ -157,7 +157,7 @@ func (m *Manager) Deploy(
 		}
 	}
 
-	if err := m.fillHostArch(sshConnProps, sshProxyProps, topo, &gOpt, opt.User); err != nil {
+	if err := m.fillHost(sshConnProps, sshProxyProps, topo, &gOpt, opt.User); err != nil {
 		return err
 	}
 
@@ -325,7 +325,6 @@ func (m *Manager) Deploy(
 	// Deploy monitor relevant components to remote
 	dlTasks, dpTasks, err := buildMonitoredDeployTask(
 		m,
-		name,
 		uniqueHosts,
 		noAgentHosts,
 		globalOptions,

@@ -687,9 +687,9 @@ func (s *Specification) GetMasterList() []string {
 	return masterList
 }
 
-// FillHostArch fills the topology with the given host->arch
-func (s *Specification) FillHostArch(hostArch map[string]string) error {
-	return spec.FillHostArch(s, hostArch)
+// FillHostArchOrOS fills the topology with the given host->arch
+func (s *Specification) FillHostArchOrOS(hostArch map[string]string, fullType spec.FullHostType) error {
+	return spec.FillHostArchOrOS(s, hostArch, fullType)
 }
 
 // Merge returns a new Topology which sum old ones
@@ -796,12 +796,6 @@ func setDMCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) erro
 				field.Field(j).Set(reflect.ValueOf(globalOptions.LogDir))
 			}
 		case "Arch":
-			// default values of globalOptions are set before fillCustomDefaults in Unmarshal
-			// so the globalOptions.Arch already has its default value set, no need to check again
-			if field.Field(j).String() == "" {
-				field.Field(j).Set(reflect.ValueOf(globalOptions.Arch))
-			}
-
 			switch strings.ToLower(field.Field(j).String()) {
 			// replace "x86_64" with amd64, they are the same in our repo
 			case "x86_64":
@@ -816,10 +810,6 @@ func setDMCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) erro
 				field.Field(j).Set(reflect.ValueOf(strings.ToLower(field.Field(j).String())))
 			}
 		case "OS":
-			// default value of globalOptions.OS is already set, same as "Arch"
-			if field.Field(j).String() == "" {
-				field.Field(j).Set(reflect.ValueOf(globalOptions.OS))
-			}
 			// convert to lower case
 			if field.Field(j).String() != "" {
 				field.Field(j).Set(reflect.ValueOf(strings.ToLower(field.Field(j).String())))

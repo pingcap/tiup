@@ -37,7 +37,7 @@ is the cluster name. Some checks are ignore in this mode, such as port and dir
 conflict checks with other clusters
 If you want to check the scale-out topology, please use execute the following command
 '	check <cluster-name> <scale-out.yml> --cluster	'
-it will the new instances `,
+it will check the new instances `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 && len(args) != 2 {
 				return cmd.Help()
