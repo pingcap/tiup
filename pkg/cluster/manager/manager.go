@@ -196,7 +196,7 @@ func (m *Manager) fillHostArchOrOS(s, p *tui.SSHConnectionProps, topo spec.Topol
 		hostArchOrOS[inst.GetHost()] = ""
 
 		tf := task.NewSimpleUerSSH(m.logger, inst.GetHost(), inst.GetSSHPort(), user, *gOpt, p, globalSSHType)
-		if s.Password != "" {
+		if s.Password != "" || user == "root" {
 			tf = task.NewBuilder(m.logger).
 				RootSSH(
 					inst.GetHost(),
