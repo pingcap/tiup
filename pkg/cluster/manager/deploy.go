@@ -130,14 +130,7 @@ func (m *Manager) Deploy(
 		}
 	}
 
-	clusterList, err := m.specManager.GetAllClusters()
-	if err != nil {
-		return err
-	}
-	if err := spec.CheckClusterPortConflict(clusterList, name, topo); err != nil {
-		return err
-	}
-	if err := spec.CheckClusterDirConflict(clusterList, name, topo); err != nil {
+	if err := checkConflict(m, name, topo); err != nil {
 		return err
 	}
 

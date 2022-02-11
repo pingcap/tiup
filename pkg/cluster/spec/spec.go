@@ -638,10 +638,6 @@ func setCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) error 
 				field.Field(j).Set(reflect.ValueOf(strings.ToLower(field.Field(j).String())))
 			}
 		case "OS":
-			// default value of globalOptions.OS is already set, same as "Arch"
-			if field.Field(j).String() == "" {
-				field.Field(j).Set(reflect.ValueOf(globalOptions.OS))
-			}
 			// convert to lower case
 			if field.Field(j).String() != "" {
 				field.Field(j).Set(reflect.ValueOf(strings.ToLower(field.Field(j).String())))

@@ -237,7 +237,7 @@ func (m *Manager) fillHostArchOrOS(s, p *tui.SSHConnectionProps, topo spec.Topol
 		m.logger,
 	)
 	t := task.NewBuilder(m.logger).
-		ParallelStep("+ Detect CPU Arch Or Kernel Name", false, detectTasks...).
+		ParallelStep(fmt.Sprintf("+ Detect CPU %s Name", string(fullType)), false, detectTasks...).
 		Build()
 
 	if err := t.Execute(ctx); err != nil {
