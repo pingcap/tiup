@@ -255,8 +255,8 @@ func StopMonitored(ctx context.Context, hosts []string, noAgentHosts set.StringS
 	return systemctlMonitor(ctx, hosts, noAgentHosts, options, "stop", timeout)
 }
 
-// RestopMonitored stop BlackboxExporter and NodeExporter
-func RestopMonitored(ctx context.Context, hosts []string, noAgentHosts set.StringSet, options *spec.MonitoredOptions, timeout uint64) error {
+// RestartMonitored stop BlackboxExporter and NodeExporter
+func RestartMonitored(ctx context.Context, hosts []string, noAgentHosts set.StringSet, options *spec.MonitoredOptions, timeout uint64) error {
 	err := StopMonitored(ctx, hosts, noAgentHosts, options, timeout)
 	if err != nil {
 		return err
