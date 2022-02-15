@@ -168,6 +168,7 @@ master_servers:
     arch: "arm64"
 worker_servers:
   - host: 172.16.5.138
+    arch: "aarch64"
 `), &topo)
 	assert.Nil(t, err)
 
@@ -179,9 +180,11 @@ global:
 master_servers:
   - host: 172.16.5.138
     arch: "aarch64"
+    os: "linux"
 worker_servers:
   - host: 172.16.5.138
     arch: "amd64"
+    os: "linux"
 `), &topo)
 	assert.NotNil(t, err)
 	assert.Equal(t, "platform mismatch for '172.16.5.138' between 'master_servers:linux/arm64' and 'worker_servers:linux/amd64'", err.Error())
@@ -195,8 +198,11 @@ global:
 master_servers:
   - host: 172.16.5.138
     os: "darwin"
+    arch: "aarch64"
 worker_servers:
   - host: 172.16.5.138
+    os: "linux"
+    arch: "aarch64"
 `), &topo)
 	assert.NotNil(t, err)
 	assert.Equal(t, "platform mismatch for '172.16.5.138' between 'master_servers:darwin/arm64' and 'worker_servers:linux/arm64'", err.Error())
