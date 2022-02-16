@@ -139,6 +139,10 @@ func Upgrade(
 		}
 	}
 
+	if topo.GetMonitoredOptions() == nil {
+		return nil
+	}
+
 	return RestartMonitored(ctx, uniqueHosts.Slice(), noAgentHosts, topo.GetMonitoredOptions(), options.OptTimeout)
 }
 
