@@ -171,8 +171,8 @@ func (ctx *Context) GetOutputs(hostID string) ([]byte, []byte, bool) {
 // SetOutputs set the outputs of a host
 func (ctx *Context) SetOutputs(hostID string, stdout []byte, stderr []byte) {
 	ctx.mutex.Lock()
-	ctx.exec.stderrs[hostID] = stdout
-	ctx.exec.stdouts[hostID] = stderr
+	ctx.exec.stdouts[hostID] = stdout
+	ctx.exec.stderrs[hostID] = stderr
 	ctx.mutex.Unlock()
 }
 
