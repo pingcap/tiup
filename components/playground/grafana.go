@@ -55,8 +55,6 @@ func writeDatasourceConfig(fname string, clusterName string, p8sURL string) erro
 	}
 
 	tpl := `apiVersion: 1
-deleteDatasources:
-  - name: %s
 datasources:
   - name: %s
     type: prometheus
