@@ -52,12 +52,18 @@ func buildReloadPromAndGrafanaTasks(
 	}
 	var tasks []*task.StepDisplay
 	deletedNodes := set.NewStringSet(nodes...)
-	for _, inst := range monitor.Instances() {
+	for _, inst := range instances {
 		if deletedNodes.Exist(inst.ID()) {
 			continue
 		}
+		// reload Prometheus
+		action := "reload"
+		if inst.ComponentName() == spec.ComponentGrafana {
+			// restart grafana
+			action = "restart"
+		}
 		t := task.NewBuilder(logger).
-			SystemCtl(inst.GetHost(), inst.ServiceName(), "reload", true).
+			SystemCtl(inst.GetHost(), inst.ServiceName(), action, true).
 			BuildAsStep(fmt.Sprintf("  - Reload %s -> %s", inst.ComponentName(), inst.ID()))
 		tasks = append(tasks, t)
 	}
