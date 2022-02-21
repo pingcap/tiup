@@ -258,7 +258,6 @@ func buildScaleOutTask(
 	// Deploy monitor relevant components to remote
 	dlTasks, dpTasks, err := buildMonitoredDeployTask(
 		m,
-		name,
 		uninitializedHosts,
 		noAgentHosts,
 		topo.BaseTopo().GlobalOptions,
@@ -407,7 +406,6 @@ type hostInfo struct {
 
 func buildMonitoredDeployTask(
 	m *Manager,
-	name string,
 	uniqueHosts map[string]hostInfo, // host -> ssh-port, os, arch
 	noAgentHosts set.StringSet, // hosts that do not deploy monitor agents
 	globalOptions *spec.GlobalOptions,

@@ -31,6 +31,7 @@ import (
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/proxy"
 	"github.com/pingcap/tiup/pkg/tui"
+	"github.com/pingcap/tiup/pkg/utils"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.uber.org/zap"
 	"golang.org/x/mod/semver"
@@ -42,6 +43,16 @@ const (
 
 	// the prometheus metric name of start time of the process since unix epoch in seconds.
 	promMetricStartTimeSeconds = "process_start_time_seconds"
+)
+
+// FullHostType is the type of fullhost operations
+type FullHostType string
+
+const (
+	// FullArchType cpu-arch type
+	FullArchType FullHostType = "Arch"
+	// FullOSType kernel-name
+	FullOSType FullHostType = "OS"
 )
 
 // general role names
@@ -153,7 +164,7 @@ type Topology interface {
 	CountDir(host string, dir string) int
 	TLSConfig(dir string) (*tls.Config, error)
 	Merge(that Topology) Topology
-	FillHostArch(hostArchmap map[string]string) error
+	FillHostArchOrOS(hostArchmap map[string]string, fullType FullHostType) error
 	GetGrafanaConfig() map[string]string
 
 	ScaleOutTopology
@@ -406,7 +417,7 @@ func (s *Specification) AdjustByVersion(clusterVersion string) {
 			server.DataDir = ""
 		}
 	}
-	if semver.Compare(clusterVersion, "v5.4.0") >= 0 {
+	if semver.Compare(clusterVersion, "v5.4.0") >= 0 || strings.Contains(clusterVersion, utils.NightlyVersionAlias) {
 		for _, m := range s.Monitors {
 			if m.NgPort == 0 {
 				m.NgPort = 12020
@@ -628,10 +639,6 @@ func setCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) error 
 				field.Field(j).Set(reflect.ValueOf(strings.ToLower(field.Field(j).String())))
 			}
 		case "OS":
-			// default value of globalOptions.OS is already set, same as "Arch"
-			if field.Field(j).String() == "" {
-				field.Field(j).Set(reflect.ValueOf(globalOptions.OS))
-			}
 			// convert to lower case
 			if field.Field(j).String() != "" {
 				field.Field(j).Set(reflect.ValueOf(strings.ToLower(field.Field(j).String())))
@@ -806,25 +813,25 @@ func AlertManagerEndpoints(alertmanager []*AlertmanagerSpec, user string, enable
 	return ends
 }
 
-// FillHostArch fills the topology with the given host->arch
-func (s *Specification) FillHostArch(hostArch map[string]string) error {
-	if err := FillHostArch(s, hostArch); err != nil {
+// FillHostArchOrOS fills the topology with the given host->arch
+func (s *Specification) FillHostArchOrOS(hostArch map[string]string, fullType FullHostType) error {
+	if err := FillHostArchOrOS(s, hostArch, fullType); err != nil {
 		return err
 	}
 
 	return s.platformConflictsDetect()
 }
 
-// FillHostArch fills the topology with the given host->arch
-func FillHostArch(s interface{}, hostArch map[string]string) error {
-	for host, arch := range hostArch {
+// FillHostArchOrOS fills the topology with the given host->arch
+func FillHostArchOrOS(s interface{}, hostArchOrOS map[string]string, fullType FullHostType) error {
+	for host, arch := range hostArchOrOS {
 		switch arch {
 		case "x86_64":
-			hostArch[host] = "amd64"
+			hostArchOrOS[host] = "amd64"
 		case "aarch64":
-			hostArch[host] = "arm64"
+			hostArchOrOS[host] = "arm64"
 		default:
-			hostArch[host] = strings.ToLower(arch)
+			hostArchOrOS[host] = strings.ToLower(arch)
 		}
 	}
 
@@ -837,7 +844,7 @@ func FillHostArch(s interface{}, hostArch map[string]string) error {
 			continue
 		}
 		for j := 0; j < field.Len(); j++ {
-			if err := setHostArch(field.Index(j), hostArch); err != nil {
+			if err := setHostArchOrOS(field.Index(j), hostArchOrOS, fullType); err != nil {
 				return err
 			}
 		}
@@ -845,13 +852,13 @@ func FillHostArch(s interface{}, hostArch map[string]string) error {
 	return nil
 }
 
-func setHostArch(field reflect.Value, hostArch map[string]string) error {
+func setHostArchOrOS(field reflect.Value, hostArchOrOS map[string]string, fullType FullHostType) error {
 	if !field.CanSet() || isSkipField(field) {
 		return nil
 	}
 
 	if field.Kind() == reflect.Ptr {
-		return setHostArch(field.Elem(), hostArch)
+		return setHostArchOrOS(field.Elem(), hostArchOrOS, fullType)
 	}
 
 	if field.Kind() != reflect.Struct {
@@ -860,10 +867,17 @@ func setHostArch(field reflect.Value, hostArch map[string]string) error {
 
 	host := field.FieldByName("Host")
 	arch := field.FieldByName("Arch")
+	os := field.FieldByName("OS")
 
 	// set arch only if not set before
-	if !host.IsZero() && arch.CanSet() && len(arch.String()) == 0 {
-		arch.Set(reflect.ValueOf(hostArch[host.String()]))
+	if fullType == FullOSType {
+		if !host.IsZero() && os.CanSet() && len(os.String()) == 0 {
+			os.Set(reflect.ValueOf(hostArchOrOS[host.String()]))
+		}
+	} else {
+		if !host.IsZero() && arch.CanSet() && len(arch.String()) == 0 {
+			arch.Set(reflect.ValueOf(hostArchOrOS[host.String()]))
+		}
 	}
 
 	return nil

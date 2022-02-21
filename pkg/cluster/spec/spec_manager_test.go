@@ -48,7 +48,7 @@ func (t *TestTopology) Merge(topo Topology) Topology {
 	panic("not support")
 }
 
-func (t *TestTopology) FillHostArch(hostArch map[string]string) error {
+func (t *TestTopology) FillHostArchOrOS(hostArchOrOS map[string]string, fullType FullHostType) error {
 	panic("not support")
 }
 

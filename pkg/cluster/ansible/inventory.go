@@ -180,6 +180,7 @@ func parseGroupVars(ctx context.Context, dir, ansCfgFile string, clsMeta *spec.C
 				SSHPort:  getHostPort(srv, ansCfg),
 				Imported: true,
 				Arch:     "amd64",
+				OS:       "linux",
 			}
 
 			if port, ok := grpVars["tidb_port"]; ok {
@@ -223,6 +224,7 @@ func parseGroupVars(ctx context.Context, dir, ansCfgFile string, clsMeta *spec.C
 				SSHPort:  getHostPort(srv, ansCfg),
 				Imported: true,
 				Arch:     "amd64",
+				OS:       "linux",
 			}
 
 			if port, ok := grpVars["tikv_port"]; ok {
@@ -269,6 +271,7 @@ func parseGroupVars(ctx context.Context, dir, ansCfgFile string, clsMeta *spec.C
 				SSHPort:  getHostPort(srv, ansCfg),
 				Imported: true,
 				Arch:     "amd64",
+				OS:       "linux",
 			}
 			if tmpIns.Host != srv.Name {
 				tmpIns.Name = srv.Name // use alias as the name of PD
@@ -318,6 +321,7 @@ func parseGroupVars(ctx context.Context, dir, ansCfgFile string, clsMeta *spec.C
 				SSHPort:  getHostPort(srv, ansCfg),
 				Imported: true,
 				Arch:     "amd64",
+				OS:       "linux",
 			}
 
 			if tcpPort, ok := grpVars["tcp_port"]; ok {
@@ -396,6 +400,7 @@ func parseGroupVars(ctx context.Context, dir, ansCfgFile string, clsMeta *spec.C
 				SSHPort:  getHostPort(srv, ansCfg),
 				Imported: true,
 				Arch:     "amd64",
+				OS:       "linux",
 			}
 
 			if port, ok := grpVars["prometheus_port"]; ok {
@@ -442,6 +447,7 @@ func parseGroupVars(ctx context.Context, dir, ansCfgFile string, clsMeta *spec.C
 				SSHPort:  getHostPort(srv, ansCfg),
 				Imported: true,
 				Arch:     "amd64",
+				OS:       "linux",
 			}
 
 			if port, ok := grpVars["alertmanager_port"]; ok {
@@ -482,6 +488,7 @@ func parseGroupVars(ctx context.Context, dir, ansCfgFile string, clsMeta *spec.C
 				SSHPort:  getHostPort(srv, ansCfg),
 				Imported: true,
 				Arch:     "amd64",
+				OS:       "linux",
 			}
 
 			if port, ok := grpVars["grafana_port"]; ok {
@@ -527,6 +534,7 @@ func parseGroupVars(ctx context.Context, dir, ansCfgFile string, clsMeta *spec.C
 				SSHPort:  getHostPort(srv, ansCfg),
 				Imported: true,
 				Arch:     "amd64",
+				OS:       "linux",
 			}
 
 			// nothing in pump_servers.yml
@@ -569,6 +577,7 @@ func parseGroupVars(ctx context.Context, dir, ansCfgFile string, clsMeta *spec.C
 				SSHPort:  getHostPort(srv, ansCfg),
 				Imported: true,
 				Arch:     "amd64",
+				OS:       "linux",
 			}
 
 			// nothing in drainer_servers.yml

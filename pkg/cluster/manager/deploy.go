@@ -130,14 +130,7 @@ func (m *Manager) Deploy(
 		}
 	}
 
-	clusterList, err := m.specManager.GetAllClusters()
-	if err != nil {
-		return err
-	}
-	if err := spec.CheckClusterPortConflict(clusterList, name, topo); err != nil {
-		return err
-	}
-	if err := spec.CheckClusterDirConflict(clusterList, name, topo); err != nil {
+	if err := checkConflict(m, name, topo); err != nil {
 		return err
 	}
 
@@ -157,7 +150,7 @@ func (m *Manager) Deploy(
 		}
 	}
 
-	if err := m.fillHostArch(sshConnProps, sshProxyProps, topo, &gOpt, opt.User); err != nil {
+	if err := m.fillHost(sshConnProps, sshProxyProps, topo, &gOpt, opt.User); err != nil {
 		return err
 	}
 
@@ -325,7 +318,6 @@ func (m *Manager) Deploy(
 	// Deploy monitor relevant components to remote
 	dlTasks, dpTasks, err := buildMonitoredDeployTask(
 		m,
-		name,
 		uniqueHosts,
 		noAgentHosts,
 		globalOptions,

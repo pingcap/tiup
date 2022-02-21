@@ -92,6 +92,14 @@ func registerTpch(root *cobra.Command) {
 		"tidb_index_serial_scan_concurrency",
 		1,
 		"tidb_index_serial_scan_concurrency param for analyze jobs")
+	cmdPrepare.PersistentFlags().StringVar(&tpchConfig.OutputType,
+		"output-type",
+		"",
+		"Output file type. If empty, then load data to db. Current only support csv")
+	cmdPrepare.PersistentFlags().StringVar(&tpchConfig.OutputDir,
+		"output-dir",
+		"",
+		"Output directory for generating file if specified")
 
 	var cmdRun = &cobra.Command{
 		Use:   "run",
