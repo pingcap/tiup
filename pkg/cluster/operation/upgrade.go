@@ -51,12 +51,14 @@ func Upgrade(
 	components = FilterComponent(components, roleFilter)
 	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 
+	noAgentHosts := set.NewStringSet()
+	uniqueHosts := set.NewStringSet()
+
 	for _, component := range components {
 		instances := FilterInstance(component.Instances(), nodeFilter)
 		if len(instances) < 1 {
 			continue
 		}
-
 		logger.Infof("Upgrading component %s", component.Name())
 
 		// perform pre-upgrade actions of component
@@ -102,6 +104,11 @@ func Upgrade(
 		deferInstances := make([]spec.Instance, 0)
 
 		for _, instance := range instances {
+			// monitors
+			uniqueHosts.Insert(instance.GetHost())
+			if instance.IgnoreMonitorAgent() {
+				noAgentHosts.Insert(instance.GetHost())
+			}
 			switch component.Name() {
 			case spec.ComponentPD:
 				// defer PD leader to be upgraded after others
@@ -132,7 +139,11 @@ func Upgrade(
 		}
 	}
 
-	return nil
+	if topo.GetMonitoredOptions() == nil {
+		return nil
+	}
+
+	return RestartMonitored(ctx, uniqueHosts.Slice(), noAgentHosts, topo.GetMonitoredOptions(), options.OptTimeout)
 }
 
 func upgradeInstance(ctx context.Context, topo spec.Topology, instance spec.Instance, options Options, tlsCfg *tls.Config) (err error) {

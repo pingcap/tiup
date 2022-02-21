@@ -255,6 +255,16 @@ func StopMonitored(ctx context.Context, hosts []string, noAgentHosts set.StringS
 	return systemctlMonitor(ctx, hosts, noAgentHosts, options, "stop", timeout)
 }
 
+// RestartMonitored stop BlackboxExporter and NodeExporter
+func RestartMonitored(ctx context.Context, hosts []string, noAgentHosts set.StringSet, options *spec.MonitoredOptions, timeout uint64) error {
+	err := StopMonitored(ctx, hosts, noAgentHosts, options, timeout)
+	if err != nil {
+		return err
+	}
+
+	return StartMonitored(ctx, hosts, noAgentHosts, options, timeout)
+}
+
 // EnableMonitored enable/disable monitor service in a cluster
 func EnableMonitored(ctx context.Context, hosts []string, noAgentHosts set.StringSet, options *spec.MonitoredOptions, timeout uint64, isEnable bool) error {
 	action := "disable"
