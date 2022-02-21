@@ -166,7 +166,7 @@ func (m *Manager) DestroyTombstone(
 		UpdateMeta(name, clusterMeta, nodes).
 		UpdateTopology(name, m.specManager.Path(name), clusterMeta, nodes).
 		ParallelStep("+ Refresh instance configs", gOpt.Force, regenConfigTasks...).
-		ParallelStep("+ Reloda prometheus and grafanas", gOpt.Force,
+		ParallelStep("+ Reloda prometheus and grafana", gOpt.Force,
 			buildReloadPromAndGrafanaTasks(metadata.GetTopology(), m.logger, gOpt)...).
 		Build()
 

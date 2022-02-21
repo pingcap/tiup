@@ -349,7 +349,7 @@ func buildScaleOutTask(
 			return operator.Start(ctx, newPart, operator.Options{OptTimeout: gOpt.OptTimeout, Operation: operator.ScaleOutOperation}, tlsCfg)
 		}).
 			ParallelStep("+ Refresh components conifgs", gOpt.Force, refreshConfigTasks...).
-			ParallelStep("+ Reload prometheus and grafanas", gOpt.Force,
+			ParallelStep("+ Reload prometheus and grafana", gOpt.Force,
 				buildReloadPromAndGrafanaTasks(metadata.GetTopology(), m.logger, gOpt)...)
 	}
 
