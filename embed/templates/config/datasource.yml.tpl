@@ -1,6 +1,4 @@
 apiVersion: 1
-deleteDatasources:
-  - name: {{.ClusterName}}
 datasources:
   - name: {{.ClusterName}}
     type: prometheus

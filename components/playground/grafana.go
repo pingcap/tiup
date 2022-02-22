@@ -55,8 +55,6 @@ func writeDatasourceConfig(fname string, clusterName string, p8sURL string) erro
 	}
 
 	tpl := `apiVersion: 1
-deleteDatasources:
-  - name: %s
 datasources:
   - name: %s
     type: prometheus
@@ -70,7 +68,7 @@ datasources:
     editable: true
 `
 
-	s := fmt.Sprintf(tpl, clusterName, clusterName, p8sURL)
+	s := fmt.Sprintf(tpl, clusterName, p8sURL)
 	err = os.WriteFile(fname, []byte(s), 0644)
 	if err != nil {
 		return errors.AddStack(err)
