@@ -116,7 +116,8 @@ func (m *Manager) ScaleIn(
 
 	t := b.
 		ParallelStep("+ Refresh instance configs", force, regenConfigTasks...).
-		ParallelStep("+ Reloda prometheus", gOpt.Force, buildReloadPromTasks(metadata.GetTopology(), m.logger, gOpt, nodes...)...).
+		ParallelStep("+ Reloda prometheus and grafana", gOpt.Force,
+			buildReloadPromAndGrafanaTasks(metadata.GetTopology(), m.logger, gOpt, nodes...)...).
 		Build()
 
 	ctx := ctxt.New(
