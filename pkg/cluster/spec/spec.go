@@ -31,6 +31,7 @@ import (
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/proxy"
 	"github.com/pingcap/tiup/pkg/tui"
+	"github.com/pingcap/tiup/pkg/utils"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.uber.org/zap"
 	"golang.org/x/mod/semver"
@@ -416,7 +417,7 @@ func (s *Specification) AdjustByVersion(clusterVersion string) {
 			server.DataDir = ""
 		}
 	}
-	if semver.Compare(clusterVersion, "v5.4.0") >= 0 {
+	if semver.Compare(clusterVersion, "v5.4.0") >= 0 || strings.Contains(clusterVersion, utils.NightlyVersionAlias) {
 		for _, m := range s.Monitors {
 			if m.NgPort == 0 {
 				m.NgPort = 12020
