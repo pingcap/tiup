@@ -162,8 +162,8 @@ func (ctx *Context) SetExecutor(host string, e Executor) {
 // GetOutputs get the outputs of a host (if has any)
 func (ctx *Context) GetOutputs(hostID string) ([]byte, []byte, bool) {
 	ctx.mutex.RLock()
-	stdout, ok1 := ctx.exec.stderrs[hostID]
-	stderr, ok2 := ctx.exec.stdouts[hostID]
+	stdout, ok1 := ctx.exec.stdouts[hostID]
+	stderr, ok2 := ctx.exec.stderrs[hostID]
 	ctx.mutex.RUnlock()
 	return stdout, stderr, ok1 && ok2
 }
