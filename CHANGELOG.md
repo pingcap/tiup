@@ -1,5 +1,14 @@
 TiUP Changelog
 
+## [1.9.1] 2022-02-24
+
+### Fixes
+
+- Fix panic running TPCC with `tiup-bench` ([#1755](https://github.com/pingcap/tiup/pull/1755), [@nexustar](https://github.com/nexustar))
+- Fix blackbox_exporter and node_exporter not restarted during upgrade in `tiup-cluster` and `tiup-dm` ([#1758](https://github.com/pingcap/tiup/pull/1758), [@srstack](https://github.com/srstack))
+- Fix messed `stdout` and `stderr` handling for SSH commands in `tiup-cluster` and `tiup-dm` ([#1763](https://github.com/pingcap/tiup/pull/1763), [@tongtongyin](https://github.com/tongtongyin))
+- Fix Grafana datasource config handling in `tiup-cluster` and `tiup-dm` ([#1768](https://github.com/pingcap/tiup/pull/1768), [@srstack](https://github.com/srstack))
+
 ## [1.9.0] 2022-02-10
 
 ### New Features
