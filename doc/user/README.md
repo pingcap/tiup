@@ -95,7 +95,7 @@ Examples:
 Use "tiup [command] --help" for more information about a command.
 ```
 
-The components available are
+The official components available are
 
 ```
 Name               Owner      Description
