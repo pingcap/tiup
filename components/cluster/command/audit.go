@@ -19,6 +19,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+//  retainDay number of days to keep audit logs for deletion
+var retainDay int
+
 func newAuditCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "audit [audit-id]",
@@ -34,5 +37,23 @@ func newAuditCmd() *cobra.Command {
 			}
 		},
 	}
+	cmd.AddCommand(newAuditCleanupCmd())
+	return cmd
+}
+
+func newAuditCleanupCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "cleanup",
+		Short: "cleanup cluster audit logs",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := audit.DeleteAuditLog(spec.AuditDir(), retainDay, skipConfirm, gOpt.DisplayMode)
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+	}
+
+	cmd.Flags().IntVar(&retainDay, "retain-day", 60, "Number of days to keep audit logs for deletion")
 	return cmd
 }

@@ -15,6 +15,7 @@ package audit
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"os"
@@ -206,4 +207,98 @@ func decodeAuditID(auditID string) (time.Time, error) {
 	}
 	t := time.Unix(ts, 0)
 	return t, nil
+}
+
+type deleteAuditLog struct {
+	Files []string `json:"files"`
+	Size  int64    `json:"size"`
+	Count int      `json:"count"`
+}
+
+// DeleteAuditLog  cleanup audit log
+func DeleteAuditLog(dir string, retainDay int, skipConfirm bool, displayMode string) error {
+	// if retainDays < 1 {
+	// 	return errors.Errorf("retain-time cannot be less than 1")
+	// }
+	oneDayDuration, _ := time.ParseDuration("-24h")
+	deleteTime := time.Now().Add(oneDayDuration * time.Duration(retainDay))
+
+	deleteLog := &deleteAuditLog{
+		Files: []string{},
+		Size:  0,
+		Count: 0,
+	}
+
+	fileInfos, err := os.ReadDir(dir)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+
+	for _, f := range fileInfos {
+		if f.IsDir() {
+			continue
+		}
+		t, err := decodeAuditID(f.Name())
+		if err != nil {
+			continue
+		}
+		if t.Before(deleteTime) {
+			info, err := f.Info()
+			if err != nil {
+				continue
+			}
+			deleteLog.Size += info.Size()
+			deleteLog.Count++
+			deleteLog.Files = append(deleteLog.Files, filepath.Join(dir, f.Name()))
+		}
+	}
+
+	if displayMode == "json" {
+		data, err := json.Marshal(struct {
+			*deleteAuditLog `json:"deleted_logs"`
+		}{deleteLog})
+
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(data))
+	} else {
+		fmt.Printf("Files to be %s are:\n%s\nTotal count: %d \nTotal size: %s\n",
+			color.HiYellowString("deleted"),
+			strings.Join(deleteLog.Files, "\n"),
+			deleteLog.Count,
+			readableSize(deleteLog.Size),
+		)
+
+		if !skipConfirm {
+			if err := tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]:"); err != nil {
+				return err
+			}
+		}
+	}
+
+	for _, f := range deleteLog.Files {
+		if err := os.Remove(f); err != nil {
+			return err
+		}
+	}
+	if displayMode != "json" {
+		fmt.Println("clean audit log successfully")
+	}
+
+	return nil
+}
+
+func readableSize(b int64) string {
+	const unit = 1024
+	if b < unit {
+		return fmt.Sprintf("%d B", b)
+	}
+	div, exp := int64(unit), 0
+	for n := b / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.2f %cB",
+		float64(b)/float64(div), "kMGTPE"[exp])
 }
