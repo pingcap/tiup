@@ -44,8 +44,8 @@ func newAuditLogCore() zapcore.Core {
 	return zapcore.NewCore(encoder, zapcore.Lock(zapcore.AddSync(auditBuffer)), zapcore.DebugLevel)
 }
 
-// OutputAuditLogToFileIfEnabled outputs audit log to specified file if enabled.
-func OutputAuditLogToFileIfEnabled(dir, file string) error {
+// OutputAuditLogToFileIfEnabled outputs audit log to specified fileSuffix if enabled.
+func OutputAuditLogToFileIfEnabled(dir, fileSuffix string) error {
 	if !auditEnabled.Load() {
 		return nil
 	}
@@ -54,7 +54,7 @@ func OutputAuditLogToFileIfEnabled(dir, file string) error {
 		return err
 	}
 
-	err := audit.OutputAuditLog(dir, file, auditBuffer.Bytes())
+	err := audit.OutputAuditLog(dir, fileSuffix, auditBuffer.Bytes())
 	if err != nil {
 		return err
 	}
