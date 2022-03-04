@@ -253,6 +253,7 @@ func DeleteAuditLog(dir string, retainDay int, skipConfirm bool, displayMode str
 		}
 	}
 
+	// output format json
 	if displayMode == "json" {
 		data, err := json.Marshal(struct {
 			*deleteAuditLog `json:"deleted_logs"`
@@ -263,6 +264,7 @@ func DeleteAuditLog(dir string, retainDay int, skipConfirm bool, displayMode str
 		}
 		fmt.Println(string(data))
 	} else {
+		// print table
 		fmt.Printf("Files to be %s are:\n%s\nTotal count: %d \nTotal size: %s\n",
 			color.HiYellowString("deleted"),
 			strings.Join(deleteLog.Files, "\n"),
@@ -282,6 +284,7 @@ func DeleteAuditLog(dir string, retainDay int, skipConfirm bool, displayMode str
 			return err
 		}
 	}
+
 	if displayMode != "json" {
 		fmt.Println("clean audit log successfully")
 	}
