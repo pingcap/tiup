@@ -69,7 +69,7 @@ func (s *testAuditSuite) TestOutputAuditLog(c *C) {
 
 	var g errgroup.Group
 	for i := 0; i < 20; i++ {
-		g.Go(func() error { return OutputAuditLog(dir, []byte("audit log")) })
+		g.Go(func() error { return OutputAuditLog(dir, "", []byte("audit log")) })
 	}
 	err := g.Wait()
 	c.Assert(err, IsNil)

@@ -144,11 +144,15 @@ func GetAuditList(dir string) ([]Item, error) {
 }
 
 // OutputAuditLog outputs audit log.
-func OutputAuditLog(dir string, data []byte) error {
-	auditID := base52.Encode(time.Now().UnixNano() + rand.Int63n(1000))
-	if customID := os.Getenv(EnvNameAuditID); customID != "" {
-		auditID = fmt.Sprintf("%s_%s", auditID, customID)
+func OutputAuditLog(dir, file string, data []byte) error {
+	auditID := file
+	if auditID == "" {
+		auditID = base52.Encode(time.Now().UnixNano() + rand.Int63n(1000))
+		if customID := os.Getenv(EnvNameAuditID); customID != "" {
+			auditID = fmt.Sprintf("%s_%s", auditID, customID)
+		}
 	}
+
 	fname := filepath.Join(dir, auditID)
 	f, err := os.Create(fname)
 	if err != nil {
