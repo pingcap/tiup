@@ -600,7 +600,7 @@ func fixFailedChecks(host string, res *operator.CheckResult, t *task.Builder) (s
 		if len(fields) < 2 {
 			return "", fmt.Errorf("can not perform action of service, %s", res.Msg)
 		}
-		t.SystemCtl(host, fields[1], fields[0], false)
+		t.SystemCtl(host, fields[1], fields[0], false, false)
 		msg = fmt.Sprintf("will try to '%s'", color.HiBlueString(res.Msg))
 	case operator.CheckNameSysctl:
 		fields := strings.Fields(res.Msg)
