@@ -112,7 +112,7 @@ type Item struct {
 // GetAuditList get the audit item list
 func GetAuditList(dir string) ([]Item, error) {
 	fileInfos, err := os.ReadDir(dir)
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil  {
 		return nil, err
 	}
 
@@ -233,7 +233,7 @@ func DeleteAuditLog(dir string, retainDay int, skipConfirm bool, displayMode str
 	deleteLog.DelBeforeTime = time.Now().Add(oneDayDuration * time.Duration(retainDay))
 
 	fileInfos, err := os.ReadDir(dir)
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil {
 		return err
 	}
 
