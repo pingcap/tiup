@@ -217,11 +217,7 @@ type deleteAuditLog struct {
 }
 
 // DeleteAuditLog  cleanup audit log
-func DeleteAuditLog(dir string, retainDay int, skipConfirm bool, displayMode string) error {
-	if retainDay < 0 {
-		return errors.Errorf("retain-time cannot be less than 0")
-	}
-
+func DeleteAuditLog(dir string, retainDays int, skipConfirm bool, displayMode string) error {
 	deleteLog := &deleteAuditLog{
 		Files: []string{},
 		Size:  0,
@@ -230,7 +226,7 @@ func DeleteAuditLog(dir string, retainDay int, skipConfirm bool, displayMode str
 
 	//  audit logs before `DelBeforeTime` will be deleted
 	oneDayDuration, _ := time.ParseDuration("-24h")
-	deleteLog.DelBeforeTime = time.Now().Add(oneDayDuration * time.Duration(retainDay))
+	deleteLog.DelBeforeTime = time.Now().Add(oneDayDuration * time.Duration(retainDays))
 
 	fileInfos, err := os.ReadDir(dir)
 	if err != nil {
