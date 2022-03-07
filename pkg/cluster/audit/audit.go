@@ -112,7 +112,7 @@ type Item struct {
 // GetAuditList get the audit item list
 func GetAuditList(dir string) ([]Item, error) {
 	fileInfos, err := os.ReadDir(dir)
-	if err != nil  {
+	if err != nil {
 		return nil, err
 	}
 
@@ -218,6 +218,11 @@ type deleteAuditLog struct {
 
 // DeleteAuditLog  cleanup audit log
 func DeleteAuditLog(dir string, retainDays int, skipConfirm bool, displayMode string) error {
+
+	if retainDays < 0 {
+		return errors.Errorf("retainDays cannot be less than 0")
+	}
+
 	deleteLog := &deleteAuditLog{
 		Files: []string{},
 		Size:  0,
