@@ -210,24 +210,27 @@ func decodeAuditID(auditID string) (time.Time, error) {
 }
 
 type deleteAuditLog struct {
-	Files []string `json:"files"`
-	Size  int64    `json:"size"`
-	Count int      `json:"count"`
+	Files         []string  `json:"files"`
+	Size          int64     `json:"size"`
+	Count         int       `json:"count"`
+	DelBeforeTime time.Time `json:"delete_before_time"` // audit logs before `DelBeforeTime` will be deleted
 }
 
 // DeleteAuditLog  cleanup audit log
 func DeleteAuditLog(dir string, retainDay int, skipConfirm bool, displayMode string) error {
-	// if retainDays < 1 {
-	// 	return errors.Errorf("retain-time cannot be less than 1")
-	// }
-	oneDayDuration, _ := time.ParseDuration("-24h")
-	deleteTime := time.Now().Add(oneDayDuration * time.Duration(retainDay))
+	if retainDay < 0 {
+		return errors.Errorf("retain-time cannot be less than 0")
+	}
 
 	deleteLog := &deleteAuditLog{
 		Files: []string{},
 		Size:  0,
 		Count: 0,
 	}
+
+	//  audit logs before `DelBeforeTime` will be deleted
+	oneDayDuration, _ := time.ParseDuration("-24h")
+	deleteLog.DelBeforeTime = time.Now().Add(oneDayDuration * time.Duration(retainDay))
 
 	fileInfos, err := os.ReadDir(dir)
 	if err != nil && !os.IsNotExist(err) {
@@ -242,7 +245,7 @@ func DeleteAuditLog(dir string, retainDay int, skipConfirm bool, displayMode str
 		if err != nil {
 			continue
 		}
-		if t.Before(deleteTime) {
+		if t.Before(deleteLog.DelBeforeTime) {
 			info, err := f.Info()
 			if err != nil {
 				continue
@@ -265,9 +268,10 @@ func DeleteAuditLog(dir string, retainDay int, skipConfirm bool, displayMode str
 		fmt.Println(string(data))
 	} else {
 		// print table
-		fmt.Printf("Files to be %s are:\n%s\nTotal count: %d \nTotal size: %s\n",
+		fmt.Printf("Audit logs before %s will be deleted!\nFiles to be %s are:\n %s\nTotal count: %d \nTotal size: %s\n",
+			color.HiYellowString(deleteLog.DelBeforeTime.Format("2006-01-02T15:04:05")),
 			color.HiYellowString("deleted"),
-			strings.Join(deleteLog.Files, "\n"),
+			strings.Join(deleteLog.Files, "\n "),
 			deleteLog.Count,
 			readableSize(deleteLog.Size),
 		)
