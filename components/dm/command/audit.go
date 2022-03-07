@@ -14,13 +14,14 @@
 package command
 
 import (
+	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/audit"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	cspec "github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/spf13/cobra"
 )
 
-var retainDay int
+var retainDays int
 
 func newAuditCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -44,9 +45,14 @@ func newAuditCmd() *cobra.Command {
 func newAuditCleanupCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "cleanup",
-		Short: "cleanup cluster audit logs",
+		Short: "cleanup dm audit logs",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			err := audit.DeleteAuditLog(spec.AuditDir(), retainDay, skipConfirm, gOpt.DisplayMode)
+
+			if retainDays < 0 {
+				return errors.Errorf("retain-days cannot be less than 0")
+			}
+
+			err := audit.DeleteAuditLog(spec.AuditDir(), retainDays, skipConfirm, gOpt.DisplayMode)
 			if err != nil {
 				return err
 			}
@@ -54,6 +60,6 @@ func newAuditCleanupCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().IntVar(&retainDay, "retain-day", 60, "Number of days to keep audit logs for deletion")
+	cmd.Flags().IntVar(&retainDays, "retain-days", 60, "Number of days to keep audit logs for deletion")
 	return cmd
 }
