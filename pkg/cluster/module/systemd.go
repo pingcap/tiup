@@ -34,6 +34,7 @@ type SystemdModuleConfig struct {
 	Unit         string        // the name of systemd unit(s)
 	Action       string        // the action to perform with the unit
 	ReloadDaemon bool          // run daemon-reload before other actions
+	CheckActive  bool          // run is-active before action
 	Scope        string        // user, system or global
 	Force        bool          // add the `--force` arg to systemctl command
 	Signal       string        // specify the signal to send to process
@@ -72,11 +73,15 @@ func NewSystemdModule(config SystemdModuleConfig) *SystemdModule {
 	cmd := fmt.Sprintf("%s %s %s",
 		systemctl, strings.ToLower(config.Action), config.Unit)
 
+	if config.CheckActive {
+		cmd = fmt.Sprintf("if [[ $(%s is-active %s) == \"active\" ]]; then %s; fi",
+			systemctl, config.Unit, cmd)
+	}
+
 	if config.ReloadDaemon {
 		cmd = fmt.Sprintf("%s daemon-reload && %s",
 			systemctl, cmd)
 	}
-
 	mod := &SystemdModule{
 		cmd:     cmd,
 		sudo:    sudo,

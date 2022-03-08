@@ -883,16 +883,16 @@ func setHostArchOrOS(field reflect.Value, hostArchOrOS map[string]string, fullTy
 	return nil
 }
 
-// when upgrade form old tiup-cluster, replace spec.CommitTS with spec.Config["initial_commit_ts"]
+// when upgrade form old tiup-cluster, replace spec.CommitTS with spec.Config["initial-commit-ts"]
 func (s *Specification) removeCommitTS() {
-	_, ok1 := s.ServerConfigs.Drainer["initial_commit_ts"]
+	_, ok1 := s.ServerConfigs.Drainer["initial-commit-ts"]
 	for _, spec := range s.Drainers {
-		_, ok2 := spec.Config["initial_commit_ts"]
+		_, ok2 := spec.Config["initial-commit-ts"]
 		if !ok1 && !ok2 && spec.CommitTS != nil && *spec.CommitTS != -1 {
 			if spec.Config == nil {
 				spec.Config = make(map[string]interface{})
 			}
-			spec.Config["initial_commit_ts"] = *spec.CommitTS
+			spec.Config["initial-commit-ts"] = *spec.CommitTS
 		}
 		spec.CommitTS = nil
 	}
