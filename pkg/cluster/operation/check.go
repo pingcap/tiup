@@ -173,7 +173,7 @@ func checkOSInfo(opt *CheckOptions, osInfo *sysinfo.OS) *CheckResult {
 				osInfo.Name, osInfo.Release)
 			return result
 		}
-	case "centos", "redhat", "rhel":
+	case "centos", "redhat", "rhel", "ol":
 		// check version
 		// CentOS 8 is known to be not working, and we don't have plan to support it
 		// as of now, we may add support for RHEL 8 based systems in the future.
