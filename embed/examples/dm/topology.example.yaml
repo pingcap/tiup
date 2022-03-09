@@ -64,7 +64,7 @@ grafana_servers:
   - host: 10.0.1.14
     # port: 3000
     # deploy_dir: /tidb-deploy/grafana-3000
-    # config:       # enable if you want to use WebUI. `tiup dm -v` newer than v1.9.0
+    # config:       # Enable this part if you want to use WebUI, make sure tiup dm -v newer than v1.9.0.
     #   auth.anonymous.enabled: true
     #   security.allow_embedding: true
 
