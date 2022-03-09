@@ -104,11 +104,9 @@ func Untar(reader io.Reader, to string) error {
 
 	decFile := func(hdr *tar.Header) error {
 		file := path.Join(to, hdr.Name)
-		if dir := filepath.Dir(file); IsNotExist(dir) {
-			err := os.MkdirAll(dir, 0755)
-			if err != nil {
-				return err
-			}
+		err := os.MkdirAll(filepath.Dir(file), 0755)
+		if err != nil {
+			return err
 		}
 		fw, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, hdr.FileInfo().Mode())
 		if err != nil {
@@ -128,11 +126,16 @@ func Untar(reader io.Reader, to string) error {
 		if err != nil {
 			return errors.Trace(err)
 		}
-		if hdr.FileInfo().IsDir() {
+		switch hdr.Typeflag {
+		case tar.TypeDir:
 			if err := os.MkdirAll(path.Join(to, hdr.Name), hdr.FileInfo().Mode()); err != nil {
 				return errors.Trace(err)
 			}
-		} else {
+		case tar.TypeSymlink:
+			if err = os.Symlink(hdr.Linkname, filepath.Join(to, hdr.Name)); err != nil {
+				return errors.Trace(err)
+			}
+		default:
 			if err := decFile(hdr); err != nil {
 				return errors.Trace(err)
 			}

@@ -15,6 +15,7 @@ package audit
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"os"
@@ -111,7 +112,7 @@ type Item struct {
 // GetAuditList get the audit item list
 func GetAuditList(dir string) ([]Item, error) {
 	fileInfos, err := os.ReadDir(dir)
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil {
 		return nil, err
 	}
 
@@ -144,11 +145,16 @@ func GetAuditList(dir string) ([]Item, error) {
 }
 
 // OutputAuditLog outputs audit log.
-func OutputAuditLog(dir string, data []byte) error {
+func OutputAuditLog(dir, fileSuffix string, data []byte) error {
+
 	auditID := base52.Encode(time.Now().UnixNano() + rand.Int63n(1000))
 	if customID := os.Getenv(EnvNameAuditID); customID != "" {
 		auditID = fmt.Sprintf("%s_%s", auditID, customID)
 	}
+	if fileSuffix != "" {
+		auditID = fmt.Sprintf("%s_%s", auditID, fileSuffix)
+	}
+
 	fname := filepath.Join(dir, auditID)
 	f, err := os.Create(fname)
 	if err != nil {
@@ -206,4 +212,106 @@ func decodeAuditID(auditID string) (time.Time, error) {
 	}
 	t := time.Unix(ts, 0)
 	return t, nil
+}
+
+type deleteAuditLog struct {
+	Files         []string  `json:"files"`
+	Size          int64     `json:"size"`
+	Count         int       `json:"count"`
+	DelBeforeTime time.Time `json:"delete_before_time"` // audit logs before `DelBeforeTime` will be deleted
+}
+
+// DeleteAuditLog  cleanup audit log
+func DeleteAuditLog(dir string, retainDays int, skipConfirm bool, displayMode string) error {
+
+	if retainDays < 0 {
+		return errors.Errorf("retainDays cannot be less than 0")
+	}
+
+	deleteLog := &deleteAuditLog{
+		Files: []string{},
+		Size:  0,
+		Count: 0,
+	}
+
+	//  audit logs before `DelBeforeTime` will be deleted
+	oneDayDuration, _ := time.ParseDuration("-24h")
+	deleteLog.DelBeforeTime = time.Now().Add(oneDayDuration * time.Duration(retainDays))
+
+	fileInfos, err := os.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+
+	for _, f := range fileInfos {
+		if f.IsDir() {
+			continue
+		}
+		t, err := decodeAuditID(f.Name())
+		if err != nil {
+			continue
+		}
+		if t.Before(deleteLog.DelBeforeTime) {
+			info, err := f.Info()
+			if err != nil {
+				continue
+			}
+			deleteLog.Size += info.Size()
+			deleteLog.Count++
+			deleteLog.Files = append(deleteLog.Files, filepath.Join(dir, f.Name()))
+		}
+	}
+
+	// output format json
+	if displayMode == "json" {
+		data, err := json.Marshal(struct {
+			*deleteAuditLog `json:"deleted_logs"`
+		}{deleteLog})
+
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(data))
+	} else {
+		// print table
+		fmt.Printf("Audit logs before %s will be deleted!\nFiles to be %s are:\n %s\nTotal count: %d \nTotal size: %s\n",
+			color.HiYellowString(deleteLog.DelBeforeTime.Format("2006-01-02T15:04:05")),
+			color.HiYellowString("deleted"),
+			strings.Join(deleteLog.Files, "\n "),
+			deleteLog.Count,
+			readableSize(deleteLog.Size),
+		)
+
+		if !skipConfirm {
+			if err := tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]:"); err != nil {
+				return err
+			}
+		}
+	}
+
+	for _, f := range deleteLog.Files {
+		if err := os.Remove(f); err != nil {
+			return err
+		}
+	}
+
+	if displayMode != "json" {
+		fmt.Println("clean audit log successfully")
+	}
+
+	return nil
+}
+
+func readableSize(b int64) string {
+	const unit = 1024
+	if b < unit {
+		return fmt.Sprintf("%d B", b)
+	}
+	div, exp := int64(unit), 0
+	for n := b / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.2f %cB",
+		float64(b)/float64(div), "kMGTPE"[exp])
 }
