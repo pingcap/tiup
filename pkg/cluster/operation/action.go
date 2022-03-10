@@ -105,6 +105,7 @@ func Start(
 	ctx context.Context,
 	cluster spec.Topology,
 	options Options,
+	restoreLeader bool,
 	tlsCfg *tls.Config,
 ) error {
 	uniqueHosts := set.NewStringSet()
@@ -127,10 +128,30 @@ func Start(
 		if err != nil {
 			return errors.Annotatef(err, "failed to start %s", comp.Name())
 		}
+
+		errg, _ := errgroup.WithContext(ctx)
 		for _, inst := range insts {
 			if !inst.IgnoreMonitorAgent() {
 				uniqueHosts.Insert(inst.GetHost())
 			}
+
+			if restoreLeader {
+				rIns, ok := inst.(spec.RollingUpdateInstance)
+				if ok {
+					// checkpoint must be in a new context
+					nctx := checkpoint.NewContext(ctx)
+					errg.Go(func() error {
+						err := rIns.PostRestart(nctx, cluster, tlsCfg)
+						if err != nil && !options.Force {
+							return err
+						}
+						return nil
+					})
+				}
+			}
+		}
+		if err := errg.Wait(); err != nil {
+			return err
 		}
 	}
 
@@ -150,6 +171,7 @@ func Stop(
 	ctx context.Context,
 	cluster spec.Topology,
 	options Options,
+	evictLeader bool,
 	tlsCfg *tls.Config,
 ) error {
 	roleFilter := set.NewStringSet(options.Roles...)
@@ -170,7 +192,15 @@ func Stop(
 
 	for _, comp := range components {
 		insts := FilterInstance(comp.Instances(), nodeFilter)
-		err := StopComponent(ctx, insts, noAgentHosts, options.OptTimeout)
+		err := StopComponent(
+			ctx,
+			cluster,
+			insts,
+			noAgentHosts,
+			options.OptTimeout,
+			evictLeader,
+			tlsCfg,
+		)
 		if err != nil && !options.Force {
 			return errors.Annotatef(err, "failed to stop %s", comp.Name())
 		}
@@ -232,12 +262,12 @@ func Restart(
 	options Options,
 	tlsCfg *tls.Config,
 ) error {
-	err := Stop(ctx, cluster, options, tlsCfg)
+	err := Stop(ctx, cluster, options, false, tlsCfg)
 	if err != nil {
 		return errors.Annotatef(err, "failed to stop")
 	}
 
-	err = Start(ctx, cluster, options, tlsCfg)
+	err = Start(ctx, cluster, options, false, tlsCfg)
 	if err != nil {
 		return errors.Annotatef(err, "failed to start")
 	}
@@ -533,7 +563,14 @@ func stopInstance(ctx context.Context, ins spec.Instance, timeout uint64) error 
 }
 
 // StopComponent stop the instances.
-func StopComponent(ctx context.Context, instances []spec.Instance, noAgentHosts set.StringSet, timeout uint64) error {
+func StopComponent(ctx context.Context,
+	topo spec.Topology,
+	instances []spec.Instance,
+	noAgentHosts set.StringSet,
+	timeout uint64,
+	evictLeader bool,
+	tlsCfg *tls.Config,
+) error {
 	if len(instances) == 0 {
 		return nil
 	}
@@ -560,6 +597,15 @@ func StopComponent(ctx context.Context, instances []spec.Instance, noAgentHosts 
 		// of checkpoint context every time put it into a new goroutine.
 		nctx := checkpoint.NewContext(ctx)
 		errg.Go(func() error {
+			if evictLeader {
+				rIns, ok := ins.(spec.RollingUpdateInstance)
+				if ok {
+					err := rIns.PreRestart(nctx, topo, int(timeout), tlsCfg)
+					if err != nil {
+						return err
+					}
+				}
+			}
 			err := stopInstance(nctx, ins, timeout)
 			if err != nil {
 				return err

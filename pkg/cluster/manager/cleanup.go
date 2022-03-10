@@ -73,7 +73,13 @@ func (m *Manager) CleanCluster(name string, gOpt operator.Options, cleanOpt oper
 	}
 	t := b.
 		Func("StopCluster", func(ctx context.Context) error {
-			return operator.Stop(ctx, topo, operator.Options{}, tlsCfg)
+			return operator.Stop(
+				ctx,
+				topo,
+				operator.Options{},
+				false, /* eviceLeader */
+				tlsCfg,
+			)
 		}).
 		Func("CleanupCluster", func(ctx context.Context) error {
 			return operator.CleanupComponent(ctx, delFileMap)

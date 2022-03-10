@@ -72,7 +72,13 @@ func (m *Manager) DestroyCluster(name string, gOpt operator.Options, destroyOpt 
 	}
 	t := b.
 		Func("StopCluster", func(ctx context.Context) error {
-			return operator.Stop(ctx, topo, operator.Options{Force: destroyOpt.Force}, tlsCfg)
+			return operator.Stop(
+				ctx,
+				topo,
+				operator.Options{Force: destroyOpt.Force},
+				false, /* eviceLeader */
+				tlsCfg,
+			)
 		}).
 		Func("DestroyCluster", func(ctx context.Context) error {
 			return operator.Destroy(ctx, topo, destroyOpt)
