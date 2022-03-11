@@ -12,7 +12,7 @@ TiUP Changelog
 ### Improvements
 
 - Check for inactive Prometheus service before `reload` in `tiup-cluster` ([#1775](https://github.com/pingcap/tiup/pull/1775), [@nexustar](https://github.com/nexustar))
-- Mark Oracle Linux 2 as supported OS in `check` result of `tiup-cluster` ([#1786](https://github.com/pingcap/tiup/pull/1786), [@srstack](https://github.com/srstack))
+- Mark Oracle Linux as supported OS in `check` result of `tiup-cluster` ([#1786](https://github.com/pingcap/tiup/pull/1786), [@srstack](https://github.com/srstack))
 
 ## [1.9.1] 2022-02-24
 
