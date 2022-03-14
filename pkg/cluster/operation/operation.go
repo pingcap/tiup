@@ -67,9 +67,9 @@ type Operation byte
 
 // Operation represents the kind of cluster operation
 const (
-	StartOperation Operation = iota
-	StopOperation
-	RestartOperation
+	// StartOperation Operation = iota
+	// StopOperation
+	RestartOperation Operation = iota
 	DestroyOperation
 	UpgradeOperation
 	ScaleInOperation
