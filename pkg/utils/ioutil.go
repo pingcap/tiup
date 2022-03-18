@@ -20,6 +20,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"io"
+	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
@@ -90,6 +91,41 @@ func IsSubDir(parent, sub string) bool {
 		return true
 	}
 	return false
+}
+
+// Tar compresses the folder to tarball with gzip
+func Tar(writer io.Writer, from string) error {
+	compressW := gzip.NewWriter(writer)
+	defer compressW.Close()
+	tarW := tar.NewWriter(compressW)
+	defer tarW.Close()
+
+	return filepath.Walk(from, func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		header, _ := tar.FileInfoHeader(info, "")
+		header.Name, _ = filepath.Rel(from, path)
+		// skip "."
+		if header.Name == "." {
+			return nil
+		}
+
+		err = tarW.WriteHeader(header)
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			fd, err := os.Open(path)
+			if err != nil {
+				return err
+			}
+			defer fd.Close()
+			_, err = io.Copy(tarW, fd)
+			return err
+		}
+		return nil
+	})
 }
 
 // Untar decompresses the tarball

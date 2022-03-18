@@ -17,7 +17,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
@@ -301,4 +303,50 @@ func checkTiFlashWithTLS(topo spec.Topology, version string) error {
 		}
 	}
 	return nil
+}
+
+// BackupClusterMeta backup cluster meta to given filepath
+func (m *Manager) BackupClusterMeta(clusterName, filePath string) error {
+	f, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
+	if err != nil {
+		return err
+	}
+	return utils.Tar(f, m.specManager.Path(clusterName))
+}
+
+// RestoreClusterMeta restore cluster meta by given filepath
+func (m *Manager) RestoreClusterMeta(clusterName, filePath string, skipConfirm bool) error {
+	fi, err := os.Stat(m.specManager.Path(clusterName, "meta.yaml"))
+	if err != nil {
+		return err
+	}
+	m.logger.Warnf(fmt.Sprintf("the exist meta.yaml of cluster %s was last modified at %s", clusterName, color.HiYellowString(fi.ModTime().Format(time.RFC3339))))
+
+	fi, err = os.Stat(filePath)
+	if err != nil {
+		return err
+	}
+	m.logger.Warnf(fmt.Sprintf("the given tarball was last modified at %s", color.HiYellowString(fi.ModTime().Format(time.RFC3339))))
+	if !skipConfirm {
+		m.logger.Warnf(color.HiRedString(tui.ASCIIArtWarning))
+		if err := tui.PromptForAnswerOrAbortError(
+			"Yes, I know my cluster meta will be be overridden.",
+			fmt.Sprintf("This operation will be override topology file and other meta file of %s cluster %s .",
+				m.sysName,
+				color.HiYellowString(clusterName),
+			)+"\nAre you sure to continue?",
+		); err != nil {
+			return err
+		}
+		m.logger.Infof("Destroying cluster...")
+	}
+	err = os.RemoveAll(m.specManager.Path(clusterName))
+	if err != nil {
+		return err
+	}
+	f, err := os.Open(filePath)
+	if err != nil {
+		return err
+	}
+	return utils.Untar(f, m.specManager.Path(clusterName))
 }
