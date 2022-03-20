@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/spf13/cobra"
@@ -31,9 +32,7 @@ func newHistoryCmd() *cobra.Command {
 		Use:   "history",
 		Short: "Display the historical execution record of TiUP",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			teleCommand = cmd.CommandPath()
 			env := environment.GlobalEnv()
-
 			rows, err := env.GetHistory(rows)
 			if err != nil {
 				return err
@@ -64,6 +63,28 @@ func newHistoryCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&displayMode, "format", "default", "(EXPERIMENTAL) The format of output, available values are [default, json]")
-	cmd.Flags().IntVar(&rows, "r", 60, "If the specified version was already installed, force a reinstallation")
+	cmd.Flags().IntVarP(&rows, "rows", "r", 60, "If the specified version was already installed, force a reinstallation")
+
+	cmd.AddCommand(newHistoryCleanupCmd())
+	return cmd
+}
+
+func newHistoryCleanupCmd() *cobra.Command {
+	var retainDays int
+	cmd := &cobra.Command{
+		Use:   "cleanup",
+		Short: "cleanup cluster audit logs",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if retainDays < 0 {
+				return errors.Errorf("retain-days cannot be less than 0")
+			}
+
+			// env := environment.GlobalEnv()
+
+			return nil
+		},
+	}
+
+	cmd.Flags().IntVar(&retainDays, "retain-days", 60, "Number of days to keep audit logs for deletion")
 	return cmd
 }
