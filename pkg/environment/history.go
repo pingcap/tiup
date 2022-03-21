@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -28,21 +29,23 @@ import (
 )
 
 const (
-	historyDir    = "history"
-	historyPrefix = "tiup-history-"
+	historyDir            = "history"
+	historyPrefix         = "tiup-history-"
+	historyFileSize int64 = 1024 * 1024 // defaule 1M, about 1w records
 )
 
 // commandRow type of command history row
 type historyRow struct {
-	Command string    `json:"command"`
 	Date    time.Time `json:"time"`
+	Command string    `json:"command"`
 	Code    int       `json:"code"`
 }
 
 // historyItem  record history row file item
 type historyItem struct {
-	path string
-	time string
+	path  string
+	size  int64
+	index int
 }
 
 // HistoryRecord record tiup exec cmd
@@ -75,11 +78,9 @@ func (h *historyRow) save(dir string) error {
 		return err
 	}
 
-	historyFile := filepath.Join(dir,
-		fmt.Sprintf("%s%s", historyPrefix, h.Date.Format("2006-01-02")),
-	)
+	historyFile := getLatestHistoryFile(dir)
 
-	f, err := os.OpenFile(historyFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0755)
+	f, err := os.OpenFile(historyFile.path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0755)
 	if err != nil {
 		return err
 	}
@@ -109,6 +110,18 @@ func (env *Environment) GetHistory(count int) ([]*historyRow, error) {
 		rows = append(rs, rows...)
 	}
 	return rows, nil
+}
+
+// DeleteHistory delete history file
+func (env *Environment) DeleteHistory() error {
+	fList, err := getHistoryFileList(env.LocalPath(historyDir))
+	if err != nil {
+		return err
+	}
+	for _, f := range fList {
+		os.Remove(f.path)
+	}
+	return nil
 }
 
 // getHistoryRows get tiup history execution row
@@ -152,15 +165,45 @@ func getHistoryFileList(dir string) ([]historyItem, error) {
 			continue
 		}
 
+		// another suffix
+		// ex: tiup-history-0.bak
+		i, err := strconv.Atoi((strings.TrimPrefix(fi.Name(), historyPrefix)))
+		if err != nil {
+			continue
+		}
+
+		fInfo, _ := fi.Info()
 		hfileList = append(hfileList, historyItem{
-			path: filepath.Join(dir, fi.Name()),
-			time: strings.TrimPrefix(fi.Name(), historyPrefix),
+			path:  filepath.Join(dir, fi.Name()),
+			index: i,
+			size:  fInfo.Size(),
 		})
 	}
 
 	sort.Slice(hfileList, func(i, j int) bool {
-		return hfileList[i].time > hfileList[j].time
+		return hfileList[i].index > hfileList[j].index
 	})
 
 	return hfileList, nil
+}
+
+func getLatestHistoryFile(dir string) (item historyItem) {
+	fileList, err := getHistoryFileList(dir)
+	// start from 0
+	if len(fileList) == 0 || err != nil {
+		item.index = 0
+		item.path = filepath.Join(dir, fmt.Sprintf("%s%s", historyPrefix, strconv.Itoa(item.index)))
+		return
+	}
+
+	latestItem := fileList[0]
+
+	if latestItem.size > historyFileSize {
+		item.index = latestItem.index + 1
+		item.path = filepath.Join(dir, fmt.Sprintf("%s%s", historyPrefix, strconv.Itoa(item.index)))
+	} else {
+		item = latestItem
+	}
+
+	return item
 }

@@ -252,7 +252,7 @@ func Execute() {
 		// record TiUP execution history
 		err := environment.HistoryRecord(env, os.Args, start, code)
 		if err != nil {
-			log.Warnf("record TiUP execution failed: %v", err)
+			log.Warnf("Record TiUP execution history log failed: %v", err)
 		}
 
 		teleMeta, _, err := telemetry.GetMeta(env)
