@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/spf13/cobra"
@@ -69,20 +70,20 @@ func newHistoryCmd() *cobra.Command {
 }
 
 func newHistoryCleanupCmd() *cobra.Command {
-	// var retainDays int
+	var retainDays int
 	cmd := &cobra.Command{
 		Use:   "cleanup",
 		Short: "cleanup cluster audit logs",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// if retainDays < 0 {
-			// 	return errors.Errorf("retain-days cannot be less than 0")
-			// }
+			if retainDays < 0 {
+				return errors.Errorf("retain-days cannot be less than 0")
+			}
 
 			env := environment.GlobalEnv()
-			return env.DeleteHistory()
+			return env.DeleteHistory(retainDays)
 		},
 	}
 
-	// cmd.Flags().IntVar(&retainDays, "retain-days", 60, "Number of days to keep audit logs for deletion")
+	cmd.Flags().IntVar(&retainDays, "retain-days", 60, "Number of days to keep audit logs for deletion")
 	return cmd
 }

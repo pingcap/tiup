@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -26,6 +27,7 @@ import (
 	"time"
 
 	"github.com/pingcap/tiup/pkg/utils"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -44,7 +46,7 @@ type historyRow struct {
 // historyItem  record history row file item
 type historyItem struct {
 	path  string
-	size  int64
+	info  fs.FileInfo
 	index int
 }
 
@@ -80,7 +82,7 @@ func (h *historyRow) save(dir string) error {
 
 	historyFile := getLatestHistoryFile(dir)
 
-	f, err := os.OpenFile(historyFile.path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0755)
+	f, err := os.OpenFile(historyFile.path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		return err
 	}
@@ -113,13 +115,23 @@ func (env *Environment) GetHistory(count int) ([]*historyRow, error) {
 }
 
 // DeleteHistory delete history file
-func (env *Environment) DeleteHistory() error {
+func (env *Environment) DeleteHistory(retainDays int) error {
+	if retainDays < 0 {
+		return errors.Errorf("retainDays cannot be less than 0")
+	}
+
+	// history file before `DelBeforeTime` will be deleted
+	oneDayDuration, _ := time.ParseDuration("-24h")
+	delBeforeTime := time.Now().Add(oneDayDuration * time.Duration(retainDays))
+
 	fList, err := getHistoryFileList(env.LocalPath(historyDir))
 	if err != nil {
 		return err
 	}
 	for _, f := range fList {
-		os.Remove(f.path)
+		if f.info.ModTime().Before(delBeforeTime) {
+			os.Remove(f.path)
+		}
 	}
 	return nil
 }
@@ -176,7 +188,7 @@ func getHistoryFileList(dir string) ([]historyItem, error) {
 		hfileList = append(hfileList, historyItem{
 			path:  filepath.Join(dir, fi.Name()),
 			index: i,
-			size:  fInfo.Size(),
+			info:  fInfo,
 		})
 	}
 
@@ -198,7 +210,7 @@ func getLatestHistoryFile(dir string) (item historyItem) {
 
 	latestItem := fileList[0]
 
-	if latestItem.size > historyFileSize {
+	if latestItem.info.Size() > historyFileSize {
 		item.index = latestItem.index + 1
 		item.path = filepath.Join(dir, fmt.Sprintf("%s%s", historyPrefix, strconv.Itoa(item.index)))
 	} else {
