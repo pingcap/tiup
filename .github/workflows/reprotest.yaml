@@ -60,6 +60,6 @@ jobs:
             GOROOT=${{ steps.prepare_env.GOROOT }} \
             GOPATH=${{ steps.prepare_env.GOPATH }} \
             PATH=$GOROOT/bin:$PATH \
-            BUILD_FLAGS='-trimpath -buildmode=pie' \
+            BUILD_FLAGS='-trimpath -buildmode=pie -mod=readonly -modcacherw -buildvcs=false' \
             make build" \
           bin
