@@ -43,6 +43,8 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // The duration process need to quit gracefully, or we kill the process.
@@ -927,7 +929,12 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 func (p *Playground) updateMonitorTopology(componentID string, info MonitorInfo) {
 	info.IP = instance.AdvertiseHost(info.IP)
-	fmt.Print(color.GreenString("To view the %s: http://%s:%d\n", strings.Title(componentID), info.IP, info.Port))
+	fmt.Print(color.GreenString(
+		"To view the %s: http://%s:%d\n",
+		cases.Title(language.English).String(componentID),
+		info.IP,
+		info.Port,
+	))
 	if len(p.pds) == 0 {
 		return
 	}
