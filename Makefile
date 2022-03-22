@@ -166,4 +166,4 @@ tools/bin/revive: tools/check/go.mod
 
 tools/bin/golangci-lint:
 	@# Target: pull in specific version of golangci-lint (v1.42.1)
-	curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ./tools/bin v1.42.1
+	curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ./tools/bin v1.45.0
