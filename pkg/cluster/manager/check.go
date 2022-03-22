@@ -632,6 +632,15 @@ func fixFailedChecks(host string, res *operator.CheckResult, t *task.Builder) (s
 			"",
 			true)
 		msg = fmt.Sprintf("will try to %s, please check again after reboot", color.HiBlueString("disable THP"))
+	case operator.CheckNameSwap:
+		// not applying swappiness setting here, it should be fixed
+		// in the sysctl check
+		// t.Sysctl(host, "vm.swappiness", "0")
+		t.Shell(host,
+			fmt.Sprintf("swapoff -a"),
+			"", true,
+		)
+		msg = fmt.Sprint("will try to disable swap, please also check /etc/fstab manually")
 	default:
 		msg = fmt.Sprintf("%s, auto fixing not supported", res)
 	}

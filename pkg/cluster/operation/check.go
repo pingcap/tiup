@@ -297,6 +297,7 @@ func checkMem(opt *CheckOptions, memInfo *sysinfo.Memory) []*CheckResult {
 	if memInfo.Swap > 0 {
 		results = append(results, &CheckResult{
 			Name: CheckNameSwap,
+			Warn: true,
 			Err:  fmt.Errorf("swap is enabled, please disable it for best performance"),
 		})
 	}
