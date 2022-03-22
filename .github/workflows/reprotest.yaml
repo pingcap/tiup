@@ -35,7 +35,7 @@ jobs:
     strategy:
       matrix:
         go:
-          - 1.17.x
+          - 1.18.x
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
