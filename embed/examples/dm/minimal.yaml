@@ -26,6 +26,9 @@ monitoring_servers:
 
 grafana_servers:
   - host: 172.19.0.101
+  # config:       #  Enable this part if you want to use WebUI, make sure tiup dm -v newer than v1.9.0.
+    # auth.anonymous.enabled: true
+    # security.allow_embedding: true
 
 alertmanager_servers:
   - host: 172.19.0.101
