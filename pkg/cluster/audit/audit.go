@@ -146,7 +146,6 @@ func GetAuditList(dir string) ([]Item, error) {
 
 // OutputAuditLog outputs audit log.
 func OutputAuditLog(dir, fileSuffix string, data []byte) error {
-
 	auditID := base52.Encode(time.Now().UnixNano() + rand.Int63n(1000))
 	if customID := os.Getenv(EnvNameAuditID); customID != "" {
 		auditID = fmt.Sprintf("%s_%s", auditID, customID)
@@ -223,7 +222,6 @@ type deleteAuditLog struct {
 
 // DeleteAuditLog  cleanup audit log
 func DeleteAuditLog(dir string, retainDays int, skipConfirm bool, displayMode string) error {
-
 	if retainDays < 0 {
 		return errors.Errorf("retainDays cannot be less than 0")
 	}

@@ -142,7 +142,15 @@ func ScaleInDMCluster(
 				continue
 			}
 
-			if err := operator.StopComponent(ctx, []dm.Instance{instance}, noAgentHosts, options.OptTimeout); err != nil {
+			if err := operator.StopComponent(
+				ctx,
+				topo,
+				[]dm.Instance{instance},
+				noAgentHosts,
+				options.OptTimeout,
+				false,         /* evictLeader */
+				&tls.Config{}, /* not used as evictLeader is false */
+			); err != nil {
 				return errors.Annotatef(err, "failed to stop %s", component.Name())
 			}
 

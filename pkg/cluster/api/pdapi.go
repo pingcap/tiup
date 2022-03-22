@@ -23,6 +23,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -358,23 +359,26 @@ func (pc *PDClient) GetConfig() (map[string]interface{}, error) {
 }
 
 // GetClusterID return cluster ID
-func (pc *PDClient) GetClusterID() (int64, error) {
+func (pc *PDClient) GetClusterID() (uint64, error) {
 	endpoints := pc.getEndpoints(pdClusterIDURI)
-	clusterID := map[string]interface{}{}
+	var clusterID map[string]interface{}
 
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		body, err := pc.httpClient.Get(pc.ctx, endpoint)
 		if err != nil {
 			return body, err
 		}
-
-		return body, json.Unmarshal(body, &clusterID)
+		d := json.NewDecoder(bytes.NewBuffer(body))
+		d.UseNumber()
+		clusterID = make(map[string]interface{})
+		return nil, d.Decode(&clusterID)
 	})
 	if err != nil {
 		return 0, err
 	}
 
-	return int64(clusterID["id"].(float64)), nil
+	idStr := clusterID["id"].(json.Number).String()
+	return strconv.ParseUint(idStr, 10, 64)
 }
 
 // GetDashboardAddress get the PD node address which runs dashboard
