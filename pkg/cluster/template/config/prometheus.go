@@ -43,6 +43,7 @@ type PrometheusConfig struct {
 	LightningAddrs            []string
 	MonitoredServers          []string
 	AlertmanagerAddrs         []string
+	NGMonitoringAddrs         []string
 	PushgatewayAddr           string
 	BlackboxAddr              string
 	KafkaExporterAddr         string
@@ -175,6 +176,12 @@ func (c *PrometheusConfig) AddBlackbox(ip string, port uint64) *PrometheusConfig
 // AddKafkaExporter add an kafka exporter address
 func (c *PrometheusConfig) AddKafkaExporter(ip string, port uint64) *PrometheusConfig {
 	c.KafkaExporterAddr = fmt.Sprintf("%s:%d", ip, port)
+	return c
+}
+
+// AddNGMonitoring add an ng-monitoring server exporter address
+func (c *PrometheusConfig) AddNGMonitoring(ip string, port uint64) *PrometheusConfig {
+	c.NGMonitoringAddrs = append(c.NGMonitoringAddrs, fmt.Sprintf("%s:%d", ip, port))
 	return c
 }
 

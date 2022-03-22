@@ -277,6 +277,23 @@ scrape_configs:
       - '{{.}}'
 {{- end}}
 {{- end}}
+{{- if .NGMonitoringAddrs}}
+  - job_name: "ng-monitoring"
+    honor_labels: true # don't overwrite job & instance labels
+{{- if .TLSEnabled}}
+    scheme: https
+    tls_config:
+      insecure_skip_verify: false
+      ca_file: ../tls/ca.crt
+      cert_file: ../tls/prometheus.crt
+      key_file: ../tls/prometheus.pem
+{{- end}}
+    static_configs:
+    - targets:
+{{- range .NGMonitoringAddrs}}
+      - '{{.}}'
+{{- end}}
+{{- end}}
   - job_name: "tidb_port_probe"
     scrape_interval: 30s
     metrics_path: /probe

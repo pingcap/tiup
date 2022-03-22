@@ -254,6 +254,13 @@ func (i *MonitorInstance) InitConfig(
 			cfig.AddCDC(cdc.Host, uint64(cdc.Port))
 		}
 	}
+	if servers, found := topoHasField("Monitors"); found {
+		for i := 0; i < servers.Len(); i++ {
+			monitoring := servers.Index(i).Interface().(*PrometheusSpec)
+			uniqueHosts.Insert(monitoring.Host)
+			cfig.AddNGMonitoring(monitoring.Host, uint64(monitoring.NgPort))
+		}
+	}
 	if servers, found := topoHasField("Grafanas"); found {
 		for i := 0; i < servers.Len(); i++ {
 			grafana := servers.Index(i).Interface().(*GrafanaSpec)
