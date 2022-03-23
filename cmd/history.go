@@ -26,14 +26,24 @@ import (
 
 // newHistoryCmd  history
 func newHistoryCmd() *cobra.Command {
-	var rows int
+	rows := 100
 	var displayMode string
+	var all bool
 	cmd := &cobra.Command{
-		Use:   "history",
-		Short: "Display the historical execution record of TiUP",
+		Use:   "history <rows>",
+		Short: "Display the historical execution record of TiUP, displays 100 lines by default",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) > 0 {
+				r, err := strconv.Atoi(args[0])
+				if err == nil {
+					rows = r
+				} else {
+					return fmt.Errorf("%s: numeric argument required", args[0])
+				}
+			}
+
 			env := environment.GlobalEnv()
-			rows, err := env.GetHistory(rows)
+			rows, err := env.GetHistory(rows, all)
 			if err != nil {
 				return err
 			}
@@ -63,14 +73,14 @@ func newHistoryCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&displayMode, "format", "default", "(EXPERIMENTAL) The format of output, available values are [default, json]")
-	cmd.Flags().IntVarP(&rows, "rows", "r", 60, "If the specified version was already installed, force a reinstallation")
-
+	cmd.Flags().BoolVar(&all, "all", false, "Delete all history")
 	cmd.AddCommand(newHistoryCleanupCmd())
 	return cmd
 }
 
 func newHistoryCleanupCmd() *cobra.Command {
 	var retainDays int
+	var all bool
 	cmd := &cobra.Command{
 		Use:   "cleanup",
 		Short: "cleanup cluster audit logs",
@@ -79,11 +89,16 @@ func newHistoryCleanupCmd() *cobra.Command {
 				return errors.Errorf("retain-days cannot be less than 0")
 			}
 
+			if all {
+				retainDays = 0
+			}
+
 			env := environment.GlobalEnv()
 			return env.DeleteHistory(retainDays)
 		},
 	}
 
 	cmd.Flags().IntVar(&retainDays, "retain-days", 60, "Number of days to keep audit logs for deletion")
+	cmd.Flags().BoolVar(&all, "all", false, "Delete all history")
 	return cmd
 }

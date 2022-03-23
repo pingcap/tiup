@@ -31,9 +31,9 @@ import (
 )
 
 const (
-	historyDir            = "history"
-	historyPrefix         = "tiup-history-"
-	historyFileSize int64 = 1024 * 1024 // defaule 1M, about 1w records
+	historyDir          = "history"
+	historyPrefix       = "tiup-history-"
+	historySize   int64 = 1024 * 64 //  history file default size is 64k
 )
 
 // commandRow type of command history row
@@ -74,8 +74,8 @@ func HistoryRecord(env *Environment, command []string, date time.Time, code int)
 }
 
 // save save commandRow to file
-func (h *historyRow) save(dir string) error {
-	hBytes, err := json.Marshal(h)
+func (r *historyRow) save(dir string) error {
+	rBytes, err := json.Marshal(r)
 	if err != nil {
 		return err
 	}
@@ -87,23 +87,23 @@ func (h *historyRow) save(dir string) error {
 		return err
 	}
 	defer f.Close()
-	_, err = f.Write(append(hBytes, []byte("\n")...))
+	_, err = f.Write(append(rBytes, []byte("\n")...))
 	return err
 }
 
 // GetHistory get tiup history
-func (env *Environment) GetHistory(count int) ([]*historyRow, error) {
+func (env *Environment) GetHistory(count int, all bool) ([]*historyRow, error) {
 	fList, err := getHistoryFileList(env.LocalPath(historyDir))
 	if err != nil {
 		return nil, err
 	}
 	rows := []*historyRow{}
 	for _, f := range fList {
-		rs, err := getHistoryRows(f.path)
+		rs, err := f.getHistory()
 		if err != nil {
 			return rows, err
 		}
-		if (len(rows) + len(rs)) > count {
+		if (len(rows)+len(rs)) > count && !all {
 			i := len(rows) + len(rs) - count
 			rows = append(rs[i:], rows...)
 			break
@@ -128,19 +128,70 @@ func (env *Environment) DeleteHistory(retainDays int) error {
 	if err != nil {
 		return err
 	}
+
+	if len(fList) == 0 {
+		return nil
+	}
+
 	for _, f := range fList {
 		if f.info.ModTime().Before(delBeforeTime) {
-			os.Remove(f.path)
+			err := os.Remove(f.path)
+			if err != nil {
+				return err
+			}
+			continue
+		}
+
+		rows, err := f.getHistory()
+		if err != nil {
+			continue
+		}
+		// create time before deltime
+		if rows[0].Date.Before(delBeforeTime) {
+			if rows[len(rows)-1].Date.Before(delBeforeTime) {
+				err := os.Remove(f.path)
+				if err != nil {
+					return err
+				}
+				continue
+			}
+
+			tmp := f.path + "_tmp"
+			err := os.Rename(f.path, tmp)
+			if err != nil {
+				return err
+			}
+
+			fi, err := os.OpenFile(f.path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+			if err != nil {
+				return err
+			}
+			defer fi.Close()
+
+			for _, row := range rows {
+				if row.Date.After(delBeforeTime) {
+					rBytes, err := json.Marshal(row)
+					if err != nil {
+						continue
+					}
+
+					_, err = fi.Write(append(rBytes, []byte("\n")...))
+					if err != nil {
+						continue
+					}
+				}
+			}
+			os.Remove(tmp)
 		}
 	}
 	return nil
 }
 
-// getHistoryRows get tiup history execution row
-func getHistoryRows(path string) ([]*historyRow, error) {
+// getHistory get tiup history execution row
+func (i *historyItem) getHistory() ([]*historyRow, error) {
 	rows := []*historyRow{}
 
-	fi, err := os.Open(path)
+	fi, err := os.Open(i.path)
 	if err != nil {
 		return rows, err
 	}
@@ -199,6 +250,7 @@ func getHistoryFileList(dir string) ([]historyItem, error) {
 	return hfileList, nil
 }
 
+// getLatestHistoryFile get the latest history file, use index 0 if it doesn't exist
 func getLatestHistoryFile(dir string) (item historyItem) {
 	fileList, err := getHistoryFileList(dir)
 	// start from 0
@@ -210,7 +262,7 @@ func getLatestHistoryFile(dir string) (item historyItem) {
 
 	latestItem := fileList[0]
 
-	if latestItem.info.Size() > historyFileSize {
+	if latestItem.info.Size() >= historySize {
 		item.index = latestItem.index + 1
 		item.path = filepath.Join(dir, fmt.Sprintf("%s%s", historyPrefix, strconv.Itoa(item.index)))
 	} else {
