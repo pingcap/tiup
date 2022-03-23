@@ -130,6 +130,58 @@ tikv_servers:
 	c.Assert(err.Error(), Equals, "port conflict for '1234' between 'tidb_servers:172.16.5.138.port' and 'tikv_servers:172.16.5.138.status_port'")
 
 	topo = Specification{}
+	err = yaml.Unmarshal([]byte(`
+global:
+  user: "test1"
+  ssh_port: 220
+  deploy_dir: "test-deploy"
+  data_dir: "test-data"
+tiflash_servers:
+  - host: 172.16.5.138
+    tcp_port: 111
+    http_port: 222
+    flash_service_port: 1234
+    flash_proxy_port: 444
+    flash_proxy_status_port: 555
+    metrics_port: 666
+  - host: 172.16.5.138
+    tcp_port: 1111
+    http_port: 1222
+    flash_service_port: 1333
+    flash_proxy_port: 1444
+    flash_proxy_status_port: 1234
+    metrics_port: 1666
+`), &topo)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "port conflict for '1234' between 'tiflash_servers:172.16.5.138.flash_service_port' and 'tiflash_servers:172.16.5.138.flash_proxy_status_port'")
+
+	topo = Specification{}
+	err = yaml.Unmarshal([]byte(`
+global:
+  user: "test1"
+  ssh_port: 220
+  deploy_dir: "test-deploy"
+  data_dir: "test-data"
+tiflash_servers:
+  - host: 172.16.5.138
+    tcp_port: 111
+    http_port: 222
+    flash_service_port: 333
+    flash_proxy_port: 1234
+    flash_proxy_status_port: 555
+    metrics_port: 666
+  - host: 172.16.5.138
+    tcp_port: 1111
+    http_port: 1222
+    flash_service_port: 1333
+    flash_proxy_port: 1234
+    flash_proxy_status_port: 1555
+    metrics_port: 1666
+`), &topo)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "port conflict for '1234' between 'tiflash_servers:172.16.5.138.flash_proxy_port' and 'tiflash_servers:172.16.5.138.flash_proxy_port'")
+
+	topo = Specification{}
 	// tispark_masters has "omitempty" in its tag value
 	err = yaml.Unmarshal([]byte(`
 monitored:
