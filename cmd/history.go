@@ -73,7 +73,7 @@ func newHistoryCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&displayMode, "format", "default", "(EXPERIMENTAL) The format of output, available values are [default, json]")
-	cmd.Flags().BoolVar(&all, "all", false, "Display all history")
+	cmd.Flags().BoolVar(&all, "all", false, "Display all execution history")
 	cmd.AddCommand(newHistoryCleanupCmd())
 	return cmd
 }
@@ -83,7 +83,7 @@ func newHistoryCleanupCmd() *cobra.Command {
 	var all bool
 	cmd := &cobra.Command{
 		Use:   "cleanup",
-		Short: "cleanup cluster audit logs",
+		Short: "delete all execution history",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if retainDays < 0 {
 				return errors.Errorf("retain-days cannot be less than 0")
