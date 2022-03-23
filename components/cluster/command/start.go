@@ -30,7 +30,10 @@ import (
 )
 
 func newStartCmd() *cobra.Command {
-	var initPasswd bool
+	var (
+		initPasswd    bool
+		restoreLeader bool
+	)
 
 	cmd := &cobra.Command{
 		Use:   "start <cluster-name>",
@@ -48,7 +51,7 @@ func newStartCmd() *cobra.Command {
 			clusterReport.ID = scrubClusterName(clusterName)
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
-			if err := cm.StartCluster(clusterName, gOpt, func(b *task.Builder, metadata spec.Metadata) {
+			if err := cm.StartCluster(clusterName, gOpt, restoreLeader, func(b *task.Builder, metadata spec.Metadata) {
 				b.UpdateTopology(
 					clusterName,
 					tidbSpec.Path(clusterName),
@@ -80,8 +83,11 @@ func newStartCmd() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&initPasswd, "init", false, "Initialize a secure root password for the database")
+	cmd.Flags().BoolVar(&restoreLeader, "restore-leaders", false, "Allow leaders to be scheduled to stores after start")
 	cmd.Flags().StringSliceVarP(&gOpt.Roles, "role", "R", nil, "Only start specified roles")
 	cmd.Flags().StringSliceVarP(&gOpt.Nodes, "node", "N", nil, "Only start specified nodes")
+
+	_ = cmd.Flags().MarkHidden("restore-leaders")
 
 	return cmd
 }

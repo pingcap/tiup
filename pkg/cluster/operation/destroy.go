@@ -102,7 +102,15 @@ func StopAndDestroyInstance(ctx context.Context, cluster spec.Topology, instance
 	})
 
 	// just try to stop and destroy
-	if err := StopComponent(ctx, []spec.Instance{instance}, noAgentHosts, options.OptTimeout); err != nil {
+	if err := StopComponent(
+		ctx,
+		cluster,
+		[]spec.Instance{instance},
+		noAgentHosts,
+		options.OptTimeout,
+		false,         /* evictLeader */
+		&tls.Config{}, /* not used as evictLeader is false */
+	); err != nil {
 		if !ignoreErr {
 			return errors.Annotatef(err, "failed to stop %s", compName)
 		}

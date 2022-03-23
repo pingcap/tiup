@@ -28,7 +28,7 @@ func newStartCmd() *cobra.Command {
 
 			clusterName := args[0]
 
-			return cm.StartCluster(clusterName, gOpt)
+			return cm.StartCluster(clusterName, gOpt, false)
 		},
 	}
 

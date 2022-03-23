@@ -55,7 +55,7 @@ func (m *Manager) Exec(name string, opt ExecOptions, gOpt operator.Options) erro
 	var shellTasks []task.Task
 	uniqueHosts := map[string]set.StringSet{} // host-sshPort -> {command}
 	topo.IterInstance(func(inst spec.Instance) {
-		key := fmt.Sprintf("%s-%d", inst.GetHost(), inst.GetSSHPort())
+		key := fmt.Sprintf("%s:%d", inst.GetHost(), inst.GetSSHPort())
 		if _, found := uniqueHosts[key]; !found {
 			if len(gOpt.Roles) > 0 && !filterRoles.Exist(inst.Role()) {
 				return
@@ -80,7 +80,7 @@ func (m *Manager) Exec(name string, opt ExecOptions, gOpt operator.Options) erro
 	})
 
 	for hostKey, i := range uniqueHosts {
-		host := strings.Split(hostKey, "-")[0]
+		host := strings.Split(hostKey, ":")[0]
 		for _, cmd := range i.Slice() {
 			shellTasks = append(shellTasks,
 				task.NewBuilder(m.logger).

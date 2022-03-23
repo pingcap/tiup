@@ -17,7 +17,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
@@ -67,5 +66,6 @@ func (c *InitConfig) Rollback(ctx context.Context) error {
 func (c *InitConfig) String() string {
 	return fmt.Sprintf("InitConfig: cluster=%s, user=%s, host=%s, path=%s, %s",
 		c.clusterName, c.deployUser, c.instance.GetHost(),
-		filepath.Join(c.specManager.Path(c.clusterName, spec.TempConfigPath, c.instance.ServiceName())), c.paths)
+		c.specManager.Path(c.clusterName, spec.TempConfigPath, c.instance.ServiceName()),
+		c.paths)
 }

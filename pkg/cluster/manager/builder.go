@@ -347,7 +347,15 @@ func buildScaleOutTask(
 		})
 	} else {
 		builder.Func("Start new instances", func(ctx context.Context) error {
-			return operator.Start(ctx, newPart, operator.Options{OptTimeout: gOpt.OptTimeout, Operation: operator.ScaleOutOperation}, tlsCfg)
+			return operator.Start(ctx,
+				newPart,
+				operator.Options{
+					OptTimeout: gOpt.OptTimeout,
+					Operation:  operator.ScaleOutOperation,
+				},
+				false, /* restoreLeader */
+				tlsCfg,
+			)
 		}).
 			ParallelStep("+ Refresh components conifgs", gOpt.Force, refreshConfigTasks...).
 			ParallelStep("+ Reload prometheus and grafana", gOpt.Force,

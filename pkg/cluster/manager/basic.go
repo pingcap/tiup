@@ -89,7 +89,7 @@ func (m *Manager) EnableCluster(name string, gOpt operator.Options, isEnable boo
 }
 
 // StartCluster start the cluster with specified name.
-func (m *Manager) StartCluster(name string, gOpt operator.Options, fn ...func(b *task.Builder, metadata spec.Metadata)) error {
+func (m *Manager) StartCluster(name string, gOpt operator.Options, restoreLeader bool, fn ...func(b *task.Builder, metadata spec.Metadata)) error {
 	m.logger.Infof("Starting cluster %s...", name)
 
 	// check locked
@@ -116,7 +116,7 @@ func (m *Manager) StartCluster(name string, gOpt operator.Options, fn ...func(b 
 	}
 
 	b.Func("StartCluster", func(ctx context.Context) error {
-		return operator.Start(ctx, topo, gOpt, tlsCfg)
+		return operator.Start(ctx, topo, gOpt, restoreLeader, tlsCfg)
 	})
 
 	for _, f := range fn {
@@ -143,7 +143,12 @@ func (m *Manager) StartCluster(name string, gOpt operator.Options, fn ...func(b 
 }
 
 // StopCluster stop the cluster.
-func (m *Manager) StopCluster(name string, gOpt operator.Options, skipConfirm bool) error {
+func (m *Manager) StopCluster(
+	name string,
+	gOpt operator.Options,
+	skipConfirm,
+	evictLeader bool,
+) error {
 	// check locked
 	if err := m.specManager.ScaleOutLockedErr(name); err != nil {
 		return err
@@ -181,7 +186,7 @@ func (m *Manager) StopCluster(name string, gOpt operator.Options, skipConfirm bo
 
 	t := b.
 		Func("StopCluster", func(ctx context.Context) error {
-			return operator.Stop(ctx, topo, gOpt, tlsCfg)
+			return operator.Stop(ctx, topo, gOpt, evictLeader, tlsCfg)
 		}).
 		Build()
 
