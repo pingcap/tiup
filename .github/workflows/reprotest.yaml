@@ -35,7 +35,7 @@ jobs:
     strategy:
       matrix:
         go:
-          - 1.17.x
+          - 1.18.x
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -60,6 +60,6 @@ jobs:
             GOROOT=${{ steps.prepare_env.GOROOT }} \
             GOPATH=${{ steps.prepare_env.GOPATH }} \
             PATH=$GOROOT/bin:$PATH \
-            BUILD_FLAGS='-trimpath -buildmode=pie' \
+            BUILD_FLAGS='-trimpath -buildmode=pie -mod=readonly -modcacherw -buildvcs=false' \
             make build" \
           bin

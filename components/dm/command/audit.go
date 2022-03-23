@@ -47,7 +47,6 @@ func newAuditCleanupCmd() *cobra.Command {
 		Use:   "cleanup",
 		Short: "cleanup dm audit logs",
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			if retainDays < 0 {
 				return errors.Errorf("retain-days cannot be less than 0")
 			}

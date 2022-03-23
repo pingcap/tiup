@@ -1,5 +1,19 @@
 TiUP Changelog
 
+## [1.9.2] 2022-03-10
+
+### Fixes
+
+- Fix next-generation monitor (`ng-monitor`) is not started by default for nightly versions in `tiup-cluster` ([#1760](https://github.com/pingcap/tiup/pull/1760), [@nexustar](https://github.com/nexustar))
+- Fix the `--ignore-config-check` argument not working during deploy process in `tiup-cluster` ([#1774](https://github.com/pingcap/tiup/pull/1774), [@AstroProfundis](https://github.com/AstroProfundis))
+- Fix incorrect `initial-commit-ts` config for drainer in `tiup-cluster` ([#1776](https://github.com/pingcap/tiup/pull/1776), [@nexustar](https://github.com/nexustar))
+- Fix symbolic link handling when decompressing packages ([#1784](https://github.com/pingcap/tiup/pull/1784), [@nexustar](https://github.com/nexustar))
+
+### Improvements
+
+- Check for inactive Prometheus service before `reload` in `tiup-cluster` ([#1775](https://github.com/pingcap/tiup/pull/1775), [@nexustar](https://github.com/nexustar))
+- Mark Oracle Linux as supported OS in `check` result of `tiup-cluster` ([#1786](https://github.com/pingcap/tiup/pull/1786), [@srstack](https://github.com/srstack))
+
 ## [1.9.1] 2022-02-24
 
 ### Fixes

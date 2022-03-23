@@ -18,6 +18,8 @@ import (
 )
 
 func newStopCmd() *cobra.Command {
+	var evictLeader bool
+
 	cmd := &cobra.Command{
 		Use:   "stop <cluster-name>",
 		Short: "Stop a TiDB cluster",
@@ -34,12 +36,15 @@ func newStopCmd() *cobra.Command {
 			clusterReport.ID = scrubClusterName(clusterName)
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
-			return cm.StopCluster(clusterName, gOpt, skipConfirm)
+			return cm.StopCluster(clusterName, gOpt, skipConfirm, evictLeader)
 		},
 	}
 
 	cmd.Flags().StringSliceVarP(&gOpt.Roles, "role", "R", nil, "Only stop specified roles")
 	cmd.Flags().StringSliceVarP(&gOpt.Nodes, "node", "N", nil, "Only stop specified nodes")
+	cmd.Flags().BoolVar(&evictLeader, "evict-leaders", false, "Evict leaders on stores before stop")
+
+	_ = cmd.Flags().MarkHidden("evict-leaders")
 
 	return cmd
 }

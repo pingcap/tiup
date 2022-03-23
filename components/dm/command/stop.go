@@ -28,7 +28,7 @@ func newStopCmd() *cobra.Command {
 
 			clusterName := args[0]
 
-			return cm.StopCluster(clusterName, gOpt, skipConfirm)
+			return cm.StopCluster(clusterName, gOpt, skipConfirm, false)
 		},
 	}
 
