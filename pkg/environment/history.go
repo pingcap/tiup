@@ -269,5 +269,5 @@ func getLatestHistoryFile(dir string) (item historyItem) {
 		item = latestItem
 	}
 
-	return item
+	return
 }
