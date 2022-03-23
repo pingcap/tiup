@@ -514,8 +514,6 @@ func parseGroupVars(ctx context.Context, dir, ansCfgFile string, clsMeta *spec.C
 		logger.Infof("Imported %d Grafana node(s).", len(clsMeta.Topology.Grafanas))
 	}
 
-	// kafka_exporter_servers
-
 	// pump_servers
 	if grp, ok := inv.Groups["pump_servers"]; ok && len(grp.Hosts) > 0 {
 		/*
