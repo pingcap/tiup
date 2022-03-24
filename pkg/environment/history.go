@@ -26,12 +26,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fatih/color"
+	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pkg/errors"
 )
 
 const (
-	historyDir          = "history"
+	// HistoryDir history save path
+	HistoryDir          = "history"
 	historyPrefix       = "tiup-history-"
 	historySize   int64 = 1024 * 64 //  history file default size is 64k
 )
@@ -56,7 +59,7 @@ func HistoryRecord(env *Environment, command []string, date time.Time, code int)
 		return nil
 	}
 
-	historyPath := env.LocalPath(historyDir)
+	historyPath := env.LocalPath(HistoryDir)
 	if utils.IsNotExist(historyPath) {
 		err := os.MkdirAll(historyPath, 0755)
 		if err != nil {
@@ -93,7 +96,7 @@ func (r *historyRow) save(dir string) error {
 
 // GetHistory get tiup history
 func (env *Environment) GetHistory(count int, all bool) ([]*historyRow, error) {
-	fList, err := getHistoryFileList(env.LocalPath(historyDir))
+	fList, err := getHistoryFileList(env.LocalPath(HistoryDir))
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +118,7 @@ func (env *Environment) GetHistory(count int, all bool) ([]*historyRow, error) {
 }
 
 // DeleteHistory delete history file
-func (env *Environment) DeleteHistory(retainDays int) error {
+func (env *Environment) DeleteHistory(retainDays int, skipConfirm bool) error {
 	if retainDays < 0 {
 		return errors.Errorf("retainDays cannot be less than 0")
 	}
@@ -124,7 +127,17 @@ func (env *Environment) DeleteHistory(retainDays int) error {
 	oneDayDuration, _ := time.ParseDuration("-24h")
 	delBeforeTime := time.Now().Add(oneDayDuration * time.Duration(retainDays))
 
-	fList, err := getHistoryFileList(env.LocalPath(historyDir))
+	if !skipConfirm {
+		fmt.Printf("History logs before %s will be %s!\n",
+			color.HiYellowString(delBeforeTime.Format("2006-01-02T15:04:05")),
+			color.HiYellowString("deleted"),
+		)
+		if err := tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]:"); err != nil {
+			return err
+		}
+	}
+
+	fList, err := getHistoryFileList(env.LocalPath(HistoryDir))
 	if err != nil {
 		return err
 	}

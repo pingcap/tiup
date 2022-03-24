@@ -69,6 +69,7 @@ func newHistoryCmd() *cobra.Command {
 				})
 			}
 			tui.PrintTable(table, true)
+			fmt.Printf("history log save path: %s\n", env.LocalPath(environment.HistoryDir))
 			return nil
 		},
 	}
@@ -81,6 +82,7 @@ func newHistoryCmd() *cobra.Command {
 func newHistoryCleanupCmd() *cobra.Command {
 	var retainDays int
 	var all bool
+	var skipConfirm bool
 	cmd := &cobra.Command{
 		Use:   "cleanup",
 		Short: "delete all execution history",
@@ -94,11 +96,12 @@ func newHistoryCleanupCmd() *cobra.Command {
 			}
 
 			env := environment.GlobalEnv()
-			return env.DeleteHistory(retainDays)
+			return env.DeleteHistory(retainDays, skipConfirm)
 		},
 	}
 
 	cmd.Flags().IntVar(&retainDays, "retain-days", 60, "Number of days to keep history for deletion")
 	cmd.Flags().BoolVar(&all, "all", false, "Delete all history")
+	cmd.Flags().BoolVarP(&skipConfirm, "yes", "y", false, "Skip all confirmations and assumes 'yes'")
 	return cmd
 }
