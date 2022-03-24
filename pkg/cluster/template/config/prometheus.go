@@ -28,7 +28,6 @@ import (
 type PrometheusConfig struct {
 	ClusterName               string
 	TLSEnabled                bool
-	KafkaAddrs                []string
 	NodeExporterAddrs         []string
 	TiDBStatusAddrs           []string
 	TiKVStatusAddrs           []string
@@ -38,14 +37,13 @@ type PrometheusConfig struct {
 	PumpAddrs                 []string
 	DrainerAddrs              []string
 	CDCAddrs                  []string
-	ZookeeperAddrs            []string
 	BlackboxExporterAddrs     []string
 	LightningAddrs            []string
 	MonitoredServers          []string
 	AlertmanagerAddrs         []string
+	NGMonitoringAddrs         []string
 	PushgatewayAddr           string
 	BlackboxAddr              string
-	KafkaExporterAddr         string
 	GrafanaAddr               string
 	HasTiKVAccelerateRules    bool
 
@@ -68,12 +66,6 @@ func NewPrometheusConfig(clusterName, clusterVersion string, enableTLS bool) *Pr
 		cfg.HasTiKVAccelerateRules = true
 	}
 	return cfg
-}
-
-// AddKafka add a kafka address
-func (c *PrometheusConfig) AddKafka(ip string, port uint64) *PrometheusConfig {
-	c.KafkaAddrs = append(c.KafkaAddrs, fmt.Sprintf("%s:%d", ip, port))
-	return c
 }
 
 // AddNodeExpoertor add a node expoter address
@@ -130,12 +122,6 @@ func (c *PrometheusConfig) AddCDC(ip string, port uint64) *PrometheusConfig {
 	return c
 }
 
-// AddZooKeeper add a zookeeper address
-func (c *PrometheusConfig) AddZooKeeper(ip string, port uint64) *PrometheusConfig {
-	c.ZookeeperAddrs = append(c.ZookeeperAddrs, fmt.Sprintf("%s:%d", ip, port))
-	return c
-}
-
 // AddBlackboxExporter add a BlackboxExporter address
 func (c *PrometheusConfig) AddBlackboxExporter(ip string, port uint64) *PrometheusConfig {
 	c.BlackboxExporterAddrs = append(c.BlackboxExporterAddrs, fmt.Sprintf("%s:%d", ip, port))
@@ -172,13 +158,13 @@ func (c *PrometheusConfig) AddBlackbox(ip string, port uint64) *PrometheusConfig
 	return c
 }
 
-// AddKafkaExporter add an kafka exporter address
-func (c *PrometheusConfig) AddKafkaExporter(ip string, port uint64) *PrometheusConfig {
-	c.KafkaExporterAddr = fmt.Sprintf("%s:%d", ip, port)
+// AddNGMonitoring add an ng-monitoring server exporter address
+func (c *PrometheusConfig) AddNGMonitoring(ip string, port uint64) *PrometheusConfig {
+	c.NGMonitoringAddrs = append(c.NGMonitoringAddrs, fmt.Sprintf("%s:%d", ip, port))
 	return c
 }
 
-// AddGrafana add an kafka exporter address
+// AddGrafana add an Grafana address
 func (c *PrometheusConfig) AddGrafana(ip string, port uint64) *PrometheusConfig {
 	c.GrafanaAddr = fmt.Sprintf("%s:%d", ip, port)
 	return c
