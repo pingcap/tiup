@@ -98,7 +98,7 @@ func newHistoryCleanupCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().IntVar(&retainDays, "retain-days", 60, "Number of days to keep audit logs for deletion")
+	cmd.Flags().IntVar(&retainDays, "retain-days", 60, "Number of days to keep history for deletion")
 	cmd.Flags().BoolVar(&all, "all", false, "Delete all history")
 	return cmd
 }
