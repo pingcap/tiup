@@ -164,7 +164,7 @@ func (c *PrometheusConfig) AddNGMonitoring(ip string, port uint64) *PrometheusCo
 	return c
 }
 
-// AddGrafana add an Grafana exporter address
+// AddGrafana add an Grafana address
 func (c *PrometheusConfig) AddGrafana(ip string, port uint64) *PrometheusConfig {
 	c.GrafanaAddr = fmt.Sprintf("%s:%d", ip, port)
 	return c
