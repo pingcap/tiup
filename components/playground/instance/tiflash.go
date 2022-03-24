@@ -83,7 +83,7 @@ type replicateEnablePlacementRulesConfig struct {
 
 // Addr return the address of tiflash
 func (inst *TiFlashInstance) Addr() string {
-	return fmt.Sprintf("%s:%d", inst.Host, inst.ServicePort)
+	return fmt.Sprintf("%s:%d", AdvertiseHost(inst.Host), inst.ServicePort)
 }
 
 // StatusAddrs implements Instance interface.
