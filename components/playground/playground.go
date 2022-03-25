@@ -636,9 +636,6 @@ func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins i
 		host = cfg.Host
 	}
 
-	// use the advertised host instead of 0.0.0.0
-	host = instance.AdvertiseHost(host)
-
 	switch componentID {
 	case spec.ComponentPD:
 		inst := instance.NewPDInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id)

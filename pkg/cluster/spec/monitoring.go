@@ -201,14 +201,11 @@ func (i *MonitorInstance) InitConfig(
 	}
 	uniqueHosts := set.NewStringSet()
 
-	ngcfg := config.NewNgMonitoringConfig(clusterName, clusterVersion, enableTLS)
-
 	if servers, found := topoHasField("PDServers"); found {
 		for i := 0; i < servers.Len(); i++ {
 			pd := servers.Index(i).Interface().(*PDSpec)
 			uniqueHosts.Insert(pd.Host)
 			cfig.AddPD(pd.Host, uint64(pd.ClientPort))
-			ngcfg.AddPD(pd.Host, uint64(pd.ClientPort))
 		}
 	}
 	if servers, found := topoHasField("TiKVServers"); found {
@@ -252,6 +249,12 @@ func (i *MonitorInstance) InitConfig(
 			cdc := servers.Index(i).Interface().(*CDCSpec)
 			uniqueHosts.Insert(cdc.Host)
 			cfig.AddCDC(cdc.Host, uint64(cdc.Port))
+		}
+	}
+	if servers, found := topoHasField("Monitors"); found {
+		for i := 0; i < servers.Len(); i++ {
+			monitoring := servers.Index(i).Interface().(*PrometheusSpec)
+			uniqueHosts.Insert(monitoring.Host)
 		}
 	}
 	if servers, found := topoHasField("Grafanas"); found {
@@ -298,13 +301,12 @@ func (i *MonitorInstance) InitConfig(
 	if err != nil {
 		return err
 	}
+	cfig.SetRemoteConfig(string(remoteCfg))
 
 	// doesn't work
 	if _, err := i.setTLSConfig(ctx, false, nil, paths); err != nil {
 		return err
 	}
-
-	cfig.SetRemoteConfig(string(remoteCfg))
 
 	for _, alertmanager := range spec.ExternalAlertmanagers {
 		cfig.AddAlertmanager(alertmanager.Host, uint64(alertmanager.WebPort))
@@ -329,19 +331,34 @@ func (i *MonitorInstance) InitConfig(
 		return err
 	}
 
-	ngcfg.AddIP(i.GetHost())
-	ngcfg.AddPort(spec.NgPort)
-	ngcfg.AddDeployDir(paths.Deploy)
-	ngcfg.AddDataDir(paths.Data[0])
-	ngcfg.AddLog(paths.Log)
+	if spec.NgPort > 0 {
+		ngcfg := config.NewNgMonitoringConfig(clusterName, clusterVersion, enableTLS)
+		if servers, found := topoHasField("PDServers"); found {
+			for i := 0; i < servers.Len(); i++ {
+				pd := servers.Index(i).Interface().(*PDSpec)
+				ngcfg.AddPD(pd.Host, uint64(pd.ClientPort))
+			}
+		}
+		ngcfg.AddIP(i.GetHost()).
+			AddPort(spec.NgPort).
+			AddDeployDir(paths.Deploy).
+			AddDataDir(paths.Data[0]).
+			AddLog(paths.Log)
 
-	fp = filepath.Join(paths.Cache, fmt.Sprintf("ngmonitoring_%s_%d.toml", i.GetHost(), i.GetPort()))
-	if err := ngcfg.ConfigToFile(fp); err != nil {
-		return err
-	}
-	dst = filepath.Join(paths.Deploy, "conf", "ngmonitoring.toml")
-	if err := e.Transfer(ctx, fp, dst, false, 0, false); err != nil {
-		return err
+		if servers, found := topoHasField("Monitors"); found {
+			for i := 0; i < servers.Len(); i++ {
+				monitoring := servers.Index(i).Interface().(*PrometheusSpec)
+				cfig.AddNGMonitoring(monitoring.Host, uint64(monitoring.NgPort))
+			}
+		}
+		fp = filepath.Join(paths.Cache, fmt.Sprintf("ngmonitoring_%s_%d.toml", i.GetHost(), i.GetPort()))
+		if err := ngcfg.ConfigToFile(fp); err != nil {
+			return err
+		}
+		dst = filepath.Join(paths.Deploy, "conf", "ngmonitoring.toml")
+		if err := e.Transfer(ctx, fp, dst, false, 0, false); err != nil {
+			return err
+		}
 	}
 
 	fp = filepath.Join(paths.Cache, fmt.Sprintf("prometheus_%s_%d.yml", i.GetHost(), i.GetPort()))
