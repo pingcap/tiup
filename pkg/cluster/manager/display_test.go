@@ -51,7 +51,7 @@ func TestGetGrafanaURLStr(t *testing.T) {
 	assert.Equal(t, exist, true)
 	assert.Equal(t, "http://127.0.0.1:3000,http://127.0.0.2:3000", str)
 
-	str, exist = getGrafanaURLStr([]InstInfo{
+	_, exist = getGrafanaURLStr([]InstInfo{
 		{
 			Role: "others",
 			Port: 3000,
