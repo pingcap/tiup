@@ -154,48 +154,6 @@ func (env *Environment) DeleteHistory(retainDays int, skipConfirm bool) error {
 			}
 			continue
 		}
-
-		rows, err := f.getHistory()
-		if err != nil {
-			continue
-		}
-		// create time before deltime
-		if rows[0].Date.Before(delBeforeTime) {
-			if rows[len(rows)-1].Date.Before(delBeforeTime) {
-				err := os.Remove(f.path)
-				if err != nil {
-					return err
-				}
-				continue
-			}
-
-			tmp := f.path + "_tmp"
-			err := os.Rename(f.path, tmp)
-			if err != nil {
-				return err
-			}
-
-			fi, err := os.OpenFile(f.path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-			if err != nil {
-				return err
-			}
-			defer fi.Close()
-
-			for _, row := range rows {
-				if row.Date.After(delBeforeTime) {
-					rBytes, err := json.Marshal(row)
-					if err != nil {
-						continue
-					}
-
-					_, err = fi.Write(append(rBytes, []byte("\n")...))
-					if err != nil {
-						continue
-					}
-				}
-			}
-			os.Remove(tmp)
-		}
 	}
 	return nil
 }
