@@ -1108,7 +1108,7 @@ func (p *Playground) bootGrafana(ctx context.Context, env *environment.Environme
 	dataDir := p.dataDir
 	grafanaDir := filepath.Join(dataDir, "grafana")
 
-	cmd := exec.Command("cp", "-r", installPath, grafanaDir)
+	cmd := exec.Command("cp", "-Rfp", installPath, grafanaDir)
 	err = cmd.Run()
 	if err != nil {
 		return nil, errors.AddStack(err)
