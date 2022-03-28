@@ -637,10 +637,10 @@ func fixFailedChecks(host string, res *operator.CheckResult, t *task.Builder) (s
 		// in the sysctl check
 		// t.Sysctl(host, "vm.swappiness", "0")
 		t.Shell(host,
-			fmt.Sprintf("swapoff -a"),
+			"swapoff -a",
 			"", true,
 		)
-		msg = fmt.Sprint("will try to disable swap, please also check /etc/fstab manually")
+		msg = "will try to disable swap, please also check /etc/fstab manually"
 	default:
 		msg = fmt.Sprintf("%s, auto fixing not supported", res)
 	}
