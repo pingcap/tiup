@@ -97,11 +97,12 @@ quota = "default"
 ip = "::/0"
 `
 
-func writeTiFlashConfig(w io.Writer, version utils.Version, tcpPort, httpPort, servicePort, metricsPort int, ip, deployDir, clusterManagerPath string, tidbStatusAddrs, endpoints []string) error {
+func writeTiFlashConfig(w io.Writer, version utils.Version, tcpPort, httpPort, servicePort, metricsPort int, host, deployDir, clusterManagerPath string, tidbStatusAddrs, endpoints []string) error {
 	pdAddrs := strings.Join(endpoints, ",")
 	dataDir := fmt.Sprintf("%s/data", deployDir)
 	tmpDir := fmt.Sprintf("%s/tmp", deployDir)
 	logDir := fmt.Sprintf("%s/log", deployDir)
+	ip := AdvertiseHost(host)
 	var conf string
 	if semver.Compare(version.String(), "v5.4.0") >= 0 || version.IsNightly() {
 		conf = fmt.Sprintf(tiflashConfig, pdAddrs, httpPort, tcpPort,

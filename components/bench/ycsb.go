@@ -139,11 +139,11 @@ func registerYcsb(root *cobra.Command) {
 	cmd.PersistentFlags().Uint32Var(&config.ConnCount, "conncount", 128, "Connection Count")
 	cmd.PersistentFlags().BoolVar(&config.ReadAllFields, "readallfields", true, "Whether Read All Fields")
 
-	cmd.PersistentFlags().Float32Var(&config.ReadProportion, "readproportion", 0, "What proportion of operations are reads")
-	cmd.PersistentFlags().Float32Var(&config.UpdateProportion, "updateproportion", 0, "What proportion of operations are updates")
-	cmd.PersistentFlags().Float32Var(&config.ScanProportion, "scanproportion", 0, "What proportion of operations are scans")
-	cmd.PersistentFlags().Float32Var(&config.InsertProportion, "insertproportion", 0, "What proportion of operations are inserts")
-	cmd.PersistentFlags().Float32Var(&config.ReadModifyWriteProportion, "readmodifywriteproportion", 0, "What proportion of operations are read-modify-write")
+	cmd.PersistentFlags().Float32Var(&config.ReadProportion, "readproportion", 0.95, "What proportion of operations are reads, default 0.95")
+	cmd.PersistentFlags().Float32Var(&config.UpdateProportion, "updateproportion", 0.05, "What proportion of operations are updates, default 0.05")
+	cmd.PersistentFlags().Float32Var(&config.ScanProportion, "scanproportion", 0, "What proportion of operations are scans, default 0")
+	cmd.PersistentFlags().Float32Var(&config.InsertProportion, "insertproportion", 0, "What proportion of operations are inserts, default 0")
+	cmd.PersistentFlags().Float32Var(&config.ReadModifyWriteProportion, "readmodifywriteproportion", 0, "What proportion of operations are read-modify-write, default 0")
 
 	cmd.PersistentFlags().StringVar(&config.RequestDistribution, "requestdistribution", "uniform", "The distribution of requests across the keyspace, [zipfian, uniform, latest]")
 
