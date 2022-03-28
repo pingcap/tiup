@@ -624,6 +624,9 @@ func (s *Specification) portConflictsDetect() error {
 		"WebPort",
 		"TCPPort",
 		"HTTPPort",
+		"FlashServicePort",
+		"FlashProxyPort",
+		"FlashProxyStatusPort",
 		"ClusterPort",
 		"NgPort",
 	}

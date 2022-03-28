@@ -636,9 +636,6 @@ func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins i
 		host = cfg.Host
 	}
 
-	// use the advertised host instead of 0.0.0.0
-	host = instance.AdvertiseHost(host)
-
 	switch componentID {
 	case spec.ComponentPD:
 		inst := instance.NewPDInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id)
@@ -1118,7 +1115,7 @@ func (p *Playground) bootGrafana(ctx context.Context, env *environment.Environme
 	dataDir := p.dataDir
 	grafanaDir := filepath.Join(dataDir, "grafana")
 
-	cmd := exec.Command("cp", "-r", installPath, grafanaDir)
+	cmd := exec.Command("cp", "-Rfp", installPath, grafanaDir)
 	err = cmd.Run()
 	if err != nil {
 		return nil, errors.AddStack(err)
