@@ -73,7 +73,7 @@ func newHistoryCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&displayMode, "format", "default", "(EXPERIMENTAL) The format of output, available values are [default, json]")
+	cmd.Flags().StringVar(&displayMode, "format", "default", "The format of output, available values are [default, json]")
 	cmd.Flags().BoolVar(&all, "all", false, "Display all execution history")
 	cmd.AddCommand(newHistoryCleanupCmd())
 	return cmd
