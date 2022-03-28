@@ -40,9 +40,6 @@ rule_files:
 {{- if .CDCAddrs}}
   - 'ticdc.rules.yml'
 {{- end}}
-{{- if .KafkaAddrs}}
-  - 'kafka.rules.yml'
-{{- end}}
 {{- if .LightningAddrs}}
   - 'lightning.rules.yml'
 {{- end}}
@@ -171,13 +168,6 @@ scrape_configs:
     {{- end}}
 {{- end}}
 {{- if .PumpAddrs}}
-{{- if .KafkaExporterAddr}}
-  - job_name: 'kafka_exporter'
-    honor_labels: true # don't overwrite job & instance labels
-    static_configs:
-    - targets:
-      - '{{.KafkaExporterAddr}}'
-{{- end}}
   - job_name: 'pump'
     honor_labels: true # don't overwrite job & instance labels
 {{- if .TLSEnabled}}
@@ -218,22 +208,6 @@ scrape_configs:
       module: [tcp_connect]
 {{- end}}
     static_configs:
-{{- if .KafkaAddrs}}
-    - targets:
-    {{- range .KafkaAddrs}}
-        - '{{.}}'
-    {{- end}}
-      labels:
-        group: 'kafka'
-{{- end}}
-{{- if .ZookeeperAddrs}}
-    - targets:
-    {{- range .ZookeeperAddrs}}
-      - '{{.}}'
-    {{- end}}
-      labels:
-        group: 'zookeeper'
-{{- end}}
     - targets:
 {{- range .PumpAddrs}}
       - '{{.}}'
@@ -246,12 +220,6 @@ scrape_configs:
     {{- end}}
       labels:
         group: 'drainer'
-{{- if .KafkaExporterAddr}}
-    - targets:
-      - '{{.KafkaExporterAddr}}'
-      labels:
-        group: 'kafka_exporter'
-{{- end}}
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target
@@ -274,6 +242,23 @@ scrape_configs:
     static_configs:
     - targets:
 {{- range .CDCAddrs}}
+      - '{{.}}'
+{{- end}}
+{{- end}}
+{{- if .NGMonitoringAddrs}}
+  - job_name: "ng-monitoring"
+    honor_labels: true # don't overwrite job & instance labels
+{{- if .TLSEnabled}}
+    scheme: https
+    tls_config:
+      insecure_skip_verify: false
+      ca_file: ../tls/ca.crt
+      cert_file: ../tls/prometheus.crt
+      key_file: ../tls/prometheus.pem
+{{- end}}
+    static_configs:
+    - targets:
+{{- range .NGMonitoringAddrs}}
       - '{{.}}'
 {{- end}}
 {{- end}}
