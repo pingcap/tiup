@@ -47,7 +47,7 @@ func (c *InstallPackage) Execute(ctx context.Context) error {
 		return errors.Annotatef(err, "failed to scp %s to %s:%s", c.srcPath, c.host, dstPath)
 	}
 
-	cmd := fmt.Sprintf(`rm -rf %s && tar --no-same-owner -zxf %s -C %s && rm %s`, dstDir, dstPath, dstDir, dstPath)
+	cmd := fmt.Sprintf(`rm -rf %s && tar -zxf %s -C %s && rm %s`, dstDir, dstPath, dstDir, dstPath)
 
 	_, stderr, err := exec.Execute(ctx, cmd, false)
 	if err != nil {
