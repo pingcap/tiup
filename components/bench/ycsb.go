@@ -41,6 +41,7 @@ type ycsbConfig struct {
 	ScanProportion            float32
 	InsertProportion          float32
 	ReadModifyWriteProportion float32
+	FieldLength               uint32
 
 	RequestDistribution string
 	Verbose             bool
@@ -103,6 +104,9 @@ func (config ycsbConfig) toProperties() (*properties.Properties, error) {
 	if config.RequestDistribution != "" {
 		_, _, _ = result.Set("requestdistribution", config.RequestDistribution)
 	}
+	if config.FieldLength != 0 {
+		_, _, _ = result.Set("fieldlength", fmt.Sprint(config.FieldLength))
+	}
 	if config.Count != 0 {
 		_, _, _ = result.Set("operationcount", fmt.Sprint(config.Count))
 		_, _, _ = result.Set("recordcount", fmt.Sprint(config.Count))
@@ -137,6 +141,7 @@ func registerYcsb(root *cobra.Command) {
 	cmd.PersistentFlags().Uint32VarP(&config.Count, "count", "c", 0, "The number of operations/records to use")
 	cmd.PersistentFlags().Uint32Var(&config.BatchSize, "batchsize", 128, "Batch Size")
 	cmd.PersistentFlags().Uint32Var(&config.ConnCount, "conncount", 128, "Connection Count")
+	cmd.PersistentFlags().Uint32Var(&config.FieldLength, "fieldlength", 100, "Value length")
 	cmd.PersistentFlags().BoolVar(&config.ReadAllFields, "readallfields", true, "Whether Read All Fields")
 
 	cmd.PersistentFlags().Float32Var(&config.ReadProportion, "readproportion", 0.95, "What proportion of operations are reads, default 0.95")
