@@ -262,20 +262,16 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 }
 
 func getGrafanaURLStr(clusterInstInfos []InstInfo) (result string, exist bool) {
-	var grafanaURL []string
+	var grafanaURLs []string
 	for _, instance := range clusterInstInfos {
 		if instance.Role == "grafana" {
-			grafanaURL = append(grafanaURL, fmt.Sprintf("%s:%d", instance.Host, instance.Port))
+			grafanaURLs = append(grafanaURLs, fmt.Sprintf("http://%s:%d", instance.Host, instance.Port))
 		}
 	}
-	if len(grafanaURL) == 0 {
+	if len(grafanaURLs) == 0 {
 		return "", false
 	}
-	grafanaURLs := fmt.Sprintf("http://%s", grafanaURL[0])
-	for i := 1; i < len(grafanaURL); i++ {
-		grafanaURLs += "," + fmt.Sprintf("http://%s", grafanaURL[i])
-	}
-	return grafanaURLs, true
+	return strings.Join(grafanaURLs, ","), true
 }
 
 // DisplayTiKVLabels display cluster tikv labels
