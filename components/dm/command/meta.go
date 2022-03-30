@@ -30,7 +30,7 @@ func newMetaCmd() *cobra.Command {
 
 	var metaBackupCmd = &cobra.Command{
 		Use:   "backup <cluster-name>",
-		Short: "backup topology and other information of cluster",
+		Short: "backup topology and other information of a cluster",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return fmt.Errorf("please input cluster-name")
