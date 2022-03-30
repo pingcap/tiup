@@ -33,7 +33,7 @@ func newMetaCmd() *cobra.Command {
 		Short: "backup topology and other information of a cluster",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
-				return fmt.Errorf("please input cluster-name")
+				return fmt.Errorf("please input cluster name")
 			}
 			if filePath == "" {
 				filePath = "tiup-cluster_" + args[0] + "_metabackup_" + time.Now().Format(time.RFC3339) + ".tar.gz"
