@@ -52,7 +52,7 @@ func newMetaCmd() *cobra.Command {
 		Short: "restore topology and other information of cluster",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 2 {
-				return fmt.Errorf("please input cluster-name and backup-file")
+				return fmt.Errorf("please input cluster name and path to the backup file")
 			}
 			return cm.RestoreClusterMeta(args[0], args[1], skipConfirm)
 		},
