@@ -13,7 +13,7 @@ var tpchConfig tpch.Config
 
 func executeTpch(action string) error {
 	if err := openDB(); err != nil {
-		fmt.Println("Cannot open database, pleae check it (ip/port/username/password)")
+		fmt.Println("Cannot open database, please check it (ip/port/username/password)")
 		closeDB()
 		return err
 	}
