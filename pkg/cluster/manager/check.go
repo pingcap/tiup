@@ -637,7 +637,7 @@ func fixFailedChecks(host string, res *operator.CheckResult, t *task.Builder) (s
 		// in the sysctl check
 		// t.Sysctl(host, "vm.swappiness", "0")
 		t.Shell(host,
-			"swapoff -a || exit 0", // ignore failure
+			"swapoff -a && swapon -a && sysctl -p || exit 0", // ignore failure
 			"", true,
 		)
 		msg = "will try to disable swap, please also check /etc/fstab manually"
