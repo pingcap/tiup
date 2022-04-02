@@ -74,7 +74,7 @@ func RunComponent(env *environment.Environment, tag, spec, binPath string, args 
 		return err
 	}
 
-	fmt.Fprintf(os.Stderr, "Starting component `%s`: %s\n", component, strings.Join(append([]string{binPath}, c.Args...), " "))
+	fmt.Fprintf(os.Stderr, "Starting component `%s`: %s\n", component, strings.Join(c.Args, " "))
 	err = c.Start()
 	if err != nil {
 		return errors.Annotatef(err, "Failed to start component `%s`", component)
