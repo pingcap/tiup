@@ -22,7 +22,6 @@ type Repository struct {
 
 // Options represents options for a repository
 type Options struct {
-	SkipVersionCheck  bool
 	GOOS              string
 	GOARCH            string
 	DisableDecompress bool
