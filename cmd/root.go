@@ -198,6 +198,7 @@ the latest stable version will be downloaded from the repository.`,
 		},
 	}
 
+	// useless, exist to generate help infomation
 	rootCmd.Flags().String("binary", "", "Print binary path of a specific version of a component `<component>[:version]`\n"+
 		"and the latest version installed will be selected if no version specified")
 	rootCmd.Flags().StringP("tag", "T", "", "[Deprecated] Specify a tag for component instance")
