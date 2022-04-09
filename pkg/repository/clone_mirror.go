@@ -466,7 +466,7 @@ func combineVersions(versions *[]string,
 						continue
 					}
 
-					fmt.Printf("get %s last version %s", manifest.ID, latest)
+					fmt.Printf("%s %s/%s found the lastest version %s\n", manifest.ID, os, arch, latest)
 					// set latest version
 					selectedVersion = latest
 				}
