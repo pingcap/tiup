@@ -447,18 +447,9 @@ func combineVersions(versions *[]string,
 				continue
 			}
 
-			// set specified version with nightly tag
-			if result.Exist(utils.NightlyVersionAlias) {
-				result.Remove(utils.NightlyVersionAlias)
-				result.Insert(manifest.Nightly)
-			}
-
 			// set specified version with latest tag
 			if result.Exist(utils.LatestVersionAlias) {
-				result.Remove(utils.LatestVersionAlias)
-
 				latest := manifest.LatestVersion(platform)
-
 				if latest != "" {
 					result.Insert(latest)
 				}

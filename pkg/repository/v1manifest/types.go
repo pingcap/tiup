@@ -259,9 +259,8 @@ func (manifest *Component) VersionList(platform string) map[string]VersionItem {
 	return versions
 }
 
-// LatestVersionreturn the latest version exclude yanked versions
+// LatestVersion return the latest version exclude yanked versions
 func (manifest *Component) LatestVersion(platform string) string {
-
 	versions := manifest.VersionList(platform)
 	if versions == nil {
 		return ""
