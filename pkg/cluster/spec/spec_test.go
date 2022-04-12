@@ -742,6 +742,9 @@ cdc_servers:
 		"v5.0.0-rc":    {false, false, false},
 		"v5.1.0-alpha": {true, true, false},
 		"v5.2.0-alpha": {true, true, false},
+		"v6.0.0-alpha": {true, true, true},
+		"v6.1.0":       {true, true, true},
+		"v99.0.0":      {true, true, true},
 	}
 
 	checkByVersion := func(version string) {
@@ -751,9 +754,9 @@ cdc_servers:
 
 		wanted := expected[version]
 
-		c.Assert(cfg.ConfigFileEnabled, Equals, wanted.configSupported)
-		c.Assert(cfg.DataDirEnabled, Equals, wanted.dataDirSupported)
-		c.Assert(len(cfg.DataDir) != 0, Equals, wanted.dataDir)
+		c.Assert(cfg.ConfigFileEnabled, Equals, wanted.configSupported, Commentf(version))
+		c.Assert(cfg.DataDirEnabled, Equals, wanted.dataDirSupported, Commentf(version))
+		c.Assert(len(cfg.DataDir) != 0, Equals, wanted.dataDir, Commentf(version))
 	}
 
 	for k := range expected {
