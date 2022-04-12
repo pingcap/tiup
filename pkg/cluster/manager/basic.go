@@ -24,6 +24,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -307,6 +308,17 @@ func checkTiFlashWithTLS(topo spec.Topology, version string) error {
 
 // BackupClusterMeta backup cluster meta to given filepath
 func (m *Manager) BackupClusterMeta(clusterName, filePath string) error {
+	exist, err := m.specManager.Exist(clusterName)
+	if err != nil {
+		return err
+	}
+	if !exist {
+		return fmt.Errorf("cluster %s does not exist", clusterName)
+	}
+	// check locked
+	if err := m.specManager.ScaleOutLockedErr(clusterName); err != nil {
+		return err
+	}
 	f, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
 	if err != nil {
 		return err
@@ -316,12 +328,20 @@ func (m *Manager) BackupClusterMeta(clusterName, filePath string) error {
 
 // RestoreClusterMeta restore cluster meta by given filepath
 func (m *Manager) RestoreClusterMeta(clusterName, filePath string, skipConfirm bool) error {
-	fi, err := os.Stat(m.specManager.Path(clusterName, "meta.yaml"))
-	if err != nil {
+	if err := clusterutil.ValidateClusterNameOrError(clusterName); err != nil {
 		return err
 	}
-	m.logger.Warnf(fmt.Sprintf("the exist meta.yaml of cluster %s was last modified at %s", clusterName, color.HiYellowString(fi.ModTime().Format(time.RFC3339))))
 
+	fi, err := os.Stat(m.specManager.Path(clusterName, "meta.yaml"))
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return perrs.AddStack(err)
+		}
+		skipConfirm = true
+		m.logger.Warnf(fmt.Sprintf("the meta.yaml of cluster %s does not exist", clusterName))
+	} else {
+		m.logger.Warnf(fmt.Sprintf("the exist meta.yaml of cluster %s was last modified at %s", clusterName, color.HiYellowString(fi.ModTime().Format(time.RFC3339))))
+	}
 	fi, err = os.Stat(filePath)
 	if err != nil {
 		return err
