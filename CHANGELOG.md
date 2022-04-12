@@ -1,5 +1,12 @@
 TiUP Changelog
 
+## [1.9.4] 2022-04-12
+
+## Fixes
+
+- Fix copy error when file is read only in `tiup-playground` ([#1816](https://github.com/pingcap/tiup/pull/1816), [@breeswish](https://github.com/breeswish))
+- Fix `data-dir` not properly handled for TiCDC v6.0.0 in `tiup-cluster` ([#1838](https://github.com/pingcap/tiup/pull/1838), [@overvenus](https://github.com/overvenus))
+
 ## [1.9.3] 2022-03-24
 
 ### Fixes
