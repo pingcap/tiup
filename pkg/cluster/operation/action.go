@@ -18,7 +18,6 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/pingcap/errors"
@@ -29,6 +28,8 @@ import (
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/set"
 	"golang.org/x/sync/errgroup"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 var (
@@ -43,7 +44,7 @@ var (
 
 func init() {
 	for action := range actionPrevMsgs {
-		actionPostMsgs[action] = strings.Title(action)
+		actionPostMsgs[action] = cases.Title(language.English).String(action)
 	}
 }
 

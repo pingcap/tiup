@@ -344,7 +344,7 @@ func (i *BaseInstance) DeployDir() string {
 
 // TLSDir implements Instance interface
 func (i *BaseInstance) TLSDir() string {
-	return filepath.Join(i.DeployDir())
+	return i.DeployDir()
 }
 
 // DataDir implements Instance interface

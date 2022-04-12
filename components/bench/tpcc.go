@@ -25,7 +25,7 @@ func executeTpcc(action string) error {
 	runtime.GOMAXPROCS(maxProcs)
 
 	if err := openDB(); err != nil {
-		fmt.Println("Cannot open database, pleae check it (ip/port/username/password)")
+		fmt.Println("Cannot open database, please check it (ip/port/username/password)")
 		closeDB()
 		return err
 	}

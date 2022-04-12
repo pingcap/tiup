@@ -38,10 +38,10 @@ jobs:
     env:
       working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
     steps:
-      - name: Set up Go 1.17
+      - name: Set up Go 1.18
         uses: actions/setup-go@v2
         with:
-          go-version: 1.17.x
+          go-version: 1.18.x
         id: go
 
       - name: Check out code into the Go module directory
@@ -94,8 +94,8 @@ jobs:
           fi
           echo ::set-output name=REL_VER::$REL_VER
 
-          BUILD_FLAGS='-trimpath' make build && \
-          BUILD_FLAGS='-trimpath' make ctl && \
+          BUILD_FLAGS='-trimpath -mod=readonly -modcacherw -buildvcs=false' make build && \
+          BUILD_FLAGS='-trimpath -mod=readonly -modcacherw -buildvcs=false' make ctl && \
           echo "Build success."
 
           checksum_file=checksum.${{ matrix.os }}-${{ matrix.arch }}.txt

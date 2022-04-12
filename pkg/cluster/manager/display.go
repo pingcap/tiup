@@ -215,6 +215,13 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 		}
 	}
 
+	if m.logger.GetDisplayMode() != logprinter.DisplayModeJSON {
+		urls, exist := getGrafanaURLStr(clusterInstInfos)
+		if exist {
+			fmt.Printf("Grafana URL:        %s\n", cyan.Sprintf("%s", urls))
+		}
+	}
+
 	if m.logger.GetDisplayMode() == logprinter.DisplayModeJSON {
 		d, err := json.MarshalIndent(j, "", "  ")
 		if err != nil {
@@ -252,6 +259,19 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 	}
 
 	return nil
+}
+
+func getGrafanaURLStr(clusterInstInfos []InstInfo) (result string, exist bool) {
+	var grafanaURLs []string
+	for _, instance := range clusterInstInfos {
+		if instance.Role == "grafana" {
+			grafanaURLs = append(grafanaURLs, fmt.Sprintf("http://%s:%d", instance.Host, instance.Port))
+		}
+	}
+	if len(grafanaURLs) == 0 {
+		return "", false
+	}
+	return strings.Join(grafanaURLs, ","), true
 }
 
 // DisplayTiKVLabels display cluster tikv labels
