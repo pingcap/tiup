@@ -28,7 +28,6 @@ import (
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/utils"
-	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -267,6 +266,7 @@ func cloneComponents(repo *V1Repository,
 		}
 
 		vs := combineVersions(options.Components[name], tidbClusterVersionMapper, manifest, options.OSs, options.Archs, selectedVersions)
+
 		var newManifest *v1manifest.Component
 		if options.Full {
 			newManifest = manifest
@@ -446,24 +446,37 @@ func combineVersions(versions *[]string,
 			if versions == nil {
 				continue
 			}
+
+			// set specified version with latest tag
+			if result.Exist(utils.LatestVersionAlias) {
+				latest := manifest.LatestVersion(platform)
+				if latest != "" {
+					result.Insert(latest)
+				}
+			}
+
 			for _, selectedVersion := range selectedVersions {
 				if selectedVersion == utils.NightlyVersionAlias {
 					selectedVersion = manifest.Nightly
 				}
+
+				if selectedVersion == utils.LatestVersionAlias {
+					latest := manifest.LatestVersion(platform)
+					if latest == "" {
+						continue
+					}
+
+					fmt.Printf("%s %s/%s found the lastest version %s\n", manifest.ID, os, arch, latest)
+					// set latest version
+					selectedVersion = latest
+				}
+
 				_, found := versions[selectedVersion]
 				// Some TiUP components won't be bound version with TiDB, if cannot find
 				// selected version we download the latest version to as a alternative
 				if !found && !coreSuites.Exist(manifest.ID) {
 					// Use the latest stable versionS if the selected version doesn't exist in specific platform
-					var latest string
-					for v := range versions {
-						if utils.Version(v).IsNightly() {
-							continue
-						}
-						if latest == "" || semver.Compare(v, latest) > 0 {
-							latest = v
-						}
-					}
+					latest := manifest.LatestVersion(platform)
 					if latest == "" {
 						continue
 					}
