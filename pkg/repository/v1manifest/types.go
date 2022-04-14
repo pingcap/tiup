@@ -18,6 +18,9 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/pingcap/tiup/pkg/utils"
+	"golang.org/x/mod/semver"
 )
 
 // Manifest representation for ser/de.
@@ -254,6 +257,25 @@ func (manifest *Component) VersionList(platform string) map[string]VersionItem {
 	}
 
 	return versions
+}
+
+// LatestVersion return the latest version exclude yanked versions
+func (manifest *Component) LatestVersion(platform string) string {
+	versions := manifest.VersionList(platform)
+	if versions == nil {
+		return ""
+	}
+
+	var latest string
+	for v := range versions {
+		if utils.Version(v).IsNightly() {
+			continue
+		}
+		if latest == "" || semver.Compare(v, latest) > 0 {
+			latest = v
+		}
+	}
+	return latest
 }
 
 // VersionListWithYanked return all versions include yanked versions

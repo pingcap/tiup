@@ -50,7 +50,7 @@ monitored:
 # # All configuration items use points to represent the hierarchy, e.g:
 # #   readpool.storage.use-unified-pool
 # #           ^       ^
-# # - example: https://github.com/pingcap/tiup/blob/master/embed/templates/examples/topology.example.yaml.
+# # - example: https://github.com/pingcap/tiup/blob/master/embed/examples/cluster/topology.example.yaml
 # # You can overwrite this configuration via the instance-level `config` field.
 # server_configs:
   # tidb:
