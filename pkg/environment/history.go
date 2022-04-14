@@ -43,7 +43,7 @@ const (
 type historyRow struct {
 	Date    time.Time `json:"time"`
 	Command string    `json:"command"`
-	Code    int       `json:"code"`
+	Code    int       `json:"exit_code"`
 }
 
 // historyItem  record history row file item
