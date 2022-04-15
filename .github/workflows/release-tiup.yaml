@@ -205,6 +205,7 @@ jobs:
     steps:
       - name: Check out brew code
         uses: actions/checkout@v3
+        continue-on-error: true
         if: github.event_name == 'release'
         with:
           repository: pingcap/homebrew-brew
@@ -216,6 +217,7 @@ jobs:
       - name: Update and Check tiup version
         id: update_version
         working-directory: ${{ github.workspace }}/homebrew-brew
+        continue-on-error: true
         if: github.event_name == 'release'
         run: |
           sed -i 's/version.*/version "${{ needs.release.outputs.REL_VER }}"/g'  Formula/tiup.rb
@@ -224,6 +226,7 @@ jobs:
           
       - name: Push new homebrew
         uses: actions-js/push@master
+        continue-on-error: true
         if: github.event_name == 'release'
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
