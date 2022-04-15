@@ -109,94 +109,94 @@ jobs:
           b2sum bin/* >> ${checksum_file}
           cat ${checksum_file}
 
-      # - name: Package components
-      #   id: packaging
-      #   working-directory: ${{ env.working-directory }}
-      #   env:
-      #     ARCH: ${{ matrix.os }}-${{ matrix.arch }}
-      #     REL_VER: ${{ steps.build_tiup.outputs.REL_VER }}
-      #   run: |
-      #     TMP_DIR=`mktemp -d`
-      #     export TIUP_HOME="$TMP_DIR/home"
-      #     echo ::set-output name=TIUP_HOME::$TIUP_HOME
-      #     echo ::set-output name=TIUP_BIN::$TIUP_HOME/bin/tiup
+      - name: Package components
+        id: packaging
+        working-directory: ${{ env.working-directory }}
+        env:
+          ARCH: ${{ matrix.os }}-${{ matrix.arch }}
+          REL_VER: ${{ steps.build_tiup.outputs.REL_VER }}
+        run: |
+          TMP_DIR=`mktemp -d`
+          export TIUP_HOME="$TMP_DIR/home"
+          echo ::set-output name=TIUP_HOME::$TIUP_HOME
+          echo ::set-output name=TIUP_BIN::$TIUP_HOME/bin/tiup
 
-      #     rm -rf $TIUP_HOME && mkdir -p $TIUP_HOME/{bin,keys}
-      #     wget -O $TMP_DIR/tiup-linux-amd64.tar.gz -q https://tiup-mirrors.pingcap.com/tiup-linux-amd64.tar.gz
-      #     tar -zxf $TMP_DIR/tiup-linux-amd64.tar.gz -C $TIUP_HOME/bin && chmod 755 $TIUP_HOME/bin/tiup
-      #     curl -s https://tiup-mirrors.pingcap.com/root.json -o $TIUP_HOME/bin/root.json
+          rm -rf $TIUP_HOME && mkdir -p $TIUP_HOME/{bin,keys}
+          wget -O $TMP_DIR/tiup-linux-amd64.tar.gz -q https://tiup-mirrors.pingcap.com/tiup-linux-amd64.tar.gz
+          tar -zxf $TMP_DIR/tiup-linux-amd64.tar.gz -C $TIUP_HOME/bin && chmod 755 $TIUP_HOME/bin/tiup
+          curl -s https://tiup-mirrors.pingcap.com/root.json -o $TIUP_HOME/bin/root.json
 
-      #     mkdir -p package
-      #     cp $TIUP_HOME/bin/root.json bin/root.json
+          mkdir -p package
+          cp $TIUP_HOME/bin/root.json bin/root.json
 
-      #     # make tar reproducible
-      #     TAR="tar --sort=name --mtime=${{ steps.get_git.outputs.COMMIT_TIMESTAMP }} --owner=0 --group=0 --numeric-owner"
+          # make tar reproducible
+          TAR="tar --sort=name --mtime=${{ steps.get_git.outputs.COMMIT_TIMESTAMP }} --owner=0 --group=0 --numeric-owner"
 
-      #     # package all binaries to upload to github release asset
-      #     ${TAR} -czf tiup-${REL_VER}-${ARCH}.tar.gz bin checksum.${{ matrix.os }}-${{ matrix.arch }}.txt
+          # package all binaries to upload to github release asset
+          ${TAR} -czf tiup-${REL_VER}-${ARCH}.tar.gz bin checksum.${{ matrix.os }}-${{ matrix.arch }}.txt
 
-      #     # package each component
-      #     # tiup-ctl is destributed with other components, so not packaging / publishing here
-      #     ${TAR} -C bin -czf package/tiup-${REL_VER}-${ARCH}.tar.gz tiup
-      #     ${TAR} -C bin -czf package/cluster-${REL_VER}-${ARCH}.tar.gz tiup-cluster
-      #     ${TAR} -C bin -czf package/dm-${REL_VER}-${ARCH}.tar.gz tiup-dm
-      #     ${TAR} -C bin -czf package/playground-${REL_VER}-${ARCH}.tar.gz tiup-playground
-      #     ${TAR} -C bin -czf package/client-${REL_VER}-${ARCH}.tar.gz tiup-client
-      #     ${TAR} -C bin -czf package/bench-${REL_VER}-${ARCH}.tar.gz tiup-bench
-      #     ${TAR} -C bin -czf package/server-${REL_VER}-${ARCH}.tar.gz tiup-server
+          # package each component
+          # tiup-ctl is destributed with other components, so not packaging / publishing here
+          ${TAR} -C bin -czf package/tiup-${REL_VER}-${ARCH}.tar.gz tiup
+          ${TAR} -C bin -czf package/cluster-${REL_VER}-${ARCH}.tar.gz tiup-cluster
+          ${TAR} -C bin -czf package/dm-${REL_VER}-${ARCH}.tar.gz tiup-dm
+          ${TAR} -C bin -czf package/playground-${REL_VER}-${ARCH}.tar.gz tiup-playground
+          ${TAR} -C bin -czf package/client-${REL_VER}-${ARCH}.tar.gz tiup-client
+          ${TAR} -C bin -czf package/bench-${REL_VER}-${ARCH}.tar.gz tiup-bench
+          ${TAR} -C bin -czf package/server-${REL_VER}-${ARCH}.tar.gz tiup-server
 
-      # - name: Publish packages
-      #   working-directory: ${{ env.working-directory }}
-      #   env:
-      #     TIUP_MIRRORS: ${{ secrets.TIUP_SERVER_STAGING }}
-      #     TIUP_HOME: ${{ steps.packaging.outputs.TIUP_HOME }}
-      #     TIUP_BIN: ${{ steps.packaging.outputs.TIUP_BIN }}
-      #     REL_VER: ${{ steps.build_tiup.outputs.REL_VER }}
-      #     ARCH: ${{ matrix.os }}-${{ matrix.arch }}
-      #     tiup_desc: "TiUP is a command-line component management tool that can help to download and install TiDB platform components to the local system"
-      #     cluster_desc: "Deploy a TiDB cluster for production"
-      #     dm_desc: "Data Migration Platform manager"
-      #     playground_desc: "Bootstrap a local TiDB cluster for fun"
-      #     client_desc: "Client to connect playground"
-      #     bench_desc: "Benchmark database with different workloads"
-      #     server_desc: "TiUP publish/cache server"
-      #   run: |
-      #     if [ ! -z ${{ steps.check_staging.outputs.STAGING }} ]; then
-      #       TIUP_MIRRORS=${{ secrets.TIUP_SERVER_STAGING }}
-      #     else
-      #       TIUP_MIRRORS=${{ secrets.TIUP_SERVER_PROD }}
-      #     fi
-      #     ${TIUP_BIN} mirror set ${TIUP_MIRRORS}
+      - name: Publish packages
+        working-directory: ${{ env.working-directory }}
+        env:
+          TIUP_MIRRORS: ${{ secrets.TIUP_SERVER_STAGING }}
+          TIUP_HOME: ${{ steps.packaging.outputs.TIUP_HOME }}
+          TIUP_BIN: ${{ steps.packaging.outputs.TIUP_BIN }}
+          REL_VER: ${{ steps.build_tiup.outputs.REL_VER }}
+          ARCH: ${{ matrix.os }}-${{ matrix.arch }}
+          tiup_desc: "TiUP is a command-line component management tool that can help to download and install TiDB platform components to the local system"
+          cluster_desc: "Deploy a TiDB cluster for production"
+          dm_desc: "Data Migration Platform manager"
+          playground_desc: "Bootstrap a local TiDB cluster for fun"
+          client_desc: "Client to connect playground"
+          bench_desc: "Benchmark database with different workloads"
+          server_desc: "TiUP publish/cache server"
+        run: |
+          if [ ! -z ${{ steps.check_staging.outputs.STAGING }} ]; then
+            TIUP_MIRRORS=${{ secrets.TIUP_SERVER_STAGING }}
+          else
+            TIUP_MIRRORS=${{ secrets.TIUP_SERVER_PROD }}
+          fi
+          ${TIUP_BIN} mirror set ${TIUP_MIRRORS}
 
-      #     echo ${{ secrets.TIUP_COMP_KEY_PINGCAP }} | base64 -d > $TIUP_HOME/keys/private.json
+          echo ${{ secrets.TIUP_COMP_KEY_PINGCAP }} | base64 -d > $TIUP_HOME/keys/private.json
 
-      #     # build the latest tiup to use for publish, this is a workaround and should
-      #     # be removed after this PR is merged and released
-      #     GOOS=linux GOARCH=amd64 make tiup
-      #     cp bin/tiup ${TIUP_BIN}
+          # build the latest tiup to use for publish, this is a workaround and should
+          # be removed after this PR is merged and released
+          GOOS=linux GOARCH=amd64 make tiup
+          cp bin/tiup ${TIUP_BIN}
 
-      #     # add a random delay before actually publishing, this can help reduce manifest conflict
-      #     # when there are multiple jobs running in parallel
-      #     sleep $[ ( $RANDOM % 10 ) ]s
-      #     ${TIUP_BIN} mirror publish tiup ${REL_VER} package/tiup-${REL_VER}-${ARCH}.tar.gz tiup --arch ${{ matrix.arch }} --os ${{ matrix.os }} --desc="${tiup_desc}"
-      #     ${TIUP_BIN} mirror publish cluster ${REL_VER} package/cluster-${REL_VER}-${ARCH}.tar.gz tiup-cluster --arch ${{ matrix.arch }} --os ${{ matrix.os }} --desc="${cluster_desc}"
-      #     ${TIUP_BIN} mirror publish dm ${REL_VER} package/dm-${REL_VER}-${ARCH}.tar.gz tiup-dm --arch ${{ matrix.arch }} --os ${{ matrix.os }} --desc="${dm_desc}" --standalone
-      #     ${TIUP_BIN} mirror publish playground ${REL_VER} package/playground-${REL_VER}-${ARCH}.tar.gz tiup-playground --arch ${{ matrix.arch }} --os ${{ matrix.os }} --desc="${playground_desc}"
-      #     ${TIUP_BIN} mirror publish client ${REL_VER} package/client-${REL_VER}-${ARCH}.tar.gz tiup-client --arch ${{ matrix.arch }} --os ${{ matrix.os }} --desc="${client_desc}"
-      #     ${TIUP_BIN} mirror publish bench ${REL_VER} package/bench-${REL_VER}-${ARCH}.tar.gz tiup-bench --arch ${{ matrix.arch }} --os ${{ matrix.os }} --desc="${bench_desc}"
-      #     ${TIUP_BIN} mirror publish server ${REL_VER} package/server-${REL_VER}-${ARCH}.tar.gz tiup-server --arch ${{ matrix.arch }} --os ${{ matrix.os }} --desc="${server_desc}" --hide --standalone
+          # add a random delay before actually publishing, this can help reduce manifest conflict
+          # when there are multiple jobs running in parallel
+          sleep $[ ( $RANDOM % 10 ) ]s
+          ${TIUP_BIN} mirror publish tiup ${REL_VER} package/tiup-${REL_VER}-${ARCH}.tar.gz tiup --arch ${{ matrix.arch }} --os ${{ matrix.os }} --desc="${tiup_desc}"
+          ${TIUP_BIN} mirror publish cluster ${REL_VER} package/cluster-${REL_VER}-${ARCH}.tar.gz tiup-cluster --arch ${{ matrix.arch }} --os ${{ matrix.os }} --desc="${cluster_desc}"
+          ${TIUP_BIN} mirror publish dm ${REL_VER} package/dm-${REL_VER}-${ARCH}.tar.gz tiup-dm --arch ${{ matrix.arch }} --os ${{ matrix.os }} --desc="${dm_desc}" --standalone
+          ${TIUP_BIN} mirror publish playground ${REL_VER} package/playground-${REL_VER}-${ARCH}.tar.gz tiup-playground --arch ${{ matrix.arch }} --os ${{ matrix.os }} --desc="${playground_desc}"
+          ${TIUP_BIN} mirror publish client ${REL_VER} package/client-${REL_VER}-${ARCH}.tar.gz tiup-client --arch ${{ matrix.arch }} --os ${{ matrix.os }} --desc="${client_desc}"
+          ${TIUP_BIN} mirror publish bench ${REL_VER} package/bench-${REL_VER}-${ARCH}.tar.gz tiup-bench --arch ${{ matrix.arch }} --os ${{ matrix.os }} --desc="${bench_desc}"
+          ${TIUP_BIN} mirror publish server ${REL_VER} package/server-${REL_VER}-${ARCH}.tar.gz tiup-server --arch ${{ matrix.arch }} --os ${{ matrix.os }} --desc="${server_desc}" --hide --standalone
 
-      # - name: Upload the all-in-one tarball to GitHub release
-      #   uses: ncipollo/release-action@v1
-      #   if: github.event_name == 'release'
-      #   with:
-      #     allowUpdates: true
-      #     artifacts: ${{ env.working-directory }}/tiup-${{ steps.build_tiup.outputs.REL_VER }}-${{ matrix.os }}-${{ matrix.arch }}.tar.gz
-      #     artifactContentType: application/gzip
-      #     omitBodyDuringUpdate: true
-      #     omitNameDuringUpdate: true
-      #     prerelease: ${{ github.event.release.prerelease }}
-      #     token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload the all-in-one tarball to GitHub release
+        uses: ncipollo/release-action@v1
+        if: github.event_name == 'release'
+        with:
+          allowUpdates: true
+          artifacts: ${{ env.working-directory }}/tiup-${{ steps.build_tiup.outputs.REL_VER }}-${{ matrix.os }}-${{ matrix.arch }}.tar.gz
+          artifactContentType: application/gzip
+          omitBodyDuringUpdate: true
+          omitNameDuringUpdate: true
+          prerelease: ${{ github.event.release.prerelease }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   brew-upgrade:
     runs-on: ubuntu-latest
@@ -208,8 +208,7 @@ jobs:
         if: github.event_name == 'release'
         with:
           repository: pingcap/homebrew-brew
-          continue-on-error: true
-          #persist-credentials: false
+          persist-credentials: false
           ref: master
           path: ${{ github.workspace }}/homebrew-brew
           fetch-depth: 0
@@ -217,7 +216,6 @@ jobs:
       - name: Update and Check tiup version
         id: update_version
         working-directory: ${{ github.workspace }}/homebrew-brew
-        continue-on-error: true
         if: github.event_name == 'release'
         run: |
           sed -i 's/version.*/version "${{ needs.release.outputs.REL_VER }}"/g'  Formula/tiup.rb
@@ -226,7 +224,6 @@ jobs:
           
       - name: Push new homebrew
         uses: actions-js/push@master
-        continue-on-error: true
         if: github.event_name == 'release'
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
