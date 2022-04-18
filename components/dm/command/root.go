@@ -169,6 +169,7 @@ please backup your data before process.`,
 		newDisableCmd(),
 		newReplayCmd(),
 		newTemplateCmd(),
+		newMetaCmd(),
 	)
 }
 
