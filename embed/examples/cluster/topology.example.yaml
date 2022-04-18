@@ -327,3 +327,5 @@ alertmanager_servers:
     # data_dir: "/tidb-data/alertmanager-9093"
     # # Alertmanager log file storage directory.
     # log_dir: "/tidb-deploy/alertmanager-9093/log"
+    # # Alertmanager config file storage directory.
+    # config_file: "/tidb-deploy/alertmanager-9093/bin/alertmanager/alertmanager.yml"
