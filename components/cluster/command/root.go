@@ -213,6 +213,7 @@ func init() {
 		newReplayCmd(),
 		newTemplateCmd(),
 		newTLSCmd(),
+		newMetaCmd(),
 	)
 }
 
