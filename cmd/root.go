@@ -86,6 +86,7 @@ the latest stable version will be downloaded from the repository.`,
 			teleCommand = cmd.CommandPath()
 			switch cmd.Name() {
 			case "init",
+				"rotate",
 				"set":
 				if cmd.HasParent() && cmd.Parent().Name() == "mirror" {
 					// skip environment init
@@ -93,7 +94,7 @@ the latest stable version will be downloaded from the repository.`,
 				}
 				fallthrough
 			default:
-				e, err := environment.InitEnv(repoOpts)
+				e, err := environment.InitEnv(repoOpts, repository.MirrorOptions{})
 				if err != nil {
 					if errors.Is(perrs.Cause(err), v1manifest.ErrLoadManifest) {
 						log.Warnf("Please check for root manifest file, you may download one from the repository mirror, or try `tiup mirror set` to force reset it.")
@@ -198,7 +199,7 @@ the latest stable version will be downloaded from the repository.`,
 		},
 	}
 
-	// useless, exist to generate help infomation
+	// useless, exist to generate help information
 	rootCmd.Flags().String("binary", "", "Print binary path of a specific version of a component `<component>[:version]`\n"+
 		"and the latest version installed will be selected if no version specified")
 	rootCmd.Flags().StringP("tag", "T", "", "[Deprecated] Specify a tag for component instance")
