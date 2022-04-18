@@ -215,6 +215,7 @@ the latest stable version will be downloaded from the repository.`,
 		newMirrorCmd(),
 		newTelemetryCmd(),
 		newEnvCmd(),
+		newHistoryCmd(),
 	)
 }
 
@@ -247,6 +248,12 @@ func Execute() {
 		// us a dedicated package for that
 		reportEnabled = false
 	} else {
+		// record TiUP execution history
+		err := environment.HistoryRecord(env, os.Args, start, code)
+		if err != nil {
+			log.Warnf("Record TiUP execution history log failed: %v", err)
+		}
+
 		teleMeta, _, err := telemetry.GetMeta(env)
 		if err == nil {
 			reportEnabled = teleMeta.Status == telemetry.EnableStatus
