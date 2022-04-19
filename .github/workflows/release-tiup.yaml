@@ -26,6 +26,8 @@ jobs:
   release:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      REL_VER: ${{ steps.build_tiup.outputs.REL_VER }}
     strategy:
       fail-fast: true
       matrix:
@@ -195,3 +197,40 @@ jobs:
           omitNameDuringUpdate: true
           prerelease: ${{ github.event.release.prerelease }}
           token: ${{ secrets.GITHUB_TOKEN }}
+
+  brew-upgrade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: release
+    steps:
+      - name: Check out brew code
+        uses: actions/checkout@v3
+        continue-on-error: true
+        if: github.event_name == 'release'
+        with:
+          repository: pingcap/homebrew-brew
+          persist-credentials: false
+          ref: master
+          path: ${{ github.workspace }}/homebrew-brew
+          fetch-depth: 0
+
+      - name: Update and Check tiup version
+        id: update_version
+        working-directory: ${{ github.workspace }}/homebrew-brew
+        continue-on-error: true
+        if: github.event_name == 'release'
+        run: |
+          sed -i 's/version.*/version "${{ needs.release.outputs.REL_VER }}"/g'  Formula/tiup.rb
+          sed -i 's/tag:.*/tag:      "${{ needs.release.outputs.REL_VER }}"/g'  Formula/tiup.rb
+          cat Formula/tiup.rb
+          
+      - name: Push new homebrew
+        uses: actions-js/push@master
+        continue-on-error: true
+        if: github.event_name == 'release'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          directory: ${{ github.workspace }}/homebrew-brew
+          message: "tiup: ${{ needs.release.outputs.REL_VER }}"
+          branch: master
+          repository: pingcap/homebrew-brew
