@@ -91,7 +91,7 @@ please backup your data before process.`,
 			env, err = tiupmeta.InitEnv(repository.Options{
 				GOOS:   "linux",
 				GOARCH: "amd64",
-			})
+			}, repository.MirrorOptions{})
 			if err != nil {
 				return err
 			}
@@ -169,6 +169,7 @@ please backup your data before process.`,
 		newDisableCmd(),
 		newReplayCmd(),
 		newTemplateCmd(),
+		newMetaCmd(),
 	)
 }
 

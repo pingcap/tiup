@@ -444,6 +444,7 @@ func newTransferOwnerCmd() *cobra.Command {
 // the `mirror rotate` sub command
 func newMirrorRotateCmd() *cobra.Command {
 	addr := "0.0.0.0:8080"
+	keyDir := ""
 
 	cmd := &cobra.Command{
 		Use:   "rotate",
@@ -451,6 +452,16 @@ func newMirrorRotateCmd() *cobra.Command {
 		Long:  "Rotate root.json make it possible to modify root.json",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			teleCommand = cmd.CommandPath()
+
+			e, err := environment.InitEnv(repoOpts, repository.MirrorOptions{KeyDir: keyDir})
+			if err != nil {
+				if errors.Is(perrs.Cause(err), v1manifest.ErrLoadManifest) {
+					log.Warnf("Please check for root manifest file, you may download one from the repository mirror, or try `tiup mirror set` to force reset it.")
+				}
+				return err
+			}
+			environment.SetGlobalEnv(e)
+
 			root, err := editLatestRootManifest()
 			if err != nil {
 				return err
@@ -465,6 +476,7 @@ func newMirrorRotateCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVarP(&addr, "addr", "", addr, "listen address:port when starting the temp server for rotating")
+	cmd.Flags().StringVarP(&keyDir, "key-dir", "", keyDir, "specify the directory where stores the private keys")
 
 	return cmd
 }
