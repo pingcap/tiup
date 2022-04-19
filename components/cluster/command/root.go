@@ -120,7 +120,7 @@ func init() {
 			env, err = tiupmeta.InitEnv(repository.Options{
 				GOOS:   "linux",
 				GOARCH: "amd64",
-			})
+			}, repository.MirrorOptions{})
 			if err != nil {
 				return err
 			}
@@ -213,6 +213,7 @@ func init() {
 		newReplayCmd(),
 		newTemplateCmd(),
 		newTLSCmd(),
+		newMetaCmd(),
 	)
 }
 

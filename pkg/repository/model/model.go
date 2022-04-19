@@ -134,10 +134,22 @@ func (m *model) Rotate(manifest *v1manifest.Manifest) error {
 			return err
 		}
 
+		// write new 'root.json' file with verion prefix
 		manifestFilename := fmt.Sprintf("%d.root.json", root.Version)
 		if err := m.txn.WriteManifest(manifestFilename, manifest); err != nil {
 			return err
 		}
+		/* not yet update the 'root.json' without version prefix, as we don't
+		 * have a '1.root.json', so the 'root.json' is playing the role of initial
+		 * '1.root.json', clients are updating to the latest 'n.root.json' no
+		 * matter older ones are expired or not
+		 * maybe we could update the 'root.json' some day when we have many many
+		 * versions of root.json available and the updating process from old clients
+		 * are causing performance issues
+		 */
+		// if err := m.txn.WriteManifest("root.json", manifest); err != nil {
+		// 	return err
+		// }
 
 		fi, err := m.txn.Stat(manifestFilename)
 		if err != nil {
