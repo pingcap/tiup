@@ -84,11 +84,11 @@ func (config ycsbConfig) toProperties() (*properties.Properties, error) {
 
 	// these config are always included in the config file
 	// should be overwritten if they are passed through the command line
-	if config.ReadProportion != 0 {
+	if config.ReadProportion != 0.95 {
 		// we don't need to check errors since we disabled expansion
 		_, _, _ = result.Set("readproportion", fmt.Sprint(config.ReadProportion))
 	}
-	if config.UpdateProportion != 0 {
+	if config.UpdateProportion != 0.95 {
 		_, _, _ = result.Set("updateproportion", fmt.Sprint(config.UpdateProportion))
 	}
 	if config.ScanProportion != 0 {
@@ -140,7 +140,7 @@ func registerYcsb(root *cobra.Command) {
 	cmd.PersistentFlags().BoolVar(&config.ReadAllFields, "readallfields", true, "Whether Read All Fields")
 
 	cmd.PersistentFlags().Float32Var(&config.ReadProportion, "readproportion", 0.95, "What proportion of operations are reads, default 0.95")
-	cmd.PersistentFlags().Float32Var(&config.UpdateProportion, "updateproportion", 0.05, "What proportion of operations are updates, default 0.05")
+	cmd.PersistentFlags().Float32Var(&config.UpdateProportion, "updateproportion", 0.95, "What proportion of operations are updates, default 0.05")
 	cmd.PersistentFlags().Float32Var(&config.ScanProportion, "scanproportion", 0, "What proportion of operations are scans, default 0")
 	cmd.PersistentFlags().Float32Var(&config.InsertProportion, "insertproportion", 0, "What proportion of operations are inserts, default 0")
 	cmd.PersistentFlags().Float32Var(&config.ReadModifyWriteProportion, "readmodifywriteproportion", 0, "What proportion of operations are read-modify-write, default 0")
