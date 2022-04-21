@@ -266,7 +266,11 @@ scrape_configs:
     scrape_interval: 30s
     metrics_path: /probe
     params:
+{{- if .TLSEnabled}}
+      module: [tls_connect]
+{{- else}}
       module: [tcp_connect]
+{{- end}}
     static_configs:
     - targets:
     {{- range .TiDBStatusAddrs}}
@@ -294,6 +298,19 @@ scrape_configs:
       labels:
         group: 'tiflash'
 {{- end}}
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: {{.BlackboxAddr}}
+  - job_name: "monitor_port_probe"
+    scrape_interval: 30s
+    metrics_path: /probe
+    params:
+      module: [tcp_connect]
+    static_configs:
 {{- if .PushgatewayAddr}}
     - targets:
       - '{{.PushgatewayAddr}}'
