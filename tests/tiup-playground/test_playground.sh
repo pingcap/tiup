@@ -47,6 +47,7 @@ function kill_all() {
     killall -9 grafana-server || true
     killall -9 tiup-playground || true
     killall -9 prometheus || true
+    killall -9 ng-monitoring-server || true
     cat $outfile
 }
 
