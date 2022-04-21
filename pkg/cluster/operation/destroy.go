@@ -600,6 +600,7 @@ func DestroyClusterTombstone(
 
 		if !tombstone {
 			pumpServers = append(pumpServers, s)
+			continue
 		}
 
 		nodes = append(nodes, id)
@@ -629,6 +630,7 @@ func DestroyClusterTombstone(
 
 		if !tombstone {
 			drainerServers = append(drainerServers, s)
+			continue
 		}
 
 		nodes = append(nodes, id)

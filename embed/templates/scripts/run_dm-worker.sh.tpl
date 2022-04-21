@@ -23,7 +23,7 @@ exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/dm-worker/d
 exec bin/dm-worker/dm-worker \
 {{- end}}
     --name="{{.Name}}" \
-    --worker-addr="{{.IP}}:{{.Port}}" \
+    --worker-addr="0.0.0.0:{{.Port}}" \
     --advertise-addr="{{.IP}}:{{.Port}}" \
     --log-file="{{.LogDir}}/dm-worker.log" \
     --join="{{template "MasterList" .Endpoints}}" \
