@@ -88,7 +88,7 @@ func (config ycsbConfig) toProperties() (*properties.Properties, error) {
 		// we don't need to check errors since we disabled expansion
 		_, _, _ = result.Set("readproportion", fmt.Sprint(config.ReadProportion))
 	}
-	if config.UpdateProportion != 0.95 {
+	if config.UpdateProportion != 0.05 {
 		_, _, _ = result.Set("updateproportion", fmt.Sprint(config.UpdateProportion))
 	}
 	if config.ScanProportion != 0 {
