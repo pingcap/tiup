@@ -51,7 +51,7 @@ function kill_all() {
 }
 
 outfile=/tmp/tiup-playground-test.out
-tiup-playground v5.0.1 > $outfile 2>&1 &
+tiup-playground v6.0.0 > $outfile 2>&1 &
 
 # wait $outfile generated
 sleep 3
