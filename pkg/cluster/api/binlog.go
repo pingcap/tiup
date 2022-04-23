@@ -140,11 +140,11 @@ func (c *BinlogClient) nodeID(ctx context.Context, addr, ty string) (string, err
 
 	switch len(targetNodes) {
 	case 0:
-		return "", errors.Errorf("found multiple %s nodes with the same ip:port, found nodes: %s", ty, targetNodes)
+		return "", errors.Errorf("%s node id for address %s not found, found address: %s", ty, addr, addrs)
 	case 1:
 		return targetNodes[0], nil
 	default:
-		return "", errors.Errorf("%s node id for address %s not found, found address: %s", ty, addr, addrs)
+		return "", errors.Errorf("found multiple %s nodes with the same ip:port, found nodes: %s", ty, targetNodes)
 	}
 }
 
