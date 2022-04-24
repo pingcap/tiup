@@ -18,12 +18,14 @@ import (
 	"crypto/tls"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/mod/semver"
 )
 
@@ -163,7 +165,7 @@ func (i *CDCInstance) InitConfig(
 	globalConfig := topo.ServerConfigs.CDC
 	instanceConfig := spec.Config
 
-	if semver.Compare(clusterVersion, "v4.0.13") == -1 {
+	if semver.Compare(clusterVersion, "v4.0.13") == -1 && !strings.Contains(clusterVersion, utils.NightlyVersionAlias) {
 		if len(globalConfig)+len(instanceConfig) > 0 {
 			return perrs.New("server_config is only supported with TiCDC version v4.0.13 or later")
 		}
