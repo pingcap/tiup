@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/pingcap/errors"
@@ -144,7 +145,7 @@ func (c *BinlogClient) nodeID(ctx context.Context, addr, ty string) (string, err
 	case 1:
 		return targetNodes[0], nil
 	default:
-		return "", errors.Errorf("found multiple %s nodes with the same ip:port, found nodes: %s", ty, targetNodes)
+		return "", errors.Errorf("found multiple %s nodes with the same host, found nodes: %s", ty, strings.Join(targetNodes, ","))
 	}
 }
 
@@ -168,34 +169,24 @@ func (c *BinlogClient) UpdatePumpState(ctx context.Context, addr string, state s
 
 // updateStatus update the specify state as the specified state.
 func (c *BinlogClient) updateStatus(ctx context.Context, ty string, nodeID string, state string) error {
-	key := fmt.Sprintf("/tidb-binlog/v1/%s/%s", ty, nodeID)
 
-	resp, err := c.etcdClient.KV.Get(ctx, key)
+	s, err := c.nodeStatus(ctx, ty, nodeID)
 	if err != nil {
 		return errors.AddStack(err)
 	}
 
-	if len(resp.Kvs) == 0 {
-		return errors.Errorf("no pump with node id: %v", nodeID)
-	}
-
-	var nodesStatus NodeStatus
-	err = json.Unmarshal(resp.Kvs[0].Value, &nodesStatus)
-	if err != nil {
-		return errors.AddStack(err)
-	}
-
-	if nodesStatus.State == state {
+	if s.State == state {
 		return nil
 	}
 
-	nodesStatus.State = state
+	s.State = state
 
-	data, err := json.Marshal(&nodesStatus)
+	data, err := json.Marshal(&s)
 	if err != nil {
 		return errors.AddStack(err)
 	}
 
+	key := fmt.Sprintf("/tidb-binlog/v1/%s/%s", ty, nodeID)
 	_, err = c.etcdClient.Put(ctx, key, string(data))
 	if err != nil {
 		return errors.AddStack(err)
