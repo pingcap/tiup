@@ -21,6 +21,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -65,5 +66,7 @@ func (m *Manager) Rename(name string, opt operator.Options, newName string, skip
 	m.logger.Infof("Rename cluster `%s` -> `%s` successfully", name, newName)
 
 	opt.Roles = []string{spec.ComponentGrafana, spec.ComponentPrometheus}
-	return m.Reload(newName, opt, false, skipConfirm)
+	return m.Reload(newName, opt, func(builder *task.Builder, meta spec.Metadata) {
+		builder.UpdateTopology(newName, m.specManager.Path(newName), meta.(*spec.ClusterMeta), nil /* deleteNodeIds */)
+	}, false, skipConfirm)
 }

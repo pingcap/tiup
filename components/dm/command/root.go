@@ -50,7 +50,7 @@ var (
 	log         = logprinter.NewLogger("") // init default logger
 )
 
-var dmspec *cspec.SpecManager
+var dmspecM *cspec.SpecManager
 var cm *manager.Manager
 
 func init() {
@@ -83,9 +83,9 @@ please backup your data before process.`,
 				return err
 			}
 
-			dmspec = spec.GetSpecManager()
+			dmspecM = spec.GetSpecManager()
 			logger.EnableAuditLog(cspec.AuditDir())
-			cm = manager.NewManager("dm", dmspec, spec.DMComponentVersion, log)
+			cm = manager.NewManager("dm", dmspecM, spec.DMComponentVersion, log)
 
 			// Running in other OS/ARCH Should be fine we only download manifest file.
 			env, err = tiupmeta.InitEnv(repository.Options{

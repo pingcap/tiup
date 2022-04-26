@@ -14,6 +14,10 @@
 package command
 
 import (
+	dmspec "github.com/pingcap/tiup/components/dm/spec"
+	dmtask "github.com/pingcap/tiup/components/dm/task"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/spf13/cobra"
 )
 
@@ -28,7 +32,9 @@ func newStartCmd() *cobra.Command {
 
 			clusterName := args[0]
 
-			return cm.StartCluster(clusterName, gOpt, false)
+			return cm.StartCluster(clusterName, gOpt, false, func(b *task.Builder, metadata spec.Metadata) {
+				b.Serial(dmtask.NewUpdateDMTopology(clusterName, metadata.(*dmspec.Metadata)))
+			})
 		},
 	}
 

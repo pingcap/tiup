@@ -15,7 +15,10 @@ package command
 
 import (
 	perrs "github.com/pingcap/errors"
-	"github.com/pingcap/tiup/components/dm/spec"
+	dmspec "github.com/pingcap/tiup/components/dm/spec"
+	dmtask "github.com/pingcap/tiup/components/dm/task"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/spf13/cobra"
 )
 
@@ -35,7 +38,9 @@ func newReloadCmd() *cobra.Command {
 
 			clusterName := args[0]
 
-			return cm.Reload(clusterName, gOpt, skipRestart, skipConfirm)
+			return cm.Reload(clusterName, gOpt, func(b *task.Builder, metadata spec.Metadata) {
+				b.Serial(dmtask.NewUpdateDMTopology(clusterName, metadata.(*dmspec.Metadata)))
+			}, skipRestart, skipConfirm)
 		},
 	}
 
@@ -49,7 +54,7 @@ func newReloadCmd() *cobra.Command {
 func validRoles(roles []string) error {
 	for _, r := range roles {
 		match := false
-		for _, has := range spec.AllDMComponentNames() {
+		for _, has := range dmspec.AllDMComponentNames() {
 			if r == has {
 				match = true
 				break
@@ -57,7 +62,7 @@ func validRoles(roles []string) error {
 		}
 
 		if !match {
-			return perrs.Errorf("not valid role: %s, should be one of: %v", r, spec.AllDMComponentNames())
+			return perrs.Errorf("not valid role: %s, should be one of: %v", r, dmspec.AllDMComponentNames())
 		}
 	}
 

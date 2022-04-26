@@ -26,12 +26,13 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/cluster/task"
 
 	"github.com/pingcap/tiup/pkg/tui"
 )
 
 // Reload the cluster.
-func (m *Manager) Reload(name string, gOpt operator.Options, skipRestart, skipConfirm bool) error {
+func (m *Manager) Reload(name string, gOpt operator.Options, updateTopo func(*task.Builder, spec.Metadata), skipRestart, skipConfirm bool) error {
 	if err := clusterutil.ValidateClusterNameOrError(name); err != nil {
 		return err
 	}
@@ -104,13 +105,8 @@ func (m *Manager) Reload(name string, gOpt operator.Options, skipRestart, skipCo
 	if err != nil {
 		return err
 	}
-	if topo.Type() == spec.TopoTypeTiDB && !skipRestart {
-		b.UpdateTopology(
-			name,
-			m.specManager.Path(name),
-			metadata.(*spec.ClusterMeta),
-			nil, /* deleteNodeIds */
-		)
+	if !skipRestart {
+		updateTopo(b, metadata)
 	}
 	b.ParallelStep("+ Refresh instance configs", gOpt.Force, refreshConfigTasks...)
 

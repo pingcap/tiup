@@ -155,6 +155,31 @@ func (c *HTTPClient) Post(ctx context.Context, url string, body io.Reader) ([]by
 	return checkHTTPResponse(res)
 }
 
+// Put send a PUT request to the url and returns the response
+func (c *HTTPClient) Put(ctx context.Context, url string, body io.Reader) ([]byte, error) {
+	req, err := http.NewRequest("PUT", url, body)
+	if err != nil {
+		return nil, err
+	}
+
+	if c.header == nil {
+		req.Header.Set("Content-Type", "application/json")
+	} else {
+		req.Header = c.header
+	}
+
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+	res, err := c.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	return checkHTTPResponse(res)
+}
+
 // Delete send a DELETE request to the url and returns the response and status code.
 func (c *HTTPClient) Delete(ctx context.Context, url string, body io.Reader) ([]byte, int, error) {
 	var statusCode int

@@ -48,7 +48,8 @@ func newScaleInCmd() *cobra.Command {
 					func(ctx context.Context) error {
 						return ScaleInDMCluster(ctx, metadata.Topology, gOpt, tlsCfg)
 					},
-				).Serial(dmtask.NewUpdateDMMeta(clusterName, metadata, gOpt.Nodes))
+				).Serial(dmtask.NewUpdateDMMeta(clusterName, metadata, gOpt.Nodes)).
+					Serial(dmtask.NewUpdateDMTopology(clusterName, metadata))
 			}
 
 			return cm.ScaleIn(clusterName, skipConfirm, gOpt, scale)
@@ -135,7 +136,7 @@ func ScaleInDMCluster(
 		}
 	})
 
-	// Delete member from cluster
+	// Delete member from cluster栓
 	for _, component := range topo.ComponentsByStartOrder() {
 		for _, instance := range component.Instances() {
 			if !deletedNodes.Exist(instance.ID()) {

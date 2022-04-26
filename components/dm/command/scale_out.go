@@ -16,6 +16,8 @@ package command
 import (
 	"path/filepath"
 
+	dmspec "github.com/pingcap/tiup/components/dm/spec"
+	dmtask "github.com/pingcap/tiup/components/dm/task"
 	"github.com/pingcap/tiup/pkg/cluster/manager"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -40,7 +42,7 @@ func newScaleOutCmd() *cobra.Command {
 			clusterName := args[0]
 			topoFile := args[1]
 
-			return cm.ScaleOut(clusterName, topoFile, postScaleOutHook, nil, opt, skipConfirm, gOpt)
+			return cm.ScaleOut(clusterName, topoFile, postScaleOutHook, final, opt, skipConfirm, gOpt)
 		},
 	}
 
@@ -53,4 +55,8 @@ func newScaleOutCmd() *cobra.Command {
 
 func postScaleOutHook(builder *task.Builder, newPart spec.Topology, gOpt operator.Options) {
 	postDeployHook(builder, newPart, gOpt)
+}
+
+func final(builder *task.Builder, name string, meta spec.Metadata, gOpt operator.Options) {
+	builder.Serial(dmtask.NewUpdateDMTopology(name, meta.(*dmspec.Metadata)))
 }

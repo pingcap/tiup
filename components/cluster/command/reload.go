@@ -16,6 +16,7 @@ package command
 import (
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/spf13/cobra"
 )
 
@@ -37,7 +38,9 @@ func newReloadCmd() *cobra.Command {
 			clusterReport.ID = scrubClusterName(clusterName)
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
-			return cm.Reload(clusterName, gOpt, skipRestart, skipConfirm)
+			return cm.Reload(clusterName, gOpt, func(builder *task.Builder, meta spec.Metadata) {
+				builder.UpdateTopology(clusterName, tidbSpec.Path(clusterName), meta.(*spec.ClusterMeta), nil /* deleteNodeIds */)
+			}, skipRestart, skipConfirm)
 		},
 	}
 

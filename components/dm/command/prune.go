@@ -37,7 +37,7 @@ func newPruneCmd() *cobra.Command {
 			clusterName := args[0]
 
 			metadata := new(spec.Metadata)
-			err := dmspec.Metadata(clusterName, metadata)
+			err := dmspecM.Metadata(clusterName, metadata)
 			if err != nil {
 				return err
 			}
@@ -64,7 +64,7 @@ func clearOutDatedEtcdInfo(clusterName string, metadata *spec.Metadata, opt oper
 		existedWorkers[workerSpec.Name] = struct{}{}
 	}
 
-	tlsCfg, err := topo.TLSConfig(dmspec.Path(clusterName, tidbspec.TLSCertKeyDir))
+	tlsCfg, err := topo.TLSConfig(dmspecM.Path(clusterName, tidbspec.TLSCertKeyDir))
 	if err != nil {
 		return err
 	}
