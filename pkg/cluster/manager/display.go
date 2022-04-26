@@ -252,9 +252,9 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 		}
 
 		// Check if there is some instance in tombstone state
-		nodes, _ := operator.DestroyTombstone(ctx, t, true /* returnNodesOnly */, opt, tlsCfg)
-		if len(nodes) != 0 {
-			color.Green("There are some nodes can be pruned: \n\tNodes: %+v\n\tYou can destroy them with the command: `tiup cluster prune %s`", nodes, name)
+		tombstoneNodes, _ := operator.DestroyTombstone(ctx, t, true /* returnNodesOnly */, opt, tlsCfg)
+		if len(tombstoneNodes) != 0 {
+			color.Green("There are some nodes can be pruned: \n\tNodes: %+v\n\tYou can destroy them with the command: `tiup cluster prune %s`", tombstoneNodes, name)
 		}
 	}
 
@@ -605,7 +605,7 @@ func formatInstanceStatus(status string) string {
 		return color.GreenString(status)
 	case startsWith("down", "err", "inactive"): // down, down|ui
 		return color.RedString(status)
-	case startsWith("tombstone", "disconnected", "n/a"), strings.Contains(status, "offline"):
+	case startsWith("tombstone", "disconnected", "n/a"), strings.Contains(strings.ToLower(status), "offline"):
 		return color.YellowString(status)
 	default:
 		return status
