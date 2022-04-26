@@ -68,6 +68,12 @@ func (u *UpdateDMTopology) String() string {
 
 // Execute implements the Task interface
 func (u *UpdateDMTopology) Execute(ctx context.Context) error {
+	_ = u.executeWithError(ctx)
+	// DM openapi is not enable by default
+	return nil
+}
+
+func (u *UpdateDMTopology) executeWithError(ctx context.Context) error {
 	tlsCfg, err := u.metadata.Topology.TLSConfig(
 		filepath.Join(dmspec.GetSpecManager().Path(u.cluster), spec.TLSCertKeyDir),
 	)
@@ -78,22 +84,6 @@ func (u *UpdateDMTopology) Execute(ctx context.Context) error {
 	var clusterInfo clusterInfoRequest
 	topo := u.metadata.Topology
 
-	/*
-		for _, inst := range topo.Masters {
-			clusterInfo.DMMaster = append(clusterInfo.DMMaster, dmcomponent{
-				Host: inst.Host,
-				Port: inst.Port,
-				Name: inst.Name,
-			})
-		}
-		for _, inst := range topo.Masters {
-			clusterInfo.DMWorker = append(clusterInfo.DMWorker, dmcomponent{
-				Host: inst.Host,
-				Port: inst.Port,
-				Name: inst.Name,
-			})
-		}
-	*/
 	if len(topo.Grafanas) > 0 {
 		inst := topo.Grafanas[0]
 		clusterInfo.Grafana = &dmcomponent{
