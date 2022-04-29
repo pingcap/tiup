@@ -55,7 +55,6 @@ type PDSpec struct {
 
 // Status queries current status of the instance
 func (s *PDSpec) Status(ctx context.Context, timeout time.Duration, tlsCfg *tls.Config, _ ...string) string {
-
 	if timeout < time.Second {
 		timeout = statusQueryTimeout
 	}
@@ -143,8 +142,8 @@ func (c *PDComponent) Instances() []Instance {
 					s.DataDir,
 				},
 				StatusFn: s.Status,
-				UptimeFn: func(_ context.Context, tlsCfg *tls.Config) time.Duration {
-					return UptimeByHost(s.Host, s.ClientPort, tlsCfg)
+				UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
+					return UptimeByHost(s.Host, s.ClientPort, timeout, tlsCfg)
 				},
 			},
 			topo: c.Topology,

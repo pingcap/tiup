@@ -533,7 +533,7 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 
 		since := "-"
 		if opt.ShowUptime {
-			since = formatInstanceSince(ins.Uptime(ctx, tlsCfg))
+			since = formatInstanceSince(ins.Uptime(ctx, statusTimeout, tlsCfg))
 		}
 
 		// Query the service status and uptime
@@ -720,7 +720,7 @@ func SetClusterSSH(ctx context.Context, topo spec.Topology, deployUser string, s
 }
 
 // DisplayDashboardInfo prints the dashboard address of cluster
-func (m *Manager) DisplayDashboardInfo(clusterName string, tlsCfg *tls.Config) error {
+func (m *Manager) DisplayDashboardInfo(clusterName string, timeout time.Duration, tlsCfg *tls.Config) error {
 	metadata, err := spec.ClusterMetadata(clusterName)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
 		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
@@ -733,7 +733,7 @@ func (m *Manager) DisplayDashboardInfo(clusterName string, tlsCfg *tls.Config) e
 	}
 
 	ctx := context.WithValue(context.Background(), logprinter.ContextKeyLogger, m.logger)
-	pdAPI := api.NewPDClient(ctx, pdEndpoints, 2*time.Second, tlsCfg)
+	pdAPI := api.NewPDClient(ctx, pdEndpoints, timeout, tlsCfg)
 	dashboardAddr, err := pdAPI.GetDashboardAddress()
 	if err != nil {
 		return fmt.Errorf("failed to retrieve TiDB Dashboard instance from PD: %s", err)

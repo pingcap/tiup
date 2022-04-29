@@ -111,8 +111,8 @@ func (c *AlertManagerComponent) Instances() []Instance {
 				StatusFn: func(_ context.Context, timeout time.Duration, _ *tls.Config, _ ...string) string {
 					return statusByHost(s.Host, s.WebPort, "/-/ready", timeout, nil)
 				},
-				UptimeFn: func(_ context.Context, tlsCfg *tls.Config) time.Duration {
-					return UptimeByHost(s.Host, s.WebPort, tlsCfg)
+				UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
+					return UptimeByHost(s.Host, s.WebPort, timeout, tlsCfg)
 				},
 			},
 			topo: c.Topology,

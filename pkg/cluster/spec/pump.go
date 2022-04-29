@@ -49,7 +49,6 @@ type PumpSpec struct {
 
 // Status queries current status of the instance
 func (s *PumpSpec) Status(ctx context.Context, timeout time.Duration, tlsCfg *tls.Config, pdList ...string) string {
-
 	if timeout < time.Second {
 		timeout = statusQueryTimeout
 	}
@@ -131,8 +130,8 @@ func (c *PumpComponent) Instances() []Instance {
 				s.DataDir,
 			},
 			StatusFn: s.Status,
-			UptimeFn: func(_ context.Context, tlsCfg *tls.Config) time.Duration {
-				return UptimeByHost(s.Host, s.Port, tlsCfg)
+			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
+				return UptimeByHost(s.Host, s.Port, timeout, tlsCfg)
 			},
 		}, c.Topology})
 	}

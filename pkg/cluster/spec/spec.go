@@ -428,7 +428,6 @@ func (s *Specification) AdjustByVersion(clusterVersion string) {
 
 // GetDashboardAddress returns the cluster's dashboard addr
 func (s *Specification) GetDashboardAddress(ctx context.Context, tlsCfg *tls.Config, timeout time.Duration, pdList ...string) (string, error) {
-
 	if timeout < time.Second {
 		timeout = statusQueryTimeout
 	}
