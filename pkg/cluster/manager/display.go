@@ -109,6 +109,8 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
 	cyan := color.New(color.FgCyan, color.Bold)
+
+	statusTimeout := time.Duration(opt.APITimeout) * time.Second
 	// display cluster meta
 	var j *JSONOutput
 	if m.logger.GetDisplayMode() == logprinter.DisplayModeJSON {
@@ -201,7 +203,7 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 	)
 	if t, ok := topo.(*spec.Specification); ok {
 		var err error
-		dashboardAddr, err = t.GetDashboardAddress(ctx, tlsCfg, masterActive...)
+		dashboardAddr, err = t.GetDashboardAddress(ctx, tlsCfg, statusTimeout, masterActive...)
 		if err == nil && !set.NewStringSet("", "auto", "none").Exist(dashboardAddr) {
 			scheme := "http"
 			if tlsCfg != nil {
@@ -455,6 +457,8 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
 
+	statusTimeout := time.Duration(opt.APITimeout) * time.Second
+
 	err = SetSSHKeySet(ctx, m.specManager.Path(name, "ssh", "id_rsa"), m.specManager.Path(name, "ssh", "id_rsa.pub"))
 	if err != nil {
 		return nil, err
@@ -490,7 +494,7 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 
 	var dashboardAddr string
 	if t, ok := topo.(*spec.Specification); ok {
-		dashboardAddr, _ = t.GetDashboardAddress(ctx, tlsCfg, masterActive...)
+		dashboardAddr, _ = t.GetDashboardAddress(ctx, tlsCfg, statusTimeout, masterActive...)
 	}
 
 	clusterInstInfos := []InstInfo{}
