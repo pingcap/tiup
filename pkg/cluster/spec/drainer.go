@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
@@ -45,6 +46,27 @@ type DrainerSpec struct {
 	ResourceControl meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
 	Arch            string                 `yaml:"arch,omitempty"`
 	OS              string                 `yaml:"os,omitempty"`
+}
+
+// Status queries current status of the instance
+func (s *DrainerSpec) Status(ctx context.Context, tlsCfg *tls.Config, pdList ...string) string {
+	state := statusByHost(s.Host, s.Port, "/status", tlsCfg)
+
+	if s.Offline {
+		binlogClient, err := api.NewBinlogClient(pdList, tlsCfg)
+		if err != nil {
+			return state
+		}
+		id := s.Host + ":" + strconv.Itoa(s.Port)
+		tombstone, _ := binlogClient.IsDrainerTombstone(ctx, id)
+
+		if tombstone {
+			state = "Tombstone"
+		} else {
+			state = "Pending Offline"
+		}
+	}
+	return state
 }
 
 // Role returns the component role of the instance
@@ -104,9 +126,7 @@ func (c *DrainerComponent) Instances() []Instance {
 				s.DeployDir,
 				s.DataDir,
 			},
-			StatusFn: func(_ context.Context, tlsCfg *tls.Config, _ ...string) string {
-				return statusByHost(s.Host, s.Port, "/status", tlsCfg)
-			},
+			StatusFn: s.Status,
 			UptimeFn: func(_ context.Context, tlsCfg *tls.Config) time.Duration {
 				return UptimeByHost(s.Host, s.Port, tlsCfg)
 			},
