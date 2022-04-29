@@ -153,7 +153,8 @@ func (m *Manager) DestroyTombstone(
 		Func("FindTomestoneNodes", func(ctx context.Context) (err error) {
 			if !skipConfirm {
 				err = tui.PromptForConfirmOrAbortError(
-					color.HiYellowString(fmt.Sprintf("Will destroy these nodes: %v\nDo you confirm this action? [y/N]:", nodes)),
+					fmt.Sprintf("%s\nDo you confirm this action? [y/N]:",
+						color.HiYellowString("Will destroy these nodes: %v", nodes)),
 				)
 				if err != nil {
 					return err
