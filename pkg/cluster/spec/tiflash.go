@@ -66,7 +66,7 @@ type TiFlashSpec struct {
 }
 
 // Status queries current status of the instance
-func (s *TiFlashSpec) Status(ctx context.Context, tlsCfg *tls.Config, pdList ...string) string {
+func (s *TiFlashSpec) Status(ctx context.Context, timeout time.Duration, tlsCfg *tls.Config, pdList ...string) string {
 	storeAddr := fmt.Sprintf("%s:%d", s.Host, s.FlashServicePort)
 	state := checkStoreStatus(ctx, storeAddr, tlsCfg, pdList...)
 	if s.Offline && strings.ToLower(state) == "offline" {

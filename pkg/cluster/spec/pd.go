@@ -54,9 +54,14 @@ type PDSpec struct {
 }
 
 // Status queries current status of the instance
-func (s *PDSpec) Status(ctx context.Context, tlsCfg *tls.Config, _ ...string) string {
+func (s *PDSpec) Status(ctx context.Context, timeout time.Duration, tlsCfg *tls.Config, _ ...string) string {
+
+	if timeout < time.Second {
+		timeout = statusQueryTimeout
+	}
+
 	addr := fmt.Sprintf("%s:%d", s.Host, s.ClientPort)
-	pc := api.NewPDClient(ctx, []string{addr}, statusQueryTimeout, tlsCfg)
+	pc := api.NewPDClient(ctx, []string{addr}, timeout, tlsCfg)
 
 	// check health
 	err := pc.CheckHealth()

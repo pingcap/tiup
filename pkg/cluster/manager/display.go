@@ -290,6 +290,7 @@ func (m *Manager) DisplayTiKVLabels(name string, opt operator.Options) error {
 	metadata, _ := m.meta(name)
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
+	statusTimeout := time.Duration(opt.APITimeout) * time.Second
 	// display cluster meta
 	cyan := color.New(color.FgCyan, color.Bold)
 
@@ -362,7 +363,7 @@ func (m *Manager) DisplayTiKVLabels(name string, opt operator.Options) error {
 	}
 	topo.IterInstance(func(ins spec.Instance) {
 		if ins.ComponentName() == spec.ComponentPD {
-			status := ins.Status(ctx, tlsCfg, masterList...)
+			status := ins.Status(ctx, statusTimeout, tlsCfg, masterList...)
 			if strings.HasPrefix(status, "Up") || strings.HasPrefix(status, "Healthy") {
 				instAddr := fmt.Sprintf("%s:%d", ins.GetHost(), ins.GetPort())
 				masterActive = append(masterActive, instAddr)
@@ -484,7 +485,7 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 		if ins.ComponentName() != spec.ComponentPD && ins.ComponentName() != spec.ComponentDMMaster {
 			return
 		}
-		status := ins.Status(ctx, tlsCfg, masterList...)
+		status := ins.Status(ctx, statusTimeout, tlsCfg, masterList...)
 		if strings.HasPrefix(status, "Up") || strings.HasPrefix(status, "Healthy") {
 			instAddr := fmt.Sprintf("%s:%d", ins.GetHost(), ins.GetPort())
 			masterActive = append(masterActive, instAddr)
@@ -527,7 +528,7 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 		case spec.ComponentDMMaster:
 			status = masterStatus[ins.ID()]
 		default:
-			status = ins.Status(ctx, tlsCfg, masterActive...)
+			status = ins.Status(ctx, statusTimeout, tlsCfg, masterActive...)
 		}
 
 		since := "-"

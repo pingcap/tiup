@@ -94,7 +94,7 @@ type Instance interface {
 	DeployDir() string
 	UsedPorts() []int
 	UsedDirs() []string
-	Status(ctx context.Context, tlsCfg *tls.Config, pdList ...string) string
+	Status(ctx context.Context, timeout time.Duration, tlsCfg *tls.Config, pdList ...string) string
 	Uptime(ctx context.Context, tlsCfg *tls.Config) time.Duration
 	DataDir() string
 	LogDir() string
@@ -139,7 +139,7 @@ type BaseInstance struct {
 
 	Ports    []int
 	Dirs     []string
-	StatusFn func(ctx context.Context, tlsCfg *tls.Config, pdHosts ...string) string
+	StatusFn func(ctx context.Context, timeout time.Duration, tlsCfg *tls.Config, pdHosts ...string) string
 	UptimeFn func(ctx context.Context, tlsCfg *tls.Config) time.Duration
 }
 
@@ -464,8 +464,8 @@ func (i *BaseInstance) UsedDirs() []string {
 }
 
 // Status implements Instance interface
-func (i *BaseInstance) Status(ctx context.Context, tlsCfg *tls.Config, pdList ...string) string {
-	return i.StatusFn(ctx, tlsCfg, pdList...)
+func (i *BaseInstance) Status(ctx context.Context, timeout time.Duration, tlsCfg *tls.Config, pdList ...string) string {
+	return i.StatusFn(ctx, timeout, tlsCfg, pdList...)
 }
 
 // Uptime implements Instance interface

@@ -127,8 +127,8 @@ func (c *MonitorComponent) Instances() []Instance {
 				s.DeployDir,
 				s.DataDir,
 			},
-			StatusFn: func(_ context.Context, _ *tls.Config, _ ...string) string {
-				return statusByHost(s.Host, s.Port, "/-/ready", nil)
+			StatusFn: func(_ context.Context, timeout time.Duration, _ *tls.Config, _ ...string) string {
+				return statusByHost(s.Host, s.Port, "/-/ready", timeout, nil)
 			},
 			UptimeFn: func(_ context.Context, tlsCfg *tls.Config) time.Duration {
 				return UptimeByHost(s.Host, s.Port, tlsCfg)

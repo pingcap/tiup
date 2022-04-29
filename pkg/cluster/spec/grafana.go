@@ -114,8 +114,8 @@ func (c *GrafanaComponent) Instances() []Instance {
 				Dirs: []string{
 					s.DeployDir,
 				},
-				StatusFn: func(_ context.Context, _ *tls.Config, _ ...string) string {
-					return statusByHost(s.Host, s.Port, "", nil)
+				StatusFn: func(_ context.Context, timeout time.Duration, _ *tls.Config, _ ...string) string {
+					return statusByHost(s.Host, s.Port, "", timeout, nil)
 				},
 				UptimeFn: func(_ context.Context, tlsCfg *tls.Config) time.Duration {
 					return UptimeByHost(s.Host, s.Port, tlsCfg)

@@ -124,8 +124,13 @@ func LoadClientCert(dir string) (*tls.Config, error) {
 }
 
 // statusByHost queries current status of the instance by http status api.
-func statusByHost(host string, port int, path string, tlsCfg *tls.Config) string {
-	client := utils.NewHTTPClient(statusQueryTimeout, tlsCfg)
+func statusByHost(host string, port int, path string, timeout time.Duration, tlsCfg *tls.Config) string {
+
+	if timeout < time.Second {
+		timeout = statusQueryTimeout
+	}
+
+	client := utils.NewHTTPClient(timeout, tlsCfg)
 
 	scheme := "http"
 	if tlsCfg != nil {

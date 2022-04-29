@@ -104,8 +104,8 @@ func (c *CDCComponent) Instances() []Instance {
 			Dirs: []string{
 				s.DeployDir,
 			},
-			StatusFn: func(_ context.Context, tlsCfg *tls.Config, _ ...string) string {
-				return statusByHost(s.Host, s.Port, "/status", tlsCfg)
+			StatusFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config, _ ...string) string {
+				return statusByHost(s.Host, s.Port, "/status", timeout, tlsCfg)
 			},
 			UptimeFn: func(_ context.Context, tlsCfg *tls.Config) time.Duration {
 				return UptimeByHost(s.Host, s.Port, tlsCfg)
