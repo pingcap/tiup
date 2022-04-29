@@ -610,7 +610,7 @@ func formatInstanceStatus(status string) string {
 		return color.GreenString(status)
 	case startsWith("down", "err", "inactive"): // down, down|ui
 		return color.RedString(status)
-	case startsWith("tombstone", "disconnected", "n/a"), strings.Contains(status, "offline"):
+	case startsWith("tombstone", "disconnected", "n/a"), strings.Contains(strings.ToLower(status), "offline"):
 		return color.YellowString(status)
 	default:
 		return status
