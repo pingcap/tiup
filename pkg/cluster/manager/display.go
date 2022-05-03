@@ -366,7 +366,7 @@ func (m *Manager) DisplayTiKVLabels(name string, opt operator.Options) error {
 				masterActive = append(masterActive, instAddr)
 			}
 		}
-	})
+	}, opt.Concurrency)
 
 	var (
 		labelInfoArr  []api.LabelInfo
@@ -486,7 +486,7 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 			masterActive = append(masterActive, instAddr)
 		}
 		masterStatus[ins.ID()] = status
-	})
+	}, opt.Concurrency)
 
 	var dashboardAddr string
 	if t, ok := topo.(*spec.Specification); ok {
@@ -569,7 +569,7 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 			Port:          ins.GetPort(),
 			Since:         since,
 		})
-	})
+	}, opt.Concurrency)
 
 	// Sort by role,host,ports
 	sort.Slice(clusterInstInfos, func(i, j int) bool {
