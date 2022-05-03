@@ -56,7 +56,7 @@ func (s *PumpSpec) Status(ctx context.Context, timeout time.Duration, tlsCfg *tl
 	state := statusByHost(s.Host, s.Port, "/status", timeout, tlsCfg)
 
 	if s.Offline {
-		binlogClient, err := api.NewBinlogClient(pdList, tlsCfg)
+		binlogClient, err := api.NewBinlogClient(pdList, timeout, tlsCfg)
 		if err != nil {
 			return state
 		}

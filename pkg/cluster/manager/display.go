@@ -485,6 +485,7 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 		if ins.ComponentName() != spec.ComponentPD && ins.ComponentName() != spec.ComponentDMMaster {
 			return
 		}
+
 		status := ins.Status(ctx, statusTimeout, tlsCfg, masterList...)
 		if strings.HasPrefix(status, "Up") || strings.HasPrefix(status, "Healthy") {
 			instAddr := fmt.Sprintf("%s:%d", ins.GetHost(), ins.GetPort())
