@@ -740,14 +740,9 @@ func (s *Specification) IterInstance(fn func(instance Instance), concurrency ...
 		for _, inst := range comp.Instances() {
 			wg.Add(1)
 			workerPool <- struct{}{}
-			go func(inst Instance) {
-				defer func() {
-					<-workerPool
-					wg.Done()
-				}()
-				fn(inst)
-			}(inst)
-
+			go fn(inst)
+			<-workerPool
+			wg.Done()
 		}
 	}
 	wg.Wait()
