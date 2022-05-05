@@ -453,9 +453,13 @@ func (topo *Specification) IterInstance(fn func(instance Instance), concurrency 
 		for _, inst := range comp.Instances() {
 			wg.Add(1)
 			workerPool <- struct{}{}
-			go fn(inst)
-			<-workerPool
-			wg.Done()
+			go func(inst Instance) {
+				defer func() {
+					<-workerPool
+					wg.Done()
+				}()
+				fn(inst)
+			}(inst)
 		}
 	}
 	wg.Wait()
