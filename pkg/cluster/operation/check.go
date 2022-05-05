@@ -24,6 +24,7 @@ import (
 
 	"github.com/AstroProfundis/sysinfo"
 	"github.com/pingcap/tidb-insight/collector/insight"
+	"github.com/pingcap/tiup/pkg/checkpoint"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/module"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -495,7 +496,7 @@ func CheckServices(ctx context.Context, e ctxt.Executor, host, service string, d
 
 	// check if the service exist before checking its status, ignore when non-exist
 	stdout, _, err := e.Execute(
-		ctx,
+		checkpoint.NewContext(ctx),
 		fmt.Sprintf(
 			"systemctl list-unit-files --type service | grep -i %s.service | wc -l", service),
 		true)
@@ -542,7 +543,7 @@ func CheckSELinux(ctx context.Context, e ctxt.Executor) *CheckResult {
 		Command: "grep -E '^\\s*SELINUX=enforcing' /etc/selinux/config 2>/dev/null | wc -l",
 		Sudo:    true,
 	})
-	stdout, stderr, err := m.Execute(ctx, e)
+	stdout, stderr, err := m.Execute(checkpoint.NewContext(ctx), e)
 	if err != nil {
 		result.Err = fmt.Errorf("%w %s", err, stderr)
 		return result
@@ -818,7 +819,7 @@ func CheckTHP(ctx context.Context, e ctxt.Executor) *CheckResult {
 		Command: fmt.Sprintf(`if [ -d %[1]s ]; then cat %[1]s/{enabled,defrag}; fi`, "/sys/kernel/mm/transparent_hugepage"),
 		Sudo:    true,
 	})
-	stdout, stderr, err := m.Execute(ctx, e)
+	stdout, stderr, err := m.Execute(checkpoint.NewContext(ctx), e)
 	if err != nil {
 		result.Err = fmt.Errorf("%w %s", err, stderr)
 		return result
@@ -845,7 +846,8 @@ func CheckJRE(ctx context.Context, e ctxt.Executor, host string, topo *spec.Spec
 		}
 
 		// check if java cli is available
-		stdout, stderr, err := e.Execute(ctx, "java -version", false)
+		// the checkpoint part of context can't be shared between goroutines
+		stdout, stderr, err := e.Execute(checkpoint.NewContext(ctx), "java -version", false)
 		if err != nil {
 			results = append(results, &CheckResult{
 				Name: CheckNameCommand,
@@ -890,7 +892,7 @@ func CheckJRE(ctx context.Context, e ctxt.Executor, host string, topo *spec.Spec
 func CheckDirPermission(ctx context.Context, e ctxt.Executor, user, path string) []*CheckResult {
 	var results []*CheckResult
 
-	_, stderr, err := e.Execute(ctx,
+	_, stderr, err := e.Execute(checkpoint.NewContext(ctx),
 		fmt.Sprintf(
 			"/usr/bin/sudo -u %[1]s touch %[2]s/.tiup_cluster_check_file && rm -f %[2]s/.tiup_cluster_check_file",
 			user,
@@ -921,7 +923,7 @@ func CheckDirIsExist(ctx context.Context, e ctxt.Executor, path string) []*Check
 		return results
 	}
 
-	req, _, _ := e.Execute(ctx,
+	req, _, _ := e.Execute(checkpoint.NewContext(ctx),
 		fmt.Sprintf(
 			"[ -e %s ] && echo 1",
 			path,
