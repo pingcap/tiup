@@ -27,7 +27,7 @@ func execute() error {
 		return errors.New("component `ctl` cannot run in standalone mode")
 	}
 	rootCmd := &cobra.Command{
-		Use:                "tiup ctl {tidb/pd/tikv/binlog/etcd/cdc}",
+		Use:                "tiup ctl {tidb/pd/tikv/binlog/etcd/cdc/tidb-lightning}",
 		Short:              "TiDB controllers",
 		SilenceUsage:       true,
 		FParseErrWhitelist: cobra.FParseErrWhitelist{UnknownFlags: true},
@@ -89,14 +89,14 @@ func execute() error {
 
 func binaryPath(home, cmd string) (string, error) {
 	switch cmd {
-	case "tidb", "tikv", "pd":
+	case "tidb", "tikv", "pd", "tidb-lightning":
 		return path.Join(home, cmd+"-ctl"), nil
 	case "binlog", "etcd":
 		return path.Join(home, cmd+"ctl"), nil
 	case "cdc":
 		return path.Join(home, cmd+" cli"), nil
 	default:
-		return "", errors.New("ctl only supports tidb, tikv, pd, binlog, etcd and cdc currently")
+		return "", errors.New("ctl only supports tidb, tikv, pd, binlog, tidb-lightning, etcd and cdc currently")
 	}
 }
 
