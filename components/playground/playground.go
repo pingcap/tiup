@@ -135,7 +135,7 @@ func (p *Playground) binlogClient() (*api.BinlogClient, error) {
 		addrs = append(addrs, inst.Addr())
 	}
 
-	return api.NewBinlogClient(addrs, nil)
+	return api.NewBinlogClient(addrs, 5*time.Second, nil)
 }
 
 func (p *Playground) pdClient() *api.PDClient {

@@ -151,10 +151,10 @@ func (c *TiSparkMasterComponent) Instances() []Instance {
 				Dirs: []string{
 					s.DeployDir,
 				},
-				StatusFn: func(_ context.Context, tlsCfg *tls.Config, _ ...string) string {
-					return statusByHost(s.Host, s.WebPort, "", tlsCfg)
+				StatusFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config, _ ...string) string {
+					return statusByHost(s.Host, s.WebPort, "", timeout, tlsCfg)
 				},
-				UptimeFn: func(_ context.Context, tlsCfg *tls.Config) time.Duration {
+				UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 					return 0
 				},
 			},
@@ -332,10 +332,10 @@ func (c *TiSparkWorkerComponent) Instances() []Instance {
 				Dirs: []string{
 					s.DeployDir,
 				},
-				StatusFn: func(_ context.Context, tlsCfg *tls.Config, _ ...string) string {
-					return statusByHost(s.Host, s.WebPort, "", tlsCfg)
+				StatusFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config, _ ...string) string {
+					return statusByHost(s.Host, s.WebPort, "", timeout, tlsCfg)
 				},
-				UptimeFn: func(_ context.Context, tlsCfg *tls.Config) time.Duration {
+				UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 					return 0
 				},
 			},

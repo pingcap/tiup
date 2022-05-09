@@ -35,10 +35,14 @@ type BinlogClient struct {
 }
 
 // NewBinlogClient create a BinlogClient.
-func NewBinlogClient(pdEndpoints []string, tlsConfig *tls.Config) (*BinlogClient, error) {
+func NewBinlogClient(pdEndpoints []string, timeout time.Duration, tlsConfig *tls.Config) (*BinlogClient, error) {
+	if timeout < time.Second {
+		timeout = time.Second * 5
+	}
+
 	etcdClient, err := clientv3.New(clientv3.Config{
 		Endpoints:   pdEndpoints,
-		DialTimeout: time.Second * 5,
+		DialTimeout: timeout,
 		TLS:         tlsConfig,
 	})
 	if err != nil {
@@ -47,7 +51,7 @@ func NewBinlogClient(pdEndpoints []string, tlsConfig *tls.Config) (*BinlogClient
 
 	return &BinlogClient{
 		tls:        tlsConfig,
-		httpClient: utils.NewHTTPClient(5*time.Second, tlsConfig).Client(),
+		httpClient: utils.NewHTTPClient(timeout, tlsConfig).Client(),
 		etcdClient: etcdClient,
 	}, nil
 }
@@ -165,6 +169,9 @@ func (c *BinlogClient) UpdatePumpState(ctx context.Context, addr string, state s
 func (c *BinlogClient) updateStatus(ctx context.Context, ty string, nodeID string, state string) error {
 	key := fmt.Sprintf("/tidb-binlog/v1/%s/%s", ty, nodeID)
 
+	// set timeout, otherwise it will keep retrying
+	ctx, f := context.WithTimeout(ctx, c.httpClient.Timeout)
+	defer f()
 	resp, err := c.etcdClient.KV.Get(ctx, key)
 	if err != nil {
 		return errors.AddStack(err)
@@ -202,6 +209,9 @@ func (c *BinlogClient) updateStatus(ctx context.Context, ty string, nodeID strin
 func (c *BinlogClient) nodeStatus(ctx context.Context, ty string) (status []*NodeStatus, err error) {
 	key := fmt.Sprintf("/tidb-binlog/v1/%s", ty)
 
+	// set timeout, otherwise it will keep retrying
+	ctx, f := context.WithTimeout(ctx, c.httpClient.Timeout)
+	defer f()
 	resp, err := c.etcdClient.KV.Get(ctx, key, clientv3.WithPrefix())
 	if err != nil {
 		return nil, errors.AddStack(err)

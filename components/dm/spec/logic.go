@@ -90,8 +90,8 @@ func (c *DMMasterComponent) Instances() []Instance {
 					s.DataDir,
 				},
 				StatusFn: s.Status,
-				UptimeFn: func(_ context.Context, tlsCfg *tls.Config) time.Duration {
-					return spec.UptimeByHost(s.Host, s.Port, tlsCfg)
+				UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
+					return spec.UptimeByHost(s.Host, s.Port, timeout, tlsCfg)
 				},
 			},
 			topo: c.Topology,
@@ -268,8 +268,8 @@ func (c *DMWorkerComponent) Instances() []Instance {
 					s.DataDir,
 				},
 				StatusFn: s.Status,
-				UptimeFn: func(_ context.Context, tlsCfg *tls.Config) time.Duration {
-					return spec.UptimeByHost(s.Host, s.Port, tlsCfg)
+				UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
+					return spec.UptimeByHost(s.Host, s.Port, timeout, tlsCfg)
 				},
 			},
 			topo: c.Topology,
