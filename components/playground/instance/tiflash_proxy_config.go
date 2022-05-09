@@ -17,8 +17,8 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/pingcap/tiup/pkg/tidbver"
 	"github.com/pingcap/tiup/pkg/utils"
-	"golang.org/x/mod/semver"
 )
 
 const tiflashProxyConfig = `
@@ -52,7 +52,7 @@ func writeTiFlashProxyConfig(w io.Writer, version utils.Version, host, deployDir
 	logDir := fmt.Sprintf("%s/log", deployDir)
 	ip := AdvertiseHost(host)
 	var statusAddr string
-	if semver.Compare(version.String(), "v4.0.5") >= 0 || version.IsNightly() {
+	if tidbver.TiFlashSupportAdvertiseStatusAddr(version.String()) {
 		statusAddr = fmt.Sprintf(`status-addr = "0.0.0.0:%[2]d"
 advertise-status-addr = "%[1]s:%[2]d"`, ip, proxyStatusPort)
 	} else {

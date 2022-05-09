@@ -37,6 +37,12 @@ func TiFlashSupportTLS(version string) bool {
 	return semver.Compare(version, "v4.0.5") >= 0 || strings.Contains(version, "nightly")
 }
 
+//  TiFlashSupportAdvertiseStatusAddr return if given version of  TiFlash support --advertise-status-addr
+func TiFlashSupportAdvertiseStatusAddr(version string) bool {
+	// TiFlash support --advertise-status-addr since v4.0.5
+	return semver.Compare(version, "v4.0.5") >= 0 || strings.Contains(version, "nightly")
+}
+
 // TiFlashSupportMultiDisksDeployment return if given version of TiFlash support multi-disks deployment
 func TiFlashSupportMultiDisksDeployment(version string) bool {
 	// https://github.com/pingcap/tiup/pull/931
@@ -55,11 +61,6 @@ func TiFlashNotNeedSomeConfig(version string) bool {
 	return semver.Compare(version, "v5.4.0") >= 0 || strings.Contains(version, "nightly")
 }
 
-// NgMonitorDeployByDefault return if given version of TiDB cluster should contain ng-monitoring
-func NgMonitorDeployByDefault(version string) bool {
-	return semver.Compare(version, "v5.4.0") >= 0 || strings.Contains(version, "nightly")
-}
-
 // TiCDCSupportConfigFile return if given version of TiCDC support config file
 func TiCDCSupportConfigFile(version string) bool {
 	// config support since v4.0.13, ignore v5.0.0-rc
@@ -73,6 +74,11 @@ func TiCDCSupportDataDir(version string) bool {
 		return true
 	}
 	return semver.Major(version) == "v4" && semver.Compare(version, "v4.0.14") >= 0
+}
+
+// NgMonitorDeployByDefault return if given version of TiDB cluster should contain ng-monitoring
+func NgMonitorDeployByDefault(version string) bool {
+	return semver.Compare(version, "v5.4.0") >= 0 || strings.Contains(version, "nightly")
 }
 
 // PrometheusHasTiKVAccelerateRules return if given version of Prometheus has TiKV accelerateRules

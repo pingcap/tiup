@@ -36,7 +36,6 @@ import (
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tidbver"
 	"github.com/pingcap/tiup/pkg/utils"
-	"golang.org/x/mod/semver"
 	"gopkg.in/yaml.v2"
 )
 
@@ -500,7 +499,7 @@ func (i *TiFlashInstance) InitTiFlashLearnerConfig(ctx context.Context, cfg *scr
 
 	firstDataDir := strings.Split(cfg.DataDir, ",")[0]
 
-	if semver.Compare(clusterVersion, "v4.0.5") >= 0 || utils.Version(clusterVersion).IsNightly() {
+	if tidbver.TiFlashSupportAdvertiseStatusAddr(clusterVersion) {
 		statusAddr = fmt.Sprintf(`server.status-addr: "0.0.0.0:%[2]d"
     server.advertise-status-addr: "%[1]s:%[2]d"`, cfg.IP, cfg.FlashProxyStatusPort)
 	} else {
