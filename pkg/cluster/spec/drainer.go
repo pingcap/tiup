@@ -49,11 +49,15 @@ type DrainerSpec struct {
 }
 
 // Status queries current status of the instance
-func (s *DrainerSpec) Status(ctx context.Context, tlsCfg *tls.Config, pdList ...string) string {
-	state := statusByHost(s.Host, s.Port, "/status", tlsCfg)
+func (s *DrainerSpec) Status(ctx context.Context, timeout time.Duration, tlsCfg *tls.Config, pdList ...string) string {
+	if timeout < time.Second {
+		timeout = statusQueryTimeout
+	}
+
+	state := statusByHost(s.Host, s.Port, "/status", timeout, tlsCfg)
 
 	if s.Offline {
-		binlogClient, err := api.NewBinlogClient(pdList, tlsCfg)
+		binlogClient, err := api.NewBinlogClient(pdList, timeout, tlsCfg)
 		if err != nil {
 			return state
 		}
@@ -127,8 +131,8 @@ func (c *DrainerComponent) Instances() []Instance {
 				s.DataDir,
 			},
 			StatusFn: s.Status,
-			UptimeFn: func(_ context.Context, tlsCfg *tls.Config) time.Duration {
-				return UptimeByHost(s.Host, s.Port, tlsCfg)
+			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
+				return UptimeByHost(s.Host, s.Port, timeout, tlsCfg)
 			},
 		}, c.Topology})
 	}

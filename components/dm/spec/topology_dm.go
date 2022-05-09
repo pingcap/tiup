@@ -141,9 +141,13 @@ type MasterSpec struct {
 }
 
 // Status queries current status of the instance
-func (s *MasterSpec) Status(_ context.Context, tlsCfg *tls.Config, _ ...string) string {
+func (s *MasterSpec) Status(_ context.Context, timeout time.Duration, tlsCfg *tls.Config, _ ...string) string {
+	if timeout < time.Second {
+		timeout = statusQueryTimeout
+	}
+
 	addr := fmt.Sprintf("%s:%d", s.Host, s.Port)
-	dc := api.NewDMMasterClient([]string{addr}, statusQueryTimeout, tlsCfg)
+	dc := api.NewDMMasterClient([]string{addr}, timeout, tlsCfg)
 	isFound, isActive, isLeader, err := dc.GetMaster(s.Name)
 	if err != nil {
 		return "Down"
@@ -207,11 +211,15 @@ type WorkerSpec struct {
 }
 
 // Status queries current status of the instance
-func (s *WorkerSpec) Status(_ context.Context, tlsCfg *tls.Config, masterList ...string) string {
+func (s *WorkerSpec) Status(_ context.Context, timeout time.Duration, tlsCfg *tls.Config, masterList ...string) string {
 	if len(masterList) < 1 {
 		return "N/A"
 	}
-	dc := api.NewDMMasterClient(masterList, statusQueryTimeout, tlsCfg)
+
+	if timeout < time.Second {
+		timeout = statusQueryTimeout
+	}
+	dc := api.NewDMMasterClient(masterList, timeout, tlsCfg)
 	stage, err := dc.GetWorker(s.Name)
 	if err != nil {
 		return "Down"
