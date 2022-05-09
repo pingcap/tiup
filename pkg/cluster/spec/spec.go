@@ -428,8 +428,12 @@ func (s *Specification) AdjustByVersion(clusterVersion string) {
 }
 
 // GetDashboardAddress returns the cluster's dashboard addr
-func (s *Specification) GetDashboardAddress(ctx context.Context, tlsCfg *tls.Config, pdList ...string) (string, error) {
-	pc := api.NewPDClient(ctx, pdList, statusQueryTimeout, tlsCfg)
+func (s *Specification) GetDashboardAddress(ctx context.Context, tlsCfg *tls.Config, timeout time.Duration, pdList ...string) (string, error) {
+	if timeout < time.Second {
+		timeout = statusQueryTimeout
+	}
+
+	pc := api.NewPDClient(ctx, pdList, timeout, tlsCfg)
 	dashboardAddr, err := pc.GetDashboardAddress()
 	if err != nil {
 		return "", err
