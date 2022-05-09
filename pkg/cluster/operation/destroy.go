@@ -491,7 +491,7 @@ func DestroyClusterTombstone(
 		defer tcpProxy.Close(closeC)
 		pdEndpoints = tcpProxy.GetEndpoints()
 	}
-	binlogClient, err := api.NewBinlogClient(pdEndpoints, tlsCfg)
+	binlogClient, err := api.NewBinlogClient(pdEndpoints, 5*time.Second, tlsCfg)
 	if err != nil {
 		return nil, err
 	}
@@ -600,6 +600,7 @@ func DestroyClusterTombstone(
 
 		if !tombstone {
 			pumpServers = append(pumpServers, s)
+			continue
 		}
 
 		nodes = append(nodes, id)
@@ -629,6 +630,7 @@ func DestroyClusterTombstone(
 
 		if !tombstone {
 			drainerServers = append(drainerServers, s)
+			continue
 		}
 
 		nodes = append(nodes, id)

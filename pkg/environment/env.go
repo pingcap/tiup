@@ -81,7 +81,7 @@ type Environment struct {
 }
 
 // InitEnv creates a new Environment object configured using env vars and defaults.
-func InitEnv(options repository.Options) (*Environment, error) {
+func InitEnv(options repository.Options, mOpt repository.MirrorOptions) (*Environment, error) {
 	if env := GlobalEnv(); env != nil {
 		return env, nil
 	}
@@ -92,7 +92,7 @@ func InitEnv(options repository.Options) (*Environment, error) {
 	// Initialize the repository
 	// Replace the mirror if some sub-commands use different mirror address
 	mirrorAddr := Mirror()
-	mirror := repository.NewMirror(mirrorAddr, repository.MirrorOptions{})
+	mirror := repository.NewMirror(mirrorAddr, mOpt)
 	if err := mirror.Open(); err != nil {
 		return nil, err
 	}
