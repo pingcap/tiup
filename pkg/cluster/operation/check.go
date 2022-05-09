@@ -24,6 +24,7 @@ import (
 
 	"github.com/AstroProfundis/sysinfo"
 	"github.com/pingcap/tidb-insight/collector/insight"
+	"github.com/pingcap/tiup/pkg/checkpoint"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/module"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -844,7 +845,8 @@ func CheckJRE(ctx context.Context, e ctxt.Executor, host string, topo *spec.Spec
 		}
 
 		// check if java cli is available
-		stdout, stderr, err := e.Execute(ctx, "java -version", false)
+		// the checkpoint part of context can't be shared between goroutines
+		stdout, stderr, err := e.Execute(checkpoint.NewContext(ctx), "java -version", false)
 		if err != nil {
 			results = append(results, &CheckResult{
 				Name: CheckNameCommand,

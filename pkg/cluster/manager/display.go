@@ -28,6 +28,7 @@ import (
 
 	"github.com/fatih/color"
 	perrs "github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/checkpoint"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
@@ -346,7 +347,7 @@ func (m *Manager) DisplayTiKVLabels(name string, opt operator.Options) error {
 				masterActive = append(masterActive, instAddr)
 			}
 		}
-	})
+	}, opt.Concurrency)
 
 	var (
 		labelInfoArr  []api.LabelInfo
@@ -466,7 +467,7 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 			masterActive = append(masterActive, instAddr)
 		}
 		masterStatus[ins.ID()] = status
-	})
+	}, opt.Concurrency)
 
 	var dashboardAddr string
 	if t, ok := topo.(*spec.Specification); ok {
@@ -515,7 +516,8 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 		if status == "-" || (opt.ShowUptime && since == "-") {
 			e, found := ctxt.GetInner(ctx).GetExecutor(ins.GetHost())
 			if found {
-				active, _ := operator.GetServiceStatus(ctx, e, ins.ServiceName())
+				nctx := checkpoint.NewContext(ctx)
+				active, _ := operator.GetServiceStatus(nctx, e, ins.ServiceName())
 				if status == "-" {
 					if parts := strings.Split(strings.TrimSpace(active), " "); len(parts) > 2 {
 						if parts[1] == "active" {
@@ -549,7 +551,7 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 			Port:          ins.GetPort(),
 			Since:         since,
 		})
-	})
+	}, opt.Concurrency)
 
 	// Sort by role,host,ports
 	sort.Slice(clusterInstInfos, func(i, j int) bool {

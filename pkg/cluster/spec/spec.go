@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/creasty/defaults"
@@ -148,7 +149,7 @@ type Topology interface {
 	ComponentsByStartOrder() []Component
 	ComponentsByStopOrder() []Component
 	ComponentsByUpdateOrder() []Component
-	IterInstance(fn func(instance Instance))
+	IterInstance(fn func(instance Instance), concurrency ...int)
 	GetMonitoredOptions() *MonitoredOptions
 	// count how many time a path is used by instances in cluster
 	CountDir(host string, dir string) int
@@ -721,12 +722,28 @@ func (s *Specification) IterComponent(fn func(comp Component)) {
 }
 
 // IterInstance iterates all instances in component starting order
-func (s *Specification) IterInstance(fn func(instance Instance)) {
+func (s *Specification) IterInstance(fn func(instance Instance), concurrency ...int) {
+	maxWorkers := 1
+	wg := sync.WaitGroup{}
+	if len(concurrency) > 0 && concurrency[0] > 1 {
+		maxWorkers = concurrency[0]
+	}
+	workerPool := make(chan struct{}, maxWorkers)
+
 	for _, comp := range s.ComponentsByStartOrder() {
 		for _, inst := range comp.Instances() {
-			fn(inst)
+			wg.Add(1)
+			workerPool <- struct{}{}
+			go func(inst Instance) {
+				defer func() {
+					<-workerPool
+					wg.Done()
+				}()
+				fn(inst)
+			}(inst)
 		}
 	}
+	wg.Wait()
 }
 
 // IterHost iterates one instance for each host
