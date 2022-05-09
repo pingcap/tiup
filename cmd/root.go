@@ -142,17 +142,25 @@ the latest stable version will be downloaded from the repository.`,
 				return nil
 			case "--binpath":
 				if len(args) < 2 {
-					return fmt.Errorf("flag needs an argument: %s", args[0])
+					return fmt.Errorf("flag %s needs an argument", args[0])
 				}
 				binPath = args[1]
 				args = args[2:]
 			case "--tag", "-T":
 				if len(args) < 2 {
-					return fmt.Errorf("flag needs an argument: %s", args[0])
+					return fmt.Errorf("flag %s needs an argument", args[0])
 				}
 				tag = args[1]
 				args = args[2:]
 			}
+
+			// component may use tag from environment variable. as workaround, make tiup set the same tag
+			for i := 0; i < len(args)-1; i++ {
+				if args[i] == "--tag" || args[i] == "-T" {
+					tag = args[i+1]
+				}
+			}
+
 			if len(args) < 1 {
 				return cmd.Help()
 			}
