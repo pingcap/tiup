@@ -34,6 +34,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/tidbver"
 	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/mod/semver"
 	"gopkg.in/yaml.v2"
@@ -363,7 +364,7 @@ func (i *TiFlashInstance) CheckIncorrectConfigs() error {
 
 // need to check the configuration after clusterVersion >= v4.0.9.
 func checkTiFlashStorageConfigWithVersion(clusterVersion string, config map[string]interface{}) (bool, error) {
-	if semver.Compare(clusterVersion, "v4.0.9") >= 0 || utils.Version(clusterVersion).IsNightly() {
+	if tidbver.TiFlashSupportMultiDisksDeployment(clusterVersion) {
 		return checkTiFlashStorageConfig(config)
 	}
 	return false, nil
@@ -388,7 +389,7 @@ func (i *TiFlashInstance) initTiFlashConfig(ctx context.Context, cfg *scripts.Ti
 		pathConfig = fmt.Sprintf(`path: "%s"`, cfg.DataDir)
 	}
 
-	if (semver.Compare(clusterVersion, "v4.0.12") >= 0 && semver.Compare(clusterVersion, "v5.0.0-rc") != 0) || utils.Version(clusterVersion).IsNightly() {
+	if tidbver.TiFlashDeprecatedUsersConfig(clusterVersion) {
 		// For v4.0.12 or later, 5.0.0 or later, TiFlash can ignore these `user.*`, `quotas.*` settings
 		deprecatedUsersConfig = "#"
 	} else {
@@ -429,7 +430,7 @@ func (i *TiFlashInstance) initTiFlashConfig(ctx context.Context, cfg *scripts.Ti
 
 	topo := Specification{}
 
-	if semver.Compare(clusterVersion, "v5.4.0") >= 0 || utils.Version(clusterVersion).IsNightly() {
+	if tidbver.TiFlashNotNeedSomeConfig(clusterVersion) {
 		// For 5.4.0 or later, TiFlash can ignore application.runAsDaemon setting
 		daemonConfig = "#"
 	} else {
