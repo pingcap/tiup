@@ -1,8 +1,19 @@
 TiUP Changelog
 
+## [1.9.5] 2022-05-10
+
+### Fix
+
+- Report error when multiple pump nodes with the same `ip:port` found in `tiup-cluster` ([#1856](https://github.com/pingcap/tiup/pull/1856), [@srstack](https://github.com/srstack))
+
+### Improvements
+
+- Check node status concurrently and support custom timeout for `display` in `tiup-cluster` ([#1867](https://github.com/pingcap/tiup/pull/1867), [@srstack](https://github.com/srstack))
+- Support `tidb-lightning` in `tiup-ctl` ([#1863](https://github.com/pingcap/tiup/pull/1863), [@nexustar](https://github.com/nexustar))
+
 ## [1.9.4] 2022-04-12
 
-## Fixes
+### Fixes
 
 - Fix copy error when file is read only in `tiup-playground` ([#1816](https://github.com/pingcap/tiup/pull/1816), [@breeswish](https://github.com/breeswish))
 - Fix `data-dir` not properly handled for TiCDC v6.0.0 in `tiup-cluster` ([#1838](https://github.com/pingcap/tiup/pull/1838), [@overvenus](https://github.com/overvenus))
