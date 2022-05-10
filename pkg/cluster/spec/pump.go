@@ -19,8 +19,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
+	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
@@ -43,6 +45,31 @@ type PumpSpec struct {
 	ResourceControl meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
 	Arch            string                 `yaml:"arch,omitempty"`
 	OS              string                 `yaml:"os,omitempty"`
+}
+
+// Status queries current status of the instance
+func (s *PumpSpec) Status(ctx context.Context, timeout time.Duration, tlsCfg *tls.Config, pdList ...string) string {
+	if timeout < time.Second {
+		timeout = statusQueryTimeout
+	}
+
+	state := statusByHost(s.Host, s.Port, "/status", timeout, tlsCfg)
+
+	if s.Offline {
+		binlogClient, err := api.NewBinlogClient(pdList, timeout, tlsCfg)
+		if err != nil {
+			return state
+		}
+		id := s.Host + ":" + strconv.Itoa(s.Port)
+		tombstone, _ := binlogClient.IsPumpTombstone(ctx, id)
+
+		if tombstone {
+			state = "Tombstone"
+		} else {
+			state = "Pending Offline"
+		}
+	}
+	return state
 }
 
 // Role returns the component role of the instance
@@ -102,11 +129,9 @@ func (c *PumpComponent) Instances() []Instance {
 				s.DeployDir,
 				s.DataDir,
 			},
-			StatusFn: func(_ context.Context, tlsCfg *tls.Config, _ ...string) string {
-				return statusByHost(s.Host, s.Port, "/status", tlsCfg)
-			},
-			UptimeFn: func(_ context.Context, tlsCfg *tls.Config) time.Duration {
-				return UptimeByHost(s.Host, s.Port, tlsCfg)
+			StatusFn: s.Status,
+			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
+				return UptimeByHost(s.Host, s.Port, timeout, tlsCfg)
 			},
 		}, c.Topology})
 	}

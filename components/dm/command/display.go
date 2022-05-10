@@ -27,6 +27,7 @@ func newDisplayCmd() *cobra.Command {
 	var (
 		clusterName     string
 		showVersionOnly bool
+		statusTimeout   uint64
 	)
 	cmd := &cobra.Command{
 		Use:   "display <cluster-name>",
@@ -36,6 +37,7 @@ func newDisplayCmd() *cobra.Command {
 				return cmd.Help()
 			}
 
+			gOpt.APITimeout = statusTimeout
 			clusterName = args[0]
 
 			if showVersionOnly {
@@ -55,6 +57,7 @@ func newDisplayCmd() *cobra.Command {
 	cmd.Flags().StringSliceVarP(&gOpt.Nodes, "node", "N", nil, "Only display specified nodes")
 	cmd.Flags().BoolVar(&showVersionOnly, "version", false, "Only display DM cluster version")
 	cmd.Flags().BoolVar(&gOpt.ShowUptime, "uptime", false, "Display DM with uptime")
+	cmd.Flags().Uint64Var(&statusTimeout, "status-timeout", 10, "Timeout in seconds when getting node status")
 
 	return cmd
 }

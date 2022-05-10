@@ -66,7 +66,7 @@ type TiFlashSpec struct {
 }
 
 // Status queries current status of the instance
-func (s *TiFlashSpec) Status(ctx context.Context, tlsCfg *tls.Config, pdList ...string) string {
+func (s *TiFlashSpec) Status(ctx context.Context, timeout time.Duration, tlsCfg *tls.Config, pdList ...string) string {
 	storeAddr := fmt.Sprintf("%s:%d", s.Host, s.FlashServicePort)
 	state := checkStoreStatus(ctx, storeAddr, tlsCfg, pdList...)
 	if s.Offline && strings.ToLower(state) == "offline" {
@@ -234,7 +234,7 @@ func (c *TiFlashComponent) Instances() []Instance {
 				s.DataDir,
 			},
 			StatusFn: s.Status,
-			UptimeFn: func(_ context.Context, tlsCfg *tls.Config) time.Duration {
+			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 				return 0
 			},
 		}, c.Topology})
