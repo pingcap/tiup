@@ -2,9 +2,11 @@ TiUP Changelog
 
 ## [1.9.5] 2022-05-10
 
-### Fix
+### Fixes
 
+- Fix `prune` incorrectly destroy pump/drainer node before they become `Tombstone` in `tiup-cluster` ([#1851](https://github.com/pingcap/tiup/pull/1851), [@srstack](https://github.com/srstack))
 - Report error when multiple pump nodes with the same `ip:port` found in `tiup-cluster` ([#1856](https://github.com/pingcap/tiup/pull/1856), [@srstack](https://github.com/srstack))
+- Get node status of pump/drainer from PD in `tiup-cluster` ([#1862](https://github.com/pingcap/tiup/pull/1862), [@srstack](https://github.com/srstack))
 
 ### Improvements
 
