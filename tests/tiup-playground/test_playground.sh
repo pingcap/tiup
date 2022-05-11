@@ -108,7 +108,7 @@ tiup-playground v6.0.0 > $outfile 2>&1 &
 sleep 3
 
 # wait start cluster successfully
-timeout 300 grep -q "CLUSTER START SUCCESSFULLY" <(tail -f $outfile)
+timeout 400 grep -q "CLUSTER START SUCCESSFULLY" <(tail -f $outfile)
 
 cat $outfile | grep ":3930" | grep -q "Done"
 
