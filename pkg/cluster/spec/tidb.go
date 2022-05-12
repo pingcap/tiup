@@ -105,11 +105,11 @@ func (c *TiDBComponent) Instances() []Instance {
 			Dirs: []string{
 				s.DeployDir,
 			},
-			StatusFn: func(_ context.Context, tlsCfg *tls.Config, _ ...string) string {
-				return statusByHost(s.Host, s.StatusPort, "/status", tlsCfg)
+			StatusFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config, _ ...string) string {
+				return statusByHost(s.Host, s.StatusPort, "/status", timeout, tlsCfg)
 			},
-			UptimeFn: func(_ context.Context, tlsCfg *tls.Config) time.Duration {
-				return UptimeByHost(s.Host, s.StatusPort, tlsCfg)
+			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
+				return UptimeByHost(s.Host, s.StatusPort, timeout, tlsCfg)
 			},
 		}, c.Topology})
 	}

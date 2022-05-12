@@ -180,7 +180,7 @@ func ScaleInCluster(
 		defer tcpProxy.Close(closeC)
 		pdEndpoints = tcpProxy.GetEndpoints()
 	}
-	binlogClient, err := api.NewBinlogClient(pdEndpoints, tlsCfg)
+	binlogClient, err := api.NewBinlogClient(pdEndpoints, 5*time.Second, tlsCfg)
 	if err != nil {
 		return err
 	}
