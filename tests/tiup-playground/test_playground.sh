@@ -102,8 +102,8 @@ killall -2 tiup-playground.test || killall -2 tiup-playground
 sleep 60
 
 # test restart with same data
-tiup-playground v6.0.0 > $outfile 2>&1 &
-
+# tiup-playground v6.0.0 > $outfile 2>&1 &
+timeout 200 tiup-playground v6.0.0 2>&1 
 # wait $outfile generated
 sleep 3
 
