@@ -99,7 +99,7 @@ tiup-playground display | grep -E "terminated|exit" | wc -l | grep -q "1"
 
 killall -2 tiup-playground.test || killall -2 tiup-playground
 
-sleep 60
+sleep 100
 
 # test restart with same data
 tiup-playground v6.0.0 > $outfile 2>&1 &
@@ -108,7 +108,7 @@ tiup-playground v6.0.0 > $outfile 2>&1 &
 sleep 3
 
 # wait start cluster successfully
-timeout 100 grep -q "CLUSTER START SUCCESSFULLY" <(tail -f $outfile)
+timeout 300 grep -q "CLUSTER START SUCCESSFULLY" <(tail -f $outfile)
 
 cat $outfile | grep ":3930" | grep -q "Done"
 
