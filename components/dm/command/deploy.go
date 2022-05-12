@@ -22,10 +22,10 @@ import (
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
+	"github.com/pingcap/tiup/pkg/tidbver"
 	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
-	"golang.org/x/mod/semver"
 )
 
 func newDeployCmd() *cobra.Command {
@@ -69,12 +69,7 @@ func newDeployCmd() *cobra.Command {
 }
 
 func supportVersion(vs string) error {
-	if !semver.IsValid(vs) {
-		return nil
-	}
-
-	majorMinor := semver.MajorMinor(vs)
-	if semver.Compare(majorMinor, "v2.0") < 0 {
+	if !tidbver.DMSupportDeploy(vs) {
 		return errors.Errorf("Only support version not less than v2.0")
 	}
 

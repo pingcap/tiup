@@ -24,7 +24,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
-	"golang.org/x/mod/semver"
+	"github.com/pingcap/tiup/pkg/tidbver"
 )
 
 // CDCSpec represents the Drainer topology specification in topology.yaml
@@ -163,7 +163,7 @@ func (i *CDCInstance) InitConfig(
 	globalConfig := topo.ServerConfigs.CDC
 	instanceConfig := spec.Config
 
-	if semver.Compare(clusterVersion, "v4.0.13") == -1 {
+	if !tidbver.TiCDCSupportConfigFile(clusterVersion) {
 		if len(globalConfig)+len(instanceConfig) > 0 {
 			return perrs.New("server_config is only supported with TiCDC version v4.0.13 or later")
 		}
