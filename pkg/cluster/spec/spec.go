@@ -31,11 +31,10 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/proxy"
+	"github.com/pingcap/tiup/pkg/tidbver"
 	"github.com/pingcap/tiup/pkg/tui"
-	"github.com/pingcap/tiup/pkg/utils"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.uber.org/zap"
-	"golang.org/x/mod/semver"
 )
 
 const (
@@ -413,12 +412,12 @@ func (s *Specification) GetPDList() []string {
 // AdjustByVersion modify the spec by cluster version.
 func (s *Specification) AdjustByVersion(clusterVersion string) {
 	// CDC does not support data dir for version below v4.0.13, and also v5.0.0-rc, set it to empty.
-	if semver.Compare(clusterVersion, "v4.0.13") == -1 || clusterVersion == "v5.0.0-rc" {
+	if !tidbver.TiCDCSupportConfigFile(clusterVersion) {
 		for _, server := range s.CDCServers {
 			server.DataDir = ""
 		}
 	}
-	if semver.Compare(clusterVersion, "v5.4.0") >= 0 || strings.Contains(clusterVersion, utils.NightlyVersionAlias) {
+	if tidbver.NgMonitorDeployByDefault(clusterVersion) {
 		for _, m := range s.Monitors {
 			if m.NgPort == 0 {
 				m.NgPort = 12020

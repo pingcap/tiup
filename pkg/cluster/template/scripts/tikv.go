@@ -21,11 +21,7 @@ import (
 	"text/template"
 
 	"github.com/pingcap/tiup/embed"
-	"golang.org/x/mod/semver"
-)
-
-const (
-	advertiseStatusAddrSupportedFrom = "v4.0.1"
+	"github.com/pingcap/tiup/pkg/tidbver"
 )
 
 // TiKVScript represent the data to generate TiKV config
@@ -55,7 +51,7 @@ func NewTiKVScript(version, ip string, port, statusPort int, deployDir, dataDir,
 		DeployDir:                  deployDir,
 		DataDir:                    dataDir,
 		LogDir:                     logDir,
-		SupportAdvertiseStatusAddr: semver.Compare(version, advertiseStatusAddrSupportedFrom) >= 0,
+		SupportAdvertiseStatusAddr: tidbver.TiKVSupportAdvertiseStatusAddr(version),
 	}
 }
 

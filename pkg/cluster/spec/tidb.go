@@ -24,7 +24,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
-	"golang.org/x/mod/semver"
+	"github.com/pingcap/tiup/pkg/tidbver"
 )
 
 // TiDBSpec represents the TiDB topology specification in topology.yaml
@@ -146,7 +146,7 @@ func (i *TiDBInstance) InitConfig(
 		AppendEndpoints(topo.Endpoints(deployUser)...).
 		WithListenHost(i.GetListenHost()).
 		WithAdvertiseAddr(spec.Host).
-		SupportSecureBootstrap(semver.Compare(clusterVersion, "v5.3.0") >= 0)
+		SupportSecureBootstrap(tidbver.TiDBSupportSecureBoot(clusterVersion))
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tidb_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err

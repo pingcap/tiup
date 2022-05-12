@@ -21,7 +21,7 @@ import (
 	"text/template"
 
 	"github.com/pingcap/tiup/embed"
-	"golang.org/x/mod/semver"
+	"github.com/pingcap/tiup/pkg/tidbver"
 )
 
 // PrometheusConfig represent the data to generate Prometheus config
@@ -57,14 +57,11 @@ type PrometheusConfig struct {
 // NewPrometheusConfig returns a PrometheusConfig
 func NewPrometheusConfig(clusterName, clusterVersion string, enableTLS bool) *PrometheusConfig {
 	cfg := &PrometheusConfig{
-		ClusterName: clusterName,
-		TLSEnabled:  enableTLS,
+		ClusterName:            clusterName,
+		TLSEnabled:             enableTLS,
+		HasTiKVAccelerateRules: tidbver.PrometheusHasTiKVAccelerateRules(clusterVersion),
 	}
 
-	// tikv.accelerate.rules.yml was first introduced in v4.0.0
-	if semver.Compare(clusterVersion, "v4.0.0") >= 0 {
-		cfg.HasTiKVAccelerateRules = true
-	}
 	return cfg
 }
 
