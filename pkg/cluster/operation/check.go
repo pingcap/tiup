@@ -167,14 +167,13 @@ func checkOSInfo(opt *CheckOptions, osInfo *sysinfo.OS) *CheckResult {
 	// check OS vendor
 	switch osInfo.Vendor {
 	case "kylin":
-		/// kylin v10 support is not fully tested, but we suppose it should work
 		msg := "kylin support is not fully tested, be careful"
 		result.Err = fmt.Errorf("%s (%s)", result.Msg, msg)
 		result.Warn = true
-		if ver, _ := strconv.ParseFloat(osInfo.Version, 64); ver < 10 {
-			result.Err = fmt.Errorf("%s %s not supported, use version 10 or higher (%s)",
+		// VERSION_ID="V10"
+		if ver, _ := strconv.ParseFloat(strings.Trim(osInfo.Version, "V"), 64); ver < 10 {
+			result.Err = fmt.Errorf("%s %s not supported, use version V10 or higher(%s)",
 				osInfo.Name, osInfo.Release, msg)
-			result.Warn = false
 			return result
 		}
 	case "amzn":
