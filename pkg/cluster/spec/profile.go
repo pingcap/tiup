@@ -59,14 +59,18 @@ var initialized = false
 // The directory will be created before return if it does not already exist.
 func Initialize(base string) error {
 	tiupData := os.Getenv(tiuplocaldata.EnvNameComponentDataDir)
-	if tiupData == "" {
+	tiupHome := os.Getenv(tiuplocaldata.EnvNameHome)
+
+	if tiupData != "" {
+		profileDir = tiupData
+	} else if tiupHome != "" {
+		profileDir = path.Join(tiupHome, tiuplocaldata.StorageParentDir, base)
+	} else {
 		homeDir, err := getHomeDir()
 		if err != nil {
 			return errors.Trace(err)
 		}
 		profileDir = path.Join(homeDir, ".tiup", tiuplocaldata.StorageParentDir, base)
-	} else {
-		profileDir = tiupData
 	}
 
 	clusterBaseDir := filepath.Join(profileDir, TiUPClusterDir)
