@@ -61,11 +61,12 @@ func Initialize(base string) error {
 	tiupData := os.Getenv(tiuplocaldata.EnvNameComponentDataDir)
 	tiupHome := os.Getenv(tiuplocaldata.EnvNameHome)
 
-	if tiupData != "" {
+	switch {
+	case tiupData != "":
 		profileDir = tiupData
-	} else if tiupHome != "" {
+	case tiupHome != "":
 		profileDir = path.Join(tiupHome, tiuplocaldata.StorageParentDir, base)
-	} else {
+	default:
 		homeDir, err := getHomeDir()
 		if err != nil {
 			return errors.Trace(err)
