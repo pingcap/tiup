@@ -80,6 +80,7 @@ func newStartCmd() *cobra.Command {
 			}
 			return nil
 		},
+		ValidArgsFunction: shellCompGetClusterName,
 	}
 
 	cmd.Flags().BoolVar(&initPasswd, "init", false, "Initialize a secure root password for the database")

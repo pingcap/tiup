@@ -36,6 +36,7 @@ func newDisableCmd() *cobra.Command {
 
 			return cm.EnableCluster(clusterName, gOpt, false)
 		},
+		ValidArgsFunction: shellCompGetClusterName,
 	}
 
 	cmd.Flags().StringSliceVarP(&gOpt.Roles, "role", "R", nil, "Only disable specified roles")

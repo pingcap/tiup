@@ -39,6 +39,7 @@ func newReloadCmd() *cobra.Command {
 
 			return cm.Reload(clusterName, gOpt, skipRestart, skipConfirm)
 		},
+		ValidArgsFunction: shellCompGetClusterName,
 	}
 
 	cmd.Flags().BoolVar(&gOpt.Force, "force", false, "Force reload without transferring PD leader and ignore remote error")

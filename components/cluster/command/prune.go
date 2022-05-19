@@ -32,6 +32,7 @@ func newPruneCmd() *cobra.Command {
 
 			return cm.DestroyTombstone(clusterName, gOpt, skipConfirm)
 		},
+		ValidArgsFunction: shellCompGetClusterName,
 	}
 
 	cmd.Flags().BoolVar(&gOpt.Force, "force", false, "Ignore errors when deleting the instance with data from the cluster")

@@ -57,6 +57,7 @@ You can retain some nodes and roles data when cleanup the cluster, eg:
 
 			return cm.CleanCluster(clusterName, gOpt, cleanOpt, skipConfirm)
 		},
+		ValidArgsFunction: shellCompGetClusterName,
 	}
 
 	cmd.Flags().StringArrayVar(&cleanOpt.RetainDataNodes, "ignore-node", nil, "Specify the nodes or hosts whose data will be retained")

@@ -32,6 +32,7 @@ func newShowConfigCmd() *cobra.Command {
 
 			return cm.ShowConfig(clusterName)
 		},
+		ValidArgsFunction: shellCompGetClusterName,
 	}
 
 	return cmd

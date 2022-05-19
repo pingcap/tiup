@@ -38,6 +38,7 @@ func newStopCmd() *cobra.Command {
 
 			return cm.StopCluster(clusterName, gOpt, skipConfirm, evictLeader)
 		},
+		ValidArgsFunction: shellCompGetClusterName,
 	}
 
 	cmd.Flags().StringSliceVarP(&gOpt.Roles, "role", "R", nil, "Only stop specified roles")
