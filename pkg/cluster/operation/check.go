@@ -65,6 +65,7 @@ var (
 	CheckNameTHP           = "thp"
 	CheckNameDirPermission = "permission"
 	CheckNameDirExist      = "exist"
+	CheckNameTimeZone      = "timezone"
 )
 
 // CheckResult is the result of a check

@@ -377,6 +377,14 @@ func checkSystemInfo(
 						task.CheckTypePackage,
 						topo,
 						opt.Opr,
+					).
+					// check for time zone
+					CheckSys(
+						inst.GetHost(),
+						"",
+						task.CheckTypeTimeZone,
+						topo,
+						opt.Opr,
 					)
 
 				if !opt.ExistCluster {

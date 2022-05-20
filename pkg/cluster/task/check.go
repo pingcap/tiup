@@ -37,6 +37,7 @@ var (
 	CheckTypeFIO          = "fio"
 	CheckTypePermission   = "permission"
 	ChecktypeIsExist      = "exist"
+	CheckTypeTimeZone     = "timezone"
 )
 
 // place the check utilities are stored
@@ -155,6 +156,36 @@ func (c *CheckSys) Execute(ctx context.Context) error {
 		}
 		// check partition mount options for data_dir
 		storeResults(ctx, c.host, operator.CheckDirIsExist(ctx, e, c.checkDir))
+	case CheckTypeTimeZone:
+		e, ok := ctxt.GetInner(ctx).GetExecutor(c.host)
+		if !ok {
+			return ErrNoExecutor
+		}
+		var results []*operator.CheckResult
+
+		stdout, stderr, err := e.Execute(ctx, "date +%z", true)
+		if err != nil || stderr == nil {
+			results = append(results, &operator.CheckResult{
+				Name: operator.CheckNameTimeZone,
+				Err:  fmt.Errorf("cannot read timezone on %s", c.host),
+			})
+		}
+
+		localTimeZone := time.Now().Format("-0700")
+		hostTimeZone := strings.Trim(string(stdout), "\n")
+		if localTimeZone == hostTimeZone {
+			results = append(results, &operator.CheckResult{
+				Name: operator.CheckNameTimeZone,
+				Msg:  "timezone is the same as tiup machine: " + hostTimeZone,
+			})
+		} else {
+			results = append(results, &operator.CheckResult{
+				Name: operator.CheckNameTimeZone,
+				Err:  fmt.Errorf("timezone is %s, but tiup machine is %s", hostTimeZone, localTimeZone),
+				Warn: true,
+			})
+		}
+		storeResults(ctx, c.host, results)
 	}
 
 	return nil
