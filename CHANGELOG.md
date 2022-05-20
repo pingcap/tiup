@@ -1,5 +1,11 @@
 TiUP Changelog
 
+## [1.9.6] 2022-05-20
+
+### Fix
+
+- Fix incorrect output of `display` in certain circumstances for `tiup-cluster` ([#1889](https://github.com/pingcap/tiup/pull/1889), [@srstack](https://github.com/srstack))
+
 ## [1.9.5] 2022-05-10
 
 ### Fixes
