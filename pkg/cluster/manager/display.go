@@ -494,13 +494,13 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 		}
 
 		status := ins.Status(ctx, statusTimeout, tlsCfg, masterList...)
+		mu.Lock()
 		if strings.HasPrefix(status, "Up") || strings.HasPrefix(status, "Healthy") {
 			instAddr := fmt.Sprintf("%s:%d", ins.GetHost(), ins.GetPort())
-			mu.Lock()
 			masterActive = append(masterActive, instAddr)
-			mu.Unlock()
 		}
 		masterStatus[ins.ID()] = status
+		mu.Unlock()
 	}, opt.Concurrency)
 
 	var dashboardAddr string
