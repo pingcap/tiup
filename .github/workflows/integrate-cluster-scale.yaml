@@ -84,20 +84,24 @@ jobs:
 
       - name: Collect component log
         working-directory: ${{ env.working-directory }}
-        if: ${{ failure() }}
         # if: always()
         run: |
           docker exec tiup-cluster-control bash /tiup-cluster/tests/tiup-cluster/script/pull_log.sh /tiup-cluster/logs
           ls ${{ env.working-directory }}
-          tar czvf ${{ env.working-directory }}/logs.tar.gz ${{ env.working-directory }}/logs/
+
+      - name: Detect error log
+        working-directory: ${{ env.working-directory }}
+        # if: always()
+        run: |
+          bash ./tests/tiup-cluster/script/detect_error.sh ./logs/
 
       - name: Upload component log
         if: ${{ failure() }}
         # if: always()
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v3
         with:
           name: cluster_logs
-          path: ${{ env.working-directory }}/logs.tar.gz
+          path: ${{ env.working-directory }}/logs/
 
       - name: Output cluster debug log
         working-directory: ${{ env.working-directory }}
