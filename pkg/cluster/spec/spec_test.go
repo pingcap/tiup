@@ -740,8 +740,6 @@ cdc_servers:
 		"v5.1.0": {true, true, true},
 
 		"v5.0.0-rc":    {false, false, false},
-		"v5.1.0-alpha": {true, true, false},
-		"v5.2.0-alpha": {true, true, false},
 		"v6.0.0-alpha": {true, true, true},
 		"v6.1.0":       {true, true, true},
 		"v99.0.0":      {true, true, true},
