@@ -44,6 +44,7 @@ func newPruneCmd() *cobra.Command {
 
 			return clearOutDatedEtcdInfo(clusterName, metadata, gOpt)
 		},
+		ValidArgsFunction: shellCompGetClusterName,
 	}
 
 	return cmd

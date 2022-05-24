@@ -17,7 +17,6 @@ import (
 	"context"
 	"os"
 	"path"
-	"strings"
 
 	"github.com/pingcap/tiup/pkg/cluster/manager"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"

@@ -45,6 +45,7 @@ func newDestroyCmd() *cobra.Command {
 
 			return cm.DestroyCluster(clusterName, gOpt, destroyOpt, skipConfirm)
 		},
+		ValidArgsFunction: shellCompGetClusterName,
 	}
 
 	cmd.Flags().StringArrayVar(&destroyOpt.RetainDataNodes, "retain-node-data", nil, "Specify the nodes or hosts whose data will be retained")

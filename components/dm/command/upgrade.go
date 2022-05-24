@@ -30,6 +30,7 @@ func newUpgradeCmd() *cobra.Command {
 
 			return cm.Upgrade(args[0], args[1], gOpt, skipConfirm, offlineMode)
 		},
+		ValidArgsFunction: shellCompGetClusterName,
 	}
 
 	cmd.Flags().BoolVarP(&offlineMode, "offline", "", false, "Upgrade a stopped cluster")

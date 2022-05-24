@@ -53,6 +53,7 @@ func newScaleInCmd() *cobra.Command {
 
 			return cm.ScaleIn(clusterName, skipConfirm, gOpt, scale)
 		},
+		ValidArgsFunction: shellCompGetClusterName,
 	}
 
 	cmd.Flags().StringSliceVarP(&gOpt.Nodes, "node", "N", nil, "Specify the nodes (required)")

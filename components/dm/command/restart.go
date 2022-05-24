@@ -30,6 +30,7 @@ func newRestartCmd() *cobra.Command {
 
 			return cm.RestartCluster(clusterName, gOpt, skipConfirm)
 		},
+		ValidArgsFunction: shellCompGetClusterName,
 	}
 
 	cmd.Flags().StringSliceVarP(&gOpt.Roles, "role", "R", nil, "Only restart specified roles")

@@ -30,6 +30,7 @@ func newStartCmd() *cobra.Command {
 
 			return cm.StartCluster(clusterName, gOpt, false)
 		},
+		ValidArgsFunction: shellCompGetClusterName,
 	}
 
 	cmd.Flags().StringSliceVarP(&gOpt.Roles, "role", "R", nil, "Only start specified roles")

@@ -37,6 +37,7 @@ func newReloadCmd() *cobra.Command {
 
 			return cm.Reload(clusterName, gOpt, skipRestart, skipConfirm)
 		},
+		ValidArgsFunction: shellCompGetClusterName,
 	}
 
 	cmd.Flags().StringSliceVarP(&gOpt.Roles, "role", "R", nil, "Only reload specified roles")
