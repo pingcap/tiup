@@ -34,7 +34,14 @@ func newEditConfigCmd() *cobra.Command {
 
 			return cm.EditConfig(clusterName, opt, skipConfirm)
 		},
-		ValidArgsFunction: shellCompGetClusterName,
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			switch len(args) {
+			case 0:
+				return shellCompGetClusterName(cm, toComplete)
+			default:
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+		},
 	}
 
 	cmd.Flags().StringVarP(&opt.NewTopoFile, "topology-file", "", opt.NewTopoFile, "Use provided topology file to substitute the original one instead of editing it.")

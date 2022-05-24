@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	perrs "github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/manager"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/spf13/cobra"
@@ -52,7 +53,14 @@ func newDisplayCmd() *cobra.Command {
 
 			return cm.Display(clusterName, gOpt)
 		},
-		ValidArgsFunction: shellCompGetClusterName,
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			switch len(args) {
+			case 0:
+				return shellCompGetClusterName(cm, toComplete)
+			default:
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+		},
 	}
 
 	cmd.Flags().StringSliceVarP(&gOpt.Roles, "role", "R", nil, "Only display specified roles")
@@ -64,16 +72,13 @@ func newDisplayCmd() *cobra.Command {
 	return cmd
 }
 
-func shellCompGetClusterName(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func shellCompGetClusterName(cm *manager.Manager, toComplete string) ([]string, cobra.ShellCompDirective) {
 	var result []string
-	clusters, err := cm.GetClusterList()
-	if err != nil {
-		return nil, cobra.ShellCompDirectiveError
-	}
+	clusters, _ := cm.GetClusterList()
 	for _, c := range clusters {
 		if strings.HasPrefix(c.Name, toComplete) {
 			result = append(result, c.Name)
 		}
 	}
-	return result, cobra.ShellCompDirectiveNoFileComp | cobra.ShellCompDirectiveNoSpace
+	return result, cobra.ShellCompDirectiveNoFileComp
 }
