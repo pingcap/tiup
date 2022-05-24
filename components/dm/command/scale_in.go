@@ -136,7 +136,7 @@ func ScaleInDMCluster(
 		}
 	})
 
-	// Delete member from cluster栓
+	// Delete member from cluster
 	for _, component := range topo.ComponentsByStartOrder() {
 		for _, instance := range component.Instances() {
 			if !deletedNodes.Exist(instance.ID()) {
