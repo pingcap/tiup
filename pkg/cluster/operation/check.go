@@ -24,6 +24,7 @@ import (
 
 	"github.com/AstroProfundis/sysinfo"
 	"github.com/pingcap/tidb-insight/collector/insight"
+	"github.com/pingcap/tiup/pkg/checkpoint"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/module"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -165,6 +166,16 @@ func checkOSInfo(opt *CheckOptions, osInfo *sysinfo.OS) *CheckResult {
 
 	// check OS vendor
 	switch osInfo.Vendor {
+	case "kylin":
+		msg := "kylin support is not fully tested, be careful"
+		result.Err = fmt.Errorf("%s (%s)", result.Msg, msg)
+		result.Warn = true
+		// VERSION_ID="V10"
+		if ver, _ := strconv.ParseFloat(strings.Trim(osInfo.Version, "V"), 64); ver < 10 {
+			result.Err = fmt.Errorf("%s %s not supported, use version V10 or higher(%s)",
+				osInfo.Name, osInfo.Release, msg)
+			return result
+		}
 	case "amzn":
 		// Amazon Linux 2 is based on CentOS 7 and is recommended for
 		// AWS Graviton 2 (ARM64) deployments.
@@ -845,7 +856,8 @@ func CheckJRE(ctx context.Context, e ctxt.Executor, host string, topo *spec.Spec
 		}
 
 		// check if java cli is available
-		stdout, stderr, err := e.Execute(ctx, "java -version", false)
+		// the checkpoint part of context can't be shared between goroutines
+		stdout, stderr, err := e.Execute(checkpoint.NewContext(ctx), "java -version", false)
 		if err != nil {
 			results = append(results, &CheckResult{
 				Name: CheckNameCommand,

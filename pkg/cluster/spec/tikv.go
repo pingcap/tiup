@@ -84,7 +84,7 @@ func checkStoreStatus(ctx context.Context, storeAddr string, tlsCfg *tls.Config,
 }
 
 // Status queries current status of the instance
-func (s *TiKVSpec) Status(ctx context.Context, tlsCfg *tls.Config, pdList ...string) string {
+func (s *TiKVSpec) Status(ctx context.Context, timeout time.Duration, tlsCfg *tls.Config, pdList ...string) string {
 	storeAddr := addr(s)
 	state := checkStoreStatus(ctx, storeAddr, tlsCfg, pdList...)
 	if s.Offline && strings.ToLower(state) == "offline" {
@@ -183,8 +183,8 @@ func (c *TiKVComponent) Instances() []Instance {
 				s.DataDir,
 			},
 			StatusFn: s.Status,
-			UptimeFn: func(_ context.Context, tlsCfg *tls.Config) time.Duration {
-				return UptimeByHost(s.Host, s.StatusPort, tlsCfg)
+			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
+				return UptimeByHost(s.Host, s.StatusPort, timeout, tlsCfg)
 			},
 		}, c.Topology})
 	}

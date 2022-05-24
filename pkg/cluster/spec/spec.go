@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/creasty/defaults"
@@ -30,11 +31,10 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/proxy"
+	"github.com/pingcap/tiup/pkg/tidbver"
 	"github.com/pingcap/tiup/pkg/tui"
-	"github.com/pingcap/tiup/pkg/utils"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.uber.org/zap"
-	"golang.org/x/mod/semver"
 )
 
 const (
@@ -158,7 +158,7 @@ type Topology interface {
 	ComponentsByStartOrder() []Component
 	ComponentsByStopOrder() []Component
 	ComponentsByUpdateOrder() []Component
-	IterInstance(fn func(instance Instance))
+	IterInstance(fn func(instance Instance), concurrency ...int)
 	GetMonitoredOptions() *MonitoredOptions
 	// count how many time a path is used by instances in cluster
 	CountDir(host string, dir string) int
@@ -412,12 +412,12 @@ func (s *Specification) GetPDList() []string {
 // AdjustByVersion modify the spec by cluster version.
 func (s *Specification) AdjustByVersion(clusterVersion string) {
 	// CDC does not support data dir for version below v4.0.13, and also v5.0.0-rc, set it to empty.
-	if semver.Compare(clusterVersion, "v4.0.13") == -1 || clusterVersion == "v5.0.0-rc" {
+	if !tidbver.TiCDCSupportConfigFile(clusterVersion) {
 		for _, server := range s.CDCServers {
 			server.DataDir = ""
 		}
 	}
-	if semver.Compare(clusterVersion, "v5.4.0") >= 0 || strings.Contains(clusterVersion, utils.NightlyVersionAlias) {
+	if tidbver.NgMonitorDeployByDefault(clusterVersion) {
 		for _, m := range s.Monitors {
 			if m.NgPort == 0 {
 				m.NgPort = 12020
@@ -427,8 +427,12 @@ func (s *Specification) AdjustByVersion(clusterVersion string) {
 }
 
 // GetDashboardAddress returns the cluster's dashboard addr
-func (s *Specification) GetDashboardAddress(ctx context.Context, tlsCfg *tls.Config, pdList ...string) (string, error) {
-	pc := api.NewPDClient(ctx, pdList, statusQueryTimeout, tlsCfg)
+func (s *Specification) GetDashboardAddress(ctx context.Context, tlsCfg *tls.Config, timeout time.Duration, pdList ...string) (string, error) {
+	if timeout < time.Second {
+		timeout = statusQueryTimeout
+	}
+
+	pc := api.NewPDClient(ctx, pdList, timeout, tlsCfg)
 	dashboardAddr, err := pc.GetDashboardAddress()
 	if err != nil {
 		return "", err
@@ -727,12 +731,28 @@ func (s *Specification) IterComponent(fn func(comp Component)) {
 }
 
 // IterInstance iterates all instances in component starting order
-func (s *Specification) IterInstance(fn func(instance Instance)) {
+func (s *Specification) IterInstance(fn func(instance Instance), concurrency ...int) {
+	maxWorkers := 1
+	wg := sync.WaitGroup{}
+	if len(concurrency) > 0 && concurrency[0] > 1 {
+		maxWorkers = concurrency[0]
+	}
+	workerPool := make(chan struct{}, maxWorkers)
+
 	for _, comp := range s.ComponentsByStartOrder() {
 		for _, inst := range comp.Instances() {
-			fn(inst)
+			wg.Add(1)
+			workerPool <- struct{}{}
+			go func(inst Instance) {
+				defer func() {
+					<-workerPool
+					wg.Done()
+				}()
+				fn(inst)
+			}(inst)
 		}
 	}
+	wg.Wait()
 }
 
 // IterHost iterates one instance for each host

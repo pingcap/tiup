@@ -17,6 +17,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/fatih/color"
@@ -28,6 +29,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
 )
 
@@ -51,6 +53,21 @@ func (m *Manager) ScaleIn(
 		force bool     = gOpt.Force
 		nodes []string = gOpt.Nodes
 	)
+
+	metadata, err := m.meta(name)
+	if err != nil &&
+		!errors.Is(perrs.Cause(err), meta.ErrValidate) &&
+		!errors.Is(perrs.Cause(err), spec.ErrMultipleTiSparkMaster) &&
+		!errors.Is(perrs.Cause(err), spec.ErrMultipleTisparkWorker) &&
+		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
+		// ignore conflict check error, node may be deployed by former version
+		// that lack of some certain conflict checks
+		return err
+	}
+
+	topo := metadata.GetTopology()
+	base := metadata.GetBaseMeta()
+
 	if !skipConfirm {
 		if force {
 			m.logger.Warnf(color.HiRedString(tui.ASCIIArtWarning))
@@ -74,22 +91,12 @@ func (m *Manager) ScaleIn(
 			return err
 		}
 
+		if err := checkAsyncComps(topo, nodes); err != nil {
+			return err
+		}
+
 		m.logger.Infof("Scale-in nodes...")
 	}
-
-	metadata, err := m.meta(name)
-	if err != nil &&
-		!errors.Is(perrs.Cause(err), meta.ErrValidate) &&
-		!errors.Is(perrs.Cause(err), spec.ErrMultipleTiSparkMaster) &&
-		!errors.Is(perrs.Cause(err), spec.ErrMultipleTisparkWorker) &&
-		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
-		// ignore conflict check error, node may be deployed by former version
-		// that lack of some certain conflict checks
-		return err
-	}
-
-	topo := metadata.GetTopology()
-	base := metadata.GetBaseMeta()
 
 	// Regenerate configuration
 	gOpt.IgnoreConfigCheck = true
@@ -135,5 +142,27 @@ func (m *Manager) ScaleIn(
 
 	m.logger.Infof("Scaled cluster `%s` in successfully", name)
 
+	return nil
+}
+
+// checkAsyncComps
+func checkAsyncComps(topo spec.Topology, nodes []string) error {
+	var asyncOfflineComps = set.NewStringSet(spec.ComponentPump, spec.ComponentTiKV, spec.ComponentTiFlash, spec.ComponentDrainer)
+	deletedNodes := set.NewStringSet(nodes...)
+	delAsyncOfflineComps := set.NewStringSet()
+	topo.IterInstance(func(instance spec.Instance) {
+		if deletedNodes.Exist(instance.ID()) {
+			if asyncOfflineComps.Exist(instance.ComponentName()) {
+				delAsyncOfflineComps.Insert(instance.ComponentName())
+			}
+		}
+	})
+
+	if len(delAsyncOfflineComps.Slice()) > 0 {
+		return tui.PromptForConfirmOrAbortError(fmt.Sprintf(
+			"%s\nDo you want to continue? [y/N]:", color.YellowString(
+				"The component `%s` will become tombstone, maybe exists in several minutes or hours, after that you can use the prune command to clean it",
+				delAsyncOfflineComps.Slice())))
+	}
 	return nil
 }

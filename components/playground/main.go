@@ -164,24 +164,21 @@ Examples:
 			if tiupHome == "" {
 				tiupHome, _ = getAbsolutePath(filepath.Join("~", localdata.ProfileDirName))
 			}
-			if tiupDataDir == "" {
-				if tag == "" {
-					dataDir = filepath.Join(tiupHome, localdata.DataParentDir, utils.Base62Tag())
-				} else {
-					dataDir = filepath.Join(tiupHome, localdata.DataParentDir, tag)
-				}
-				if dataDir == "" {
-					return errors.Errorf("cannot read environment variable %s nor %s", localdata.EnvNameInstanceDataDir, localdata.EnvNameHome)
-				}
+			switch {
+			case tag != "":
+				dataDir = filepath.Join(tiupHome, localdata.DataParentDir, tag)
 				err := os.MkdirAll(dataDir, os.ModePerm)
 				if err != nil {
 					return err
 				}
-			} else {
+			case tiupDataDir != "":
 				dataDir = tiupDataDir
+				tag = dataDir[strings.LastIndex(dataDir, "/")+1:]
+			default:
+				tag = utils.Base62Tag()
+				dataDir = filepath.Join(tiupHome, localdata.DataParentDir, tag)
 			}
-			instanceName := dataDir[strings.LastIndex(dataDir, "/")+1:]
-			fmt.Printf("\033]0;TiUP Playground: %s\a", instanceName)
+			fmt.Printf("\033]0;TiUP Playground: %s\a", tag)
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -218,7 +215,7 @@ Examples:
 				return err
 			}
 
-			env, err := environment.InitEnv(repository.Options{})
+			env, err := environment.InitEnv(repository.Options{}, repository.MirrorOptions{})
 			if err != nil {
 				return err
 			}

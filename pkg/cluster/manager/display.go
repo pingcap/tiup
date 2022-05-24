@@ -24,10 +24,12 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/fatih/color"
 	perrs "github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/checkpoint"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
@@ -109,6 +111,8 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
 	cyan := color.New(color.FgCyan, color.Bold)
+
+	statusTimeout := time.Duration(opt.APITimeout) * time.Second
 	// display cluster meta
 	var j *JSONOutput
 	if m.logger.GetDisplayMode() == logprinter.DisplayModeJSON {
@@ -201,7 +205,7 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 	)
 	if t, ok := topo.(*spec.Specification); ok {
 		var err error
-		dashboardAddr, err = t.GetDashboardAddress(ctx, tlsCfg, masterActive...)
+		dashboardAddr, err = t.GetDashboardAddress(ctx, tlsCfg, statusTimeout, masterActive...)
 		if err == nil && !set.NewStringSet("", "auto", "none").Exist(dashboardAddr) {
 			scheme := "http"
 			if tlsCfg != nil {
@@ -288,6 +292,7 @@ func (m *Manager) DisplayTiKVLabels(name string, opt operator.Options) error {
 	metadata, _ := m.meta(name)
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
+	statusTimeout := time.Duration(opt.APITimeout) * time.Second
 	// display cluster meta
 	cyan := color.New(color.FgCyan, color.Bold)
 
@@ -358,15 +363,19 @@ func (m *Manager) DisplayTiKVLabels(name string, opt operator.Options) error {
 	if err != nil {
 		return err
 	}
+
+	var mu sync.Mutex
 	topo.IterInstance(func(ins spec.Instance) {
 		if ins.ComponentName() == spec.ComponentPD {
-			status := ins.Status(ctx, tlsCfg, masterList...)
+			status := ins.Status(ctx, statusTimeout, tlsCfg, masterList...)
 			if strings.HasPrefix(status, "Up") || strings.HasPrefix(status, "Healthy") {
 				instAddr := fmt.Sprintf("%s:%d", ins.GetHost(), ins.GetPort())
+				mu.Lock()
 				masterActive = append(masterActive, instAddr)
+				mu.Unlock()
 			}
 		}
-	})
+	}, opt.Concurrency)
 
 	var (
 		labelInfoArr  []api.LabelInfo
@@ -455,6 +464,8 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
 
+	statusTimeout := time.Duration(opt.APITimeout) * time.Second
+
 	err = SetSSHKeySet(ctx, m.specManager.Path(name, "ssh", "id_rsa"), m.specManager.Path(name, "ssh", "id_rsa.pub"))
 	if err != nil {
 		return nil, err
@@ -476,21 +487,25 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 	masterActive := make([]string, 0)
 	masterStatus := make(map[string]string)
 
+	var mu sync.Mutex
 	topo.IterInstance(func(ins spec.Instance) {
 		if ins.ComponentName() != spec.ComponentPD && ins.ComponentName() != spec.ComponentDMMaster {
 			return
 		}
-		status := ins.Status(ctx, tlsCfg, masterList...)
+
+		status := ins.Status(ctx, statusTimeout, tlsCfg, masterList...)
+		mu.Lock()
 		if strings.HasPrefix(status, "Up") || strings.HasPrefix(status, "Healthy") {
 			instAddr := fmt.Sprintf("%s:%d", ins.GetHost(), ins.GetPort())
 			masterActive = append(masterActive, instAddr)
 		}
 		masterStatus[ins.ID()] = status
-	})
+		mu.Unlock()
+	}, opt.Concurrency)
 
 	var dashboardAddr string
 	if t, ok := topo.(*spec.Specification); ok {
-		dashboardAddr, _ = t.GetDashboardAddress(ctx, tlsCfg, masterActive...)
+		dashboardAddr, _ = t.GetDashboardAddress(ctx, tlsCfg, statusTimeout, masterActive...)
 	}
 
 	clusterInstInfos := []InstInfo{}
@@ -523,19 +538,20 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 		case spec.ComponentDMMaster:
 			status = masterStatus[ins.ID()]
 		default:
-			status = ins.Status(ctx, tlsCfg, masterActive...)
+			status = ins.Status(ctx, statusTimeout, tlsCfg, masterActive...)
 		}
 
 		since := "-"
 		if opt.ShowUptime {
-			since = formatInstanceSince(ins.Uptime(ctx, tlsCfg))
+			since = formatInstanceSince(ins.Uptime(ctx, statusTimeout, tlsCfg))
 		}
 
 		// Query the service status and uptime
 		if status == "-" || (opt.ShowUptime && since == "-") {
 			e, found := ctxt.GetInner(ctx).GetExecutor(ins.GetHost())
 			if found {
-				active, _ := operator.GetServiceStatus(ctx, e, ins.ServiceName())
+				nctx := checkpoint.NewContext(ctx)
+				active, _ := operator.GetServiceStatus(nctx, e, ins.ServiceName())
 				if status == "-" {
 					if parts := strings.Split(strings.TrimSpace(active), " "); len(parts) > 2 {
 						if parts[1] == "active" {
@@ -556,6 +572,7 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 		if ins.IsPatched() {
 			roleName += " (patched)"
 		}
+		mu.Lock()
 		clusterInstInfos = append(clusterInstInfos, InstInfo{
 			ID:            ins.ID(),
 			Role:          roleName,
@@ -569,7 +586,8 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 			Port:          ins.GetPort(),
 			Since:         since,
 		})
-	})
+		mu.Unlock()
+	}, opt.Concurrency)
 
 	// Sort by role,host,ports
 	sort.Slice(clusterInstInfos, func(i, j int) bool {
@@ -605,7 +623,7 @@ func formatInstanceStatus(status string) string {
 		return color.GreenString(status)
 	case startsWith("down", "err", "inactive"): // down, down|ui
 		return color.RedString(status)
-	case startsWith("tombstone", "disconnected", "n/a"), strings.Contains(status, "offline"):
+	case startsWith("tombstone", "disconnected", "n/a"), strings.Contains(strings.ToLower(status), "offline"):
 		return color.YellowString(status)
 	default:
 		return status
@@ -715,7 +733,7 @@ func SetClusterSSH(ctx context.Context, topo spec.Topology, deployUser string, s
 }
 
 // DisplayDashboardInfo prints the dashboard address of cluster
-func (m *Manager) DisplayDashboardInfo(clusterName string, tlsCfg *tls.Config) error {
+func (m *Manager) DisplayDashboardInfo(clusterName string, timeout time.Duration, tlsCfg *tls.Config) error {
 	metadata, err := spec.ClusterMetadata(clusterName)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
 		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
@@ -728,7 +746,7 @@ func (m *Manager) DisplayDashboardInfo(clusterName string, tlsCfg *tls.Config) e
 	}
 
 	ctx := context.WithValue(context.Background(), logprinter.ContextKeyLogger, m.logger)
-	pdAPI := api.NewPDClient(ctx, pdEndpoints, 2*time.Second, tlsCfg)
+	pdAPI := api.NewPDClient(ctx, pdEndpoints, timeout, tlsCfg)
 	dashboardAddr, err := pdAPI.GetDashboardAddress()
 	if err != nil {
 		return fmt.Errorf("failed to retrieve TiDB Dashboard instance from PD: %s", err)
