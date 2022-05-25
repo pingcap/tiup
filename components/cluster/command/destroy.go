@@ -53,6 +53,14 @@ You can retain some nodes and roles data when destroy cluster, eg:
 
 			return cm.DestroyCluster(clusterName, gOpt, destroyOpt, skipConfirm)
 		},
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			switch len(args) {
+			case 0:
+				return shellCompGetClusterName(cm, toComplete)
+			default:
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+		},
 	}
 
 	cmd.Flags().StringArrayVar(&destroyOpt.RetainDataNodes, "retain-node-data", nil, "Specify the nodes or hosts whose data will be retained")
