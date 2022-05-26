@@ -24,6 +24,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/fatih/color"
@@ -362,12 +363,16 @@ func (m *Manager) DisplayTiKVLabels(name string, opt operator.Options) error {
 	if err != nil {
 		return err
 	}
+
+	var mu sync.Mutex
 	topo.IterInstance(func(ins spec.Instance) {
 		if ins.ComponentName() == spec.ComponentPD {
 			status := ins.Status(ctx, statusTimeout, tlsCfg, masterList...)
 			if strings.HasPrefix(status, "Up") || strings.HasPrefix(status, "Healthy") {
 				instAddr := fmt.Sprintf("%s:%d", ins.GetHost(), ins.GetPort())
+				mu.Lock()
 				masterActive = append(masterActive, instAddr)
+				mu.Unlock()
 			}
 		}
 	}, opt.Concurrency)
@@ -482,17 +487,20 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 	masterActive := make([]string, 0)
 	masterStatus := make(map[string]string)
 
+	var mu sync.Mutex
 	topo.IterInstance(func(ins spec.Instance) {
 		if ins.ComponentName() != spec.ComponentPD && ins.ComponentName() != spec.ComponentDMMaster {
 			return
 		}
 
 		status := ins.Status(ctx, statusTimeout, tlsCfg, masterList...)
+		mu.Lock()
 		if strings.HasPrefix(status, "Up") || strings.HasPrefix(status, "Healthy") {
 			instAddr := fmt.Sprintf("%s:%d", ins.GetHost(), ins.GetPort())
 			masterActive = append(masterActive, instAddr)
 		}
 		masterStatus[ins.ID()] = status
+		mu.Unlock()
 	}, opt.Concurrency)
 
 	var dashboardAddr string
@@ -564,6 +572,7 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 		if ins.IsPatched() {
 			roleName += " (patched)"
 		}
+		mu.Lock()
 		clusterInstInfos = append(clusterInstInfos, InstInfo{
 			ID:            ins.ID(),
 			Role:          roleName,
@@ -577,6 +586,7 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 			Port:          ins.GetPort(),
 			Since:         since,
 		})
+		mu.Unlock()
 	}, opt.Concurrency)
 
 	// Sort by role,host,ports

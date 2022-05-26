@@ -20,7 +20,7 @@ import (
 	"text/template"
 
 	"github.com/pingcap/tiup/embed"
-	"golang.org/x/mod/semver"
+	"github.com/pingcap/tiup/pkg/tidbver"
 )
 
 // CDCScript represent the data to generate cdc config
@@ -126,24 +126,13 @@ func (c *CDCScript) AppendEndpoints(ends ...*PDScript) *CDCScript {
 func (c *CDCScript) PatchByVersion(clusterVersion, dataDir string) *CDCScript {
 	// config support since v4.0.13, ignore v5.0.0-rc
 	// the same to data-dir, but we treat it as --sort-dir
-	if semver.Compare(clusterVersion, "v4.0.13") >= 0 && clusterVersion != "v5.0.0-rc" {
+	if tidbver.TiCDCSupportConfigFile(clusterVersion) {
 		c = c.WithConfigFileEnabled().WithDataDir(dataDir)
 	}
 
 	// cdc support --data-dir since v4.0.14 and v5.0.3
-	if semver.Major(clusterVersion) == "v4" && semver.Compare(clusterVersion, "v4.0.14") >= 0 {
+	if tidbver.TiCDCSupportDataDir(clusterVersion) {
 		c = c.WithDataDirEnabled()
-	}
-
-	// for those version above v5.0.3, cdc does not support --data-dir
-	ignoreVersion := map[string]struct{}{
-		"v5.1.0-alpha": {},
-		"v5.2.0-alpha": {},
-	}
-	if semver.Compare(clusterVersion, "v5.0.3") >= 0 {
-		if _, ok := ignoreVersion[clusterVersion]; !ok {
-			c = c.WithDataDirEnabled()
-		}
 	}
 
 	return c
