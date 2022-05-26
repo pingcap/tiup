@@ -72,6 +72,7 @@ var (
 	playgroundReport *telemetry.PlaygroundReport
 	options          = &BootOptions{}
 	tag              string
+	deleteWhenExit   bool
 	tiupDataDir      string
 	dataDir          string
 	log              = logprinter.NewLogger("")
@@ -167,16 +168,17 @@ Examples:
 			switch {
 			case tag != "":
 				dataDir = filepath.Join(tiupHome, localdata.DataParentDir, tag)
-				err := os.MkdirAll(dataDir, os.ModePerm)
-				if err != nil {
-					return err
-				}
 			case tiupDataDir != "":
 				dataDir = tiupDataDir
 				tag = dataDir[strings.LastIndex(dataDir, "/")+1:]
 			default:
 				tag = utils.Base62Tag()
 				dataDir = filepath.Join(tiupHome, localdata.DataParentDir, tag)
+				deleteWhenExit = true
+			}
+			err := os.MkdirAll(dataDir, os.ModePerm)
+			if err != nil {
+				return err
 			}
 			fmt.Printf("\033]0;TiUP Playground: %s\a", tag)
 			return nil
@@ -257,7 +259,6 @@ Examples:
 				sig = (<-sc).(syscall.Signal)
 				atomic.StoreInt32(&p.curSig, int32(syscall.SIGKILL))
 				if sig == syscall.SIGINT {
-					removeData()
 					p.terminate(syscall.SIGKILL)
 				}
 			}()
@@ -630,6 +631,7 @@ func main() {
 		fmt.Println(color.RedString("Error: %v", err))
 		code = 1
 	}
+	removeData()
 
 	if reportEnabled {
 		f := func() {
@@ -681,8 +683,7 @@ func main() {
 }
 
 func removeData() {
-	// remove if not set tag when run at standalone mode
-	if tiupDataDir == "" && tag == "" {
+	if deleteWhenExit {
 		os.RemoveAll(dataDir)
 	}
 }
