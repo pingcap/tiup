@@ -16,9 +16,11 @@ package command
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	perrs "github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/manager"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/spf13/cobra"
@@ -77,6 +79,14 @@ func newDisplayCmd() *cobra.Command {
 			}
 			return cm.Display(clusterName, gOpt)
 		},
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			switch len(args) {
+			case 0:
+				return shellCompGetClusterName(cm, toComplete)
+			default:
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+		},
 	}
 
 	cmd.Flags().StringSliceVarP(&gOpt.Roles, "role", "R", nil, "Only display specified roles")
@@ -88,4 +98,15 @@ func newDisplayCmd() *cobra.Command {
 	cmd.Flags().Uint64Var(&statusTimeout, "status-timeout", 10, "Timeout in seconds when getting node status")
 
 	return cmd
+}
+
+func shellCompGetClusterName(cm *manager.Manager, toComplete string) ([]string, cobra.ShellCompDirective) {
+	var result []string
+	clusters, _ := cm.GetClusterList()
+	for _, c := range clusters {
+		if strings.HasPrefix(c.Name, toComplete) {
+			result = append(result, c.Name)
+		}
+	}
+	return result, cobra.ShellCompDirectiveNoFileComp
 }
