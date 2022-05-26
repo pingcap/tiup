@@ -37,6 +37,7 @@ var (
 	CheckTypeFIO          = "fio"
 	CheckTypePermission   = "permission"
 	ChecktypeIsExist      = "exist"
+	CheckTypeTimeZone     = "timezone"
 )
 
 // place the check utilities are stored
@@ -155,6 +156,8 @@ func (c *CheckSys) Execute(ctx context.Context) error {
 		}
 		// check partition mount options for data_dir
 		storeResults(ctx, c.host, operator.CheckDirIsExist(ctx, e, c.checkDir))
+	case CheckTypeTimeZone:
+		storeResults(ctx, c.host, operator.CheckTimeZone(ctx, c.topo, c.host, stdout))
 	}
 
 	return nil
