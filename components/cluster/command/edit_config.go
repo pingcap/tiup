@@ -22,7 +22,8 @@ func newEditConfigCmd() *cobra.Command {
 	opt := manager.EditConfigOptions{}
 	cmd := &cobra.Command{
 		Use:   "edit-config <cluster-name>",
-		Short: "Edit TiDB cluster config.\nWill use editor from environment variable `EDITOR`, default use vi",
+		Short: "Edit TiDB cluster config",
+		Long:  "Edit TiDB cluster config.\nWill use editor from environment variable `EDITOR`, default use vi",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return cmd.Help()

@@ -23,6 +23,7 @@ func newEditConfigCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "edit-config <cluster-name>",
 		Short: "Edit DM cluster config",
+		Long:  "Edit DM cluster config.\nWill use editor from environment variable `EDITOR`, default use vi",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return cmd.Help()
