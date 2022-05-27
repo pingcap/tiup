@@ -18,8 +18,8 @@ import (
 	"io"
 	"strings"
 
+	"github.com/pingcap/tiup/pkg/tidbver"
 	"github.com/pingcap/tiup/pkg/utils"
-	"golang.org/x/mod/semver"
 )
 
 const tiflashDaemonConfig = `
@@ -104,7 +104,7 @@ func writeTiFlashConfig(w io.Writer, version utils.Version, tcpPort, httpPort, s
 	logDir := fmt.Sprintf("%s/log", deployDir)
 	ip := AdvertiseHost(host)
 	var conf string
-	if semver.Compare(version.String(), "v5.4.0") >= 0 || version.IsNightly() {
+	if tidbver.TiFlashNotNeedSomeConfig(version.String()) {
 		conf = fmt.Sprintf(tiflashConfig, pdAddrs, httpPort, tcpPort,
 			deployDir, dataDir, tmpDir, logDir, servicePort, metricsPort,
 			ip, strings.Join(tidbStatusAddrs, ","), clusterManagerPath, "")

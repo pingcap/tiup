@@ -72,6 +72,7 @@ var (
 	playgroundReport *telemetry.PlaygroundReport
 	options          = &BootOptions{}
 	tag              string
+	deleteWhenExit   bool
 	tiupDataDir      string
 	dataDir          string
 	log              = logprinter.NewLogger("")
@@ -164,24 +165,22 @@ Examples:
 			if tiupHome == "" {
 				tiupHome, _ = getAbsolutePath(filepath.Join("~", localdata.ProfileDirName))
 			}
-			if tiupDataDir == "" {
-				if tag == "" {
-					dataDir = filepath.Join(tiupHome, localdata.DataParentDir, utils.Base62Tag())
-				} else {
-					dataDir = filepath.Join(tiupHome, localdata.DataParentDir, tag)
-				}
-				if dataDir == "" {
-					return errors.Errorf("cannot read environment variable %s nor %s", localdata.EnvNameInstanceDataDir, localdata.EnvNameHome)
-				}
-				err := os.MkdirAll(dataDir, os.ModePerm)
-				if err != nil {
-					return err
-				}
-			} else {
+			switch {
+			case tag != "":
+				dataDir = filepath.Join(tiupHome, localdata.DataParentDir, tag)
+			case tiupDataDir != "":
 				dataDir = tiupDataDir
+				tag = dataDir[strings.LastIndex(dataDir, "/")+1:]
+			default:
+				tag = utils.Base62Tag()
+				dataDir = filepath.Join(tiupHome, localdata.DataParentDir, tag)
+				deleteWhenExit = true
 			}
-			instanceName := dataDir[strings.LastIndex(dataDir, "/")+1:]
-			fmt.Printf("\033]0;TiUP Playground: %s\a", instanceName)
+			err := os.MkdirAll(dataDir, os.ModePerm)
+			if err != nil {
+				return err
+			}
+			fmt.Printf("\033]0;TiUP Playground: %s\a", tag)
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -260,7 +259,6 @@ Examples:
 				sig = (<-sc).(syscall.Signal)
 				atomic.StoreInt32(&p.curSig, int32(syscall.SIGKILL))
 				if sig == syscall.SIGINT {
-					removeData()
 					p.terminate(syscall.SIGKILL)
 				}
 			}()
@@ -633,6 +631,7 @@ func main() {
 		fmt.Println(color.RedString("Error: %v", err))
 		code = 1
 	}
+	removeData()
 
 	if reportEnabled {
 		f := func() {
@@ -684,8 +683,7 @@ func main() {
 }
 
 func removeData() {
-	// remove if not set tag when run at standalone mode
-	if tiupDataDir == "" && tag == "" {
+	if deleteWhenExit {
 		os.RemoveAll(dataDir)
 	}
 }

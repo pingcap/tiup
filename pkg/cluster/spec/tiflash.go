@@ -34,8 +34,8 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/tidbver"
 	"github.com/pingcap/tiup/pkg/utils"
-	"golang.org/x/mod/semver"
 	"gopkg.in/yaml.v2"
 )
 
@@ -66,7 +66,7 @@ type TiFlashSpec struct {
 }
 
 // Status queries current status of the instance
-func (s *TiFlashSpec) Status(ctx context.Context, tlsCfg *tls.Config, pdList ...string) string {
+func (s *TiFlashSpec) Status(ctx context.Context, timeout time.Duration, tlsCfg *tls.Config, pdList ...string) string {
 	storeAddr := fmt.Sprintf("%s:%d", s.Host, s.FlashServicePort)
 	state := checkStoreStatus(ctx, storeAddr, tlsCfg, pdList...)
 	if s.Offline && strings.ToLower(state) == "offline" {
@@ -234,7 +234,7 @@ func (c *TiFlashComponent) Instances() []Instance {
 				s.DataDir,
 			},
 			StatusFn: s.Status,
-			UptimeFn: func(_ context.Context, tlsCfg *tls.Config) time.Duration {
+			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 				return 0
 			},
 		}, c.Topology})
@@ -363,7 +363,7 @@ func (i *TiFlashInstance) CheckIncorrectConfigs() error {
 
 // need to check the configuration after clusterVersion >= v4.0.9.
 func checkTiFlashStorageConfigWithVersion(clusterVersion string, config map[string]interface{}) (bool, error) {
-	if semver.Compare(clusterVersion, "v4.0.9") >= 0 || utils.Version(clusterVersion).IsNightly() {
+	if tidbver.TiFlashSupportMultiDisksDeployment(clusterVersion) {
 		return checkTiFlashStorageConfig(config)
 	}
 	return false, nil
@@ -388,7 +388,7 @@ func (i *TiFlashInstance) initTiFlashConfig(ctx context.Context, cfg *scripts.Ti
 		pathConfig = fmt.Sprintf(`path: "%s"`, cfg.DataDir)
 	}
 
-	if (semver.Compare(clusterVersion, "v4.0.12") >= 0 && semver.Compare(clusterVersion, "v5.0.0-rc") != 0) || utils.Version(clusterVersion).IsNightly() {
+	if tidbver.TiFlashDeprecatedUsersConfig(clusterVersion) {
 		// For v4.0.12 or later, 5.0.0 or later, TiFlash can ignore these `user.*`, `quotas.*` settings
 		deprecatedUsersConfig = "#"
 	} else {
@@ -429,7 +429,7 @@ func (i *TiFlashInstance) initTiFlashConfig(ctx context.Context, cfg *scripts.Ti
 
 	topo := Specification{}
 
-	if semver.Compare(clusterVersion, "v5.4.0") >= 0 || utils.Version(clusterVersion).IsNightly() {
+	if tidbver.TiFlashNotNeedSomeConfig(clusterVersion) {
 		// For 5.4.0 or later, TiFlash can ignore application.runAsDaemon setting
 		daemonConfig = "#"
 	} else {
@@ -499,7 +499,7 @@ func (i *TiFlashInstance) InitTiFlashLearnerConfig(ctx context.Context, cfg *scr
 
 	firstDataDir := strings.Split(cfg.DataDir, ",")[0]
 
-	if semver.Compare(clusterVersion, "v4.0.5") >= 0 || utils.Version(clusterVersion).IsNightly() {
+	if tidbver.TiFlashSupportAdvertiseStatusAddr(clusterVersion) {
 		statusAddr = fmt.Sprintf(`server.status-addr: "0.0.0.0:%[2]d"
     server.advertise-status-addr: "%[1]s:%[2]d"`, cfg.IP, cfg.FlashProxyStatusPort)
 	} else {

@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/pingcap/errors"
@@ -35,10 +36,14 @@ type BinlogClient struct {
 }
 
 // NewBinlogClient create a BinlogClient.
-func NewBinlogClient(pdEndpoints []string, tlsConfig *tls.Config) (*BinlogClient, error) {
+func NewBinlogClient(pdEndpoints []string, timeout time.Duration, tlsConfig *tls.Config) (*BinlogClient, error) {
+	if timeout < time.Second {
+		timeout = time.Second * 5
+	}
+
 	etcdClient, err := clientv3.New(clientv3.Config{
 		Endpoints:   pdEndpoints,
-		DialTimeout: time.Second * 5,
+		DialTimeout: timeout,
 		TLS:         tlsConfig,
 	})
 	if err != nil {
@@ -47,7 +52,7 @@ func NewBinlogClient(pdEndpoints []string, tlsConfig *tls.Config) (*BinlogClient
 
 	return &BinlogClient{
 		tls:        tlsConfig,
-		httpClient: utils.NewHTTPClient(5*time.Second, tlsConfig).Client(),
+		httpClient: utils.NewHTTPClient(timeout, tlsConfig).Client(),
 		etcdClient: etcdClient,
 	}, nil
 }
@@ -99,35 +104,32 @@ func (c *BinlogClient) IsDrainerTombstone(ctx context.Context, addr string) (boo
 }
 
 func (c *BinlogClient) isTombstone(ctx context.Context, ty string, nodeID string) (bool, error) {
-	status, err := c.nodeStatus(ctx, ty)
+	s, err := c.nodeStatus(ctx, ty, nodeID)
 	if err != nil {
 		return false, err
 	}
 
-	for _, s := range status {
-		if s.NodeID == nodeID {
-			if s.State == "offline" {
-				return true, nil
-			}
-			return false, nil
-		}
+	if s.State == "offline" {
+		return true, nil
 	}
-
-	return false, errors.Errorf("node not exist: %s", nodeID)
+	return false, nil
 }
 
 // nolint (unused)
 func (c *BinlogClient) pumpNodeStatus(ctx context.Context) (status []*NodeStatus, err error) {
-	return c.nodeStatus(ctx, "pumps")
+	return c.nodesStatus(ctx, "pumps")
 }
 
 // nolint (unused)
 func (c *BinlogClient) drainerNodeStatus(ctx context.Context) (status []*NodeStatus, err error) {
-	return c.nodeStatus(ctx, "drainers")
+	return c.nodesStatus(ctx, "drainers")
 }
 
 func (c *BinlogClient) nodeID(ctx context.Context, addr, ty string) (string, error) {
-	nodes, err := c.nodeStatus(ctx, ty)
+	// the number of nodes with the same ip:port
+	targetNodes := []string{}
+
+	nodes, err := c.nodesStatus(ctx, ty)
 	if err != nil {
 		return "", err
 	}
@@ -135,12 +137,20 @@ func (c *BinlogClient) nodeID(ctx context.Context, addr, ty string) (string, err
 	addrs := []string{}
 	for _, node := range nodes {
 		if addr == node.Addr {
-			return node.NodeID, nil
+			targetNodes = append(targetNodes, node.NodeID)
+			continue
 		}
 		addrs = append(addrs, addr)
 	}
 
-	return "", errors.Errorf("%s node id for address %s not found, found address: %s", ty, addr, addrs)
+	switch len(targetNodes) {
+	case 0:
+		return "", errors.Errorf("%s node id for address %s not found, found address: %s", ty, addr, addrs)
+	case 1:
+		return targetNodes[0], nil
+	default:
+		return "", errors.Errorf("found multiple %s nodes with the same host, found nodes: %s", ty, strings.Join(targetNodes, ","))
+	}
 }
 
 // UpdateDrainerState update the specify state as the specified state.
@@ -163,34 +173,25 @@ func (c *BinlogClient) UpdatePumpState(ctx context.Context, addr string, state s
 
 // updateStatus update the specify state as the specified state.
 func (c *BinlogClient) updateStatus(ctx context.Context, ty string, nodeID string, state string) error {
-	key := fmt.Sprintf("/tidb-binlog/v1/%s/%s", ty, nodeID)
-
-	resp, err := c.etcdClient.KV.Get(ctx, key)
+	ctx, f := context.WithTimeout(ctx, c.httpClient.Timeout)
+	defer f()
+	s, err := c.nodeStatus(ctx, ty, nodeID)
 	if err != nil {
 		return errors.AddStack(err)
 	}
 
-	if len(resp.Kvs) == 0 {
-		return errors.Errorf("no pump with node id: %v", nodeID)
-	}
-
-	var nodeStatus NodeStatus
-	err = json.Unmarshal(resp.Kvs[0].Value, &nodeStatus)
-	if err != nil {
-		return errors.AddStack(err)
-	}
-
-	if nodeStatus.State == state {
+	if s.State == state {
 		return nil
 	}
 
-	nodeStatus.State = state
+	s.State = state
 
-	data, err := json.Marshal(&nodeStatus)
+	data, err := json.Marshal(&s)
 	if err != nil {
 		return errors.AddStack(err)
 	}
 
+	key := fmt.Sprintf("/tidb-binlog/v1/%s/%s", ty, nodeID)
 	_, err = c.etcdClient.Put(ctx, key, string(data))
 	if err != nil {
 		return errors.AddStack(err)
@@ -199,9 +200,12 @@ func (c *BinlogClient) updateStatus(ctx context.Context, ty string, nodeID strin
 	return nil
 }
 
-func (c *BinlogClient) nodeStatus(ctx context.Context, ty string) (status []*NodeStatus, err error) {
+func (c *BinlogClient) nodesStatus(ctx context.Context, ty string) (status []*NodeStatus, err error) {
 	key := fmt.Sprintf("/tidb-binlog/v1/%s", ty)
 
+	// set timeout, otherwise it will keep retrying
+	ctx, f := context.WithTimeout(ctx, c.httpClient.Timeout)
+	defer f()
 	resp, err := c.etcdClient.KV.Get(ctx, key, clientv3.WithPrefix())
 	if err != nil {
 		return nil, errors.AddStack(err)
@@ -218,6 +222,25 @@ func (c *BinlogClient) nodeStatus(ctx context.Context, ty string) (status []*Nod
 	}
 
 	return
+}
+
+// nodeStatus get nodeStatus with nodeID
+func (c *BinlogClient) nodeStatus(ctx context.Context, ty string, nodeID string) (node *NodeStatus, err error) {
+	key := fmt.Sprintf("/tidb-binlog/v1/%s/%s", ty, nodeID)
+
+	resp, err := c.etcdClient.KV.Get(ctx, key)
+	if err != nil {
+		return nil, errors.AddStack(err)
+	}
+
+	if len(resp.Kvs) > 0 {
+		err = json.Unmarshal(resp.Kvs[0].Value, &node)
+		if err != nil {
+			return nil, errors.Annotatef(err, "key: %s,data: %s", string(resp.Kvs[0].Key), string(resp.Kvs[0].Value))
+		}
+		return
+	}
+	return nil, errors.Errorf("%s node-id: %s not found, found address: %s", ty, nodeID, key)
 }
 
 func (c *BinlogClient) offline(addr string, nodeID string) error {
@@ -262,6 +285,16 @@ func (c *BinlogClient) OfflinePump(ctx context.Context, addr string) error {
 	if err != nil {
 		return err
 	}
+
+	s, err := c.nodeStatus(ctx, "pumps", nodeID)
+	if err != nil {
+		return err
+	}
+
+	if s.State == "offline" {
+		return nil
+	}
+
 	return c.offline(addr, nodeID)
 }
 
@@ -271,5 +304,15 @@ func (c *BinlogClient) OfflineDrainer(ctx context.Context, addr string) error {
 	if err != nil {
 		return err
 	}
+
+	s, err := c.nodeStatus(ctx, "drainers", nodeID)
+	if err != nil {
+		return err
+	}
+
+	if s.State == "offline" {
+		return nil
+	}
+
 	return c.offline(addr, nodeID)
 }

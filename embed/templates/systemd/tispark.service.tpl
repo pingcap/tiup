@@ -7,8 +7,8 @@ User={{.User}}
 {{- if ne .JavaHome ""}}
 Environment="JAVA_HOME={{.JavaHome}}"
 {{- end}}
-ExecStart={{.DeployDir}}/sbin/start-{{.ServiceName}}.sh
-ExecStop={{.DeployDir}}/sbin/stop-{{.ServiceName}}.sh
+ExecStart=/bin/bash -c '{{.DeployDir}}/sbin/start-{{.ServiceName}}.sh'
+ExecStop=/bin/bash -c '{{.DeployDir}}/sbin/stop-{{.ServiceName}}.sh'
 Type=forking
 {{- if .Restart}}
 Restart={{.Restart}}

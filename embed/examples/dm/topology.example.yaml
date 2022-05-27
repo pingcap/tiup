@@ -68,9 +68,6 @@ grafana_servers:
     # deploy_dir: /tidb-deploy/grafana-3000
     # grafana dashboard dir on TiUP machine
     # dashboard_dir: /home/tidb/dashboards
-    # config:       # Enable this part if you want to use WebUI, make sure tiup dm -v newer than v1.9.0.
-    #   auth.anonymous.enabled: true
-    #   security.allow_embedding: true
 
 alertmanager_servers:
   - host: 10.0.1.15

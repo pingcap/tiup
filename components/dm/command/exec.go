@@ -33,6 +33,14 @@ func newExecCmd() *cobra.Command {
 
 			return cm.Exec(clusterName, opt, gOpt)
 		},
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			switch len(args) {
+			case 0:
+				return shellCompGetClusterName(cm, toComplete)
+			default:
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+		},
 	}
 
 	cmd.Flags().StringVar(&opt.Command, "command", "ls", "the command run on cluster host")

@@ -24,7 +24,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
-	"golang.org/x/mod/semver"
+	"github.com/pingcap/tiup/pkg/tidbver"
 )
 
 // TiDBSpec represents the TiDB topology specification in topology.yaml
@@ -105,11 +105,11 @@ func (c *TiDBComponent) Instances() []Instance {
 			Dirs: []string{
 				s.DeployDir,
 			},
-			StatusFn: func(_ context.Context, tlsCfg *tls.Config, _ ...string) string {
-				return statusByHost(s.Host, s.StatusPort, "/status", tlsCfg)
+			StatusFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config, _ ...string) string {
+				return statusByHost(s.Host, s.StatusPort, "/status", timeout, tlsCfg)
 			},
-			UptimeFn: func(_ context.Context, tlsCfg *tls.Config) time.Duration {
-				return UptimeByHost(s.Host, s.StatusPort, tlsCfg)
+			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
+				return UptimeByHost(s.Host, s.StatusPort, timeout, tlsCfg)
 			},
 		}, c.Topology})
 	}
@@ -146,7 +146,7 @@ func (i *TiDBInstance) InitConfig(
 		AppendEndpoints(topo.Endpoints(deployUser)...).
 		WithListenHost(i.GetListenHost()).
 		WithAdvertiseAddr(spec.Host).
-		SupportSecureBootstrap(semver.Compare(clusterVersion, "v5.3.0") >= 0)
+		SupportSecureBootstrap(tidbver.TiDBSupportSecureBoot(clusterVersion))
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tidb_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err

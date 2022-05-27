@@ -22,10 +22,10 @@ import (
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
+	"github.com/pingcap/tiup/pkg/tidbver"
 	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
-	"golang.org/x/mod/semver"
 )
 
 func newDeployCmd() *cobra.Command {
@@ -59,6 +59,14 @@ func newDeployCmd() *cobra.Command {
 
 			return cm.Deploy(clusterName, version, topoFile, opt, postDeployHook, skipConfirm, gOpt)
 		},
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			switch len(args) {
+			case 2:
+				return nil, cobra.ShellCompDirectiveDefault
+			default:
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+		},
 	}
 
 	cmd.Flags().StringVarP(&opt.User, "user", "u", utils.CurrentUser(), "The user name to login via SSH. The user must has root (or sudo) privilege.")
@@ -69,12 +77,7 @@ func newDeployCmd() *cobra.Command {
 }
 
 func supportVersion(vs string) error {
-	if !semver.IsValid(vs) {
-		return nil
-	}
-
-	majorMinor := semver.MajorMinor(vs)
-	if semver.Compare(majorMinor, "v2.0") < 0 {
+	if !tidbver.DMSupportDeploy(vs) {
 		return errors.Errorf("Only support version not less than v2.0")
 	}
 

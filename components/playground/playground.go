@@ -137,7 +137,7 @@ func (p *Playground) binlogClient() (*api.BinlogClient, error) {
 		addrs = append(addrs, inst.Addr())
 	}
 
-	return api.NewBinlogClient(addrs, nil)
+	return api.NewBinlogClient(addrs, 5*time.Second, nil)
 }
 
 func (p *Playground) pdClient() *api.PDClient {
@@ -959,11 +959,14 @@ func (p *Playground) wait() error {
 }
 
 func (p *Playground) terminate(sig syscall.Signal) {
-	kill := func(pid int, wait func() error) {
-		if sig != syscall.SIGINT {
-			_ = syscall.Kill(pid, sig)
+	kill := func(name string, pid int, wait func() error) {
+		if sig == syscall.SIGKILL {
+			fmt.Printf("Force %s(%d) to quit...\n", name, pid)
+		} else if atomic.LoadInt32(&p.curSig) == int32(sig) { // In case of double ctr+c
+			fmt.Printf("Wait %s(%d) to quit...\n", name, pid)
 		}
 
+		_ = syscall.Kill(pid, sig)
 		timer := time.AfterFunc(forceKillAfterDuration, func() {
 			_ = syscall.Kill(pid, syscall.SIGKILL)
 		})
@@ -972,27 +975,38 @@ func (p *Playground) terminate(sig syscall.Signal) {
 		timer.Stop()
 	}
 
-	for i := len(p.startedInstances); i > 0; i-- {
-		inst := p.startedInstances[i-1]
-		if sig == syscall.SIGKILL {
-			fmt.Printf("Force %s(%d) to quit...\n", inst.Component(), inst.Pid())
-		} else if atomic.LoadInt32(&p.curSig) == int32(sig) { // In case of double ctr+c
-			fmt.Printf("Wait %s(%d) to quit...\n", inst.Component(), inst.Pid())
-		}
-
-		kill(inst.Pid(), inst.Wait)
-	}
-
 	if p.monitor != nil {
-		kill(p.monitor.cmd.Process.Pid, p.monitor.wait)
+		go kill("prometheus", p.monitor.cmd.Process.Pid, p.monitor.wait)
 	}
 
 	if p.ngmonitoring != nil {
-		kill(p.ngmonitoring.cmd.Process.Pid, p.ngmonitoring.wait)
+		go kill("ng-monitoring", p.ngmonitoring.cmd.Process.Pid, p.ngmonitoring.wait)
 	}
 
 	if p.grafana != nil {
-		kill(p.grafana.cmd.Process.Pid, p.grafana.wait)
+		go kill("grafana", p.grafana.cmd.Process.Pid, p.grafana.wait)
+	}
+	for _, inst := range p.tiflashs {
+		kill(inst.Component(), inst.Pid(), inst.Wait)
+	}
+	for _, inst := range p.ticdcs {
+		kill(inst.Component(), inst.Pid(), inst.Wait)
+	}
+	for _, inst := range p.drainers {
+		kill(inst.Component(), inst.Pid(), inst.Wait)
+	}
+	// tidb must exit earlier then pd
+	for _, inst := range p.tidbs {
+		kill(inst.Component(), inst.Pid(), inst.Wait)
+	}
+	for _, inst := range p.pumps {
+		kill(inst.Component(), inst.Pid(), inst.Wait)
+	}
+	for _, inst := range p.tikvs {
+		kill(inst.Component(), inst.Pid(), inst.Wait)
+	}
+	for _, inst := range p.pds {
+		kill(inst.Component(), inst.Pid(), inst.Wait)
 	}
 }
 

@@ -47,11 +47,12 @@ function kill_all() {
     killall -9 grafana-server || true
     killall -9 tiup-playground || true
     killall -9 prometheus || true
+    killall -9 ng-monitoring-server || true
     cat $outfile
 }
 
 outfile=/tmp/tiup-playground-test.out
-tiup-playground v5.0.1 > $outfile 2>&1 &
+tiup-playground v6.0.0 > $outfile 2>&1 &
 
 # wait $outfile generated
 sleep 3
@@ -98,10 +99,10 @@ tiup-playground display | grep -E "terminated|exit" | wc -l | grep -q "1"
 
 killall -2 tiup-playground.test || killall -2 tiup-playground
 
-sleep 60
+sleep 100
 
 # test restart with same data
-tiup-playground v5.0.1 > $outfile 2>&1 &
+tiup-playground v6.0.0 > $outfile 2>&1 &
 
 # wait $outfile generated
 sleep 3
