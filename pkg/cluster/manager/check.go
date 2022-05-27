@@ -334,6 +334,14 @@ func checkSystemInfo(
 						topo,
 						opt.Opr,
 					).
+					// check for time zone
+					CheckSys(
+						inst.GetHost(),
+						"",
+						task.CheckTypeTimeZone,
+						topo,
+						opt.Opr,
+					).
 					// check for system limits
 					Shell(
 						inst.GetHost(),

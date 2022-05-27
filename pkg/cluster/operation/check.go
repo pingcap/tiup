@@ -65,6 +65,7 @@ var (
 	CheckNameTHP           = "thp"
 	CheckNameDirPermission = "permission"
 	CheckNameDirExist      = "exist"
+	CheckNameTimeZone      = "timezone"
 )
 
 // CheckResult is the result of a check
@@ -166,6 +167,16 @@ func checkOSInfo(opt *CheckOptions, osInfo *sysinfo.OS) *CheckResult {
 
 	// check OS vendor
 	switch osInfo.Vendor {
+	case "kylin":
+		msg := "kylin support is not fully tested, be careful"
+		result.Err = fmt.Errorf("%s (%s)", result.Msg, msg)
+		result.Warn = true
+		// VERSION_ID="V10"
+		if ver, _ := strconv.ParseFloat(strings.Trim(osInfo.Version, "V"), 64); ver < 10 {
+			result.Err = fmt.Errorf("%s %s not supported, use version V10 or higher(%s)",
+				osInfo.Name, osInfo.Release, msg)
+			return result
+		}
 	case "amzn":
 		// Amazon Linux 2 is based on CentOS 7 and is recommended for
 		// AWS Graviton 2 (ARM64) deployments.
@@ -938,5 +949,51 @@ func CheckDirIsExist(ctx context.Context, e ctxt.Executor, path string) []*Check
 		})
 	}
 
+	return results
+}
+
+// CheckTimeZone performs checks if time zone is the same
+func CheckTimeZone(ctx context.Context, topo *spec.Specification, host string, rawData []byte) []*CheckResult {
+	var results []*CheckResult
+	var insightInfo, pd0insightInfo insight.InsightInfo
+	if err := json.Unmarshal(rawData, &insightInfo); err != nil {
+		return append(results, &CheckResult{
+			Name: CheckNameTimeZone,
+			Err:  err,
+		})
+	}
+
+	if len(topo.PDServers) < 1 {
+		return append(results, &CheckResult{
+			Name: CheckNameTimeZone,
+			Err:  fmt.Errorf("no pd found"),
+		})
+	}
+	// skip compare with itself
+	if topo.PDServers[0].Host == host {
+		return nil
+	}
+	pd0stdout, _, _ := ctxt.GetInner(ctx).GetOutputs(topo.PDServers[0].Host)
+	if err := json.Unmarshal(pd0stdout, &pd0insightInfo); err != nil {
+		return append(results, &CheckResult{
+			Name: CheckNameTimeZone,
+			Err:  err,
+		})
+	}
+
+	timezone := insightInfo.SysInfo.Node.Timezone
+	pd0timezone := pd0insightInfo.SysInfo.Node.Timezone
+
+	if timezone == pd0timezone {
+		results = append(results, &CheckResult{
+			Name: CheckNameTimeZone,
+			Msg:  "time zone is the same as the first PD machine: " + timezone,
+		})
+	} else {
+		results = append(results, &CheckResult{
+			Name: CheckNameTimeZone,
+			Err:  fmt.Errorf("time zone is %s, but the firt PD is %s", timezone, pd0timezone),
+		})
+	}
 	return results
 }

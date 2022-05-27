@@ -42,6 +42,16 @@ func newScaleOutCmd() *cobra.Command {
 
 			return cm.ScaleOut(clusterName, topoFile, postScaleOutHook, nil, opt, skipConfirm, gOpt)
 		},
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			switch len(args) {
+			case 0:
+				return shellCompGetClusterName(cm, toComplete)
+			case 1:
+				return nil, cobra.ShellCompDirectiveDefault
+			default:
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+		},
 	}
 
 	cmd.Flags().StringVarP(&opt.User, "user", "u", utils.CurrentUser(), "The user name to login via SSH. The user must has root (or sudo) privilege.")

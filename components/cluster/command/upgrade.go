@@ -40,6 +40,14 @@ func newUpgradeCmd() *cobra.Command {
 
 			return cm.Upgrade(clusterName, version, gOpt, skipConfirm, offlineMode)
 		},
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			switch len(args) {
+			case 0:
+				return shellCompGetClusterName(cm, toComplete)
+			default:
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+		},
 	}
 	cmd.Flags().BoolVar(&gOpt.Force, "force", false, "Force upgrade without transferring PD leader")
 	cmd.Flags().Uint64Var(&gOpt.APITimeout, "transfer-timeout", 600, "Timeout in seconds when transferring PD and TiKV store leaders")
