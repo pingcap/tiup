@@ -189,8 +189,8 @@ func checkOSInfo(opt *CheckOptions, osInfo *sysinfo.OS) *CheckResult {
 		// check version
 		// CentOS 8 is known to be not working, and we don't have plan to support it
 		// as of now, we may add support for RHEL 8 based systems in the future.
-		if ver, _ := strconv.ParseFloat(osInfo.Version, 64); ver < 7 || ver >= 8 {
-			result.Err = fmt.Errorf("%s %s not supported, use version 7 please",
+		if ver, _ := strconv.ParseFloat(osInfo.Version, 64); ver < 7 {
+			result.Err = fmt.Errorf("%s %s not supported, use version 8 please",
 				osInfo.Name, osInfo.Release)
 			return result
 		}

@@ -84,11 +84,11 @@ func (config ycsbConfig) toProperties() (*properties.Properties, error) {
 
 	// these config are always included in the config file
 	// should be overwritten if they are passed through the command line
-	if config.ReadProportion != 0 {
+	if config.ReadProportion != 0.95 {
 		// we don't need to check errors since we disabled expansion
 		_, _, _ = result.Set("readproportion", fmt.Sprint(config.ReadProportion))
 	}
-	if config.UpdateProportion != 0 {
+	if config.UpdateProportion != 0.05 {
 		_, _, _ = result.Set("updateproportion", fmt.Sprint(config.UpdateProportion))
 	}
 	if config.ScanProportion != 0 {
