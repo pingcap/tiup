@@ -367,7 +367,7 @@ func (m *Manager) RestoreClusterMeta(clusterName, filePath string, skipConfirm b
 		); err != nil {
 			return err
 		}
-		m.logger.Infof("Destroying cluster...")
+		m.logger.Infof("Restoring cluster meta files...")
 	}
 	err = os.RemoveAll(m.specManager.Path(clusterName))
 	if err != nil {
