@@ -1,5 +1,43 @@
 TiUP Changelog
 
+## [1.10.0] 2022-06-08
+
+### New Features
+
+- Add support of backup and restore the cluster metadata for `tiup-cluster` and `tiup-dm` ([#1801](https://github.com/pingcap/tiup/pull/1801), [@nexustar](https://github.com/nexustar))
+- Add `history` command for `tiup` to display component execution records ([#1808](https://github.com/pingcap/tiup/pull/1808), [@srstack](https://github.com/srstack))
+- Add support of trying to disable swap when `check --apply` in `tiup-cluster` ([#1803](https://github.com/pingcap/tiup/pull/1803), [@AstroProfundis](https://github.com/AstroProfundis))
+- Add Grafana URL in `display` output of `tiup-cluster` ([#1819](https://github.com/pingcap/tiup/pull/1819), [@Smityz](https://github.com/Smityz))
+- Add a `latest` alias for component versions when cloning repo with `tiup mirror clone` command ([#1835](https://github.com/pingcap/tiup/pull/1835), [@srstack](https://github.com/srstack))
+- Add Kylin Linux 10+ as supported in `check` result of `tiup-cluster` ([#1886](https://github.com/pingcap/tiup/pull/1886), [@srstack](https://github.com/srstack))
+- Add support of completion of cluster name with Tab button for `tiup-cluster` ([#1891](https://github.com/pingcap/tiup/pull/1891), [@nexustar](https://github.com/nexustar))
+- Add support of checking timezone consistency among servers in `check` command of `tiup-cluster` ([#1890](https://github.com/pingcap/tiup/pull/1890), [@nexustar](https://github.com/nexustar))
+- Add support of deploying on RHEL 8 in `tiup-cluster` ([#1896](https://github.com/pingcap/tiup/pull/1896), [@nexustar](https://github.com/nexustar))
+- Add support of specifing custom key directory when rotating `root.json` in `tiup mirror` command ([#1848](https://github.com/pingcap/tiup/pull/1848), [@AstroProfundis](https://github.com/AstroProfundis))
+
+### Fixes
+
+- Fix typo in error message of `tiup-bench` ([#1824](https://github.com/pingcap/tiup/pull/1824), [@Mini256](https://github.com/Mini256))
+- Fix duplicated component path printed in `tiup` ([#1832](https://github.com/pingcap/tiup/pull/1832), [@nexustar](https://github.com/nexustar))
+- Fix outdated URL in topology example for `tiup-cluster` ([#1840](https://github.com/pingcap/tiup/pull/1840), [@srstack](https://github.com/srstack))
+- Fix DM startup scripts to bind `0.0.0.0` instead of host IP ([#1845](https://github.com/pingcap/tiup/pull/1845), [@nexustar](https://github.com/nexustar))
+- Fix incorrect blackbox_exporter, node_exporter and Grafana status monitor for TLS enabled clusters ([#1853](https://github.com/pingcap/tiup/pull/1853), [@srstack](https://github.com/srstack))
+- Fix priority of tag argument for `tiup-playground` ([#1869](https://github.com/pingcap/tiup/pull/1869), [@nexustar](https://github.com/nexustar))
+- Fix `TIUP_HOME` not loaded correctly on initializing metadata for some components ([#1885](https://github.com/pingcap/tiup/pull/1885), [@srstack](https://github.com/srstack))
+- Fix concurrent error in `display` command of `tiup-cluster` ([#1895](https://github.com/pingcap/tiup/pull/1895), [@srstack](https://github.com/srstack))
+- Fix incorrect workload loading in `tiup-bench` ([#1827](https://github.com/pingcap/tiup/pull/1827), [@Smityz](https://github.com/Smityz))
+- Fix OS type detection for hybrid platform deployment in `tiup-cluster` ([#1753](https://github.com/pingcap/tiup/pull/1753), [@srstack](https://github.com/srstack))
+
+### Improvements
+
+- Add notes about default workload values in help message of `tiup-bench` ([#1807](https://github.com/pingcap/tiup/pull/1807), [@Smityz](https://github.com/Smityz))
+- Refactor `-h/--help` handling to avoid conflicts with component arguments ([#1831](https://github.com/pingcap/tiup/pull/1831), [@nexustar](https://github.com/nexustar))
+- Refactor version specific handlings of TiDB cluster to a dedicated Go package ([#1873](https://github.com/pingcap/tiup/pull/1873), [@nexustar](https://github.com/nexustar))
+- Improve integrate tests for `tiup-cluster` ([#1882](https://github.com/pingcap/tiup/pull/1882), [@nexustar](https://github.com/nexustar))
+- Adjust help information of `edit-cluster` command for `tiup-cluster` and `tiup-dm` ([#1900](https://github.com/pingcap/tiup/pull/1900), [@nexustar](https://github.com/nexustar))
+- Update configuration example of monitoring components ([#1818](https://github.com/pingcap/tiup/pull/1818), [@glkappe](https://github.com/glkappe); [#1843](https://github.com/pingcap/tiup/pull/1843), [@nexustar](https://github.com/nexustar))
+- Improve cluster shutting down process in `playground` ([#1893](https://github.com/pingcap/tiup/pull/1893), [@nexustar](https://github.com/nexustar))
+
 ## [1.9.6] 2022-05-20
 
 ### Fix
@@ -39,7 +77,7 @@ TiUP Changelog
 ### Improvements
 
 - Support cleanup audit log files for `tiup-cluster` and `tiup-dm` ([#1780](https://github.com/pingcap/tiup/pull/1780), [@srstack](https://github.com/srstack))
-- Add anonymous login example to Grafana configuration templates ([#1785](https://github.com/pingcap/tiup/pull/1785)[@sunzhaoyang](https://github.com/sunzhaoyang))
+- Add anonymous login example to Grafana configuration templates ([#1785](https://github.com/pingcap/tiup/pull/1785), [@sunzhaoyang](https://github.com/sunzhaoyang))
 
 ## [1.9.2] 2022-03-10
 
