@@ -1,5 +1,11 @@
 TiUP Changelog
 
+## [1.10.1] 2022-06-09
+
+### Fix
+
+- Fix SSH login error when identity file is specified for non-root user in `tiup-cluster` ([#1914](https://github.com/pingcap/tiup/pull/1914), [@srstack](https://github.com/srstack))
+
 ## [1.10.0] 2022-06-08
 
 ### New Features
