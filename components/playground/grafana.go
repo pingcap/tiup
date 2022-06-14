@@ -145,7 +145,7 @@ func makeSureDir(fname string) error {
 	return os.MkdirAll(filepath.Dir(fname), 0755)
 }
 
-var clusterName string = "playground"
+var clusterName = "Test-Cluster"
 
 // dir should contains files untar the grafana.
 // return not error iff the Cmd is started successfully.
