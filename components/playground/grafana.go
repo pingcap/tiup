@@ -126,6 +126,7 @@ providers:
     folder: %s
     type: file
     disableDeletion: false
+    allowUiUpdates: true
     editable: true
     updateIntervalSeconds: 30
     options:
