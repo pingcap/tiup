@@ -168,11 +168,12 @@ func checkSystemInfo(
 	opt *CheckOptions,
 ) error {
 	var (
-		collectTasks  []*task.StepDisplay
-		checkSysTasks []*task.StepDisplay
-		cleanTasks    []*task.StepDisplay
-		applyFixTasks []*task.StepDisplay
-		downloadTasks []*task.StepDisplay
+		collectTasks       []*task.StepDisplay
+		checkTimeZoneTasks []*task.StepDisplay
+		checkSysTasks      []*task.StepDisplay
+		cleanTasks         []*task.StepDisplay
+		applyFixTasks      []*task.StepDisplay
+		downloadTasks      []*task.StepDisplay
 	)
 	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 	insightVer := spec.TiDBComponentVersion(spec.ComponentCheckCollector, "")
@@ -317,6 +318,20 @@ func checkSystemInfo(
 					BuildAsStep(fmt.Sprintf("  - Getting system info of %s:%d", inst.GetHost(), inst.GetSSHPort()))
 				collectTasks = append(collectTasks, t2)
 
+				t4 := task.NewBuilder(logger).
+					// check for time zone
+					CheckSys(
+						inst.GetHost(),
+						"",
+						task.CheckTypeTimeZone,
+						topo,
+						opt.Opr,
+					)
+				checkTimeZoneTasks = append(
+					checkTimeZoneTasks,
+					t4.BuildAsStep(fmt.Sprintf("  - Checking node %s", inst.GetHost())),
+				)
+
 				// build checking tasks
 				t1 = t1.
 					// check for general system info
@@ -331,14 +346,6 @@ func checkSystemInfo(
 						inst.GetHost(),
 						"",
 						task.CheckTypePartitions,
-						topo,
-						opt.Opr,
-					).
-					// check for time zone
-					CheckSys(
-						inst.GetHost(),
-						"",
-						task.CheckTypeTimeZone,
 						topo,
 						opt.Opr,
 					).
@@ -440,6 +447,7 @@ func checkSystemInfo(
 	t := task.NewBuilder(logger).
 		ParallelStep("+ Download necessary tools", false, downloadTasks...).
 		ParallelStep("+ Collect basic system information", false, collectTasks...).
+		ParallelStep("+ Check time zone", false, checkTimeZoneTasks...).
 		ParallelStep("+ Check system requirements", false, checkSysTasks...).
 		ParallelStep("+ Cleanup check files", false, cleanTasks...).
 		Build()
