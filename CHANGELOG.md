@@ -2,7 +2,7 @@ TiUP Changelog
 
 ## [1.10.2] 2022-06-16
 
-### Fix
+### Fixes
 
 - Fix cannot get drainer status from pd in `tiup-cluster` ([#1922](https://github.com/pingcap/tiup/pull/1922), [@srstack](https://github.com/srstack))
 - Fix error when check time zone in `tiup-cluster` ([#1925](https://github.com/pingcap/tiup/pull/1925), [@nexustar](https://github.com/nexustar))
