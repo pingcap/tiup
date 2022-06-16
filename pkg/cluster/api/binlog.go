@@ -100,7 +100,7 @@ func (c *BinlogClient) IsDrainerTombstone(ctx context.Context, addr string) (boo
 	if err != nil {
 		return false, err
 	}
-	return c.isTombstone(ctx, "drainer", nodeID)
+	return c.isTombstone(ctx, "drainers", nodeID)
 }
 
 func (c *BinlogClient) isTombstone(ctx context.Context, ty string, nodeID string) (bool, error) {
