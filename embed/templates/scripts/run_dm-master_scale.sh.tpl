@@ -24,7 +24,7 @@ exec bin/dm-master/dm-master \
     --name="{{.Name}}" \
     --master-addr="0.0.0.0:{{.Port}}" \
     --advertise-addr="{{.IP}}:{{.Port}}" \
-    --peer-urls="{{.Scheme}}://{{.IP}}:{{.PeerPort}}" \
+    --peer-urls="{{.Scheme}}://0.0.0.0:{{.PeerPort}}" \
     --advertise-peer-urls="{{.Scheme}}://{{.IP}}:{{.PeerPort}}" \
     --log-file="{{.LogDir}}/dm-master.log" \
     --data-dir="{{.DataDir}}" \
