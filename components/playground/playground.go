@@ -638,7 +638,7 @@ func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins i
 
 	switch componentID {
 	case spec.ComponentPD:
-		inst := instance.NewPDInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id)
+		inst := instance.NewPDInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port)
 		ins = inst
 		if p.booted {
 			inst.Join(p.pds)
