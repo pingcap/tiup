@@ -33,7 +33,10 @@ type PDInstance struct {
 }
 
 // NewPDInstance return a PDInstance
-func NewPDInstance(binPath, dir, host, configPath string, id int) *PDInstance {
+func NewPDInstance(binPath, dir, host, configPath string, id, port int) *PDInstance {
+	if port <= 0 {
+		port = 2379
+	}
 	return &PDInstance{
 		instance: instance{
 			BinPath:    binPath,
@@ -41,7 +44,7 @@ func NewPDInstance(binPath, dir, host, configPath string, id int) *PDInstance {
 			Dir:        dir,
 			Host:       host,
 			Port:       utils.MustGetFreePort(host, 2380),
-			StatusPort: utils.MustGetFreePort(host, 2379),
+			StatusPort: utils.MustGetFreePort(host, port),
 			ConfigPath: configPath,
 		},
 	}
