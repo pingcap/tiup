@@ -987,26 +987,40 @@ func (p *Playground) terminate(sig syscall.Signal) {
 		go kill("grafana", p.grafana.cmd.Process.Pid, p.grafana.wait)
 	}
 	for _, inst := range p.tiflashs {
-		kill(inst.Component(), inst.Pid(), inst.Wait)
+		if inst.Process != nil {
+			kill(inst.Component(), inst.Pid(), inst.Wait)
+		}
 	}
 	for _, inst := range p.ticdcs {
-		kill(inst.Component(), inst.Pid(), inst.Wait)
+		if inst.Process != nil {
+			kill(inst.Component(), inst.Pid(), inst.Wait)
+		}
 	}
 	for _, inst := range p.drainers {
-		kill(inst.Component(), inst.Pid(), inst.Wait)
+		if inst.Process != nil {
+			kill(inst.Component(), inst.Pid(), inst.Wait)
+		}
 	}
 	// tidb must exit earlier then pd
 	for _, inst := range p.tidbs {
-		kill(inst.Component(), inst.Pid(), inst.Wait)
+		if inst.Process != nil {
+			kill(inst.Component(), inst.Pid(), inst.Wait)
+		}
 	}
 	for _, inst := range p.pumps {
-		kill(inst.Component(), inst.Pid(), inst.Wait)
+		if inst.Process != nil {
+			kill(inst.Component(), inst.Pid(), inst.Wait)
+		}
 	}
 	for _, inst := range p.tikvs {
-		kill(inst.Component(), inst.Pid(), inst.Wait)
+		if inst.Process != nil {
+			kill(inst.Component(), inst.Pid(), inst.Wait)
+		}
 	}
 	for _, inst := range p.pds {
-		kill(inst.Component(), inst.Pid(), inst.Wait)
+		if inst.Process != nil {
+			kill(inst.Component(), inst.Pid(), inst.Wait)
+		}
 	}
 }
 
