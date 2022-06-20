@@ -101,6 +101,7 @@ const (
 	dbHost      = "db.host"
 	dbPort      = "db.port"
 	pdHost      = "pd.host"
+	pdPort      = "pd.port"
 
 	// config paths
 	dbConfig      = "db.config"
@@ -328,6 +329,7 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 	rootCmd.Flags().String(dbHost, defaultOptions.TiDB.Host, "Playground TiDB host. If not provided, TiDB will still use `host` flag as its host")
 	rootCmd.Flags().Int(dbPort, defaultOptions.TiDB.Port, "Playground TiDB port. If not provided, TiDB will use 4000 as its port")
 	rootCmd.Flags().String(pdHost, defaultOptions.PD.Host, "Playground PD host. If not provided, PD will still use `host` flag as its host")
+	rootCmd.Flags().Int(pdPort, defaultOptions.PD.Port, "Playground PD port. If not provided, PD will use 2379 as its port")
 
 	rootCmd.Flags().String(dbConfig, defaultOptions.TiDB.ConfigPath, "TiDB instance configuration file")
 	rootCmd.Flags().String(kvConfig, defaultOptions.TiKV.ConfigPath, "TiKV instance configuration file")
@@ -479,6 +481,11 @@ func populateOpt(flagSet *pflag.FlagSet) (err error) {
 			}
 		case pdHost:
 			options.PD.Host = flag.Value.String()
+		case pdPort:
+			options.PD.Port, err = strconv.Atoi(flag.Value.String())
+			if err != nil {
+				return
+			}
 		}
 	})
 
