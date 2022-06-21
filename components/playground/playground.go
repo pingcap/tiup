@@ -525,6 +525,11 @@ func (p *Playground) commandHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Mapping command line component id to internal spec component id.
+	if cmd.ComponentID == ticdc {
+		cmd.ComponentID = spec.ComponentCDC
+	}
+
 	err = p.handleCommand(cmd, w)
 	if err != nil {
 		w.WriteHeader(403)
