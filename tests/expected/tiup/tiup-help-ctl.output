@@ -1,7 +1,0 @@
-TiDB controllers
-
-Usage:
-  tiup ctl {tidb/pd/tikv/binlog/etcd} [flags]
-
-Flags:
-  -h, --help   help for tiup

@@ -1,8 +1,0 @@
-TiDB document summary page
-
-Usage:
-  tiup doc [flags]
-
-Flags:
-  -h, --help          help for tiup
-      --lang string   The language of the documentation: en/cn (default "en")
