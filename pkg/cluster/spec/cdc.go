@@ -225,8 +225,3 @@ func (i *CDCInstance) IsOwner(ctx context.Context, topo Topology, apiTimeoutSeco
 
 	return owner.Name == i.Name, nil
 }
-
-func (i *CDCInstance) isOwner(client *api.CDCOpenAPIClient) (bool, error) {
-	//pdClient := api.NewPDClient(ctx, tidbTopo.GetPDList(), time.Second*5, tlsCfg)
-	return false, nil
-}

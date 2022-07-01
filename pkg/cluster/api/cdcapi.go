@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/pingcap/tiup/pkg/utils"
+	"github.com/pingcap/tiflow/cdc/model"
 )
 
 type CDCOpenAPIClient struct {
@@ -45,8 +46,7 @@ func NewCDCOpenAPIClient(addrs []string, timeout time.Duration, tlsConfig *tls.C
 func (c *CDCOpenAPIClient) DrainCapture(target string) error {
 	api := "api/v1/captures/drain"
 
-	request := &struct {
-	}{}
+	request := model.DrainCaptureRequest{}
 
 	body, err := json.Marshal(request)
 	if err != nil {
