@@ -16,6 +16,7 @@ package utils
 import (
 	"fmt"
 	"net"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -36,14 +37,15 @@ func GetFreePort(host string, priority int) (int, error) {
 
 // MustGetFreePort asks the kernel for a free open port that is ready to use, if fail, panic
 func MustGetFreePort(host string, priority int) int {
-	if port, err := GetFreePort(host, priority); err == nil {
-		return port
+	port, err := GetFreePort(host, priority)
+	if err != nil {
+		panic(fmt.Sprintf("can't get a free port: %v", err))
 	}
-	panic("can't get a free port")
+	return port
 }
 
 func getPort(host string, port int) (int, error) {
-	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", host, port))
+	addr, err := net.ResolveTCPAddr("tcp", net.JoinHostPort(host, strconv.Itoa(port)))
 	if err != nil {
 		return 0, err
 	}
