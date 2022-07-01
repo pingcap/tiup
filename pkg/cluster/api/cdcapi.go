@@ -43,6 +43,8 @@ func NewCDCOpenAPIClient(addrs []string, timeout time.Duration, tlsConfig *tls.C
 func (c *CDCOpenAPIClient) DrainCapture() error {
 	api := "api/v1/captures/drain"
 
+	c.client.Post()
+
 	return nil
 }
 
