@@ -118,8 +118,17 @@ func Upgrade(
 				}
 				if isLeader {
 					deferInstances = append(deferInstances, instance)
-					logger.Debugf("Defferred upgrading of PD leader %s", instance.ID())
+					logger.Debugf("Deferred upgrading of PD leader %s", instance.ID())
 					continue
+				}
+			case spec.ComponentCDC:
+				isOwner, err := instance.(*spec.CDCInstance).IsOwner(ctx, topo, int(options.APITimeout), tlsCfg)
+				if err != nil {
+					return err
+				}
+				if isOwner {
+					deferInstances = append(deferInstances, instance)
+					logger.Debugf("Deferred upgrading of TiCDC owner %s", instance.ID())
 				}
 			default:
 				// do nothing, kept for future usage with other components

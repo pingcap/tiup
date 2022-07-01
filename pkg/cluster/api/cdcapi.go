@@ -14,7 +14,9 @@
 package api
 
 import (
+	"context"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -40,10 +42,27 @@ func NewCDCOpenAPIClient(addrs []string, timeout time.Duration, tlsConfig *tls.C
 	}
 }
 
-func (c *CDCOpenAPIClient) DrainCapture() error {
+func (c *CDCOpenAPIClient) DrainCapture(target string) error {
 	api := "api/v1/captures/drain"
 
-	c.client.Post()
+	request := &struct {
+	}{}
+
+	body, err := json.Marshal(request)
+	if err != nil {
+		return err
+	}
+
+	bytes, err := c.client.PUT(context.Background(), api, body)
+	if err != nil {
+		return err
+	}
+
+	var resp struct{}
+	err = json.Unmarshal(bytes, resp)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -69,6 +88,10 @@ func (c *CDCOpenAPIClient) getEndpoints(cmd string) (endpoints []string) {
 	}
 
 	return endpoints
+}
+
+func (c *CDCOpenAPIClient) GetOwner() (interface{}, error) {
+	return nil, nil
 }
 
 //var (

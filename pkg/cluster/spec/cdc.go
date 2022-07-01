@@ -21,6 +21,7 @@ import (
 	"time"
 
 	perrs "github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
@@ -206,4 +207,26 @@ func (i *CDCInstance) InitConfig(
 // setTLSConfig set TLS Config to support enable/disable TLS
 func (i *CDCInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
 	return nil, nil
+}
+
+// IsOwner return true if the instance is the TiCDC owner
+// todo: reset this apiTimeout to a much more reasonable value
+func (i *CDCInstance) IsOwner(ctx context.Context, topo Topology, apiTimeoutSeconds int, cfg *tls.Config) (bool, error) {
+	tidbTopo, ok := topo.(*Specification)
+	if !ok {
+		panic("topo should be type of tidb topology")
+	}
+	client := api.NewCDCOpenAPIClient(tidbTopo.GetCDCList(), 5*time.Second, cfg)
+
+	owner, err := client.GetOwner()
+	if err != nil {
+		return false, perrs.Annotatef(err, "failed to get CDC owner %s", i.GetHost())
+	}
+
+	return owner.Name == i.Name, nil
+}
+
+func (i *CDCInstance) isOwner(client *api.CDCOpenAPIClient) (bool, error) {
+	//pdClient := api.NewPDClient(ctx, tidbTopo.GetPDList(), time.Second*5, tlsCfg)
+	return false, nil
 }

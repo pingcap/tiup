@@ -409,6 +409,15 @@ func (s *Specification) GetPDList() []string {
 	return pdList
 }
 
+// GetCDCList returns a list of CDC API hosts of the current cluster
+func (s *Specification) GetCDCList() []string {
+	var result []string
+	for _, server := range s.CDCServers {
+		result = append(result, fmt.Sprintf("%s:%d", server.Host, server.Port))
+	}
+	return result
+}
+
 // AdjustByVersion modify the spec by cluster version.
 func (s *Specification) AdjustByVersion(clusterVersion string) {
 	// CDC does not support data dir for version below v4.0.13, and also v5.0.0-rc, set it to empty.

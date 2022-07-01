@@ -34,8 +34,9 @@ func newUpgradeCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clusterReport.ID = scrubClusterName(clusterName)
-			teleCommand = append(teleCommand, scrubClusterName(clusterName))
+			scrubbedClusterName := scrubClusterName(clusterName)
+			clusterReport.ID = scrubbedClusterName
+			teleCommand = append(teleCommand, scrubbedClusterName)
 			teleCommand = append(teleCommand, version)
 
 			return cm.Upgrade(clusterName, version, gOpt, skipConfirm, offlineMode)
@@ -50,6 +51,7 @@ func newUpgradeCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().BoolVar(&gOpt.Force, "force", false, "Force upgrade without transferring PD leader")
+	// todo (Ling Jin):  TiCDC may also use this timeout for drain the capture.
 	cmd.Flags().Uint64Var(&gOpt.APITimeout, "transfer-timeout", 600, "Timeout in seconds when transferring PD and TiKV store leaders")
 	cmd.Flags().BoolVarP(&gOpt.IgnoreConfigCheck, "ignore-config-check", "", false, "Ignore the config check result")
 	cmd.Flags().BoolVarP(&offlineMode, "offline", "", false, "Upgrade a stopped cluster")
