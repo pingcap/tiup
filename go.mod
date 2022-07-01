@@ -24,24 +24,21 @@ require (
 	github.com/gofrs/flock v0.8.1
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/protobuf v1.5.2
-	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
 	github.com/jeremywohl/flatten v1.0.1
 	github.com/joomcode/errorx v1.1.0
 	github.com/juju/ansiterm v0.0.0-20210929141451-8b71cc96ebdc
-	github.com/kr/text v0.2.0 // indirect
-	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-runewidth v0.0.13
 	github.com/otiai10/copy v1.7.0
 	github.com/pingcap/check v0.0.0-20211026125417-57bd13f7b5f0
-	github.com/pingcap/errors v0.11.5-0.20201126102027-b0a155152ca3
+	github.com/pingcap/errors v0.11.5-0.20211224045212-9687c2b0f87c
 	github.com/pingcap/failpoint v0.0.0-20220423142525-ae43b7f4e5c3
 	github.com/pingcap/fn v1.0.0
 	github.com/pingcap/kvproto v0.0.0-20220525022339-6aaebf466305
-	github.com/pingcap/log v1.1.0 // indirect
 	github.com/pingcap/tidb-insight/collector v0.0.0-20220111101533-227008e9835b
+	github.com/pingcap/tiflow v0.0.0-20220701111639-6d1341c93c68
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_model v0.2.0
 	github.com/prometheus/common v0.34.0
@@ -54,16 +51,12 @@ require (
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/testify v1.7.1
-	github.com/syndtr/goleveldb v1.0.1-0.20190318030020-c3a204f8e965 // indirect
+	github.com/stretchr/testify v1.7.2-0.20220504104629-106ec21d14df
 	github.com/tj/go-termd v0.0.1
-	github.com/tklauser/go-sysconf v0.3.10 // indirect
 	github.com/tklauser/numcpus v0.5.0 // indirect
-	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	go.etcd.io/etcd/client/pkg/v3 v3.5.4
 	go.etcd.io/etcd/client/v3 v3.5.4
 	go.uber.org/atomic v1.9.0
-	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.21.0
 	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4
@@ -73,7 +66,6 @@ require (
 	golang.org/x/term v0.0.0-20220526004731-065cf7ba2467
 	golang.org/x/text v0.3.7
 	golang.org/x/tools v0.1.11 // indirect
-	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20220525015930-6ca3db687a9d
 	google.golang.org/grpc v1.46.2
 	gopkg.in/ini.v1 v1.66.4

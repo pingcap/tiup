@@ -14,14 +14,16 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"time"
 
-	"github.com/pingcap/tiup/pkg/utils"
+	"github.com/pingcap/errors"
 	"github.com/pingcap/tiflow/cdc/model"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 type CDCOpenAPIClient struct {
@@ -46,20 +48,21 @@ func NewCDCOpenAPIClient(addrs []string, timeout time.Duration, tlsConfig *tls.C
 func (c *CDCOpenAPIClient) DrainCapture(target string) error {
 	api := "api/v1/captures/drain"
 
-	request := model.DrainCaptureRequest{}
-
+	request := model.DrainCaptureRequest{
+		CaptureID: target,
+	}
 	body, err := json.Marshal(request)
 	if err != nil {
 		return err
 	}
 
-	bytes, err := c.client.PUT(context.Background(), api, body)
+	result, err := c.client.PUT(context.Background(), api, bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
 
-	var resp struct{}
-	err = json.Unmarshal(bytes, resp)
+	var resp model.DrainCaptureResp
+	err = json.Unmarshal(result, &resp)
 	if err != nil {
 		return err
 	}
@@ -67,12 +70,19 @@ func (c *CDCOpenAPIClient) DrainCapture(target string) error {
 	return nil
 }
 
+// ResignOwner resign the cdc owner, to make owner switch
 func (c *CDCOpenAPIClient) ResignOwner() error {
 	api := "api/v1/owner/resign"
+
+	_, err := c.client.Post(context.Background(), api, nil)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
-// GetURL builds the the client URL of DMClient
+// GetURL builds the client URL of DMClient
 func (c *CDCOpenAPIClient) GetURL(addr string) string {
 	httpPrefix := "http"
 	if c.tlsEnabled {
@@ -90,8 +100,27 @@ func (c *CDCOpenAPIClient) getEndpoints(cmd string) (endpoints []string) {
 	return endpoints
 }
 
-func (c *CDCOpenAPIClient) GetOwner() (interface{}, error) {
-	return nil, nil
+func (c *CDCOpenAPIClient) GetOwner() (*model.Capture, error) {
+	api := "/api/v1/captures"
+
+	data, err := c.client.Get(context.Background(), api)
+	if err != nil {
+		return nil, err
+	}
+
+	var response []*model.Capture
+	err = json.Unmarshal(data, response)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, capture := range response {
+		if capture.IsOwner {
+			return capture, nil
+		}
+	}
+
+	return nil, errors.New("owner not found, this should not happen")
 }
 
 //var (

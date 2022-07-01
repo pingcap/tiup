@@ -223,5 +223,5 @@ func (i *CDCInstance) IsOwner(ctx context.Context, topo Topology, apiTimeoutSeco
 		return false, perrs.Annotatef(err, "failed to get CDC owner %s", i.GetHost())
 	}
 
-	return owner.Name == i.Name, nil
+	return owner.AdvertiseAddr == i.Host, nil
 }
