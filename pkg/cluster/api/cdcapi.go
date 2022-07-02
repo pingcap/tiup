@@ -45,29 +45,32 @@ func NewCDCOpenAPIClient(addrs []string, timeout time.Duration, tlsConfig *tls.C
 	}
 }
 
-func (c *CDCOpenAPIClient) DrainCapture(target string) error {
+// DrainCapture request cdc owner move all tables on the target capture to other captures.
+func (c *CDCOpenAPIClient) DrainCapture(target string) (int, error) {
 	api := "api/v1/captures/drain"
+
+	// todo: also handle each kind of errors returned from the cdc
 
 	request := model.DrainCaptureRequest{
 		CaptureID: target,
 	}
 	body, err := json.Marshal(request)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	result, err := c.client.PUT(context.Background(), api, bytes.NewReader(body))
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	var resp model.DrainCaptureResp
 	err = json.Unmarshal(result, &resp)
 	if err != nil {
-		return err
+		return resp.CurrentTableCount, err
 	}
 
-	return nil
+	return resp.CurrentTableCount, nil
 }
 
 // ResignOwner resign the cdc owner, to make owner switch

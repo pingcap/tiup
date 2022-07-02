@@ -563,6 +563,10 @@ func stopInstance(ctx context.Context, ins spec.Instance, timeout uint64) error 
 	return nil
 }
 
+func scaleInCDC() error {
+	return nil
+}
+
 // StopComponent stop the instances.
 func StopComponent(ctx context.Context,
 	topo spec.Topology,
@@ -590,6 +594,24 @@ func StopComponent(ctx context.Context,
 			if noAgentHosts.Exist(ins.GetHost()) {
 				logger.Debugf("Ignored stopping %s for %s:%d", name, ins.GetHost(), ins.GetPort())
 				continue
+			}
+		case spec.ComponentCDC:
+			// when scale-in cdc node, each nodes should be stopped one by one.
+			// todo: also take cdc instance count and scaled-in targets count into consideration.
+			// if all nodes scaled-in, just stop the instance, no need to do foreplay
+			// if the owner is going to be drained, close it at the last, and switch the owner to other captures.
+			nctx := checkpoint.NewContext(ctx)
+			cdc, ok := ins.(spec.RollingUpdateInstance)
+			if ok {
+				err := cdc.PreRestart(nctx, topo, int(timeout), tlsCfg)
+				if err != nil {
+					return err
+				}
+
+				if err := stopInstance(nctx, ins, timeout); err != nil {
+					return err
+				}
+				return nil
 			}
 		}
 

@@ -26,6 +26,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/tidbver"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // CDCSpec represents the Drainer topology specification in topology.yaml
@@ -207,6 +208,55 @@ func (i *CDCInstance) InitConfig(
 // setTLSConfig set TLS Config to support enable/disable TLS
 func (i *CDCInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
 	return nil, nil
+}
+
+var _ RollingUpdateInstance = &CDCInstance{}
+
+// PreRestart implements RollingUpdateInstance interface.
+func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config) error {
+	tidbTopo, ok := topo.(*Specification)
+	if !ok {
+		panic("should be type of tidb topology")
+	}
+
+	// cdc rolling upgrade strategy only works if there are more than 2 captures
+	// todo: shall we detect server count by request the cdc cluster instead of the specification.
+	if len(tidbTopo.CDCServers) <= 1 {
+		return nil
+	}
+
+	timeoutOpt := &utils.RetryOption{
+		Timeout: time.Second * time.Duration(apiTimeoutSeconds),
+		Delay:   time.Second * 2,
+	}
+
+	client := api.NewCDCOpenAPIClient(tidbTopo.GetCDCList(), 5*time.Second, tlsCfg)
+
+	var captureID string
+	count, err := client.DrainCapture(captureID)
+	if err != nil {
+		return err
+	}
+
+	// retry here, until count become 0
+	for count != 0 {
+		// send request to the cdc in a proper way.
+	}
+
+	if count != 0 {
+
+	}
+
+	return nil
+}
+
+//func (i *CDCInstance) drainCapture() error {
+//	return nil
+//}
+
+// PostRestart implements RollingUpdateInstance interface.
+func (i *CDCInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tls.Config) error {
+	return nil
 }
 
 // IsOwner return true if the instance is the TiCDC owner
