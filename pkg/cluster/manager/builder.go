@@ -156,15 +156,8 @@ func buildScaleOutTask(
 		envInitTasks = append(envInitTasks, t)
 	})
 
-	// Get versions info from TiSparkMasters
+	// Get versions info from mergedTopo
 	var sparkVersion, tiSparkVersion, scalaVersion string
-	//mergedTopo.IterInstance(func(inst spec.Instance) {
-	//	if i, ok := inst.(*spec.TiSparkMasterInstance); ok {
-	//		sparkVersion, tiSparkVersion, scalaVersion = i.GetOrUpdateVersion()
-	//		m.logger.Infof("builder: spark version: `%s` ,tispark version : `%s`, scala version : `%s`", sparkVersion, tiSparkVersion, scalaVersion)
-	//	}
-	//})
-
 	if topo, ok := mergedTopo.(*spec.Specification); ok {
 		if len(topo.TiSparkMasters) > 0 {
 			sparkVersion, tiSparkVersion, scalaVersion = topo.TiSparkMasters[0].GetVersion()
