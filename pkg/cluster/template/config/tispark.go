@@ -15,6 +15,7 @@ package config
 
 import (
 	"bytes"
+	"github.com/pingcap/tiup/pkg/utils"
 	"os"
 	"path/filepath"
 	"text/template"
@@ -27,6 +28,7 @@ type TiSparkConfig struct {
 	TiSparkMasters string
 	CustomFields   map[string]interface{}
 	Endpoints      []string
+	tiSparkVersion string
 }
 
 // NewTiSparkConfig returns a TiSparkConfig
@@ -46,9 +48,22 @@ func (c *TiSparkConfig) WithCustomFields(m map[string]interface{}) *TiSparkConfi
 	return c
 }
 
+// WithTiSparkVersion sets TiSpark version
+func (c *TiSparkConfig) WithTiSparkVersion(version string) *TiSparkConfig {
+	c.tiSparkVersion = version
+	return c
+}
+
 // Config generate the config file data.
 func (c *TiSparkConfig) Config() ([]byte, error) {
-	fp := filepath.Join("templates", "config", "spark-defaults.conf.tpl")
+	// After TiSpark 2.5.0(include), we need to contain catalog configs
+	const tiSparkVersionForCatalog = utils.Version("v2.5.0")
+	var fp string
+	if c.tiSparkVersion != "" && utils.Version(c.tiSparkVersion) < tiSparkVersionForCatalog {
+		fp = filepath.Join("templates", "config", "spark-defaults.conf.tpl")
+	} else {
+		fp = filepath.Join("templates", "config", "spark3-defaults.conf.tpl")
+	}
 	tpl, err := embed.ReadTemplate(fp)
 	if err != nil {
 		return nil, err

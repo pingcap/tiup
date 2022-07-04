@@ -17,6 +17,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"github.com/pingcap/tiup/pkg/environment"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -48,6 +49,9 @@ type TiSparkMasterSpec struct {
 	JavaHome       string                 `yaml:"java_home,omitempty" validate:"java_home:editable"`
 	SparkConfigs   map[string]interface{} `yaml:"spark_config,omitempty" validate:"spark_config:ignore"`
 	SparkEnvs      map[string]string      `yaml:"spark_env,omitempty" validate:"spark_env:ignore"`
+	SparkVersion   string                 `yaml:"spark_version,omitempty" validate:"spark_version:ignore"`
+	TiSparkVersion string                 `yaml:"tispark_version,omitempty" validate:"tispark_version:ignore"`
+	ScalaVersion   string                 `yaml:"scala_version,omitempty" default:"v2.12"`
 	Arch           string                 `yaml:"arch,omitempty"`
 	OS             string                 `yaml:"os,omitempty"`
 }
@@ -77,6 +81,33 @@ func (s *TiSparkMasterSpec) IgnoreMonitorAgent() bool {
 	return s.IgnoreExporter
 }
 
+// GetVersion get versions
+func (s *TiSparkMasterSpec) GetVersion() (string, string, string) {
+	env := environment.GlobalEnv()
+
+	var sparkVersion = s.SparkVersion
+	var tiSparkVersion = s.TiSparkVersion
+	var scalaVersion = s.ScalaVersion
+
+	// Get user-defined Spark version or default latest version
+	if sparkVersion == "" {
+		if sparkVer, _, iterErr := env.V1Repository().LatestStableVersion(ComponentSpark, false); iterErr != nil {
+			panic("get latest sparkVersion fail")
+		} else {
+			sparkVersion = sparkVer.String()
+		}
+	}
+	// Get user-defined TiSpark version or default latest version
+	if tiSparkVersion == "" {
+		if tiSparkVer, _, iterErr := env.V1Repository().LatestStableVersion(ComponentTiSpark, false); iterErr != nil {
+			panic("get latest tiSparkVersion fail")
+		} else {
+			tiSparkVersion = tiSparkVer.String()
+		}
+	}
+	return sparkVersion, tiSparkVersion, scalaVersion
+}
+
 // TiSparkWorkerSpec is the topology specification for TiSpark slave nodes
 type TiSparkWorkerSpec struct {
 	Host           string `yaml:"host"`
@@ -91,6 +122,9 @@ type TiSparkWorkerSpec struct {
 	JavaHome       string `yaml:"java_home,omitempty" validate:"java_home:editable"`
 	Arch           string `yaml:"arch,omitempty"`
 	OS             string `yaml:"os,omitempty"`
+	SparkVersion   string `yaml:"spark_version,omitempty" validate:"spark_version:editable"`
+	TiSparkVersion string `yaml:"tispark_version,omitempty" validate:"tispark_version:editable"`
+	ScalaVersion   string `yaml:"scala_version,omitempty" validate:"scala_version:editable"`
 }
 
 // Role returns the component role of the instance
@@ -116,6 +150,11 @@ func (s *TiSparkWorkerSpec) IsImported() bool {
 // IgnoreMonitorAgent returns if the node does not have monitor agents available
 func (s *TiSparkWorkerSpec) IgnoreMonitorAgent() bool {
 	return s.IgnoreExporter
+}
+
+// GetVersion get versions
+func (s *TiSparkWorkerSpec) GetVersion() (string, string, string) {
+	return s.SparkVersion, s.TiSparkVersion, s.ScalaVersion
 }
 
 // TiSparkMasterComponent represents TiSpark master component.
@@ -243,7 +282,7 @@ func (i *TiSparkMasterInstance) InitConfig(
 	}
 
 	cfg := config.NewTiSparkConfig(pdList).WithMasters(strings.Join(masterList, ",")).
-		WithCustomFields(i.GetCustomFields())
+		WithCustomFields(i.GetCustomFields()).WithTiSparkVersion(topo.TiSparkMasters[0].SparkVersion)
 	// transfer spark-defaults.conf
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("spark-defaults-%s-%d.conf", host, port))
 	if err := cfg.ConfigToFile(fp); err != nil {
@@ -406,7 +445,7 @@ func (i *TiSparkWorkerInstance) InitConfig(
 	}
 
 	cfg := config.NewTiSparkConfig(pdList).WithMasters(strings.Join(masterList, ",")).
-		WithCustomFields(topo.TiSparkMasters[0].SparkConfigs)
+		WithCustomFields(topo.TiSparkMasters[0].SparkConfigs).WithTiSparkVersion(topo.TiSparkMasters[0].SparkVersion)
 
 	// doesn't work
 	if _, err := i.setTLSConfig(ctx, false, nil, paths); err != nil {

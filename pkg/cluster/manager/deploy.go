@@ -30,12 +30,8 @@ import (
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
-	"github.com/pingcap/tiup/pkg/environment"
-
-	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
-	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // DeployOptions contains the options for scale out.
@@ -275,15 +271,16 @@ func (m *Manager) Deploy(
 			// copy dependency component if needed
 			switch inst.ComponentName() {
 			case spec.ComponentTiSpark:
-				env := environment.GlobalEnv()
-				var sparkVer utils.Version
-				if sparkVer, _, iterErr = env.V1Repository().WithOptions(repository.Options{
-					GOOS:   inst.OS(),
-					GOARCH: inst.Arch(),
-				}).LatestStableVersion(spec.ComponentSpark, false); iterErr != nil {
-					return
+				// Get spark version and TiSpark version from master or worker
+				var sparkVersion, tiSparkVersion, scalaVersion string
+				if len(topo.(*spec.Specification).TiSparkMasters) > 0 {
+					sparkVersion, tiSparkVersion, scalaVersion = topo.(*spec.Specification).TiSparkMasters[0].GetVersion()
+				} else {
+					sparkVersion, tiSparkVersion, _ = topo.(*spec.Specification).TiSparkWorkers[0].GetVersion()
 				}
-				t = t.DeploySpark(inst, sparkVer.String(), "" /* default srcPath */, deployDir)
+				m.logger.Infof("deploy: spark version: `%s` ,tispark version : `%s`, scala version : `%s`", sparkVersion, tiSparkVersion, scalaVersion)
+
+				t = t.DeploySpark(inst, sparkVersion, "" /* default srcPath */, deployDir, tiSparkVersion, scalaVersion)
 			default:
 				t = t.CopyComponent(
 					inst.ComponentName(),

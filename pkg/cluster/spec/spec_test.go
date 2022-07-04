@@ -99,6 +99,8 @@ pd_servers:
 cdc_servers:
   - host: 172.16.5.233
     data_dir: "cdc-data"
+tispark_masters:
+  - host: 172.16.5.233
 `), &topo)
 	c.Assert(err, IsNil)
 	c.Assert(topo.GlobalOptions.User, Equals, "test1")
@@ -113,6 +115,9 @@ cdc_servers:
 	c.Assert(topo.CDCServers[0].SSHPort, Equals, 220)
 	c.Assert(topo.CDCServers[0].DeployDir, Equals, "test-deploy/cdc-8300")
 	c.Assert(topo.CDCServers[0].DataDir, Equals, "cdc-data")
+
+	c.Assert(topo.TiSparkMasters[0].SSHPort, Equals, 220)
+	c.Assert(topo.TiSparkMasters[0].DeployDir, Equals, "test-deploy/tispark-master-7077")
 }
 
 func (s *metaSuiteTopo) TestDataDirAbsolute(c *C) {
@@ -853,4 +858,27 @@ tidb_servers:
 `), &topo)
 	c.Assert(err, NotNil)
 	c.Assert(strings.Contains(err.Error(), "not found"), IsTrue)
+}
+
+func (s *metaSuiteTopo) TestTiSparkVersion(c *C) {
+	topo := Specification{}
+	err := yaml.Unmarshal([]byte(`
+global:
+  user: "test1"
+  ssh_port: 220
+  deploy_dir: "test-deploy"
+  data_dir: "test-data"
+tidb_servers:
+  - host: 172.16.5.138
+    deploy_dir: "tidb-deploy"
+tispark_masters:
+  - host: 172.16.5.233
+    spark_version: "v3.0.4"
+    tispark_version: "v3.0.0"
+`), &topo)
+	c.Assert(err, IsNil)
+
+	c.Assert(topo.TiSparkMasters[0].SparkVersion, Equals, "v3.0.4")
+	c.Assert(topo.TiSparkMasters[0].TiSparkVersion, Equals, "v3.0.0")
+	c.Assert(topo.TiSparkMasters[0].ScalaVersion, Equals, "v2.12")
 }

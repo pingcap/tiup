@@ -45,6 +45,7 @@ var (
 		`followed by lower case letters, digits, underscores, or dashes. ` +
 		`Usernames may only be up to 32 characters long. ` +
 		`Groupnames may only be up to 16 characters long.`)
+	ErrSingleTiSparkVersion = errors.New("tiSpark_version and spark_version need to be set together or not set together")
 )
 
 // Linux username and groupname must start with a lower case letter or an underscore,
@@ -910,6 +911,13 @@ func (s *Specification) validateTiSparkSpec() error {
 			}
 			cnt[w.Host]++
 		}
+	}
+
+	// Set both sparkVersion and tiSparkVersion or none of them should be set
+	sparkVersion := s.TiSparkMasters[0].SparkVersion
+	tiSparkVersion := s.TiSparkMasters[0].TiSparkVersion
+	if (sparkVersion == "" && tiSparkVersion != "") || (sparkVersion != "" && tiSparkVersion == "") {
+		return ErrSingleTiSparkVersion
 	}
 
 	return nil

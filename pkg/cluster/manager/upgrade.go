@@ -26,9 +26,7 @@ import (
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
-	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/meta"
-	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/mod/semver"
@@ -145,15 +143,7 @@ func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Optio
 				// copy dependency component if needed
 				switch inst.ComponentName() {
 				case spec.ComponentTiSpark:
-					env := environment.GlobalEnv()
-					sparkVer, _, err := env.V1Repository().WithOptions(repository.Options{
-						GOOS:   inst.OS(),
-						GOARCH: inst.Arch(),
-					}).LatestStableVersion(spec.ComponentSpark, false)
-					if err != nil {
-						return err
-					}
-					tb = tb.DeploySpark(inst, sparkVer.String(), "" /* default srcPath */, deployDir)
+					// Skip TiSpark when upgrade
 				default:
 					tb = tb.CopyComponent(
 						inst.ComponentName(),

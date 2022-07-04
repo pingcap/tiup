@@ -32,6 +32,8 @@ func (s *TestSemverSuite) TestVersion(c *C) {
 	c.Assert(Version("").IsNightly(), IsFalse)
 	c.Assert(Version("nightly").IsNightly(), IsTrue)
 	c.Assert(Version("v1.2.3").String(), Equals, "v1.2.3")
+	c.Assert(Version("v1.2.3").GetStringWithoutV(), Equals, "1.2.3")
+
 }
 
 func (s *TestSemverSuite) TestConstraint(c *C) {

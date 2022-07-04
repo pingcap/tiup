@@ -79,6 +79,12 @@ func (v Version) String() string {
 	return string(v)
 }
 
+// GetStringWithoutV returns version without v
+func (v Version) GetStringWithoutV() string {
+	version := string(v)
+	return version[1:]
+}
+
 type ver struct {
 	Major, Minor, Patch int
 	Prerelease          []string

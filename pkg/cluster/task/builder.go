@@ -429,8 +429,23 @@ func (b *Builder) CheckSys(host, dir, checkType string, topo *spec.Specification
 }
 
 // DeploySpark deployes spark as dependency of TiSpark
-func (b *Builder) DeploySpark(inst spec.Instance, sparkVersion, srcPath, deployDir string) *Builder {
+func (b *Builder) DeploySpark(inst spec.Instance, sparkVersion, srcPath, deployDir, tiSparkVersion, scalaVersion string) *Builder {
 	sparkSubPath := spec.ComponentSubDir(spec.ComponentSpark, sparkVersion)
+
+	tiSparkVer := utils.Version(tiSparkVersion)
+	scalaVer := utils.Version(scalaVersion)
+	const oldTiSparkMaxVer = utils.Version("v2.4.1")
+
+	// Get TiSpark jar name, for the same version of TiSpark may have multiple jars
+	// Old TiSpark jar's name is tispark-assembly-${tispark_version}
+	// New TiSpark jar's name is tispark-assembly-${spark_version}_${scala_version}-${tispark_version}
+	var tiSparkJarName string
+	if tiSparkVer <= oldTiSparkMaxVer {
+		tiSparkJarName = fmt.Sprintf("tispark-assembly-%s", tiSparkVer.GetStringWithoutV())
+	} else {
+		tiSparkJarName = fmt.Sprintf("tispark-assembly-%s_%s-%s", sparkVersion[1:len(sparkVersion)-2], scalaVer.GetStringWithoutV(), tiSparkVer.GetStringWithoutV())
+	}
+
 	return b.CopyComponent(
 		spec.ComponentSpark,
 		inst.OS(),
@@ -453,16 +468,17 @@ func (b *Builder) DeploySpark(inst spec.Instance, sparkVersion, srcPath, deployD
 		inst.ComponentName(),
 		inst.OS(),
 		inst.Arch(),
-		"", // use the latest stable version
+		tiSparkVersion,
 		srcPath,
 		inst.GetHost(),
 		deployDir,
 	).Shell( // move tispark jar to correct path
 		inst.GetHost(),
 		fmt.Sprintf(
-			"cp -f %[1]s/*.jar %[2]s/jars/ && rm -f %[1]s/*.jar",
+			"cp -f %[1]s/%[3]s.jar %[2]s/jars/ && rm -f %[1]s/*.jar",
 			filepath.Join(deployDir, "bin"),
 			deployDir,
+			tiSparkJarName,
 		),
 		"",
 		false, // (not) sudo

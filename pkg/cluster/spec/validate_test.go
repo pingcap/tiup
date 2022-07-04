@@ -432,6 +432,19 @@ tispark_workers:
 `), &topo)
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "the host 172.16.5.139 is duplicated: multiple TiSpark workers on the same host is not supported by Spark")
+
+	err = yaml.Unmarshal([]byte(`
+pd_servers:
+  - host: 172.16.5.138
+    peer_port: 1234
+tispark_masters:
+  - host: 172.16.5.138
+    spark_version: "v3.0.4"
+tispark_workers:
+  - host: 172.16.5.138
+`), &topo)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "tiSpark_version and spark_version need to be set together or not set together")
 }
 
 func (s *metaSuiteTopo) TestTLSEnabledValidation(c *C) {

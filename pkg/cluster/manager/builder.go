@@ -24,12 +24,10 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/crypto"
-	"github.com/pingcap/tiup/pkg/environment"
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
-	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // buildReloadPromTasks reloads Prometheus and Grafana configuration
@@ -158,6 +156,31 @@ func buildScaleOutTask(
 		envInitTasks = append(envInitTasks, t)
 	})
 
+	// Get versions info from TiSparkMasters
+	var sparkVersion, tiSparkVersion, scalaVersion string
+	//mergedTopo.IterInstance(func(inst spec.Instance) {
+	//	if i, ok := inst.(*spec.TiSparkMasterInstance); ok {
+	//		sparkVersion, tiSparkVersion, scalaVersion = i.GetOrUpdateVersion()
+	//		m.logger.Infof("builder: spark version: `%s` ,tispark version : `%s`, scala version : `%s`", sparkVersion, tiSparkVersion, scalaVersion)
+	//	}
+	//})
+
+	if topo, ok := mergedTopo.(*spec.Specification); ok {
+		if len(topo.TiSparkMasters) > 0 {
+			sparkVersion, tiSparkVersion, scalaVersion = topo.TiSparkMasters[0].GetVersion()
+			m.logger.Infof("builder: spark version: `%s` ,tispark version : `%s`, scala version : `%s`", sparkVersion, tiSparkVersion, scalaVersion)
+		}
+	}
+
+	if topo, ok := newPart.(*spec.Specification); ok {
+		for _, worker := range topo.TiSparkWorkers {
+			worker.SparkVersion = sparkVersion
+			worker.TiSparkVersion = tiSparkVersion
+			worker.ScalaVersion = scalaVersion
+		}
+
+	}
+
 	// Download missing component
 	downloadCompTasks = buildDownloadCompTasks(
 		base.Version,
@@ -169,7 +192,6 @@ func buildScaleOutTask(
 
 	sshType := topo.BaseTopo().GlobalOptions.SSHType
 
-	var iterErr error
 	// Deploy the new topology and refresh the configuration
 	newPart.IterInstance(func(inst spec.Instance) {
 		version := m.bindVersion(inst.ComponentName(), base.Version)
@@ -202,12 +224,7 @@ func buildScaleOutTask(
 			// copy dependency component if needed
 			switch inst.ComponentName() {
 			case spec.ComponentTiSpark:
-				env := environment.GlobalEnv()
-				var sparkVer utils.Version
-				if sparkVer, _, iterErr = env.V1Repository().LatestStableVersion(spec.ComponentSpark, false); iterErr != nil {
-					return
-				}
-				tb = tb.DeploySpark(inst, sparkVer.String(), srcPath, deployDir)
+				tb = tb.DeploySpark(inst, sparkVersion, srcPath, deployDir, tiSparkVersion, scalaVersion)
 			default:
 				tb.CopyComponent(
 					inst.ComponentName(),
@@ -223,10 +240,6 @@ func buildScaleOutTask(
 
 		deployCompTasks = append(deployCompTasks, tb.BuildAsStep(fmt.Sprintf("  - Deploy instance %s -> %s", inst.ComponentName(), inst.ID())))
 	})
-
-	if iterErr != nil {
-		return nil, iterErr
-	}
 
 	// Download and copy the latest component to remote if the cluster is imported from Ansible
 	mergedTopo.IterInstance(func(inst spec.Instance) {
@@ -695,8 +708,16 @@ func buildDownloadCompTasks(
 			// we don't set version for tispark, so the lastest tispark will be used
 			var version string
 			if inst.ComponentName() == spec.ComponentTiSpark {
+				// get sparkVersion and TiSparkVersion
+				var sparkVersion, tiSparkVersion string
+				if len(topo.(*spec.Specification).TiSparkMasters) > 0 {
+					sparkVersion, tiSparkVersion, _ = topo.(*spec.Specification).TiSparkMasters[0].GetVersion()
+				} else {
+					sparkVersion, tiSparkVersion, _ = topo.(*spec.Specification).TiSparkWorkers[0].GetVersion()
+				}
 				// download spark as dependency of tispark
-				tasks = append(tasks, buildDownloadSparkTask(inst, logger, gOpt))
+				tasks = append(tasks, buildDownloadSparkTask(inst, logger, gOpt, sparkVersion))
+				version = tiSparkVersion
 			} else {
 				version = bindVersion(inst.ComponentName(), clusterVersion)
 			}
@@ -713,11 +734,11 @@ func buildDownloadCompTasks(
 
 // buildDownloadSparkTask build download task for spark, which is a dependency of tispark
 // FIXME: this is a hack and should be replaced by dependency handling in manifest processing
-func buildDownloadSparkTask(inst spec.Instance, logger *logprinter.Logger, gOpt operator.Options) *task.StepDisplay {
+func buildDownloadSparkTask(inst spec.Instance, logger *logprinter.Logger, gOpt operator.Options, sparkVersion string) *task.StepDisplay {
 	return task.NewBuilder(logger).
-		Download(spec.ComponentSpark, inst.OS(), inst.Arch(), "").
-		BuildAsStep(fmt.Sprintf("  - Download %s: (%s/%s)",
-			spec.ComponentSpark, inst.OS(), inst.Arch()))
+		Download(spec.ComponentSpark, inst.OS(), inst.Arch(), sparkVersion).
+		BuildAsStep(fmt.Sprintf("  - Download %s:%s (%s/%s)",
+			spec.ComponentSpark, sparkVersion, inst.OS(), inst.Arch()))
 }
 
 // buildTLSTask create enable/disable tls task
