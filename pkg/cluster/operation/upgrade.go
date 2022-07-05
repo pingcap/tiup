@@ -54,6 +54,8 @@ func Upgrade(
 	noAgentHosts := set.NewStringSet()
 	uniqueHosts := set.NewStringSet()
 
+	var cdcOpenAPIClient *api.CDCOpenAPIClient
+
 	for _, component := range components {
 		instances := FilterInstance(component.Instances(), nodeFilter)
 		if len(instances) < 1 {
@@ -122,9 +124,20 @@ func Upgrade(
 					continue
 				}
 			case spec.ComponentCDC:
-				isOwner, err := instance.(*spec.CDCInstance).IsOwner(ctx, topo, int(options.APITimeout), tlsCfg)
+				if cdcOpenAPIClient == nil {
+					cdcOpenAPIClient = api.NewCDCOpenAPIClient(topo.(*spec.Specification).GetCDCList(), 10*time.Second, tlsCfg)
+				}
+				// always check all captures, since capture liveness is always in change, such as node crash.
+				allCaptures, err := cdcOpenAPIClient.GetAllCaptures()
 				if err != nil {
 					return err
+				}
+				isOwner := false
+				for _, capture := range allCaptures {
+					if capture.AdvertiseAddr == fmt.Sprintf("%s:%d", instance.GetHost(), instance.GetPort()) {
+						isOwner = true
+						break
+					}
 				}
 				if isOwner {
 					deferInstances = append(deferInstances, instance)
@@ -139,7 +152,7 @@ func Upgrade(
 			}
 		}
 
-		// process defferred instances
+		// process deferred instances
 		for _, instance := range deferInstances {
 			logger.Debugf("Upgrading defferred instance %s...", instance.ID())
 			if err := upgradeInstance(ctx, topo, instance, options, tlsCfg); err != nil {

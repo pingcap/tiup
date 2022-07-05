@@ -229,13 +229,20 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 		return err
 	}
 
+	// if only one capture alive, no need to drain the capture, just return it to trigger hard restart.
+	if len(captures) <= 1 {
+		return nil
+	}
+
 	var (
 		captureID string
 		found     bool
 		isOwner   bool
 	)
+
+	target := fmt.Sprintf("%s:%d", i.GetHost(), i.GetPort())
 	for _, capture := range captures {
-		if capture.AdvertiseAddr == fmt.Sprintf("%s:%d", i.GetHost(), i.GetPort()) {
+		if target == capture.AdvertiseAddr {
 			found = true
 			captureID = capture.ID
 			isOwner = capture.IsOwner
