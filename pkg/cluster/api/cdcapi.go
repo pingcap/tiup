@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/pingcap/errors"
 	"github.com/pingcap/tiflow/cdc/model"
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -103,28 +102,39 @@ func (c *CDCOpenAPIClient) getEndpoints(cmd string) (endpoints []string) {
 	return endpoints
 }
 
-func (c *CDCOpenAPIClient) GetOwner() (*model.Capture, error) {
+func (c *CDCOpenAPIClient) GetAllCaptures() ([]*model.Capture, error) {
 	api := "/api/v1/captures"
-
-	data, err := c.client.Get(context.Background(), api)
-	if err != nil {
-		return nil, err
-	}
+	endpoints := c.getEndpoints(api)
 
 	var response []*model.Capture
-	err = json.Unmarshal(data, response)
+
+	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
+		data, err := c.client.Get(context.Background(), endpoint)
+		if err != nil {
+			return data, err
+		}
+
+		return data, json.Unmarshal(data, response)
+	})
+
 	if err != nil {
 		return nil, err
 	}
 
-	for _, capture := range response {
-		if capture.IsOwner {
-			return capture, nil
-		}
-	}
+	return response, nil
 
-	return nil, errors.New("owner not found, this should not happen")
+	//for _, capture := range response {
+	//	if capture.IsOwner {
+	//		return capture, nil
+	//	}
+	//}
+	//
+	//return nil, errors.New("owner not found, this should not happen")
 }
+
+//func (c *CDCOpenAPIClient) GetAllCaptures(ctx context.Context, topo spec.Topology, seconds int, cfg *tls.Config) interface{} {
+//
+//}
 
 //var (
 //	dmMembersURI = "apis/v1alpha1/members"
