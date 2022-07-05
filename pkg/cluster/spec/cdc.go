@@ -26,6 +26,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/tidbver"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // CDCSpec represents the Drainer topology specification in topology.yaml
@@ -223,7 +224,7 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 		return nil
 	}
 
-	client := api.NewCDCOpenAPIClient(tidbTopo.GetCDCList(), 5*time.Second, tlsCfg)
+	client := api.NewCDCOpenAPIClient(ctx, tidbTopo.GetCDCList(), 5*time.Second, tlsCfg)
 	captures, err := client.GetAllCaptures()
 	if err != nil {
 		return err
@@ -267,7 +268,6 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 func (i *CDCInstance) drainCapture(client *api.CDCOpenAPIClient, captureID string) error {
 	ticker := time.NewTicker(time.Second)
 	hardTimeoutTicker := time.NewTicker(time.Minute * 5)
-
 	defer func() {
 		ticker.Stop()
 		hardTimeoutTicker.Stop()
@@ -303,31 +303,15 @@ func (i *CDCInstance) drainCapture(client *api.CDCOpenAPIClient, captureID strin
 
 // PostRestart implements RollingUpdateInstance interface.
 func (i *CDCInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tls.Config) error {
-	// cdc do nothing after the instance started, so return nil directly.
-	// todo: shall we call `/status` here ?
+	timeoutOpt := utils.RetryOption{
+		Delay:   500 * time.Minute,
+		Timeout: 10 * time.Second,
+	}
+
+	currentCDCAddr := []string{fmt.Sprintf("%s:%d", i.GetHost(), i.GetPort())}
+	client := api.NewCDCOpenAPIClient(ctx, currentCDCAddr, 5*time.Second, tlsCfg)
+	if err := utils.Retry(client.GetStatus, timeoutOpt); err != nil {
+		return errors.Annotatef(err, "failed to get cdc status")
+	}
 	return nil
 }
-
-//// WaitOwner wait until there's a TiCDC owner or timeout
-//func (client *CDCOpenAPIClient) WaitOwner(retryOpt *utils.RetryOption) error {
-//	if retryOpt == nil {
-//		retryOpt = &utils.RetryOption{
-//			Delay:   time.Second * 1,
-//			Timeout: time.Second * 30,
-//		}
-//	}
-//
-//	if err := utils.Retry(func() error {
-//		_, err := client.GetOwner()
-//		if err == nil {
-//			return nil
-//		}
-//
-//		// // return error by default, to make the retry work
-//		// client.l().Debugf("Still waitting for the PD leader to be elected")
-//		return perrs.New("still waitting for the PD leader to be elected")
-//	}, *retryOpt); err != nil {
-//		return fmt.Errorf("error getting PD leader, %v", err)
-//	}
-//	return nil
-//}

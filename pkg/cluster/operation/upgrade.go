@@ -125,17 +125,18 @@ func Upgrade(
 				}
 			case spec.ComponentCDC:
 				if cdcOpenAPIClient == nil {
-					cdcOpenAPIClient = api.NewCDCOpenAPIClient(topo.(*spec.Specification).GetCDCList(), 10*time.Second, tlsCfg)
+					cdcOpenAPIClient = api.NewCDCOpenAPIClient(ctx, topo.(*spec.Specification).GetCDCList(), 5*time.Second, tlsCfg)
 				}
 				// always check all captures, since capture liveness is always in change, such as node crash.
 				allCaptures, err := cdcOpenAPIClient.GetAllCaptures()
 				if err != nil {
 					return err
 				}
+
 				isOwner := false
 				for _, capture := range allCaptures {
 					if capture.AdvertiseAddr == fmt.Sprintf("%s:%d", instance.GetHost(), instance.GetPort()) {
-						isOwner = true
+						isOwner = capture.IsOwner
 						break
 					}
 				}
@@ -154,7 +155,7 @@ func Upgrade(
 
 		// process deferred instances
 		for _, instance := range deferInstances {
-			logger.Debugf("Upgrading defferred instance %s...", instance.ID())
+			logger.Debugf("Upgrading deferred instance %s...", instance.ID())
 			if err := upgradeInstance(ctx, topo, instance, options, tlsCfg); err != nil {
 				return err
 			}

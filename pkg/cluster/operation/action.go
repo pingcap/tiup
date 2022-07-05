@@ -600,19 +600,21 @@ func StopComponent(ctx context.Context,
 			// todo: also take cdc instance count and scaled-in targets count into consideration.
 			// if all nodes scaled-in, just stop the instance, no need to do foreplay
 			// if the owner is going to be drained, close it at the last, and switch the owner to other captures.
-			nctx := checkpoint.NewContext(ctx)
 			cdc, ok := ins.(spec.RollingUpdateInstance)
-			if ok {
-				err := cdc.PreRestart(nctx, topo, int(timeout), tlsCfg)
-				if err != nil {
-					return err
-				}
-
-				if err := stopInstance(nctx, ins, timeout); err != nil {
-					return err
-				}
-				return nil
+			if !ok {
+				panic("cdc should support rolling upgrade")
 			}
+			nctx := checkpoint.NewContext(ctx)
+			err := cdc.PreRestart(nctx, topo, int(timeout), tlsCfg)
+			if err != nil {
+				return err
+			}
+
+			if err := stopInstance(nctx, ins, timeout); err != nil {
+				return err
+			}
+			// continue here, to skip the logic below.
+			continue
 		}
 
 		// the checkpoint part of context can't be shared between goroutines

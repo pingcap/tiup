@@ -29,9 +29,10 @@ type CDCOpenAPIClient struct {
 	addrs      []string
 	tlsEnabled bool
 	client     *utils.HTTPClient
+	ctx        context.Context
 }
 
-func NewCDCOpenAPIClient(addrs []string, timeout time.Duration, tlsConfig *tls.Config) *CDCOpenAPIClient {
+func NewCDCOpenAPIClient(ctx context.Context, addrs []string, timeout time.Duration, tlsConfig *tls.Config) *CDCOpenAPIClient {
 	enableTLS := false
 	if tlsConfig != nil {
 		enableTLS = true
@@ -41,14 +42,13 @@ func NewCDCOpenAPIClient(addrs []string, timeout time.Duration, tlsConfig *tls.C
 		addrs:      addrs,
 		tlsEnabled: enableTLS,
 		client:     utils.NewHTTPClient(timeout, tlsConfig),
+		ctx:        ctx,
 	}
 }
 
-// DrainCapture request cdc owner move all tables on the target capture to other captures.
-func (c *CDCOpenAPIClient) DrainCapture(target string) (int, error) {
-	api := "api/v1/captures/drain"
-
-	// todo: also handle each kind of errors returned from the cdc
+func drainCapture(client *CDCOpenAPIClient, target string) (int, error) {
+	api := "/api/v1/captures/drain"
+	endpoints := client.getEndpoints(api)
 
 	request := model.DrainCaptureRequest{
 		CaptureID: target,
@@ -58,13 +58,21 @@ func (c *CDCOpenAPIClient) DrainCapture(target string) (int, error) {
 		return 0, err
 	}
 
-	result, err := c.client.PUT(context.Background(), api, bytes.NewReader(body))
+	var data []byte
+	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
+		// todo: also handle each kind of errors returned from the cdc
+		data, err = client.client.PUT(client.ctx, api, bytes.NewReader(body))
+		if err != nil {
+			return data, err
+		}
+		return data, nil
+	})
 	if err != nil {
 		return 0, err
 	}
 
 	var resp model.DrainCaptureResp
-	err = json.Unmarshal(result, &resp)
+	err = json.Unmarshal(data, &resp)
 	if err != nil {
 		return resp.CurrentTableCount, err
 	}
@@ -72,16 +80,35 @@ func (c *CDCOpenAPIClient) DrainCapture(target string) (int, error) {
 	return resp.CurrentTableCount, nil
 }
 
+// DrainCapture request cdc owner move all tables on the target capture to other captures.
+func (c *CDCOpenAPIClient) DrainCapture(target string) (result int, err error) {
+	err = utils.Retry(func() error {
+		result, err = drainCapture(c, target)
+		if err != nil {
+			return err
+		}
+		return nil
+	}, utils.RetryOption{
+		Delay:   500 * time.Millisecond,
+		Timeout: 10 * time.Second,
+	})
+
+	return result, err
+}
+
 // ResignOwner resign the cdc owner, to make owner switch
 func (c *CDCOpenAPIClient) ResignOwner() error {
 	api := "api/v1/owner/resign"
+	endpoints := c.getEndpoints(api)
+	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
+		body, err := c.client.Post(c.ctx, endpoint, nil)
+		if err != nil {
+			return body, err
+		}
+		return body, nil
+	})
 
-	_, err := c.client.Post(context.Background(), api, nil)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 // GetURL builds the client URL of DMClient
@@ -102,14 +129,57 @@ func (c *CDCOpenAPIClient) getEndpoints(cmd string) (endpoints []string) {
 	return endpoints
 }
 
-func (c *CDCOpenAPIClient) GetAllCaptures() ([]*model.Capture, error) {
-	api := "/api/v1/captures"
+func (c *CDCOpenAPIClient) GetAllCaptures() (result []*model.Capture, err error) {
+	err = utils.Retry(func() error {
+		result, err = getAllCaptures(c)
+		if err != nil {
+			return err
+		}
+		return nil
+	}, utils.RetryOption{
+		Delay:   500 * time.Millisecond,
+		Timeout: 10 * time.Second,
+	})
+
+	return result, err
+}
+
+func (c *CDCOpenAPIClient) GetStatus() error {
+	api := "/api/v1/status"
 	endpoints := c.getEndpoints(api)
+
+	var response model.ServerStatus
+	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
+		data, err := c.client.Get(c.ctx, endpoint)
+		if err != nil {
+			return data, err
+		}
+
+		err = json.Unmarshal(data, &response)
+		if err != nil {
+			return data, err
+		}
+
+		if response.Liveness != model.LivenessCaptureAlive {
+			return data, fmt.Errorf("cdc is not alive")
+		}
+		return data, nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func getAllCaptures(client *CDCOpenAPIClient) ([]*model.Capture, error) {
+	api := "/api/v1/captures"
+	endpoints := client.getEndpoints(api)
 
 	var response []*model.Capture
 
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		data, err := c.client.Get(context.Background(), endpoint)
+		data, err := client.client.Get(client.ctx, endpoint)
 		if err != nil {
 			return data, err
 		}
@@ -120,80 +190,5 @@ func (c *CDCOpenAPIClient) GetAllCaptures() ([]*model.Capture, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return response, nil
-
-	//for _, capture := range response {
-	//	if capture.IsOwner {
-	//		return capture, nil
-	//	}
-	//}
-	//
-	//return nil, errors.New("owner not found, this should not happen")
 }
-
-//func (c *CDCOpenAPIClient) GetAllCaptures(ctx context.Context, topo spec.Topology, seconds int, cfg *tls.Config) interface{} {
-//
-//}
-
-//var (
-//	dmMembersURI = "apis/v1alpha1/members"
-//
-//	defaultRetryOpt = &utils.RetryOption{
-//		Delay:   time.Second * 5,
-//		Timeout: time.Second * 60,
-//	}
-//)
-
-//func (dm *DMMasterClient) getMember(endpoints []string) (*dmpb.ListMemberResponse, error) {
-//	resp := &dmpb.ListMemberResponse{}
-//	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-//		body, err := dm.httpClient.Get(context.TODO(), endpoint)
-//		if err != nil {
-//			return body, err
-//		}
-//
-//		err = jsonpb.Unmarshal(strings.NewReader(string(body)), resp)
-//
-//		if err != nil {
-//			return body, err
-//		}
-//
-//		if !resp.Result {
-//			return body, errors.New("dm-master get members failed: " + resp.Msg)
-//		}
-//
-//		return body, nil
-//	})
-//	return resp, err
-//}
-//
-//// GetLeader gets leader of dm cluster
-//func (dm *DMMasterClient) GetLeader(retryOpt *utils.RetryOption) (string, error) {
-//	query := "?leader=true"
-//	endpoints := dm.getEndpoints(dmMembersURI + query)
-//
-//	if retryOpt == nil {
-//		retryOpt = defaultRetryOpt
-//	}
-//
-//	var (
-//		memberResp *dmpb.ListMemberResponse
-//		err        error
-//	)
-//
-//	if err := utils.Retry(func() error {
-//		memberResp, err = dm.getMember(endpoints)
-//		return err
-//	}, *retryOpt); err != nil {
-//		return "", err
-//	}
-//
-//	leaderName := ""
-//	for _, member := range memberResp.Members {
-//		if leader := member.GetLeader(); leader != nil {
-//			leaderName = leader.GetName()
-//		}
-//	}
-//	return leaderName, nil
-//}
