@@ -404,10 +404,7 @@ func scaleInCDC(
 		for _, ins := range instances {
 			ins := ins
 			g.Go(func() error {
-				if err := StopAndDestroyInstance(ctx, cluster, ins, options, true, instCount[ins.GetHost()] == 0); err != nil {
-					return err
-				}
-				return nil
+				return StopAndDestroyInstance(ctx, cluster, ins, options, true, instCount[ins.GetHost()] == 0)
 			})
 		}
 		return g.Wait()

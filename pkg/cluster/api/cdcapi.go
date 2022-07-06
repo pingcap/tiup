@@ -26,6 +26,7 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
+// CDCOpenAPIClient is client for access TiCDC Open API
 type CDCOpenAPIClient struct {
 	addrs      []string
 	tlsEnabled bool
@@ -33,6 +34,7 @@ type CDCOpenAPIClient struct {
 	ctx        context.Context
 }
 
+// NewCDCOpenAPIClient return a `CDCOpenAPIClient`
 func NewCDCOpenAPIClient(ctx context.Context, addrs []string, timeout time.Duration, tlsConfig *tls.Config) *CDCOpenAPIClient {
 	enableTLS := false
 	if tlsConfig != nil {
@@ -116,8 +118,7 @@ func (c *CDCOpenAPIClient) ResignOwner() error {
 	return err
 }
 
-// GetURL builds the client URL of DMClient
-func (c *CDCOpenAPIClient) GetURL(addr string) string {
+func (c *CDCOpenAPIClient) getURL(addr string) string {
 	httpPrefix := "http"
 	if c.tlsEnabled {
 		httpPrefix = "https"
@@ -127,13 +128,14 @@ func (c *CDCOpenAPIClient) GetURL(addr string) string {
 
 func (c *CDCOpenAPIClient) getEndpoints(cmd string) (endpoints []string) {
 	for _, addr := range c.addrs {
-		endpoint := fmt.Sprintf("%s/%s", c.GetURL(addr), cmd)
+		endpoint := fmt.Sprintf("%s/%s", c.getURL(addr), cmd)
 		endpoints = append(endpoints, endpoint)
 	}
 
 	return endpoints
 }
 
+// GetAllCaptures return all captures instantaneously
 func (c *CDCOpenAPIClient) GetAllCaptures() (result []*model.Capture, err error) {
 	err = utils.Retry(func() error {
 		result, err = getAllCaptures(c)
@@ -153,9 +155,12 @@ func (c *CDCOpenAPIClient) GetAllCaptures() (result []*model.Capture, err error)
 	return result, err
 }
 
+// GetStatus return the status of the TiCDC server.
 func (c *CDCOpenAPIClient) GetStatus() error {
 	api := "/api/v1/status"
 	endpoints := c.getEndpoints(api)
+
+	// todo: only send request to the target capture.
 
 	var response model.ServerStatus
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {

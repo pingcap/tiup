@@ -213,6 +213,7 @@ func (i *CDCInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs 
 
 var _ RollingUpdateInstance = &CDCInstance{}
 
+// GetAddr return the address of this TiCDC instance
 func (i *CDCInstance) GetAddr() string {
 	return fmt.Sprintf("%s:%d", i.GetHost(), i.GetPort())
 }

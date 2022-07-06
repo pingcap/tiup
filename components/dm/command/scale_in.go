@@ -113,7 +113,7 @@ func ScaleInDMCluster(
 					continue
 				}
 				instCount[instance.GetHost()]--
-				if err := operator.StopAndDestroyInstance(ctx, topo, instance, options, instCount[instance.GetHost()] == 0); err != nil {
+				if err := operator.StopAndDestroyInstance(ctx, topo, instance, options, false, instCount[instance.GetHost()] == 0); err != nil {
 					log.Warnf("failed to stop/destroy %s: %v", component.Name(), err)
 				}
 			}
