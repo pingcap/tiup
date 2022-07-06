@@ -54,8 +54,6 @@ func Upgrade(
 	noAgentHosts := set.NewStringSet()
 	uniqueHosts := set.NewStringSet()
 
-	var cdcOpenAPIClient *api.CDCOpenAPIClient
-
 	for _, component := range components {
 		instances := FilterInstance(component.Instances(), nodeFilter)
 		if len(instances) < 1 {
@@ -70,6 +68,8 @@ func Upgrade(
 
 		var pdEndpoints []string
 		forcePDEndpoints := os.Getenv(EnvNamePDEndpointOverwrite) // custom set PD endpoint list
+
+		var cdcOpenAPIClient *api.CDCOpenAPIClient // client for cdc openapi, only used when upgrade cdc
 
 		switch component.Name() {
 		case spec.ComponentTiKV:
@@ -124,6 +124,7 @@ func Upgrade(
 					continue
 				}
 			case spec.ComponentCDC:
+				// during the upgrade process, endpoint addresses should not change, so only new the client once.
 				if cdcOpenAPIClient == nil {
 					cdcOpenAPIClient = api.NewCDCOpenAPIClient(ctx, topo.(*spec.Specification).GetCDCList(), 5*time.Second, tlsCfg)
 				}
@@ -133,16 +134,17 @@ func Upgrade(
 					return err
 				}
 
+				currentAddr := fmt.Sprintf("%s:%d", instance.GetHost(), instance.GetPort())
 				isOwner := false
 				for _, capture := range allCaptures {
-					if capture.AdvertiseAddr == fmt.Sprintf("%s:%d", instance.GetHost(), instance.GetPort()) {
+					if capture.AdvertiseAddr == currentAddr {
 						isOwner = capture.IsOwner
 						break
 					}
 				}
 				if isOwner {
 					deferInstances = append(deferInstances, instance)
-					logger.Debugf("Deferred upgrading of TiCDC owner %s", instance.ID())
+					logger.Debugf("Deferred upgrading of TiCDC owner %s, addr %", instance.ID(), currentAddr)
 				}
 			default:
 				// do nothing, kept for future usage with other components

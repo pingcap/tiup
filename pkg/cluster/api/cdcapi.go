@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/pingcap/tiflow/cdc/model"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -92,6 +93,9 @@ func (c *CDCOpenAPIClient) DrainCapture(target string) (result int, err error) {
 		Delay:   500 * time.Millisecond,
 		Timeout: 10 * time.Second,
 	})
+	if err != nil {
+		c.l().Warnf("cdc drain capture failed: %v, target=%+v", err, target)
+	}
 
 	return result, err
 }
@@ -103,8 +107,10 @@ func (c *CDCOpenAPIClient) ResignOwner() error {
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		body, err := c.client.Post(c.ctx, endpoint, nil)
 		if err != nil {
+			c.l().Warnf("cdc resign owner failed: %v", err)
 			return body, err
 		}
+		c.l().Infof("cdc resign owner successfully")
 		return body, nil
 	})
 
@@ -137,9 +143,13 @@ func (c *CDCOpenAPIClient) GetAllCaptures() (result []*model.Capture, err error)
 		}
 		return nil
 	}, utils.RetryOption{
-		Delay:   500 * time.Millisecond,
-		Timeout: 10 * time.Second,
+		Delay:   100 * time.Millisecond,
+		Timeout: 20 * time.Second,
 	})
+
+	if err != nil {
+		c.l().Warnf("cdc get all captures failed: %v", err)
+	}
 
 	return result, err
 }
@@ -191,4 +201,8 @@ func getAllCaptures(client *CDCOpenAPIClient) ([]*model.Capture, error) {
 		return nil, err
 	}
 	return response, nil
+}
+
+func (c *CDCOpenAPIClient) l() *logprinter.Logger {
+	return c.ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 }

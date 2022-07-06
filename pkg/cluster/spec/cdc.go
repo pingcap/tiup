@@ -257,8 +257,10 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 
 	if isOwner {
 		if err := client.ResignOwner(); err != nil {
-			// todo: relax this error
-			return err
+			// if resign the owner failed, no more need to drain the current capture,
+			// since it's not allowed by the cdc.
+			// return nil to trigger hard restart.
+			return nil
 		}
 	}
 
@@ -267,6 +269,7 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 
 func (i *CDCInstance) drainCapture(client *api.CDCOpenAPIClient, captureID string) error {
 	ticker := time.NewTicker(time.Second)
+	// todo: revise this timeout value to prevent drain the capture cost too long.
 	hardTimeoutTicker := time.NewTicker(time.Minute * 5)
 	defer func() {
 		ticker.Stop()
@@ -282,11 +285,13 @@ func (i *CDCInstance) drainCapture(client *api.CDCOpenAPIClient, captureID strin
 			}
 
 			if len(allCaptures) < 2 {
+				// todo: shall we log here ?
 				return nil
 			}
 
 			count, err := client.DrainCapture(captureID)
 			if err != nil {
+				// todo: relax it, no need to return error.
 				return err
 			}
 
@@ -304,7 +309,7 @@ func (i *CDCInstance) drainCapture(client *api.CDCOpenAPIClient, captureID strin
 // PostRestart implements RollingUpdateInstance interface.
 func (i *CDCInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tls.Config) error {
 	timeoutOpt := utils.RetryOption{
-		Delay:   500 * time.Minute,
+		Delay:   500 * time.Millisecond,
 		Timeout: 10 * time.Second,
 	}
 
