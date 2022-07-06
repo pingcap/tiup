@@ -24,6 +24,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/tidbver"
 	"github.com/pingcap/tiup/pkg/utils"
@@ -212,11 +213,20 @@ func (i *CDCInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs 
 
 var _ RollingUpdateInstance = &CDCInstance{}
 
+func (i *CDCInstance) GetAddr() string {
+	return fmt.Sprintf("%s:%d", i.GetHost(), i.GetPort())
+}
+
 // PreRestart implements RollingUpdateInstance interface.
 func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config) error {
 	tidbTopo, ok := topo.(*Specification)
 	if !ok {
 		panic("should be type of tidb topology")
+	}
+
+	logger, ok := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
+	if !ok {
+		panic("logger not found")
 	}
 
 	// cdc rolling upgrade strategy only works if there are more than 2 captures
@@ -227,11 +237,13 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 	client := api.NewCDCOpenAPIClient(ctx, tidbTopo.GetCDCList(), 5*time.Second, tlsCfg)
 	captures, err := client.GetAllCaptures()
 	if err != nil {
+		logger.Warnf("get cdc all captures failed when pre-restart the cdc instance: %s", i.GetAddr())
 		return err
 	}
 
 	// if only one capture alive, no need to drain the capture, just return it to trigger hard restart.
 	if len(captures) <= 1 {
+		logger.Infof("pre-restart cdc finished, only one alive capture found, trigger hard restart, %s", i.GetAddr())
 		return nil
 	}
 
@@ -241,7 +253,7 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 		isOwner   bool
 	)
 
-	target := fmt.Sprintf("%s:%d", i.GetHost(), i.GetPort())
+	target := i.GetAddr()
 	for _, capture := range captures {
 		if target == capture.AdvertiseAddr {
 			found = true
@@ -275,7 +287,7 @@ func (i *CDCInstance) drainCapture(client *api.CDCOpenAPIClient, captureID strin
 		ticker.Stop()
 		hardTimeoutTicker.Stop()
 	}()
-
+LOOP:
 	for {
 		select {
 		case <-ticker.C:
@@ -285,21 +297,23 @@ func (i *CDCInstance) drainCapture(client *api.CDCOpenAPIClient, captureID strin
 			}
 
 			if len(allCaptures) < 2 {
-				// todo: shall we log here ?
+				// only one alive capture found when drain the capture,
+				// this may caused by other captures crashed. return nil to trigger hard restart.
 				return nil
 			}
 
 			count, err := client.DrainCapture(captureID)
 			if err != nil {
-				// todo: relax it, no need to return error.
-				return err
+				// if drain the capture failed, trigger hard restart
+				return nil
 			}
 
 			if count == 0 {
+				// no more table replicating on the instance, cdc pre-restart process fully finished
 				return nil
 			}
 		case <-hardTimeoutTicker.C:
-			return nil
+			break LOOP
 		}
 	}
 
@@ -309,14 +323,17 @@ func (i *CDCInstance) drainCapture(client *api.CDCOpenAPIClient, captureID strin
 // PostRestart implements RollingUpdateInstance interface.
 func (i *CDCInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tls.Config) error {
 	timeoutOpt := utils.RetryOption{
-		Delay:   500 * time.Millisecond,
-		Timeout: 10 * time.Second,
+		Delay:   200 * time.Millisecond,
+		Timeout: 20 * time.Second,
 	}
 
-	currentCDCAddr := []string{fmt.Sprintf("%s:%d", i.GetHost(), i.GetPort())}
-	client := api.NewCDCOpenAPIClient(ctx, currentCDCAddr, 5*time.Second, tlsCfg)
+	addr := fmt.Sprintf("%s:%d", i.GetHost(), i.GetPort())
+	currentAddrs := []string{addr}
+
+	client := api.NewCDCOpenAPIClient(ctx, currentAddrs, 5*time.Second, tlsCfg)
 	if err := utils.Retry(client.GetStatus, timeoutOpt); err != nil {
-		return errors.Annotatef(err, "failed to get cdc status")
+		logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
+		logger.Warnf("failed to get cdc status, %s")
 	}
 	return nil
 }

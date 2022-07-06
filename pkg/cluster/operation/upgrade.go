@@ -54,6 +54,8 @@ func Upgrade(
 	noAgentHosts := set.NewStringSet()
 	uniqueHosts := set.NewStringSet()
 
+	var cdcOpenAPIClient *api.CDCOpenAPIClient // client for cdc openapi, only used when upgrade cdc
+
 	for _, component := range components {
 		instances := FilterInstance(component.Instances(), nodeFilter)
 		if len(instances) < 1 {
@@ -68,8 +70,6 @@ func Upgrade(
 
 		var pdEndpoints []string
 		forcePDEndpoints := os.Getenv(EnvNamePDEndpointOverwrite) // custom set PD endpoint list
-
-		var cdcOpenAPIClient *api.CDCOpenAPIClient // client for cdc openapi, only used when upgrade cdc
 
 		switch component.Name() {
 		case spec.ComponentTiKV:
@@ -134,7 +134,7 @@ func Upgrade(
 					return err
 				}
 
-				currentAddr := fmt.Sprintf("%s:%d", instance.GetHost(), instance.GetPort())
+				currentAddr := instance.(*spec.CDCInstance).GetAddr()
 				isOwner := false
 				for _, capture := range allCaptures {
 					if capture.AdvertiseAddr == currentAddr {

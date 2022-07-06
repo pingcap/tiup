@@ -90,12 +90,11 @@ func (c *CDCOpenAPIClient) DrainCapture(target string) (result int, err error) {
 		}
 		return nil
 	}, utils.RetryOption{
-		Delay:   500 * time.Millisecond,
-		Timeout: 10 * time.Second,
+		Delay:   100 * time.Millisecond,
+		Timeout: 20 * time.Second,
 	})
-	if err != nil {
-		c.l().Warnf("cdc drain capture failed: %v, target=%+v", err, target)
-	}
+
+	c.l().Infof("cdc drain capture finished, target=%+v, current_table_count=%+v, err=%+v", target, result, err)
 
 	return result, err
 }
