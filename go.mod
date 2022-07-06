@@ -1,6 +1,6 @@
 module github.com/pingcap/tiup
 
-go 1.16
+go 1.18
 
 replace gopkg.in/yaml.v2 => github.com/july2993/yaml v0.0.0-20200423062752-adcfa5abe2ed
 
@@ -9,7 +9,6 @@ require (
 	github.com/AstroProfundis/tabby v1.1.1-color
 	github.com/BurntSushi/toml v1.1.0
 	github.com/ScaleFT/sshkeys v0.0.0-20200327173127-6142f742bca5
-	github.com/VividCortex/ewma v1.2.0 // indirect
 	github.com/alecthomas/assert v1.0.0
 	github.com/appleboy/easyssh-proxy v1.3.10-0.20211209134747-6671f69d85f5
 	github.com/asaskevich/EventBus v0.0.0-20200907212545-49d423059eef
@@ -24,15 +23,12 @@ require (
 	github.com/gofrs/flock v0.8.1
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/protobuf v1.5.2
-	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
 	github.com/jeremywohl/flatten v1.0.1
 	github.com/joomcode/errorx v1.1.0
 	github.com/juju/ansiterm v0.0.0-20210929141451-8b71cc96ebdc
-	github.com/kr/text v0.2.0 // indirect
-	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-runewidth v0.0.13
 	github.com/otiai10/copy v1.7.0
 	github.com/pingcap/check v0.0.0-20211026125417-57bd13f7b5f0
@@ -40,7 +36,6 @@ require (
 	github.com/pingcap/failpoint v0.0.0-20220423142525-ae43b7f4e5c3
 	github.com/pingcap/fn v1.0.0
 	github.com/pingcap/kvproto v0.0.0-20220525022339-6aaebf466305
-	github.com/pingcap/log v1.1.0 // indirect
 	github.com/pingcap/tidb-insight/collector v0.0.0-20220111101533-227008e9835b
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_model v0.2.0
@@ -55,29 +50,87 @@ require (
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.1
-	github.com/syndtr/goleveldb v1.0.1-0.20190318030020-c3a204f8e965 // indirect
 	github.com/tj/go-termd v0.0.1
-	github.com/tklauser/go-sysconf v0.3.10 // indirect
-	github.com/tklauser/numcpus v0.5.0 // indirect
-	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	go.etcd.io/etcd/client/pkg/v3 v3.5.4
 	go.etcd.io/etcd/client/v3 v3.5.4
 	go.uber.org/atomic v1.9.0
-	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.21.0
 	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4
-	golang.org/x/net v0.0.0-20220524220425-1d687d428aca // indirect
 	golang.org/x/sync v0.0.0-20220513210516-0976fa681c29
 	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a
 	golang.org/x/term v0.0.0-20220526004731-065cf7ba2467
 	golang.org/x/text v0.3.7
-	golang.org/x/tools v0.1.11 // indirect
-	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20220525015930-6ca3db687a9d
 	google.golang.org/grpc v1.46.2
 	gopkg.in/ini.v1 v1.66.4
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.0
 	software.sslmate.com/src/go-pkcs12 v0.2.0
+)
+
+require (
+	github.com/RoaringBitmap/roaring v0.4.23 // indirect
+	github.com/VividCortex/ewma v1.2.0 // indirect
+	github.com/alecthomas/chroma v0.6.8 // indirect
+	github.com/alecthomas/colour v0.1.0 // indirect
+	github.com/alecthomas/repr v0.0.0-20210801044451-80ca428c5142 // indirect
+	github.com/aybabtme/rgbterm v0.0.0-20170906152045-cc83f3b3ce59 // indirect
+	github.com/benbjohnson/clock v1.1.0 // indirect
+	github.com/blevesearch/go-porterstemmer v1.0.3 // indirect
+	github.com/blevesearch/mmap-go v1.0.2 // indirect
+	github.com/blevesearch/segment v0.9.0 // indirect
+	github.com/blevesearch/snowballstem v0.9.0 // indirect
+	github.com/blevesearch/zap/v11 v11.0.14 // indirect
+	github.com/blevesearch/zap/v12 v12.0.14 // indirect
+	github.com/blevesearch/zap/v13 v13.0.6 // indirect
+	github.com/blevesearch/zap/v14 v14.0.5 // indirect
+	github.com/blevesearch/zap/v15 v15.0.3 // indirect
+	github.com/coreos/go-semver v0.3.0 // indirect
+	github.com/coreos/go-systemd/v22 v22.3.2 // indirect
+	github.com/couchbase/vellum v1.0.2 // indirect
+	github.com/danwakefield/fnmatch v0.0.0-20160403171240-cbb64ac3d964 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/dchest/bcrypt_pbkdf v0.0.0-20150205184540-83f37f9c154a // indirect
+	github.com/dlclark/regexp2 v1.1.6 // indirect
+	github.com/glycerine/go-unsnap-stream v0.0.0-20181221182339-f9677308dec2 // indirect
+	github.com/go-ole/go-ole v1.2.6 // indirect
+	github.com/golang/snappy v0.0.4 // indirect
+	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
+	github.com/inconshreveable/mousetrap v1.0.0 // indirect
+	github.com/kr/text v0.2.0 // indirect
+	github.com/lorenzosaino/go-sysctl v0.2.0 // indirect
+	github.com/lunixbochs/vtclean v1.0.0 // indirect
+	github.com/mattn/go-colorable v0.1.12 // indirect
+	github.com/mattn/go-isatty v0.0.14 // indirect
+	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
+	github.com/mitchellh/go-wordwrap v1.0.0 // indirect
+	github.com/mschoch/smat v0.2.0 // indirect
+	github.com/philhofer/fwd v1.0.0 // indirect
+	github.com/pingcap/log v1.1.0 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/rivo/uniseg v0.2.0 // indirect
+	github.com/russross/blackfriday v2.0.0+incompatible // indirect
+	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
+	github.com/steveyen/gtreap v0.1.0 // indirect
+	github.com/syndtr/goleveldb v1.0.1-0.20190318030020-c3a204f8e965 // indirect
+	github.com/tinylib/msgp v1.1.0 // indirect
+	github.com/tj/go-css v0.0.0-20191108133013-220a796d1705 // indirect
+	github.com/tklauser/go-sysconf v0.3.10 // indirect
+	github.com/tklauser/numcpus v0.5.0 // indirect
+	github.com/vishvananda/netlink v0.0.0-20210530105856-14e832ae1e8f // indirect
+	github.com/vishvananda/netns v0.0.0-20200728191858-db3c7e526aae // indirect
+	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
+	github.com/willf/bitset v1.1.10 // indirect
+	github.com/yusufpapurcu/wmi v1.2.2 // indirect
+	go.etcd.io/bbolt v1.3.5 // indirect
+	go.etcd.io/etcd/api/v3 v3.5.4 // indirect
+	go.uber.org/multierr v1.8.0 // indirect
+	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
+	golang.org/x/net v0.0.0-20220524220425-1d687d428aca // indirect
+	golang.org/x/tools v0.1.11 // indirect
+	google.golang.org/appengine v1.6.7 // indirect
+	google.golang.org/protobuf v1.28.0 // indirect
+	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
+	honnef.co/go/tools v0.2.1 // indirect
 )
