@@ -156,6 +156,7 @@ func ScaleInDMCluster(
 				[]dm.Instance{instance},
 				noAgentHosts,
 				options.OptTimeout,
+				false,
 				false,         /* evictLeader */
 				&tls.Config{}, /* not used as evictLeader is false */
 			); err != nil {

@@ -32,6 +32,7 @@ import (
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
+	"golang.org/x/sync/errgroup"
 )
 
 // TODO: We can make drainer not async.
@@ -200,7 +201,7 @@ func ScaleInCluster(
 				}
 
 				instCount[instance.GetHost()]--
-				if err := StopAndDestroyInstance(ctx, cluster, instance, options, instCount[instance.GetHost()] == 0); err != nil {
+				if err := StopAndDestroyInstance(ctx, cluster, instance, options, false, instCount[instance.GetHost()] == 0); err != nil {
 					logger.Warnf("failed to stop/destroy %s: %v", compName, err)
 				}
 
@@ -259,10 +260,17 @@ func ScaleInCluster(
 		}
 	}
 
+	cdcInstances := make([]spec.Instance, 0)
 	// Delete member from cluster
 	for _, component := range cluster.ComponentsByStartOrder() {
 		for _, instance := range component.Instances() {
 			if !deletedNodes.Exist(instance.ID()) {
+				continue
+			}
+
+			// skip cdc at the moment, handle them in separately.
+			if component.Role() == spec.ComponentCDC {
+				cdcInstances = append(cdcInstances, instance)
 				continue
 			}
 
@@ -273,13 +281,20 @@ func ScaleInCluster(
 
 			if !asyncOfflineComps.Exist(instance.ComponentName()) {
 				instCount[instance.GetHost()]--
-				if err := StopAndDestroyInstance(ctx, cluster, instance, options, instCount[instance.GetHost()] == 0); err != nil {
+				if err := StopAndDestroyInstance(ctx, cluster, instance, options, false, instCount[instance.GetHost()] == 0); err != nil {
 					return err
 				}
 			} else {
 				logger.Warnf(color.YellowString("The component `%s` will become tombstone, maybe exists in several minutes or hours, after that you can use the prune command to clean it",
 					component.Name()))
 			}
+		}
+	}
+
+	if len(cdcInstances) != 0 {
+		err := scaleInCDC(ctx, cluster, cdcInstances, tlsCfg, options, instCount)
+		if err != nil {
+			return errors.Trace(err)
 		}
 	}
 
@@ -363,6 +378,72 @@ func deleteMember(
 		addr := instance.GetHost() + ":" + strconv.Itoa(instance.GetPort())
 		err := binlogClient.OfflinePump(ctx, addr)
 		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func scaleInCDC(
+	ctx context.Context,
+	cluster *spec.Specification,
+	instances []spec.Instance,
+	tlsCfg *tls.Config,
+	options Options,
+	instCount map[string]int,
+) error {
+	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
+
+	// collect all cdc endpoints, even planned to be shutdown.
+	endpoints := cluster.GetCDCList()
+
+	// if all cdc instances are selected, just stop all instances immediately, no need to do any pre-restart
+	if len(instances) == len(endpoints) {
+		g, _ := errgroup.WithContext(ctx)
+		for _, ins := range instances {
+			ins := ins
+			g.Go(func() error {
+				if err := StopAndDestroyInstance(ctx, cluster, ins, options, true, instCount[ins.GetHost()] == 0); err != nil {
+					return err
+				}
+				return nil
+			})
+		}
+		return g.Wait()
+	}
+
+	client := api.NewCDCOpenAPIClient(ctx, endpoints, 5*time.Second, tlsCfg)
+	deferInstances := make([]spec.Instance, 0, 1)
+
+	for _, instance := range instances {
+		// always check all captures, since capture liveness is always in change, such as node crash.
+		allCaptures, err := client.GetAllCaptures()
+		if err != nil {
+			return err
+		}
+
+		currentAddr := instance.(*spec.CDCInstance).GetAddr()
+		isOwner := false
+		for _, capture := range allCaptures {
+			if capture.AdvertiseAddr == currentAddr {
+				isOwner = capture.IsOwner
+				break
+			}
+		}
+		if isOwner {
+			deferInstances = append(deferInstances, instance)
+			logger.Debugf("Deferred scale-in the TiCDC owner %s, addr %", instance.ID(), currentAddr)
+			continue
+		}
+
+		if err := StopAndDestroyInstance(ctx, cluster, instance, options, false, instCount[instance.GetHost()] == 0); err != nil {
+			return err
+		}
+	}
+
+	for _, instance := range deferInstances {
+		if err := StopAndDestroyInstance(ctx, cluster, instance, options, false, instCount[instance.GetHost()] == 0); err != nil {
 			return err
 		}
 	}

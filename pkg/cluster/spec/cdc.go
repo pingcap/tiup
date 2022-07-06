@@ -30,7 +30,7 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
-// CDCSpec represents the Drainer topology specification in topology.yaml
+// CDCSpec represents the CDC topology specification in topology.yaml
 type CDCSpec struct {
 	Host            string                 `yaml:"host"`
 	SSHPort         int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
@@ -276,13 +276,12 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 		}
 	}
 
-	return i.drainCapture(client, captureID)
+	return i.drainCapture(client, captureID, apiTimeoutSeconds)
 }
 
-func (i *CDCInstance) drainCapture(client *api.CDCOpenAPIClient, captureID string) error {
+func (i *CDCInstance) drainCapture(client *api.CDCOpenAPIClient, captureID string, apiTimeoutSeconds int) error {
 	ticker := time.NewTicker(time.Second)
-	// todo: revise this timeout value to prevent drain the capture cost too long.
-	hardTimeoutTicker := time.NewTicker(time.Minute * 5)
+	hardTimeoutTicker := time.NewTicker(time.Second * time.Duration(apiTimeoutSeconds))
 	defer func() {
 		ticker.Stop()
 		hardTimeoutTicker.Stop()

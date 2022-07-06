@@ -199,6 +199,7 @@ func Stop(
 			insts,
 			noAgentHosts,
 			options.OptTimeout,
+			true,
 			evictLeader,
 			tlsCfg,
 		)
@@ -563,16 +564,13 @@ func stopInstance(ctx context.Context, ins spec.Instance, timeout uint64) error 
 	return nil
 }
 
-func scaleInCDC() error {
-	return nil
-}
-
 // StopComponent stop the instances.
 func StopComponent(ctx context.Context,
 	topo spec.Topology,
 	instances []spec.Instance,
 	noAgentHosts set.StringSet,
 	timeout uint64,
+	forceStop bool,
 	evictLeader bool,
 	tlsCfg *tls.Config,
 ) error {
@@ -596,20 +594,18 @@ func StopComponent(ctx context.Context,
 				continue
 			}
 		case spec.ComponentCDC:
-			// when scale-in cdc node, each nodes should be stopped one by one.
-			// todo: also take cdc instance count and scaled-in targets count into consideration.
-			// if all nodes scaled-in, just stop the instance, no need to do foreplay
-			// if the owner is going to be drained, close it at the last, and switch the owner to other captures.
-			cdc, ok := ins.(spec.RollingUpdateInstance)
-			if !ok {
-				panic("cdc should support rolling upgrade")
-			}
 			nctx := checkpoint.NewContext(ctx)
-			err := cdc.PreRestart(nctx, topo, int(timeout), tlsCfg)
-			if err != nil {
-				return err
+			if !forceStop {
+				// when scale-in cdc node, each nodes should be stopped one by one.
+				cdc, ok := ins.(spec.RollingUpdateInstance)
+				if !ok {
+					panic("cdc should support rolling upgrade, but not")
+				}
+				err := cdc.PreRestart(nctx, topo, int(timeout), tlsCfg)
+				if err != nil {
+					return err
+				}
 			}
-
 			if err := stopInstance(nctx, ins, timeout); err != nil {
 				return err
 			}

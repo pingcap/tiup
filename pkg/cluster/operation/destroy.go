@@ -89,7 +89,14 @@ func Destroy(
 // StopAndDestroyInstance stop and destroy the instance,
 // if this instance is the host's last one, and the host has monitor deployed,
 // we need to destroy the monitor, too
-func StopAndDestroyInstance(ctx context.Context, cluster spec.Topology, instance spec.Instance, options Options, destroyNode bool) error {
+func StopAndDestroyInstance(
+	ctx context.Context,
+	cluster spec.Topology,
+	instance spec.Instance,
+	options Options,
+	forceStop bool,
+	destroyNode bool,
+) error {
 	ignoreErr := options.Force
 	compName := instance.ComponentName()
 	noAgentHosts := set.NewStringSet()
@@ -108,6 +115,7 @@ func StopAndDestroyInstance(ctx context.Context, cluster spec.Topology, instance
 		[]spec.Instance{instance},
 		noAgentHosts,
 		options.OptTimeout,
+		forceStop,
 		false,         /* evictLeader */
 		&tls.Config{}, /* not used as evictLeader is false */
 	); err != nil {
@@ -510,7 +518,7 @@ func DestroyClusterTombstone(
 
 		for _, instance := range instances {
 			instCount[instance.GetHost()]--
-			err := StopAndDestroyInstance(ctx, cluster, instance, options, instCount[instance.GetHost()] == 0)
+			err := StopAndDestroyInstance(ctx, cluster, instance, options, false, instCount[instance.GetHost()] == 0)
 			if err != nil {
 				if options.Force {
 					logger.Warnf("failed to stop and destroy instance %s (%s), ignored as --force is set, you may need to manually cleanup the files",
