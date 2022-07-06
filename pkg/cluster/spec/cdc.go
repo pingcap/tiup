@@ -298,7 +298,7 @@ LOOP:
 
 			if len(allCaptures) < 2 {
 				// only one alive capture found when drain the capture,
-				// this may caused by other captures crashed. return nil to trigger hard restart.
+				// this may be caused by other captures crashed. return nil to trigger hard restart.
 				return nil
 			}
 

@@ -115,7 +115,7 @@ func StopAndDestroyInstance(
 		[]spec.Instance{instance},
 		noAgentHosts,
 		options.OptTimeout,
-		forceStop,
+		forceStop,     /* forceStop */
 		false,         /* evictLeader */
 		&tls.Config{}, /* not used as evictLeader is false */
 	); err != nil {

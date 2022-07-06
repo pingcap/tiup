@@ -596,7 +596,7 @@ func StopComponent(ctx context.Context,
 		case spec.ComponentCDC:
 			nctx := checkpoint.NewContext(ctx)
 			if !forceStop {
-				// when scale-in cdc node, each nodes should be stopped one by one.
+				// when scale-in cdc node, each node should be stopped one by one.
 				cdc, ok := ins.(spec.RollingUpdateInstance)
 				if !ok {
 					panic("cdc should support rolling upgrade, but not")
