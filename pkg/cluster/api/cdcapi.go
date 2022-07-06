@@ -198,7 +198,7 @@ func getAllCaptures(client *CDCOpenAPIClient) ([]*model.Capture, error) {
 			return data, err
 		}
 
-		return data, json.Unmarshal(data, response)
+		return data, json.Unmarshal(data, &response)
 	})
 
 	if err != nil {

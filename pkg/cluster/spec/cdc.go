@@ -327,13 +327,12 @@ func (i *CDCInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tl
 		Timeout: 20 * time.Second,
 	}
 
-	addr := fmt.Sprintf("%s:%d", i.GetHost(), i.GetPort())
+	addr := i.GetAddr()
 	currentAddrs := []string{addr}
-
 	client := api.NewCDCOpenAPIClient(ctx, currentAddrs, 5*time.Second, tlsCfg)
 	if err := utils.Retry(client.GetStatus, timeoutOpt); err != nil {
 		logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
-		logger.Warnf("failed to get cdc status, %s")
+		logger.Warnf("unexpected cdc status: %s, addr: %s", err, addr)
 	}
 	return nil
 }
