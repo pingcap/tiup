@@ -158,7 +158,7 @@ func (c *CDCOpenAPIClient) GetAllCaptures() (result []*model.Capture, err error)
 		return nil
 	}, utils.RetryOption{
 		Delay:   100 * time.Millisecond,
-		Timeout: 20 * time.Second,
+		Timeout: 30 * time.Second,
 	})
 
 	if err != nil {
