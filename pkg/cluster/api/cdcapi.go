@@ -65,7 +65,7 @@ func drainCapture(client *CDCOpenAPIClient, target string) (int, error) {
 	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		body, statusCode, err := client.client.Put(client.ctx, endpoint, bytes.NewReader(body))
 		if err != nil {
-			if statusCode == http.StatusNotFound || bytes.Contains(body, []byte("not found")) {
+			if statusCode == http.StatusNotFound {
 				// old version cdc does not support `DrainCapture`, return nil to trigger hard restart.
 				client.l().Debugf("cdc drain capture %s does not found, ignore: %s, err: %s", target, body, err)
 				return data, nil
@@ -121,7 +121,7 @@ func (c *CDCOpenAPIClient) ResignOwner() error {
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		body, statusCode, err := c.client.PostWithStatusCode(c.ctx, endpoint, nil)
 		if err != nil {
-			if statusCode == http.StatusNotFound || bytes.Contains(body, []byte("not found")) {
+			if statusCode == http.StatusNotFound {
 				c.l().Debugf("resign owner does not found, ignore: %s, err: %s", body, err)
 				return body, nil
 			}
@@ -220,10 +220,10 @@ func getAllCaptures(client *CDCOpenAPIClient) ([]*Capture, error) {
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		body, statusCode, err := client.client.GetWithStatusCode(client.ctx, endpoint)
 		if err != nil {
-			if statusCode == http.StatusNotFound || bytes.Contains(body, []byte("not found")) {
+			if statusCode == http.StatusNotFound {
 				// old version cdc does not support open api, also the stopped cdc instance
 				// return nil to trigger hard restart
-				client.l().Debugf("get all captures failed, ignore: %s, statusCode: %s, err: %s", body, statusCode, err)
+				client.l().Warnf("get all captures not exist, ignore: %s, statusCode: %s, err: %s", body, statusCode, err)
 				return body, nil
 			}
 			return body, err
@@ -233,6 +233,7 @@ func getAllCaptures(client *CDCOpenAPIClient) ([]*Capture, error) {
 	})
 
 	if err != nil {
+		client.l().Warnf("get all capture failed, err: %s", err)
 		return nil, err
 	}
 	return response, nil

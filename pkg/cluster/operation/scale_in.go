@@ -414,6 +414,13 @@ func scaleInCDC(
 	deferInstances := make([]spec.Instance, 0, 1)
 
 	for _, instance := range instances {
+		if instance.Status(ctx, 5*time.Second, tlsCfg) == "Down" {
+			if err := StopAndDestroyInstance(ctx, cluster, instance, options, true, instCount[instance.GetHost()] == 0); err != nil {
+				return err
+			}
+			return nil
+		}
+
 		// always check all captures, since capture liveness is always in change, such as node crash.
 		allCaptures, err := client.GetAllCaptures()
 		if err != nil {
