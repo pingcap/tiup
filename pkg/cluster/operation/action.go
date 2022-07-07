@@ -193,13 +193,26 @@ func Stop(
 
 	for _, comp := range components {
 		insts := FilterInstance(comp.Instances(), nodeFilter)
+		if len(insts) == 0 {
+			continue
+		}
+
+		// when restart cdc nodes, if not all cdc nodes were selected,
+		// stop selected node one by one, and do not force stop.
+		forceStop := false
+		if insts[0].ComponentName() == spec.ComponentCDC {
+			if len(insts) == len(comp.Instances()) {
+				forceStop = true
+			}
+		}
+
 		err := StopComponent(
 			ctx,
 			cluster,
 			insts,
 			noAgentHosts,
 			options.OptTimeout,
-			true,
+			forceStop,
 			evictLeader,
 			tlsCfg,
 		)
