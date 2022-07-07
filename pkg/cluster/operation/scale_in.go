@@ -268,7 +268,7 @@ func ScaleInCluster(
 				continue
 			}
 
-			// skip cdc at the moment, handle them in separately.
+			// skip cdc at the moment, handle them separately.
 			if component.Role() == spec.ComponentCDC {
 				cdcInstances = append(cdcInstances, instance)
 				continue
@@ -415,10 +415,7 @@ func scaleInCDC(
 
 	for _, instance := range instances {
 		if instance.Status(ctx, 5*time.Second, tlsCfg) == "Down" {
-			if err := StopAndDestroyInstance(ctx, cluster, instance, options, true, instCount[instance.GetHost()] == 0); err != nil {
-				return err
-			}
-			return nil
+			return StopAndDestroyInstance(ctx, cluster, instance, options, true, instCount[instance.GetHost()] == 0)
 		}
 
 		// always check all captures, since capture liveness is always in change, such as node crash.

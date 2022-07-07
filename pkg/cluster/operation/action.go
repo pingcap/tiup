@@ -190,20 +190,10 @@ func Stop(
 			instCount[inst.GetHost()]++
 		}
 	})
-
 	for _, comp := range components {
 		insts := FilterInstance(comp.Instances(), nodeFilter)
 		if len(insts) == 0 {
 			continue
-		}
-
-		// when restart cdc nodes, if not all cdc nodes were selected,
-		// stop selected node one by one, and do not force stop.
-		forceStop := false
-		if insts[0].ComponentName() == spec.ComponentCDC {
-			if len(insts) == len(comp.Instances()) {
-				forceStop = true
-			}
 		}
 
 		err := StopComponent(
@@ -212,7 +202,7 @@ func Stop(
 			insts,
 			noAgentHosts,
 			options.OptTimeout,
-			forceStop,
+			false,
 			evictLeader,
 			tlsCfg,
 		)
@@ -597,6 +587,10 @@ func StopComponent(ctx context.Context,
 
 	errg, _ := errgroup.WithContext(ctx)
 
+	deferredInstance := make([]spec.Instance, 0)
+
+	//client := api.NewCDCOpenAPIClient(ctx, endpoints, 5*time.Second, tlsCfg)
+
 	for _, ins := range instances {
 		ins := ins
 		switch name {
@@ -607,6 +601,7 @@ func StopComponent(ctx context.Context,
 				continue
 			}
 		case spec.ComponentCDC:
+
 			nctx := checkpoint.NewContext(ctx)
 			if !forceStop {
 				// when scale-in cdc node, each node should be stopped one by one.

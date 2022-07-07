@@ -73,7 +73,7 @@ func (c *HTTPClient) Get(ctx context.Context, url string) ([]byte, error) {
 	return data, err
 }
 
-// Get fetch an URL with GET method and returns the response, also the status code.
+// GetWithStatusCode fetch a URL with GET method and returns the response, also the status code.
 func (c *HTTPClient) GetWithStatusCode(ctx context.Context, url string) ([]byte, int, error) {
 	var statusCode int
 	req, err := http.NewRequest("GET", url, nil)
