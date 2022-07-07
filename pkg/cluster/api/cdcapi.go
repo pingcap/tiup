@@ -194,8 +194,14 @@ func getAllCaptures(client *CDCOpenAPIClient) ([]*Capture, error) {
 	var response []*Capture
 
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		data, err := client.client.Get(client.ctx, endpoint)
+		data, statusCode, err := client.client.GetWithStatusCode(client.ctx, endpoint)
 		if err != nil {
+			if statusCode == http.StatusNotFound {
+				// old version cdc does not support open api, also the stopped cdc instance
+				// return nil to trigger hard restart
+				client.l().Debugf("get all captures failed, statusCode: %s, %s", statusCode, err)
+				return data, nil
+			}
 			return data, err
 		}
 

@@ -69,9 +69,16 @@ func (c *HTTPClient) SetRequestHeader(key, value string) {
 
 // Get fetch an URL with GET method and returns the response
 func (c *HTTPClient) Get(ctx context.Context, url string) ([]byte, error) {
+	data, _, err := c.GetWithStatusCode(ctx, url)
+	return data, err
+}
+
+// Get fetch an URL with GET method and returns the response, also the status code.
+func (c *HTTPClient) GetWithStatusCode(ctx context.Context, url string) ([]byte, int, error) {
+	var statusCode int
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return nil, err
+		return nil, statusCode, err
 	}
 
 	req.Header = c.header
@@ -81,11 +88,12 @@ func (c *HTTPClient) Get(ctx context.Context, url string) ([]byte, error) {
 	}
 	res, err := c.client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, statusCode, err
 	}
 	defer res.Body.Close()
 
-	return checkHTTPResponse(res)
+	data, err := checkHTTPResponse(res)
+	return data, res.StatusCode, err
 }
 
 // Download fetch an URL with GET method and Download the response to filePath
