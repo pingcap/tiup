@@ -65,9 +65,9 @@ func drainCapture(client *CDCOpenAPIClient, target string) (int, error) {
 	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		body, statusCode, err := client.client.Put(client.ctx, endpoint, bytes.NewReader(body))
 		if err != nil {
-			if statusCode == http.StatusNotFound {
+			if statusCode == http.StatusNotFound || bytes.Contains(body, []byte("not found")) {
 				// old version cdc does not support `DrainCapture`, return nil to trigger hard restart.
-				client.l().Debugf("cdc drain capture does not found, give up")
+				client.l().Debugf("cdc drain capture %s does not found, ignore: %s, err: %s", target, body, err)
 				return data, nil
 			}
 
@@ -121,8 +121,8 @@ func (c *CDCOpenAPIClient) ResignOwner() error {
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		body, statusCode, err := c.client.PostWithStatusCode(c.ctx, endpoint, nil)
 		if err != nil {
-			if statusCode == http.StatusNotFound {
-				c.l().Debugf("resign owner does not found, err: %s", err)
+			if statusCode == http.StatusNotFound || bytes.Contains(body, []byte("not found")) {
+				c.l().Debugf("resign owner does not found, ignore: %s, err: %s", body, err)
 				return body, nil
 			}
 
@@ -218,18 +218,18 @@ func getAllCaptures(client *CDCOpenAPIClient) ([]*Capture, error) {
 	var response []*Capture
 
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		data, statusCode, err := client.client.GetWithStatusCode(client.ctx, endpoint)
+		body, statusCode, err := client.client.GetWithStatusCode(client.ctx, endpoint)
 		if err != nil {
-			if statusCode == http.StatusNotFound {
+			if statusCode == http.StatusNotFound || bytes.Contains(body, []byte("not found")) {
 				// old version cdc does not support open api, also the stopped cdc instance
 				// return nil to trigger hard restart
-				client.l().Debugf("get all captures failed, statusCode: %s, %s", statusCode, err)
-				return data, nil
+				client.l().Debugf("get all captures failed, ignore: %s, statusCode: %s, err: %s", body, statusCode, err)
+				return body, nil
 			}
-			return data, err
+			return body, err
 		}
 
-		return data, json.Unmarshal(data, &response)
+		return body, json.Unmarshal(body, &response)
 	})
 
 	if err != nil {
