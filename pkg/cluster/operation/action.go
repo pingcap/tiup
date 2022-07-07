@@ -586,11 +586,6 @@ func StopComponent(ctx context.Context,
 	logger.Infof("Stopping component %s", name)
 
 	errg, _ := errgroup.WithContext(ctx)
-
-	deferredInstance := make([]spec.Instance, 0)
-
-	//client := api.NewCDCOpenAPIClient(ctx, endpoints, 5*time.Second, tlsCfg)
-
 	for _, ins := range instances {
 		ins := ins
 		switch name {
@@ -601,7 +596,6 @@ func StopComponent(ctx context.Context,
 				continue
 			}
 		case spec.ComponentCDC:
-
 			nctx := checkpoint.NewContext(ctx)
 			if !forceStop {
 				// when scale-in cdc node, each node should be stopped one by one.

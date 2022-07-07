@@ -223,7 +223,7 @@ func getAllCaptures(client *CDCOpenAPIClient) ([]*Capture, error) {
 			if statusCode == http.StatusNotFound {
 				// old version cdc does not support open api, also the stopped cdc instance
 				// return nil to trigger hard restart
-				client.l().Warnf("get all captures not exist, ignore: %s, statusCode: %s, err: %s", body, statusCode, err)
+				client.l().Warnf("get all captures not exist, ignore: %s, statusCode: %+v, err: %s", body, statusCode, err)
 				return body, nil
 			}
 			return body, err
