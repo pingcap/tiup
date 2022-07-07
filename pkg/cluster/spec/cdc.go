@@ -330,9 +330,27 @@ func (i *CDCInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tl
 	addr := i.GetAddr()
 	currentAddrs := []string{addr}
 	client := api.NewCDCOpenAPIClient(ctx, currentAddrs, 5*time.Second, tlsCfg)
-	if err := utils.Retry(client.GetStatus, timeoutOpt); err != nil {
-		logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
-		logger.Warnf("unexpected cdc status: %s, addr: %s", err, addr)
+
+	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
+
+	var liveness api.Liveness
+	err := utils.Retry(func() error {
+		var err error
+		liveness, err = client.GetStatus()
+		if err != nil {
+			return err
+		}
+		return nil
+	}, timeoutOpt)
+	if err != nil {
+		logger.Warnf("get cdc status failed: %s, addr: %s", err, addr)
+
+		return nil
 	}
+
+	if liveness != api.LivenessCaptureAlive {
+		logger.Warnf("cdc status is not alive, addr: %s", addr)
+	}
+
 	return nil
 }

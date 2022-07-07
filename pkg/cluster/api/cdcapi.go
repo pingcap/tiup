@@ -22,7 +22,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/pingcap/tiflow/cdc/model"
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -54,7 +53,7 @@ func drainCapture(client *CDCOpenAPIClient, target string) (int, error) {
 	api := "/api/v1/captures/drain"
 	endpoints := client.getEndpoints(api)
 
-	request := model.DrainCaptureRequest{
+	request := DrainCaptureRequest{
 		CaptureID: target,
 	}
 	body, err := json.Marshal(request)
@@ -64,10 +63,11 @@ func drainCapture(client *CDCOpenAPIClient, target string) (int, error) {
 
 	var data []byte
 	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, statusCode, err := client.client.PUT(client.ctx, endpoint, bytes.NewReader(body))
+		body, statusCode, err := client.client.Put(client.ctx, endpoint, bytes.NewReader(body))
 		if err != nil {
 			if statusCode == http.StatusNotFound {
 				// old version cdc does not support `DrainCapture`, return nil to trigger hard restart.
+				client.l().Debugf("cdc drain capture does not found, give up")
 				return data, nil
 			}
 
@@ -87,7 +87,7 @@ func drainCapture(client *CDCOpenAPIClient, target string) (int, error) {
 		return 0, err
 	}
 
-	var resp model.DrainCaptureResp
+	var resp DrainCaptureResp
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
 		return resp.CurrentTableCount, err
@@ -149,7 +149,7 @@ func (c *CDCOpenAPIClient) getEndpoints(cmd string) (endpoints []string) {
 }
 
 // GetAllCaptures return all captures instantaneously
-func (c *CDCOpenAPIClient) GetAllCaptures() (result []*model.Capture, err error) {
+func (c *CDCOpenAPIClient) GetAllCaptures() (result []*Capture, err error) {
 	err = utils.Retry(func() error {
 		result, err = getAllCaptures(c)
 		if err != nil {
@@ -169,41 +169,29 @@ func (c *CDCOpenAPIClient) GetAllCaptures() (result []*model.Capture, err error)
 }
 
 // GetStatus return the status of the TiCDC server.
-func (c *CDCOpenAPIClient) GetStatus() error {
+func (c *CDCOpenAPIClient) GetStatus() (Liveness, error) {
 	api := "/api/v1/status"
 	endpoints := c.getEndpoints(api)
 
-	// todo: only send request to the target capture.
-
-	var response model.ServerStatus
-	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		data, err := c.client.Get(c.ctx, endpoint)
-		if err != nil {
-			return data, err
-		}
-
-		err = json.Unmarshal(data, &response)
-		if err != nil {
-			return data, err
-		}
-
-		if response.Liveness != model.LivenessCaptureAlive {
-			return data, fmt.Errorf("cdc is not alive")
-		}
-		return data, nil
-	})
+	var response ServerStatus
+	data, err := c.client.Get(c.ctx, endpoints[0])
 	if err != nil {
-		return err
+		return response.Liveness, err
 	}
 
-	return nil
+	err = json.Unmarshal(data, &response)
+	if err != nil {
+		return response.Liveness, err
+	}
+
+	return response.Liveness, nil
 }
 
-func getAllCaptures(client *CDCOpenAPIClient) ([]*model.Capture, error) {
+func getAllCaptures(client *CDCOpenAPIClient) ([]*Capture, error) {
 	api := "/api/v1/captures"
 	endpoints := client.getEndpoints(api)
 
-	var response []*model.Capture
+	var response []*Capture
 
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		data, err := client.client.Get(client.ctx, endpoint)
@@ -222,4 +210,41 @@ func getAllCaptures(client *CDCOpenAPIClient) ([]*model.Capture, error) {
 
 func (c *CDCOpenAPIClient) l() *logprinter.Logger {
 	return c.ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
+}
+
+// Liveness is the liveness status of a capture.
+type Liveness int32
+
+const (
+	// LivenessCaptureAlive means the capture is alive, and ready to serve.
+	LivenessCaptureAlive Liveness = 0
+	// LivenessCaptureStopping means the capture is in the process of graceful shutdown.
+	LivenessCaptureStopping Liveness = 1
+)
+
+// ServerStatus holds some common information of a TiCDC server
+type ServerStatus struct {
+	Version  string   `json:"version"`
+	GitHash  string   `json:"git_hash"`
+	ID       string   `json:"id"`
+	Pid      int      `json:"pid"`
+	IsOwner  bool     `json:"is_owner"`
+	Liveness Liveness `json:"liveness"`
+}
+
+// Capture holds common information of a capture in cdc
+type Capture struct {
+	ID            string `json:"id"`
+	IsOwner       bool   `json:"is_owner"`
+	AdvertiseAddr string `json:"address"`
+}
+
+// DrainCaptureRequest is request for manual `DrainCapture`
+type DrainCaptureRequest struct {
+	CaptureID string `json:"capture_id"`
+}
+
+// DrainCaptureResp is response for manual `DrainCapture`
+type DrainCaptureResp struct {
+	CurrentTableCount int `json:"current_table_count"`
 }

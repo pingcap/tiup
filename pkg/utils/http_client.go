@@ -155,8 +155,8 @@ func (c *HTTPClient) Post(ctx context.Context, url string, body io.Reader) ([]by
 	return checkHTTPResponse(res)
 }
 
-// PUT send a PUT request to the url and returns the response
-func (c *HTTPClient) PUT(ctx context.Context, url string, body io.Reader) ([]byte, int, error) {
+// Put send a PUT request to the url and returns the response
+func (c *HTTPClient) Put(ctx context.Context, url string, body io.Reader) ([]byte, int, error) {
 	var statusCode int
 	req, err := http.NewRequest("PUT", url, body)
 	if err != nil {
