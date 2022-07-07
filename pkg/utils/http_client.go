@@ -140,9 +140,16 @@ func (c *HTTPClient) Download(ctx context.Context, url, filePath string) error {
 
 // Post send a POST request to the url and returns the response
 func (c *HTTPClient) Post(ctx context.Context, url string, body io.Reader) ([]byte, error) {
+	data, _, err := c.PostWithStatusCode(ctx, url, body)
+	return data, err
+}
+
+// PostWithStatusCode send a POST request to the url and returns the response, also the http status code.
+func (c *HTTPClient) PostWithStatusCode(ctx context.Context, url string, body io.Reader) ([]byte, int, error) {
+	var statusCode int
 	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
-		return nil, err
+		return nil, statusCode, err
 	}
 
 	if c.header == nil {
@@ -156,11 +163,12 @@ func (c *HTTPClient) Post(ctx context.Context, url string, body io.Reader) ([]by
 	}
 	res, err := c.client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, statusCode, err
 	}
 	defer res.Body.Close()
 
-	return checkHTTPResponse(res)
+	data, err := checkHTTPResponse(res)
+	return data, res.StatusCode, err
 }
 
 // Put send a PUT request to the url and returns the response

@@ -119,8 +119,13 @@ func (c *CDCOpenAPIClient) ResignOwner() error {
 	api := "api/v1/owner/resign"
 	endpoints := c.getEndpoints(api)
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, err := c.client.Post(c.ctx, endpoint, nil)
+		body, statusCode, err := c.client.PostWithStatusCode(c.ctx, endpoint, nil)
 		if err != nil {
+			if statusCode == http.StatusNotFound {
+				c.l().Debugf("resign owner does not found, err: %s", err)
+				return body, nil
+			}
+
 			c.l().Warnf("cdc resign owner failed: %v", err)
 			return body, err
 		}
@@ -158,7 +163,7 @@ func (c *CDCOpenAPIClient) GetAllCaptures() (result []*Capture, err error) {
 		return nil
 	}, utils.RetryOption{
 		Delay:   100 * time.Millisecond,
-		Timeout: 30 * time.Second,
+		Timeout: 20 * time.Second,
 	})
 
 	if err != nil {
@@ -169,12 +174,31 @@ func (c *CDCOpenAPIClient) GetAllCaptures() (result []*Capture, err error) {
 }
 
 // GetStatus return the status of the TiCDC server.
-func (c *CDCOpenAPIClient) GetStatus() (Liveness, error) {
+func (c *CDCOpenAPIClient) GetStatus() (result Liveness, err error) {
+	err = utils.Retry(func() error {
+		result, err = getCDCServerStatus(c)
+		if err != nil {
+			return err
+		}
+		return nil
+	}, utils.RetryOption{
+		Delay:   100 * time.Millisecond,
+		Timeout: 20 * time.Second,
+	})
+
+	if err != nil {
+		c.l().Warnf("cdc get capture status failed, %s", err)
+	}
+
+	return result, err
+}
+
+func getCDCServerStatus(client *CDCOpenAPIClient) (Liveness, error) {
 	api := "/api/v1/status"
-	endpoints := c.getEndpoints(api)
+	endpoints := client.getEndpoints(api)
 
 	var response ServerStatus
-	data, err := c.client.Get(c.ctx, endpoints[0])
+	data, err := client.client.Get(client.ctx, endpoints[0])
 	if err != nil {
 		return response.Liveness, err
 	}
