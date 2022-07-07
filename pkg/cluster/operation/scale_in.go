@@ -430,7 +430,7 @@ func scaleInCDC(
 		}
 		if isOwner {
 			deferInstances = append(deferInstances, instance)
-			logger.Debugf("Deferred scale-in the TiCDC owner %s, addr %", instance.ID(), currentAddr)
+			logger.Debugf("Deferred scale-in the TiCDC owner %s, addr: %s", instance.ID(), currentAddr)
 			continue
 		}
 

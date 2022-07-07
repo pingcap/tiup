@@ -144,7 +144,7 @@ func Upgrade(
 				}
 				if isOwner {
 					deferInstances = append(deferInstances, instance)
-					logger.Debugf("Deferred upgrading of TiCDC owner %s, addr %", instance.ID(), currentAddr)
+					logger.Debugf("Deferred upgrading of TiCDC owner %s, addr: %s", instance.ID(), currentAddr)
 				}
 			default:
 				// do nothing, kept for future usage with other components
