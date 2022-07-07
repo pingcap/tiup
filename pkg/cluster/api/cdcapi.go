@@ -19,6 +19,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/pingcap/tiflow/cdc/model"
@@ -63,9 +64,21 @@ func drainCapture(client *CDCOpenAPIClient, target string) (int, error) {
 
 	var data []byte
 	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		// todo: also handle each kind of errors returned from the cdc
-		data, err = client.client.PUT(client.ctx, api, bytes.NewReader(body))
+		body, statusCode, err := client.client.PUT(client.ctx, endpoint, bytes.NewReader(body))
 		if err != nil {
+			if statusCode == http.StatusNotFound {
+				// old version cdc does not support `DrainCapture`, return nil to trigger hard restart.
+				return data, nil
+			}
+
+			if bytes.Contains(body, []byte("scheduler request failed")) {
+				client.l().Debugf("cdc drain capture failed: %s", body)
+				return data, nil
+			}
+			if bytes.Contains(body, []byte("capture not exists")) {
+				client.l().Debugf("cdc drain capture failed: %s", body)
+				return data, nil
+			}
 			return data, err
 		}
 		return data, nil
@@ -145,7 +158,7 @@ func (c *CDCOpenAPIClient) GetAllCaptures() (result []*model.Capture, err error)
 		return nil
 	}, utils.RetryOption{
 		Delay:   100 * time.Millisecond,
-		Timeout: 20 * time.Second,
+		Timeout: 30 * time.Second,
 	})
 
 	if err != nil {
