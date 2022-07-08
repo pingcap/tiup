@@ -124,6 +124,10 @@ func Upgrade(
 					continue
 				}
 			case spec.ComponentCDC:
+				if instance.(*spec.CDCInstance).Status(ctx, 5*time.Second, tlsCfg) == "Down" {
+					return upgradeInstance(ctx, topo, instance, options, tlsCfg)
+				}
+
 				// during the upgrade process, endpoint addresses should not change, so only new the client once.
 				if cdcOpenAPIClient == nil {
 					cdcOpenAPIClient = api.NewCDCOpenAPIClient(ctx, topo.(*spec.Specification).GetCDCList(), 5*time.Second, tlsCfg)

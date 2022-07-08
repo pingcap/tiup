@@ -200,11 +200,12 @@ func (c *CDCOpenAPIClient) GetCaptureByAddr(addr string) (*Capture, error) {
 		}
 	}
 
-	return nil, errors.New("capture not found")
+	return nil, fmt.Errorf("capture not found, addr: %s", addr)
 }
 
 // GetAllCaptures return all captures instantaneously
 func (c *CDCOpenAPIClient) GetAllCaptures() (result []*Capture, err error) {
+	// todo: remove this retry
 	err = utils.Retry(func() error {
 		result, err = getAllCaptures(c)
 		if err != nil {
@@ -217,7 +218,7 @@ func (c *CDCOpenAPIClient) GetAllCaptures() (result []*Capture, err error) {
 	})
 	if err != nil {
 		// todo: set to debug level
-		c.l().Warnf("cdc get all captures failed: %v", err)
+		c.l().Warnf("cdc get all captures failed: %+v", err)
 	}
 
 	return result, err
@@ -237,7 +238,7 @@ func (c *CDCOpenAPIClient) GetStatus() (result Liveness, err error) {
 	})
 
 	if err != nil {
-		c.l().Warnf("cdc get capture status failed, %s", err)
+		c.l().Warnf("cdc get capture status failed, %+v", err)
 	}
 
 	return result, err

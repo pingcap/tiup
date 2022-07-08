@@ -244,7 +244,8 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 		return nil
 	}
 
-	// if only one capture alive, no need to drain the capture, just return it to trigger hard restart.
+	// this may happen all other captures crashed, only this one alive,
+	// no need to drain the capture, just return it to trigger hard restart.
 	if len(captures) <= 1 {
 		logger.Infof("pre-restart cdc finished, only one alive capture found, trigger hard restart, %s", i.GetAddr())
 		return nil
@@ -265,6 +266,7 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 		}
 	}
 
+	// this may happen if the capture crashed at the moment.
 	if !found {
 		logger.Debugf("pre-restart cdc finished, target capture %s not found, trigger hard restart, %s", captureID, i.GetAddr())
 		return nil
