@@ -22,6 +22,7 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/checkpoint"
+	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/module"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -200,6 +201,10 @@ func Stop(
 		if comp.Role() == spec.ComponentCDC {
 			if len(insts) == len(comp.Instances()) {
 				forceStop = true
+			}
+
+			if !forceStop {
+				insts = reorderCDCInstances(ctx, cluster, tlsCfg, insts)
 			}
 		}
 
@@ -697,4 +702,47 @@ func monitorPortMap(options *spec.MonitoredOptions) map[string]int {
 		spec.ComponentNodeExporter:     options.NodeExporterPort,
 		spec.ComponentBlackboxExporter: options.BlackboxExporterPort,
 	}
+}
+
+func reorderCDCInstances(
+	ctx context.Context,
+	cluster spec.Topology,
+	tlsCfg *tls.Config,
+	insts []spec.Instance) []spec.Instance {
+	client := api.NewCDCOpenAPIClient(ctx, cluster.(*spec.Specification).GetCDCList(), 5*time.Second, tlsCfg)
+	allCaptures, err := client.GetAllCaptures()
+	if err != nil {
+		return insts
+	}
+
+	var ownerAddr string
+	for _, capture := range allCaptures {
+		if capture.IsOwner {
+			ownerAddr = capture.AdvertiseAddr
+		}
+	}
+	if ownerAddr == "" {
+		return insts
+	}
+
+	var (
+		ownerInstance spec.Instance
+		found         bool
+	)
+
+	i := 0
+	for _, item := range insts {
+		if item.(*spec.CDCInstance).GetAddr() == ownerAddr {
+			ownerInstance = item
+			found = true
+		} else {
+			insts[i] = item
+			i++
+		}
+	}
+	if found {
+		insts[i] = ownerInstance
+	}
+
+	return insts
 }
