@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"path"
 	"time"
 
 	"github.com/pingcap/errors"
@@ -61,7 +62,7 @@ func drainCapture(client *CDCOpenAPIClient, target string) (result int, err erro
 	if err != nil {
 		return 0, err
 	}
-	
+
 	var data []byte
 	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		data, statusCode, err := client.client.Put(client.ctx, endpoint, bytes.NewReader(body))
@@ -122,7 +123,7 @@ func (c *CDCOpenAPIClient) DrainCapture(target string, apiTimeoutSeconds int) er
 	return nil
 }
 
-// ResignOwner resign the cdc owner, to make owner switch
+// ResignOwner resign the cdc owner, and wait for a new owner be found
 func (c *CDCOpenAPIClient) ResignOwner() error {
 	api := "api/v1/owner/resign"
 	endpoints := c.getEndpoints(api)
@@ -130,19 +131,27 @@ func (c *CDCOpenAPIClient) ResignOwner() error {
 		body, statusCode, err := c.client.PostWithStatusCode(c.ctx, endpoint, nil)
 		if err != nil {
 			if statusCode == http.StatusNotFound {
-				c.l().Debugf("resign owner does not found, ignore: %s, err: %s", body, err)
+				c.l().Debugf("resign owner does not found, data=%+v, statusCode=%+v, err=%+v", body, statusCode, err)
 				return body, nil
 			}
-
-			//todo: to debug level
-			c.l().Warnf("cdc resign owner failed: %v", err)
+			c.l().Warnf("resign owner failed, data=%+v, statusCode=%+v, err=%+v", body, statusCode, err)
 			return body, err
 		}
-		// todo: to debug level
-		c.l().Infof("cdc resign owner successfully")
 		return body, nil
 	})
 
+	if err != nil {
+		return err
+	}
+
+	owner, err := c.GetOwner()
+	if err != nil {
+		c.l().Warnf("cdc get owner failed: %v", err)
+	}
+
+	if owner.IsOwner {
+		c.l().Infof("cdc resign owner successfully, and new owner found, owner: %+v", owner)
+	}
 	return err
 }
 
@@ -156,11 +165,42 @@ func (c *CDCOpenAPIClient) getURL(addr string) string {
 
 func (c *CDCOpenAPIClient) getEndpoints(cmd string) (endpoints []string) {
 	for _, addr := range c.addrs {
-		endpoint := fmt.Sprintf("%s/%s", c.getURL(addr), cmd)
+		url := c.getURL(addr)
+		endpoint := path.Join(url, cmd)
 		endpoints = append(endpoints, endpoint)
 	}
-
 	return endpoints
+}
+
+// GetOwner return the cdc owner capture information
+func (c *CDCOpenAPIClient) GetOwner() (*Capture, error) {
+	captures, err := c.GetAllCaptures()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, capture := range captures {
+		if capture.IsOwner {
+			return capture, nil
+		}
+	}
+	return nil, errors.New("owner not found")
+}
+
+// GetCaptureByAddr return the capture information by the address
+func (c *CDCOpenAPIClient) GetCaptureByAddr(addr string) (*Capture, error) {
+	captures, err := c.GetAllCaptures()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, capture := range captures {
+		if capture.AdvertiseAddr == addr {
+			return capture, nil
+		}
+	}
+
+	return nil, errors.New("capture not found")
 }
 
 // GetAllCaptures return all captures instantaneously

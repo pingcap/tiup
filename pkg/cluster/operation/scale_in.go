@@ -418,21 +418,13 @@ func scaleInCDC(
 			return StopAndDestroyInstance(ctx, cluster, instance, options, true, instCount[instance.GetHost()] == 0)
 		}
 
-		// always check all captures, since capture liveness is always in change, such as node crash.
-		allCaptures, err := client.GetAllCaptures()
+		currentAddr := instance.(*spec.CDCInstance).GetAddr()
+		capture, err := client.GetCaptureByAddr(currentAddr)
 		if err != nil {
 			return err
 		}
 
-		currentAddr := instance.(*spec.CDCInstance).GetAddr()
-		isOwner := false
-		for _, capture := range allCaptures {
-			if capture.AdvertiseAddr == currentAddr {
-				isOwner = capture.IsOwner
-				break
-			}
-		}
-		if isOwner {
+		if capture.IsOwner {
 			deferInstances = append(deferInstances, instance)
 			logger.Debugf("Deferred scale-in the TiCDC owner %s, addr: %s", instance.ID(), currentAddr)
 			continue

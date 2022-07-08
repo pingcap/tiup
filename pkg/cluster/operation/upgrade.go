@@ -128,21 +128,14 @@ func Upgrade(
 				if cdcOpenAPIClient == nil {
 					cdcOpenAPIClient = api.NewCDCOpenAPIClient(ctx, topo.(*spec.Specification).GetCDCList(), 5*time.Second, tlsCfg)
 				}
-				// always check all captures, since capture liveness is always in change, such as node crash.
-				allCaptures, err := cdcOpenAPIClient.GetAllCaptures()
+
+				currentAddr := instance.(*spec.CDCInstance).GetAddr()
+				capture, err := cdcOpenAPIClient.GetCaptureByAddr(currentAddr)
 				if err != nil {
 					return err
 				}
 
-				currentAddr := instance.(*spec.CDCInstance).GetAddr()
-				isOwner := false
-				for _, capture := range allCaptures {
-					if capture.AdvertiseAddr == currentAddr {
-						isOwner = capture.IsOwner
-						break
-					}
-				}
-				if isOwner {
+				if capture.IsOwner {
 					deferInstances = append(deferInstances, instance)
 					logger.Debugf("Deferred upgrading of TiCDC owner %s, addr: %s", instance.ID(), currentAddr)
 				}

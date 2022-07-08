@@ -236,7 +236,8 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 		return nil
 	}
 
-	client := api.NewCDCOpenAPIClient(ctx, []string{i.GetAddr()}, 5*time.Second, tlsCfg)
+	currentAddr := i.GetAddr()
+	client := api.NewCDCOpenAPIClient(ctx, []string{currentAddr}, 5*time.Second, tlsCfg)
 	captures, err := client.GetAllCaptures()
 	if err != nil {
 		logger.Warnf("get cdc all captures failed when pre-restart the cdc instance: %s", i.GetAddr())
@@ -255,9 +256,8 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 		isOwner   bool
 	)
 
-	target := i.GetAddr()
 	for _, capture := range captures {
-		if target == capture.AdvertiseAddr {
+		if currentAddr == capture.AdvertiseAddr {
 			found = true
 			captureID = capture.ID
 			isOwner = capture.IsOwner
@@ -266,7 +266,7 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 	}
 
 	if !found {
-		logger.Debugf("pre-restart cdc finished, target capture %s not found, trigger hard restart, %s", target, i.GetAddr())
+		logger.Debugf("pre-restart cdc finished, target capture %s not found, trigger hard restart, %s", captureID, i.GetAddr())
 		return nil
 	}
 
