@@ -64,11 +64,11 @@ func (c *CDCOpenAPIClient) DrainCapture(target string) (result int, err error) {
 
 	var data []byte
 	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, statusCode, err := c.client.Put(c.ctx, endpoint, bytes.NewReader(body))
+		data, statusCode, err := c.client.Put(c.ctx, endpoint, bytes.NewReader(body))
 		if err != nil {
 			if statusCode == http.StatusNotFound {
 				// old version cdc does not support `DrainCapture`, return nil to trigger hard restart.
-				c.l().Debugf("cdc drain capture %s does not found, ignore: %s, err: %s", target, body, err)
+				c.l().Debugf("cdc drain capture does not support, ignore it, target: %s, err: %s", target, err)
 				return data, nil
 			}
 
