@@ -49,9 +49,10 @@ func NewCDCOpenAPIClient(ctx context.Context, addrs []string, timeout time.Durat
 	}
 }
 
-func drainCapture(client *CDCOpenAPIClient, target string) (int, error) {
+// DrainCapture request cdc owner move all tables on the target capture to other captures.
+func (c *CDCOpenAPIClient) DrainCapture(target string) (result int, err error) {
 	api := "api/v1/captures/drain"
-	endpoints := client.getEndpoints(api)
+	endpoints := c.getEndpoints(api)
 
 	request := DrainCaptureRequest{
 		CaptureID: target,
@@ -63,20 +64,20 @@ func drainCapture(client *CDCOpenAPIClient, target string) (int, error) {
 
 	var data []byte
 	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, statusCode, err := client.client.Put(client.ctx, endpoint, bytes.NewReader(body))
+		body, statusCode, err := c.client.Put(c.ctx, endpoint, bytes.NewReader(body))
 		if err != nil {
 			if statusCode == http.StatusNotFound {
 				// old version cdc does not support `DrainCapture`, return nil to trigger hard restart.
-				client.l().Debugf("cdc drain capture %s does not found, ignore: %s, err: %s", target, body, err)
+				c.l().Debugf("cdc drain capture %s does not found, ignore: %s, err: %s", target, body, err)
 				return data, nil
 			}
 
 			if bytes.Contains(body, []byte("scheduler request failed")) {
-				client.l().Debugf("cdc drain capture failed: %s", body)
+				c.l().Debugf("cdc drain capture failed: %s", body)
 				return data, nil
 			}
 			if bytes.Contains(body, []byte("capture not exists")) {
-				client.l().Debugf("cdc drain capture failed: %s", body)
+				c.l().Debugf("cdc drain capture failed: %s", body)
 				return data, nil
 			}
 			return data, err
@@ -93,25 +94,9 @@ func drainCapture(client *CDCOpenAPIClient, target string) (int, error) {
 		return resp.CurrentTableCount, err
 	}
 
-	return resp.CurrentTableCount, nil
-}
-
-// DrainCapture request cdc owner move all tables on the target capture to other captures.
-func (c *CDCOpenAPIClient) DrainCapture(target string) (result int, err error) {
-	err = utils.Retry(func() error {
-		result, err = drainCapture(c, target)
-		if err != nil {
-			return err
-		}
-		return nil
-	}, utils.RetryOption{
-		Delay:   100 * time.Millisecond,
-		Timeout: 20 * time.Second,
-	})
-
 	c.l().Infof("cdc drain capture finished, target=%+v, current_table_count=%+v, err=%+v", target, result, err)
 
-	return result, err
+	return resp.CurrentTableCount, nil
 }
 
 // ResignOwner resign the cdc owner, to make owner switch
@@ -162,7 +147,7 @@ func (c *CDCOpenAPIClient) GetAllCaptures() (result []*Capture, err error) {
 		}
 		return nil
 	}, utils.RetryOption{
-		Delay:   100 * time.Millisecond,
+		Delay:   500 * time.Millisecond,
 		Timeout: 20 * time.Second,
 	})
 
