@@ -219,6 +219,7 @@ func (i *CDCInstance) GetAddr() string {
 }
 
 // PreRestart implements RollingUpdateInstance interface.
+// All errors are ignored, to trigger hard restart.
 func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config) error {
 	tidbTopo, ok := topo.(*Specification)
 	if !ok {
@@ -235,11 +236,11 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 		return nil
 	}
 
-	client := api.NewCDCOpenAPIClient(ctx, tidbTopo.GetCDCList(), 5*time.Second, tlsCfg)
+	client := api.NewCDCOpenAPIClient(ctx, []string{i.GetAddr()}, 5*time.Second, tlsCfg)
 	captures, err := client.GetAllCaptures()
 	if err != nil {
 		logger.Warnf("get cdc all captures failed when pre-restart the cdc instance: %s", i.GetAddr())
-		return err
+		return nil
 	}
 
 	// if only one capture alive, no need to drain the capture, just return it to trigger hard restart.
@@ -265,7 +266,8 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 	}
 
 	if !found {
-		return fmt.Errorf("capture not found for %s:%d", i.GetHost(), i.GetPort())
+		logger.Debugf("pre-restart cdc finished, target capture %s not found, trigger hard restart, %s", i.GetAddr())
+		return nil
 	}
 
 	if isOwner {
@@ -277,44 +279,8 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 		}
 	}
 
-	return i.drainCapture(client, captureID, apiTimeoutSeconds)
-}
-
-func (i *CDCInstance) drainCapture(client *api.CDCOpenAPIClient, captureID string, apiTimeoutSeconds int) error {
-	ticker := time.NewTicker(time.Second)
-	hardTimeoutTicker := time.NewTicker(time.Second * time.Duration(apiTimeoutSeconds))
-	defer func() {
-		ticker.Stop()
-		hardTimeoutTicker.Stop()
-	}()
-LOOP:
-	for {
-		select {
-		case <-ticker.C:
-			allCaptures, err := client.GetAllCaptures()
-			if err != nil {
-				return err
-			}
-
-			if len(allCaptures) < 2 {
-				// only one alive capture found when drain the capture,
-				// this may be caused by other captures crashed. return nil to trigger hard restart.
-				return nil
-			}
-
-			count, err := client.DrainCapture(captureID)
-			if err != nil {
-				// if drain the capture failed, trigger hard restart
-				return nil
-			}
-
-			if count == 0 {
-				// no more table replicating on the instance, cdc pre-restart process fully finished
-				return nil
-			}
-		case <-hardTimeoutTicker.C:
-			break LOOP
-		}
+	if err := client.DrainCapture(captureID, apiTimeoutSeconds); err != nil {
+		logger.Debugf("pre-restart cdc drain capture failed, %s", err)
 	}
 
 	return nil
