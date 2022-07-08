@@ -34,9 +34,8 @@ func newUpgradeCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			scrubbedClusterName := scrubClusterName(clusterName)
-			clusterReport.ID = scrubbedClusterName
-			teleCommand = append(teleCommand, scrubbedClusterName)
+			clusterReport.ID = scrubClusterName(clusterName)
+			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 			teleCommand = append(teleCommand, version)
 
 			return cm.Upgrade(clusterName, version, gOpt, skipConfirm, offlineMode)

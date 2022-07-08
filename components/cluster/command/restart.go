@@ -31,9 +31,8 @@ func newRestartCmd() *cobra.Command {
 			}
 
 			clusterName := args[0]
-			scrubbedClusterName := scrubClusterName(clusterName)
-			clusterReport.ID = scrubbedClusterName
-			teleCommand = append(teleCommand, scrubbedClusterName)
+			clusterReport.ID = scrubClusterName(clusterName)
+			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
 			return cm.RestartCluster(clusterName, gOpt, skipConfirm)
 		},

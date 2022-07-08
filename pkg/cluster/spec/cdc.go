@@ -266,7 +266,7 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 	}
 
 	if !found {
-		logger.Debugf("pre-restart cdc finished, target capture %s not found, trigger hard restart, %s", i.GetAddr())
+		logger.Debugf("pre-restart cdc finished, target capture %s not found, trigger hard restart, %s", target, i.GetAddr())
 		return nil
 	}
 

@@ -32,9 +32,8 @@ func newScaleInCmd() *cobra.Command {
 			}
 
 			clusterName := args[0]
-			scrubbedClusterName := scrubClusterName(clusterName)
-			clusterReport.ID = scrubbedClusterName
-			teleCommand = append(teleCommand, scrubbedClusterName)
+			clusterReport.ID = scrubClusterName(clusterName)
+			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
 			scale := func(b *task.Builder, imetadata spec.Metadata, tlsCfg *tls.Config) {
 				metadata := imetadata.(*spec.ClusterMeta)
