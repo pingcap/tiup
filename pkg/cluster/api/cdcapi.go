@@ -151,10 +151,6 @@ func (c *CDCOpenAPIClient) GetAllCaptures() (result []*Capture, err error) {
 		Timeout: 20 * time.Second,
 	})
 
-	if err != nil {
-		c.l().Warnf("cdc get all captures failed: %v", err)
-	}
-
 	return result, err
 }
 
@@ -218,7 +214,6 @@ func getAllCaptures(client *CDCOpenAPIClient) ([]*Capture, error) {
 	})
 
 	if err != nil {
-		client.l().Warnf("get all capture failed, err: %s", err)
 		return nil, err
 	}
 	return response, nil
