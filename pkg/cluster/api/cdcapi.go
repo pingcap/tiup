@@ -150,6 +150,10 @@ func (c *CDCOpenAPIClient) GetAllCaptures() (result []*Capture, err error) {
 		Delay:   500 * time.Millisecond,
 		Timeout: 20 * time.Second,
 	})
+	if err != nil {
+		// todo: set to debug level
+		c.l().Warnf("cdc get all captures failed: %v", err)
+	}
 
 	return result, err
 }
