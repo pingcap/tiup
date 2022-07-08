@@ -196,13 +196,20 @@ func Stop(
 			continue
 		}
 
+		forceStop := false
+		if comp.Role() == spec.ComponentCDC {
+			if len(insts) == len(comp.Instances()) {
+				forceStop = true
+			}
+		}
+
 		err := StopComponent(
 			ctx,
 			cluster,
 			insts,
 			noAgentHosts,
 			options.OptTimeout,
-			false,
+			forceStop,
 			evictLeader,
 			tlsCfg,
 		)

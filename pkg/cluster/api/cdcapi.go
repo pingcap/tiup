@@ -50,7 +50,7 @@ func NewCDCOpenAPIClient(ctx context.Context, addrs []string, timeout time.Durat
 }
 
 func drainCapture(client *CDCOpenAPIClient, target string) (int, error) {
-	api := "/api/v1/captures/drain"
+	api := "api/v1/captures/drain"
 	endpoints := client.getEndpoints(api)
 
 	request := DrainCaptureRequest{
@@ -194,7 +194,7 @@ func (c *CDCOpenAPIClient) GetStatus() (result Liveness, err error) {
 }
 
 func getCDCServerStatus(client *CDCOpenAPIClient) (Liveness, error) {
-	api := "/api/v1/status"
+	api := "api/v1/status"
 	endpoints := client.getEndpoints(api)
 
 	var response ServerStatus
@@ -212,7 +212,7 @@ func getCDCServerStatus(client *CDCOpenAPIClient) (Liveness, error) {
 }
 
 func getAllCaptures(client *CDCOpenAPIClient) ([]*Capture, error) {
-	api := "/api/v1/captures"
+	api := "api/v1/captures"
 	endpoints := client.getEndpoints(api)
 
 	var response []*Capture
