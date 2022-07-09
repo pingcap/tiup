@@ -27,7 +27,6 @@ import (
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/tidbver"
-	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // CDCSpec represents the CDC topology specification in topology.yaml
@@ -231,12 +230,13 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 		panic("logger not found")
 	}
 
+	address := i.GetAddr()
 	// cdc rolling upgrade strategy only works if there are more than 2 captures
 	if len(tidbTopo.CDCServers) <= 1 {
+		logger.Debugf("cdc pre-restart skipped, only one capture in the topology, addr: %s", address)
 		return nil
 	}
 
-	address := i.GetAddr()
 	if i.Status(ctx, 5*time.Second, tlsCfg) == "Down" {
 		logger.Debugf("cdc pre-restart skipped, instance is down, trigger hard restart, addr: %s", address)
 		return nil
@@ -290,10 +290,10 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 
 	if err := client.DrainCapture(captureID, apiTimeoutSeconds); err != nil {
 		logger.Debugf("cdc pre-restar finished, drain the capture failed, captureID: %s, addr: %s, err: %s, elapsed: %+v", captureID, address, err, time.Since(start))
-	} else {
-		logger.Debugf("cdc pre-restart success, captureID: %s, addr: %s, err: %s, elapsed: %+v", captureID, address, err, time.Since(start))
+		return nil
 	}
 
+	logger.Debugf("cdc pre-restart success, captureID: %s, addr: %s, err: %s, elapsed: %+v", captureID, address, err, time.Since(start))
 	return nil
 }
 
@@ -313,26 +313,12 @@ func (i *CDCInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tl
 	start := time.Now()
 	client := api.NewCDCOpenAPIClient(ctx, []string{address}, 5*time.Second, tlsCfg)
 
-	var liveness api.Liveness
-	err := utils.Retry(func() error {
-		var err error
-		liveness, err = client.GetStatus()
-		if err != nil {
-			return err
-		}
-		if liveness == api.LivenessCaptureAlive {
-			return nil
-		}
-		return errors.New("capture status is not alive, retry again")
-	}, utils.RetryOption{
-		Delay:   200 * time.Millisecond,
-		Timeout: 20 * time.Second,
-	})
+	err := client.GetCaptureAlived()
 	if err != nil {
-		logger.Warnf("cdc post-restart finished, get capture status failed, addr: %s, err: %s, elapsed: %+v", address, err, time.Since(start))
+		logger.Debugf("cdc post-restart finished, get capture status failed, addr: %s, err: %s, elapsed: %+v", address, err, time.Since(start))
 		return nil
 	}
 
-	logger.Warnf("cdc post-restart success, addr: %s, elapsed: %+v", address, time.Since(start))
+	logger.Debugf("cdc post-restart success, addr: %s, elapsed: %+v", address, time.Since(start))
 	return nil
 }
