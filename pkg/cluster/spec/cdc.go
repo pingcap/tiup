@@ -272,7 +272,7 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 		}
 	}
 
-	// this may happen if the capture crashed at the moment.
+	// this may happen if the capture crashed right away.
 	if !found {
 		logger.Debugf("cdc pre-restart finished, cannot found the capture, trigger hard restart, captureID: %s, addr: %s, elapsed: %+v", captureID, address, time.Since(start))
 		return nil

@@ -135,8 +135,13 @@ func Upgrade(
 					address := ins.GetAddr()
 					capture, err := cdcOpenAPIClient.GetCaptureByAddr(address)
 					if err != nil {
-						logger.Warnf("cannot found the capture by address: %s", address)
-						return err
+						// After the previous status check, we know that the cdc instance should be `Up`, but know it cannot be found by address
+						// perhaps since the specified version of cdc does not support open api, or the instance just crashed right away
+						logger.Debugf("upgrade cdc, cannot found the capture by address: %s", address)
+						if err := upgradeInstance(ctx, topo, instance, options, tlsCfg); err != nil {
+							return err
+						}
+						continue
 					}
 
 					if capture.IsOwner {

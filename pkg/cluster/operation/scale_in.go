@@ -413,15 +413,24 @@ func scaleInCDC(
 	for _, instance := range instances {
 		if instance.Status(ctx, 5*time.Second, tlsCfg) == "Down" {
 			instCount[instance.GetHost()]--
-			return StopAndDestroyInstance(ctx, cluster, instance, options, true, instCount[instance.GetHost()] == 0, tlsCfg)
+			if err := StopAndDestroyInstance(ctx, cluster, instance, options, true, instCount[instance.GetHost()] == 0, tlsCfg); err != nil {
+				return err
+			}
+			continue
 		}
 
 		address := instance.(*spec.CDCInstance).GetAddr()
 		client := api.NewCDCOpenAPIClient(ctx, []string{address}, 5*time.Second, tlsCfg)
 		capture, err := client.GetCaptureByAddr(address)
 		if err != nil {
-			logger.Infof("scale-in cdc server, get capture by address failed, addr: %s, err: %+v", address, err)
-			return err
+			// After the previous status check, we know that the cdc instance should be `Up`, but know it cannot be found by address
+			// perhaps since the specified version of cdc does not support open api, or the instance just crashed right away
+			logger.Debugf("scale-in cdc, get capture by address failed, stop the instance by force, err: %+v", err)
+			instCount[instance.GetHost()]--
+			if err := StopAndDestroyInstance(ctx, cluster, instance, options, true, instCount[instance.GetHost()] == 0, tlsCfg); err != nil {
+				return err
+			}
+			continue
 		}
 
 		if capture.IsOwner {
