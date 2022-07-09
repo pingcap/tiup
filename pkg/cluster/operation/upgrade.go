@@ -116,6 +116,7 @@ func Upgrade(
 				// defer PD leader to be upgraded after others
 				isLeader, err := instance.(*spec.PDInstance).IsLeader(ctx, topo, int(options.APITimeout), tlsCfg)
 				if err != nil {
+					logger.Warnf("cannot found pd leader, ignore: %s", err)
 					return err
 				}
 				if isLeader {
@@ -124,24 +125,22 @@ func Upgrade(
 					continue
 				}
 			case spec.ComponentCDC:
-				if instance.(*spec.CDCInstance).Status(ctx, 5*time.Second, tlsCfg) == "Down" {
-					return upgradeInstance(ctx, topo, instance, options, tlsCfg)
-				}
+				if instance.(*spec.CDCInstance).Status(ctx, 5*time.Second, tlsCfg) == "Up" {
+					// during the upgrade process, endpoint addresses should not change, so only new the client once.
+					if cdcOpenAPIClient == nil {
+						cdcOpenAPIClient = api.NewCDCOpenAPIClient(ctx, topo.(*spec.Specification).GetCDCList(), 5*time.Second, tlsCfg)
+					}
 
-				// during the upgrade process, endpoint addresses should not change, so only new the client once.
-				if cdcOpenAPIClient == nil {
-					cdcOpenAPIClient = api.NewCDCOpenAPIClient(ctx, topo.(*spec.Specification).GetCDCList(), 5*time.Second, tlsCfg)
-				}
+					currentAddr := instance.(*spec.CDCInstance).GetAddr()
+					capture, err := cdcOpenAPIClient.GetCaptureByAddr(currentAddr)
+					if err != nil {
+						return err
+					}
 
-				currentAddr := instance.(*spec.CDCInstance).GetAddr()
-				capture, err := cdcOpenAPIClient.GetCaptureByAddr(currentAddr)
-				if err != nil {
-					return err
-				}
-
-				if capture.IsOwner {
-					deferInstances = append(deferInstances, instance)
-					logger.Debugf("Deferred upgrading of TiCDC owner %s, addr: %s", instance.ID(), currentAddr)
+					if capture.IsOwner {
+						deferInstances = append(deferInstances, instance)
+						logger.Debugf("Deferred upgrading of TiCDC owner %s, addr: %s", instance.ID(), currentAddr)
+					}
 				}
 			default:
 				// do nothing, kept for future usage with other components
