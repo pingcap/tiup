@@ -236,18 +236,23 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 		return nil
 	}
 
-	currentAddr := i.GetAddr()
-	client := api.NewCDCOpenAPIClient(ctx, []string{currentAddr}, 5*time.Second, tlsCfg)
+	address := i.GetAddr()
+	if i.Status(ctx, 5*time.Second, tlsCfg) == "Down" {
+		logger.Debugf("cdc pre-restart skipped, instance is down, trigger hard restart, addr: %s", address)
+		return nil
+	}
+
+	client := api.NewCDCOpenAPIClient(ctx, []string{address}, 5*time.Second, tlsCfg)
 	captures, err := client.GetAllCaptures()
 	if err != nil {
-		logger.Warnf("get cdc all captures failed when pre-restart the cdc instance: %s", i.GetAddr())
+		logger.Warnf("cdc pre-restart failed, cannot get all captures, trigger hard restart, addr: %s", address)
 		return nil
 	}
 
 	// this may happen all other captures crashed, only this one alive,
 	// no need to drain the capture, just return it to trigger hard restart.
 	if len(captures) <= 1 {
-		logger.Infof("pre-restart cdc finished, only one alive capture found, trigger hard restart, %s", i.GetAddr())
+		logger.Debugf("cdc pre-restart finished, only one alive capture found, trigger hard restart, addr: %s", address)
 		return nil
 	}
 
@@ -258,7 +263,7 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 	)
 
 	for _, capture := range captures {
-		if currentAddr == capture.AdvertiseAddr {
+		if address == capture.AdvertiseAddr {
 			found = true
 			captureID = capture.ID
 			isOwner = capture.IsOwner
@@ -268,7 +273,7 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 
 	// this may happen if the capture crashed at the moment.
 	if !found {
-		logger.Debugf("pre-restart cdc finished, target capture %s not found, trigger hard restart, %s", captureID, i.GetAddr())
+		logger.Debugf("cdc pre-restart finished, cannot found the capture, trigger hard restart, captureID: %s, addr: %s", captureID, address)
 		return nil
 	}
 
@@ -282,7 +287,7 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 	}
 
 	if err := client.DrainCapture(captureID, apiTimeoutSeconds); err != nil {
-		logger.Debugf("pre-restart cdc drain capture failed, %s", err)
+		logger.Debugf("cdc pre-restar finished, drain the capture failed, captureID: %s, addr: %s, err: %s", captureID, address, err)
 	}
 
 	return nil
@@ -290,16 +295,18 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 
 // PostRestart implements RollingUpdateInstance interface.
 func (i *CDCInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tls.Config) error {
-	timeoutOpt := utils.RetryOption{
-		Delay:   200 * time.Millisecond,
-		Timeout: 20 * time.Second,
+	logger, ok := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
+	if !ok {
+		panic("logger not found")
 	}
 
-	addr := i.GetAddr()
-	currentAddrs := []string{addr}
-	client := api.NewCDCOpenAPIClient(ctx, currentAddrs, 5*time.Second, tlsCfg)
+	address := i.GetAddr()
+	if i.Status(ctx, 5*time.Second, tlsCfg) == "Down" {
+		logger.Debugf("cdc post-restart skipped, instance is down, addr: %s", address)
+		return nil
+	}
 
-	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
+	client := api.NewCDCOpenAPIClient(ctx, []string{address}, 5*time.Second, tlsCfg)
 
 	var liveness api.Liveness
 	err := utils.Retry(func() error {
@@ -309,15 +316,17 @@ func (i *CDCInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tl
 			return err
 		}
 		return nil
-	}, timeoutOpt)
+	}, utils.RetryOption{
+		Delay:   200 * time.Millisecond,
+		Timeout: 20 * time.Second,
+	})
 	if err != nil {
-		logger.Warnf("get cdc status failed: %s, addr: %s", err, addr)
-
+		logger.Warnf("cdc post-restart finished, get capture status failed, addr: %s, err: %s", address, err)
 		return nil
 	}
 
 	if liveness != api.LivenessCaptureAlive {
-		logger.Warnf("cdc status is not alive, addr: %s", addr)
+		logger.Warnf("cdc post-restart finished, capture not alive, addr: %s", address)
 	}
 
 	return nil

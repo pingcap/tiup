@@ -151,7 +151,7 @@ func (c *CDCOpenAPIClient) ResignOwner() error {
 	}
 
 	if owner.IsOwner {
-		c.l().Infof("cdc resign owner successfully, and new owner found, owner: %s", owner)
+		c.l().Infof("cdc resign owner successfully, and new owner found, owner: %+v", owner)
 	}
 	return err
 }
