@@ -201,7 +201,7 @@ func ScaleInCluster(
 				}
 
 				instCount[instance.GetHost()]--
-				if err := StopAndDestroyInstance(ctx, cluster, instance, options, true, instCount[instance.GetHost()] == 0); err != nil {
+				if err := StopAndDestroyInstance(ctx, cluster, instance, options, true, instCount[instance.GetHost()] == 0, tlsCfg); err != nil {
 					logger.Warnf("failed to stop/destroy %s: %v", compName, err)
 				}
 
@@ -281,7 +281,7 @@ func ScaleInCluster(
 
 			if !asyncOfflineComps.Exist(instance.ComponentName()) {
 				instCount[instance.GetHost()]--
-				if err := StopAndDestroyInstance(ctx, cluster, instance, options, false, instCount[instance.GetHost()] == 0); err != nil {
+				if err := StopAndDestroyInstance(ctx, cluster, instance, options, false, instCount[instance.GetHost()] == 0, tlsCfg); err != nil {
 					return err
 				}
 			} else {
@@ -404,7 +404,7 @@ func scaleInCDC(
 		for _, ins := range instances {
 			ins := ins
 			g.Go(func() error {
-				return StopAndDestroyInstance(ctx, cluster, ins, options, true, instCount[ins.GetHost()] == 0)
+				return StopAndDestroyInstance(ctx, cluster, ins, options, true, instCount[ins.GetHost()] == 0, tlsCfg)
 			})
 		}
 		return g.Wait()
@@ -415,7 +415,7 @@ func scaleInCDC(
 
 	for _, instance := range instances {
 		if instance.Status(ctx, 5*time.Second, tlsCfg) == "Down" {
-			return StopAndDestroyInstance(ctx, cluster, instance, options, true, instCount[instance.GetHost()] == 0)
+			return StopAndDestroyInstance(ctx, cluster, instance, options, true, instCount[instance.GetHost()] == 0, tlsCfg)
 		}
 
 		currentAddr := instance.(*spec.CDCInstance).GetAddr()
@@ -430,13 +430,13 @@ func scaleInCDC(
 			continue
 		}
 
-		if err := StopAndDestroyInstance(ctx, cluster, instance, options, false, instCount[instance.GetHost()] == 0); err != nil {
+		if err := StopAndDestroyInstance(ctx, cluster, instance, options, false, instCount[instance.GetHost()] == 0, tlsCfg); err != nil {
 			return err
 		}
 	}
 
 	for _, instance := range deferInstances {
-		if err := StopAndDestroyInstance(ctx, cluster, instance, options, false, instCount[instance.GetHost()] == 0); err != nil {
+		if err := StopAndDestroyInstance(ctx, cluster, instance, options, false, instCount[instance.GetHost()] == 0, tlsCfg); err != nil {
 			return err
 		}
 	}
