@@ -403,8 +403,10 @@ func scaleInCDC(
 		g, _ := errgroup.WithContext(ctx)
 		for _, ins := range instances {
 			ins := ins
+			instCount[ins.GetHost()]++
+			destroyNode := instCount[ins.GetHost()] == 0
 			g.Go(func() error {
-				return StopAndDestroyInstance(ctx, cluster, ins, options, true, instCount[ins.GetHost()] == 0, tlsCfg)
+				return StopAndDestroyInstance(ctx, cluster, ins, options, true, destroyNode, tlsCfg)
 			})
 		}
 		return g.Wait()
@@ -415,6 +417,7 @@ func scaleInCDC(
 
 	for _, instance := range instances {
 		if instance.Status(ctx, 5*time.Second, tlsCfg) == "Down" {
+			instCount[instance.GetHost()]--
 			return StopAndDestroyInstance(ctx, cluster, instance, options, true, instCount[instance.GetHost()] == 0, tlsCfg)
 		}
 
@@ -430,12 +433,14 @@ func scaleInCDC(
 			continue
 		}
 
+		instCount[instance.GetHost()]--
 		if err := StopAndDestroyInstance(ctx, cluster, instance, options, false, instCount[instance.GetHost()] == 0, tlsCfg); err != nil {
 			return err
 		}
 	}
 
 	for _, instance := range deferInstances {
+		instCount[instance.GetHost()]--
 		if err := StopAndDestroyInstance(ctx, cluster, instance, options, false, instCount[instance.GetHost()] == 0, tlsCfg); err != nil {
 			return err
 		}
