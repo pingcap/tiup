@@ -125,22 +125,22 @@ func Upgrade(
 					continue
 				}
 			case spec.ComponentCDC:
-				if instance.(*spec.CDCInstance).Status(ctx, 5*time.Second, tlsCfg) == "Up" {
-					// during the upgrade process, endpoint addresses should not change, so only new the client once.
-					if cdcOpenAPIClient == nil {
-						cdcOpenAPIClient = api.NewCDCOpenAPIClient(ctx, topo.(*spec.Specification).GetCDCList(), 5*time.Second, tlsCfg)
-					}
+				// during the upgrade process, endpoint addresses should not change, so only new the client once.
+				if cdcOpenAPIClient == nil {
+					cdcOpenAPIClient = api.NewCDCOpenAPIClient(ctx, topo.(*spec.Specification).GetCDCList(), 5*time.Second, tlsCfg)
+				}
 
-					currentAddr := instance.(*spec.CDCInstance).GetAddr()
-					capture, err := cdcOpenAPIClient.GetCaptureByAddr(currentAddr)
-					if err != nil {
-						return err
-					}
+				address := instance.(*spec.CDCInstance).GetAddr()
+				capture, err := cdcOpenAPIClient.GetCaptureByAddr(address)
+				if err != nil {
+					logger.Warnf("cannot found the target capture by address: %s", address)
+					return err
+				}
 
-					if capture.IsOwner {
-						deferInstances = append(deferInstances, instance)
-						logger.Debugf("Deferred upgrading of TiCDC owner %s, addr: %s", instance.ID(), currentAddr)
-					}
+				if capture.IsOwner {
+					deferInstances = append(deferInstances, instance)
+					logger.Debugf("Deferred upgrading of TiCDC owner %s, addr: %s", instance.ID(), address)
+					continue
 				}
 			default:
 				// do nothing, kept for future usage with other components

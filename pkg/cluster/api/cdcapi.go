@@ -20,8 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
-	"path"
 	"time"
 
 	"github.com/pingcap/errors"
@@ -44,11 +42,7 @@ func NewCDCOpenAPIClient(ctx context.Context, addresses []string, timeout time.D
 	}
 	urls := make([]string, 0, len(addresses))
 	for _, addr := range addresses {
-		url := &url.URL{
-			Scheme: httpPrefix,
-			Host:   addr,
-		}
-		urls = append(urls, url.String())
+		urls = append(urls, fmt.Sprintf("%s://%s", httpPrefix, addr))
 	}
 
 	return &CDCOpenAPIClient{
@@ -60,13 +54,12 @@ func NewCDCOpenAPIClient(ctx context.Context, addresses []string, timeout time.D
 
 func (c *CDCOpenAPIClient) getEndpoints(api string) (endpoints []string) {
 	for _, url := range c.urls {
-		endpoint := path.Join(url, api)
-		endpoints = append(endpoints, endpoint)
+		endpoints = append(endpoints, fmt.Sprintf("%s/%s", url, api))
 	}
 	return endpoints
 }
 
-func drainCapture(client *CDCOpenAPIClient, target string) (result int, err error) {
+func drainCapture(client *CDCOpenAPIClient, target string) (int, error) {
 	api := "api/v1/captures/drain"
 	endpoints := client.getEndpoints(api)
 
@@ -78,7 +71,7 @@ func drainCapture(client *CDCOpenAPIClient, target string) (result int, err erro
 		return 0, err
 	}
 
-	var data []byte
+	var resp DrainCaptureResp
 	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		data, statusCode, err := client.client.Put(client.ctx, endpoint, bytes.NewReader(body))
 		if err != nil {
@@ -87,35 +80,27 @@ func drainCapture(client *CDCOpenAPIClient, target string) (result int, err erro
 				client.l().Debugf("cdc drain capture does not support, ignore it, target: %s, err: %s", target, err)
 				return data, nil
 			}
-
-			if bytes.Contains(body, []byte("scheduler request failed")) {
-				client.l().Debugf("cdc drain capture failed: %s", body)
+			// match https://github.com/pingcap/tiflow/blob/e3d0d9d23b77c7884b70016ddbd8030ffeb95dfd/pkg/errors/cdc_errors.go#L55-L57
+			if bytes.Contains(data, []byte("scheduler request failed")) {
+				client.l().Debugf("cdc drain capture failed, data: %s", data)
 				return data, nil
 			}
-			if bytes.Contains(body, []byte("capture not exists")) {
-				client.l().Debugf("cdc drain capture failed: %s", body)
+			// match https://github.com/pingcap/tiflow/blob/e3d0d9d23b77c7884b70016ddbd8030ffeb95dfd/pkg/errors/cdc_errors.go#L51-L54
+			if bytes.Contains(data, []byte("capture not exists")) {
+				client.l().Debugf("cdc drain capture failed, data: %s", data)
 				return data, nil
 			}
-			client.l().Warnf("cdc drain capture failed, data=%+v, statusCode=%+v, err=%+v", data, statusCode, err)
+			client.l().Debugf("cdc drain capture failed, data: %s, statusCode: %d, err: %s", data, statusCode, err)
 			return data, err
 		}
-		return data, nil
+		return data, json.Unmarshal(data, &resp)
 	})
-	if err != nil {
-		return 0, err
-	}
-
-	var resp DrainCaptureResp
-	err = json.Unmarshal(data, &resp)
-	if err != nil {
-		return resp.CurrentTableCount, err
-	}
-
-	return resp.CurrentTableCount, nil
+	return resp.CurrentTableCount, err
 }
 
 // DrainCapture request cdc owner move all tables on the target capture to other captures.
 func (c *CDCOpenAPIClient) DrainCapture(target string, apiTimeoutSeconds int) error {
+	start := time.Now()
 	err := utils.Retry(func() error {
 		count, err := drainCapture(c, target)
 		if err != nil {
@@ -124,17 +109,18 @@ func (c *CDCOpenAPIClient) DrainCapture(target string, apiTimeoutSeconds int) er
 		if count == 0 {
 			return nil
 		}
+		c.l().Debugf("DrainCapture not finished, target: %s, count: %d", target, count)
 		return errors.New("still waiting for the drain capture to finish")
 	}, utils.RetryOption{
-		Delay:   time.Second,
+		Delay:   2 * time.Second,
 		Timeout: time.Duration(apiTimeoutSeconds) * time.Second,
 	})
 
 	if err != nil {
-		return fmt.Errorf("cdc drain capture failed: %s, target: %s", err, target)
+		c.l().Warnf("cdc drain capture not success, give up, target: %s, err: %s", target, err)
 	}
 
-	c.l().Infof("cdc drain capture finished, target=%+v", target)
+	c.l().Infof("cdc drain capture finished, target: %s, elapsed: %+v", target, time.Since(start))
 	return nil
 }
 
@@ -146,10 +132,10 @@ func (c *CDCOpenAPIClient) ResignOwner() error {
 		body, statusCode, err := c.client.PostWithStatusCode(c.ctx, endpoint, nil)
 		if err != nil {
 			if statusCode == http.StatusNotFound {
-				c.l().Debugf("resign owner does not found, data=%+v, statusCode=%+v, err=%+v", body, statusCode, err)
+				c.l().Debugf("resign owner does not found, data: %s, statusCode: %d, err: %s", body, statusCode, err)
 				return body, nil
 			}
-			c.l().Warnf("resign owner failed, data=%+v, statusCode=%+v, err=%+v", body, statusCode, err)
+			c.l().Warnf("resign owner failed, data: %s, statusCode: %d, err: %s", body, statusCode, err)
 			return body, err
 		}
 		return body, nil
@@ -161,11 +147,11 @@ func (c *CDCOpenAPIClient) ResignOwner() error {
 
 	owner, err := c.GetOwner()
 	if err != nil {
-		c.l().Warnf("cdc get owner failed: %v", err)
+		c.l().Warnf("cdc get owner failed, err: %s", err)
 	}
 
 	if owner.IsOwner {
-		c.l().Infof("cdc resign owner successfully, and new owner found, owner: %+v", owner)
+		c.l().Infof("cdc resign owner successfully, and new owner found, owner: %s", owner)
 	}
 	return err
 }
@@ -211,12 +197,11 @@ func (c *CDCOpenAPIClient) GetAllCaptures() (result []*Capture, err error) {
 		}
 		return nil
 	}, utils.RetryOption{
-		Delay:   500 * time.Millisecond,
 		Timeout: 20 * time.Second,
 	})
 	if err != nil {
 		// todo: set to debug level
-		c.l().Warnf("cdc get all captures failed: %+v", err)
+		c.l().Warnf("cdc get all captures failed, err: %s", err)
 	}
 
 	return result, err
@@ -231,12 +216,11 @@ func (c *CDCOpenAPIClient) GetStatus() (result Liveness, err error) {
 		}
 		return nil
 	}, utils.RetryOption{
-		Delay:   100 * time.Millisecond,
 		Timeout: 20 * time.Second,
 	})
 
 	if err != nil {
-		c.l().Warnf("cdc get capture status failed, %+v", err)
+		c.l().Warnf("cdc get capture status failed, err: %s", err)
 	}
 
 	return result, err
@@ -244,6 +228,7 @@ func (c *CDCOpenAPIClient) GetStatus() (result Liveness, err error) {
 
 func getCDCServerStatus(client *CDCOpenAPIClient) (Liveness, error) {
 	api := "api/v1/status"
+	// client should only have address to the target cdc server, not all cdc servers.
 	endpoints := client.getEndpoints(api)
 
 	var response ServerStatus
@@ -269,12 +254,11 @@ func getAllCaptures(client *CDCOpenAPIClient) ([]*Capture, error) {
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		body, statusCode, err := client.client.GetWithStatusCode(client.ctx, endpoint)
 		// todo: remove this log
-		client.l().Warnf("get all captures, data=%+v, statusCode=%+v, err=%+v", body, statusCode, err)
 		if err != nil {
 			if statusCode == http.StatusNotFound {
 				// old version cdc does not support open api, also the stopped cdc instance
 				// return nil to trigger hard restart
-				client.l().Warnf("get all captures not exist, ignore: %s, statusCode: %+v, err: %s", body, statusCode, err)
+				client.l().Warnf("get all captures not support, ignore: %s, statusCode: %d, err: %s", body, statusCode, err)
 				return body, nil
 			}
 			return body, err
