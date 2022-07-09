@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"path"
 	"time"
 
@@ -30,25 +31,39 @@ import (
 
 // CDCOpenAPIClient is client for access TiCDC Open API
 type CDCOpenAPIClient struct {
-	addrs      []string
-	tlsEnabled bool
-	client     *utils.HTTPClient
-	ctx        context.Context
+	urls   []string
+	client *utils.HTTPClient
+	ctx    context.Context
 }
 
 // NewCDCOpenAPIClient return a `CDCOpenAPIClient`
-func NewCDCOpenAPIClient(ctx context.Context, addrs []string, timeout time.Duration, tlsConfig *tls.Config) *CDCOpenAPIClient {
-	enableTLS := false
+func NewCDCOpenAPIClient(ctx context.Context, addresses []string, timeout time.Duration, tlsConfig *tls.Config) *CDCOpenAPIClient {
+	httpPrefix := "http"
 	if tlsConfig != nil {
-		enableTLS = true
+		httpPrefix = "https"
+	}
+	urls := make([]string, 0, len(addresses))
+	for _, addr := range addresses {
+		url := &url.URL{
+			Scheme: httpPrefix,
+			Host:   addr,
+		}
+		urls = append(urls, url.String())
 	}
 
 	return &CDCOpenAPIClient{
-		addrs:      addrs,
-		tlsEnabled: enableTLS,
-		client:     utils.NewHTTPClient(timeout, tlsConfig),
-		ctx:        ctx,
+		urls:   urls,
+		client: utils.NewHTTPClient(timeout, tlsConfig),
+		ctx:    ctx,
 	}
+}
+
+func (c *CDCOpenAPIClient) getEndpoints(api string) (endpoints []string) {
+	for _, url := range c.urls {
+		endpoint := path.Join(url, api)
+		endpoints = append(endpoints, endpoint)
+	}
+	return endpoints
 }
 
 func drainCapture(client *CDCOpenAPIClient, target string) (result int, err error) {
@@ -153,23 +168,6 @@ func (c *CDCOpenAPIClient) ResignOwner() error {
 		c.l().Infof("cdc resign owner successfully, and new owner found, owner: %+v", owner)
 	}
 	return err
-}
-
-func (c *CDCOpenAPIClient) getURL(addr string) string {
-	httpPrefix := "http"
-	if c.tlsEnabled {
-		httpPrefix = "https"
-	}
-	return fmt.Sprintf("%s://%s", httpPrefix, addr)
-}
-
-func (c *CDCOpenAPIClient) getEndpoints(cmd string) (endpoints []string) {
-	for _, addr := range c.addrs {
-		url := c.getURL(addr)
-		endpoint := path.Join(url, cmd)
-		endpoints = append(endpoints, endpoint)
-	}
-	return endpoints
 }
 
 // GetOwner return the cdc owner capture information
