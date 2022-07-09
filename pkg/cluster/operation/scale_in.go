@@ -420,7 +420,7 @@ func scaleInCDC(
 		client := api.NewCDCOpenAPIClient(ctx, []string{address}, 5*time.Second, tlsCfg)
 		capture, err := client.GetCaptureByAddr(address)
 		if err != nil {
-			logger.Debugf("scale-in cdc server, get capture by address failed, addr: %s, err: %+v", address, err)
+			logger.Infof("scale-in cdc server, get capture by address failed, addr: %s, err: %+v", address, err)
 			return err
 		}
 
