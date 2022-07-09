@@ -395,11 +395,8 @@ func scaleInCDC(
 ) error {
 	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 
-	// collect all cdc endpoints, even planned to be shutdown.
-	endpoints := cluster.GetCDCList()
-
-	// if all cdc instances are selected, just stop all instances immediately, no need to do any pre-restart
-	if len(instances) == len(endpoints) {
+	// if all cdc instances are selected, just stop all instances by force
+	if len(instances) == len(cluster.CDCServers) {
 		g, _ := errgroup.WithContext(ctx)
 		for _, ins := range instances {
 			ins := ins
@@ -412,24 +409,24 @@ func scaleInCDC(
 		return g.Wait()
 	}
 
-	client := api.NewCDCOpenAPIClient(ctx, endpoints, 5*time.Second, tlsCfg)
 	deferInstances := make([]spec.Instance, 0, 1)
-
 	for _, instance := range instances {
 		if instance.Status(ctx, 5*time.Second, tlsCfg) == "Down" {
 			instCount[instance.GetHost()]--
 			return StopAndDestroyInstance(ctx, cluster, instance, options, true, instCount[instance.GetHost()] == 0, tlsCfg)
 		}
 
-		currentAddr := instance.(*spec.CDCInstance).GetAddr()
-		capture, err := client.GetCaptureByAddr(currentAddr)
+		address := instance.(*spec.CDCInstance).GetAddr()
+		client := api.NewCDCOpenAPIClient(ctx, []string{address}, 5*time.Second, tlsCfg)
+		capture, err := client.GetCaptureByAddr(address)
 		if err != nil {
+			logger.Debugf("scale-in cdc server, get capture by address failed, addr: %s, err: %+v", address, err)
 			return err
 		}
 
 		if capture.IsOwner {
 			deferInstances = append(deferInstances, instance)
-			logger.Debugf("Deferred scale-in the TiCDC owner %s, addr: %s", instance.ID(), currentAddr)
+			logger.Debugf("Deferred scale-in the TiCDC owner %s, addr: %s", instance.ID(), address)
 			continue
 		}
 

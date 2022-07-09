@@ -190,12 +190,9 @@ func Stop(
 			instCount[inst.GetHost()]++
 		}
 	})
+
 	for _, comp := range components {
 		insts := FilterInstance(comp.Instances(), nodeFilter)
-		if len(insts) == 0 {
-			continue
-		}
-
 		err := StopComponent(
 			ctx,
 			cluster,
@@ -586,6 +583,7 @@ func StopComponent(ctx context.Context,
 	logger.Infof("Stopping component %s", name)
 
 	errg, _ := errgroup.WithContext(ctx)
+
 	for _, ins := range instances {
 		ins := ins
 		switch name {

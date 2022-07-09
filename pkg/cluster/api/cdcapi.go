@@ -109,20 +109,14 @@ func (c *CDCOpenAPIClient) DrainCapture(target string, apiTimeoutSeconds int) er
 		if count == 0 {
 			return nil
 		}
-		c.l().Debugf("DrainCapture not finished, target: %s, count: %d", target, count)
-		return errors.New("still waiting for the drain capture to finish")
+		return fmt.Errorf("drain capture not finished yet, target: %s, count: %d", target, count)
 	}, utils.RetryOption{
-		Delay:   2 * time.Second,
+		Delay:   1 * time.Second,
 		Timeout: time.Duration(apiTimeoutSeconds) * time.Second,
 	})
 
-	if err != nil {
-		c.l().Debugf("cdc drain capture not success, give up, target: %s, err: %s", target, err)
-		return err
-	}
-
 	c.l().Debugf("cdc drain capture finished, target: %s, elapsed: %+v", target, time.Since(start))
-	return nil
+	return err
 }
 
 // ResignOwner resign the cdc owner, and wait for a new owner be found
@@ -133,10 +127,9 @@ func (c *CDCOpenAPIClient) ResignOwner() error {
 		body, statusCode, err := c.client.PostWithStatusCode(c.ctx, endpoint, nil)
 		if err != nil {
 			if statusCode == http.StatusNotFound {
-				c.l().Debugf("resign owner does not found, data: %s, statusCode: %d, err: %s", body, statusCode, err)
+				c.l().Debugf("resign owner does not found, ignore it, statusCode: %d, err: %s", statusCode, err)
 				return body, nil
 			}
-			c.l().Debugf("resign owner failed, data: %s, statusCode: %d, err: %s", body, statusCode, err)
 			return body, err
 		}
 		return body, nil
@@ -148,7 +141,6 @@ func (c *CDCOpenAPIClient) ResignOwner() error {
 
 	owner, err := c.GetOwner()
 	if err != nil {
-		c.l().Debugf("cdc get owner failed, err: %s", err)
 		return err
 	}
 
@@ -189,7 +181,6 @@ func (c *CDCOpenAPIClient) GetCaptureByAddr(addr string) (*Capture, error) {
 
 // GetAllCaptures return all captures instantaneously
 func (c *CDCOpenAPIClient) GetAllCaptures() (result []*Capture, err error) {
-	// todo: remove this retry
 	err = utils.Retry(func() error {
 		result, err = getAllCaptures(c)
 		if err != nil {
@@ -199,10 +190,6 @@ func (c *CDCOpenAPIClient) GetAllCaptures() (result []*Capture, err error) {
 	}, utils.RetryOption{
 		Timeout: 20 * time.Second,
 	})
-	if err != nil {
-		c.l().Debugf("cdc get all captures failed, err: %s", err)
-	}
-
 	return result, err
 }
 
@@ -218,7 +205,7 @@ func getAllCaptures(client *CDCOpenAPIClient) ([]*Capture, error) {
 			if statusCode == http.StatusNotFound {
 				// old version cdc does not support open api, also the stopped cdc instance
 				// return nil to trigger hard restart
-				client.l().Debugf("get all captures not support, ignore: %s, statusCode: %d, err: %s", body, statusCode, err)
+				client.l().Debugf("get all captures not support, ignore it, statusCode: %d, err: %s", statusCode, err)
 				return body, nil
 			}
 			return body, err
@@ -255,7 +242,7 @@ func (c *CDCOpenAPIClient) GetStatus() (result ServerStatus, err error) {
 		data, statusCode, err := c.client.GetWithStatusCode(c.ctx, endpoints[0])
 		if err != nil {
 			if statusCode == http.StatusNotFound {
-				c.l().Debugf("capture server status api not support, data: %s, statusCode: %d, err: %s", data, statusCode, err)
+				c.l().Debugf("capture server status api not support, ignore it. statusCode: %d, err: %s", statusCode, err)
 				return nil
 			}
 			err = json.Unmarshal(data, &result)
@@ -271,10 +258,6 @@ func (c *CDCOpenAPIClient) GetStatus() (result ServerStatus, err error) {
 	}, utils.RetryOption{
 		Timeout: 20 * time.Second,
 	})
-
-	if err != nil {
-		c.l().Warnf("cdc get capture status failed, err: %s", err)
-	}
 
 	return result, err
 }

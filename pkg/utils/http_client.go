@@ -171,7 +171,7 @@ func (c *HTTPClient) PostWithStatusCode(ctx context.Context, url string, body io
 	return data, res.StatusCode, err
 }
 
-// Put send a PUT request to the url and returns the response
+// Put send a PUT request to the url and returns the response, also the status code
 func (c *HTTPClient) Put(ctx context.Context, url string, body io.Reader) ([]byte, int, error) {
 	var statusCode int
 	req, err := http.NewRequest("PUT", url, body)
