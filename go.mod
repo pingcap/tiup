@@ -49,7 +49,7 @@ require (
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/testify v1.7.2-0.20220504104629-106ec21d14df
+	github.com/stretchr/testify v1.7.1
 	github.com/tj/go-termd v0.0.1
 	go.etcd.io/etcd/client/pkg/v3 v3.5.4
 	go.etcd.io/etcd/client/v3 v3.5.4
