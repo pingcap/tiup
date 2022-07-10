@@ -81,13 +81,13 @@ func drainCapture(client *CDCOpenAPIClient, target string) (int, error) {
 				return data, nil
 			}
 			// match https://github.com/pingcap/tiflow/blob/e3d0d9d23b77c7884b70016ddbd8030ffeb95dfd/pkg/errors/cdc_errors.go#L55-L57
-			if bytes.Contains(data, []byte("scheduler request failed")) {
-				client.l().Debugf("cdc drain capture failed, data: %s", data)
+			if bytes.Contains(data, []byte("CDC:ErrSchedulerRequestFailed")) {
+				client.l().Debugf("cdc drain capture failed, data: %s, statusCode: %d, err: %s", data, statusCode, err)
 				return data, nil
 			}
 			// match https://github.com/pingcap/tiflow/blob/e3d0d9d23b77c7884b70016ddbd8030ffeb95dfd/pkg/errors/cdc_errors.go#L51-L54
-			if bytes.Contains(data, []byte("capture not exists")) {
-				client.l().Debugf("cdc drain capture failed, data: %s", data)
+			if bytes.Contains(data, []byte("CDC:ErrCaptureNotExist")) {
+				client.l().Debugf("cdc drain capture failed, data: %s, statusCode: %d, err: %s", data, statusCode, err)
 				return data, nil
 			}
 			client.l().Debugf("cdc drain capture failed, data: %s, statusCode: %d, err: %s", data, statusCode, err)
