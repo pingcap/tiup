@@ -214,10 +214,7 @@ func getAllCaptures(client *CDCOpenAPIClient) ([]*Capture, error) {
 		return body, json.Unmarshal(body, &response)
 	})
 
-	if err != nil {
-		return nil, err
-	}
-	return response, nil
+	return response, err
 }
 
 // GetCaptureAlived return error if the capture is not alived

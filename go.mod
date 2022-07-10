@@ -32,7 +32,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.13
 	github.com/otiai10/copy v1.7.0
 	github.com/pingcap/check v0.0.0-20211026125417-57bd13f7b5f0
-	github.com/pingcap/errors v0.11.5-0.20211224045212-9687c2b0f87c
+	github.com/pingcap/errors v0.11.5-0.20201126102027-b0a155152ca3
 	github.com/pingcap/failpoint v0.0.0-20220423142525-ae43b7f4e5c3
 	github.com/pingcap/fn v1.0.0
 	github.com/pingcap/kvproto v0.0.0-20220525022339-6aaebf466305
