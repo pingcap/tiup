@@ -144,6 +144,10 @@ func (c *CDCOpenAPIClient) ResignOwner() error {
 		return err
 	}
 
+	// sleep 2 seconds to wait for the new owner finish the first heartbeat request-response round.
+	// if this is not enough, sleep longer.
+	time.Sleep(2 * time.Second)
+
 	c.l().Debugf("cdc resign owner successfully, and new owner found, owner: %+v", owner)
 	return nil
 }
