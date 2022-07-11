@@ -603,6 +603,7 @@ func StopComponent(ctx context.Context,
 				}
 				err := cdc.PreRestart(nctx, topo, int(timeout), tlsCfg)
 				if err != nil {
+					// this should never hit, since all errors swallowed to trigger hard stop.
 					return err
 				}
 			}
