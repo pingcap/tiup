@@ -110,7 +110,7 @@ func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Optio
 			deployDir := spec.Abs(base.User, inst.DeployDir())
 			// data dir would be empty for components which don't need it
 			dataDirs := spec.MultiDirAbs(base.User, inst.DataDir())
-			// log dir will always be with values, but the component might not use it
+			// log dir will always be with values, but might not used by the component
 			logDir := spec.Abs(base.User, inst.LogDir())
 
 			// Deploy component
