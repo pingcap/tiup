@@ -77,20 +77,20 @@ func drainCapture(client *CDCOpenAPIClient, target string) (int, error) {
 		if err != nil {
 			if statusCode == http.StatusNotFound {
 				// old version cdc does not support `DrainCapture`, return nil to trigger hard restart.
-				client.l().Debugf("cdc drain capture does not support, ignore it, target: %s, err: %s", target, err)
+				client.l().Debugf("cdc drain capture does not support, ignore it, target: %s, err: %+v", target, err)
 				return data, nil
 			}
 			// match https://github.com/pingcap/tiflow/blob/e3d0d9d23b77c7884b70016ddbd8030ffeb95dfd/pkg/errors/cdc_errors.go#L55-L57
 			if bytes.Contains(data, []byte("CDC:ErrSchedulerRequestFailed")) {
-				client.l().Debugf("cdc drain capture failed, data: %s, statusCode: %d, err: %s", data, statusCode, err)
+				client.l().Debugf("cdc drain capture failed, data: %s, err: %+v", data, err)
 				return data, nil
 			}
 			// match https://github.com/pingcap/tiflow/blob/e3d0d9d23b77c7884b70016ddbd8030ffeb95dfd/pkg/errors/cdc_errors.go#L51-L54
 			if bytes.Contains(data, []byte("CDC:ErrCaptureNotExist")) {
-				client.l().Debugf("cdc drain capture failed, data: %s, statusCode: %d, err: %s", data, statusCode, err)
+				client.l().Debugf("cdc drain capture failed, data: %s, err: %+v", data, err)
 				return data, nil
 			}
-			client.l().Debugf("cdc drain capture failed, data: %s, statusCode: %d, err: %s", data, statusCode, err)
+			client.l().Debugf("cdc drain capture failed, data: %s, statusCode: %d, err: %+v", data, statusCode, err)
 			return data, err
 		}
 		return data, json.Unmarshal(data, &resp)
@@ -127,7 +127,7 @@ func (c *CDCOpenAPIClient) ResignOwner() error {
 		body, statusCode, err := c.client.PostWithStatusCode(c.ctx, endpoint, nil)
 		if err != nil {
 			if statusCode == http.StatusNotFound {
-				c.l().Debugf("resign owner does not found, ignore it, statusCode: %d, err: %s", statusCode, err)
+				c.l().Debugf("resign owner does not found, ignore it, err: %+v", err)
 				return body, nil
 			}
 			return body, err
@@ -205,7 +205,7 @@ func getAllCaptures(client *CDCOpenAPIClient) ([]*Capture, error) {
 			if statusCode == http.StatusNotFound {
 				// old version cdc does not support open api, also the stopped cdc instance
 				// return nil to trigger hard restart
-				client.l().Debugf("get all captures not support, ignore it, statusCode: %d, err: %s", statusCode, err)
+				client.l().Debugf("get all captures not support, ignore it, err: %+v", err)
 				return body, nil
 			}
 			return body, err
@@ -239,7 +239,7 @@ func (c *CDCOpenAPIClient) GetStatus() (result ServerStatus, err error) {
 		data, statusCode, err := c.client.GetWithStatusCode(c.ctx, endpoints[0])
 		if err != nil {
 			if statusCode == http.StatusNotFound {
-				c.l().Debugf("capture server status api not support, ignore it. statusCode: %d, err: %s", statusCode, err)
+				c.l().Debugf("capture server status api not support, ignore it, err: %+v", err)
 				return nil
 			}
 			err = json.Unmarshal(data, &result)

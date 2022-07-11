@@ -289,11 +289,11 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 	}
 
 	if err := client.DrainCapture(captureID, apiTimeoutSeconds); err != nil {
-		logger.Debugf("cdc pre-restar finished, drain the capture failed, captureID: %s, addr: %s, err: %s, elapsed: %+v", captureID, address, err, time.Since(start))
+		logger.Debugf("cdc pre-restar finished, drain the capture failed, captureID: %s, addr: %s, err: %+v, elapsed: %+v", captureID, address, err, time.Since(start))
 		return nil
 	}
 
-	logger.Debugf("cdc pre-restart success, captureID: %s, addr: %s, err: %s, elapsed: %+v", captureID, address, err, time.Since(start))
+	logger.Debugf("cdc pre-restart success, captureID: %s, addr: %s, elapsed: %+v", captureID, address, time.Since(start))
 	return nil
 }
 
@@ -315,7 +315,7 @@ func (i *CDCInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tl
 
 	err := client.GetCaptureAlived()
 	if err != nil {
-		logger.Debugf("cdc post-restart finished, get capture status failed, addr: %s, err: %s, elapsed: %+v", address, err, time.Since(start))
+		logger.Debugf("cdc post-restart finished, get capture status failed, addr: %s, err: %+v, elapsed: %+v", address, err, time.Since(start))
 		return nil
 	}
 
