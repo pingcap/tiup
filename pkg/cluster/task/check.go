@@ -48,6 +48,7 @@ const (
 // CheckSys performs checks of system information
 type CheckSys struct {
 	host     string
+	currtopo *spec.Specification
 	topo     *spec.Specification
 	opt      *operator.CheckOptions
 	check    string // check type name
@@ -157,7 +158,7 @@ func (c *CheckSys) Execute(ctx context.Context) error {
 		// check partition mount options for data_dir
 		storeResults(ctx, c.host, operator.CheckDirIsExist(ctx, e, c.checkDir))
 	case CheckTypeTimeZone:
-		storeResults(ctx, c.host, operator.CheckTimeZone(ctx, c.topo, c.host, stdout))
+		storeResults(ctx, c.host, operator.CheckTimeZone(ctx, c.currtopo, c.topo, c.host, stdout))
 	}
 
 	return nil

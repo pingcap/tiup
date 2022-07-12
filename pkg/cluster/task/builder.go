@@ -417,9 +417,10 @@ func (b *Builder) Limit(host, domain, limit, item, value string) *Builder {
 }
 
 // CheckSys checks system information of deploy server
-func (b *Builder) CheckSys(host, dir, checkType string, topo *spec.Specification, opt *operator.CheckOptions) *Builder {
+func (b *Builder) CheckSys(host, dir, checkType string, currtopo *spec.Specification, topo *spec.Specification, opt *operator.CheckOptions) *Builder {
 	b.tasks = append(b.tasks, &CheckSys{
 		host:     host,
+		currtopo: currtopo,
 		topo:     topo,
 		opt:      opt,
 		checkDir: dir,

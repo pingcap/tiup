@@ -137,8 +137,7 @@ func (m *Manager) CheckCluster(clusterOrTopoName, scaleoutTopo string, opt Check
 			return err
 		}
 	}
-
-	if err := checkSystemInfo(ctx, sshConnProps, sshProxyProps, &topo, &gOpt, &opt); err != nil {
+	if err := checkSystemInfo(ctx, sshConnProps, sshProxyProps, currTopo, &topo, &gOpt, &opt); err != nil {
 		return err
 	}
 
@@ -163,6 +162,7 @@ type HostCheckResult struct {
 func checkSystemInfo(
 	ctx context.Context,
 	s, p *tui.SSHConnectionProps,
+	currtopo *spec.Specification,
 	topo *spec.Specification,
 	gOpt *operator.Options,
 	opt *CheckOptions,
@@ -214,6 +214,7 @@ func checkSystemInfo(
 					inst.GetHost(),
 					inst.DeployDir(),
 					task.CheckTypePermission,
+					currtopo,
 					topo,
 					opt.Opr,
 				)
@@ -225,6 +226,7 @@ func checkSystemInfo(
 						inst.GetHost(),
 						inst.DeployDir(),
 						task.ChecktypeIsExist,
+						currtopo,
 						topo,
 						opt.Opr,
 					).
@@ -232,6 +234,7 @@ func checkSystemInfo(
 						inst.GetHost(),
 						inst.DataDir(),
 						task.ChecktypeIsExist,
+						currtopo,
 						topo,
 						opt.Opr,
 					).
@@ -239,6 +242,7 @@ func checkSystemInfo(
 						inst.GetHost(),
 						inst.LogDir(),
 						task.ChecktypeIsExist,
+						currtopo,
 						topo,
 						opt.Opr,
 					).
@@ -246,6 +250,7 @@ func checkSystemInfo(
 						inst.GetHost(),
 						fmt.Sprintf("/etc/systemd/system/%s-%d.service", inst.ComponentName(), inst.GetPort()),
 						task.ChecktypeIsExist,
+						currtopo,
 						topo,
 						opt.Opr,
 					)
@@ -260,6 +265,7 @@ func checkSystemInfo(
 						inst.GetHost(),
 						dataDir,
 						task.CheckTypeFIO,
+						currtopo,
 						topo,
 						opt.Opr,
 					)
@@ -269,6 +275,7 @@ func checkSystemInfo(
 						inst.GetHost(),
 						dataDir,
 						task.CheckTypePermission,
+						currtopo,
 						topo,
 						opt.Opr,
 					)
@@ -324,6 +331,7 @@ func checkSystemInfo(
 						inst.GetHost(),
 						"",
 						task.CheckTypeTimeZone,
+						currtopo,
 						topo,
 						opt.Opr,
 					)
@@ -339,6 +347,7 @@ func checkSystemInfo(
 						inst.GetHost(),
 						"",
 						task.CheckTypeSystemInfo,
+						currtopo,
 						topo,
 						opt.Opr,
 					).
@@ -346,6 +355,7 @@ func checkSystemInfo(
 						inst.GetHost(),
 						"",
 						task.CheckTypePartitions,
+						currtopo,
 						topo,
 						opt.Opr,
 					).
@@ -360,6 +370,7 @@ func checkSystemInfo(
 						inst.GetHost(),
 						"",
 						task.CheckTypeSystemLimits,
+						currtopo,
 						topo,
 						opt.Opr,
 					).
@@ -374,6 +385,7 @@ func checkSystemInfo(
 						inst.GetHost(),
 						"",
 						task.CheckTypeSystemConfig,
+						currtopo,
 						topo,
 						opt.Opr,
 					).
@@ -382,6 +394,7 @@ func checkSystemInfo(
 						inst.GetHost(),
 						"",
 						task.CheckTypeService,
+						currtopo,
 						topo,
 						opt.Opr,
 					).
@@ -390,6 +403,7 @@ func checkSystemInfo(
 						inst.GetHost(),
 						"",
 						task.CheckTypePackage,
+						currtopo,
 						topo,
 						opt.Opr,
 					)
@@ -407,6 +421,7 @@ func checkSystemInfo(
 							inst.GetHost(),
 							"",
 							task.CheckTypePort,
+							currtopo,
 							topo,
 							opt.Opr,
 						)
