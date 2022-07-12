@@ -74,6 +74,7 @@ func drainCapture(client *CDCOpenAPIClient, target string) (int, error) {
 	var resp DrainCaptureResp
 	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		data, statusCode, err := client.client.Put(client.ctx, endpoint, bytes.NewReader(body))
+		client.l().Infof("drain capture, endpoint: %s, data: %s, statusCode: %d, err: %+v", endpoint, data, statusCode, err)
 		if err != nil {
 			if statusCode == http.StatusNotFound {
 				// old version cdc does not support `DrainCapture`, return nil to trigger hard restart.
@@ -144,9 +145,9 @@ func (c *CDCOpenAPIClient) ResignOwner() error {
 		return err
 	}
 
-	// sleep 2 seconds to wait for the new owner finish the first heartbeat request-response round.
+	// sleep 3 seconds to wait for the new owner finish the first heartbeat request-response round.
 	// if this is not enough, sleep longer.
-	time.Sleep(2 * time.Second)
+	time.Sleep(3 * time.Second)
 
 	c.l().Debugf("cdc resign owner successfully, and new owner found, owner: %+v", owner)
 	return nil
