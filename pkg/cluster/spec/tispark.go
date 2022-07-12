@@ -17,7 +17,6 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"github.com/pingcap/tiup/pkg/environment"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -31,6 +30,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/template/config"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	system "github.com/pingcap/tiup/pkg/cluster/template/systemd"
+	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/meta"
 	"go.uber.org/zap"
 )

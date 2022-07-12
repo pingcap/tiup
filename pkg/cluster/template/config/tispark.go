@@ -15,12 +15,12 @@ package config
 
 import (
 	"bytes"
-	"github.com/pingcap/tiup/pkg/utils"
 	"os"
 	"path/filepath"
 	"text/template"
 
 	"github.com/pingcap/tiup/embed"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // TiSparkConfig represent the data to generate TiSpark configs
