@@ -953,7 +953,7 @@ func CheckDirIsExist(ctx context.Context, e ctxt.Executor, path string) []*Check
 }
 
 // CheckTimeZone performs checks if time zone is the same
-func CheckTimeZone(ctx context.Context, topo *spec.Specification, host string, rawData []byte) []*CheckResult {
+func CheckTimeZone(ctx context.Context, currtopo *spec.Specification, topo *spec.Specification, host string, rawData []byte) []*CheckResult {
 	var results []*CheckResult
 	var insightInfo, pd0insightInfo insight.InsightInfo
 	if err := json.Unmarshal(rawData, &insightInfo); err != nil {
@@ -963,17 +963,17 @@ func CheckTimeZone(ctx context.Context, topo *spec.Specification, host string, r
 		})
 	}
 
-	if len(topo.PDServers) < 1 {
+	if len(currtopo.PDServers) < 1 {
 		return append(results, &CheckResult{
 			Name: CheckNameTimeZone,
 			Err:  fmt.Errorf("no pd found"),
 		})
 	}
 	// skip compare with itself
-	if topo.PDServers[0].Host == host {
+	if currtopo.PDServers[0].Host == host {
 		return nil
 	}
-	pd0stdout, _, _ := ctxt.GetInner(ctx).GetOutputs(topo.PDServers[0].Host)
+	pd0stdout, _, _ := ctxt.GetInner(ctx).GetOutputs(currtopo.PDServers[0].Host)
 	if err := json.Unmarshal(pd0stdout, &pd0insightInfo); err != nil {
 		return append(results, &CheckResult{
 			Name: CheckNameTimeZone,

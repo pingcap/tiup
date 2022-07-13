@@ -48,6 +48,7 @@ type CheckOptions struct {
 // CheckCluster check cluster before deploying or upgrading
 func (m *Manager) CheckCluster(clusterOrTopoName, scaleoutTopo string, opt CheckOptions, gOpt operator.Options) error {
 	var topo spec.Specification
+	var pdtopo spec.Specification
 	ctx := ctxt.New(
 		context.Background(),
 		gOpt.Concurrency,
@@ -136,9 +137,12 @@ func (m *Manager) CheckCluster(clusterOrTopoName, scaleoutTopo string, opt Check
 		if err := checkConflict(m, clusterOrTopoName, mergedTopo); err != nil {
 			return err
 		}
+		pdtopo.PDServers = currTopo.PDServers
+	} else {
+		pdtopo.PDServers = topo.PDServers
 	}
 
-	if err := checkSystemInfo(ctx, sshConnProps, sshProxyProps, &topo, &gOpt, &opt); err != nil {
+	if err := checkSystemInfo(ctx, sshConnProps, sshProxyProps, &pdtopo, &topo, &gOpt, &opt); err != nil {
 		return err
 	}
 
@@ -163,6 +167,7 @@ type HostCheckResult struct {
 func checkSystemInfo(
 	ctx context.Context,
 	s, p *tui.SSHConnectionProps,
+	currtopo *spec.Specification,
 	topo *spec.Specification,
 	gOpt *operator.Options,
 	opt *CheckOptions,
@@ -185,7 +190,7 @@ func checkSystemInfo(
 	nodeFilter := set.NewStringSet(gOpt.Nodes...)
 	components := topo.ComponentsByUpdateOrder()
 	components = operator.FilterComponent(components, roleFilter)
-
+	pdcomponents := currtopo.ComponentsByUpdateOrder()
 	for _, comp := range components {
 		instances := operator.FilterInstance(comp.Instances(), nodeFilter)
 		if len(instances) < 1 {
@@ -214,6 +219,7 @@ func checkSystemInfo(
 					inst.GetHost(),
 					inst.DeployDir(),
 					task.CheckTypePermission,
+					currtopo,
 					topo,
 					opt.Opr,
 				)
@@ -225,6 +231,7 @@ func checkSystemInfo(
 						inst.GetHost(),
 						inst.DeployDir(),
 						task.ChecktypeIsExist,
+						currtopo,
 						topo,
 						opt.Opr,
 					).
@@ -232,6 +239,7 @@ func checkSystemInfo(
 						inst.GetHost(),
 						inst.DataDir(),
 						task.ChecktypeIsExist,
+						currtopo,
 						topo,
 						opt.Opr,
 					).
@@ -239,6 +247,7 @@ func checkSystemInfo(
 						inst.GetHost(),
 						inst.LogDir(),
 						task.ChecktypeIsExist,
+						currtopo,
 						topo,
 						opt.Opr,
 					).
@@ -246,6 +255,7 @@ func checkSystemInfo(
 						inst.GetHost(),
 						fmt.Sprintf("/etc/systemd/system/%s-%d.service", inst.ComponentName(), inst.GetPort()),
 						task.ChecktypeIsExist,
+						currtopo,
 						topo,
 						opt.Opr,
 					)
@@ -260,6 +270,7 @@ func checkSystemInfo(
 						inst.GetHost(),
 						dataDir,
 						task.CheckTypeFIO,
+						currtopo,
 						topo,
 						opt.Opr,
 					)
@@ -269,6 +280,7 @@ func checkSystemInfo(
 						inst.GetHost(),
 						dataDir,
 						task.CheckTypePermission,
+						currtopo,
 						topo,
 						opt.Opr,
 					)
@@ -324,6 +336,7 @@ func checkSystemInfo(
 						inst.GetHost(),
 						"",
 						task.CheckTypeTimeZone,
+						currtopo,
 						topo,
 						opt.Opr,
 					)
@@ -339,6 +352,7 @@ func checkSystemInfo(
 						inst.GetHost(),
 						"",
 						task.CheckTypeSystemInfo,
+						currtopo,
 						topo,
 						opt.Opr,
 					).
@@ -346,6 +360,7 @@ func checkSystemInfo(
 						inst.GetHost(),
 						"",
 						task.CheckTypePartitions,
+						currtopo,
 						topo,
 						opt.Opr,
 					).
@@ -360,6 +375,7 @@ func checkSystemInfo(
 						inst.GetHost(),
 						"",
 						task.CheckTypeSystemLimits,
+						currtopo,
 						topo,
 						opt.Opr,
 					).
@@ -374,6 +390,7 @@ func checkSystemInfo(
 						inst.GetHost(),
 						"",
 						task.CheckTypeSystemConfig,
+						currtopo,
 						topo,
 						opt.Opr,
 					).
@@ -382,6 +399,7 @@ func checkSystemInfo(
 						inst.GetHost(),
 						"",
 						task.CheckTypeService,
+						currtopo,
 						topo,
 						opt.Opr,
 					).
@@ -390,6 +408,7 @@ func checkSystemInfo(
 						inst.GetHost(),
 						"",
 						task.CheckTypePackage,
+						currtopo,
 						topo,
 						opt.Opr,
 					)
@@ -407,6 +426,7 @@ func checkSystemInfo(
 							inst.GetHost(),
 							"",
 							task.CheckTypePort,
+							currtopo,
 							topo,
 							opt.Opr,
 						)
@@ -442,6 +462,54 @@ func checkSystemInfo(
 				BuildAsStep(fmt.Sprintf("  - Cleanup check files on %s:%d", inst.GetHost(), inst.GetSSHPort()))
 			cleanTasks = append(cleanTasks, t3)
 		}
+	}
+	for _, pdcomp := range pdcomponents {
+		instances := pdcomp.Instances()
+		for _, inst := range instances {
+			// checks that applies to each host
+			if _, found := uniqueHosts[inst.GetHost()]; !found {
+				uniqueHosts[inst.GetHost()] = inst.GetSSHPort()
+				t2 := task.NewBuilder(logger).
+					RootSSH(
+						inst.GetHost(),
+						inst.GetSSHPort(),
+						opt.User,
+						s.Password,
+						s.IdentityFile,
+						s.IdentityFilePassphrase,
+						gOpt.SSHTimeout,
+						gOpt.OptTimeout,
+						gOpt.SSHProxyHost,
+						gOpt.SSHProxyPort,
+						gOpt.SSHProxyUser,
+						p.Password,
+						p.IdentityFile,
+						p.IdentityFilePassphrase,
+						gOpt.SSHProxyTimeout,
+						gOpt.SSHType,
+						topo.GlobalOptions.SSHType,
+					).
+					Mkdir(opt.User, inst.GetHost(), filepath.Join(task.CheckToolsPathDir, "bin")).
+					CopyComponent(
+						spec.ComponentCheckCollector,
+						inst.OS(),
+						inst.Arch(),
+						insightVer,
+						"", // use default srcPath
+						inst.GetHost(),
+						task.CheckToolsPathDir,
+					).
+					Shell(
+						inst.GetHost(),
+						filepath.Join(task.CheckToolsPathDir, "bin", "insight"),
+						"",
+						false,
+					).
+					BuildAsStep(fmt.Sprintf("  - Getting PDsystem info of %s:%d", inst.GetHost(), inst.GetSSHPort()))
+				collectTasks = append(collectTasks, t2)
+			}
+		}
+
 	}
 
 	t := task.NewBuilder(logger).
