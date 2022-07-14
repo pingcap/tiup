@@ -63,6 +63,9 @@ func (c *TiCDC) Start(ctx context.Context, version utils.Version) error {
 	}
 	clusterVersion := string(version)
 	if tidbver.TiCDCSupportConfigFile(clusterVersion) {
+		if c.ConfigPath != "" {
+			args = append(args, fmt.Sprintf("--config=%s", c.ConfigPath))
+		}
 		if tidbver.TiCDCSupportDataDir(clusterVersion) {
 			args = append(args, fmt.Sprintf("--data-dir=%s", filepath.Join(c.Dir, "data")))
 		} else {
