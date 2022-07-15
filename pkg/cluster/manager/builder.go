@@ -629,6 +629,13 @@ func buildInitConfigTasks(
 			return
 		}
 		compName := instance.ComponentName()
+
+		for _, IgnoreComp := range gOpt.IngoreInitConfigComps {
+			if IgnoreComp == compName {
+				return
+			}
+		}
+
 		deployDir := spec.Abs(base.User, instance.DeployDir())
 		// data dir would be empty for components which don't need it
 		dataDirs := spec.MultiDirAbs(base.User, instance.DataDir())

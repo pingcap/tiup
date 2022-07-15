@@ -60,6 +60,8 @@ type Options struct {
 
 	DisplayMode string // the output format
 	Operation   Operation
+
+	IngoreInitConfigComps []string // ignore config generate in the specific component
 }
 
 // Operation represents the type of cluster operation
