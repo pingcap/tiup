@@ -54,7 +54,7 @@ function scale_core() {
 
     # scale in tikv maybe exists in several minutes or hours, and the GitHub CI is not guaranteed
     echo "start scale in tikv"
-    tiup-cluster --yes scale-in $name -N n3:20160
+    tiup-cluster --yes scale-in $name -N n3:20160 --ignore-generate-config tikv
     wait_instance_num_reach $name $total_sub_one $native_ssh
     echo "start scale out tikv"
     topo=./topo/full_scale_in_tikv.yaml
