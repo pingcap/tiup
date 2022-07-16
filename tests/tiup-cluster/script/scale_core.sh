@@ -52,7 +52,7 @@ function scale_core() {
     tiup-cluster $client exec $name -N n1 --command "systemctl status tidb-4000 | grep Loaded |grep 'enabled; vendor'"
     tiup-cluster $client exec $name -N n1 --command "grep -q n1:10080 /home/tidb/deploy/prometheus-9090/conf/prometheus.yml"
 
-    scale in tikv maybe exists in several minutes or hours, and the GitHub CI is not guaranteed
+    # scale in tikv maybe exists in several minutes or hours, and the GitHub CI is not guaranteed
     echo "start scale in tikv"
     tiup-cluster --yes scale-in $name -N n3:20160
     wait_instance_num_reach $name $total_sub_one $native_ssh
