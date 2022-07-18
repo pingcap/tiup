@@ -530,7 +530,7 @@ server_configs:
 	enableTLS := i.topo.(*Specification).GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(*TiFlashSpec)
 	// set TLS configs
-	spec.LearnerConfig, err = i.setTLSConfigWithTiFlashLearner(ctx, enableTLS, spec.Config, paths)
+	spec.LearnerConfig, err = i.setTLSConfigWithTiFlashLearner(ctx, enableTLS, spec.LearnerConfig, paths)
 	if err != nil {
 		return nil, err
 	}
