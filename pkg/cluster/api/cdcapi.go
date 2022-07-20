@@ -76,10 +76,15 @@ func drainCapture(client *CDCOpenAPIClient, target string) (int, error) {
 		data, statusCode, err := client.client.Put(client.ctx, endpoint, bytes.NewReader(body))
 		client.l().Infof("drain capture, endpoint: %s, data: %s, statusCode: %d, err: %+v", endpoint, data, statusCode, err)
 		if err != nil {
-			if statusCode == http.StatusNotFound {
+			switch statusCode {
+			case http.StatusNotFound:
 				// old version cdc does not support `DrainCapture`, return nil to trigger hard restart.
 				client.l().Debugf("cdc drain capture does not support, ignore it, target: %s, err: %+v", target, err)
 				return data, nil
+			case http.StatusServiceUnavailable:
+				// cdc is not ready to accept request, return error to trigger retry.
+				return data, err
+			default:
 			}
 			// match https://github.com/pingcap/tiflow/blob/e3d0d9d23b77c7884b70016ddbd8030ffeb95dfd/pkg/errors/cdc_errors.go#L55-L57
 			if bytes.Contains(data, []byte("CDC:ErrSchedulerRequestFailed")) {
@@ -144,10 +149,6 @@ func (c *CDCOpenAPIClient) ResignOwner() error {
 	if err != nil {
 		return err
 	}
-
-	// sleep 3 seconds to wait for the new owner finish the first heartbeat request-response round.
-	// if this is not enough, sleep longer.
-	time.Sleep(3 * time.Second)
 
 	c.l().Debugf("cdc resign owner successfully, and new owner found, owner: %+v", owner)
 	return nil
