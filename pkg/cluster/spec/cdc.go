@@ -289,7 +289,7 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 	}
 
 	if err := client.DrainCapture(captureID, apiTimeoutSeconds); err != nil {
-		logger.Debugf("cdc pre-restar finished, drain the capture failed, captureID: %s, addr: %s, err: %+v, elapsed: %+v", captureID, address, err, time.Since(start))
+		logger.Debugf("cdc pre-restart finished, drain the capture failed, captureID: %s, addr: %s, err: %+v, elapsed: %+v", captureID, address, err, time.Since(start))
 		return nil
 	}
 
@@ -304,16 +304,16 @@ func (i *CDCInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tl
 		panic("logger not found")
 	}
 
+	start := time.Now()
 	address := i.GetAddr()
 	if i.Status(ctx, 5*time.Second, tlsCfg) == "Down" {
-		logger.Debugf("cdc post-restart skipped, instance is down, addr: %s", address)
+		logger.Debugf("cdc post-restart skipped, instance is down, addr: %s, elapsed: %+v", address, time.Since(start))
 		return nil
 	}
 
-	start := time.Now()
 	client := api.NewCDCOpenAPIClient(ctx, []string{address}, 5*time.Second, tlsCfg)
 
-	err := client.IsCaptureAlived()
+	err := client.IsCaptureAlive()
 	if err != nil {
 		logger.Debugf("cdc post-restart finished, get capture status failed, addr: %s, err: %+v, elapsed: %+v", address, err, time.Since(start))
 		return nil

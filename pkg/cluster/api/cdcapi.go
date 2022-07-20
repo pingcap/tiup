@@ -222,8 +222,8 @@ func getAllCaptures(client *CDCOpenAPIClient) ([]*Capture, error) {
 	return response, err
 }
 
-// IsCaptureAlived return error if the capture is not alived
-func (c *CDCOpenAPIClient) IsCaptureAlived() error {
+// IsCaptureAlive return error if the capture is not alive
+func (c *CDCOpenAPIClient) IsCaptureAlive() error {
 	status, err := c.GetStatus()
 	if err != nil {
 		return err
