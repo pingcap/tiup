@@ -115,7 +115,7 @@ func StopAndDestroyInstance(
 		cluster,
 		[]spec.Instance{instance},
 		noAgentHosts,
-		options.OptTimeout,
+		options,
 		forceStop, /* forceStop */
 		false,     /* evictLeader */
 		tlsCfg,    /* when the forceStop is false, this is use for TiCDC graceful shutdown */

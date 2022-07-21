@@ -155,7 +155,7 @@ func ScaleInDMCluster(
 				topo,
 				[]dm.Instance{instance},
 				noAgentHosts,
-				options.OptTimeout,
+				options,
 				false,
 				false,         /* evictLeader */
 				&tls.Config{}, /* not used as evictLeader is false */
