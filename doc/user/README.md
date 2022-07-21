@@ -4,7 +4,7 @@
 
 For detailed documentation, see the manual which starts with an [overview](overview.md).
 
-To get started with TiDB using TiUP, see the [TiDB quick start guide](https://docs.pingcap.com/tidb/stable/quick-start-with-tidb). To deploy TiDB using TiUP in a production-like environment, see the [TiDB deploymeny guide](https://docs.pingcap.com/tidb/stable/production-deployment-using-tiup).
+To get started with TiDB using TiUP, see the [TiDB quick start guide](https://docs.pingcap.com/tidb/stable/quick-start-with-tidb). To deploy TiDB using TiUP in a production-like environment, see the [TiDB deployment guide](https://docs.pingcap.com/tidb/stable/production-deployment-using-tiup).
 
 ## Installation
 
