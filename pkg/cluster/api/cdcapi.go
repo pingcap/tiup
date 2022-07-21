@@ -74,7 +74,6 @@ func drainCapture(client *CDCOpenAPIClient, target string) (int, error) {
 	var resp DrainCaptureResp
 	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		data, statusCode, err := client.client.Put(client.ctx, endpoint, bytes.NewReader(body))
-		client.l().Infof("drain capture, endpoint: %s, data: %s, statusCode: %d, err: %+v", endpoint, data, statusCode, err)
 		if err != nil {
 			switch statusCode {
 			case http.StatusNotFound:
@@ -83,6 +82,7 @@ func drainCapture(client *CDCOpenAPIClient, target string) (int, error) {
 				return data, nil
 			case http.StatusServiceUnavailable:
 				// cdc is not ready to accept request, return error to trigger retry.
+				client.l().Debugf("cdc drain capture meet service unavailable, retry it, target: %s, err: %+v", target, err)
 				return data, err
 			default:
 			}
@@ -115,6 +115,7 @@ func (c *CDCOpenAPIClient) DrainCapture(target string, apiTimeoutSeconds int) er
 		if count == 0 {
 			return nil
 		}
+		c.l().Infof("\t Still waiting for %d tables to transfer...", count)
 		return fmt.Errorf("drain capture not finished yet, target: %s, count: %d", target, count)
 	}, utils.RetryOption{
 		Delay:   1 * time.Second,
