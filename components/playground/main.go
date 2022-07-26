@@ -309,7 +309,7 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 	defaultOptions := &BootOptions{}
 
 	rootCmd.Flags().String(mode, defaultMode, "TiUP playground mode: 'tidb', 'tikv-slim'")
-	rootCmd.Flags().StringVarP(&tag, "tag", "T", "", "Specify a tag for playground")
+	rootCmd.PersistentFlags().StringVarP(&tag, "tag", "T", "", "Specify a tag for playground") // Use `PersistentFlags()` to make it available to subcommands.
 	rootCmd.Flags().Bool(withoutMonitor, false, "Don't start prometheus and grafana component")
 	rootCmd.Flags().Bool(withMonitor, true, "Start prometheus and grafana component")
 	_ = rootCmd.Flags().MarkDeprecated(withMonitor, "Please use --without-monitor to control whether to disable monitor.")
