@@ -237,16 +237,11 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 		return nil
 	}
 
-	if i.Status(ctx, 5*time.Second, tlsCfg) == "Down" {
-		logger.Debugf("cdc pre-restart skipped, instance is down, trigger hard restart, addr: %s", address)
-		return nil
-	}
-
 	start := time.Now()
 	client := api.NewCDCOpenAPIClient(ctx, []string{address}, 5*time.Second, tlsCfg)
 	captures, err := client.GetAllCaptures()
 	if err != nil {
-		logger.Warnf("cdc pre-restart failed, cannot get all captures, trigger hard restart, addr: %s, elapsed: %+v", address, time.Since(start))
+		logger.Warnf("cdc pre-restart skipped, cannot get all captures, trigger hard restart, addr: %s, elapsed: %+v", address, time.Since(start))
 		return nil
 	}
 
