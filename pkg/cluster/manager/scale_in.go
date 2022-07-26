@@ -38,7 +38,7 @@ func (m *Manager) ScaleIn(
 	name string,
 	skipConfirm bool,
 	gOpt operator.Options,
-	scale func(builer *task.Builder, metadata spec.Metadata, tlsCfg *tls.Config),
+	scale func(builder *task.Builder, metadata spec.Metadata, tlsCfg *tls.Config),
 ) error {
 	if err := clusterutil.ValidateClusterNameOrError(name); err != nil {
 		return err

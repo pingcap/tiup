@@ -20,14 +20,16 @@ import (
 	"path/filepath"
 	"time"
 
-	perrs "github.com/pingcap/errors"
+	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/tidbver"
 )
 
-// CDCSpec represents the Drainer topology specification in topology.yaml
+// CDCSpec represents the CDC topology specification in topology.yaml
 type CDCSpec struct {
 	Host            string                 `yaml:"host"`
 	SSHPort         int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
@@ -165,7 +167,7 @@ func (i *CDCInstance) InitConfig(
 
 	if !tidbver.TiCDCSupportConfigFile(clusterVersion) {
 		if len(globalConfig)+len(instanceConfig) > 0 {
-			return perrs.New("server_config is only supported with TiCDC version v4.0.13 or later")
+			return errors.New("server_config is only supported with TiCDC version v4.0.13 or later")
 		}
 	}
 
@@ -206,4 +208,117 @@ func (i *CDCInstance) InitConfig(
 // setTLSConfig set TLS Config to support enable/disable TLS
 func (i *CDCInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
 	return nil, nil
+}
+
+var _ RollingUpdateInstance = &CDCInstance{}
+
+// GetAddr return the address of this TiCDC instance
+func (i *CDCInstance) GetAddr() string {
+	return fmt.Sprintf("%s:%d", i.GetHost(), i.GetPort())
+}
+
+// PreRestart implements RollingUpdateInstance interface.
+// All errors are ignored, to trigger hard restart.
+func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config) error {
+	tidbTopo, ok := topo.(*Specification)
+	if !ok {
+		panic("should be type of tidb topology")
+	}
+
+	logger, ok := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
+	if !ok {
+		panic("logger not found")
+	}
+
+	address := i.GetAddr()
+	// cdc rolling upgrade strategy only works if there are more than 2 captures
+	if len(tidbTopo.CDCServers) <= 1 {
+		logger.Debugf("cdc pre-restart skipped, only one capture in the topology, addr: %s", address)
+		return nil
+	}
+
+	if i.Status(ctx, 5*time.Second, tlsCfg) == "Down" {
+		logger.Debugf("cdc pre-restart skipped, instance is down, trigger hard restart, addr: %s", address)
+		return nil
+	}
+
+	start := time.Now()
+	client := api.NewCDCOpenAPIClient(ctx, []string{address}, 5*time.Second, tlsCfg)
+	captures, err := client.GetAllCaptures()
+	if err != nil {
+		logger.Warnf("cdc pre-restart failed, cannot get all captures, trigger hard restart, addr: %s, elapsed: %+v", address, time.Since(start))
+		return nil
+	}
+
+	// this may happen all other captures crashed, only this one alive,
+	// no need to drain the capture, just return it to trigger hard restart.
+	if len(captures) <= 1 {
+		logger.Debugf("cdc pre-restart finished, only one alive capture found, trigger hard restart, addr: %s, elapsed: %+v", address, time.Since(start))
+		return nil
+	}
+
+	var (
+		captureID string
+		found     bool
+		isOwner   bool
+	)
+
+	for _, capture := range captures {
+		if address == capture.AdvertiseAddr {
+			found = true
+			captureID = capture.ID
+			isOwner = capture.IsOwner
+			break
+		}
+	}
+
+	// this may happen if the capture crashed right away.
+	if !found {
+		logger.Debugf("cdc pre-restart finished, cannot found the capture, trigger hard restart, captureID: %s, addr: %s, elapsed: %+v", captureID, address, time.Since(start))
+		return nil
+	}
+
+	if isOwner {
+		if err := client.ResignOwner(); err != nil {
+			// if resign the owner failed, no more need to drain the current capture,
+			// since it's not allowed by the cdc.
+			// return nil to trigger hard restart.
+			logger.Debugf("cdc pre-restart finished, resign owner failed, trigger hard restart, captureID: %s, addr: %s, elapsed: %+v", captureID, address, time.Since(start))
+			return nil
+		}
+	}
+
+	if err := client.DrainCapture(captureID, apiTimeoutSeconds); err != nil {
+		logger.Debugf("cdc pre-restart finished, drain the capture failed, captureID: %s, addr: %s, err: %+v, elapsed: %+v", captureID, address, err, time.Since(start))
+		return nil
+	}
+
+	logger.Debugf("cdc pre-restart success, captureID: %s, addr: %s, elapsed: %+v", captureID, address, time.Since(start))
+	return nil
+}
+
+// PostRestart implements RollingUpdateInstance interface.
+func (i *CDCInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tls.Config) error {
+	logger, ok := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
+	if !ok {
+		panic("logger not found")
+	}
+
+	start := time.Now()
+	address := i.GetAddr()
+	if i.Status(ctx, 5*time.Second, tlsCfg) == "Down" {
+		logger.Debugf("cdc post-restart skipped, instance is down, addr: %s, elapsed: %+v", address, time.Since(start))
+		return nil
+	}
+
+	client := api.NewCDCOpenAPIClient(ctx, []string{address}, 5*time.Second, tlsCfg)
+
+	err := client.IsCaptureAlive()
+	if err != nil {
+		logger.Debugf("cdc post-restart finished, get capture status failed, addr: %s, err: %+v, elapsed: %+v", address, err, time.Since(start))
+		return nil
+	}
+
+	logger.Debugf("cdc post-restart success, addr: %s, elapsed: %+v", address, time.Since(start))
+	return nil
 }
