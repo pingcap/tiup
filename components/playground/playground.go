@@ -64,7 +64,7 @@ type Playground struct {
 	tidbs            []*instance.TiDBInstance
 	tiflashs         []*instance.TiFlashInstance
 	ticdcs           []*instance.TiCDC
-	tikv_cdcs        []*instance.TiKVCDC
+	tikvCdcs         []*instance.TiKVCDC
 	pumps            []*instance.Pump
 	drainers         []*instance.Drainer
 	startedInstances []instance.Instance
@@ -311,9 +311,9 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 			}
 		}
 	case spec.ComponentTiKVCDC:
-		for i := 0; i < len(p.tikv_cdcs); i++ {
-			if p.tikv_cdcs[i].Pid() == pid {
-				p.tikv_cdcs = append(p.tikv_cdcs[:i], p.tikv_cdcs[i+1:]...)
+		for i := 0; i < len(p.tikvCdcs); i++ {
+			if p.tikvCdcs[i].Pid() == pid {
+				p.tikvCdcs = append(p.tikvCdcs[:i], p.tikvCdcs[i+1:]...)
 			}
 		}
 	case spec.ComponentTiFlash:
@@ -603,7 +603,7 @@ func (p *Playground) WalkInstances(fn func(componentID string, ins instance.Inst
 		}
 	}
 
-	for _, ins := range p.tikv_cdcs {
+	for _, ins := range p.tikvCdcs {
 		err := fn(spec.ComponentTiKVCDC, ins)
 		if err != nil {
 			return err
@@ -690,7 +690,7 @@ func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins i
 	case spec.ComponentTiKVCDC:
 		inst := instance.NewTiKVCDC(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds)
 		ins = inst
-		p.tikv_cdcs = append(p.tikv_cdcs, inst)
+		p.tikvCdcs = append(p.tikvCdcs, inst)
 	case spec.ComponentPump:
 		inst := instance.NewPump(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds)
 		ins = inst
@@ -1033,7 +1033,7 @@ func (p *Playground) terminate(sig syscall.Signal) {
 			kill(inst.Component(), inst.Pid(), inst.Wait)
 		}
 	}
-	for _, inst := range p.tikv_cdcs {
+	for _, inst := range p.tikvCdcs {
 		if inst.Process != nil {
 			kill(inst.Component(), inst.Pid(), inst.Wait)
 		}
