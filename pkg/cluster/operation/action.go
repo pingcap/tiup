@@ -198,7 +198,8 @@ func Stop(
 			cluster,
 			insts,
 			noAgentHosts,
-			options.OptTimeout,
+			options,
+			true,
 			evictLeader,
 			tlsCfg,
 		)
@@ -568,7 +569,8 @@ func StopComponent(ctx context.Context,
 	topo spec.Topology,
 	instances []spec.Instance,
 	noAgentHosts set.StringSet,
-	timeout uint64,
+	options Options,
+	forceStop bool,
 	evictLeader bool,
 	tlsCfg *tls.Config,
 ) error {
@@ -591,6 +593,25 @@ func StopComponent(ctx context.Context,
 				logger.Debugf("Ignored stopping %s for %s:%d", name, ins.GetHost(), ins.GetPort())
 				continue
 			}
+		case spec.ComponentCDC:
+			nctx := checkpoint.NewContext(ctx)
+			if !forceStop {
+				// when scale-in cdc node, each node should be stopped one by one.
+				cdc, ok := ins.(spec.RollingUpdateInstance)
+				if !ok {
+					panic("cdc should support rolling upgrade, but not")
+				}
+				err := cdc.PreRestart(nctx, topo, int(options.APITimeout), tlsCfg)
+				if err != nil {
+					// this should never hit, since all errors swallowed to trigger hard stop.
+					return err
+				}
+			}
+			if err := stopInstance(nctx, ins, options.OptTimeout); err != nil {
+				return err
+			}
+			// continue here, to skip the logic below.
+			continue
 		}
 
 		// the checkpoint part of context can't be shared between goroutines
@@ -601,13 +622,13 @@ func StopComponent(ctx context.Context,
 			if evictLeader {
 				rIns, ok := ins.(spec.RollingUpdateInstance)
 				if ok {
-					err := rIns.PreRestart(nctx, topo, int(timeout), tlsCfg)
+					err := rIns.PreRestart(nctx, topo, int(options.APITimeout), tlsCfg)
 					if err != nil {
 						return err
 					}
 				}
 			}
-			err := stopInstance(nctx, ins, timeout)
+			err := stopInstance(nctx, ins, options.OptTimeout)
 			if err != nil {
 				return err
 			}

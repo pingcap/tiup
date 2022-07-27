@@ -113,7 +113,7 @@ func ScaleInDMCluster(
 					continue
 				}
 				instCount[instance.GetHost()]--
-				if err := operator.StopAndDestroyInstance(ctx, topo, instance, options, instCount[instance.GetHost()] == 0); err != nil {
+				if err := operator.StopAndDestroyInstance(ctx, topo, instance, options, false, instCount[instance.GetHost()] == 0, tlsCfg); err != nil {
 					log.Warnf("failed to stop/destroy %s: %v", component.Name(), err)
 				}
 			}
@@ -155,7 +155,8 @@ func ScaleInDMCluster(
 				topo,
 				[]dm.Instance{instance},
 				noAgentHosts,
-				options.OptTimeout,
+				options,
+				false,
 				false,         /* evictLeader */
 				&tls.Config{}, /* not used as evictLeader is false */
 			); err != nil {

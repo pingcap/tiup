@@ -54,6 +54,8 @@ func Upgrade(
 	noAgentHosts := set.NewStringSet()
 	uniqueHosts := set.NewStringSet()
 
+	var cdcOpenAPIClient *api.CDCOpenAPIClient // client for cdc openapi, only used when upgrade cdc
+
 	for _, component := range components {
 		instances := FilterInstance(component.Instances(), nodeFilter)
 		if len(instances) < 1 {
@@ -80,7 +82,7 @@ func Upgrade(
 			pdClient := api.NewPDClient(ctx, pdEndpoints, 10*time.Second, tlsCfg)
 			origLeaderScheduleLimit, origRegionScheduleLimit, err = increaseScheduleLimit(ctx, pdClient)
 			if err != nil {
-				// the config modifing error should be able to be safely ignored, as it will
+				// the config modifying error should be able to be safely ignored, as it will
 				// be processed with current settings anyway.
 				logger.Warnf("failed increasing schedule limit: %s, ignore", err)
 			} else {
@@ -114,12 +116,39 @@ func Upgrade(
 				// defer PD leader to be upgraded after others
 				isLeader, err := instance.(*spec.PDInstance).IsLeader(ctx, topo, int(options.APITimeout), tlsCfg)
 				if err != nil {
+					logger.Warnf("cannot found pd leader, ignore: %s", err)
 					return err
 				}
 				if isLeader {
 					deferInstances = append(deferInstances, instance)
-					logger.Debugf("Defferred upgrading of PD leader %s", instance.ID())
+					logger.Debugf("Deferred upgrading of PD leader %s", instance.ID())
 					continue
+				}
+			case spec.ComponentCDC:
+				ins := instance.(*spec.CDCInstance)
+				if ins.Status(ctx, 5*time.Second, tlsCfg) == "Up" {
+					// during the upgrade process, endpoint addresses should not change, so only new the client once.
+					if cdcOpenAPIClient == nil {
+						cdcOpenAPIClient = api.NewCDCOpenAPIClient(ctx, topo.(*spec.Specification).GetCDCList(), 5*time.Second, tlsCfg)
+					}
+
+					address := ins.GetAddr()
+					capture, err := cdcOpenAPIClient.GetCaptureByAddr(address)
+					if err != nil {
+						// After the previous status check, we know that the cdc instance should be `Up`, but know it cannot be found by address
+						// perhaps since the specified version of cdc does not support open api, or the instance just crashed right away
+						logger.Debugf("upgrade cdc, cannot found the capture by address: %s", address)
+						if err := upgradeInstance(ctx, topo, instance, options, tlsCfg); err != nil {
+							return err
+						}
+						continue
+					}
+
+					if capture.IsOwner {
+						deferInstances = append(deferInstances, instance)
+						logger.Debugf("Deferred upgrading of TiCDC owner %s, captureID: %s, addr: %s", instance.ID(), capture.ID, address)
+						continue
+					}
 				}
 			default:
 				// do nothing, kept for future usage with other components
@@ -130,9 +159,9 @@ func Upgrade(
 			}
 		}
 
-		// process defferred instances
+		// process deferred instances
 		for _, instance := range deferInstances {
-			logger.Debugf("Upgrading defferred instance %s...", instance.ID())
+			logger.Debugf("Upgrading deferred instance %s...", instance.ID())
 			if err := upgradeInstance(ctx, topo, instance, options, tlsCfg); err != nil {
 				return err
 			}

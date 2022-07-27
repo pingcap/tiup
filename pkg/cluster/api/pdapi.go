@@ -106,7 +106,7 @@ func (pc *PDClient) tryIdentifyVersion() {
 	}
 }
 
-// GetURL builds the the client URL of PDClient
+// GetURL builds the client URL of PDClient
 func (pc *PDClient) GetURL(addr string) string {
 	httpPrefix := "http"
 	if pc.tlsEnabled {
