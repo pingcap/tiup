@@ -195,7 +195,7 @@ func (c *CDCOpenAPIClient) GetAllCaptures() (result []*Capture, err error) {
 		}
 		return nil
 	}, utils.RetryOption{
-		Timeout: 20 * time.Second,
+		Timeout: 10 * time.Second,
 	})
 	return result, err
 }
@@ -260,7 +260,7 @@ func (c *CDCOpenAPIClient) GetStatus() (result ServerStatus, err error) {
 		}
 		return nil
 	}, utils.RetryOption{
-		Timeout: 20 * time.Second,
+		Timeout: 10 * time.Second,
 	})
 
 	return result, err
