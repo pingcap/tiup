@@ -4,7 +4,9 @@ set -eux
 
 TEST_DIR=$(cd "$(dirname "$0")"; pwd)
 TMP_DIR=$TEST_DIR/_tmp
-VERSION="v6.2.0"
+
+TIDB_VERSION="v6.2.0"
+KVCDC_VERSION="v1.0.0-alpha"
 MIRROR="http://staging.tiup-server.pingcap.net" # TODO: move to release mirror after TiKV-CDC is released.
 
 
@@ -60,7 +62,7 @@ function kill_all() {
 outfile=/tmp/tiup-playground-test.out
 tiup mirror set $MIRROR
 # no tiflash to speed up
-tiup-playground $VERSION --db 1 --pd 1 --kv 1 --kvcdc 1 --tiflash 0 > $outfile 2>&1 &
+tiup-playground $TIDB_VERSION --db 1 --pd 1 --kv 1 --tiflash 0 --kvcdc 1 --kvcdc.version $KVCDC_VERSION > $outfile 2>&1 &
 
 # wait $outfile generated
 sleep 3

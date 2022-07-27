@@ -26,15 +26,14 @@ import (
 // TiKVCDC represent a TiKV-CDC instance.
 type TiKVCDC struct {
 	instance
-	version utils.Version
-	pds     []*PDInstance
+	pds []*PDInstance
 	Process
 }
 
 var _ Instance = &TiKVCDC{}
 
 // NewTiKVCDC create a TiKVCDC instance.
-func NewTiKVCDC(version utils.Version, binPath string, dir, host, configPath string, id int, pds []*PDInstance) *TiKVCDC {
+func NewTiKVCDC(binPath string, dir, host, configPath string, id int, pds []*PDInstance) *TiKVCDC {
 	tikvCdc := &TiKVCDC{
 		instance: instance{
 			BinPath:    binPath,
@@ -44,15 +43,14 @@ func NewTiKVCDC(version utils.Version, binPath string, dir, host, configPath str
 			Port:       utils.MustGetFreePort(host, 8800),
 			ConfigPath: configPath,
 		},
-		version: version,
-		pds:     pds,
+		pds: pds,
 	}
 	tikvCdc.StatusPort = tikvCdc.Port
 	return tikvCdc
 }
 
 // Start implements Instance interface.
-func (c *TiKVCDC) Start(ctx context.Context, _ utils.Version) error {
+func (c *TiKVCDC) Start(ctx context.Context, version utils.Version) error {
 	endpoints := pdEndpoints(c.pds, true)
 
 	args := []string{
@@ -68,7 +66,7 @@ func (c *TiKVCDC) Start(ctx context.Context, _ utils.Version) error {
 	args = append(args, fmt.Sprintf("--data-dir=%s", filepath.Join(c.Dir, "data")))
 
 	var err error
-	if c.BinPath, err = tiupexec.PrepareBinary("tikv-cdc", c.version, c.BinPath); err != nil {
+	if c.BinPath, err = tiupexec.PrepareBinary("tikv-cdc", version, c.BinPath); err != nil {
 		return err
 	}
 	c.Process = &process{cmd: PrepareCommand(ctx, c.BinPath, args, nil, c.Dir)}

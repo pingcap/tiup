@@ -428,8 +428,8 @@ func (p *Playground) sanitizeComponentConfig(cid string, cfg *instance.Config) e
 }
 
 func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) error {
-	versionOption := p.bindVersion(inst.Component(), p.bootOptions.Version)
-	version, err := environment.GlobalEnv().V1Repository().ResolveComponentVersion(inst.Component(), versionOption)
+	boundVersion := p.bindVersion(inst.Component(), p.bootOptions.Version)
+	version, err := environment.GlobalEnv().V1Repository().ResolveComponentVersion(inst.Component(), boundVersion)
 	if err != nil {
 		return err
 	}
@@ -688,7 +688,7 @@ func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins i
 		ins = inst
 		p.ticdcs = append(p.ticdcs, inst)
 	case spec.ComponentTiKVCDC:
-		inst := instance.NewTiKVCDC(utils.Version(cfg.Version), cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds)
+		inst := instance.NewTiKVCDC(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds)
 		ins = inst
 		p.tikv_cdcs = append(p.tikv_cdcs, inst)
 	case spec.ComponentPump:
