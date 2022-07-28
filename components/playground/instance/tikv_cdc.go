@@ -40,7 +40,7 @@ func NewTiKVCDC(binPath string, dir, host, configPath string, id int, pds []*PDI
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
-			Port:       utils.MustGetFreePort(host, 8800),
+			Port:       utils.MustGetFreePort(host, 8600),
 			ConfigPath: configPath,
 		},
 		pds: pds,
