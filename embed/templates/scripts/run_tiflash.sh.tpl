@@ -15,7 +15,9 @@ stat=$(time sync)
 echo ok
 echo $stat
 
-{{- if .NumaNode}}
+{{- if and .NumaNode .NumaCores}}
+exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} -C {{.NumaCores}} bin/tiflash/tiflash server \
+{{- else if .NumaNode}}
 exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/tiflash/tiflash server \
 {{- else}}
 exec bin/tiflash/tiflash server \

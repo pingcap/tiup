@@ -58,6 +58,7 @@ type TiFlashSpec struct {
 	TmpDir               string                 `yaml:"tmp_path,omitempty"`
 	Offline              bool                   `yaml:"offline,omitempty"`
 	NumaNode             string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
+	NumaCores            string                 `yaml:"numa_cores,omitempty" validate:"numa_cores:editable"`
 	Config               map[string]interface{} `yaml:"config,omitempty" validate:"config:ignore"`
 	LearnerConfig        map[string]interface{} `yaml:"learner_config,omitempty" validate:"learner_config:ignore"`
 	ResourceControl      meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
@@ -652,6 +653,7 @@ func (i *TiFlashInstance) InitConfig(
 		WithStatusPort(spec.StatusPort).
 		WithTmpDir(spec.TmpDir).
 		WithNumaNode(spec.NumaNode).
+		WithNumaCores(spec.NumaCores).
 		AppendEndpoints(topo.Endpoints(deployUser)...)
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tiflash_%s_%d.sh", i.GetHost(), i.GetPort()))
