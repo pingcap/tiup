@@ -307,6 +307,14 @@ func ScaleInCluster(
 
 		// process deferred instances
 		for _, instance := range deferInstances {
+			// actually, it must be the pd leader at the moment, so the `PreRestart` always triggered.
+			rollingInstance, ok := instance.(spec.RollingUpdateInstance)
+			if ok {
+				if err := rollingInstance.PreRestart(ctx, cluster, int(options.APITimeout), tlsCfg); err != nil {
+					return errors.Trace(err)
+				}
+			}
+
 			err := deleteMember(ctx, component, instance, pdClient, binlogClient, options.APITimeout)
 			if err != nil {
 				return errors.Trace(err)
