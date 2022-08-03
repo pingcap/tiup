@@ -263,6 +263,7 @@ func ScaleInCluster(
 	cdcInstances := make([]spec.Instance, 0)
 	// Delete member from cluster
 	for _, component := range cluster.ComponentsByStartOrder() {
+		deferInstances := make([]spec.Instance, 0)
 		for _, instance := range component.Instances() {
 			if !deletedNodes.Exist(instance.ID()) {
 				continue
@@ -274,6 +275,38 @@ func ScaleInCluster(
 				continue
 			}
 
+			if component.Role() == spec.ComponentPD {
+				// defer PD leader to be scale-in after others
+				isLeader, err := instance.(*spec.PDInstance).IsLeader(ctx, cluster, int(options.APITimeout), tlsCfg)
+				if err != nil {
+					logger.Warnf("cannot found pd leader, ignore: %s", err)
+					return err
+				}
+				if isLeader {
+					deferInstances = append(deferInstances, instance)
+					logger.Debugf("Deferred scale-in of PD leader %s", instance.ID())
+					continue
+				}
+			}
+
+			err := deleteMember(ctx, component, instance, pdClient, binlogClient, options.APITimeout)
+			if err != nil {
+				return errors.Trace(err)
+			}
+
+			if !asyncOfflineComps.Exist(instance.ComponentName()) {
+				instCount[instance.GetHost()]--
+				if err := StopAndDestroyInstance(ctx, cluster, instance, options, false, instCount[instance.GetHost()] == 0, tlsCfg); err != nil {
+					return err
+				}
+			} else {
+				logger.Warnf(color.YellowString("The component `%s` will become tombstone, maybe exists in several minutes or hours, after that you can use the prune command to clean it",
+					component.Name()))
+			}
+		}
+
+		// process deferred instances
+		for _, instance := range deferInstances {
 			err := deleteMember(ctx, component, instance, pdClient, binlogClient, options.APITimeout)
 			if err != nil {
 				return errors.Trace(err)
