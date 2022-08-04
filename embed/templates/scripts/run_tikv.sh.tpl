@@ -22,7 +22,9 @@ echo $stat
 
 export MALLOC_CONF="prof:true,prof_active:false"
 
-{{- if .NumaNode}}
+{{- if and .NumaNode .NumaCores}}
+exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} -C {{.NumaCores}} bin/tikv-server \
+{{- else if .NumaNode}}
 exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/tikv-server \
 {{- else}}
 exec bin/tikv-server \

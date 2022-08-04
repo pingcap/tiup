@@ -17,7 +17,9 @@ cd "${DEPLOY_DIR}" || exit 1
   {{- end}}
 {{- end}}
 
-{{- if .NumaNode}}
+{{- if and .NumaNode .NumaCores}}
+exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} -C {{.NumaCores}} env GODEBUG=madvdontneed=1 bin/tidb-server \
+{{- else if .NumaNode}}
 exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} env GODEBUG=madvdontneed=1 bin/tidb-server \
 {{- else}}
 exec env GODEBUG=madvdontneed=1 bin/tidb-server \
