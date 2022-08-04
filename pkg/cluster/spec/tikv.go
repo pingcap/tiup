@@ -60,6 +60,7 @@ type TiKVSpec struct {
 	LogDir              string                 `yaml:"log_dir,omitempty"`
 	Offline             bool                   `yaml:"offline,omitempty"`
 	NumaNode            string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
+	NumaCores           string                 `yaml:"numa_cores,omitempty" validate:"numa_cores:editable"`
 	Config              map[string]interface{} `yaml:"config,omitempty" validate:"config:ignore"`
 	ResourceControl     meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
 	Arch                string                 `yaml:"arch,omitempty"`
@@ -216,6 +217,7 @@ func (i *TiKVInstance) InitConfig(
 	cfg := scripts.
 		NewTiKVScript(clusterVersion, i.GetHost(), spec.Port, spec.StatusPort, paths.Deploy, paths.Data[0], paths.Log).
 		WithNumaNode(spec.NumaNode).
+		WithNumaCores(spec.NumaCores).
 		AppendEndpoints(topo.Endpoints(deployUser)...).
 		WithListenHost(i.GetListenHost()).
 		WithAdvertiseAddr(spec.AdvertiseAddr).

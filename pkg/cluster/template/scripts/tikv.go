@@ -37,6 +37,7 @@ type TiKVScript struct {
 	LogDir                     string
 	SupportAdvertiseStatusAddr bool
 	NumaNode                   string
+	NumaCores                  string
 	Endpoints                  []*PDScript
 }
 
@@ -80,6 +81,12 @@ func (c *TiKVScript) WithAdvertiseStatusAddr(addr string) *TiKVScript {
 // WithNumaNode set NumaNode field of TiKVScript
 func (c *TiKVScript) WithNumaNode(numa string) *TiKVScript {
 	c.NumaNode = numa
+	return c
+}
+
+// WithNumaCores set NumaCores field of TiKVScript
+func (c *TiKVScript) WithNumaCores(numaCores string) *TiKVScript {
+	c.NumaCores = numaCores
 	return c
 }
 
