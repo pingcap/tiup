@@ -38,6 +38,7 @@ type TiFlashScript struct {
 	LogDir               string
 	TmpDir               string
 	NumaNode             string
+	NumaCores            string
 	Endpoints            []*PDScript
 	TiDBStatusAddrs      string
 	PDAddrs              string
@@ -109,6 +110,12 @@ func (c *TiFlashScript) WithTmpDir(tmpDir string) *TiFlashScript {
 // WithNumaNode set NumaNode field of TiFlashScript
 func (c *TiFlashScript) WithNumaNode(numa string) *TiFlashScript {
 	c.NumaNode = numa
+	return c
+}
+
+// WithNumaCores set NumaCores field of TiFlashScript
+func (c *TiFlashScript) WithNumaCores(numaCores string) *TiFlashScript {
+	c.NumaCores = numaCores
 	return c
 }
 
