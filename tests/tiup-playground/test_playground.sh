@@ -112,4 +112,32 @@ timeout 300 grep -q "CLUSTER START SUCCESSFULLY" <(tail -f $outfile)
 
 cat $outfile | grep ":3930" | grep -q "Done"
 
+# start another cluster with tag
+TAG="test_1"
+outfile_1=/tmp/tiup-playground-test_1.out
+# no TiFlash to speed up
+tiup-playground v6.0.0 --tag $TAG --db 2 --tiflash 0 > $outfile_1 2>&1 &
+sleep 3
+timeout 300 grep -q "CLUSTER START SUCCESSFULLY" <(tail -f $outfile_1)
+tiup-playground --tag $TAG display | grep -qv "exit"
+
+# TiDB scale-out to 4
+tiup-playground --tag $TAG scale-out --db 2
+sleep 5
+# TiDB scale-in to 3
+pid=`tiup-playground --tag $TAG display | grep "tidb" | awk 'NR==1 {print $1}'`
+tiup-playground --tag $TAG scale-in --pid $pid
+sleep 5
+# check number of TiDB instances.
+tidb_num=$(tiup-playground --tag $TAG display | grep "tidb" | wc -l | sed 's/ //g')
+if [ "$tidb_num" != 3 ]; then
+    echo "unexpected tidb instance number: $tidb_num"
+    exit 1
+fi
+
+
+# exit all
+killall -2 tiup-playground.test || killall -2 tiup-playground
+sleep 30
+
 echo -e "\033[0;36m<<< Run all test success >>>\033[0m"
