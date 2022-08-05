@@ -29,6 +29,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/tidbver"
 	"go.uber.org/zap"
 )
 
@@ -41,6 +42,7 @@ var (
 // Upgrade the cluster.
 func Upgrade(
 	ctx context.Context,
+	currentVersion string,
 	topo spec.Topology,
 	options Options,
 	tlsCfg *tls.Config,
@@ -138,7 +140,7 @@ func Upgrade(
 						// After the previous status check, we know that the cdc instance should be `Up`, but know it cannot be found by address
 						// perhaps since the specified version of cdc does not support open api, or the instance just crashed right away
 						logger.Debugf("upgrade cdc, cannot found the capture by address: %s", address)
-						if err := upgradeInstance(ctx, topo, instance, options, tlsCfg); err != nil {
+						if err := upgradeInstance(ctx, currentVersion, topo, instance, options, tlsCfg); err != nil {
 							return err
 						}
 						continue
@@ -154,7 +156,7 @@ func Upgrade(
 				// do nothing, kept for future usage with other components
 			}
 
-			if err := upgradeInstance(ctx, topo, instance, options, tlsCfg); err != nil {
+			if err := upgradeInstance(ctx, currentVersion, topo, instance, options, tlsCfg); err != nil {
 				return err
 			}
 		}
@@ -162,7 +164,7 @@ func Upgrade(
 		// process deferred instances
 		for _, instance := range deferInstances {
 			logger.Debugf("Upgrading deferred instance %s...", instance.ID())
-			if err := upgradeInstance(ctx, topo, instance, options, tlsCfg); err != nil {
+			if err := upgradeInstance(ctx, currentVersion, topo, instance, options, tlsCfg); err != nil {
 				return err
 			}
 		}
@@ -175,7 +177,14 @@ func Upgrade(
 	return RestartMonitored(ctx, uniqueHosts.Slice(), noAgentHosts, topo.GetMonitoredOptions(), options.OptTimeout)
 }
 
-func upgradeInstance(ctx context.Context, topo spec.Topology, instance spec.Instance, options Options, tlsCfg *tls.Config) (err error) {
+func upgradeInstance(
+	ctx context.Context,
+	currentVersion string,
+	topo spec.Topology,
+	instance spec.Instance,
+	options Options,
+	tlsCfg *tls.Config,
+) (err error) {
 	// insert checkpoint
 	point := checkpoint.Acquire(ctx, upgradePoint, map[string]interface{}{"instance": instance.ID()})
 	defer func() {
@@ -191,6 +200,9 @@ func upgradeInstance(ctx context.Context, topo spec.Topology, instance spec.Inst
 
 	if !options.Force {
 		rollingInstance, isRollingInstance = instance.(spec.RollingUpdateInstance)
+		if instance.ComponentName() == spec.ComponentCDC {
+			isRollingInstance = tidbver.TiCDCSupportRollingUpgrade(currentVersion)
+		}
 	}
 
 	if isRollingInstance {
