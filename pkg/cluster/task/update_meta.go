@@ -72,6 +72,15 @@ func (u *UpdateMeta) Execute(ctx context.Context) error {
 	}
 	newMeta.Topology.PDServers = pdServers
 
+	dashboardServers := make([]*spec.DashboardSpec, 0)
+	for i, instance := range (&spec.DashboardComponent{Topology: topo}).Instances() {
+		if deleted.Exist(instance.ID()) {
+			continue
+		}
+		dashboardServers = append(dashboardServers, topo.DashboardServers[i])
+	}
+	topo.DashboardServers = dashboardServers
+
 	tiflashServers := make([]*spec.TiFlashSpec, 0)
 	for i, instance := range (&spec.TiFlashComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
