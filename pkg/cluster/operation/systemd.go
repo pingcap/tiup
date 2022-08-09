@@ -46,13 +46,13 @@ func GetServiceStatus(ctx context.Context, e ctxt.Executor, name string) (active
 	}
 	lines := strings.Split(string(stdout), "\n")
 	for _, line := range lines {
-		words := strings.Split(strings.TrimSpace(line), ":")
+		words := strings.Split(strings.TrimSpace(line), " ")
 		if len(words) >= 2 {
 			switch words[0] {
-			case "Active":
+			case "Active:":
 				active = words[1]
-			case "Memory":
-				memory = strings.Join(words[1:], "")
+			case "Memory:":
+				memory = words[1]
 			}
 		}
 	}

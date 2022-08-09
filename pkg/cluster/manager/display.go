@@ -54,16 +54,18 @@ type DisplayOption struct {
 
 // InstInfo represents an instance info
 type InstInfo struct {
-	ID        string `json:"id"`
-	Role      string `json:"role"`
-	Host      string `json:"host"`
-	Ports     string `json:"ports"`
-	OsArch    string `json:"os_arch"`
-	Status    string `json:"status"`
-	Memory    string `json:"memory"`
-	Since     string `json:"since"`
-	DataDir   string `json:"data_dir"`
-	DeployDir string `json:"deploy_dir"`
+	ID          string `json:"id"`
+	Role        string `json:"role"`
+	Host        string `json:"host"`
+	Ports       string `json:"ports"`
+	OsArch      string `json:"os_arch"`
+	Status      string `json:"status"`
+	Memory      string `json:"memory"`
+	MemoryLimit string `json:"memory_limit"`
+	CPUquota    string `json:"cpu_quota"`
+	Since       string `json:"since"`
+	DataDir     string `json:"data_dir"`
+	DeployDir   string `json:"deploy_dir"`
 
 	ComponentName string
 	Port          int
@@ -172,7 +174,7 @@ func (m *Manager) Display(dopt DisplayOption, opt operator.Options) error {
 	var clusterTable [][]string
 	rowHead := []string{"ID", "Role", "Host", "Ports", "OS/Arch", "Status"}
 	if dopt.ShowProcess {
-		rowHead = append(rowHead, "Memory")
+		rowHead = append(rowHead, "Memory", "Memory Limit", "CPU Quota")
 	}
 	if dopt.ShowUptime {
 		rowHead = append(rowHead, "Since")
@@ -191,7 +193,7 @@ func (m *Manager) Display(dopt DisplayOption, opt operator.Options) error {
 			formatInstanceStatus(v.Status),
 		}
 		if dopt.ShowProcess {
-			row = append(row, v.Memory)
+			row = append(row, v.Memory, v.MemoryLimit, v.CPUquota)
 		}
 		if dopt.ShowUptime {
 			row = append(row, v.Since)
@@ -589,6 +591,7 @@ func (m *Manager) GetClusterTopology(dopt DisplayOption, opt operator.Options) (
 		if ins.IsPatched() {
 			roleName += " (patched)"
 		}
+		rc := ins.ResourceControl()
 		mu.Lock()
 		clusterInstInfos = append(clusterInstInfos, InstInfo{
 			ID:            ins.ID(),
@@ -597,7 +600,9 @@ func (m *Manager) GetClusterTopology(dopt DisplayOption, opt operator.Options) (
 			Ports:         utils.JoinInt(ins.UsedPorts(), "/"),
 			OsArch:        tui.OsArch(ins.OS(), ins.Arch()),
 			Status:        status,
-			Memory:        memory,
+			Memory:        utils.Ternary(memory == "", "-", memory).(string),
+			MemoryLimit:   utils.Ternary(rc.MemoryLimit == "", "-", rc.MemoryLimit).(string),
+			CPUquota:      utils.Ternary(rc.CPUQuota == "", "-", rc.CPUQuota).(string),
 			DataDir:       dataDir,
 			DeployDir:     deployDir,
 			ComponentName: ins.ComponentName(),
