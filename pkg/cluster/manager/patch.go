@@ -104,7 +104,7 @@ func (m *Manager) Patch(name string, packagePath string, opt operator.Options, o
 			if offline {
 				return nil
 			}
-			return operator.Upgrade(ctx, base.Version, topo, opt, tlsCfg)
+			return operator.Upgrade(ctx, topo, opt, tlsCfg)
 		}).
 		Build()
 
