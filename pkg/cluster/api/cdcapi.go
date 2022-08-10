@@ -183,20 +183,17 @@ func (c *CDCOpenAPIClient) GetOwner() (result *Capture, err error) {
 
 // GetCaptureByAddr return the capture information by the address
 func (c *CDCOpenAPIClient) GetCaptureByAddr(addr string) (result *Capture, err error) {
-	err = utils.Retry(func() error {
-		captures, err := c.GetAllCaptures()
-		if err != nil {
-			return err
+	captures, err := c.GetAllCaptures()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, capture := range captures {
+		if capture.AdvertiseAddr == addr {
+			return capture, nil
 		}
-		for _, capture := range captures {
-			if capture.AdvertiseAddr == addr {
-				result = capture
-				return nil
-			}
-		}
-		return fmt.Errorf("no capture found")
-	})
-	return result, err
+	}
+	return nil, fmt.Errorf("capture not found, addr: %s", addr)
 }
 
 // GetAllCaptures return all captures instantaneously
