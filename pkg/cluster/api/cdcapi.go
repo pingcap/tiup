@@ -317,12 +317,11 @@ func isHealthy(client *CDCOpenAPIClient) (bool, error) {
 		}
 		return nil, nil
 	})
-
-	if err == nil {
-		return true, nil
+	if err != nil {
+		return false, err
 	}
 
-	return false, err
+	return true, nil
 }
 
 func (c *CDCOpenAPIClient) l() *logprinter.Logger {
