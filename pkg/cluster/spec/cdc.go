@@ -238,8 +238,7 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 	}
 
 	start := time.Now()
-	client := api.NewCDCOpenAPIClient(ctx, []string{address}, 5*time.Second, tlsCfg)
-
+	client := api.NewCDCOpenAPIClient(ctx, topo.(*Specification).GetCDCList(), 5*time.Second, tlsCfg)
 	if err := client.Healthy(); err != nil {
 		logger.Debugf("cdc pre-restart skipped, the cluster unhealthy, trigger hard restart, "+
 			"addr: %s, err: %+v, elapsed: %+v", address, err, time.Since(start))
