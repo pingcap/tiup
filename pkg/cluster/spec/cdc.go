@@ -270,7 +270,7 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 			// if resign the owner failed, no more need to drain the current capture,
 			// since it's not allowed by the cdc.
 			// return nil to trigger hard restart.
-			logger.Debugf("cdc pre-restart finished, resign owner failed, trigger hard restart, captureID: %s, addr: %s, elapsed: %+v", captureID, address, time.Since(start))
+			logger.Debugf("cdc pre-restart finished, resign owner failed, trigger hard restart, captureID: %s, addr: %s, err: %+v, elapsed: %+v", captureID, address, err, time.Since(start))
 			return nil
 		}
 	}
