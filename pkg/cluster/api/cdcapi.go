@@ -150,11 +150,6 @@ func (c *CDCOpenAPIClient) ResignOwner() error {
 		return err
 	}
 
-	if err := c.Healthy(); err != nil {
-		c.l().Debugf("cdc unhealthy after resign the owner, err: %+v", err)
-		return err
-	}
-
 	owner, err := c.GetOwner()
 	if err != nil {
 		return err
@@ -165,34 +160,43 @@ func (c *CDCOpenAPIClient) ResignOwner() error {
 }
 
 // GetOwner return the cdc owner capture information
-func (c *CDCOpenAPIClient) GetOwner() (*Capture, error) {
-	captures, err := c.GetAllCaptures()
-	if err != nil {
-		return nil, err
-	}
-
-	for _, capture := range captures {
-		if capture.IsOwner {
-			return capture, nil
+func (c *CDCOpenAPIClient) GetOwner() (result *Capture, err error) {
+	err = utils.Retry(func() error {
+		captures, err := c.GetAllCaptures()
+		if err != nil {
+			return err
 		}
-	}
-	return nil, fmt.Errorf("cannot found the cdc owner, query urls: %+v", c.urls)
+		for _, capture := range captures {
+			if capture.IsOwner {
+				result = capture
+				return nil
+			}
+		}
+		return fmt.Errorf("no owner found")
+	}, utils.RetryOption{
+		Delay:   time.Second,
+		Timeout: 10 * time.Second,
+	})
+
+	return result, err
 }
 
 // GetCaptureByAddr return the capture information by the address
-func (c *CDCOpenAPIClient) GetCaptureByAddr(addr string) (*Capture, error) {
-	captures, err := c.GetAllCaptures()
-	if err != nil {
-		return nil, err
-	}
-
-	for _, capture := range captures {
-		if capture.AdvertiseAddr == addr {
-			return capture, nil
+func (c *CDCOpenAPIClient) GetCaptureByAddr(addr string) (result *Capture, err error) {
+	err = utils.Retry(func() error {
+		captures, err := c.GetAllCaptures()
+		if err != nil {
+			return err
 		}
-	}
-
-	return nil, fmt.Errorf("capture not found, addr: %s", addr)
+		for _, capture := range captures {
+			if capture.AdvertiseAddr == addr {
+				result = capture
+				return nil
+			}
+		}
+		return fmt.Errorf("no capture found")
+	})
+	return result, err
 }
 
 // GetAllCaptures return all captures instantaneously
