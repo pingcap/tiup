@@ -452,6 +452,7 @@ func scaleInCDC(
 
 	deferInstances := make([]spec.Instance, 0, 1)
 	for _, instance := range instances {
+		// todo: remove this, test when the cluster is down.
 		if instance.Status(ctx, 5*time.Second, tlsCfg) == "Down" {
 			instCount[instance.GetHost()]--
 			if err := StopAndDestroyInstance(ctx, cluster, instance, options, true, instCount[instance.GetHost()] == 0, tlsCfg); err != nil {
@@ -462,16 +463,6 @@ func scaleInCDC(
 
 		address := instance.(*spec.CDCInstance).GetAddr()
 		client := api.NewCDCOpenAPIClient(ctx, []string{address}, 5*time.Second, tlsCfg)
-
-		if err := client.Healthy(); err != nil {
-			logger.Debugf("scale-in cdc, the cluster unhealthy, stop the instance by force, "+
-				"addr: %s, err: %+v", address, err)
-			instCount[instance.GetHost()]--
-			if err := StopAndDestroyInstance(ctx, cluster, instance, options, true, instCount[instance.GetHost()] == 0, tlsCfg); err != nil {
-				return err
-			}
-			continue
-		}
 
 		capture, err := client.GetCaptureByAddr(address)
 		if err != nil {

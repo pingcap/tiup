@@ -29,6 +29,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/tidbver"
 	"go.uber.org/zap"
 )
 
@@ -126,13 +127,27 @@ func Upgrade(
 				}
 			case spec.ComponentCDC:
 				ins := instance.(*spec.CDCInstance)
+				address := ins.GetAddr()
+				currentVersion := getCurrentVersionFromContext(ctx)
+				if !tidbver.TiCDCSupportRollingUpgrade(currentVersion) {
+					logger.Debugf("rolling upgrade cdc not supported, upgrade by force, "+
+						"addr: %s, version: %s", address, currentVersion)
+					options.Force = true
+					if err := upgradeInstance(ctx, topo, instance, options, tlsCfg); err != nil {
+						options.Force = false
+						return err
+					}
+					options.Force = false
+					continue
+				}
+
+				// todo: remove this, test stopped cdc cluster
 				if ins.Status(ctx, 5*time.Second, tlsCfg) == "Up" {
 					// during the upgrade process, endpoint addresses should not change, so only new the client once.
 					if cdcOpenAPIClient == nil {
 						cdcOpenAPIClient = api.NewCDCOpenAPIClient(ctx, topo.(*spec.Specification).GetCDCList(), 5*time.Second, tlsCfg)
 					}
 
-					address := ins.GetAddr()
 					capture, err := cdcOpenAPIClient.GetCaptureByAddr(address)
 					if err != nil {
 						// After the previous status check, we know that the cdc instance should be `Up`, but know it cannot be found by address
@@ -307,4 +322,17 @@ func decreaseScheduleLimit(pc *api.PDClient, origLeaderScheduleLimit, origRegion
 		return err
 	}
 	return pc.SetReplicationConfig("region-schedule-limit", origRegionScheduleLimit)
+}
+
+func getCurrentVersionFromContext(ctx context.Context) string {
+	v := ctx.Value("currentVersion")
+	if v == nil {
+		return ""
+	}
+
+	if version, ok := v.(string); ok {
+		return version
+	}
+
+	return ""
 }
