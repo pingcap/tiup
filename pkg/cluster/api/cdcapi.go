@@ -150,6 +150,11 @@ func (c *CDCOpenAPIClient) ResignOwner() error {
 		return err
 	}
 
+	if err := c.Healthy(); err != nil {
+		c.l().Debugf("cdc unhealthy after resign the owner, err: %+v", err)
+		return err
+	}
+
 	owner, err := c.GetOwner()
 	if err != nil {
 		return err
@@ -211,21 +216,7 @@ func (c *CDCOpenAPIClient) GetAllCaptures() ([]*Capture, error) {
 	})
 
 	return result, err
-	//err = utils.Retry(func() error {
-	//	result, err = getAllCaptures(c)
-	//	if err != nil {
-	//		return err
-	//	}
-	//	return nil
-	//}, utils.RetryOption{
-	//	Timeout: 10 * time.Second,
-	//})
-	//return result, err
 }
-
-//func getAllCaptures(client *CDCOpenAPIClient) ([]*Capture, error) {
-//
-//}
 
 // IsCaptureAlive return error if the capture is not alive
 func (c *CDCOpenAPIClient) IsCaptureAlive() error {
