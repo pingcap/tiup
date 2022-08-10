@@ -81,6 +81,10 @@ func drainCapture(client *CDCOpenAPIClient, target string) (int, error) {
 				client.l().Debugf("cdc drain capture does not support, ignore it, target: %s, err: %+v", target, err)
 				return data, nil
 			case http.StatusServiceUnavailable:
+				if bytes.Contains(data, []byte("CDC:ErrVersionIncompatible")) {
+					client.l().Debugf("cdc drain capture does not support, ignore it, target: %s, err: %+v", target, err)
+					return data, nil
+				}
 				// cdc is not ready to accept request, return error to trigger retry.
 				client.l().Debugf("cdc drain capture meet service unavailable, retry it, target: %s, err: %+v", target, err)
 				return data, err
