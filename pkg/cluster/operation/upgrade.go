@@ -175,7 +175,13 @@ func Upgrade(
 	return RestartMonitored(ctx, uniqueHosts.Slice(), noAgentHosts, topo.GetMonitoredOptions(), options.OptTimeout)
 }
 
-func upgradeInstance(ctx context.Context, topo spec.Topology, instance spec.Instance, options Options, tlsCfg *tls.Config) (err error) {
+func upgradeInstance(
+	ctx context.Context,
+	topo spec.Topology,
+	instance spec.Instance,
+	options Options,
+	tlsCfg *tls.Config,
+) (err error) {
 	// insert checkpoint
 	point := checkpoint.Acquire(ctx, upgradePoint, map[string]interface{}{"instance": instance.ID()})
 	defer func() {
