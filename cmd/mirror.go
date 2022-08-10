@@ -953,7 +953,8 @@ func newMirrorCloneCmd() *cobra.Command {
 	}
 	cmd := &cobra.Command{
 		Use: "clone <target-dir> [global version]",
-		Example: `  tiup mirror clone /path/to/local --arch amd64,arm --os linux,darwin    # Specify the architectures and OSs
+		Example: `  tiup mirror clone /path/to/local --arch amd64,arm64 --os linux,darwin    # Specify the architectures and OSs
+  tiup mirror clone /path/to/local --os linux v6.1.0 v5.4.0              # Specify multiple versions 
   tiup mirror clone /path/to/local --full                                # Build a full local mirror
   tiup mirror clone /path/to/local --tikv v4  --prefix                   # Specify the version via prefix
   tiup mirror clone /path/to/local --tidb all --pd all                   # Download all version for specific component`,
