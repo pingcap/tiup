@@ -207,7 +207,7 @@ func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Optio
 			if offline {
 				return nil
 			}
-			ctx = context.WithValue(ctx, "currentVersion", base.Version)
+			ctx = context.WithValue(ctx, ContextKeyCurrentVersion, base.Version)
 			return operator.Upgrade(ctx, topo, opt, tlsCfg)
 		}).
 		Build()
