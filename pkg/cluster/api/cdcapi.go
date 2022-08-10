@@ -191,42 +191,41 @@ func (c *CDCOpenAPIClient) GetCaptureByAddr(addr string) (*Capture, error) {
 }
 
 // GetAllCaptures return all captures instantaneously
-func (c *CDCOpenAPIClient) GetAllCaptures() (result []*Capture, err error) {
-	err = utils.Retry(func() error {
-		result, err = getAllCaptures(c)
-		if err != nil {
-			return err
-		}
-		return nil
-	}, utils.RetryOption{
-		Timeout: 10 * time.Second,
-	})
-	return result, err
-}
-
-func getAllCaptures(client *CDCOpenAPIClient) ([]*Capture, error) {
+func (c *CDCOpenAPIClient) GetAllCaptures() ([]*Capture, error) {
 	api := "api/v1/captures"
-	endpoints := client.getEndpoints(api)
+	endpoints := c.getEndpoints(api)
 
-	var response []*Capture
-
+	var result []*Capture
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, statusCode, err := client.client.GetWithStatusCode(client.ctx, endpoint)
+		body, statusCode, err := c.client.GetWithStatusCode(c.ctx, endpoint)
 		if err != nil {
 			if statusCode == http.StatusNotFound {
 				// old version cdc does not support open api, also the stopped cdc instance
 				// return nil to trigger hard restart
-				client.l().Debugf("get all captures not support, ignore it, err: %+v", err)
+				c.l().Debugf("get all captures not support, ignore it, err: %+v", err)
 				return body, nil
 			}
 			return body, err
 		}
-
-		return body, json.Unmarshal(body, &response)
+		return body, json.Unmarshal(body, &result)
 	})
 
-	return response, err
+	return result, err
+	//err = utils.Retry(func() error {
+	//	result, err = getAllCaptures(c)
+	//	if err != nil {
+	//		return err
+	//	}
+	//	return nil
+	//}, utils.RetryOption{
+	//	Timeout: 10 * time.Second,
+	//})
+	//return result, err
 }
+
+//func getAllCaptures(client *CDCOpenAPIClient) ([]*Capture, error) {
+//
+//}
 
 // IsCaptureAlive return error if the capture is not alive
 func (c *CDCOpenAPIClient) IsCaptureAlive() error {
