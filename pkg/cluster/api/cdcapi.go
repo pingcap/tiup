@@ -268,6 +268,7 @@ func (c *CDCOpenAPIClient) GetStatus() (result ServerStatus, err error) {
 
 // Healthy return true if the TiCDC cluster is healthy
 func (c *CDCOpenAPIClient) Healthy() (result bool, err error) {
+	// todo: adjust the retry logic here.
 	err = utils.Retry(func() error {
 		result, err = isHealthy(c)
 		if err != nil {
@@ -294,9 +295,10 @@ func isHealthy(client *CDCOpenAPIClient) (bool, error) {
 				client.l().Debugf("cdc check healthy does not support, ignore it")
 				return nil, nil
 			case http.StatusInternalServerError:
-				client.l().Debugf("cdc check healthy: internal server error, retry it")
+				client.l().Debugf("cdc check healthy: internal server error, retry it, err: %+v", err)
 				return nil, fmt.Errorf("internal server error")
 			}
+			return nil, err
 		}
 		return nil, nil
 	})
