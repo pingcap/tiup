@@ -82,7 +82,7 @@ func drainCapture(client *CDCOpenAPIClient, target string) (int, error) {
 				return data, nil
 			case http.StatusServiceUnavailable:
 				if bytes.Contains(data, []byte("CDC:ErrVersionIncompatible")) {
-					client.l().Debugf("cdc drain capture does not support, ignore it, target: %s, err: %+v", target, err)
+					client.l().Debugf("cdc drain capture meet version incompatible, ignore it, target: %s, err: %+v", target, err)
 					return data, nil
 				}
 				// cdc is not ready to accept request, return error to trigger retry.
@@ -271,10 +271,13 @@ func (c *CDCOpenAPIClient) GetStatus() (result ServerStatus, err error) {
 }
 
 // Healthy return true if the TiCDC cluster is healthy
-func (c *CDCOpenAPIClient) Healthy() (result bool, err error) {
-	// todo: adjust the retry logic here.
+func (c *CDCOpenAPIClient) Healthy() error {
+	var (
+		healthy bool
+		err     error
+	)
 	err = utils.Retry(func() error {
-		result, err = isHealthy(c)
+		healthy, err = isHealthy(c)
 		if err != nil {
 			return err
 		}
@@ -283,7 +286,15 @@ func (c *CDCOpenAPIClient) Healthy() (result bool, err error) {
 		Timeout: 10 * time.Second,
 	})
 
-	return result, err
+	if err != nil {
+		return err
+	}
+
+	if !healthy {
+		return fmt.Errorf("cdc cluster unhealthy")
+	}
+
+	return nil
 }
 
 func isHealthy(client *CDCOpenAPIClient) (bool, error) {
