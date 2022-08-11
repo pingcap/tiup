@@ -2,6 +2,9 @@ TiUP Changelog
 
 ## [1.10.3] 2022-08-11
 
+### Mirror update
+
+- Add new version for node_exporter (https://github.com/prometheus/node_exporter/releases/tag/v1.3.1) and blackbox_exporter (https://github.com/prometheus/blackbox_exporter/releases/tag/v0.21.1) in tiup repository. All the new tidb clusters or instances deployed by tiup cluster will use the new version by default.
 ### Fixes
 
 - Fix cannot clean related tidb topology after scale-in in `tiup-cluster` ([#2011](https://github.com/pingcap/tiup/pull/2011), [@nexustar](https://github.com/nexustar))
