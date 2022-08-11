@@ -36,16 +36,6 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
-//// ContextKey is key used to store values in context
-//type ContextKey string
-//
-//// ContextKeyLogger is the key used for logger stored in context
-//const ContextKeyLogger ContextKey = "logger"
-
-type ContextKey string
-
-const ContextKeyCurrentVersion ContextKey = "currentVersion"
-
 // EnableCluster enable/disable the service in a cluster
 func (m *Manager) EnableCluster(name string, gOpt operator.Options, isEnable bool) error {
 	if isEnable {

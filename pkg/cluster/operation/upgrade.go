@@ -26,7 +26,6 @@ import (
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/checkpoint"
 	"github.com/pingcap/tiup/pkg/cluster/api"
-	"github.com/pingcap/tiup/pkg/cluster/manager"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/set"
@@ -320,17 +319,4 @@ func decreaseScheduleLimit(pc *api.PDClient, origLeaderScheduleLimit, origRegion
 		return err
 	}
 	return pc.SetReplicationConfig("region-schedule-limit", origRegionScheduleLimit)
-}
-
-func getCurrentVersionFromContext(ctx context.Context) string {
-	v := ctx.Value(manager.ContextKeyCurrentVersion)
-	if v == nil {
-		return ""
-	}
-
-	if version, ok := v.(string); ok {
-		return version
-	}
-
-	return ""
 }
