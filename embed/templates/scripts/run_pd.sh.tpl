@@ -18,9 +18,9 @@ cd "${DEPLOY_DIR}" || exit 1
 {{- end}}
 
 {{- if .NumaNode}}
-exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/pd-server \
+exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} GODEBUG=madvdontneed=1 bin/pd-server \
 {{- else}}
-exec bin/pd-server \
+exec GODEBUG=madvdontneed=1 bin/pd-server \
 {{- end}}
     --name="{{.Name}}" \
     --client-urls="{{.Scheme}}://{{.ListenHost}}:{{.ClientPort}}" \
