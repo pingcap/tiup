@@ -14,10 +14,10 @@
 package handler
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/pingcap/fn"
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/server/session"
 )
@@ -34,8 +34,18 @@ type tarballUploader struct {
 	sm session.Manager
 }
 
+type errResponse struct {
+	Status  string `json:"status"`
+	Message string `json:"message"`
+}
+
 func (h *tarballUploader) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fn.Wrap(h.upload).ServeHTTP(w, r)
+	_, err := h.upload(r)
+	if err != nil {
+		w.WriteHeader(err.StatusCode())
+		_ = json.NewEncoder(w).Encode(errResponse{Status: err.Status(), Message: err.Error()})
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *tarballUploader) upload(r *http.Request) (*simpleResponse, statusError) {
