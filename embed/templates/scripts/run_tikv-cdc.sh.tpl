@@ -17,7 +17,7 @@ cd "${DEPLOY_DIR}" || exit 1
 {{- end}}
 
 {{- if .NumaNode}}
-exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/cdc server \
+exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/tikv-cdc server \
 {{- else}}
 exec bin/tikv-cdc server \
 {{- end}}

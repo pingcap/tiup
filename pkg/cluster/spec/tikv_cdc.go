@@ -79,12 +79,12 @@ type TiKVCDCComponent struct{ Topology *Specification }
 
 // Name implements Component interface.
 func (c *TiKVCDCComponent) Name() string {
-	return ComponentCDC
+	return ComponentTiKVCDC
 }
 
 // Role implements Component interface.
 func (c *TiKVCDCComponent) Role() string {
-	return ComponentCDC
+	return ComponentTiKVCDC
 }
 
 // Instances implements Component interface.
@@ -174,7 +174,7 @@ func (i *TiKVCDCInstance) InitConfig(
 		spec.TZ,
 	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).AppendEndpoints(topo.Endpoints(deployUser)...)
 
-	// doesn't work. TODO: fix it.
+	// doesn't work.
 	if _, err := i.setTLSConfig(ctx, false, nil, paths); err != nil {
 		return err
 	}

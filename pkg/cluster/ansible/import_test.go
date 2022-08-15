@@ -129,6 +129,7 @@ server_configs:
     pump: {}
     drainer: {}
     cdc: {}
+    tikv-cdc: {}
     grafana: {}
 tidb_servers: []
 tikv_servers: []
@@ -139,7 +140,7 @@ monitoring_servers: []
 
 	topo, err := yaml.Marshal(clsMeta.Topology)
 	c.Assert(err, IsNil)
-	c.Assert(topo, DeepEquals, expected)
+	c.Assert(string(topo), DeepEquals, string(expected))
 }
 
 func (s *ansSuite) TestParseGroupVars(c *C) {
