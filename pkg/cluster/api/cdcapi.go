@@ -263,8 +263,7 @@ func (c *CDCOpenAPIClient) GetStatus() (result ServerStatus, err error) {
 
 // Healthy return true if the TiCDC cluster is healthy
 func (c *CDCOpenAPIClient) Healthy() error {
-	var err error
-	err = utils.Retry(func() error {
+	err := utils.Retry(func() error {
 		return isHealthy(c)
 	}, utils.RetryOption{
 		Timeout: 10 * time.Second,
