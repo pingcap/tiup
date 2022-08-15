@@ -30,6 +30,7 @@ const (
 
 type contextKey string
 
+// ContextKeyCurrentVersion is the key of current cluster version
 const ContextKeyCurrentVersion contextKey = "currentVersion"
 
 func getCurrentVersionFromContext(ctx context.Context) string {
