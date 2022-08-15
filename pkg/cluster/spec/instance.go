@@ -44,6 +44,7 @@ const (
 	ComponentDrainer          = "drainer"
 	ComponentPump             = "pump"
 	ComponentCDC              = "cdc"
+	ComponentTiKVCDC          = "tikv-cdc"
 	ComponentTiSpark          = "tispark"
 	ComponentSpark            = "spark"
 	ComponentAlertmanager     = "alertmanager"

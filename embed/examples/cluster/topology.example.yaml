@@ -58,6 +58,7 @@ monitored:
   # pd:
   # tiflash:
   # tiflash-learner:
+  # tikv-cdc:
 
 # # Server configs are used to specify the configuration of PD Servers.
 pd_servers:
@@ -277,6 +278,21 @@ tiflash_servers:
     deploy_dir: /data2/tidb-deploy/tiflash-9001
     data_dir: /data2/tidb-data/tiflash-9001
     log_dir: /data2/tidb-deploy/tiflash-9001/log
+
+# # Server configs are used to specify the configuration of TiKV-CDC Servers.
+tikv-cdc_servers:
+  - host: 10.0.1.20
+    # # SSH port of the server.
+    # ssh_port: 22
+    # # TiKV-CDC Server communication port.
+    port: 8600
+    # # TiKV-CDC Server data storage directory.
+    data_dir: "/data1/tidb-data/tikv-cdc-8600"
+    # # TiKV-CDC Server log file storage directory.
+    log_dir: "/data1/tidb-deploy/tikv-cdc-8600/log"
+  - host: 10.0.1.21
+    data_dir: "/data1/tidb-data/tikv-cdc-8600"
+    log_dir: "/data1/tidb-deploy/tikv-cdc-8600/log"
 
 # # Server configs are used to specify the configuration of Prometheus Server.  
 monitoring_servers:

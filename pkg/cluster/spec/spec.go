@@ -112,6 +112,7 @@ type (
 		Pump           map[string]interface{} `yaml:"pump"`
 		Drainer        map[string]interface{} `yaml:"drainer"`
 		CDC            map[string]interface{} `yaml:"cdc"`
+		TiKVCDC        map[string]interface{} `yaml:"tikv-cdc"`
 		Grafana        map[string]string      `yaml:"grafana"`
 	}
 
@@ -127,6 +128,7 @@ type (
 		PumpServers      []*PumpSpec          `yaml:"pump_servers,omitempty"`
 		Drainers         []*DrainerSpec       `yaml:"drainer_servers,omitempty"`
 		CDCServers       []*CDCSpec           `yaml:"cdc_servers,omitempty"`
+		TiKVCDCServers   []*TiKVCDCSpec       `yaml:"tikv-cdc_servers,omitempty"`
 		TiSparkMasters   []*TiSparkMasterSpec `yaml:"tispark_masters,omitempty"`
 		TiSparkWorkers   []*TiSparkWorkerSpec `yaml:"tispark_workers,omitempty"`
 		Monitors         []*PrometheusSpec    `yaml:"monitoring_servers"`
@@ -485,6 +487,7 @@ func (s *Specification) Merge(that Topology) Topology {
 		PumpServers:      append(s.PumpServers, spec.PumpServers...),
 		Drainers:         append(s.Drainers, spec.Drainers...),
 		CDCServers:       append(s.CDCServers, spec.CDCServers...),
+		TiKVCDCServers:   append(s.TiKVCDCServers, spec.TiKVCDCServers...),
 		TiSparkMasters:   append(s.TiSparkMasters, spec.TiSparkMasters...),
 		TiSparkWorkers:   append(s.TiSparkWorkers, spec.TiSparkWorkers...),
 		Monitors:         append(s.Monitors, spec.Monitors...),
@@ -688,7 +691,7 @@ func (s *Specification) ComponentsByStopOrder() (comps []Component) {
 
 // ComponentsByStartOrder return component in the order need to start.
 func (s *Specification) ComponentsByStartOrder() (comps []Component) {
-	// "pd", "tikv", "pump", "tidb", "tiflash", "drainer", "cdc", "prometheus", "grafana", "alertmanager"
+	// "pd", "tikv", "pump", "tidb", "tiflash", "drainer", "cdc", "tikv-cdc", "prometheus", "grafana", "alertmanager"
 	comps = append(comps, &PDComponent{s})
 	comps = append(comps, &TiKVComponent{s})
 	comps = append(comps, &PumpComponent{s})
@@ -696,6 +699,7 @@ func (s *Specification) ComponentsByStartOrder() (comps []Component) {
 	comps = append(comps, &TiFlashComponent{s})
 	comps = append(comps, &DrainerComponent{s})
 	comps = append(comps, &CDCComponent{s})
+	comps = append(comps, &TiKVCDCComponent{s})
 	comps = append(comps, &MonitorComponent{s})
 	comps = append(comps, &GrafanaComponent{s})
 	comps = append(comps, &AlertManagerComponent{s})

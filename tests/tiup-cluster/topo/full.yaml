@@ -10,6 +10,8 @@ server_configs:
     storage.reserve-space: 1K
   pump:
     storage.stop-write-at-available-space: 1 mib
+  tikv-cdc:
+    gc-ttl: 43200
 
 tidb_servers:
   - host: n1
@@ -50,6 +52,11 @@ drainer_servers:
       syncer.db-type: "file"
 
 cdc_servers:
+  - host: n3
+  - host: n4
+  - host: n5
+
+tikv-cdc_servers:
   - host: n3
   - host: n4
   - host: n5
