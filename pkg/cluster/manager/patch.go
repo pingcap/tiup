@@ -78,9 +78,9 @@ func (m *Manager) Patch(name string, packagePath string, opt operator.Options, o
 	if err != nil {
 		return err
 	}
-	//if err := checkPackage(m.bindVersion, m.specManager, name, insts[0].ComponentName(), insts[0].OS(), insts[0].Arch(), packagePath); err != nil {
-	//	return err
-	//}
+	if err := checkPackage(m.bindVersion, m.specManager, name, insts[0].ComponentName(), insts[0].OS(), insts[0].Arch(), packagePath); err != nil {
+		return err
+	}
 
 	var replacePackageTasks []task.Task
 	for _, inst := range insts {
