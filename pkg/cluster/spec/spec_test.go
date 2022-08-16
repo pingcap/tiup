@@ -107,6 +107,9 @@ pd_servers:
 cdc_servers:
   - host: 172.16.5.233
     data_dir: "cdc-data"
+tikv-cdc_servers:
+  - host: 172.16.5.244
+    data_dir: "tikv-cdc-data"
 `), &topo)
 	c.Assert(err, IsNil)
 	c.Assert(topo.GlobalOptions.User, Equals, "test1")
@@ -121,6 +124,10 @@ cdc_servers:
 	c.Assert(topo.CDCServers[0].SSHPort, Equals, 220)
 	c.Assert(topo.CDCServers[0].DeployDir, Equals, "test-deploy/cdc-8300")
 	c.Assert(topo.CDCServers[0].DataDir, Equals, "cdc-data")
+
+	c.Assert(topo.TiKVCDCServers[0].SSHPort, Equals, 220)
+	c.Assert(topo.TiKVCDCServers[0].DeployDir, Equals, "test-deploy/tikv-cdc-8600")
+	c.Assert(topo.TiKVCDCServers[0].DataDir, Equals, "tikv-cdc-data")
 }
 
 func (s *metaSuiteTopo) TestDataDirAbsolute(c *C) {
@@ -139,6 +146,11 @@ cdc_servers:
     data_dir: "cdc-data"
   - host: 172.16.5.234
     port: 23333
+tikv-cdc_servers:
+  - host: 172.16.5.244
+    data_dir: "tikv-cdc-data"
+  - host: 172.16.5.245
+    port: 33333
 `), &topo)
 	c.Assert(err, IsNil)
 
@@ -147,6 +159,9 @@ cdc_servers:
 
 	c.Assert(topo.CDCServers[0].DataDir, Equals, "cdc-data")
 	c.Assert(topo.CDCServers[1].DataDir, Equals, "/test-data/cdc-23333")
+
+	c.Assert(topo.TiKVCDCServers[0].DataDir, Equals, "tikv-cdc-data")
+	c.Assert(topo.TiKVCDCServers[1].DataDir, Equals, "/test-data/tikv-cdc-33333")
 }
 
 func (s *metaSuiteTopo) TestGlobalConfig(c *C) {
@@ -172,6 +187,8 @@ server_configs:
     status.address: 10
     port: 1230
     scheduler.max_limit: 20480
+  tikv-cdc:
+    gc-ttl: 43200
 
 tidb_servers:
   - host: 172.16.5.138
@@ -184,6 +201,13 @@ tidb_servers:
     config:
       latch.capacity: 5000
       log.file.rotate: "55555.xxx"
+
+tikv-cdc_servers:
+  - host: 172.16.5.200
+  - host: 172.16.5.201
+    port: 8601
+    config:
+      log-level: "debug"
 `), &topo)
 	c.Assert(err, IsNil)
 	c.Assert(topo.ServerConfigs.TiDB, DeepEquals, map[string]interface{}{
@@ -192,6 +216,10 @@ tidb_servers:
 		"latch.capacity":  20480,
 		"log.file.rotate": "123445.xxx",
 	})
+	c.Assert(topo.ServerConfigs.TiKVCDC, DeepEquals, map[string]interface{}{
+		"gc-ttl": 43200,
+	})
+
 	expected := map[string]interface{}{
 		"status": map[string]interface{}{
 			"address": 10,
@@ -250,6 +278,20 @@ tidb_servers:
 	}
 	got = FoldMap(topo.TiDBServers[1].Config)
 	c.Assert(err, IsNil)
+	c.Assert(got, DeepEquals, expected)
+
+	expected = map[string]interface{}{}
+	got = FoldMap(topo.TiKVCDCServers[0].Config)
+	c.Assert(got, DeepEquals, expected)
+
+	expected = map[string]interface{}{}
+	got = FoldMap(topo.TiKVCDCServers[0].Config)
+	c.Assert(got, DeepEquals, expected)
+
+	expected = map[string]interface{}{
+		"log-level": "debug",
+	}
+	got = FoldMap(topo.TiKVCDCServers[1].Config)
 	c.Assert(got, DeepEquals, expected)
 }
 
@@ -321,12 +363,19 @@ server_configs:
     config.item2: 300
     config.item3.item5: 500
     config.item3.item6: 600
+  tikv-cdc:
+    gc-ttl: 43200
 
 tikv_servers:
   - host: 172.16.5.138
     config:
       config.item2: 500
       config.item3.item5: 700
+
+tikv-cdc_servers:
+  - host: 172.16.5.238
+    config:
+      log-level: "debug"
 
 `), &topo)
 	c.Assert(err, IsNil)
@@ -345,6 +394,20 @@ item5 = 700
 item6 = 600
 `
 	got, err := merge2Toml("tikv", topo.ServerConfigs.TiKV, topo.TiKVServers[0].Config)
+	c.Assert(err, IsNil)
+	c.Assert(string(got), DeepEquals, expected)
+
+	expected = `# WARNING: This file is auto-generated. Do not edit! All your modification will be overwritten!
+# You can use 'tiup cluster edit-config' and 'tiup cluster reload' to update the configuration
+# All configuration items you want to change can be added to:
+# server_configs:
+#   tikv-cdc:
+#     aa.b1.c3: value
+#     aa.b2.c4: value
+gc-ttl = 43200
+log-level = "debug"
+`
+	got, err = merge2Toml("tikv-cdc", topo.ServerConfigs.TiKVCDC, topo.TiKVCDCServers[0].Config)
 	c.Assert(err, IsNil)
 	c.Assert(string(got), DeepEquals, expected)
 }
