@@ -22,5 +22,5 @@ tikv_cdc_test --version 6.2.0 --topo tikv_cdc --staging --tikv-cdc-patch 1.0.0-a
 # TODO: test upgrade of TiKV-CDC
 
 ###############################################
-echo "Test scale in/out for TiKV-CDC"
+echo "Test scale in/out for TiKV-CDC" 
 tikv_cdc_scale_test --version "6.2.0" --topo tikv_cdc --staging
