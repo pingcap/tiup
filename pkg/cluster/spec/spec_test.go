@@ -40,6 +40,7 @@ func (s *metaSuiteTopo) TestDefaultDataDir(c *C) {
 	topo := new(Specification)
 	topo.TiKVServers = append(topo.TiKVServers, &TiKVSpec{Host: "1.1.1.1", Port: 22})
 	topo.CDCServers = append(topo.CDCServers, &CDCSpec{Host: "2.3.3.3", Port: 22})
+	topo.TiKVCDCServers = append(topo.TiKVCDCServers, &TiKVCDCSpec{Host: "3.3.3.3", Port: 22})
 	data, err := yaml.Marshal(topo)
 	c.Assert(err, IsNil)
 
@@ -50,6 +51,7 @@ func (s *metaSuiteTopo) TestDefaultDataDir(c *C) {
 	c.Assert(topo.GlobalOptions.DataDir, Equals, "data")
 	c.Assert(topo.TiKVServers[0].DataDir, Equals, "data")
 	c.Assert(topo.CDCServers[0].DataDir, Equals, "data")
+	c.Assert(topo.TiKVCDCServers[0].DataDir, Equals, "data")
 
 	// Can keep the default value.
 	data, err = yaml.Marshal(topo)
@@ -60,6 +62,7 @@ func (s *metaSuiteTopo) TestDefaultDataDir(c *C) {
 	c.Assert(topo.GlobalOptions.DataDir, Equals, "data")
 	c.Assert(topo.TiKVServers[0].DataDir, Equals, "data")
 	c.Assert(topo.CDCServers[0].DataDir, Equals, "data")
+	c.Assert(topo.TiKVCDCServers[0].DataDir, Equals, "data")
 
 	// Test with global DataDir.
 	topo = new(Specification)
@@ -68,6 +71,8 @@ func (s *metaSuiteTopo) TestDefaultDataDir(c *C) {
 	topo.TiKVServers = append(topo.TiKVServers, &TiKVSpec{Host: "1.1.1.2", Port: 33, DataDir: "/my_data"})
 	topo.CDCServers = append(topo.CDCServers, &CDCSpec{Host: "2.3.3.3", Port: 22})
 	topo.CDCServers = append(topo.CDCServers, &CDCSpec{Host: "2.3.3.4", Port: 22, DataDir: "/cdc_data"})
+	topo.TiKVCDCServers = append(topo.TiKVCDCServers, &TiKVCDCSpec{Host: "3.3.3.3", Port: 22})
+	topo.TiKVCDCServers = append(topo.TiKVCDCServers, &TiKVCDCSpec{Host: "3.3.3.4", Port: 22, DataDir: "/tikv-cdc_data"})
 	data, err = yaml.Marshal(topo)
 	c.Assert(err, IsNil)
 
@@ -80,6 +85,9 @@ func (s *metaSuiteTopo) TestDefaultDataDir(c *C) {
 
 	c.Assert(topo.CDCServers[0].DataDir, Equals, "/global_data/cdc-22")
 	c.Assert(topo.CDCServers[1].DataDir, Equals, "/cdc_data")
+
+	c.Assert(topo.TiKVCDCServers[0].DataDir, Equals, "/global_data/tikv-cdc-22")
+	c.Assert(topo.TiKVCDCServers[1].DataDir, Equals, "/tikv-cdc_data")
 }
 
 func (s *metaSuiteTopo) TestGlobalOptions(c *C) {

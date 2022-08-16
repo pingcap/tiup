@@ -5,15 +5,48 @@ set -eu
 function cmd_subtest() {
     mkdir -p ~/.tiup/bin/
 
-    version=$1
-    test_tls=$2
-    native_ssh=$3
+    version="nightly"
+    topo_name="full"
+    test_tls=false
+    native_ssh=false
+    mirror="https://tiup-mirrors.pingcap.com/"
+
+    while [[ $# -gt 0 ]]
+    do
+        case $1 in
+            --version)
+                version="$2"
+                shift
+                shift
+                ;;
+            --topo)
+                topo_name="$2"
+                shift
+                shift
+                ;;
+            --tls)
+                test_tls=true
+                shift
+                ;;
+            --native-ssh)
+                native_ssh=true
+                shift
+                ;;
+            --staging)
+                mirror="http://staging.tiup-server.pingcap.net"
+                shift
+                ;;
+        esac
+    done
+
+    # set mirror
+    tiup mirror set $mirror
 
     name="test_cmd_$RANDOM"
     if [ $test_tls = true ]; then
-        topo=./topo/full_tls.yaml
+        topo=./topo/${topo_name}_tls.yaml
     else
-        topo=./topo/full.yaml
+        topo=./topo/${topo_name}.yaml
     fi
 
     client=""
