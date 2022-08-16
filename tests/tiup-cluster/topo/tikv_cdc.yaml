@@ -32,7 +32,6 @@ tikv-cdc_servers:
  - host: n3
  - host: n4
    data_dir: "/home/tidb/tikv_cdc_data"
- - host: n5
 
 monitoring_servers:
   - host: n1

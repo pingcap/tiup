@@ -168,16 +168,22 @@ function tikv_cdc_scale_test() {
 
 	tiup-cluster display $name
 
-	total_sub_one=14
-	total=15
+	total_sub_one=13
+	total=14
 
-	echo "start scale in tikv-cdc"
-	yes | tiup-cluster scale-in $name -N n5:8600
+	echo "start scale in tikv-cdc (-n3)"
+	yes | tiup-cluster scale-in $name -N n3:8600
 	wait_instance_num_reach $name $total_sub_one false
-	echo "start scale out tikv-cdc"
+
+	echo "start scale out tikv-cdc (+n5)"
 	topo=./topo/tikv_cdc_scale_in.yaml
 	yes | tiup-cluster scale-out $name $topo
 	wait_instance_num_reach $name $total false
+
+	# scale in n4, as n4 should be the owner.
+	echo "start scale in tikv-cdc (-n4)"
+	yes | tiup-cluster scale-in $name -N n4:8600
+	wait_instance_num_reach $name $total_sub_one false
 
 	tiup-cluster _test $name writable
 
