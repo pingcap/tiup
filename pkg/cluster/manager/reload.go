@@ -77,14 +77,14 @@ func (m *Manager) Reload(name string, gOpt operator.Options, skipRestart, skipCo
 	uniqueHosts, noAgentHosts := getMonitorHosts(topo)
 
 	// init config
-	refreshConfigTasks, hasImported := buildInitConfigTasks(m, name, topo, base, gOpt, nil)
+	//refreshConfigTasks, hasImported := buildInitConfigTasks(m, name, topo, base, gOpt, nil)
 
 	// handle dir scheme changes
-	if hasImported {
-		if err := spec.HandleImportPathMigration(name); err != nil {
-			return err
-		}
-	}
+	//if hasImported {
+	//	if err := spec.HandleImportPathMigration(name); err != nil {
+	//		return err
+	//	}
+	//}
 
 	monitorConfigTasks := buildInitMonitoredConfigTasks(
 		m.specManager,
@@ -112,7 +112,7 @@ func (m *Manager) Reload(name string, gOpt operator.Options, skipRestart, skipCo
 			nil, /* deleteNodeIds */
 		)
 	}
-	b.ParallelStep("+ Refresh instance configs", gOpt.Force, refreshConfigTasks...)
+	//b.ParallelStep("+ Refresh instance configs", gOpt.Force, refreshConfigTasks...)
 
 	if len(monitorConfigTasks) > 0 {
 		b.ParallelStep("+ Refresh monitor configs", gOpt.Force, monitorConfigTasks...)
