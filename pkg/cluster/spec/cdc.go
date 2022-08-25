@@ -238,10 +238,17 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 	}
 
 	start := time.Now()
-	client := api.NewCDCOpenAPIClient(ctx, []string{address}, 5*time.Second, tlsCfg)
+	client := api.NewCDCOpenAPIClient(ctx, topo.(*Specification).GetCDCList(), 5*time.Second, tlsCfg)
+	if err := client.Healthy(); err != nil {
+		logger.Debugf("cdc pre-restart skipped, the cluster unhealthy, trigger hard restart, "+
+			"addr: %s, err: %+v, elapsed: %+v", address, err, time.Since(start))
+		return nil
+	}
+
 	captures, err := client.GetAllCaptures()
 	if err != nil {
-		logger.Debugf("cdc pre-restart skipped, cannot get all captures, trigger hard restart, addr: %s, elapsed: %+v", address, time.Since(start))
+		logger.Debugf("cdc pre-restart skipped, cannot get all captures, trigger hard restart, "+
+			"addr: %s, err: %+v, elapsed: %+v", address, err, time.Since(start))
 		return nil
 	}
 
@@ -261,7 +268,8 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 
 	// this may happen if the capture crashed right away.
 	if !found {
-		logger.Debugf("cdc pre-restart finished, cannot found the capture, trigger hard restart, captureID: %s, addr: %s, elapsed: %+v", captureID, address, time.Since(start))
+		logger.Debugf("cdc pre-restart finished, cannot found the capture, trigger hard restart, "+
+			"addr: %s, captureID: %s, elapsed: %+v", address, captureID, time.Since(start))
 		return nil
 	}
 
@@ -270,17 +278,19 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 			// if resign the owner failed, no more need to drain the current capture,
 			// since it's not allowed by the cdc.
 			// return nil to trigger hard restart.
-			logger.Debugf("cdc pre-restart finished, resign owner failed, trigger hard restart, captureID: %s, addr: %s, elapsed: %+v", captureID, address, time.Since(start))
+			logger.Debugf("cdc pre-restart finished, resign owner failed, trigger hard restart, "+
+				"addr: %s, captureID: %s, err: %+v, elapsed: %+v", address, captureID, err, time.Since(start))
 			return nil
 		}
 	}
 
 	if err := client.DrainCapture(captureID, apiTimeoutSeconds); err != nil {
-		logger.Debugf("cdc pre-restart finished, drain the capture failed, captureID: %s, addr: %s, err: %+v, elapsed: %+v", captureID, address, err, time.Since(start))
+		logger.Debugf("cdc pre-restart finished, drain the capture failed, "+
+			"addr: %s, captureID: %s, err: %+v, elapsed: %+v", address, captureID, err, time.Since(start))
 		return nil
 	}
 
-	logger.Debugf("cdc pre-restart success, captureID: %s, addr: %s, elapsed: %+v", captureID, address, time.Since(start))
+	logger.Debugf("cdc pre-restart success, addr: %s, captureID: %s, elapsed: %+v", address, captureID, time.Since(start))
 	return nil
 }
 
