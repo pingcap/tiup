@@ -14,7 +14,6 @@
 package operator
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/pingcap/tiup/pkg/cluster/executor"
@@ -27,24 +26,6 @@ const (
 	EnvNameSkipScaleInTopoCheck = "SKIP_SCALEIN_TOPO_CHECK"
 	EnvNamePDEndpointOverwrite  = "FORCE_PD_ENDPOINTS"
 )
-
-type contextKey string
-
-// ContextKeyCurrentVersion is the key of current cluster version
-const ContextKeyCurrentVersion contextKey = "currentVersion"
-
-func getCurrentVersionFromContext(ctx context.Context) string {
-	v := ctx.Value(ContextKeyCurrentVersion)
-	if v == nil {
-		return ""
-	}
-
-	if version, ok := v.(string); ok {
-		return version
-	}
-
-	return ""
-}
 
 // Options represents the operation options
 type Options struct {

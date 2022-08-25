@@ -124,8 +124,7 @@ func (m *Manager) Reload(name string, gOpt operator.Options, skipRestart, skipCo
 			return err
 		}
 		b.Func("Upgrade Cluster", func(ctx context.Context) error {
-			ctx = context.WithValue(ctx, operator.ContextKeyCurrentVersion, base.Version)
-			return operator.Upgrade(ctx, topo, gOpt, tlsCfg)
+			return operator.Upgrade(ctx, topo, gOpt, tlsCfg, base.Version)
 		})
 	}
 

@@ -104,8 +104,7 @@ func (m *Manager) Patch(name string, packagePath string, opt operator.Options, o
 			if offline {
 				return nil
 			}
-			ctx = context.WithValue(ctx, operator.ContextKeyCurrentVersion, base.Version)
-			return operator.Upgrade(ctx, topo, opt, tlsCfg)
+			return operator.Upgrade(ctx, topo, opt, tlsCfg, base.Version)
 		}).
 		Build()
 

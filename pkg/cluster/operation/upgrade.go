@@ -45,6 +45,7 @@ func Upgrade(
 	topo spec.Topology,
 	options Options,
 	tlsCfg *tls.Config,
+	currentVersion string,
 ) error {
 	roleFilter := set.NewStringSet(options.Roles...)
 	nodeFilter := set.NewStringSet(options.Nodes...)
@@ -128,7 +129,6 @@ func Upgrade(
 			case spec.ComponentCDC:
 				ins := instance.(*spec.CDCInstance)
 				address := ins.GetAddr()
-				currentVersion := getCurrentVersionFromContext(ctx)
 				if !tidbver.TiCDCSupportRollingUpgrade(currentVersion) {
 					logger.Debugf("rolling upgrade cdc not supported, upgrade by force, "+
 						"addr: %s, version: %s", address, currentVersion)
