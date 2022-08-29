@@ -76,6 +76,12 @@ func TiCDCSupportDataDir(version string) bool {
 	return semver.Major(version) == "v4" && semver.Compare(version, "v4.0.14") >= 0
 }
 
+// TiCDCSupportRollingUpgrade return if the given version of TiCDC support rolling upgrade
+// TiCDC support graceful rolling upgrade since v6.3.0
+func TiCDCSupportRollingUpgrade(version string) bool {
+	return semver.Compare(version, "v6.3.0") >= 0 || strings.Contains(version, "nightly")
+}
+
 // NgMonitorDeployByDefault return if given version of TiDB cluster should contain ng-monitoring
 func NgMonitorDeployByDefault(version string) bool {
 	return semver.Compare(version, "v5.4.0") >= 0 || strings.Contains(version, "nightly")

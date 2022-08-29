@@ -59,7 +59,8 @@ func (c *ClusterOperate) Execute(ctx context.Context) error {
 	case operator.DestroyOperation:
 		err = operator.Destroy(ctx, c.spec, c.options)
 	case operator.UpgradeOperation:
-		err = operator.Upgrade(ctx, c.spec, c.options, c.tlsCfg)
+		// this should not be hit, it's ok to pass currentVersion as empty string here.
+		err = operator.Upgrade(ctx, c.spec, c.options, c.tlsCfg, "")
 	case operator.ScaleInOperation:
 		err = operator.ScaleIn(ctx, c.spec, c.options, c.tlsCfg)
 		printStatus = false
