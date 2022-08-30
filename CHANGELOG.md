@@ -1,5 +1,21 @@
 TiUP Changelog
 
+## [1.10.3] 2022-08-11
+
+### Mirror update
+
+- Add new version for node_exporter (https://github.com/prometheus/node_exporter/releases/tag/v1.3.1) and blackbox_exporter (https://github.com/prometheus/blackbox_exporter/releases/tag/v0.21.1) in tiup repository. All the new tidb clusters or instances deployed by tiup cluster will use the new version by default.
+### Fixes
+
+- Fix cannot clean related tidb topology after scale-in in `tiup-cluster` ([#2011](https://github.com/pingcap/tiup/pull/2011), [@nexustar](https://github.com/nexustar))
+- Fix fail to push if server name has "-" in `tiup-cluster` ([#2008](https://github.com/pingcap/tiup/pull/2008), [@nexustar](https://github.com/nexustar))
+- Fix unable to configure tiflash LearnerConfig in `tiup-cluster` ([#1991](https://github.com/pingcap/tiup/pull/1991), [@srstack](https://github.com/srstack))
+
+### Improvements
+
+- Improve the THP check rule in `tiup-cluster` ([#2014](https://github.com/pingcap/tiup/pull/2014), [@nexustar](https://github.com/nexustar))
+- Add an example in -h for `tiup mirror clone` for multiple versions ([#2009](https://github.com/pingcap/tiup/pull/2009), [@nexustar](https://github.com/nexustar))
+
 ## [1.10.2] 2022-06-16
 
 ### Fixes
