@@ -2,6 +2,9 @@ linters-settings:
   govet:
     enable:
       - nilness
+  errcheck:
+    exclude-functions:
+      - (*mime/multipart.Form).RemoveAll
 
 linters:
   disable-all: true
