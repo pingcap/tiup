@@ -207,7 +207,7 @@ func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Optio
 			if offline {
 				return nil
 			}
-			return operator.Upgrade(ctx, topo, opt, tlsCfg)
+			return operator.Upgrade(ctx, topo, opt, tlsCfg, base.Version)
 		}).
 		Build()
 

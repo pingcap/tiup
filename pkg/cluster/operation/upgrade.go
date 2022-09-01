@@ -29,6 +29,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/tidbver"
 	"go.uber.org/zap"
 )
 
@@ -44,6 +45,7 @@ func Upgrade(
 	topo spec.Topology,
 	options Options,
 	tlsCfg *tls.Config,
+	currentVersion string,
 ) error {
 	roleFilter := set.NewStringSet(options.Roles...)
 	nodeFilter := set.NewStringSet(options.Nodes...)
@@ -126,29 +128,39 @@ func Upgrade(
 				}
 			case spec.ComponentCDC:
 				ins := instance.(*spec.CDCInstance)
-				if ins.Status(ctx, 5*time.Second, tlsCfg) == "Up" {
-					// during the upgrade process, endpoint addresses should not change, so only new the client once.
-					if cdcOpenAPIClient == nil {
-						cdcOpenAPIClient = api.NewCDCOpenAPIClient(ctx, topo.(*spec.Specification).GetCDCList(), 5*time.Second, tlsCfg)
+				address := ins.GetAddr()
+				if !tidbver.TiCDCSupportRollingUpgrade(currentVersion) {
+					logger.Debugf("rolling upgrade cdc not supported, upgrade by force, "+
+						"addr: %s, version: %s", address, currentVersion)
+					options.Force = true
+					if err := upgradeInstance(ctx, topo, instance, options, tlsCfg); err != nil {
+						options.Force = false
+						return err
 					}
+					options.Force = false
+					continue
+				}
 
-					address := ins.GetAddr()
-					capture, err := cdcOpenAPIClient.GetCaptureByAddr(address)
-					if err != nil {
-						// After the previous status check, we know that the cdc instance should be `Up`, but know it cannot be found by address
-						// perhaps since the specified version of cdc does not support open api, or the instance just crashed right away
-						logger.Debugf("upgrade cdc, cannot found the capture by address: %s", address)
-						if err := upgradeInstance(ctx, topo, instance, options, tlsCfg); err != nil {
-							return err
-						}
-						continue
-					}
+				// during the upgrade process, endpoint addresses should not change, so only new the client once.
+				if cdcOpenAPIClient == nil {
+					cdcOpenAPIClient = api.NewCDCOpenAPIClient(ctx, topo.(*spec.Specification).GetCDCList(), 5*time.Second, tlsCfg)
+				}
 
-					if capture.IsOwner {
-						deferInstances = append(deferInstances, instance)
-						logger.Debugf("Deferred upgrading of TiCDC owner %s, captureID: %s, addr: %s", instance.ID(), capture.ID, address)
-						continue
+				capture, err := cdcOpenAPIClient.GetCaptureByAddr(address)
+				if err != nil {
+					// After the previous status check, we know that the cdc instance should be `Up`, but know it cannot be found by address
+					// perhaps since the specified version of cdc does not support open api, or the instance just crashed right away
+					logger.Debugf("upgrade cdc, cannot found the capture by address: %s", address)
+					if err := upgradeInstance(ctx, topo, instance, options, tlsCfg); err != nil {
+						return err
 					}
+					continue
+				}
+
+				if capture.IsOwner {
+					deferInstances = append(deferInstances, instance)
+					logger.Debugf("Deferred upgrading of TiCDC owner %s, captureID: %s, addr: %s", instance.ID(), capture.ID, address)
+					continue
 				}
 			default:
 				// do nothing, kept for future usage with other components
@@ -175,7 +187,13 @@ func Upgrade(
 	return RestartMonitored(ctx, uniqueHosts.Slice(), noAgentHosts, topo.GetMonitoredOptions(), options.OptTimeout)
 }
 
-func upgradeInstance(ctx context.Context, topo spec.Topology, instance spec.Instance, options Options, tlsCfg *tls.Config) (err error) {
+func upgradeInstance(
+	ctx context.Context,
+	topo spec.Topology,
+	instance spec.Instance,
+	options Options,
+	tlsCfg *tls.Config,
+) (err error) {
 	// insert checkpoint
 	point := checkpoint.Acquire(ctx, upgradePoint, map[string]interface{}{"instance": instance.ID()})
 	defer func() {
