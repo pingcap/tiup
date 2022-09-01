@@ -269,12 +269,12 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 	// this may happen if the capture crashed right away.
 	if !found {
 		logger.Debugf("cdc pre-restart finished, cannot found the capture, trigger hard restart, "+
-			"addr: %s, captureID: %s, elapsed: %+v", address, captureID, time.Since(start))
+			"addr: %s, elapsed: %+v", address, time.Since(start))
 		return nil
 	}
 
 	if isOwner {
-		if err := client.ResignOwner(); err != nil {
+		if err := client.ResignOwner(address); err != nil {
 			// if resign the owner failed, no more need to drain the current capture,
 			// since it's not allowed by the cdc.
 			// return nil to trigger hard restart.
