@@ -690,7 +690,7 @@ func (p *Playground) waitAllTidbUp() []string {
 	if len(p.tidbs) > 0 {
 		var wg sync.WaitGroup
 		var appendMutex sync.Mutex
-		bars := progress.NewMultiBar(color.YellowString("Waiting for tidb instances ready\n"))
+		bars := progress.NewMultiBar(color.YellowString("Waiting for tidb instances ready"))
 		for _, db := range p.tidbs {
 			wg.Add(1)
 			prefix := color.YellowString(db.Addr())
@@ -734,7 +734,7 @@ func (p *Playground) waitAllTiFlashUp() {
 		)
 
 		var wg sync.WaitGroup
-		bars := progress.NewMultiBar(color.YellowString("Waiting for tiflash instances ready\n"))
+		bars := progress.NewMultiBar(color.YellowString("Waiting for tiflash instances ready"))
 		for _, flash := range p.tiflashs {
 			wg.Add(1)
 			prefix := color.YellowString(flash.Addr())
