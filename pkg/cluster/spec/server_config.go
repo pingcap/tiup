@@ -145,21 +145,28 @@ func FlattenMap(ms map[string]interface{}) map[string]interface{} {
 
 // MergeConfig merge two or more config into one and unflat them
 // config1:
-//   a.b.a: 1
-//   a.b.b: 2
+//
+//	a.b.a: 1
+//	a.b.b: 2
+//
 // config2:
-//   a.b.a: 3
-//   a.b.c: 4
+//
+//	a.b.a: 3
+//	a.b.c: 4
+//
 // config3:
-//   b.c = 5
+//
+//	b.c = 5
+//
 // After MergeConfig(config1, config2, config3):
-//   a:
-//     b:
-//       a: 3
-//       b: 2
-//       c: 4
-//   b:
-//     c: 5
+//
+//	a:
+//	  b:
+//	    a: 3
+//	    b: 2
+//	    c: 4
+//	b:
+//	  c: 5
 func MergeConfig(orig map[string]interface{}, overwrites ...map[string]interface{}) map[string]interface{} {
 	lhs := FoldMap(orig)
 	for _, overwrite := range overwrites {
