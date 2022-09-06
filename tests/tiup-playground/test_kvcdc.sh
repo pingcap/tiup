@@ -6,8 +6,9 @@ TEST_DIR=$(cd "$(dirname "$0")"; pwd)
 TMP_DIR=$TEST_DIR/_tmp
 
 TIDB_VERSION="v6.2.0"
-KVCDC_VERSION="v1.0.0-alpha"
-MIRROR="http://staging.tiup-server.pingcap.net" # TODO: move to release mirror after TiKV-CDC is released.
+KVCDC_VERSION="v1.0.0"
+MIRROR="https://tiup-mirrors.pingcap.com"
+# MIRROR="http://staging.tiup-server.pingcap.net" # uncomment if staging environment is using.
 
 
 # Profile home directory
