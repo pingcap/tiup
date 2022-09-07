@@ -59,11 +59,11 @@ func (c *TiKVCDC) Start(ctx context.Context, version utils.Version) error {
 		fmt.Sprintf("--advertise-addr=%s:%d", AdvertiseHost(c.Host), c.Port),
 		fmt.Sprintf("--pd=%s", strings.Join(endpoints, ",")),
 		fmt.Sprintf("--log-file=%s", c.LogFile()),
+		fmt.Sprintf("--data-dir=%s", filepath.Join(c.Dir, "data")),
 	}
 	if c.ConfigPath != "" {
 		args = append(args, fmt.Sprintf("--config=%s", c.ConfigPath))
 	}
-	args = append(args, fmt.Sprintf("--data-dir=%s", filepath.Join(c.Dir, "data")))
 
 	var err error
 	if c.BinPath, err = tiupexec.PrepareBinary("tikv-cdc", version, c.BinPath); err != nil {

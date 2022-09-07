@@ -52,7 +52,7 @@ function kill_all() {
     killall -9 tidb-server || true
     killall -9 tikv-server || true
     killall -9 pd-server || true
-    killall -9 tiflash || true
+    killall -9 tikv-cdc || true
     killall -9 grafana-server || true
     killall -9 tiup-playground || true
     killall -9 prometheus || true
