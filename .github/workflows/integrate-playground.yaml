@@ -39,7 +39,6 @@ jobs:
       matrix:
         cases:
           - "test_playground"
-          - "test_kvcdc"
     env:
       working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
     steps:
