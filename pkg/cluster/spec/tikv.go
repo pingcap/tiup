@@ -357,14 +357,9 @@ func (i *TiKVInstance) PreRestart(ctx context.Context, topo Topology, apiTimeout
 		return err
 	}
 
-	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
-	if err := pdClient.DisableBalanceLeader(3600); err != nil {
-		logger.Debugf("failed to disable balance leader: %v", err)
-	}
-
 	if err := pdClient.EvictStoreLeader(addr(i.InstanceSpec.(*TiKVSpec)), timeoutOpt, genLeaderCounter(tidbTopo, tlsCfg)); err != nil {
 		if utils.IsTimeoutOrMaxRetry(err) {
-			logger.Warnf("Ignore evicting store leader from %s, %v", i.ID(), err)
+			ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger).Warnf("Ignore evicting store leader from %s, %v", i.ID(), err)
 		} else {
 			return perrs.Annotatef(err, "failed to evict store leader %s", i.GetHost())
 		}
@@ -389,12 +384,6 @@ func (i *TiKVInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *t
 	if err := pdClient.RemoveStoreEvict(addr(i.InstanceSpec.(*TiKVSpec))); err != nil {
 		return perrs.Annotatef(err, "failed to remove evict store scheduler for %s", i.GetHost())
 	}
-
-	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
-	if err := pdClient.EnableBalanceLeader(); err != nil {
-		logger.Debugf("failed to enable balance leader: %v", err)
-	}
-
 	return nil
 }
 

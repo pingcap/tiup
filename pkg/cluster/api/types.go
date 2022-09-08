@@ -124,3 +124,11 @@ type RegionsInfo struct {
 	Count   int           `json:"count"`
 	Regions []*RegionInfo `json:"regions"`
 }
+
+// PDScheduleConfig is copied from https://github.com/tikv/pd/blob/8e92dcde2e52dc/server/config/config.go#L641
+// only keep a part of the fields need at the moment.
+type PDScheduleConfig struct {
+	MaxMergeRegionSize uint64 `toml:"max-merge-region-size" json:"max-merge-region-size"`
+	// MergeScheduleLimit is the max coexist merge schedules.
+	MergeScheduleLimit uint64 `toml:"merge-schedule-limit" json:"merge-schedule-limit"`
+}

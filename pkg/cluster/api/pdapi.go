@@ -120,8 +120,13 @@ const (
 	pdEvictLeaderName = "evict-leader-scheduler"
 	// pdBalanceLeaderName is balance leader scheduler name.
 	pdBalanceLeaderName = "balance-leader-scheduler"
-	// pdBalanceRegionName is merge region scheduler name.
-	pdMergeRegionName = "merge-region-scheduler"
+)
+
+const (
+	// pdConfigMergeScheduleLimit is the config name of merge schedule limit
+	pdConfigMergeScheduleLimit = "merge-schedule-limit"
+	// pdConfigMaxMergeRegionSize is the config name of max merge region size
+	pdConfigMaxMergeRegionSize = "max-merge-region-size"
 )
 
 // nolint (some is unused now)
@@ -815,9 +820,54 @@ func (pc *PDClient) GetTiKVLabels() (map[string]map[string]string, []map[string]
 	return locationLabels, storeInfo, nil
 }
 
+func (pc *PDClient) GetScheduleConfig() (PDScheduleConfig, error) {
+	sc := PDScheduleConfig{}
+	endpoints := pc.getEndpoints(pdConfigSchedule)
+	data, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
+		return pc.httpClient.Get(pc.ctx, endpoint)
+	})
+	if err != nil {
+		return sc, err
+	}
+
+	if err := json.Unmarshal(data, &sc); err != nil {
+		return sc, perrs.Annotatef(err, "unmarshal schedule config: %s", string(data))
+	}
+
+	return sc, nil
+}
+
 // UpdateScheduleConfig updates the PD schedule config
 func (pc *PDClient) UpdateScheduleConfig(body io.Reader) error {
 	return pc.updateConfig(pdConfigSchedule, body)
+}
+
+func (pc *PDClient) setMergeRegion(maxMergeRegionSize, mergeScheduleLimit uint64) error {
+	data := map[string]interface{}{
+		pdConfigMaxMergeRegionSize: maxMergeRegionSize,
+		pdConfigMergeScheduleLimit: mergeScheduleLimit,
+	}
+	body, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	return pc.UpdateScheduleConfig(bytes.NewReader(body))
+}
+
+func (pc *PDClient) DisableMergeRegion() {
+	if err := pc.setMergeRegion(0, 0); err != nil {
+		pc.l().Warnf("failed disabling merge region: %s, ignore", err)
+		return
+	}
+	pc.l().Debugf("disable merge region")
+}
+
+func (pc *PDClient) EnableMergeRegion(maxMergeRegionSize, mergeScheduleLimit uint64) {
+	if err := pc.setMergeRegion(maxMergeRegionSize, mergeScheduleLimit); err != nil {
+		pc.l().Warnf("failed to enable merge region: %v, please check value for %s, %s are reasonable, (original values should be: %s, %s)", err,
+			pdConfigMaxMergeRegionSize, pdConfigMergeScheduleLimit,
+			fmt.Sprintf("%s=%d", pdConfigMaxMergeRegionSize, 0), fmt.Sprintf("%s=%d", pdConfigMergeScheduleLimit, 0))
+	}
 }
 
 // CheckRegion queries for the region with specific status
@@ -872,8 +922,10 @@ func (pc *PDClient) SetAllStoreLimits(value int) error {
 }
 
 // EnableBalanceLeader set the delay to 0 to enable `balance-region-scheduler`
-func (pc *PDClient) EnableBalanceLeader() error {
-	return pc.DisableBalanceLeader(0)
+func (pc *PDClient) EnableBalanceLeader() {
+	if err := pc.DisableBalanceLeader(0); err != nil {
+		pc.l().Debugf("failed to enable balance leader: %s, ignore", err)
+	}
 }
 
 // DisableBalanceLeader disable the `balance-region-scheduler` for `delay` seconds.
@@ -904,6 +956,7 @@ func (pc *PDClient) DisableBalanceLeader(delay int) error {
 		Delay:   2 * time.Second,
 		Timeout: 10 * time.Second,
 	}); err != nil {
+		logger.Warnf("failed disabling balance leader: %s", err)
 		return err
 	}
 
