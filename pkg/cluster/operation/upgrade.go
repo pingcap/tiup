@@ -100,6 +100,7 @@ func Upgrade(
 					}
 				}()
 			}
+
 		default:
 			// do nothing, kept for future usage with other components
 		}
@@ -319,4 +320,16 @@ func decreaseScheduleLimit(pc *api.PDClient, origLeaderScheduleLimit, origRegion
 		return err
 	}
 	return pc.SetReplicationConfig("region-schedule-limit", origRegionScheduleLimit)
+}
+
+func enableBalanceRegionLeader(pc *api.PDClient) error {
+	return pc.EnableBalanceLeader()
+}
+
+func disableBalanceRegionLeader(pc *api.PDClient) error {
+	// upgrade TiKV instance may cost a long time,
+	// depend on the number of regions situated at the target tikv instance, also the number of tikv instances.
+	// todo: make this configurable, set it to 1 hour temporarily, should works for most situation,
+	// If there are a large number of tikv instances, user can enlarge the value.
+	return pc.DisableBalanceLeader(3600)
 }

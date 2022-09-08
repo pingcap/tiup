@@ -118,6 +118,10 @@ func (pc *PDClient) GetURL(addr string) string {
 const (
 	// pdEvictLeaderName is evict leader scheduler name.
 	pdEvictLeaderName = "evict-leader-scheduler"
+	// pdBalanceLeaderName is balance leader scheduler name.
+	pdBalanceLeaderName = "balance-leader-scheduler"
+	// pdBalanceRegionName is merge region scheduler name.
+	pdMergeRegionName = "merge-region-scheduler"
 )
 
 // nolint (some is unused now)
@@ -865,4 +869,44 @@ func (pc *PDClient) SetAllStoreLimits(value int) error {
 	}
 	pc.l().Debugf("setting store limit: %d", value)
 	return pc.updateConfig(pdStoresLimitURI, bytes.NewBuffer(body))
+}
+
+// EnableBalanceLeader set the delay to 0 to enable `balance-region-scheduler`
+func (pc *PDClient) EnableBalanceLeader() error {
+	return pc.DisableBalanceLeader(0)
+}
+
+// DisableBalanceLeader disable the `balance-region-scheduler` for `delay` seconds.
+func (pc *PDClient) DisableBalanceLeader(delay int) error {
+	cmd := fmt.Sprintf("%s/%s", pdSchedulersURI, pdBalanceLeaderName)
+	endpoints := pc.getEndpoints(cmd)
+
+	body, err := json.Marshal(map[string]interface{}{"delay": delay})
+	if err != nil {
+		return err
+	}
+
+	logger := pc.l()
+	if err := utils.Retry(func() error {
+		_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
+			body, statusCode, err := pc.httpClient.PostWithStatusCode(pc.ctx, endpoint, bytes.NewBuffer(body))
+			if err != nil {
+				if statusCode == http.StatusNotFound || bytes.Contains(body, []byte("scheduler not found")) {
+					logger.Debugf("balance-leader-scheduler not found, ignore.")
+					return body, nil
+				}
+				return body, err
+			}
+			return body, nil
+		})
+		return err
+	}, utils.RetryOption{
+		Delay:   2 * time.Second,
+		Timeout: 10 * time.Second,
+	}); err != nil {
+		return err
+	}
+
+	logger.Debugf("balance-leader-scheduler disabled for %d seconds", delay)
+	return nil
 }
