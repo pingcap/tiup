@@ -128,7 +128,11 @@ type RegionsInfo struct {
 // PDScheduleConfig is copied from https://github.com/tikv/pd/blob/8e92dcde2e52dc/server/config/config.go#L641
 // only keep a part of the fields need at the moment.
 type PDScheduleConfig struct {
+	// If both the size of region is smaller than MaxMergeRegionSize
+	// and the number of rows in region is smaller than MaxMergeRegionKeys,
+	// it will try to merge with adjacent regions.
 	MaxMergeRegionSize uint64 `toml:"max-merge-region-size" json:"max-merge-region-size"`
+	MaxMergeRegionKeys uint64 `toml:"max-merge-region-keys" json:"max-merge-region-keys"`
 	// MergeScheduleLimit is the max coexist merge schedules.
 	MergeScheduleLimit uint64 `toml:"merge-schedule-limit" json:"merge-schedule-limit"`
 }

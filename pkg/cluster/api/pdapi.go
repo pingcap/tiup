@@ -127,6 +127,8 @@ const (
 	pdConfigMergeScheduleLimit = "merge-schedule-limit"
 	// pdConfigMaxMergeRegionSize is the config name of max merge region size
 	pdConfigMaxMergeRegionSize = "max-merge-region-size"
+	// pdConfigMaxMergeRegionKeys is the config name of max merge region keys
+	pdConfigMaxMergeRegionKeys = "max-merge-region-keys"
 )
 
 // nolint (some is unused now)
@@ -842,32 +844,51 @@ func (pc *PDClient) UpdateScheduleConfig(body io.Reader) error {
 	return pc.updateConfig(pdConfigSchedule, body)
 }
 
-func (pc *PDClient) setMergeRegion(maxMergeRegionSize, mergeScheduleLimit uint64) error {
+func (pc *PDClient) DisableMergeRegion() {
 	data := map[string]interface{}{
-		pdConfigMaxMergeRegionSize: maxMergeRegionSize,
-		pdConfigMergeScheduleLimit: mergeScheduleLimit,
+		pdConfigMaxMergeRegionSize: 0,
+		pdConfigMergeScheduleLimit: 0,
 	}
 	body, err := json.Marshal(data)
 	if err != nil {
-		return err
-	}
-	return pc.UpdateScheduleConfig(bytes.NewReader(body))
-}
-
-func (pc *PDClient) DisableMergeRegion() {
-	if err := pc.setMergeRegion(0, 0); err != nil {
 		pc.l().Warnf("failed disabling merge region: %s, ignore", err)
 		return
 	}
+
+	if err := pc.UpdateScheduleConfig(bytes.NewReader(body)); err != nil {
+		pc.l().Warnf("failed disabling merge region: %s, ignore", err)
+		return
+	}
+
 	pc.l().Debugf("disable merge region")
 }
 
-func (pc *PDClient) EnableMergeRegion(maxMergeRegionSize, mergeScheduleLimit uint64) {
-	if err := pc.setMergeRegion(maxMergeRegionSize, mergeScheduleLimit); err != nil {
-		pc.l().Warnf("failed to enable merge region: %v, please check value for %s, %s are reasonable, (original values should be: %s, %s)", err,
-			pdConfigMaxMergeRegionSize, pdConfigMergeScheduleLimit,
-			fmt.Sprintf("%s=%d", pdConfigMaxMergeRegionSize, 0), fmt.Sprintf("%s=%d", pdConfigMergeScheduleLimit, 0))
+func (pc *PDClient) EnableMergeRegion(maxMergeRegionSize, maxMergeRegionKeys, mergeScheduleLimit uint64) {
+	data := map[string]interface{}{
+		pdConfigMaxMergeRegionSize: maxMergeRegionSize,
+		pdConfigMergeScheduleLimit: mergeScheduleLimit,
+		pdConfigMaxMergeRegionKeys: maxMergeRegionKeys,
 	}
+
+	var (
+		err  error
+		body []byte
+	)
+	defer func() {
+		if err != nil {
+			pc.l().Warnf("failed to enable merge region: %v, please check value for %s, %s are reasonable, (original values should be: %s, %s)", err,
+				pdConfigMaxMergeRegionSize, pdConfigMergeScheduleLimit,
+				fmt.Sprintf("%s=%d", pdConfigMaxMergeRegionSize, 0), fmt.Sprintf("%s=%d", pdConfigMergeScheduleLimit, 0))
+		}
+	}()
+
+	body, err = json.Marshal(data)
+	if err != nil {
+		return
+	}
+
+	err = pc.UpdateScheduleConfig(bytes.NewReader(body))
+	return
 }
 
 // CheckRegion queries for the region with specific status

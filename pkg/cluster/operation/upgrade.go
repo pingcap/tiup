@@ -104,7 +104,7 @@ func Upgrade(
 			// disable merge region to make the upgrade process more stable
 			if sc, err := pdClient.GetScheduleConfig(); err == nil {
 				pdClient.DisableMergeRegion()
-				defer pdClient.EnableMergeRegion(sc.MaxMergeRegionSize, sc.MergeScheduleLimit)
+				defer pdClient.EnableMergeRegion(sc.MaxMergeRegionSize, sc.MaxMergeRegionKeys, sc.MergeScheduleLimit)
 			} else {
 				logger.Warnf("failed getting schedule config: %s, skip disable merge region", err)
 			}
