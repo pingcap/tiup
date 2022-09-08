@@ -60,6 +60,7 @@ type BootOptions struct {
 	TiKV    instance.Config `yaml:"tikv"`
 	TiFlash instance.Config `yaml:"tiflash"`
 	TiCDC   instance.Config `yaml:"ticdc"`
+	TiKVCDC instance.Config `yaml:"tikv_cdc"`
 	Pump    instance.Config `yaml:"pump"`
 	Drainer instance.Config `yaml:"drainer"`
 	Host    string          `yaml:"host"`
@@ -89,6 +90,7 @@ const (
 	pd      = "pd"
 	tiflash = "tiflash"
 	ticdc   = "ticdc"
+	kvcdc   = "kvcdc"
 	pump    = "pump"
 	drainer = "drainer"
 
@@ -109,6 +111,7 @@ const (
 	pdConfig      = "pd.config"
 	tiflashConfig = "tiflash.config"
 	ticdcConfig   = "ticdc.config"
+	kvcdcConfig   = "kvcdc.config"
 	pumpConfig    = "pump.config"
 	drainerConfig = "drainer.config"
 
@@ -118,8 +121,12 @@ const (
 	pdBinpath      = "pd.binpath"
 	tiflashBinpath = "tiflash.binpath"
 	ticdcBinpath   = "ticdc.binpath"
+	kvcdcBinpath   = "kvcdc.binpath"
 	pumpBinpath    = "pump.binpath"
 	drainerBinpath = "drainer.binpath"
+
+	// component version
+	kvcdcVersion = "kvcdc.version"
 )
 
 func installIfMissing(component, version string) error {
@@ -319,6 +326,7 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 	rootCmd.Flags().Int(pd, defaultOptions.PD.Num, "PD instance number")
 	rootCmd.Flags().Int(tiflash, defaultOptions.TiFlash.Num, "TiFlash instance number")
 	rootCmd.Flags().Int(ticdc, defaultOptions.TiCDC.Num, "TiCDC instance number")
+	rootCmd.Flags().Int(kvcdc, defaultOptions.TiKVCDC.Num, "TiKV-CDC instance number")
 	rootCmd.Flags().Int(pump, defaultOptions.Pump.Num, "Pump instance number")
 	rootCmd.Flags().Int(drainer, defaultOptions.Drainer.Num, "Drainer instance number")
 
@@ -338,14 +346,18 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 	rootCmd.Flags().String(pumpConfig, defaultOptions.Pump.ConfigPath, "Pump instance configuration file")
 	rootCmd.Flags().String(drainerConfig, defaultOptions.Drainer.ConfigPath, "Drainer instance configuration file")
 	rootCmd.Flags().String(ticdcConfig, defaultOptions.TiCDC.ConfigPath, "TiCDC instance configuration file")
+	rootCmd.Flags().String(kvcdcConfig, defaultOptions.TiKVCDC.ConfigPath, "TiKV-CDC instance configuration file")
 
 	rootCmd.Flags().String(dbBinpath, defaultOptions.TiDB.BinPath, "TiDB instance binary path")
 	rootCmd.Flags().String(kvBinpath, defaultOptions.TiKV.BinPath, "TiKV instance binary path")
 	rootCmd.Flags().String(pdBinpath, defaultOptions.PD.BinPath, "PD instance binary path")
 	rootCmd.Flags().String(tiflashBinpath, defaultOptions.TiFlash.BinPath, "TiFlash instance binary path")
 	rootCmd.Flags().String(ticdcBinpath, defaultOptions.TiCDC.BinPath, "TiCDC instance binary path")
+	rootCmd.Flags().String(kvcdcBinpath, defaultOptions.TiKVCDC.BinPath, "TiKV-CDC instance binary path")
 	rootCmd.Flags().String(pumpBinpath, defaultOptions.Pump.BinPath, "Pump instance binary path")
 	rootCmd.Flags().String(drainerBinpath, defaultOptions.Drainer.BinPath, "Drainer instance binary path")
+
+	rootCmd.Flags().String(kvcdcVersion, defaultOptions.TiKVCDC.Version, "TiKV-CDC instance version")
 
 	rootCmd.AddCommand(newDisplay())
 	rootCmd.AddCommand(newScaleOut())
@@ -418,6 +430,11 @@ func populateOpt(flagSet *pflag.FlagSet) (err error) {
 			if err != nil {
 				return
 			}
+		case kvcdc:
+			options.TiKVCDC.Num, err = strconv.Atoi(flag.Value.String())
+			if err != nil {
+				return
+			}
 		case pump:
 			options.Pump.Num, err = strconv.Atoi(flag.Value.String())
 			if err != nil {
@@ -439,6 +456,8 @@ func populateOpt(flagSet *pflag.FlagSet) (err error) {
 			options.TiFlash.ConfigPath = flag.Value.String()
 		case ticdcConfig:
 			options.TiCDC.ConfigPath = flag.Value.String()
+		case kvcdcConfig:
+			options.TiKVCDC.ConfigPath = flag.Value.String()
 		case pumpConfig:
 			options.Pump.ConfigPath = flag.Value.String()
 		case drainerConfig:
@@ -454,6 +473,8 @@ func populateOpt(flagSet *pflag.FlagSet) (err error) {
 			options.TiFlash.BinPath = flag.Value.String()
 		case ticdcBinpath:
 			options.TiCDC.BinPath = flag.Value.String()
+		case kvcdcBinpath:
+			options.TiKVCDC.BinPath = flag.Value.String()
 		case pumpBinpath:
 			options.Pump.BinPath = flag.Value.String()
 		case drainerBinpath:
@@ -486,6 +507,9 @@ func populateOpt(flagSet *pflag.FlagSet) (err error) {
 			if err != nil {
 				return
 			}
+
+		case kvcdcVersion:
+			options.TiKVCDC.Version = flag.Value.String()
 		}
 	})
 
