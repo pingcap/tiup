@@ -19,8 +19,6 @@ pd_servers:
   - host: n4
   - host: n5
 
-# Note if only 3 instance, when scale-in one of it.
-# It may not be tombstone.
 tikv_servers:
   - host: n1
   - host: n3
