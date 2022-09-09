@@ -24,7 +24,7 @@ topology:
     pump: {}
     drainer: {}
     cdc: {}
-    tikv-cdc: {}
+    kvcdc: {}
     grafana: {}
   tidb_servers:
     - host: 172.16.1.218

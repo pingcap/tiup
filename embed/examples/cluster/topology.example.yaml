@@ -58,7 +58,7 @@ monitored:
   # pd:
   # tiflash:
   # tiflash-learner:
-  # tikv-cdc:
+  # kvcdc:
 
 # # Server configs are used to specify the configuration of PD Servers.
 pd_servers:
@@ -280,7 +280,7 @@ tiflash_servers:
     log_dir: /data2/tidb-deploy/tiflash-9001/log
 
 # # Server configs are used to specify the configuration of TiKV-CDC Servers.
-tikv-cdc_servers:
+kvcdc_servers:
   - host: 10.0.1.20
     # # SSH port of the server.
     # ssh_port: 22

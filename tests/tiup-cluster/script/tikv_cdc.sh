@@ -164,7 +164,7 @@ function tikv_cdc_scale_test() {
 	mkdir -p /tmp/topo
 	topo=/tmp/topo/tikv_cdc_scale_in.yaml
 	cat <<EOF > $topo
-tikv-cdc_servers:
+kvcdc_servers:
   - host: n5
 EOF
 	yes | tiup-cluster scale-out $name $topo
@@ -172,16 +172,16 @@ EOF
 
 	echo -e "\033[0;36m Scale out another tikv-cdc on n5 to verify port conflict detection \033[0m"
 	cat <<EOF > $topo
-tikv-cdc_servers:
+kvcdc_servers:
   - host: n5
     data_dir: "/home/tidb/tikv_cdc_data_1"
 EOF
-	# should fail with message "Error: port conflict for '8600' between 'tikv-cdc_servers:n5.port' and 'tikv-cdc_servers:n5.port'"
+	# should fail with message "Error: port conflict for '8600' between 'kvcdc_servers:n5.port' and 'kvcdc_servers:n5.port'"
 	! yes | tiup-cluster scale-out $name $topo # should fail
 
 	echo -e "\033[0;36m Scale out another tikv-cdc on n5 with different port & data_dir \033[0m"
 	cat <<EOF > $topo
-tikv-cdc_servers:
+kvcdc_servers:
   - host: n5
     port: 8666
     data_dir: "/home/tidb/tikv_cdc_data_1"

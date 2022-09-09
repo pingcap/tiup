@@ -129,7 +129,7 @@ server_configs:
     pump: {}
     drainer: {}
     cdc: {}
-    tikv-cdc: {}
+    kvcdc: {}
     grafana: {}
 tidb_servers: []
 tikv_servers: []

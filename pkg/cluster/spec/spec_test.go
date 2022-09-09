@@ -107,7 +107,7 @@ pd_servers:
 cdc_servers:
   - host: 172.16.5.233
     data_dir: "cdc-data"
-tikv-cdc_servers:
+kvcdc_servers:
   - host: 172.16.5.244
     data_dir: "tikv-cdc-data"
 `), &topo)
@@ -146,7 +146,7 @@ cdc_servers:
     data_dir: "cdc-data"
   - host: 172.16.5.234
     port: 23333
-tikv-cdc_servers:
+kvcdc_servers:
   - host: 172.16.5.244
     data_dir: "tikv-cdc-data"
   - host: 172.16.5.245
@@ -187,7 +187,7 @@ server_configs:
     status.address: 10
     port: 1230
     scheduler.max_limit: 20480
-  tikv-cdc:
+  kvcdc:
     gc-ttl: 43200
 
 tidb_servers:
@@ -202,7 +202,7 @@ tidb_servers:
       latch.capacity: 5000
       log.file.rotate: "55555.xxx"
 
-tikv-cdc_servers:
+kvcdc_servers:
   - host: 172.16.5.200
   - host: 172.16.5.201
     port: 8601
@@ -363,7 +363,7 @@ server_configs:
     config.item2: 300
     config.item3.item5: 500
     config.item3.item6: 600
-  tikv-cdc:
+  kvcdc:
     gc-ttl: 43200
 
 tikv_servers:
@@ -372,7 +372,7 @@ tikv_servers:
       config.item2: 500
       config.item3.item5: 700
 
-tikv-cdc_servers:
+kvcdc_servers:
   - host: 172.16.5.238
     config:
       log-level: "debug"
@@ -401,13 +401,13 @@ item6 = 600
 # You can use 'tiup cluster edit-config' and 'tiup cluster reload' to update the configuration
 # All configuration items you want to change can be added to:
 # server_configs:
-#   tikv-cdc:
+#   kvcdc:
 #     aa.b1.c3: value
 #     aa.b2.c4: value
 gc-ttl = 43200
 log-level = "debug"
 `
-	got, err = merge2Toml("tikv-cdc", topo.ServerConfigs.TiKVCDC, topo.TiKVCDCServers[0].Config)
+	got, err = merge2Toml("kvcdc", topo.ServerConfigs.TiKVCDC, topo.TiKVCDCServers[0].Config)
 	c.Assert(err, IsNil)
 	c.Assert(string(got), DeepEquals, expected)
 }

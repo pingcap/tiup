@@ -112,7 +112,7 @@ type (
 		Pump           map[string]interface{} `yaml:"pump"`
 		Drainer        map[string]interface{} `yaml:"drainer"`
 		CDC            map[string]interface{} `yaml:"cdc"`
-		TiKVCDC        map[string]interface{} `yaml:"tikv-cdc"`
+		TiKVCDC        map[string]interface{} `yaml:"kvcdc"`
 		Grafana        map[string]string      `yaml:"grafana"`
 	}
 
@@ -128,7 +128,7 @@ type (
 		PumpServers      []*PumpSpec          `yaml:"pump_servers,omitempty"`
 		Drainers         []*DrainerSpec       `yaml:"drainer_servers,omitempty"`
 		CDCServers       []*CDCSpec           `yaml:"cdc_servers,omitempty"`
-		TiKVCDCServers   []*TiKVCDCSpec       `yaml:"tikv-cdc_servers,omitempty"`
+		TiKVCDCServers   []*TiKVCDCSpec       `yaml:"kvcdc_servers,omitempty"`
 		TiSparkMasters   []*TiSparkMasterSpec `yaml:"tispark_masters,omitempty"`
 		TiSparkWorkers   []*TiSparkWorkerSpec `yaml:"tispark_workers,omitempty"`
 		Monitors         []*PrometheusSpec    `yaml:"monitoring_servers"`

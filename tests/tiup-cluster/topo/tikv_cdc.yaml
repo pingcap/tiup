@@ -7,7 +7,7 @@ server_configs:
     storage.reserve-space: 1K
     storage.api-version: 2
     storage.enable-ttl: true
-  tikv-cdc:
+  kvcdc:
     gc-ttl: 43200
 
 tidb_servers:
@@ -28,7 +28,7 @@ tikv_servers:
   - host: n4
   - host: n5
 
-tikv-cdc_servers:
+kvcdc_servers:
  - host: n3
  - host: n4
    data_dir: "/home/tidb/tikv_cdc_data"
