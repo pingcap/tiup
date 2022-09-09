@@ -9,8 +9,7 @@ function cmd_subtest() {
     topo_name="full"
     test_tls=false
     native_ssh=false
-    mirror="https://tiup-mirrors.pingcap.com/"
-
+    
     while [[ $# -gt 0 ]]
     do
         case $1 in
@@ -32,15 +31,8 @@ function cmd_subtest() {
                 native_ssh=true
                 shift
                 ;;
-            --staging)
-                mirror="http://staging.tiup-server.pingcap.net"
-                shift
-                ;;
         esac
     done
-
-    # set mirror
-    tiup mirror set $mirror
 
     name="test_cmd_$RANDOM"
     if [ $test_tls = true ]; then
