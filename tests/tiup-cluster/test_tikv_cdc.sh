@@ -6,14 +6,14 @@ source script/cmd_subtest.sh
 source script/tikv_cdc.sh
 
 ###############################################
-echo "Test common cases for TiKV-CDC"
+echo -e "\033[0;36m<<< Test common cases for TiKV-CDC >>>\033[0m"
 cmd_subtest --version 6.2.0 --topo tikv_cdc
 
 ###############################################
 # TODO: test tls cases after TiKV-CDC support TLS.
 
 ###############################################
-echo "Test specified cases for TiKV-CDC"
+echo -e "\033[0;36m<<< Test specified cases for TiKV-CDC >>>\033[0m"
 tikv_cdc_test --version 6.2.0 --topo tikv_cdc --tikv-cdc-patch 1.0.0
 
 ###############################################
@@ -22,5 +22,5 @@ tikv_cdc_test --version 6.2.0 --topo tikv_cdc --tikv-cdc-patch 1.0.0
 # TODO: test upgrade of TiKV-CDC
 
 ###############################################
-echo "Test scale in/out for TiKV-CDC" 
-tikv_cdc_scale_test --version "6.2.0" --topo tikv_cdc
+echo -e "\033[0;36m<<< Test scale in/out for TiKV-CDC >>>\033[0m"
+tikv_cdc_scale_test --version 6.2.0 --topo tikv_cdc

@@ -8,7 +8,6 @@ function tikv_cdc_test() {
 	version="nightly"
 	topo_name="tikv_cdc"
 	test_tls=false
-	mirror="https://tiup-mirrors.pingcap.com/"
 	tikv_cdc_patch=""
 
 	while [[ $# -gt 0 ]]; do
@@ -27,10 +26,6 @@ function tikv_cdc_test() {
 			test_tls=true
 			shift
 			;;
-		--staging)
-			mirror="http://staging.tiup-server.pingcap.net"
-			shift
-			;;
 		--tikv-cdc-patch)
 			tikv_cdc_patch="$2"
 			shift
@@ -38,9 +33,6 @@ function tikv_cdc_test() {
 			;;
 		esac
 	done
-
-	# set mirror
-	tiup mirror set $mirror
 
 	name="test_tikv_cdc_$RANDOM"
 	if [ $test_tls = true ]; then
@@ -125,7 +117,6 @@ function tikv_cdc_scale_test() {
 	version="nightly"
 	topo_name="tikv_cdc"
 	test_tls=false
-	mirror="https://tiup-mirrors.pingcap.com/"
 
 	while [[ $# -gt 0 ]]; do
 		case $1 in
@@ -143,15 +134,8 @@ function tikv_cdc_scale_test() {
 			test_tls=true
 			shift
 			;;
-		--staging)
-			mirror="http://staging.tiup-server.pingcap.net"
-			shift
-			;;
 		esac
 	done
-
-	# set mirror
-	tiup mirror set $mirror
 
 	name=test_tikv_cdc_scale_$RANDOM
 	if [ $test_tls = true ]; then
@@ -170,20 +154,45 @@ function tikv_cdc_scale_test() {
 
 	total_sub_one=13
 	total=14
+	total_add_one=15
 
-	echo "start scale in tikv-cdc (-n3)"
+	echo -e "\033[0;36m Start scale in tikv-cdc (-n3) \033[0m"
 	yes | tiup-cluster scale-in $name -N n3:8600
 	wait_instance_num_reach $name $total_sub_one false
 
-	echo "start scale out tikv-cdc (+n5)"
-	topo=./topo/tikv_cdc_scale_in.yaml
+	echo -e "\033[0;36m Start scale out tikv-cdc (+n5) \033[0m"
+	mkdir -p /tmp/topo
+	topo=/tmp/topo/tikv_cdc_scale_in.yaml
+	cat <<EOF > $topo
+tikv-cdc_servers:
+  - host: n5
+EOF
 	yes | tiup-cluster scale-out $name $topo
 	wait_instance_num_reach $name $total false
 
+	echo -e "\033[0;36m Scale out another tikv-cdc on n5 to verify port conflict detection \033[0m"
+	cat <<EOF > $topo
+tikv-cdc_servers:
+  - host: n5
+    data_dir: "/home/tidb/tikv_cdc_data_1"
+EOF
+	# should fail with message "Error: port conflict for '8600' between 'tikv-cdc_servers:n5.port' and 'tikv-cdc_servers:n5.port'"
+	! yes | tiup-cluster scale-out $name $topo # should fail
+
+	echo -e "\033[0;36m Scale out another tikv-cdc on n5 with different port & data_dir \033[0m"
+	cat <<EOF > $topo
+tikv-cdc_servers:
+  - host: n5
+    port: 8666
+    data_dir: "/home/tidb/tikv_cdc_data_1"
+EOF
+	yes | tiup-cluster scale-out $name $topo
+	wait_instance_num_reach $name $total_add_one false
+
 	# scale in n4, as n4 should be the owner.
-	echo "start scale in tikv-cdc (-n4)"
+	echo -e "\033[0;36m Start scale in tikv-cdc (-n4) \033[0m"
 	yes | tiup-cluster scale-in $name -N n4:8600
-	wait_instance_num_reach $name $total_sub_one false
+	wait_instance_num_reach $name $total false
 
 	tiup-cluster _test $name writable
 
