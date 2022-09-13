@@ -42,17 +42,13 @@ func (h *tarballUploader) upload(r *http.Request) (*simpleResponse, statusError)
 	sid := mux.Vars(r)["sid"]
 	logprinter.Infof("Uploading tarball, sid: %s", sid)
 
-	if err := r.ParseMultipartForm(MaxMemory); err != nil {
-		// TODO: log error here
-		return nil, ErrorInvalidTarball
-	}
-
 	file, handler, err := r.FormFile("file")
 	if err != nil {
 		// TODO: log error here
 		return nil, ErrorInvalidTarball
 	}
 	defer file.Close()
+	defer r.MultipartForm.RemoveAll()
 
 	if err := h.sm.Write(sid, handler.Filename, file); err != nil {
 		logprinter.Errorf("Error to write tarball: %s", err.Error())
