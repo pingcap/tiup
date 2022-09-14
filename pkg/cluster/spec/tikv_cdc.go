@@ -20,11 +20,13 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/tidbver"
 )
 
 // TiKVCDCSpec represents the TiKVCDC topology specification in topology.yaml
@@ -121,7 +123,7 @@ func (c *TiKVCDCComponent) Instances() []Instance {
 	return ins
 }
 
-// TiKVCDCInstance represent the CDC instance.
+// TiKVCDCInstance represent the TiKV-CDC instance.
 type TiKVCDCInstance struct {
 	BaseInstance
 	topo Topology
@@ -155,6 +157,10 @@ func (i *TiKVCDCInstance) InitConfig(
 	deployUser string,
 	paths meta.DirPaths,
 ) error {
+	if !tidbver.TiKVCDCSupportDeploy(clusterVersion) {
+		return errors.New("tikv-cdc only supports cluster version v6.2.0 or later")
+	}
+
 	topo := i.topo.(*Specification)
 	if err := i.BaseInstance.InitConfig(ctx, e, topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
@@ -203,7 +209,7 @@ func (i *TiKVCDCInstance) setTLSConfig(ctx context.Context, enableTLS bool, conf
 
 var _ RollingUpdateInstance = &TiKVCDCInstance{}
 
-// GetAddr return the address of this TiCDC instance
+// GetAddr return the address of this TiKV-CDC instance
 func (i *TiKVCDCInstance) GetAddr() string {
 	return fmt.Sprintf("%s:%d", i.GetHost(), i.GetPort())
 }
@@ -224,7 +230,7 @@ func (i *TiKVCDCInstance) PreRestart(ctx context.Context, topo Topology, apiTime
 	address := i.GetAddr()
 	// cdc rolling upgrade strategy only works if there are more than 2 captures
 	if len(tidbTopo.TiKVCDCServers) <= 1 {
-		logger.Debugf("TiKV-CDC pre-restart skipped, only one capture in the topology, addr: %s", address)
+		logger.Debugf("tikv-cdc pre-restart skipped, only one capture in the topology, addr: %s", address)
 		return nil
 	}
 

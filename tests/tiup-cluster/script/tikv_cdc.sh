@@ -46,6 +46,11 @@ function tikv_cdc_test() {
 	ssh-add /root/.ssh/id_rsa
 
 	tiup-cluster check $topo --apply
+
+	# Test check version. Cluster version >= v6.2.0 is required.
+	# Error message: "Error: init config failed: n3:8600: tikv-cdc only supports cluster version v6.2.0 or later"
+	! tiup-cluster --yes deploy $name 6.1.0 $topo
+
 	tiup-cluster --yes deploy $name $version $topo
 
 	# check the local config
