@@ -98,3 +98,9 @@ func DMSupportDeploy(version string) bool {
 	// tiup-dm only support version not less than v2.0
 	return semver.Compare(version, "v2.0.0") >= 0 || strings.Contains(version, "nightly")
 }
+
+// TiKVCDCSupportDeploy return if given version of TiDB/TiKV cluster is supported
+func TiKVCDCSupportDeploy(version string) bool {
+	// TiKV-CDC only support TiKV version not less than v6.2.0
+	return semver.Compare(version, "v6.2.0") >= 0 || strings.Contains(version, "nightly")
+}
