@@ -40,6 +40,7 @@ jobs:
           # - 'test_cmd_tls_native_ssh'
           - 'test_upgrade'
           - 'test_upgrade_tls'
+          - 'test_tikv_cdc'
     env:
       working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
     steps:

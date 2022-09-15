@@ -131,7 +131,18 @@ func (c *CDCOpenAPIClient) DrainCapture(target string, apiTimeoutSeconds int) er
 }
 
 // ResignOwner resign the cdc owner, and wait for a new owner be found
-func (c *CDCOpenAPIClient) ResignOwner() error {
+// address is the current owner's address
+func (c *CDCOpenAPIClient) ResignOwner(address string) error {
+	err := utils.Retry(func() error {
+		return resignOwner(c, address)
+	}, utils.RetryOption{
+		Delay:   2 * time.Second,
+		Timeout: 10 * time.Second,
+	})
+	return err
+}
+
+func resignOwner(c *CDCOpenAPIClient, addr string) error {
 	api := "api/v1/owner/resign"
 	endpoints := c.getEndpoints(api)
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
@@ -153,6 +164,10 @@ func (c *CDCOpenAPIClient) ResignOwner() error {
 	owner, err := c.GetOwner()
 	if err != nil {
 		return err
+	}
+
+	if owner.AdvertiseAddr == addr {
+		return fmt.Errorf("old owner in power again, resign again, owner: %+v", owner)
 	}
 
 	c.l().Debugf("cdc resign owner successfully, and new owner found, owner: %+v", owner)
