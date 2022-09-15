@@ -3,13 +3,12 @@ global:
   group: pingcap
 
 server_configs:
-  tidb:
-    binlog.enable: true
-    binlog.ignore-error: false
   tikv:
     storage.reserve-space: 1K
-  pump:
-    storage.stop-write-at-available-space: 1 mib
+    storage.api-version: 2
+    storage.enable-ttl: true
+  kvcdc:
+    gc-ttl: 43200
 
 tidb_servers:
   - host: n1
@@ -20,8 +19,6 @@ pd_servers:
   - host: n4
   - host: n5
 
-# Note if only 3 instance, when scale-in one of it.
-# It may not be tombstone.
 tikv_servers:
   - host: n1
   - host: n3
@@ -29,41 +26,10 @@ tikv_servers:
   - host: n4
   - host: n5
 
-# tiflash eat too much memory
-# and binary is more than 1G..
-tiflash_servers:
-  - host: n3
-    data_dir: "data1,/data/tiflash-data"
-#   - host: n4
-#   - host: n5
-
-pump_servers:
-  - host: n3
-  - host: n4
-  - host: n5
-
-drainer_servers:
-  - host: n1
-    data_dir: /home/tidb/data/drainer-8249/data
-    commit_ts: -1
-    config:
-      syncer.db-type: "file"
-
-cdc_servers:
-  - host: n3
-  - host: n4
-  - host: n5
-
 kvcdc_servers:
  - host: n3
  - host: n4
    data_dir: "/home/tidb/tikv_cdc_data"
-
-tispark_masters:
-  - host: n3
-
-tispark_workers:
-  - host: n4
 
 monitoring_servers:
   - host: n1

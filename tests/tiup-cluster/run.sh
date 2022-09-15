@@ -31,6 +31,15 @@ function tiup-cluster() {
     fi
 }
 
+function tiup() {
+    mkdir -p ~/.tiup/bin && cp -f ./root.json ~/.tiup/bin/
+    if [ -f "../tiup/bin/tiup.test" ]; then
+        ../tiup/bin/tiup.test -test.coverprofile=./cover/cov.itest-$(date +'%s')-$RANDOM.out __DEVEL--i-heard-you-like-tests "$@"
+    else
+        ../../bin/tiup "$@"
+    fi
+}
+
 . ./script/util.sh
 
 # use run.sh test_cmd test_upgrade to run specify cases
