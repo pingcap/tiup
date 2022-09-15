@@ -28,7 +28,8 @@ func TiDBComponentVersion(comp, version string) string {
 		ComponentPushwaygate,
 		ComponentCheckCollector,
 		ComponentSpark,
-		ComponentTiSpark:
+		ComponentTiSpark,
+		ComponentTiKVCDC: // TiKV-CDC use individual version.
 		return ""
 	default:
 		return version
