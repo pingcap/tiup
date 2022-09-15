@@ -76,16 +76,17 @@ type LabelInfo struct {
 
 // ClusterMetaInfo hold the structure for the JSON output of the dashboard info
 type ClusterMetaInfo struct {
-	ClusterType    string `json:"cluster_type"`
-	ClusterName    string `json:"cluster_name"`
-	ClusterVersion string `json:"cluster_version"`
-	DeployUser     string `json:"deploy_user"`
-	SSHType        string `json:"ssh_type"`
-	TLSEnabled     bool   `json:"tls_enabled"`
-	TLSCACert      string `json:"tls_ca_cert,omitempty"`
-	TLSClientCert  string `json:"tls_client_cert,omitempty"`
-	TLSClientKey   string `json:"tls_client_key,omitempty"`
-	DashboardURL   string `json:"dashboard_url,omitempty"`
+	ClusterType    string   `json:"cluster_type"`
+	ClusterName    string   `json:"cluster_name"`
+	ClusterVersion string   `json:"cluster_version"`
+	DeployUser     string   `json:"deploy_user"`
+	SSHType        string   `json:"ssh_type"`
+	TLSEnabled     bool     `json:"tls_enabled"`
+	TLSCACert      string   `json:"tls_ca_cert,omitempty"`
+	TLSClientCert  string   `json:"tls_client_cert,omitempty"`
+	TLSClientKey   string   `json:"tls_client_key,omitempty"`
+	DashboardURL   string   `json:"dashboard_url,omitempty"`
+	GrafanaURLS    []string `json:"grafana_urls,omitempty"`
 }
 
 // JSONOutput holds the structure for the JSON output of `tiup cluster display --json`
@@ -128,6 +129,7 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 				"", // Client Cert
 				"", // Client Key
 				"",
+				nil,
 			},
 			InstanceInfos: clusterInstInfos,
 		}
@@ -219,7 +221,12 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 		}
 	}
 
-	if m.logger.GetDisplayMode() != logprinter.DisplayModeJSON {
+	if m.logger.GetDisplayMode() == logprinter.DisplayModeJSON {
+		grafanaURLs := getGrafanaURL(clusterInstInfos)
+		if len(grafanaURLs) != 0 {
+			j.ClusterMetaInfo.GrafanaURLS = grafanaURLs		
+		}
+	} else {
 		urls, exist := getGrafanaURLStr(clusterInstInfos)
 		if exist {
 			fmt.Printf("Grafana URL:        %s\n", cyan.Sprintf("%s", urls))
@@ -265,13 +272,18 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 	return nil
 }
 
-func getGrafanaURLStr(clusterInstInfos []InstInfo) (result string, exist bool) {
+func getGrafanaURL(clusterInstInfos []InstInfo) (result []string) {
 	var grafanaURLs []string
 	for _, instance := range clusterInstInfos {
 		if instance.Role == "grafana" {
 			grafanaURLs = append(grafanaURLs, fmt.Sprintf("http://%s:%d", instance.Host, instance.Port))
 		}
 	}
+	return grafanaURLs
+}
+
+func getGrafanaURLStr(clusterInstInfos []InstInfo) (result string, exist bool) {
+	grafanaURLs := getGrafanaURL(clusterInstInfos)
 	if len(grafanaURLs) == 0 {
 		return "", false
 	}
@@ -310,6 +322,7 @@ func (m *Manager) DisplayTiKVLabels(name string, opt operator.Options) error {
 				"", // Client Cert
 				"", // Client Key
 				"",
+				nil,
 			},
 		}
 
