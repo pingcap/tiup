@@ -535,6 +535,60 @@ func (pc *PDClient) EvictStoreLeader(host string, retryOpt *utils.RetryOption, c
 	return nil
 }
 
+// RecoverStoreLeader wait for leaders to transfer back.
+func (pc *PDClient) RecoverStoreLeader(host string, targetCount int, retryOpt *utils.RetryOption, countLeader func(string) (int, error)) error {
+	// get info of current stores
+	latestStore, err := pc.GetCurrentStore(host)
+	if err != nil {
+		if errors.Is(err, ErrNoStore) {
+			return nil
+		}
+		return err
+	}
+
+	pc.l().Infof("\tRecovering about %d leaders %s...", targetCount, latestStore.Store.Address)
+
+	// wait for the transfer to complete
+	if retryOpt == nil {
+		retryOpt = &utils.RetryOption{
+			Delay:   time.Second * 5,
+			Timeout: time.Second * 600,
+		}
+	}
+	if err := utils.Retry(func() error {
+		currStore, err := pc.GetCurrentStore(host)
+		if err != nil {
+			if errors.Is(err, ErrNoStore) {
+				return nil
+			}
+			return err
+		}
+
+		// check if all leaders are evicted
+		var leaderCount int
+		if leaderCount, err = countLeader(currStore.Store.Address); err != nil {
+			return err
+		}
+		if leaderCount >= targetCount*2/3 {
+			pc.l().Infof(
+				"\t  leader count has reocovered to %d",
+				leaderCount,
+			)
+			return nil
+		}
+		pc.l().Infof(
+			"\t  Still waitting for otherstore leaders to transfer... %d",
+			leaderCount,
+		)
+
+		// return error by default, to make the retry work
+		return perrs.New("still waiting for the store leaders to transfer")
+	}, *retryOpt); err != nil {
+		return fmt.Errorf("recover store leader from %s, %v", host, err)
+	}
+	return nil
+}
+
 // RemoveStoreEvict removes a store leader evict scheduler, which allows following
 // leaders to be transffered to it again.
 func (pc *PDClient) RemoveStoreEvict(host string) error {
