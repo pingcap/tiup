@@ -820,14 +820,14 @@ func CheckFIOResult(rr, rw, lat []byte) []*CheckResult {
 	return results
 }
 
-// CheckTHP checks THP in /sys/kernel/mm/transparent_hugepage/{enabled,defrag}
+// CheckTHP checks THP in /sys/kernel/mm/transparent_hugepage/enabled
 func CheckTHP(ctx context.Context, e ctxt.Executor) *CheckResult {
 	result := &CheckResult{
 		Name: CheckNameTHP,
 	}
 
 	m := module.NewShellModule(module.ShellModuleConfig{
-		Command: fmt.Sprintf(`if [ -d %[1]s ]; then cat %[1]s/{enabled,defrag}; fi`, "/sys/kernel/mm/transparent_hugepage"),
+		Command: fmt.Sprintf(`if [ -d %[1]s ]; then cat %[1]s/enabled; fi`, "/sys/kernel/mm/transparent_hugepage"),
 		Sudo:    true,
 	})
 	stdout, stderr, err := m.Execute(ctx, e)

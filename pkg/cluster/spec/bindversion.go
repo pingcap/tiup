@@ -19,7 +19,7 @@ import (
 )
 
 // TiDBComponentVersion maps the TiDB version to the third components binding version
-// Empty version should be treate as the the last stable one
+// Empty version should be treated as the last stable one
 func TiDBComponentVersion(comp, version string) string {
 	switch comp {
 	case ComponentAlertmanager,
@@ -28,7 +28,8 @@ func TiDBComponentVersion(comp, version string) string {
 		ComponentPushwaygate,
 		ComponentCheckCollector,
 		ComponentSpark,
-		ComponentTiSpark:
+		ComponentTiSpark,
+		ComponentTiKVCDC: // TiKV-CDC use individual version.
 		return ""
 	default:
 		return version

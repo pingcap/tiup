@@ -69,9 +69,16 @@ func (c *HTTPClient) SetRequestHeader(key, value string) {
 
 // Get fetch an URL with GET method and returns the response
 func (c *HTTPClient) Get(ctx context.Context, url string) ([]byte, error) {
+	data, _, err := c.GetWithStatusCode(ctx, url)
+	return data, err
+}
+
+// GetWithStatusCode fetch a URL with GET method and returns the response, also the status code.
+func (c *HTTPClient) GetWithStatusCode(ctx context.Context, url string) ([]byte, int, error) {
+	var statusCode int
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return nil, err
+		return nil, statusCode, err
 	}
 
 	req.Header = c.header
@@ -81,11 +88,12 @@ func (c *HTTPClient) Get(ctx context.Context, url string) ([]byte, error) {
 	}
 	res, err := c.client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, statusCode, err
 	}
 	defer res.Body.Close()
 
-	return checkHTTPResponse(res)
+	data, err := checkHTTPResponse(res)
+	return data, res.StatusCode, err
 }
 
 // Download fetch an URL with GET method and Download the response to filePath
@@ -132,9 +140,16 @@ func (c *HTTPClient) Download(ctx context.Context, url, filePath string) error {
 
 // Post send a POST request to the url and returns the response
 func (c *HTTPClient) Post(ctx context.Context, url string, body io.Reader) ([]byte, error) {
+	data, _, err := c.PostWithStatusCode(ctx, url, body)
+	return data, err
+}
+
+// PostWithStatusCode send a POST request to the url and returns the response, also the http status code.
+func (c *HTTPClient) PostWithStatusCode(ctx context.Context, url string, body io.Reader) ([]byte, int, error) {
+	var statusCode int
 	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
-		return nil, err
+		return nil, statusCode, err
 	}
 
 	if c.header == nil {
@@ -148,11 +163,38 @@ func (c *HTTPClient) Post(ctx context.Context, url string, body io.Reader) ([]by
 	}
 	res, err := c.client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, statusCode, err
 	}
 	defer res.Body.Close()
 
-	return checkHTTPResponse(res)
+	data, err := checkHTTPResponse(res)
+	return data, res.StatusCode, err
+}
+
+// Put send a PUT request to the url and returns the response, also the status code
+func (c *HTTPClient) Put(ctx context.Context, url string, body io.Reader) ([]byte, int, error) {
+	var statusCode int
+	req, err := http.NewRequest("PUT", url, body)
+	if err != nil {
+		return nil, statusCode, err
+	}
+	if c.header == nil {
+		req.Header.Set("Content-Type", "application/json")
+	} else {
+		req.Header = c.header
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return nil, statusCode, err
+	}
+	defer resp.Body.Close()
+	b, err := checkHTTPResponse(resp)
+	statusCode = resp.StatusCode
+	return b, statusCode, err
 }
 
 // Delete send a DELETE request to the url and returns the response and status code.

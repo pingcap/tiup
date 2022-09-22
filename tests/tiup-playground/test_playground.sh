@@ -4,7 +4,7 @@ set -eux
 
 TEST_DIR=$(cd "$(dirname "$0")"; pwd)
 TMP_DIR=$TEST_DIR/_tmp
-
+TIDB_VERSION="v6.2.0"
 
 # Profile home directory
 mkdir -p $TMP_DIR/home/bin/
@@ -28,13 +28,14 @@ function tiup-playground() {
     fi
 }
 
-# usage: check_tidb_num 1
+# usage: check_instance_num tidb 1
 # make sure the tidb number is 1 or other specified number
-function check_tidb_num() {
-    mustbe=$1
-    num=$(tiup-playground display | grep "tidb" | wc -l | sed 's/ //g')
+function check_instance_num() {
+    instance=$1
+    mustbe=$2
+    num=$(tiup-playground display | grep "$instance" | wc -l | sed 's/ //g')
     if [ "$num" != "$mustbe" ]; then
-        echo "unexpected tidb instance number: $num"
+        echo "unexpected $instance instance number: $num"
         tiup-playground display
     fi
 }
@@ -43,6 +44,7 @@ function kill_all() {
     killall -9 tidb-server || true
     killall -9 tikv-server || true
     killall -9 pd-server || true
+    killall -9 tikv-cdc || true
     killall -9 tiflash || true
     killall -9 grafana-server || true
     killall -9 tiup-playground || true
@@ -52,7 +54,7 @@ function kill_all() {
 }
 
 outfile=/tmp/tiup-playground-test.out
-tiup-playground v6.0.0 > $outfile 2>&1 &
+tiup-playground $TIDB_VERSION > $outfile 2>&1 &
 
 # wait $outfile generated
 sleep 3
@@ -71,14 +73,14 @@ sleep 5
 ls "${TIUP_HOME}/data/test_play/prometheus/data"
 
 # 1(init) + 2(scale-out)
-check_tidb_num 3
+check_instance_num tidb 3
 
 # get pid of one tidb instance and scale-in
 pid=`tiup-playground display | grep "tidb" | awk 'NR==1 {print $1}'`
 tiup-playground scale-in --pid $pid
 
 sleep 5
-check_tidb_num 2
+check_instance_num tidb 2
 
 # get pid of one tidb instance and kill it
 pid=`tiup-playground display | grep "tidb" | awk 'NR==1 {print $1}'`
@@ -102,7 +104,7 @@ killall -2 tiup-playground.test || killall -2 tiup-playground
 sleep 100
 
 # test restart with same data
-tiup-playground v6.0.0 > $outfile 2>&1 &
+tiup-playground $TIDB_VERSION > $outfile 2>&1 &
 
 # wait $outfile generated
 sleep 3
@@ -111,5 +113,51 @@ sleep 3
 timeout 300 grep -q "CLUSTER START SUCCESSFULLY" <(tail -f $outfile)
 
 cat $outfile | grep ":3930" | grep -q "Done"
+
+# start another cluster with tag
+TAG="test_1"
+outfile_1=/tmp/tiup-playground-test_1.out
+# no TiFlash to speed up
+tiup-playground $TIDB_VERSION --tag $TAG --db 2 --tiflash 0 > $outfile_1 2>&1 &
+sleep 3
+timeout 300 grep -q "CLUSTER START SUCCESSFULLY" <(tail -f $outfile_1)
+tiup-playground --tag $TAG display | grep -qv "exit"
+
+# TiDB scale-out to 4
+tiup-playground --tag $TAG scale-out --db 2
+sleep 5
+# TiDB scale-in to 3
+pid=`tiup-playground --tag $TAG display | grep "tidb" | awk 'NR==1 {print $1}'`
+tiup-playground --tag $TAG scale-in --pid $pid
+sleep 5
+# check number of TiDB instances.
+tidb_num=$(tiup-playground --tag $TAG display | grep "tidb" | wc -l | sed 's/ //g')
+if [ "$tidb_num" != 3 ]; then
+    echo "unexpected tidb instance number: $tidb_num"
+    exit 1
+fi
+
+killall -2 tiup-playground.test || killall -2 tiup-playground
+sleep 100
+
+# test for TiKV-CDC
+echo -e "\033[0;36m<<< Run TiKV-CDC test >>>\033[0m"
+tiup-playground $TIDB_VERSION --db 1 --pd 1 --kv 1 --tiflash 0 --kvcdc 1 --kvcdc.version v1.0.0 > $outfile 2>&1 &
+sleep 3
+timeout 300 grep -q "CLUSTER START SUCCESSFULLY" <(tail -f $outfile)
+tiup-playground display | grep -qv "exit"
+# scale out
+tiup-playground scale-out --kvcdc 2
+sleep 5
+check_instance_num tikv-cdc 3 # 1(init) + 2(scale-out)
+# scale in
+pid=`tiup-playground display | grep "tikv-cdc" | awk 'NR==1 {print $1}'`
+tiup-playground scale-in --pid $pid
+sleep 5
+check_instance_num tikv-cdc 2
+
+# exit all
+killall -2 tiup-playground.test || killall -2 tiup-playground
+sleep 30
 
 echo -e "\033[0;36m<<< Run all test success >>>\033[0m"

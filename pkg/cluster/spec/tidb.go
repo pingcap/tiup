@@ -41,6 +41,7 @@ type TiDBSpec struct {
 	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
 	LogDir          string                 `yaml:"log_dir,omitempty"`
 	NumaNode        string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
+	NumaCores       string                 `yaml:"numa_cores,omitempty" validate:"numa_cores:editable"`
 	Config          map[string]interface{} `yaml:"config,omitempty" validate:"config:ignore"`
 	ResourceControl meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
 	Arch            string                 `yaml:"arch,omitempty"`
@@ -142,6 +143,7 @@ func (i *TiDBInstance) InitConfig(
 		NewTiDBScript(i.GetHost(), paths.Deploy, paths.Log).
 		WithPort(spec.Port).
 		WithNumaNode(spec.NumaNode).
+		WithNumaCores(spec.NumaCores).
 		WithStatusPort(spec.StatusPort).
 		AppendEndpoints(topo.Endpoints(deployUser)...).
 		WithListenHost(i.GetListenHost()).

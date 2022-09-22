@@ -32,6 +32,7 @@ type TiDBScript struct {
 	DeployDir      string
 	LogDir         string
 	NumaNode       string
+	NumaCores      string
 	SupportSecboot bool
 	Endpoints      []*PDScript
 }
@@ -77,6 +78,12 @@ func (c *TiDBScript) WithStatusPort(port int) *TiDBScript {
 // WithNumaNode set NumaNode field of TiDBScript
 func (c *TiDBScript) WithNumaNode(numa string) *TiDBScript {
 	c.NumaNode = numa
+	return c
+}
+
+// WithNumaCores set NumaCores field of TiDBScript
+func (c *TiDBScript) WithNumaCores(numaCores string) *TiDBScript {
+	c.NumaCores = numaCores
 	return c
 }
 

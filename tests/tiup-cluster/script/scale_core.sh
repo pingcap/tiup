@@ -36,7 +36,7 @@ function scale_core() {
     if [ $test_tls = true ]; then
         total_sub_one=18
     else
-        total_sub_one=21
+        total_sub_one=23
     fi
 
     echo "start scale in tidb"
