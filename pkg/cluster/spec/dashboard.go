@@ -32,7 +32,7 @@ type DashboardSpec struct {
 	Version         string                 `yaml:"version,omitempty"`
 	Patched         bool                   `yaml:"patched,omitempty"`
 	IgnoreExporter  bool                   `yaml:"ignore_exporter,omitempty"`
-	Port            int                    `yaml:"port" default:"23333"`
+	Port            int                    `yaml:"port" default:"12333"`
 	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
 	DataDir         string                 `yaml:"data_dir,omitempty"`
 	LogDir          string                 `yaml:"log_dir,omitempty"`
