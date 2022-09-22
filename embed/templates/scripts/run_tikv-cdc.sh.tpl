@@ -17,19 +17,15 @@ cd "${DEPLOY_DIR}" || exit 1
 {{- end}}
 
 {{- if .NumaNode}}
-exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/cdc server \
+exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/tikv-cdc server \
 {{- else}}
-exec bin/cdc server \
+exec bin/tikv-cdc server \
 {{- end}}
     --addr "0.0.0.0:{{.Port}}" \
     --advertise-addr "{{.IP}}:{{.Port}}" \
     --pd "{{template "PDList" .Endpoints}}" \
 {{- if .DataDir}}
-  {{- if .DataDirEnabled}}
     --data-dir="{{.DataDir}}" \
-  {{- else}}
-    --sort-dir="{{.DataDir}}/tmp/sorter" \
-  {{- end}}
 {{- end}}
 {{- if .TLSEnabled}}
     --ca tls/ca.crt \
@@ -42,10 +38,5 @@ exec bin/cdc server \
 {{- if .TZ}}
     --tz "{{.TZ}}" \
 {{- end}}
-{{- if .ClusterID}}
-    --cluster-id {{.ClusterID}} \
-{{- end}}
-{{- if .ConfigFileEnabled}}
-    --config conf/cdc.toml \
-{{- end}}
-    --log-file "{{.LogDir}}/cdc.log" 2>> "{{.LogDir}}/cdc_stderr.log"
+    --config conf/tikv-cdc.toml \
+    --log-file "{{.LogDir}}/tikv-cdc.log" 2>> "{{.LogDir}}/tikv-cdc_stderr.log"
