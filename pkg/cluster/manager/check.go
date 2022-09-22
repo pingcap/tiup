@@ -291,8 +291,7 @@ func checkSystemInfo(
 		}
 	}
 
-
-	existPD := (&spec.PDComponent{fullTopo}).Instances()
+	existPD := (&spec.PDComponent{Topology: fullTopo}).Instances()
 	if len(existPD) < 1 {
 		return fmt.Errorf("cannot find PD in exist cluster")
 	}
