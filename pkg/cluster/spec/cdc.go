@@ -43,6 +43,7 @@ type CDCSpec struct {
 	Offline         bool                   `yaml:"offline,omitempty"`
 	GCTTL           int64                  `yaml:"gc-ttl,omitempty" validate:"gc-ttl:editable"`
 	TZ              string                 `yaml:"tz,omitempty" validate:"tz:editable"`
+	TiCDCClusterID  string                 `yaml:"ticdc_cluster_id"`
 	NumaNode        string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
 	Config          map[string]interface{} `yaml:"config,omitempty" validate:"config:ignore"`
 	ResourceControl meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
@@ -171,6 +172,10 @@ func (i *CDCInstance) InitConfig(
 		}
 	}
 
+	if !tidbver.TiCDCSupportClusterID(clusterVersion) && spec.TiCDCClusterID != "" {
+		return errors.New("ticdc_cluster_id is only supported with TiCDC version v6.2.0 or later")
+	}
+
 	cfg := scripts.NewCDCScript(
 		i.GetHost(),
 		paths.Deploy,
@@ -178,7 +183,7 @@ func (i *CDCInstance) InitConfig(
 		enableTLS,
 		spec.GCTTL,
 		spec.TZ,
-	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).AppendEndpoints(topo.Endpoints(deployUser)...)
+	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).AppendEndpoints(topo.Endpoints(deployUser)...).WithCDCClusterID(spec.TiCDCClusterID)
 
 	// doesn't work
 	if _, err := i.setTLSConfig(ctx, false, nil, paths); err != nil {

@@ -639,43 +639,6 @@ func StopComponent(ctx context.Context,
 	return errg.Wait()
 }
 
-// PrintClusterStatus print cluster status into the io.Writer.
-func PrintClusterStatus(ctx context.Context, cluster *spec.Specification) (health bool) {
-	health = true
-	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
-
-	for _, com := range cluster.ComponentsByStartOrder() {
-		if len(com.Instances()) == 0 {
-			continue
-		}
-
-		logger.Infof("Checking service state of %s", com.Name())
-		errg, _ := errgroup.WithContext(ctx)
-		for _, ins := range com.Instances() {
-			ins := ins
-
-			// the checkpoint part of context can't be shared between goroutines
-			// since it's used to trace the stack, so we must create a new layer
-			// of checkpoint context every time put it into a new goroutine.
-			nctx := checkpoint.NewContext(ctx)
-			errg.Go(func() error {
-				e := ctxt.GetInner(nctx).Get(ins.GetHost())
-				active, err := GetServiceStatus(nctx, e, ins.ServiceName())
-				if err != nil {
-					health = false
-					logger.Errorf("\t%s\t%v", ins.GetHost(), err)
-				} else {
-					logger.Infof("\t%s\t%s", ins.GetHost(), active)
-				}
-				return nil
-			})
-		}
-		_ = errg.Wait()
-	}
-
-	return
-}
-
 // toFailedActionError formats the errror msg for failed action
 func toFailedActionError(err error, action string, host, service, logDir string) error {
 	return errors.Annotatef(err,

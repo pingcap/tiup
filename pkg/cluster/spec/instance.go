@@ -90,6 +90,7 @@ type Instance interface {
 	ComponentName() string
 	InstanceName() string
 	ServiceName() string
+	ResourceControl() meta.ResourceControl
 	GetHost() string
 	GetPort() int
 	GetSSHPort() int
@@ -167,7 +168,7 @@ func (i *BaseInstance) InitConfig(ctx context.Context, e ctxt.Executor, opt Glob
 		return nil
 	}
 
-	resource := MergeResourceControl(opt.ResourceControl, i.resourceControl())
+	resource := MergeResourceControl(opt.ResourceControl, i.ResourceControl())
 	systemCfg := system.NewConfig(comp, user, paths.Deploy).
 		WithMemoryLimit(resource.MemoryLimit).
 		WithCPUQuota(resource.CPUQuota).
@@ -443,7 +444,8 @@ func MergeResourceControl(lhs, rhs meta.ResourceControl) meta.ResourceControl {
 	return lhs
 }
 
-func (i *BaseInstance) resourceControl() meta.ResourceControl {
+// ResourceControl return cgroups config of instance
+func (i *BaseInstance) ResourceControl() meta.ResourceControl {
 	if v := reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("ResourceControl"); v.IsValid() {
 		return v.Interface().(meta.ResourceControl)
 	}
