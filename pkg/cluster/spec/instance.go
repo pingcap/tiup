@@ -42,6 +42,7 @@ const (
 	ComponentTiFlash          = "tiflash"
 	ComponentGrafana          = "grafana"
 	ComponentDrainer          = "drainer"
+	ComponentDashboard        = "tidb-dashboard"
 	ComponentPump             = "pump"
 	ComponentCDC              = "cdc"
 	ComponentTiKVCDC          = "tikv-cdc"

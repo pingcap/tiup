@@ -124,6 +124,7 @@ server_configs:
         binlog.enable: true
     tikv: {}
     pd: {}
+    tidb_dashboard: {}
     tiflash: {}
     tiflash-learner: {}
     pump: {}
