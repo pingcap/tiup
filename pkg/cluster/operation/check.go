@@ -523,7 +523,7 @@ func CheckServices(ctx context.Context, e ctxt.Executor, host, service string, d
 		return result
 	}
 
-	active, err := GetServiceStatus(ctx, e, service+".service")
+	active, _, err := GetServiceStatus(ctx, e, service+".service")
 	if err != nil {
 		result.Err = err
 	}

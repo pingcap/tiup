@@ -100,7 +100,8 @@ type componentTopology struct {
 }
 
 // updateInstancesAndOps receives alertmanager, prometheus and grafana instance list, if the list has
-//  no member or all deleted, it will add a `OpDelete` in ops, otherwise it will push all current not deleted instances into instance list.
+//
+//	no member or all deleted, it will add a `OpDelete` in ops, otherwise it will push all current not deleted instances into instance list.
 func updateInstancesAndOps(ops []clientv3.Op, ins []spec.Instance, deleted set.StringSet, instances []spec.Instance, componentName string) ([]clientv3.Op, []spec.Instance) {
 	var currentInstances []spec.Instance
 	for _, instance := range instances {
@@ -119,7 +120,8 @@ func updateInstancesAndOps(ops []clientv3.Op, ins []spec.Instance, deleted set.S
 }
 
 // updateTopologyOp receive an alertmanager, prometheus or grafana instance, and return an operation
-//  for update it's topology.
+//
+//	for update it's topology.
 func updateTopologyOp(instance spec.Instance) (*clientv3.Op, error) {
 	switch compName := instance.ComponentName(); compName {
 	case spec.ComponentAlertmanager, spec.ComponentPrometheus, spec.ComponentGrafana:

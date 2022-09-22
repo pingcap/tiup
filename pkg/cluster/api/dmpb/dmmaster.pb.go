@@ -413,8 +413,10 @@ func (m *OperateTaskResponse) GetSources() []*CommonWorkerResponse {
 
 // UpdateTaskRequest used to update task after it has beed started
 // task: task's configuration, yaml format
-//       now, only support to update config for routes, filters, column-mappings, block-allow-list
-//       support update partial config for syncer, loader, etc later
+//
+//	now, only support to update config for routes, filters, column-mappings, block-allow-list
+//	support update partial config for syncer, loader, etc later
+//
 // sources need to do update, empty for all sources in processing the task
 type UpdateTaskRequest struct {
 	Task    string   `protobuf:"bytes,1,opt,name=task,proto3" json:"task,omitempty"`
@@ -643,7 +645,9 @@ func (m *QueryStatusListResponse) GetSources() []*QueryStatusResponse {
 // ShowDDLLocksRequest used to query DDL locks which are un-resolved
 // task: task's name, empty for all tasks
 // sources: source need to query, empty for all sources
-//          any DDL lock in which the source is synced or unsynced will return
+//
+//	any DDL lock in which the source is synced or unsynced will return
+//
 // if specify task and sources both, and sources not doing the task , it will return empty DDL locks
 type ShowDDLLocksRequest struct {
 	Task    string   `protobuf:"bytes,1,opt,name=task,proto3" json:"task,omitempty"`
