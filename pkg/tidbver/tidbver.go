@@ -76,6 +76,11 @@ func TiCDCSupportDataDir(version string) bool {
 	return semver.Major(version) == "v4" && semver.Compare(version, "v4.0.14") >= 0
 }
 
+// TiCDCSupportClusterID return if the given version of TiCDC support --cluster-id param to identify TiCDC cluster
+func TiCDCSupportClusterID(version string) bool {
+	return semver.Compare(version, "v6.2.0") >= 0 || strings.Contains(version, "nightly")
+}
+
 // TiCDCSupportRollingUpgrade return if the given version of TiCDC support rolling upgrade
 // TiCDC support graceful rolling upgrade since v6.3.0
 func TiCDCSupportRollingUpgrade(version string) bool {

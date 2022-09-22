@@ -33,6 +33,7 @@ type CDCScript struct {
 	NumaNode          string
 	GCTTL             int64
 	TZ                string
+	ClusterID         string
 	TLSEnabled        bool
 	Endpoints         []*PDScript
 	ConfigFileEnabled bool
@@ -79,6 +80,12 @@ func (c *CDCScript) WithDataDir(dataDir string) *CDCScript {
 // WithDataDirEnabled enables CDC data-dir
 func (c *CDCScript) WithDataDirEnabled() *CDCScript {
 	c.DataDirEnabled = true
+	return c
+}
+
+// WithCDCClusterID set CDC cluster-id
+func (c *CDCScript) WithCDCClusterID(clusterID string) *CDCScript {
+	c.ClusterID = clusterID
 	return c
 }
 
