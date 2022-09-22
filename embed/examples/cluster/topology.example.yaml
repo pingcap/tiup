@@ -295,7 +295,7 @@ kvcdc_servers:
     log_dir: "/data1/tidb-deploy/tikv-cdc-8600/log"
 
 # # Server configs are used to specify the configuration of TiDB Dashboard Servers.
-tidb-dashboard_servers:
+tidb_dashboard_servers:
   # # The ip address of the PD Server.
   - host: 10.0.1.11
     # # SSH port of the server.

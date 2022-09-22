@@ -32,5 +32,5 @@ exec bin/tidb-dashboard \
     --tidb-cert tls/tidb-dashboard.crt \
     --tidb-key tls/tidb-dasboard.pem \
 {{- end}}
-    1>> "{{.LogDir}}/tidb-dashboard.log" \
-    2>> "{{.LogDir}}/tidb-dashboard_stderr.log"
+    1>> "{{.LogDir}}/tidb_dashboard.log" \
+    2>> "{{.LogDir}}/tidb_dashboard_stderr.log"

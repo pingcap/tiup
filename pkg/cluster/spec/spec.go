@@ -107,7 +107,7 @@ type (
 		TiDB           map[string]interface{} `yaml:"tidb"`
 		TiKV           map[string]interface{} `yaml:"tikv"`
 		PD             map[string]interface{} `yaml:"pd"`
-		Dashboard      map[string]interface{} `yaml:"tidb-dashboard"`
+		Dashboard      map[string]interface{} `yaml:"tidb_dashboard"`
 		TiFlash        map[string]interface{} `yaml:"tiflash"`
 		TiFlashLearner map[string]interface{} `yaml:"tiflash-learner"`
 		Pump           map[string]interface{} `yaml:"pump"`
@@ -126,7 +126,7 @@ type (
 		TiKVServers      []*TiKVSpec          `yaml:"tikv_servers"`
 		TiFlashServers   []*TiFlashSpec       `yaml:"tiflash_servers"`
 		PDServers        []*PDSpec            `yaml:"pd_servers"`
-		DashboardServers []*DashboardSpec     `yaml:"tidb-dashboard_servers"`
+		DashboardServers []*DashboardSpec     `yaml:"tidb_dashboard_servers,omitempty"`
 		PumpServers      []*PumpSpec          `yaml:"pump_servers,omitempty"`
 		Drainers         []*DrainerSpec       `yaml:"drainer_servers,omitempty"`
 		CDCServers       []*CDCSpec           `yaml:"cdc_servers,omitempty"`
