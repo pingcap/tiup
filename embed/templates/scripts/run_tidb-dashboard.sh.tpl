@@ -30,7 +30,7 @@ exec bin/tidb-dashboard \
 {{- if .TLSEnabled}}
     --tidb-ca tls/ca.crt \
     --tidb-cert tls/tidb-dashboard.crt \
-    --tidb-key tls/tidb-dasboard.pem \
+    --tidb-key tls/tidb-dashboard.pem \
 {{- end}}
     1>> "{{.LogDir}}/tidb_dashboard.log" \
     2>> "{{.LogDir}}/tidb_dashboard_stderr.log"

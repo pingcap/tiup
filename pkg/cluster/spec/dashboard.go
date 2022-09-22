@@ -171,6 +171,7 @@ func (i *DashboardInstance) InitConfig(
 		Port:        spec.Port,
 		NumaNode:    spec.NumaNode,
 		Endpoints:   topo.Endpoints(deployUser),
+		TLSEnabled:  enableTLS,
 	}
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tidb-dashboard_%s_%d.sh", i.GetHost(), i.GetPort()))
@@ -189,12 +190,6 @@ func (i *DashboardInstance) InitConfig(
 	}
 
 	globalConfig := topo.ServerConfigs.Dashboard
-
-	// set TLS configs
-	spec.Config, err = i.setTLSConfig(ctx, enableTLS, spec.Config, paths)
-	if err != nil {
-		return err
-	}
 
 	if err := i.MergeServerConfig(ctx, e, globalConfig, spec.Config, paths); err != nil {
 		return err
