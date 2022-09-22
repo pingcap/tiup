@@ -50,9 +50,10 @@ var (
 )
 
 // CheckPointExecutor wraps Executor and inject checkpoints
-//   ATTENTION please: the result of CheckPointExecutor shouldn't be used to impact
-//                     external system like PD, otherwise, the external system may
-//                     take wrong action.
+//
+//	ATTENTION please: the result of CheckPointExecutor shouldn't be used to impact
+//	                  external system like PD, otherwise, the external system may
+//	                  take wrong action.
 type CheckPointExecutor struct {
 	ctxt.Executor
 	config *SSHConfig
