@@ -180,6 +180,7 @@ func checkSystemInfo(
 
 	uniqueHosts := map[string]int{}             // host -> ssh-port
 	uniqueArchList := make(map[string]struct{}) // map["os-arch"]{}
+	uniqueInstances := []spec.Instance{}
 
 	roleFilter := set.NewStringSet(gOpt.Roles...)
 	nodeFilter := set.NewStringSet(gOpt.Nodes...)
@@ -217,9 +218,7 @@ func checkSystemInfo(
 					topo,
 					opt.Opr,
 				)
-			}
-
-			if !opt.ExistCluster {
+			} else {
 				t1 = t1.
 					CheckSys(
 						inst.GetHost(),
@@ -275,173 +274,183 @@ func checkSystemInfo(
 				}
 			}
 
-			// checks that applies to each host
-			if _, found := uniqueHosts[inst.GetHost()]; !found {
-				uniqueHosts[inst.GetHost()] = inst.GetSSHPort()
-				// build system info collecting tasks
-				t2 := task.NewBuilder(logger).
-					RootSSH(
-						inst.GetHost(),
-						inst.GetSSHPort(),
-						opt.User,
-						s.Password,
-						s.IdentityFile,
-						s.IdentityFilePassphrase,
-						gOpt.SSHTimeout,
-						gOpt.OptTimeout,
-						gOpt.SSHProxyHost,
-						gOpt.SSHProxyPort,
-						gOpt.SSHProxyUser,
-						p.Password,
-						p.IdentityFile,
-						p.IdentityFilePassphrase,
-						gOpt.SSHProxyTimeout,
-						gOpt.SSHType,
-						topo.GlobalOptions.SSHType,
-					).
-					Mkdir(opt.User, inst.GetHost(), filepath.Join(task.CheckToolsPathDir, "bin")).
-					CopyComponent(
-						spec.ComponentCheckCollector,
-						inst.OS(),
-						inst.Arch(),
-						insightVer,
-						"", // use default srcPath
-						inst.GetHost(),
-						task.CheckToolsPathDir,
-					).
-					Shell(
-						inst.GetHost(),
-						filepath.Join(task.CheckToolsPathDir, "bin", "insight"),
-						"",
-						false,
-					).
-					BuildAsStep(fmt.Sprintf("  - Getting system info of %s:%d", inst.GetHost(), inst.GetSSHPort()))
-				collectTasks = append(collectTasks, t2)
-
-				t4 := task.NewBuilder(logger).
-					// check for time zone
-					CheckSys(
-						inst.GetHost(),
-						"",
-						task.CheckTypeTimeZone,
-						topo,
-						opt.Opr,
-					)
-				checkTimeZoneTasks = append(
-					checkTimeZoneTasks,
-					t4.BuildAsStep(fmt.Sprintf("  - Checking node %s", inst.GetHost())),
-				)
-
-				// build checking tasks
-				t1 = t1.
-					// check for general system info
-					CheckSys(
-						inst.GetHost(),
-						"",
-						task.CheckTypeSystemInfo,
-						topo,
-						opt.Opr,
-					).
-					CheckSys(
-						inst.GetHost(),
-						"",
-						task.CheckTypePartitions,
-						topo,
-						opt.Opr,
-					).
-					// check for system limits
-					Shell(
-						inst.GetHost(),
-						"cat /etc/security/limits.conf",
-						"",
-						false,
-					).
-					CheckSys(
-						inst.GetHost(),
-						"",
-						task.CheckTypeSystemLimits,
-						topo,
-						opt.Opr,
-					).
-					// check for kernel params
-					Shell(
-						inst.GetHost(),
-						"sysctl -a",
-						"",
-						true,
-					).
-					CheckSys(
-						inst.GetHost(),
-						"",
-						task.CheckTypeSystemConfig,
-						topo,
-						opt.Opr,
-					).
-					// check for needed system service
-					CheckSys(
-						inst.GetHost(),
-						"",
-						task.CheckTypeService,
-						topo,
-						opt.Opr,
-					).
-					// check for needed packages
-					CheckSys(
-						inst.GetHost(),
-						"",
-						task.CheckTypePackage,
-						topo,
-						opt.Opr,
-					)
-
-				if !opt.ExistCluster {
-					t1 = t1.
-						// check for listening port
-						Shell(
-							inst.GetHost(),
-							"ss -lnt",
-							"",
-							false,
-						).
-						CheckSys(
-							inst.GetHost(),
-							"",
-							task.CheckTypePort,
-							topo,
-							opt.Opr,
-						)
-				}
-			}
-
 			checkSysTasks = append(
 				checkSysTasks,
 				t1.BuildAsStep(fmt.Sprintf("  - Checking node %s", inst.GetHost())),
 			)
 
-			t3 := task.NewBuilder(logger).
-				RootSSH(
-					inst.GetHost(),
-					inst.GetSSHPort(),
-					opt.User,
-					s.Password,
-					s.IdentityFile,
-					s.IdentityFilePassphrase,
-					gOpt.SSHTimeout,
-					gOpt.OptTimeout,
-					gOpt.SSHProxyHost,
-					gOpt.SSHProxyPort,
-					gOpt.SSHProxyUser,
-					p.Password,
-					p.IdentityFile,
-					p.IdentityFilePassphrase,
-					gOpt.SSHProxyTimeout,
-					gOpt.SSHType,
-					topo.GlobalOptions.SSHType,
-				).
-				Rmdir(inst.GetHost(), task.CheckToolsPathDir).
-				BuildAsStep(fmt.Sprintf("  - Cleanup check files on %s:%d", inst.GetHost(), inst.GetSSHPort()))
-			cleanTasks = append(cleanTasks, t3)
+			if _, found := uniqueHosts[inst.GetHost()]; !found {
+				uniqueHosts[inst.GetHost()] = inst.GetSSHPort()
+				uniqueInstances = append(uniqueInstances, inst)
+			}
 		}
+	}
+
+	// checks that applies to each host
+	//		if _, found := uniqueHosts[inst.GetHost()]; !found {
+	//			uniqueHosts[inst.GetHost()] = inst.GetSSHPort()
+	for _, inst := range uniqueInstances {
+		// build system info collecting tasks
+		t2 := task.NewBuilder(logger).
+			RootSSH(
+				inst.GetHost(),
+				inst.GetSSHPort(),
+				opt.User,
+				s.Password,
+				s.IdentityFile,
+				s.IdentityFilePassphrase,
+				gOpt.SSHTimeout,
+				gOpt.OptTimeout,
+				gOpt.SSHProxyHost,
+				gOpt.SSHProxyPort,
+				gOpt.SSHProxyUser,
+				p.Password,
+				p.IdentityFile,
+				p.IdentityFilePassphrase,
+				gOpt.SSHProxyTimeout,
+				gOpt.SSHType,
+				topo.GlobalOptions.SSHType,
+			).
+			Mkdir(opt.User, inst.GetHost(), filepath.Join(task.CheckToolsPathDir, "bin")).
+			CopyComponent(
+				spec.ComponentCheckCollector,
+				inst.OS(),
+				inst.Arch(),
+				insightVer,
+				"", // use default srcPath
+				inst.GetHost(),
+				task.CheckToolsPathDir,
+			).
+			Shell(
+				inst.GetHost(),
+				filepath.Join(task.CheckToolsPathDir, "bin", "insight"),
+				"",
+				false,
+			).
+			BuildAsStep(fmt.Sprintf("  - Getting system info of %s:%d", inst.GetHost(), inst.GetSSHPort()))
+		collectTasks = append(collectTasks, t2)
+
+		t4 := task.NewBuilder(logger).
+			// check for time zone
+			CheckSys(
+				inst.GetHost(),
+				"",
+				task.CheckTypeTimeZone,
+				topo,
+				opt.Opr,
+			)
+		checkTimeZoneTasks = append(
+			checkTimeZoneTasks,
+			t4.BuildAsStep(fmt.Sprintf("  - Checking node %s", inst.GetHost())),
+		)
+
+		t1 := task.NewBuilder(logger).
+			// check for general system info
+			CheckSys(
+				inst.GetHost(),
+				"",
+				task.CheckTypeSystemInfo,
+				topo,
+				opt.Opr,
+			).
+			CheckSys(
+				inst.GetHost(),
+				"",
+				task.CheckTypePartitions,
+				topo,
+				opt.Opr,
+			).
+			// check for system limits
+			Shell(
+				inst.GetHost(),
+				"cat /etc/security/limits.conf",
+				"",
+				false,
+			).
+			CheckSys(
+				inst.GetHost(),
+				"",
+				task.CheckTypeSystemLimits,
+				topo,
+				opt.Opr,
+			).
+			// check for kernel params
+			Shell(
+				inst.GetHost(),
+				"sysctl -a",
+				"",
+				true,
+			).
+			CheckSys(
+				inst.GetHost(),
+				"",
+				task.CheckTypeSystemConfig,
+				topo,
+				opt.Opr,
+			).
+			// check for needed system service
+			CheckSys(
+				inst.GetHost(),
+				"",
+				task.CheckTypeService,
+				topo,
+				opt.Opr,
+			).
+			// check for needed packages
+			CheckSys(
+				inst.GetHost(),
+				"",
+				task.CheckTypePackage,
+				topo,
+				opt.Opr,
+			)
+
+		if !opt.ExistCluster {
+			t1 = t1.
+				// check for listening port
+				Shell(
+					inst.GetHost(),
+					"ss -lnt",
+					"",
+					false,
+				).
+				CheckSys(
+					inst.GetHost(),
+					"",
+					task.CheckTypePort,
+					topo,
+					opt.Opr,
+				)
+		}
+
+		checkSysTasks = append(
+			checkSysTasks,
+			t1.BuildAsStep(fmt.Sprintf("  - Checking node %s", inst.GetHost())),
+		)
+
+		t3 := task.NewBuilder(logger).
+			RootSSH(
+				inst.GetHost(),
+				inst.GetSSHPort(),
+				opt.User,
+				s.Password,
+				s.IdentityFile,
+				s.IdentityFilePassphrase,
+				gOpt.SSHTimeout,
+				gOpt.OptTimeout,
+				gOpt.SSHProxyHost,
+				gOpt.SSHProxyPort,
+				gOpt.SSHProxyUser,
+				p.Password,
+				p.IdentityFile,
+				p.IdentityFilePassphrase,
+				gOpt.SSHProxyTimeout,
+				gOpt.SSHType,
+				topo.GlobalOptions.SSHType,
+			).
+			Rmdir(inst.GetHost(), task.CheckToolsPathDir).
+			BuildAsStep(fmt.Sprintf("  - Cleanup check files on %s:%d", inst.GetHost(), inst.GetSSHPort()))
+		cleanTasks = append(cleanTasks, t3)
 	}
 
 	t := task.NewBuilder(logger).
