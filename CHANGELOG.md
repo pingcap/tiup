@@ -5,7 +5,7 @@ TiUP Changelog
 ### New Features
 
 - Add support of new component `tikv-cdc` for `tiup-cluster` and `tiup-playground` ([#2000](https://github.com/pingcap/tiup/pull/2000), [#2022](https://github.com/pingcap/tiup/pull/2022), [@pingyu](https://github.com/pingyu))
-- Add support of splited `tidb-dashboard` in `tiup-cluster` ([#2017](https://github.com/pingcap/tiup/pull/2017), [@nexustar](https://github.com/nexustar))
+- Add support of dedicated `tidb-dashboard` in `tiup-cluster` ([#2017](https://github.com/pingcap/tiup/pull/2017), [@nexustar](https://github.com/nexustar))
 - Add support of TiCDC rolling upgrade for `tiup-cluster` ([#1996](https://github.com/pingcap/tiup/pull/1996), [#2005](https://github.com/pingcap/tiup/pull/2005), [#2036](https://github.com/pingcap/tiup/pull/2036),  [@3AceShowHand](https://github.com/3AceShowHand))
 - Add support to config TiCDC cluster-id for `tiup-cluster` ([#2042](https://github.com/pingcap/tiup/pull/2042), [@nexustar](https://github.com/nexustar))
 - Add support to set CPUAffinity in `tiup-cluster` ([#2007](https://github.com/pingcap/tiup/pull/2007), [@YaozhengWang](https://github.com/YaozhengWang))
@@ -14,8 +14,8 @@ TiUP Changelog
 
 ### Fixes
 
-- Fix not delete tmp file when upload package in `tiup-server` ([#2021](https://github.com/pingcap/tiup/pull/2021), [@nexustar](https://github.com/nexustar))
-- Fix redundant log when start in `tiup-playground` ([#2032](https://github.com/pingcap/tiup/pull/2032), [@nexustar](https://github.com/nexustar))
+- Fix tmp file not deleted when upload package in `tiup-server` ([#2021](https://github.com/pingcap/tiup/pull/2021), [@nexustar](https://github.com/nexustar))
+- Fix redundant log when start TiDB cluster with `tiup-playground` ([#2032](https://github.com/pingcap/tiup/pull/2032), [@nexustar](https://github.com/nexustar))
 - Fix panic when fail to start component in `tiup-playground` ([#1933](https://github.com/pingcap/tiup/pull/1933), [@dveeden](https://github.com/dveeden))
 - Fix scale-out cdc command in `tiup-playground` ([#1935](https://github.com/pingcap/tiup/pull/1935), [@lonng](https://github.com/lonng))
 - Fix ineffectiveness of ticdc.config in `tiup-playground` ([#1978](https://github.com/pingcap/tiup/pull/1978), [@pingyu](https://github.com/pingyu))
