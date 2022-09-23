@@ -6,7 +6,7 @@ TiUP Changelog
 
 - Add support of new component `tikv-cdc` for `tiup-cluster` and `tiup-playground` ([#2000](https://github.com/pingcap/tiup/pull/2000), [#2022](https://github.com/pingcap/tiup/pull/2022), [@pingyu](https://github.com/pingyu))
 - Add support of splited `tidb-dashboard` in `tiup-cluster` ([#2017](https://github.com/pingcap/tiup/pull/2017), [@nexustar](https://github.com/nexustar))
-- Add support TiCDC rolling upgrade for `tiup-cluster` ([#1996](https://github.com/pingcap/tiup/pull/1996), [#2005](https://github.com/pingcap/tiup/pull/2005), [#2036](https://github.com/pingcap/tiup/pull/2036),  [@3AceShowHand](https://github.com/3AceShowHand))
+- Add support of TiCDC rolling upgrade for `tiup-cluster` ([#1996](https://github.com/pingcap/tiup/pull/1996), [#2005](https://github.com/pingcap/tiup/pull/2005), [#2036](https://github.com/pingcap/tiup/pull/2036),  [@3AceShowHand](https://github.com/3AceShowHand))
 - Add support to config TiCDC cluster-id for `tiup-cluster` ([#2042](https://github.com/pingcap/tiup/pull/2042), [@nexustar](https://github.com/nexustar))
 - Add support to set CPUAffinity in `tiup-cluster` ([#2007](https://github.com/pingcap/tiup/pull/2007), [@YaozhengWang](https://github.com/YaozhengWang))
 - Allow to display memory usage in `tiup-cluster` ([#1994](https://github.com/pingcap/tiup/pull/1994), [@nexustar](https://github.com/nexustar))
