@@ -72,24 +72,33 @@ func (TaskOp) EnumDescriptor() ([]byte, []int) {
 // a (sub) task should be always in one stage of the following stages
 // (sub) task can transfer from on stage to some special other stages
 // New: initial stage when a sub task is created
-//      can not be transferred from other stages
-//      transfers to Running when initialize with no error
+//
+//	can not be transferred from other stages
+//	transfers to Running when initialize with no error
+//
 // Running: indicates the sub task is processing
-//          is transferred from New when created successfully
-//          is transferred from Paused when resuming is requested
-//          transfers to Paused when error occurred or requested from external
-//          transfers to Stopped when requested from external
-//          transfers to Finished when sub task processing completed (no Syncer used)
+//
+//	is transferred from New when created successfully
+//	is transferred from Paused when resuming is requested
+//	transfers to Paused when error occurred or requested from external
+//	transfers to Stopped when requested from external
+//	transfers to Finished when sub task processing completed (no Syncer used)
+//
 // Paused: indicates the processing is paused, and can be resume from external request
-//         is transferred from Running when error occurred or requested from external
-//         transfers to Running when resuming is requested from external
-//         transfers to Stopped when requested from external
+//
+//	is transferred from Running when error occurred or requested from external
+//	transfers to Running when resuming is requested from external
+//	transfers to Stopped when requested from external
+//
 // Stopped: indicates the processing is stopped, and can not be resume (or re-run) again
-//          is transferred from Running / Paused when requested from external
-//          can not transfer to any stages
+//
+//	is transferred from Running / Paused when requested from external
+//	can not transfer to any stages
+//
 // Finished: indicates the processing is finished, and no need to re-run
-//           is transferred from Running when processing completed
-//           should not transfer to any stages
+//
+//	is transferred from Running when processing completed
+//	should not transfer to any stages
 type Stage int32
 
 const (
@@ -1122,10 +1131,13 @@ func (m *RelayStatus) GetResult() *ProcessResult {
 // unit: sub task's current dm unit's UnitType
 // result: current unit's process result, when the stage is Running, no result
 // unresolvedDDLLockID: un-resolved sharding DDL lock ID (ref DDLLockInfo)
-//                      if needed, we can put this to SyncStatus
+//
+//	if needed, we can put this to SyncStatus
+//
 // status: current unit's statistics
-//         for Load, includes total bytes, progress, etc.
-//         for Sync, includes TPS, binlog meta, etc.
+//
+//	for Load, includes total bytes, progress, etc.
+//	for Sync, includes TPS, binlog meta, etc.
 type SubTaskStatus struct {
 	Name                string         `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	Stage               Stage          `protobuf:"varint,2,opt,name=stage,proto3,enum=pb.Stage" json:"stage,omitempty"`
@@ -1697,7 +1709,8 @@ func (m *RelayError) GetMsg() string {
 // stage: sub task's current stage
 // unit: sub task's current dm unit's UnitType
 // error: current unit's error information
-//         for Sync, includes failed sql, failed sql pos in binlog, etc.
+//
+//	for Sync, includes failed sql, failed sql pos in binlog, etc.
 type SubTaskError struct {
 	Name  string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	Stage Stage    `protobuf:"varint,2,opt,name=stage,proto3,enum=pb.Stage" json:"stage,omitempty"`
@@ -1893,7 +1906,9 @@ func (m *SubTaskErrorList) GetError() []*SubTaskError {
 
 // ProcessResult represents results produced by a dm unit
 // isCanceled: indicates whether the process is canceled from external
-//             when Stop or Pause is requested from external, isCanceled will be true
+//
+//	when Stop or Pause is requested from external, isCanceled will be true
+//
 // errors: includes all (potential) errors occured when processing
 type ProcessResult struct {
 	IsCanceled bool            `protobuf:"varint,1,opt,name=isCanceled,proto3" json:"isCanceled,omitempty"`

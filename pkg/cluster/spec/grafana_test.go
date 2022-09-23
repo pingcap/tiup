@@ -143,7 +143,6 @@ mode = file
 # For "file" mode only
 [log.file]
 level = warning
-
 `
 
 	addition := map[string]string{

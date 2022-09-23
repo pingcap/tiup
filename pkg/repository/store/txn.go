@@ -54,11 +54,11 @@ var (
 // 2. write the manifest file to temporary directory
 //
 // To commit a localTxn:
-// 1. for every accessed file, get the recorded timestamp
-// 2. for every accessed file, get the current modify time of their origin file in root directory
-// 3. check if the origin file is newer thant recorded timestamp, if so, there must be conflict
-// 4. copy every file in temporary directory to root directory, if there is a timestamp.json in
-//    temporary directory, it should be the last one to copy
+//  1. for every accessed file, get the recorded timestamp
+//  2. for every accessed file, get the current modify time of their origin file in root directory
+//  3. check if the origin file is newer thant recorded timestamp, if so, there must be conflict
+//  4. copy every file in temporary directory to root directory, if there is a timestamp.json in
+//     temporary directory, it should be the last one to copy
 type localTxn struct {
 	syncer   Syncer
 	store    *localStore
