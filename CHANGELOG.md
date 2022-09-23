@@ -1,10 +1,38 @@
 TiUP Changelog
 
+## [1.11.0] 2022-09-23
+
+### New Features
+
+- Add support of new component `tikv-cdc` for `tiup-cluster` and `tiup-playground` ([#2000](https://github.com/pingcap/tiup/pull/2000), [#2022](https://github.com/pingcap/tiup/pull/2022), [@pingyu](https://github.com/pingyu))
+- Add support of splited `tidb-dashboard` in `tiup-cluster` ([#2017](https://github.com/pingcap/tiup/pull/2017), [@nexustar](https://github.com/nexustar))
+- Add support TiCDC rolling upgrade for `tiup-cluster` ([#1996](https://github.com/pingcap/tiup/pull/1996), [#2005](https://github.com/pingcap/tiup/pull/2005), [#2036](https://github.com/pingcap/tiup/pull/2036),  [@3AceShowHand](https://github.com/3AceShowHand))
+- Add support to config TiCDC cluster-id for `tiup-cluster` ([#2042](https://github.com/pingcap/tiup/pull/2042), [@nexustar](https://github.com/nexustar))
+- Add support to set CPUAffinity in `tiup-cluster` ([#2007](https://github.com/pingcap/tiup/pull/2007), [@YaozhengWang](https://github.com/YaozhengWang))
+- Allow to display memory usage in `tiup-cluster` ([#1994](https://github.com/pingcap/tiup/pull/1994), [@nexustar](https://github.com/nexustar))
+
+
+### Fixes
+
+- Fix not delete tmp file when upload package in `tiup-server` ([#2021](https://github.com/pingcap/tiup/pull/2021), [@nexustar](https://github.com/nexustar))
+- Fix redundant log when start in `tiup-playground` ([#2032](https://github.com/pingcap/tiup/pull/2032), [@nexustar](https://github.com/nexustar))
+- Fix panic when fail to start component in `tiup-playground` ([#1933](https://github.com/pingcap/tiup/pull/1933), [@dveeden](https://github.com/dveeden))
+- Fix scale-out cdc command in `tiup-playground` ([#1935](https://github.com/pingcap/tiup/pull/1935), [@lonng](https://github.com/lonng))
+- Fix ineffectiveness of ticdc.config in `tiup-playground` ([#1978](https://github.com/pingcap/tiup/pull/1978), [@pingyu](https://github.com/pingyu))
+- Fix timezone check and remove duplicate cleanTasks in `tiup-cluster` ([#2045](https://github.com/pingcap/tiup/pull/2045), [@nexustar](https://github.com/nexustar))
+
+### Improvements
+
+- Use test-cluster as dashboard name in `tiup-playground` ([#1920](https://github.com/pingcap/tiup/pull/1920), [@breezewish](https://github.com/breezewish))
+- Add pd.port argument in `tiup-playground` ([#1931](https://github.com/pingcap/tiup/pull/1931), [@pingyu](https://github.com/pingyu))
+- Allow --tag argument on any locate in `tiup-playground` ([#1998](https://github.com/pingcap/tiup/pull/1998), [@pingyu](https://github.com/pingyu))
+
 ## [1.10.3] 2022-08-11
 
 ### Mirror update
 
 - Add new version for node_exporter (https://github.com/prometheus/node_exporter/releases/tag/v1.3.1) and blackbox_exporter (https://github.com/prometheus/blackbox_exporter/releases/tag/v0.21.1) in tiup repository. All the new tidb clusters or instances deployed by tiup cluster will use the new version by default.
+
 ### Fixes
 
 - Fix cannot clean related tidb topology after scale-in in `tiup-cluster` ([#2011](https://github.com/pingcap/tiup/pull/2011), [@nexustar](https://github.com/nexustar))
