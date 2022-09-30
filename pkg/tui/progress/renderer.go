@@ -39,7 +39,7 @@ func (r *renderer) startRenderLoop() {
 	if r.renderFn == nil {
 		panic("renderFn must be set")
 	}
-	if !r.isUpdaterRunning.CAS(false, true) {
+	if !r.isUpdaterRunning.CompareAndSwap(false, true) {
 		return
 	}
 	r.stopChan = make(chan struct{})
@@ -48,7 +48,7 @@ func (r *renderer) startRenderLoop() {
 }
 
 func (r *renderer) stopRenderLoop() {
-	if !r.isUpdaterRunning.CAS(true, false) {
+	if !r.isUpdaterRunning.CompareAndSwap(true, false) {
 		return
 	}
 	r.stopChan <- struct{}{}

@@ -37,7 +37,7 @@ func TiFlashSupportTLS(version string) bool {
 	return semver.Compare(version, "v4.0.5") >= 0 || strings.Contains(version, "nightly")
 }
 
-//  TiFlashSupportAdvertiseStatusAddr return if given version of  TiFlash support --advertise-status-addr
+// TiFlashSupportAdvertiseStatusAddr return if given version of  TiFlash support --advertise-status-addr
 func TiFlashSupportAdvertiseStatusAddr(version string) bool {
 	// TiFlash support --advertise-status-addr since v4.0.5
 	return semver.Compare(version, "v4.0.5") >= 0 || strings.Contains(version, "nightly")
@@ -74,6 +74,11 @@ func TiCDCSupportDataDir(version string) bool {
 		return true
 	}
 	return semver.Major(version) == "v4" && semver.Compare(version, "v4.0.14") >= 0
+}
+
+// TiCDCSupportClusterID return if the given version of TiCDC support --cluster-id param to identify TiCDC cluster
+func TiCDCSupportClusterID(version string) bool {
+	return semver.Compare(version, "v6.2.0") >= 0 || strings.Contains(version, "nightly")
 }
 
 // TiCDCSupportRollingUpgrade return if the given version of TiCDC support rolling upgrade

@@ -20,7 +20,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//  retainDay number of days to keep audit logs for deletion
+// retainDay number of days to keep audit logs for deletion
 var retainDays int
 
 func newAuditCmd() *cobra.Command {
