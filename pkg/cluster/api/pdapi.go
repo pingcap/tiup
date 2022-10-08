@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -531,6 +532,82 @@ func (pc *PDClient) EvictStoreLeader(host string, retryOpt *utils.RetryOption, c
 		return perrs.New("still waiting for the store leaders to transfer")
 	}, *retryOpt); err != nil {
 		return fmt.Errorf("error evicting store leader from %s, %v", host, err)
+	}
+	return nil
+}
+
+// RecoverStoreLeader waits for some leaders to transfer back.
+//
+// Currently, recoverStoreLeader will be considered as succeed in any of the following case
+//   - 2/3 of leaders are already transferred back.
+//   - The leader count has been unchanged for 5 times.
+//     The default leadership transfer timeout for one region is 10s,
+//     so set the default value to about 10s (5*2).
+func (pc *PDClient) RecoverStoreLeader(host string, originalCount int, retryOpt *utils.RetryOption, countLeader func(string) (int, error)) error {
+	targetCount := originalCount * 2 / 3
+	maxUnchangedTimes := 5
+
+	// get info of current stores
+	latestStore, err := pc.GetCurrentStore(host)
+	if err != nil {
+		if errors.Is(err, ErrNoStore) {
+			return nil
+		}
+		return err
+	}
+
+	pc.l().Infof("\tRecovering about %d leaders to store %s, original count is %d...", targetCount, latestStore.Store.Address, originalCount)
+
+	// wait for the transfer to complete
+	if retryOpt == nil {
+		retryOpt = &utils.RetryOption{
+			Delay:   time.Second * 2,
+			Timeout: time.Second * 600,
+		}
+	}
+
+	lastLeaderCount := math.MaxInt
+	curUnchangedTimes := 0
+	if err := utils.Retry(func() error {
+		currStore, err := pc.GetCurrentStore(host)
+		if err != nil {
+			if errors.Is(err, ErrNoStore) {
+				return nil
+			}
+			return err
+		}
+
+		curLeaderCount, err := countLeader(currStore.Store.Address)
+		if err != nil {
+			return err
+		}
+
+		// Target number of leaders have been transferred back.
+		if curLeaderCount >= targetCount {
+			return nil
+		}
+
+		// Check if the leader count has been unchanged for too much times.
+		if lastLeaderCount == curLeaderCount {
+			curUnchangedTimes += 1
+			if curUnchangedTimes >= maxUnchangedTimes {
+				pc.l().Warnf("\tSkip recovering leaders to %s, because leader count has been unchanged for %d times", host, maxUnchangedTimes)
+				return nil
+			}
+		} else {
+			lastLeaderCount = curLeaderCount
+			curUnchangedTimes = 0
+		}
+
+		pc.l().Infof(
+			"\t  Still waiting for at least %d leaders to transfer back...",
+			targetCount-curLeaderCount,
+		)
+
+		// return error by default, to make the retry work
+		return perrs.New("still waiting for the store leaders to transfer back")
+	}, *retryOpt); err != nil {
+		return fmt.Errorf("error recovering store leader to %s, %v", host, err)
 	}
 	return nil
 }

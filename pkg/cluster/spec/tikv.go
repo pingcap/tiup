@@ -187,7 +187,7 @@ func (c *TiKVComponent) Instances() []Instance {
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 				return UptimeByHost(s.Host, s.StatusPort, timeout, tlsCfg)
 			},
-		}, c.Topology})
+		}, c.Topology, 0})
 	}
 	return ins
 }
@@ -195,7 +195,8 @@ func (c *TiKVComponent) Instances() []Instance {
 // TiKVInstance represent the TiDB instance
 type TiKVInstance struct {
 	BaseInstance
-	topo Topology
+	topo                     Topology
+	leaderCountBeforeRestart int
 }
 
 // InitConfig implement Instance interface
@@ -357,6 +358,13 @@ func (i *TiKVInstance) PreRestart(ctx context.Context, topo Topology, apiTimeout
 		return err
 	}
 
+	// Get and record the leader count before evict leader.
+	leaderCount, err := genLeaderCounter(tidbTopo, tlsCfg)(i.ID())
+	if err != nil {
+		return perrs.Annotatef(err, "failed to get leader count %s", i.GetHost())
+	}
+	i.leaderCountBeforeRestart = leaderCount
+
 	if err := pdClient.EvictStoreLeader(addr(i.InstanceSpec.(*TiKVSpec)), timeoutOpt, genLeaderCounter(tidbTopo, tlsCfg)); err != nil {
 		if utils.IsTimeoutOrMaxRetry(err) {
 			ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger).
@@ -384,6 +392,25 @@ func (i *TiKVInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *t
 	// remove store leader evict scheduler after restart
 	if err := pdClient.RemoveStoreEvict(addr(i.InstanceSpec.(*TiKVSpec))); err != nil {
 		return perrs.Annotatef(err, "failed to remove evict store scheduler for %s", i.GetHost())
+	}
+
+	if i.leaderCountBeforeRestart > 0 {
+		timeoutOpt := &utils.RetryOption{
+			// The default timeout of evicting leader is 600s, so set the recovering timeout to
+			// a same value should be reasonable. Besides, One local test shows it takes about
+			// 30s to recover 3.6k leaders.
+			Timeout: time.Second * 600,
+			Delay:   time.Second * 2,
+		}
+
+		if err := pdClient.RecoverStoreLeader(addr(i.InstanceSpec.(*TiKVSpec)), i.leaderCountBeforeRestart, timeoutOpt, genLeaderCounter(tidbTopo, tlsCfg)); err != nil {
+			if utils.IsTimeoutOrMaxRetry(err) {
+				ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger).
+					Warnf("Ignore recovering store leader from %s, %v", i.ID(), err)
+			} else {
+				return perrs.Annotatef(err, "failed to recover store leader %s", i.GetHost())
+			}
+		}
 	}
 
 	return nil
