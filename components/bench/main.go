@@ -34,6 +34,7 @@ var (
 	silence        bool
 	pprofAddr      string
 	maxProcs       int
+	connParams     string
 
 	globalDB  *sql.DB
 	globalCtx context.Context
@@ -57,10 +58,14 @@ func openDB() error {
 	var (
 		tmpDB *sql.DB
 		err   error
-		ds    = fmt.Sprintf("%s:%s@tcp(%s:%d)/", user, password, host, port)
+		ds = fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", user, password, host, port, dbName)
 	)
 	// allow multiple statements in one query to allow q15 on the TPC-H
-	globalDB, err = sql.Open(mysqlDriver, fmt.Sprintf("%s%s?multiStatements=true", ds, dbName))
+	fullDsn := fmt.Sprintf("%s?multiStatements=true", ds)
+ 	if len(connParams) > 0 {
+ 		fullDsn = fmt.Sprintf("%s&%s", fullDsn, connParams)
+ 	}
+ 	globalDB, err = sql.Open(mysqlDriver, fullDsn)
 	if err != nil {
 		return err
 	}
@@ -107,6 +112,7 @@ func main() {
 	rootCmd.PersistentFlags().IntVar(&isolationLevel, "isolation", 0, `Isolation Level 0: Default, 1: ReadUncommitted,
 2: ReadCommitted, 3: WriteCommitted, 4: RepeatableRead,
 5: Snapshot, 6: Serializable, 7: Linerizable`)
+	rootCmd.PersistentFlags().StringVar(&connParams, "conn-params", "", "session variables")
 
 	cobra.EnablePrefixMatching = true
 
