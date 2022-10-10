@@ -542,7 +542,7 @@ func (pc *PDClient) EvictStoreLeader(host string, retryOpt *utils.RetryOption, c
 //
 //  1. 2/3 of leaders are already transferred back.
 //
-//  2. Original leader count is less than 60.
+//  2. Original leader count is less than 57.
 //
 //     Since PD considers it as balance when the leader count delta is less than 10, so
 //     these two conditions should be taken into consideration
@@ -552,15 +552,15 @@ func (pc *PDClient) EvictStoreLeader(host string, retryOpt *utils.RetryOption, c
 //     For example: The target store's leader count is 19. Other stores' leader count are 9.
 //     There are 20 stores in total. In this case, there may be no leader to transfer back.
 //
-//     - When the leader count is less than 60, there is possibility that only less than 2/3
-//     leaders are transfered back. `(N-10-10 >= 2/3*N) -> (N>=60)`.
-//     For example: The target store's leader count is 59. Other stores' leader count are 49.
-//     There are 50 stores in total. In this case, there may be only 39 leaders to transfer back.
+//     - When the leader count is less than 57, there is possibility that only less than 2/3
+//     leaders are transfered back. `(N-10-9 >= 2/3*N) -> (N>=57)`.
+//     For example: The target store's leader count is 56. Other stores' leader count are 46.
+//     There are 57 stores in total. In this case, there may be only 37 leaders to transfer back.
 //
 //  3. The leader count has been unchanged for 5 times.
 func (pc *PDClient) RecoverStoreLeader(host string, originalCount int, retryOpt *utils.RetryOption, countLeader func(string) (int, error)) error {
-	// When the leader count is less than 60, just ignore recovering.
-	if originalCount <= 60 {
+	// When the leader count is less than certain number, just ignore recovering.
+	if originalCount < 57 {
 		return nil
 	}
 
