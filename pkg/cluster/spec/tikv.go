@@ -395,15 +395,7 @@ func (i *TiKVInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *t
 	}
 
 	if i.leaderCountBeforeRestart > 0 {
-		timeoutOpt := &utils.RetryOption{
-			// The default timeout of evicting leader is 600s, so set the recovering timeout to
-			// a same value should be reasonable. Besides, One local test shows it takes about
-			// 30s to recover 3.6k leaders.
-			Timeout: time.Second * 600,
-			Delay:   time.Second * 2,
-		}
-
-		if err := pdClient.RecoverStoreLeader(addr(i.InstanceSpec.(*TiKVSpec)), i.leaderCountBeforeRestart, timeoutOpt, genLeaderCounter(tidbTopo, tlsCfg)); err != nil {
+		if err := pdClient.RecoverStoreLeader(addr(i.InstanceSpec.(*TiKVSpec)), i.leaderCountBeforeRestart, nil, genLeaderCounter(tidbTopo, tlsCfg)); err != nil {
 			if utils.IsTimeoutOrMaxRetry(err) {
 				ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger).
 					Warnf("Ignore recovering store leader from %s, %v", i.ID(), err)
