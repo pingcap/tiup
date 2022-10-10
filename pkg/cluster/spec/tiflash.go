@@ -614,6 +614,7 @@ func (i *TiFlashInstance) setTLSConfig(ctx context.Context, enableTLS bool, conf
 	return configs, nil
 }
 
+// getTiFlashRequiredCPUFlagsWithVersion return required CPU flags for TiFlash by given version
 func getTiFlashRequiredCPUFlagsWithVersion(clusterVersion string, arch string) string {
 	arch = strings.ToLower(arch)
 	if arch == "x86_64" || arch == "amd64" {
