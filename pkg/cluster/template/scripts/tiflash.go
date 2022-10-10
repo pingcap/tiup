@@ -120,6 +120,7 @@ func (c *TiFlashScript) WithNumaCores(numaCores string) *TiFlashScript {
 	return c
 }
 
+// WithRequiredCPUFlags set required CPU flags for TiFlashScript
 func (c *TiFlashScript) WithRequiredCPUFlags(requiredCPUFlags string) *TiFlashScript {
 	c.RequiredCPUFlags = requiredCPUFlags
 	return c
