@@ -15,6 +15,25 @@ stat=$(time sync)
 echo ok
 echo $stat
 
+{{- if .RequiredCPUFlags }}
+if [ -f "/proc/cpuinfo" ]; then
+    IFS_OLD=$IFS
+    IFS=' '
+    line="{{.RequiredCPUFlags}}"
+    for flag in $(echo $line); do
+        grep -q ${flag} /proc/cpuinfo
+        if [ $? -ne 0 ]; then
+            err_msg="Fail to check CPU flags: ${flag} not supported. Require ${line}"
+            echo ${err_msg}
+            echo ${err_msg} >>"{{.LogDir}}/tiflash_stderr.log"
+            exit -1
+        fi
+
+    done
+    IFS=$IFS_OLD
+fi
+{{- end}}
+
 {{- if and .NumaNode .NumaCores}}
 exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} -C {{.NumaCores}} bin/tiflash/tiflash server \
 {{- else if .NumaNode}}

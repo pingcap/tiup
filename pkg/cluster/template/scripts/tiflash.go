@@ -42,6 +42,7 @@ type TiFlashScript struct {
 	Endpoints            []*PDScript
 	TiDBStatusAddrs      string
 	PDAddrs              string
+	RequiredCPUFlags     string
 }
 
 // NewTiFlashScript returns a TiFlashScript with given arguments
@@ -116,6 +117,11 @@ func (c *TiFlashScript) WithNumaNode(numa string) *TiFlashScript {
 // WithNumaCores set NumaCores field of TiFlashScript
 func (c *TiFlashScript) WithNumaCores(numaCores string) *TiFlashScript {
 	c.NumaCores = numaCores
+	return c
+}
+
+func (c *TiFlashScript) WithRequiredCPUFlags(requiredCPUFlags string) *TiFlashScript {
+	c.RequiredCPUFlags = requiredCPUFlags
 	return c
 }
 
