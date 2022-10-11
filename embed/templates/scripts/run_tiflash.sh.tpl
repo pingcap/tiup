@@ -19,11 +19,12 @@ echo $stat
 if [ -f "/proc/cpuinfo" ]; then
     IFS_OLD=$IFS
     IFS=' '
-    line="{{.RequiredCPUFlags}}"
-    for flag in $(echo $line); do
-        grep -q ${flag} /proc/cpuinfo
-        if [ $? -ne 0 ]; then
-            err_msg="Fail to check CPU flags: ${flag} not supported. Require ${line}"
+    required_cpu_flags="{{.RequiredCPUFlags}}"
+    for flag in $(echo $required_cpu_flags); do
+        if grep -q ${flag} /proc/cpuinfo; then
+            true
+        else
+            err_msg="Fail to check CPU flags: \`${flag}\` not supported. Require \`${required_cpu_flags}\`."
             echo ${err_msg}
             echo ${err_msg} >>"{{.LogDir}}/tiflash_stderr.log"
             exit -1

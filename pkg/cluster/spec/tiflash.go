@@ -106,6 +106,7 @@ const (
 	TiFlashStorageKeyMainDirs   string = "storage.main.dir"
 	TiFlashStorageKeyLatestDirs string = "storage.latest.dir"
 	TiFlashStorageKeyRaftDirs   string = "storage.raft.dir"
+	TiFlashRequiredCPUFlags     string = "avx2 popcnt movbe"
 )
 
 // GetOverrideDataDir returns the data dir.
@@ -619,7 +620,7 @@ func getTiFlashRequiredCPUFlagsWithVersion(clusterVersion string, arch string) s
 	arch = strings.ToLower(arch)
 	if arch == "x86_64" || arch == "amd64" {
 		if tidbver.TiFlashRequireCPUFlagAVX2(clusterVersion) {
-			return "avx2 popcnt movbe"
+			return TiFlashRequiredCPUFlags
 		}
 	}
 	return ""
