@@ -10,11 +10,6 @@ export RUST_BACKTRACE=1
 export TZ=${TZ:-/etc/localtime}
 export LD_LIBRARY_PATH={{.DeployDir}}/bin/tiflash:$LD_LIBRARY_PATH
 
-echo -n 'sync ... '
-stat=$(time sync)
-echo ok
-echo $stat
-
 {{- if .RequiredCPUFlags }}
 if [ -f "/proc/cpuinfo" ]; then
     IFS_OLD=$IFS
@@ -29,11 +24,15 @@ if [ -f "/proc/cpuinfo" ]; then
             echo ${err_msg} >>"{{.LogDir}}/tiflash_stderr.log"
             exit -1
         fi
-
     done
     IFS=$IFS_OLD
 fi
 {{- end}}
+
+echo -n 'sync ... '
+stat=$(time sync)
+echo ok
+echo $stat
 
 {{- if and .NumaNode .NumaCores}}
 exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} -C {{.NumaCores}} bin/tiflash/tiflash server \
