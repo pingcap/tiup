@@ -17,7 +17,6 @@ on:
       - 'doc/**'
       - 'embed/templates/examples/**'
       - 'embed/templates/examples/**'
-      - 'components/bench/**'
       - 'components/client/**'
       - 'components/ctl/**'
       - 'components/cluster/**'
