@@ -34,8 +34,7 @@ type ClusterOperate struct {
 // Execute implements the Task interface
 func (c *ClusterOperate) Execute(ctx context.Context) error {
 	var (
-		err         error
-		printStatus bool = true
+		err error
 	)
 	var opErrMsg = [...]string{
 		"failed to start",
@@ -48,34 +47,17 @@ func (c *ClusterOperate) Execute(ctx context.Context) error {
 		"failed to destroy tombstone",
 	}
 	switch c.op {
-	/* deprecated
-	case operator.StartOperation:
-		err = operator.Start(ctx, c.spec, c.options, false, c.tlsCfg)
-	case operator.StopOperation:
-		err = operator.Stop(ctx, c.spec, c.options, false, c.tlsCfg)
-	*/
-	case operator.RestartOperation:
-		err = operator.Restart(ctx, c.spec, c.options, c.tlsCfg)
-	case operator.DestroyOperation:
-		err = operator.Destroy(ctx, c.spec, c.options)
-	case operator.UpgradeOperation:
-		err = operator.Upgrade(ctx, c.spec, c.options, c.tlsCfg)
 	case operator.ScaleInOperation:
 		err = operator.ScaleIn(ctx, c.spec, c.options, c.tlsCfg)
-		printStatus = false
+		// printStatus = false
 	case operator.DestroyTombstoneOperation:
 		_, err = operator.DestroyTombstone(ctx, c.spec, false, c.options, c.tlsCfg)
-		printStatus = false
 	default:
 		return errors.Errorf("nonsupport %s", c.op)
 	}
 
 	if err != nil {
 		return errors.Annotatef(err, opErrMsg[c.op])
-	}
-
-	if printStatus {
-		operator.PrintClusterStatus(ctx, c.spec)
 	}
 
 	return nil

@@ -64,6 +64,7 @@ type Playground struct {
 	tidbs            []*instance.TiDBInstance
 	tiflashs         []*instance.TiFlashInstance
 	ticdcs           []*instance.TiCDC
+	tikvCdcs         []*instance.TiKVCDC
 	pumps            []*instance.Pump
 	drainers         []*instance.Drainer
 	startedInstances []instance.Instance
@@ -309,6 +310,12 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 				p.ticdcs = append(p.ticdcs[:i], p.ticdcs[i+1:]...)
 			}
 		}
+	case spec.ComponentTiKVCDC:
+		for i := 0; i < len(p.tikvCdcs); i++ {
+			if p.tikvCdcs[i].Pid() == pid {
+				p.tikvCdcs = append(p.tikvCdcs[:i], p.tikvCdcs[i+1:]...)
+			}
+		}
 	case spec.ComponentTiFlash:
 		for i := 0; i < len(p.tiflashs); i++ {
 			if p.tiflashs[i].Pid() == pid {
@@ -409,6 +416,8 @@ func (p *Playground) sanitizeComponentConfig(cid string, cfg *instance.Config) e
 		return p.sanitizeConfig(p.bootOptions.TiFlash, cfg)
 	case spec.ComponentCDC:
 		return p.sanitizeConfig(p.bootOptions.TiCDC, cfg)
+	case spec.ComponentTiKVCDC:
+		return p.sanitizeConfig(p.bootOptions.TiKVCDC, cfg)
 	case spec.ComponentPump:
 		return p.sanitizeConfig(p.bootOptions.Pump, cfg)
 	case spec.ComponentDrainer:
@@ -419,7 +428,8 @@ func (p *Playground) sanitizeComponentConfig(cid string, cfg *instance.Config) e
 }
 
 func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) error {
-	version, err := environment.GlobalEnv().V1Repository().ResolveComponentVersion(inst.Component(), p.bootOptions.Version)
+	boundVersion := p.bindVersion(inst.Component(), p.bootOptions.Version)
+	version, err := environment.GlobalEnv().V1Repository().ResolveComponentVersion(inst.Component(), boundVersion)
 	if err != nil {
 		return err
 	}
@@ -593,6 +603,13 @@ func (p *Playground) WalkInstances(fn func(componentID string, ins instance.Inst
 		}
 	}
 
+	for _, ins := range p.tikvCdcs {
+		err := fn(spec.ComponentTiKVCDC, ins)
+		if err != nil {
+			return err
+		}
+	}
+
 	for _, ins := range p.drainers {
 		err := fn(spec.ComponentDrainer, ins)
 		if err != nil {
@@ -670,6 +687,10 @@ func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins i
 		inst := instance.NewTiCDC(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds)
 		ins = inst
 		p.ticdcs = append(p.ticdcs, inst)
+	case spec.ComponentTiKVCDC:
+		inst := instance.NewTiKVCDC(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds)
+		ins = inst
+		p.tikvCdcs = append(p.tikvCdcs, inst)
 	case spec.ComponentPump:
 		inst := instance.NewPump(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds)
 		ins = inst
@@ -690,7 +711,7 @@ func (p *Playground) waitAllTidbUp() []string {
 	if len(p.tidbs) > 0 {
 		var wg sync.WaitGroup
 		var appendMutex sync.Mutex
-		bars := progress.NewMultiBar(color.YellowString("Waiting for tidb instances ready\n"))
+		bars := progress.NewMultiBar(color.YellowString("Waiting for tidb instances ready"))
 		for _, db := range p.tidbs {
 			wg.Add(1)
 			prefix := color.YellowString(db.Addr())
@@ -734,7 +755,7 @@ func (p *Playground) waitAllTiFlashUp() {
 		)
 
 		var wg sync.WaitGroup
-		bars := progress.NewMultiBar(color.YellowString("Waiting for tiflash instances ready\n"))
+		bars := progress.NewMultiBar(color.YellowString("Waiting for tiflash instances ready"))
 		for _, flash := range p.tiflashs {
 			wg.Add(1)
 			prefix := color.YellowString(flash.Addr())
@@ -765,6 +786,15 @@ func (p *Playground) waitAllTiFlashUp() {
 	}
 }
 
+func (p *Playground) bindVersion(comp string, version string) (bindVersion string) {
+	switch comp {
+	case spec.ComponentTiKVCDC:
+		return p.bootOptions.TiKVCDC.Version
+	default:
+		return version
+	}
+}
+
 func (p *Playground) bootCluster(ctx context.Context, env *environment.Environment, options *BootOptions) error {
 	for _, cfg := range []*instance.Config{
 		&options.PD,
@@ -773,6 +803,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		&options.TiFlash,
 		&options.Pump,
 		&options.Drainer,
+		&options.TiKVCDC,
 	} {
 		path, err := getAbsolutePath(cfg.ConfigPath)
 		if err != nil {
@@ -807,6 +838,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		{spec.ComponentPump, options.Pump},
 		{spec.ComponentTiDB, options.TiDB},
 		{spec.ComponentCDC, options.TiCDC},
+		{spec.ComponentTiKVCDC, options.TiKVCDC},
 		{spec.ComponentDrainer, options.Drainer},
 		{spec.ComponentTiFlash, options.TiFlash},
 	}
@@ -997,6 +1029,11 @@ func (p *Playground) terminate(sig syscall.Signal) {
 		}
 	}
 	for _, inst := range p.ticdcs {
+		if inst.Process != nil {
+			kill(inst.Component(), inst.Pid(), inst.Wait)
+		}
+	}
+	for _, inst := range p.tikvCdcs {
 		if inst.Process != nil {
 			kill(inst.Component(), inst.Pid(), inst.Wait)
 		}

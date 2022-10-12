@@ -37,6 +37,7 @@ type PrometheusConfig struct {
 	PumpAddrs                 []string
 	DrainerAddrs              []string
 	CDCAddrs                  []string
+	TiKVCDCAddrs              []string
 	BlackboxExporterAddrs     []string
 	LightningAddrs            []string
 	MonitoredServers          []string
@@ -116,6 +117,12 @@ func (c *PrometheusConfig) AddDrainer(ip string, port uint64) *PrometheusConfig 
 // AddCDC add a cdc address
 func (c *PrometheusConfig) AddCDC(ip string, port uint64) *PrometheusConfig {
 	c.CDCAddrs = append(c.CDCAddrs, fmt.Sprintf("%s:%d", ip, port))
+	return c
+}
+
+// AddTiKVCDC add a tikv-cdc address
+func (c *PrometheusConfig) AddTiKVCDC(ip string, port uint64) *PrometheusConfig {
+	c.TiKVCDCAddrs = append(c.TiKVCDCAddrs, fmt.Sprintf("%s:%d", ip, port))
 	return c
 }
 

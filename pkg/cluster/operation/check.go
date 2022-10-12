@@ -523,19 +523,19 @@ func CheckServices(ctx context.Context, e ctxt.Executor, host, service string, d
 		return result
 	}
 
-	active, err := GetServiceStatus(ctx, e, service+".service")
+	active, _, err := GetServiceStatus(ctx, e, service+".service")
 	if err != nil {
 		result.Err = err
 	}
 
 	switch disable {
 	case false:
-		if !strings.Contains(active, "running") {
+		if active != "active" {
 			result.Err = fmt.Errorf("service %s is not running", service)
 			result.Msg = fmt.Sprintf("start %s.service", service)
 		}
 	case true:
-		if strings.Contains(active, "running") {
+		if active == "active" {
 			result.Err = fmt.Errorf("service %s is running but should be stopped", service)
 			result.Msg = fmt.Sprintf("stop %s.service", service)
 		}
@@ -820,14 +820,14 @@ func CheckFIOResult(rr, rw, lat []byte) []*CheckResult {
 	return results
 }
 
-// CheckTHP checks THP in /sys/kernel/mm/transparent_hugepage/{enabled,defrag}
+// CheckTHP checks THP in /sys/kernel/mm/transparent_hugepage/enabled
 func CheckTHP(ctx context.Context, e ctxt.Executor) *CheckResult {
 	result := &CheckResult{
 		Name: CheckNameTHP,
 	}
 
 	m := module.NewShellModule(module.ShellModuleConfig{
-		Command: fmt.Sprintf(`if [ -d %[1]s ]; then cat %[1]s/{enabled,defrag}; fi`, "/sys/kernel/mm/transparent_hugepage"),
+		Command: fmt.Sprintf(`if [ -d %[1]s ]; then cat %[1]s/enabled; fi`, "/sys/kernel/mm/transparent_hugepage"),
 		Sudo:    true,
 	})
 	stdout, stderr, err := m.Execute(ctx, e)

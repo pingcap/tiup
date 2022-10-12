@@ -107,11 +107,13 @@ type (
 		TiDB           map[string]interface{} `yaml:"tidb"`
 		TiKV           map[string]interface{} `yaml:"tikv"`
 		PD             map[string]interface{} `yaml:"pd"`
+		Dashboard      map[string]interface{} `yaml:"tidb_dashboard"`
 		TiFlash        map[string]interface{} `yaml:"tiflash"`
 		TiFlashLearner map[string]interface{} `yaml:"tiflash-learner"`
 		Pump           map[string]interface{} `yaml:"pump"`
 		Drainer        map[string]interface{} `yaml:"drainer"`
 		CDC            map[string]interface{} `yaml:"cdc"`
+		TiKVCDC        map[string]interface{} `yaml:"kvcdc"`
 		Grafana        map[string]string      `yaml:"grafana"`
 	}
 
@@ -124,9 +126,11 @@ type (
 		TiKVServers      []*TiKVSpec          `yaml:"tikv_servers"`
 		TiFlashServers   []*TiFlashSpec       `yaml:"tiflash_servers"`
 		PDServers        []*PDSpec            `yaml:"pd_servers"`
+		DashboardServers []*DashboardSpec     `yaml:"tidb_dashboard_servers,omitempty"`
 		PumpServers      []*PumpSpec          `yaml:"pump_servers,omitempty"`
 		Drainers         []*DrainerSpec       `yaml:"drainer_servers,omitempty"`
 		CDCServers       []*CDCSpec           `yaml:"cdc_servers,omitempty"`
+		TiKVCDCServers   []*TiKVCDCSpec       `yaml:"kvcdc_servers,omitempty"`
 		TiSparkMasters   []*TiSparkMasterSpec `yaml:"tispark_masters,omitempty"`
 		TiSparkWorkers   []*TiSparkWorkerSpec `yaml:"tispark_workers,omitempty"`
 		Monitors         []*PrometheusSpec    `yaml:"monitoring_servers"`
@@ -481,10 +485,12 @@ func (s *Specification) Merge(that Topology) Topology {
 		TiDBServers:      append(s.TiDBServers, spec.TiDBServers...),
 		TiKVServers:      append(s.TiKVServers, spec.TiKVServers...),
 		PDServers:        append(s.PDServers, spec.PDServers...),
+		DashboardServers: append(s.DashboardServers, spec.DashboardServers...),
 		TiFlashServers:   append(s.TiFlashServers, spec.TiFlashServers...),
 		PumpServers:      append(s.PumpServers, spec.PumpServers...),
 		Drainers:         append(s.Drainers, spec.Drainers...),
 		CDCServers:       append(s.CDCServers, spec.CDCServers...),
+		TiKVCDCServers:   append(s.TiKVCDCServers, spec.TiKVCDCServers...),
 		TiSparkMasters:   append(s.TiSparkMasters, spec.TiSparkMasters...),
 		TiSparkWorkers:   append(s.TiSparkWorkers, spec.TiSparkWorkers...),
 		Monitors:         append(s.Monitors, spec.Monitors...),
@@ -574,7 +580,7 @@ func setCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) error 
 			clientPort := reflect.Indirect(field).FieldByName("ClientPort").Int()
 			field.Field(j).Set(reflect.ValueOf(fmt.Sprintf("pd-%s-%d", host, clientPort)))
 		case "DataDir":
-			if reflect.Indirect(field).FieldByName("Imported").Interface().(bool) {
+			if imported := reflect.Indirect(field).FieldByName("Imported"); imported.IsValid() && imported.Interface().(bool) {
 				setDefaultDir(globalOptions.DataDir, field.Addr().Interface().(InstanceSpec).Role(), getPort(field), field.Field(j))
 			}
 
@@ -607,7 +613,7 @@ func setCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) error 
 		case "DeployDir":
 			setDefaultDir(globalOptions.DeployDir, field.Addr().Interface().(InstanceSpec).Role(), getPort(field), field.Field(j))
 		case "LogDir":
-			if reflect.Indirect(field).FieldByName("Imported").Interface().(bool) {
+			if imported := reflect.Indirect(field).FieldByName("Imported"); imported.IsValid() && imported.Interface().(bool) {
 				setDefaultDir(globalOptions.LogDir, field.Addr().Interface().(InstanceSpec).Role(), getPort(field), field.Field(j))
 			}
 
@@ -688,14 +694,16 @@ func (s *Specification) ComponentsByStopOrder() (comps []Component) {
 
 // ComponentsByStartOrder return component in the order need to start.
 func (s *Specification) ComponentsByStartOrder() (comps []Component) {
-	// "pd", "tikv", "pump", "tidb", "tiflash", "drainer", "cdc", "prometheus", "grafana", "alertmanager"
+	// "pd", "dashboard", "tikv", "pump", "tidb", "tiflash", "drainer", "cdc", "tikv-cdc", "prometheus", "grafana", "alertmanager"
 	comps = append(comps, &PDComponent{s})
+	comps = append(comps, &DashboardComponent{s})
 	comps = append(comps, &TiKVComponent{s})
 	comps = append(comps, &PumpComponent{s})
 	comps = append(comps, &TiDBComponent{s})
 	comps = append(comps, &TiFlashComponent{s})
 	comps = append(comps, &DrainerComponent{s})
 	comps = append(comps, &CDCComponent{s})
+	comps = append(comps, &TiKVCDCComponent{s})
 	comps = append(comps, &MonitorComponent{s})
 	comps = append(comps, &GrafanaComponent{s})
 	comps = append(comps, &AlertManagerComponent{s})
@@ -706,9 +714,10 @@ func (s *Specification) ComponentsByStartOrder() (comps []Component) {
 
 // ComponentsByUpdateOrder return component in the order need to be updated.
 func (s *Specification) ComponentsByUpdateOrder() (comps []Component) {
-	// "tiflash", "pd", "tikv", "pump", "tidb", "drainer", "cdc", "prometheus", "grafana", "alertmanager"
+	// "tiflash", "pd", "dashboard", "tikv", "pump", "tidb", "drainer", "cdc", "prometheus", "grafana", "alertmanager"
 	comps = append(comps, &TiFlashComponent{s})
 	comps = append(comps, &PDComponent{s})
+	comps = append(comps, &DashboardComponent{s})
 	comps = append(comps, &TiKVComponent{s})
 	comps = append(comps, &PumpComponent{s})
 	comps = append(comps, &TiDBComponent{s})

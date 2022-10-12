@@ -58,6 +58,7 @@ monitored:
   # pd:
   # tiflash:
   # tiflash-learner:
+  # kvcdc:
 
 # # Server configs are used to specify the configuration of PD Servers.
 pd_servers:
@@ -277,6 +278,39 @@ tiflash_servers:
     deploy_dir: /data2/tidb-deploy/tiflash-9001
     data_dir: /data2/tidb-data/tiflash-9001
     log_dir: /data2/tidb-deploy/tiflash-9001/log
+
+# # Server configs are used to specify the configuration of TiKV-CDC Servers.
+kvcdc_servers:
+  - host: 10.0.1.20
+    # # SSH port of the server.
+    # ssh_port: 22
+    # # TiKV-CDC Server communication port.
+    port: 8600
+    # # TiKV-CDC Server data storage directory.
+    data_dir: "/data1/tidb-data/tikv-cdc-8600"
+    # # TiKV-CDC Server log file storage directory.
+    log_dir: "/data1/tidb-deploy/tikv-cdc-8600/log"
+  - host: 10.0.1.21
+    data_dir: "/data1/tidb-data/tikv-cdc-8600"
+    log_dir: "/data1/tidb-deploy/tikv-cdc-8600/log"
+
+# # Server configs are used to specify the configuration of TiDB Dashboard Servers.
+tidb_dashboard_servers:
+  # # The ip address of the PD Server.
+  - host: 10.0.1.11
+    # # SSH port of the server.
+    # ssh_port: 22
+    # # port of TiDB Dashboard
+    # port: 2380
+    # # TiDB Dashboard deployment file, startup script, configuration file storage directory.
+    # deploy_dir: "/tidb-deploy/tidb-dashboard-23333"
+    # # PD Server data storage directory.
+    # data_dir: "/tidb-data/tidb-dashboard-23333"
+    # # PD Server log file storage directory.
+    # log_dir: "/tidb-deploy/tidb-dashboard-23333/log"
+    # # numa node bindings.
+    # numa_node: "0,1"
+
 
 # # Server configs are used to specify the configuration of Prometheus Server.  
 monitoring_servers:
