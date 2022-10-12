@@ -19,6 +19,7 @@ topology:
       binlog.enable: true
     tikv: {}
     pd: {}
+    tidb_dashboard: {}
     tiflash: {}
     tiflash-learner: {}
     pump: {}

@@ -42,6 +42,9 @@ exec bin/cdc server \
 {{- if .TZ}}
     --tz "{{.TZ}}" \
 {{- end}}
+{{- if .ClusterID}}
+    --cluster-id {{.ClusterID}} \
+{{- end}}
 {{- if .ConfigFileEnabled}}
     --config conf/cdc.toml \
 {{- end}}

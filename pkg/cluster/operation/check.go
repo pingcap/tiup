@@ -523,19 +523,19 @@ func CheckServices(ctx context.Context, e ctxt.Executor, host, service string, d
 		return result
 	}
 
-	active, err := GetServiceStatus(ctx, e, service+".service")
+	active, _, err := GetServiceStatus(ctx, e, service+".service")
 	if err != nil {
 		result.Err = err
 	}
 
 	switch disable {
 	case false:
-		if !strings.Contains(active, "running") {
+		if active != "active" {
 			result.Err = fmt.Errorf("service %s is not running", service)
 			result.Msg = fmt.Sprintf("start %s.service", service)
 		}
 	case true:
-		if strings.Contains(active, "running") {
+		if active == "active" {
 			result.Err = fmt.Errorf("service %s is running but should be stopped", service)
 			result.Msg = fmt.Sprintf("stop %s.service", service)
 		}
