@@ -27,20 +27,20 @@ import (
 
 // DashboardSpec represents the Dashboard topology specification in topology.yaml
 type DashboardSpec struct {
-	Host            string                 `yaml:"host"`
-	SSHPort         int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Version         string                 `yaml:"version,omitempty"`
-	Patched         bool                   `yaml:"patched,omitempty"`
-	IgnoreExporter  bool                   `yaml:"ignore_exporter,omitempty"`
-	Port            int                    `yaml:"port" default:"12333"`
-	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
-	DataDir         string                 `yaml:"data_dir,omitempty"`
-	LogDir          string                 `yaml:"log_dir,omitempty"`
-	NumaNode        string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
-	Config          map[string]interface{} `yaml:"config,omitempty" validate:"config:ignore"`
-	ResourceControl meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
-	Arch            string                 `yaml:"arch,omitempty"`
-	OS              string                 `yaml:"os,omitempty"`
+	Host            string               `yaml:"host"`
+	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
+	Version         string               `yaml:"version,omitempty"`
+	Patched         bool                 `yaml:"patched,omitempty"`
+	IgnoreExporter  bool                 `yaml:"ignore_exporter,omitempty"`
+	Port            int                  `yaml:"port" default:"12333"`
+	DeployDir       string               `yaml:"deploy_dir,omitempty"`
+	DataDir         string               `yaml:"data_dir,omitempty"`
+	LogDir          string               `yaml:"log_dir,omitempty"`
+	NumaNode        string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
+	Config          map[string]any       `yaml:"config,omitempty" validate:"config:ignore"`
+	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
+	Arch            string               `yaml:"arch,omitempty"`
+	OS              string               `yaml:"os,omitempty"`
 }
 
 // Status queries current status of the instance
@@ -199,6 +199,6 @@ func (i *DashboardInstance) InitConfig(
 }
 
 // setTLSConfig set TLS Config to support enable/disable TLS
-func (i *DashboardInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
+func (i *DashboardInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error) {
 	return nil, nil
 }

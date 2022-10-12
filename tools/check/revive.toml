@@ -43,7 +43,7 @@ warningCode = 0
 [rule.redefines-builtin-id]
 [rule.waitgroup-by-value]
 [rule.unconditional-recursion]
-#[rule.use-any]
+[rule.use-any]
 
 [rule.cognitive-complexity]
   severity = "warning"

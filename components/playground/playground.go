@@ -107,11 +107,11 @@ func (p *Playground) handleDisplay(r io.Writer) (err error) {
 	t := tabby.NewCustom(w)
 
 	// TODO add more info.
-	header := []interface{}{"Pid", "Role", "Uptime"}
+	header := []any{"Pid", "Role", "Uptime"}
 	t.AddHeader(header...)
 
 	err = p.WalkInstances(func(componentID string, ins instance.Instance) error {
-		row := make([]interface{}, len(header))
+		row := make([]any, len(header))
 		row[0] = strconv.Itoa(ins.Pid())
 		row[1] = componentID
 		row[2] = ins.Uptime()

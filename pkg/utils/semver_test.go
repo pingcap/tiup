@@ -9,7 +9,7 @@ var _ = Suite(&TestSemverSuite{})
 type TestSemverSuite struct{}
 
 func (s *TestSemverSuite) TestSemverc(c *C) {
-	cases := [][]interface{}{
+	cases := [][]any{
 		{"v0.0.1", "v0.0.1", true},
 		{"0.0.1", "v0.0.1", true},
 		{"invalid", "vinvalid", false},

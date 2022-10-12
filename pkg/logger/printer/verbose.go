@@ -27,7 +27,7 @@ func init() {
 }
 
 // Verbose logs verbose messages
-func Verbose(format string, args ...interface{}) {
+func Verbose(format string, args ...any) {
 	if !verbose {
 		return
 	}
@@ -35,7 +35,7 @@ func Verbose(format string, args ...interface{}) {
 }
 
 // Verbose logs verbose messages
-func (l *Logger) Verbose(format string, args ...interface{}) {
+func (l *Logger) Verbose(format string, args ...any) {
 	if !verbose {
 		return
 	}

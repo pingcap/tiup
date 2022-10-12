@@ -336,12 +336,12 @@ func (pc *PDClient) GetMembers() (*pdpb.GetMembersResponse, error) {
 }
 
 // GetConfig returns all PD configs
-func (pc *PDClient) GetConfig() (map[string]interface{}, error) {
+func (pc *PDClient) GetConfig() (map[string]any, error) {
 	endpoints := pc.getEndpoints(pdConfigURI)
 
 	// We don't use the `github.com/tikv/pd/server/config` directly because
 	// there is compatible issue: https://github.com/pingcap/tiup/issues/637
-	pdConfig := map[string]interface{}{}
+	pdConfig := map[string]any{}
 
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		body, err := pc.httpClient.Get(pc.ctx, endpoint)
@@ -361,7 +361,7 @@ func (pc *PDClient) GetConfig() (map[string]interface{}, error) {
 // GetClusterID return cluster ID
 func (pc *PDClient) GetClusterID() (uint64, error) {
 	endpoints := pc.getEndpoints(pdClusterIDURI)
-	var clusterID map[string]interface{}
+	var clusterID map[string]any
 
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		body, err := pc.httpClient.Get(pc.ctx, endpoint)
@@ -370,7 +370,7 @@ func (pc *PDClient) GetClusterID() (uint64, error) {
 		}
 		d := json.NewDecoder(bytes.NewBuffer(body))
 		d.UseNumber()
-		clusterID = make(map[string]interface{})
+		clusterID = make(map[string]any)
 		return nil, d.Decode(&clusterID)
 	})
 	if err != nil {
@@ -841,7 +841,7 @@ func (pc *PDClient) SetReplicationConfig(key string, value int) error {
 		return nil
 	}
 
-	data := map[string]interface{}{"set": map[string]interface{}{key: value}}
+	data := map[string]any{"set": map[string]any{key: value}}
 	body, err := json.Marshal(data)
 	if err != nil {
 		return err
@@ -858,7 +858,7 @@ func (pc *PDClient) SetAllStoreLimits(value int) error {
 		return nil
 	}
 
-	data := map[string]interface{}{"rate": value}
+	data := map[string]any{"rate": value}
 	body, err := json.Marshal(data)
 	if err != nil {
 		return err

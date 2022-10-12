@@ -63,7 +63,7 @@ func (ev *EventBus) PublishTaskProgress(task fmt.Stringer, progress string) {
 }
 
 // Subscribe subscribes events.
-func (ev *EventBus) Subscribe(eventName EventKind, handler interface{}) {
+func (ev *EventBus) Subscribe(eventName EventKind, handler any) {
 	err := ev.eventBus.Subscribe(string(eventName), handler)
 	if err != nil {
 		panic(err)
@@ -71,7 +71,7 @@ func (ev *EventBus) Subscribe(eventName EventKind, handler interface{}) {
 }
 
 // Unsubscribe unsubscribes events.
-func (ev *EventBus) Unsubscribe(eventName EventKind, handler interface{}) {
+func (ev *EventBus) Unsubscribe(eventName EventKind, handler any) {
 	err := ev.eventBus.Unsubscribe(string(eventName), handler)
 	if err != nil {
 		panic(err)

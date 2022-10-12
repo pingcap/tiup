@@ -89,9 +89,9 @@ type (
 type (
 	// DMServerConfigs represents the server runtime configuration
 	DMServerConfigs struct {
-		Master  map[string]interface{} `yaml:"master"`
-		Worker  map[string]interface{} `yaml:"worker"`
-		Grafana map[string]string      `yaml:"grafana"`
+		Master  map[string]any    `yaml:"master"`
+		Worker  map[string]any    `yaml:"worker"`
+		Grafana map[string]string `yaml:"grafana"`
 	}
 
 	// Specification represents the specification of topology.yaml
@@ -126,18 +126,18 @@ type MasterSpec struct {
 	Patched        bool   `yaml:"patched,omitempty"`
 	IgnoreExporter bool   `yaml:"ignore_exporter,omitempty"`
 	// Use Name to get the name with a default value if it's empty.
-	Name            string                 `yaml:"name,omitempty"`
-	Port            int                    `yaml:"port,omitempty" default:"8261"`
-	PeerPort        int                    `yaml:"peer_port,omitempty" default:"8291"`
-	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
-	DataDir         string                 `yaml:"data_dir,omitempty"`
-	LogDir          string                 `yaml:"log_dir,omitempty"`
-	NumaNode        string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
-	Config          map[string]interface{} `yaml:"config,omitempty" validate:"config:ignore"`
-	ResourceControl ResourceControl        `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
-	Arch            string                 `yaml:"arch,omitempty"`
-	OS              string                 `yaml:"os,omitempty"`
-	V1SourcePath    string                 `yaml:"v1_source_path,omitempty"`
+	Name            string          `yaml:"name,omitempty"`
+	Port            int             `yaml:"port,omitempty" default:"8261"`
+	PeerPort        int             `yaml:"peer_port,omitempty" default:"8291"`
+	DeployDir       string          `yaml:"deploy_dir,omitempty"`
+	DataDir         string          `yaml:"data_dir,omitempty"`
+	LogDir          string          `yaml:"log_dir,omitempty"`
+	NumaNode        string          `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
+	Config          map[string]any  `yaml:"config,omitempty" validate:"config:ignore"`
+	ResourceControl ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
+	Arch            string          `yaml:"arch,omitempty"`
+	OS              string          `yaml:"os,omitempty"`
+	V1SourcePath    string          `yaml:"v1_source_path,omitempty"`
 }
 
 // Status queries current status of the instance
@@ -198,16 +198,16 @@ type WorkerSpec struct {
 	Patched        bool   `yaml:"patched,omitempty"`
 	IgnoreExporter bool   `yaml:"ignore_exporter,omitempty"`
 	// Use Name to get the name with a default value if it's empty.
-	Name            string                 `yaml:"name,omitempty"`
-	Port            int                    `yaml:"port,omitempty" default:"8262"`
-	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
-	DataDir         string                 `yaml:"data_dir,omitempty"`
-	LogDir          string                 `yaml:"log_dir,omitempty"`
-	NumaNode        string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
-	Config          map[string]interface{} `yaml:"config,omitempty" validate:"config:ignore"`
-	ResourceControl ResourceControl        `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
-	Arch            string                 `yaml:"arch,omitempty"`
-	OS              string                 `yaml:"os,omitempty"`
+	Name            string          `yaml:"name,omitempty"`
+	Port            int             `yaml:"port,omitempty" default:"8262"`
+	DeployDir       string          `yaml:"deploy_dir,omitempty"`
+	DataDir         string          `yaml:"data_dir,omitempty"`
+	LogDir          string          `yaml:"log_dir,omitempty"`
+	NumaNode        string          `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
+	Config          map[string]any  `yaml:"config,omitempty" validate:"config:ignore"`
+	ResourceControl ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
+	Arch            string          `yaml:"arch,omitempty"`
+	OS              string          `yaml:"os,omitempty"`
 }
 
 // Status queries current status of the instance
@@ -256,7 +256,7 @@ func (s *WorkerSpec) IgnoreMonitorAgent() bool {
 }
 
 // UnmarshalYAML sets default values when unmarshaling the topology file
-func (s *Specification) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (s *Specification) UnmarshalYAML(unmarshal func(any) error) error {
 	type topology Specification
 	if err := unmarshal((*topology)(s)); err != nil {
 		return err
@@ -716,7 +716,7 @@ func (s *Specification) Merge(that spec.Topology) spec.Topology {
 }
 
 // fillDefaults tries to fill custom fields to their default values
-func fillDMCustomDefaults(globalOptions *GlobalOptions, data interface{}) error {
+func fillDMCustomDefaults(globalOptions *GlobalOptions, data any) error {
 	v := reflect.ValueOf(data).Elem()
 	t := v.Type()
 

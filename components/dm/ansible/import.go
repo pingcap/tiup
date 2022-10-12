@@ -193,9 +193,9 @@ func (im *Importer) fetchFile(ctx context.Context, host string, port int, fname 
 	return
 }
 
-func setConfig(config *map[string]interface{}, k string, v interface{}) {
+func setConfig(config *map[string]any, k string, v any) {
 	if *config == nil {
-		*config = make(map[string]interface{})
+		*config = make(map[string]any)
 	}
 
 	(*config)[k] = v

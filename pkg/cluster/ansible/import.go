@@ -115,7 +115,7 @@ func parseInventoryFile(invFile io.Reader) (string, *spec.ClusterMeta, *aini.Inv
 
 	if enableBinlog, err := strconv.ParseBool(grp.Vars["enable_binlog"]); err == nil && enableBinlog {
 		if clsMeta.Topology.ServerConfigs.TiDB == nil {
-			clsMeta.Topology.ServerConfigs.TiDB = make(map[string]interface{})
+			clsMeta.Topology.ServerConfigs.TiDB = make(map[string]any)
 		}
 		clsMeta.Topology.ServerConfigs.TiDB["binlog.enable"] = enableBinlog
 	}
@@ -143,16 +143,16 @@ func uniqueVar(key string, hosts map[string]*aini.Host) []string {
 }
 
 // parse config files
-func parseConfigFile(cfgfile string) (map[string]interface{}, error) {
-	srvConfigs := make(map[string]interface{})
+func parseConfigFile(cfgfile string) (map[string]any, error) {
+	srvConfigs := make(map[string]any)
 	if _, err := toml.DecodeFile(cfgfile, &srvConfigs); err != nil {
 		return nil, errors.Annotate(err, "decode toml file")
 	}
 	return spec.FlattenMap(srvConfigs), nil
 }
 
-func diffConfigs(configs []map[string]interface{}) (global map[string]interface{}, locals []map[string]interface{}) {
-	global = make(map[string]interface{})
+func diffConfigs(configs []map[string]any) (global map[string]any, locals []map[string]any) {
+	global = make(map[string]any)
 	keySet := set.NewStringSet()
 
 	// parse all configs from file
@@ -214,7 +214,7 @@ func CommentConfig(clsName string) error {
 // LoadConfig files to clusterMeta, include tidbservers, tikvservers, pdservers pumpservers and drainerservers
 func LoadConfig(clsName string, cls *spec.ClusterMeta) error {
 	// deal with tidb config
-	configs := []map[string]interface{}{}
+	configs := []map[string]any{}
 	for _, srv := range cls.Topology.TiDBServers {
 		prefixkey := spec.ComponentTiDB
 		fname := spec.ClusterPath(clsName, spec.AnsibleImportedConfigPath, fmt.Sprintf("%s-%s-%d.toml", prefixkey, srv.Host, srv.Port))
@@ -231,7 +231,7 @@ func LoadConfig(clsName string, cls *spec.ClusterMeta) error {
 	}
 
 	// deal with tikv config
-	configs = []map[string]interface{}{}
+	configs = []map[string]any{}
 	for _, srv := range cls.Topology.TiKVServers {
 		prefixkey := spec.ComponentTiKV
 		fname := spec.ClusterPath(clsName, spec.AnsibleImportedConfigPath, fmt.Sprintf("%s-%s-%d.toml", prefixkey, srv.Host, srv.Port))
@@ -248,7 +248,7 @@ func LoadConfig(clsName string, cls *spec.ClusterMeta) error {
 	}
 
 	// deal with pd config
-	configs = []map[string]interface{}{}
+	configs = []map[string]any{}
 	for _, srv := range cls.Topology.PDServers {
 		prefixkey := spec.ComponentPD
 		fname := spec.ClusterPath(clsName, spec.AnsibleImportedConfigPath, fmt.Sprintf("%s-%s-%d.toml", prefixkey, srv.Host, srv.ClientPort))
@@ -265,7 +265,7 @@ func LoadConfig(clsName string, cls *spec.ClusterMeta) error {
 	}
 
 	// deal with pump config
-	configs = []map[string]interface{}{}
+	configs = []map[string]any{}
 	for _, srv := range cls.Topology.PumpServers {
 		prefixkey := spec.ComponentPump
 		fname := spec.ClusterPath(clsName, spec.AnsibleImportedConfigPath, fmt.Sprintf("%s-%s-%d.toml", prefixkey, srv.Host, srv.Port))
@@ -282,7 +282,7 @@ func LoadConfig(clsName string, cls *spec.ClusterMeta) error {
 	}
 
 	// deal with drainer config
-	configs = []map[string]interface{}{}
+	configs = []map[string]any{}
 	for _, srv := range cls.Topology.Drainers {
 		prefixkey := spec.ComponentDrainer
 		fname := spec.ClusterPath(clsName, spec.AnsibleImportedConfigPath, fmt.Sprintf("%s-%s-%d.toml", prefixkey, srv.Host, srv.Port))

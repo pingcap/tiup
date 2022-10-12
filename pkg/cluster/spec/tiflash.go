@@ -40,29 +40,29 @@ import (
 
 // TiFlashSpec represents the TiFlash topology specification in topology.yaml
 type TiFlashSpec struct {
-	Host                 string                 `yaml:"host"`
-	SSHPort              int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported             bool                   `yaml:"imported,omitempty"`
-	Patched              bool                   `yaml:"patched,omitempty"`
-	IgnoreExporter       bool                   `yaml:"ignore_exporter,omitempty"`
-	TCPPort              int                    `yaml:"tcp_port" default:"9000"`
-	HTTPPort             int                    `yaml:"http_port" default:"8123"`
-	FlashServicePort     int                    `yaml:"flash_service_port" default:"3930"`
-	FlashProxyPort       int                    `yaml:"flash_proxy_port" default:"20170"`
-	FlashProxyStatusPort int                    `yaml:"flash_proxy_status_port" default:"20292"`
-	StatusPort           int                    `yaml:"metrics_port" default:"8234"`
-	DeployDir            string                 `yaml:"deploy_dir,omitempty"`
-	DataDir              string                 `yaml:"data_dir,omitempty" validate:"data_dir:expandable"`
-	LogDir               string                 `yaml:"log_dir,omitempty"`
-	TmpDir               string                 `yaml:"tmp_path,omitempty"`
-	Offline              bool                   `yaml:"offline,omitempty"`
-	NumaNode             string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
-	NumaCores            string                 `yaml:"numa_cores,omitempty" validate:"numa_cores:editable"`
-	Config               map[string]interface{} `yaml:"config,omitempty" validate:"config:ignore"`
-	LearnerConfig        map[string]interface{} `yaml:"learner_config,omitempty" validate:"learner_config:ignore"`
-	ResourceControl      meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
-	Arch                 string                 `yaml:"arch,omitempty"`
-	OS                   string                 `yaml:"os,omitempty"`
+	Host                 string               `yaml:"host"`
+	SSHPort              int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
+	Imported             bool                 `yaml:"imported,omitempty"`
+	Patched              bool                 `yaml:"patched,omitempty"`
+	IgnoreExporter       bool                 `yaml:"ignore_exporter,omitempty"`
+	TCPPort              int                  `yaml:"tcp_port" default:"9000"`
+	HTTPPort             int                  `yaml:"http_port" default:"8123"`
+	FlashServicePort     int                  `yaml:"flash_service_port" default:"3930"`
+	FlashProxyPort       int                  `yaml:"flash_proxy_port" default:"20170"`
+	FlashProxyStatusPort int                  `yaml:"flash_proxy_status_port" default:"20292"`
+	StatusPort           int                  `yaml:"metrics_port" default:"8234"`
+	DeployDir            string               `yaml:"deploy_dir,omitempty"`
+	DataDir              string               `yaml:"data_dir,omitempty" validate:"data_dir:expandable"`
+	LogDir               string               `yaml:"log_dir,omitempty"`
+	TmpDir               string               `yaml:"tmp_path,omitempty"`
+	Offline              bool                 `yaml:"offline,omitempty"`
+	NumaNode             string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
+	NumaCores            string               `yaml:"numa_cores,omitempty" validate:"numa_cores:editable"`
+	Config               map[string]any       `yaml:"config,omitempty" validate:"config:ignore"`
+	LearnerConfig        map[string]any       `yaml:"learner_config,omitempty" validate:"learner_config:ignore"`
+	ResourceControl      meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
+	Arch                 string               `yaml:"arch,omitempty"`
+	OS                   string               `yaml:"os,omitempty"`
 }
 
 // Status queries current status of the instance
@@ -114,7 +114,7 @@ func (s *TiFlashSpec) GetOverrideDataDir() (string, error) {
 	getStrings := func(key string) []string {
 		var strs []string
 		if dirsVal, ok := s.Config[key]; ok {
-			if dirs, ok := dirsVal.([]interface{}); ok && len(dirs) > 0 {
+			if dirs, ok := dirsVal.([]any); ok && len(dirs) > 0 {
 				for _, elem := range dirs {
 					if elemStr, ok := elem.(string); ok {
 						elemStr := strings.TrimSuffix(strings.TrimSpace(elemStr), "/")
@@ -283,16 +283,16 @@ func (i *TiFlashInstance) checkIncorrectServerConfigs(key string) error {
 // The configuration is valid only the key-value is defined, and the
 // value is a non-empty string array.
 // Return (key is defined or not, the value is valid or not)
-func isValidStringArray(key string, config map[string]interface{}, couldEmpty bool) (bool, error) {
+func isValidStringArray(key string, config map[string]any, couldEmpty bool) (bool, error) {
 	var (
-		dirsVal          interface{}
+		dirsVal          any
 		isKeyDefined     bool
 		isAllElemsString = true
 	)
 	if dirsVal, isKeyDefined = config[key]; !isKeyDefined {
 		return isKeyDefined, nil
 	}
-	if dirs, ok := dirsVal.([]interface{}); ok && (couldEmpty || len(dirs) > 0) {
+	if dirs, ok := dirsVal.([]any); ok && (couldEmpty || len(dirs) > 0) {
 		// ensure dirs is non-empty string array
 		for _, elem := range dirs {
 			if _, ok := elem.(string); !ok {
@@ -309,7 +309,7 @@ func isValidStringArray(key string, config map[string]interface{}, couldEmpty bo
 
 // checkTiFlashStorageConfig detect the "storage" section in `config`
 // is valid or not.
-func checkTiFlashStorageConfig(config map[string]interface{}) (bool, error) {
+func checkTiFlashStorageConfig(config map[string]any) (bool, error) {
 	var (
 		isStorageDirsDefined bool
 		err                  error
@@ -318,7 +318,7 @@ func checkTiFlashStorageConfig(config map[string]interface{}) (bool, error) {
 		return isStorageDirsDefined, err
 	}
 	if !isStorageDirsDefined {
-		containsStorageSectionKey := func(config map[string]interface{}) (string, bool) {
+		containsStorageSectionKey := func(config map[string]any) (string, bool) {
 			for k := range config {
 				if strings.HasPrefix(k, "storage.") {
 					return k, true
@@ -362,7 +362,7 @@ func (i *TiFlashInstance) CheckIncorrectConfigs() error {
 }
 
 // need to check the configuration after clusterVersion >= v4.0.9.
-func checkTiFlashStorageConfigWithVersion(clusterVersion string, config map[string]interface{}) (bool, error) {
+func checkTiFlashStorageConfigWithVersion(clusterVersion string, config map[string]any) (bool, error) {
 	if tidbver.TiFlashSupportMultiDisksDeployment(clusterVersion) {
 		return checkTiFlashStorageConfig(config)
 	}
@@ -370,7 +370,7 @@ func checkTiFlashStorageConfigWithVersion(clusterVersion string, config map[stri
 }
 
 // InitTiFlashConfig initializes TiFlash config file with the configurations in server_configs
-func (i *TiFlashInstance) initTiFlashConfig(ctx context.Context, cfg *scripts.TiFlashScript, clusterVersion string, src map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
+func (i *TiFlashInstance) initTiFlashConfig(ctx context.Context, cfg *scripts.TiFlashScript, clusterVersion string, src map[string]any, paths meta.DirPaths) (map[string]any, error) {
 	var (
 		pathConfig            string
 		isStorageDirsDefined  bool
@@ -475,11 +475,11 @@ server_configs:
 	return conf, nil
 }
 
-func (i *TiFlashInstance) mergeTiFlashInstanceConfig(clusterVersion string, globalConf, instanceConf map[string]interface{}) (map[string]interface{}, error) {
+func (i *TiFlashInstance) mergeTiFlashInstanceConfig(clusterVersion string, globalConf, instanceConf map[string]any) (map[string]any, error) {
 	var (
 		isStorageDirsDefined bool
 		err                  error
-		conf                 map[string]interface{}
+		conf                 map[string]any
 	)
 	if isStorageDirsDefined, err = checkTiFlashStorageConfigWithVersion(clusterVersion, instanceConf); err != nil {
 		return nil, err
@@ -493,7 +493,7 @@ func (i *TiFlashInstance) mergeTiFlashInstanceConfig(clusterVersion string, glob
 }
 
 // InitTiFlashLearnerConfig initializes TiFlash learner config file
-func (i *TiFlashInstance) InitTiFlashLearnerConfig(ctx context.Context, cfg *scripts.TiFlashScript, clusterVersion string, src map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
+func (i *TiFlashInstance) InitTiFlashLearnerConfig(ctx context.Context, cfg *scripts.TiFlashScript, clusterVersion string, src map[string]any, paths meta.DirPaths) (map[string]any, error) {
 	topo := Specification{}
 	var statusAddr string
 
@@ -540,10 +540,10 @@ server_configs:
 }
 
 // setTLSConfigWithTiFlashLearner set TLS Config to support enable/disable TLS
-func (i *TiFlashInstance) setTLSConfigWithTiFlashLearner(ctx context.Context, enableTLS bool, configs map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
+func (i *TiFlashInstance) setTLSConfigWithTiFlashLearner(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error) {
 	if enableTLS {
 		if configs == nil {
-			configs = make(map[string]interface{})
+			configs = make(map[string]any)
 		}
 		configs["security.ca-path"] = fmt.Sprintf(
 			"%s/tls/%s",
@@ -577,10 +577,10 @@ func (i *TiFlashInstance) setTLSConfigWithTiFlashLearner(ctx context.Context, en
 }
 
 // setTLSConfig set TLS Config to support enable/disable TLS
-func (i *TiFlashInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
+func (i *TiFlashInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error) {
 	if enableTLS {
 		if configs == nil {
-			configs = make(map[string]interface{})
+			configs = make(map[string]any)
 		}
 		configs["security.ca_path"] = fmt.Sprintf(
 			"%s/tls/%s",
