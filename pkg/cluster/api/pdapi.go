@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -531,6 +532,116 @@ func (pc *PDClient) EvictStoreLeader(host string, retryOpt *utils.RetryOption, c
 		return perrs.New("still waiting for the store leaders to transfer")
 	}, *retryOpt); err != nil {
 		return fmt.Errorf("error evicting store leader from %s, %v", host, err)
+	}
+	return nil
+}
+
+// RecoverStoreLeader waits for some leaders to transfer back.
+//
+// Currently, recoverStoreLeader will be considered as succeed in any of the following case
+//
+//  1. 2/3 of leaders are already transferred back.
+//
+//  2. Original leader count is less than 200.
+//     Though the accurate threshold is 57, it can be set to a larger value, for example 200.
+//     Moreover, clusters which have small number of leaders are supposed to has low pressure,
+//     and this recovering strategy may be unnecessary for them. Clusters in production env
+//     usually has thousands of leaders.
+//
+//     Since PD considers it as balance when the leader count delta is less than 10, so
+//     these two conditions should be taken into consideration
+//
+//     - When the original leader count is less than 20, there is possibility that
+//     no leader will transfer back.
+//     For example: The target store's leader count is 19. Other stores' leader count are 9.
+//     There are 20 stores in total. In this case, there may be no leader to transfer back.
+//
+//     - When the leader count is less than 57, there is possibility that only less than 2/3
+//     leaders are transfered back. `(N-10-9 >= 2/3*N) -> (N>=57)`.
+//     For example: The target store's leader count is 56. Other stores' leader count are 46.
+//     There are 57 stores in total. In this case, there may be only 37 leaders to transfer back,
+//     and 37/56 < 2/3. Accordingly, if the target store's leader count is 57, then there may be
+//     38 leaders to transfer back, and 38/57 == 2/3.
+//
+//  3. The leader count has been unchanged for 5 times.
+func (pc *PDClient) RecoverStoreLeader(host string, originalCount int, retryOpt *utils.RetryOption, countLeader func(string) (int, error)) error {
+	// When the leader count is less than certain number, just ignore recovering.
+	if originalCount < 200 {
+		return nil
+	}
+
+	targetCount := originalCount * 2 / 3
+	// The default leadership transfer timeout for one region is 10s,
+	// so set the default value to about 10s (5*2s=10s).
+	// NOTE: PD may not transfer leader to a newly started store in the future,
+	// (check https://github.com/tikv/pd/pull/4762 for details),
+	// so this strategy should also be enhanced later.
+	maxUnchangedTimes := 5
+
+	// Get info of current stores.
+	latestStore, err := pc.GetCurrentStore(host)
+	if err != nil {
+		if errors.Is(err, ErrNoStore) {
+			return nil
+		}
+		return err
+	}
+
+	pc.l().Infof("\tRecovering about %d leaders to store %s, original count is %d...", targetCount, latestStore.Store.Address, originalCount)
+
+	// Wait for the transfer to complete.
+	if retryOpt == nil {
+		retryOpt = &utils.RetryOption{
+			// The default timeout of evicting leader is 600s, so set the recovering timeout to
+			// 2/3 of it should be reasonable. Besides, One local test shows it takes about
+			// 30s to recover 3.6k leaders.
+			Timeout: time.Second * 400,
+			Delay:   time.Second * 2,
+		}
+	}
+
+	lastLeaderCount := math.MaxInt
+	curUnchangedTimes := 0
+	if err := utils.Retry(func() error {
+		currStore, err := pc.GetCurrentStore(host)
+		if err != nil {
+			if errors.Is(err, ErrNoStore) {
+				return nil
+			}
+			return err
+		}
+
+		curLeaderCount, err := countLeader(currStore.Store.Address)
+		if err != nil {
+			return err
+		}
+
+		// Target number of leaders have been transferred back.
+		if curLeaderCount >= targetCount {
+			return nil
+		}
+
+		// Check if the leader count has been unchanged for certain times.
+		if lastLeaderCount == curLeaderCount {
+			curUnchangedTimes += 1
+			if curUnchangedTimes >= maxUnchangedTimes {
+				pc.l().Warnf("\tSkip recovering leaders to %s, because leader count has been unchanged for %d times", host, maxUnchangedTimes)
+				return nil
+			}
+		} else {
+			lastLeaderCount = curLeaderCount
+			curUnchangedTimes = 0
+		}
+
+		pc.l().Infof(
+			"\t  Still waiting for at least %d leaders to transfer back...",
+			targetCount-curLeaderCount,
+		)
+
+		// Return error by default, to make the retry work.
+		return perrs.New("still waiting for the store leaders to transfer back")
+	}, *retryOpt); err != nil {
+		return fmt.Errorf("error recovering store leader to %s, %v", host, err)
 	}
 	return nil
 }
