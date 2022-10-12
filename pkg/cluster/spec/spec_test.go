@@ -393,7 +393,7 @@ item2 = 500
 item5 = 700
 item6 = 600
 `
-	got, err := merge2Toml("tikv", topo.ServerConfigs.TiKV, topo.TiKVServers[0].Config)
+	got, err := Merge2Toml("tikv", topo.ServerConfigs.TiKV, topo.TiKVServers[0].Config)
 	c.Assert(err, IsNil)
 	c.Assert(string(got), DeepEquals, expected)
 
@@ -407,7 +407,7 @@ item6 = 600
 gc-ttl = 43200
 log-level = "debug"
 `
-	got, err = merge2Toml("kvcdc", topo.ServerConfigs.TiKVCDC, topo.TiKVCDCServers[0].Config)
+	got, err = Merge2Toml("kvcdc", topo.ServerConfigs.TiKVCDC, topo.TiKVCDCServers[0].Config)
 	c.Assert(err, IsNil)
 	c.Assert(string(got), DeepEquals, expected)
 }
@@ -496,7 +496,7 @@ region-schedule-limit = 2048
 replica-schedule-limit = 164
 split-merge-interval = "1h"
 `
-	got, err := merge2Toml("pd", topo.ServerConfigs.PD, topo.PDServers[1].Config)
+	got, err := Merge2Toml("pd", topo.ServerConfigs.PD, topo.PDServers[1].Config)
 	c.Assert(err, IsNil)
 	c.Assert(string(got), DeepEquals, expected)
 }
@@ -564,7 +564,7 @@ item7 = 700
 	merge1, err := mergeImported(config, spec.ServerConfigs.TiKV)
 	c.Assert(err, IsNil)
 
-	merge2, err := merge2Toml(ComponentTiKV, merge1, spec.TiKVServers[0].Config)
+	merge2, err := Merge2Toml(ComponentTiKV, merge1, spec.TiKVServers[0].Config)
 	c.Assert(err, IsNil)
 	c.Assert(string(merge2), DeepEquals, expected)
 }

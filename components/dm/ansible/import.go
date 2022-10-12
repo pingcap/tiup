@@ -558,16 +558,9 @@ func (im *Importer) ImportFromAnsibleDir(ctx context.Context) (clusterName strin
 				if err != nil {
 					return "", nil, err
 				}
-				_, flags, err := parseRunScript(data)
+				_, _, err = parseRunScript(data)
 				if err != nil {
 					return "", nil, err
-				}
-
-				for k, v := range flags {
-					// Ignore
-					_ = v
-					switch k {
-					}
 				}
 
 				srv.DeployDir = instancDeployDir(spec.ComponentGrafana, srv.Port, host.Vars["deploy_dir"], topo.GlobalOptions.DeployDir)

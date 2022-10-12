@@ -260,7 +260,7 @@ func (i *BaseInstance) IteratorLocalConfigDir(ctx context.Context, local string,
 // MergeServerConfig merges the server configuration and overwrite the global configuration
 func (i *BaseInstance) MergeServerConfig(ctx context.Context, e ctxt.Executor, globalConf, instanceConf map[string]interface{}, paths meta.DirPaths) error {
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("%s-%s-%d.toml", i.ComponentName(), i.GetHost(), i.GetPort()))
-	conf, err := merge2Toml(i.ComponentName(), globalConf, instanceConf)
+	conf, err := Merge2Toml(i.ComponentName(), globalConf, instanceConf)
 	if err != nil {
 		return err
 	}
@@ -276,7 +276,7 @@ func (i *BaseInstance) MergeServerConfig(ctx context.Context, e ctxt.Executor, g
 // mergeTiFlashLearnerServerConfig merges the server configuration and overwrite the global configuration
 func (i *BaseInstance) mergeTiFlashLearnerServerConfig(ctx context.Context, e ctxt.Executor, globalConf, instanceConf map[string]interface{}, paths meta.DirPaths) error {
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("%s-learner-%s-%d.toml", i.ComponentName(), i.GetHost(), i.GetPort()))
-	conf, err := merge2Toml(i.ComponentName()+"-learner", globalConf, instanceConf)
+	conf, err := Merge2Toml(i.ComponentName()+"-learner", globalConf, instanceConf)
 	if err != nil {
 		return err
 	}

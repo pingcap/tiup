@@ -26,7 +26,7 @@ type scrubSuite struct{}
 
 var _ = check.Suite(&scrubSuite{})
 
-func (s *scrubSuite) testScrubYaml(c *check.C, generate bool) {
+func (s *scrubSuite) runScrubYamlTests(c *check.C, generate bool) {
 	files, err := os.ReadDir("./testdata")
 	c.Assert(err, check.IsNil)
 
@@ -70,7 +70,7 @@ func (s *scrubSuite) testScrubYaml(c *check.C, generate bool) {
 }
 
 func (s *scrubSuite) TestScrubYaml(c *check.C) {
-	s.testScrubYaml(c, false)
+	s.runScrubYamlTests(c, false)
 }
 
 // alertmanager_servers will contains a nil value in the yaml.

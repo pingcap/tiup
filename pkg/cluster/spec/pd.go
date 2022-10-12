@@ -337,10 +337,10 @@ func (i *PDInstance) IsLeader(ctx context.Context, topo Topology, apiTimeoutSeco
 	}
 	pdClient := api.NewPDClient(ctx, tidbTopo.GetPDList(), time.Second*5, tlsCfg)
 
-	return i.isLeader(pdClient)
+	return i.checkLeader(pdClient)
 }
 
-func (i *PDInstance) isLeader(pdClient *api.PDClient) (bool, error) {
+func (i *PDInstance) checkLeader(pdClient *api.PDClient) (bool, error) {
 	leader, err := pdClient.GetLeader()
 	if err != nil {
 		return false, errors.Annotatef(err, "failed to get PD leader %s", i.GetHost())
@@ -362,7 +362,7 @@ func (i *PDInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutSe
 	}
 	pdClient := api.NewPDClient(ctx, tidbTopo.GetPDList(), time.Second*5, tlsCfg)
 
-	isLeader, err := i.isLeader(pdClient)
+	isLeader, err := i.checkLeader(pdClient)
 	if err != nil {
 		return err
 	}

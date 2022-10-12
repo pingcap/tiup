@@ -147,9 +147,7 @@ func ValidateSpecDiff(s1, s2 interface{}) error {
 	return nil
 }
 
-func parseValidateTagValue(v string) (string, string) {
-	key := ""
-	ctl := ""
+func parseValidateTagValue(v string) (key, ctl string) {
 	pvs := strings.Split(v, validateTagSeperator)
 	switch len(pvs) {
 	case 1:

@@ -358,12 +358,11 @@ func (i *TiKVInstance) PreRestart(ctx context.Context, topo Topology, apiTimeout
 	}
 
 	if err := pdClient.EvictStoreLeader(addr(i.InstanceSpec.(*TiKVSpec)), timeoutOpt, genLeaderCounter(tidbTopo, tlsCfg)); err != nil {
-		if utils.IsTimeoutOrMaxRetry(err) {
-			ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger).
-				Warnf("Ignore evicting store leader from %s, %v", i.ID(), err)
-		} else {
+		if !utils.IsTimeoutOrMaxRetry(err) {
 			return perrs.Annotatef(err, "failed to evict store leader %s", i.GetHost())
 		}
+		ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger).
+			Warnf("Ignore evicting store leader from %s, %v", i.ID(), err)
 	}
 	return nil
 }

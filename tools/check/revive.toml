@@ -2,50 +2,61 @@ ignoreGeneratedHeader = false
 severity = "error"
 confidence = 0.8
 errorCode = -1
-warningCode = -1
+warningCode = 0
 
+[rule.atomic]
 [rule.blank-imports]
 [rule.context-as-argument]
 [rule.dot-imports]
+[rule.duplicated-imports]
 [rule.error-return]
 [rule.error-strings]
 [rule.error-naming]
+[rule.confusing-naming]
+[rule.unexported-naming]
+[rule.confusing-results]
 [rule.exported]
 [rule.if-return]
+[rule.var-declaration]
 [rule.var-naming]
-[rule.package-comments]
 [rule.range]
+[rule.range-val-in-closure]
+[rule.range-val-address]
 [rule.receiver-naming]
 [rule.indent-error-flow]
 [rule.superfluous-else]
 [rule.modifies-parameter]
+[rule.modifies-value-receiver]
+[rule.time-equal]
+[rule.time-naming]
+[rule.empty-block]
+[rule.empty-lines]
+[rule.get-return]
+[rule.early-return]
+[rule.unnecessary-stmt]
+[rule.struct-tag]
+[rule.string-of-int]
+[rule.string-format]
+[rule.constant-logical-expr]
+[rule.bool-literal-in-expr]
+[rule.optimize-operands-order]
+[rule.redefines-builtin-id]
+[rule.waitgroup-by-value]
+[rule.unconditional-recursion]
+#[rule.use-any]
+
+[rule.cognitive-complexity]
+  severity = "warning"
+  arguments =[48]
+#[rule.cyclomatic]
+#  severity = "warning"
+#  arguments = [48]
+
+[imports-blacklist]
+  arguments =["crypto/md5", "crypto/sha1", "io/ioutil"]
+
+[rule.defer]
+  arguments=[["call-chain", "method-call", "return"]]
 
 # This can be checked by other tools like megacheck
 [rule.unreachable-code]
-
-
-# Currently this makes too much noise, but should add it in
-# and perhaps ignore it in a few files
-#[rule.confusing-naming]
-#  severity = "warning"
-#[rule.confusing-results]
-#  severity = "warning"
-#[rule.unused-parameter]
-#  severity = "warning"
-#[rule.deep-exit]
-#  severity = "warning"
-#[rule.flag-parameter]
-#  severity = "warning"
-
-
-
-# Adding these will slow down the linter
-# They are already provided by megacheck
-# [rule.unexported-return]
-# [rule.time-naming]
-# [rule.errorf]
-
-# Adding these will slow down the linter
-# Not sure if they are already provided by megacheck
-# [rule.var-declaration]
-# [rule.context-keys-type]

@@ -282,7 +282,7 @@ func newMirrorModifyCmd() *cobra.Command {
 			env := environment.GlobalEnv()
 
 			comp, ver := environment.ParseCompVersion(component)
-			m, err := env.V1Repository().FetchComponentManifest(comp, true)
+			m, err := env.V1Repository().GetComponentManifest(comp, true)
 			if err != nil {
 				return err
 			}
@@ -359,14 +359,13 @@ func newMirrorRenewCmd() *cobra.Command {
 			env := environment.GlobalEnv()
 
 			comp, _ := environment.ParseCompVersion(component)
-			m, err := env.V1Repository().FetchComponentManifest(comp, true)
+			m, err := env.V1Repository().GetComponentManifest(comp, true)
 			if err != nil {
 				// ignore manifest expiration error
-				if v1manifest.IsExpirationError(perrs.Cause(err)) {
-					fmt.Println(err)
-				} else {
+				if !v1manifest.IsExpirationError(perrs.Cause(err)) {
 					return err
 				}
+				fmt.Println(err)
 			}
 
 			if days > 0 {
@@ -417,7 +416,7 @@ func newTransferOwnerCmd() *cobra.Command {
 				return fmt.Errorf("new owner '%s' is not in the available owner list", newOwnerName)
 			}
 
-			m, err := env.V1Repository().FetchComponentManifest(component, true)
+			m, err := env.V1Repository().GetComponentManifest(component, true)
 			if err != nil {
 				return err
 			}
@@ -680,15 +679,14 @@ func doPublish(
 ) error {
 	env := environment.GlobalEnv()
 	env.V1Repository().PurgeTimestamp()
-	m, err := env.V1Repository().FetchComponentManifest(component, true)
+	m, err := env.V1Repository().GetComponentManifest(component, true)
 	if err != nil {
-		if perrs.Cause(err) == repository.ErrUnknownComponent {
-			fmt.Printf("Creating component %s\n", component)
-			publishInfo.Stand = &standalone
-			publishInfo.Hide = &hidden
-		} else {
+		if perrs.Cause(err) != repository.ErrUnknownComponent {
 			return err
 		}
+		fmt.Printf("Creating component %s\n", component)
+		publishInfo.Stand = &standalone
+		publishInfo.Hide = &hidden
 	} else if flagSet.Exist("standalone") || flagSet.Exist("hide") {
 		fmt.Println("This is not a new component, --standalone and --hide flag will be omitted")
 	}

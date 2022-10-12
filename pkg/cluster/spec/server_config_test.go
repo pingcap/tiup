@@ -29,7 +29,7 @@ server_configs:
 	decimal := bytes.Contains(yamlData, []byte("0.0"))
 	c.Assert(decimal, check.IsTrue)
 
-	get, err := merge2Toml("tidb", topo.ServerConfigs.TiDB, nil)
+	get, err := Merge2Toml("tidb", topo.ServerConfigs.TiDB, nil)
 	c.Assert(err, check.IsNil)
 
 	decimal = bytes.Contains(get, []byte("0.0"))

@@ -24,7 +24,7 @@ import (
 )
 
 var (
-	outputFmt DisplayMode = DisplayModeDefault // global output format of logger
+	outputFmt = DisplayModeDefault // global output format of logger
 
 	stdout io.Writer = os.Stdout
 	stderr io.Writer = os.Stderr

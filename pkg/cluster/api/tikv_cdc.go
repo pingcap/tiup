@@ -121,7 +121,7 @@ func (c *TiKVCDCOpenAPIClient) GetCaptureByAddr(addr string) (*TiKVCDCCapture, e
 // GetAllCaptures return all captures instantaneously
 func (c *TiKVCDCOpenAPIClient) GetAllCaptures() (result []*TiKVCDCCapture, err error) {
 	err = utils.Retry(func() error {
-		result, err = c.getAllCaptures()
+		result, err = c.queryAllCaptures()
 		if err != nil {
 			return err
 		}
@@ -132,7 +132,7 @@ func (c *TiKVCDCOpenAPIClient) GetAllCaptures() (result []*TiKVCDCCapture, err e
 	return result, err
 }
 
-func (c *TiKVCDCOpenAPIClient) getAllCaptures() ([]*TiKVCDCCapture, error) {
+func (c *TiKVCDCOpenAPIClient) queryAllCaptures() ([]*TiKVCDCCapture, error) {
 	api := "api/v1/captures"
 	endpoints := c.getEndpoints(api)
 

@@ -27,7 +27,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pingcap/errors"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
@@ -288,7 +287,7 @@ func isValidStringArray(key string, config map[string]interface{}, couldEmpty bo
 	var (
 		dirsVal          interface{}
 		isKeyDefined     bool
-		isAllElemsString bool = true
+		isAllElemsString = true
 	)
 	if dirsVal, isKeyDefined = config[key]; !isKeyDefined {
 		return isKeyDefined, nil
@@ -843,7 +842,7 @@ func (i *TiFlashInstance) Ready(ctx context.Context, e ctxt.Executor, timeout ui
 		queryErr = err
 		return err
 	}, retryOpt); err != nil {
-		return errors.Annotatef(queryErr, "timed out waiting for tiflash %s:%d to be ready after %ds",
+		return perrs.Annotatef(queryErr, "timed out waiting for tiflash %s:%d to be ready after %ds",
 			i.Host, i.Port, timeout)
 	}
 	return nil

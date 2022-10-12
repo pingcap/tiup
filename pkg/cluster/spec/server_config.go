@@ -216,10 +216,6 @@ func searchValue(m map[interface{}]interface{}, ss []string) interface{} {
 
 // Merge2Toml merge the config of global.
 func Merge2Toml(comp string, global, overwrite map[string]interface{}) ([]byte, error) {
-	return merge2Toml(comp, global, overwrite)
-}
-
-func merge2Toml(comp string, global, overwrite map[string]interface{}) ([]byte, error) {
 	lhs := MergeConfig(global, overwrite)
 	buf := bytes.NewBufferString(fmt.Sprintf(`# WARNING: This file is auto-generated. Do not edit! All your modification will be overwritten!
 # You can use 'tiup cluster edit-config' and 'tiup cluster reload' to update the configuration
