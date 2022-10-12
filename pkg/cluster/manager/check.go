@@ -367,7 +367,7 @@ func checkSystemInfo(
 		cleanTasks = append(cleanTasks, t3)
 	}
 
-	for host, _ := range uniqueHosts {
+	for host := range uniqueHosts {
 		t4 := task.NewBuilder(logger).
 			// check for time zone
 			CheckSys(
