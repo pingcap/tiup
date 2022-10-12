@@ -16,7 +16,6 @@ on:
       - 'LICENSE'
       - 'doc/**'
       - 'embed/templates/examples/**'
-      - 'components/bench/**'
       - 'components/client/**'
       - 'components/ctl/**'
       - 'components/dm/**'
