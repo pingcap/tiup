@@ -142,7 +142,6 @@ jobs:
           ${TAR} -C bin -czf package/dm-${REL_VER}-${ARCH}.tar.gz tiup-dm
           ${TAR} -C bin -czf package/playground-${REL_VER}-${ARCH}.tar.gz tiup-playground
           ${TAR} -C bin -czf package/client-${REL_VER}-${ARCH}.tar.gz tiup-client
-          ${TAR} -C bin -czf package/bench-${REL_VER}-${ARCH}.tar.gz tiup-bench
           ${TAR} -C bin -czf package/server-${REL_VER}-${ARCH}.tar.gz tiup-server
 
       - name: Publish packages
@@ -158,7 +157,6 @@ jobs:
           dm_desc: "Data Migration Platform manager"
           playground_desc: "Bootstrap a local TiDB cluster for fun"
           client_desc: "Client to connect playground"
-          bench_desc: "Benchmark database with different workloads"
           server_desc: "TiUP publish/cache server"
         run: |
           if [ ! -z ${{ steps.check_staging.outputs.STAGING }} ]; then
@@ -183,7 +181,6 @@ jobs:
           ${TIUP_BIN} mirror publish dm ${REL_VER} package/dm-${REL_VER}-${ARCH}.tar.gz tiup-dm --arch ${{ matrix.arch }} --os ${{ matrix.os }} --desc="${dm_desc}" --standalone
           ${TIUP_BIN} mirror publish playground ${REL_VER} package/playground-${REL_VER}-${ARCH}.tar.gz tiup-playground --arch ${{ matrix.arch }} --os ${{ matrix.os }} --desc="${playground_desc}"
           ${TIUP_BIN} mirror publish client ${REL_VER} package/client-${REL_VER}-${ARCH}.tar.gz tiup-client --arch ${{ matrix.arch }} --os ${{ matrix.os }} --desc="${client_desc}"
-          ${TIUP_BIN} mirror publish bench ${REL_VER} package/bench-${REL_VER}-${ARCH}.tar.gz tiup-bench --arch ${{ matrix.arch }} --os ${{ matrix.os }} --desc="${bench_desc}"
           ${TIUP_BIN} mirror publish server ${REL_VER} package/server-${REL_VER}-${ARCH}.tar.gz tiup-server --arch ${{ matrix.arch }} --os ${{ matrix.os }} --desc="${server_desc}" --hide --standalone
 
       - name: Upload the all-in-one tarball to GitHub release

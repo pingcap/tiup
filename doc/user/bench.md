@@ -1,5 +1,7 @@
 # Benchmarking
 
+tiup bench has been **moved** to https://github.com/PingCAP-QE/tiup-bench
+
 To facilitate this, TiUP has integrated the bench component, which currently provides two workloads for pressure testing: tpcc and tpch, with the following command parameters:
 
 ```bash

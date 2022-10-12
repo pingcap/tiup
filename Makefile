@@ -46,8 +46,8 @@ include ./tests/Makefile
 build: tiup components
 	@# Target: build tiup and all it's components
 
-components: playground client cluster dm bench server
-	@# Target: build the playground, client, cluster, dm, bench and server components
+components: playground client cluster dm server
+	@# Target: build the playground, client, cluster, dm and server components
 
 tiup:
 	@# Target: build the tiup driver
@@ -69,10 +69,6 @@ dm:
 	@# Target: build the tiup-dm component
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-dm ./components/dm
 
-bench:
-	@# Target: build the tiup-bench component
-	$(MAKE) -C components/bench $(MAKECMDGOALS)
-
 doc:
 	@# Target: build the tiup-doc component
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-doc ./components/doc
@@ -91,7 +87,6 @@ server:
 
 check: fmt lint tidy check-static vet
 	@# Target: run all checkers. (fmt, lint, tidy, check-static and vet)
-	$(MAKE) -C components/bench ${MAKECMDGOALS}
 	$(MAKE) -C components/client ${MAKECMDGOALS}
 
 check-static: tools/bin/golangci-lint
@@ -121,7 +116,6 @@ clean:
 
 test: failpoint-enable run-tests failpoint-disable
 	@# Target: run tests with failpoint enabled
-	$(MAKE) -C components/bench ${MAKECMDGOALS}
 	$(MAKE) -C components/client ${MAKECMDGOALS}
 
 # TODO: refactor integration tests base on v1 manifest
