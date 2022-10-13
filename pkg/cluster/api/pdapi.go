@@ -557,7 +557,7 @@ func (pc *PDClient) EvictStoreLeader(host string, retryOpt *utils.RetryOption, c
 //     There are 20 stores in total. In this case, there may be no leader to transfer back.
 //
 //     - When the leader count is less than 57, there is possibility that only less than 2/3
-//     leaders are transfered back. `(N-10-9 >= 2/3*N) -> (N>=57)`.
+//     leaders are transferred back. `(N-10-9 >= 2/3*N) -> (N>=57)`.
 //     For example: The target store's leader count is 56. Other stores' leader count are 46.
 //     There are 57 stores in total. In this case, there may be only 37 leaders to transfer back,
 //     and 37/56 < 2/3. Accordingly, if the target store's leader count is 57, then there may be

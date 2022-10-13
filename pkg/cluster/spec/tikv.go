@@ -395,12 +395,11 @@ func (i *TiKVInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *t
 
 	if i.leaderCountBeforeRestart > 0 {
 		if err := pdClient.RecoverStoreLeader(addr(i.InstanceSpec.(*TiKVSpec)), i.leaderCountBeforeRestart, nil, genLeaderCounter(tidbTopo, tlsCfg)); err != nil {
-			if utils.IsTimeoutOrMaxRetry(err) {
-				ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger).
-					Warnf("Ignore recovering store leader from %s, %v", i.ID(), err)
-			} else {
+			if !utils.IsTimeoutOrMaxRetry(err) {
 				return perrs.Annotatef(err, "failed to recover store leader %s", i.GetHost())
 			}
+			ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger).
+				Warnf("Ignore recovering store leader from %s, %v", i.ID(), err)
 		}
 	}
 
