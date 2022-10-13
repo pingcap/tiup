@@ -89,11 +89,11 @@ func (m *model) Grant(id, name string, key *v1manifest.KeyInfo) error {
 			return err
 		}
 
-		if indexFi, err := m.txn.Stat(fmt.Sprintf("%d.index.json", indexFileVersion.Version)); err == nil {
-			indexFileVersion.Length = uint(indexFi.Size())
-		} else {
+		indexFi, err := m.txn.Stat(fmt.Sprintf("%d.index.json", indexFileVersion.Version))
+		if err != nil {
 			return err
 		}
+		indexFileVersion.Length = uint(indexFi.Size())
 
 		if err := m.updateSnapshotManifest(initTime, func(om *v1manifest.Manifest) *v1manifest.Manifest {
 			signed := om.Signed.(*v1manifest.Snapshot)
@@ -261,11 +261,11 @@ func (m *model) Publish(manifest *v1manifest.Manifest, info ComponentInfo) error
 		}
 
 		if indexFileVersion != nil {
-			if indexFi, err := m.txn.Stat(fmt.Sprintf("%d.index.json", indexFileVersion.Version)); err == nil {
-				indexFileVersion.Length = uint(indexFi.Size())
-			} else {
+			indexFi, err := m.txn.Stat(fmt.Sprintf("%d.index.json", indexFileVersion.Version))
+			if err != nil {
 				return err
 			}
+			indexFileVersion.Length = uint(indexFi.Size())
 		}
 
 		if err := m.updateSnapshotManifest(initTime, func(om *v1manifest.Manifest) *v1manifest.Manifest {

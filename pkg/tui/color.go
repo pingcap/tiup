@@ -65,7 +65,7 @@ func newColorResetFn() func() string {
 }
 
 // AddColorFunctions invokes callback for each colorize functions.
-func AddColorFunctions(addCallback func(string, interface{})) {
+func AddColorFunctions(addCallback func(string, any)) {
 	addCallback("ColorErrorMsg", newColorizeFn(ColorErrorMsg))
 	addCallback("ColorSuccessMsg", newColorizeFn(ColorSuccessMsg))
 	addCallback("ColorWarningMsg", newColorizeFn(ColorWarningMsg))
@@ -76,7 +76,7 @@ func AddColorFunctions(addCallback func(string, interface{})) {
 
 // AddColorFunctionsForCobra adds colorize functions to cobra, so that they can be used in usage or help.
 func AddColorFunctionsForCobra() {
-	AddColorFunctions(func(name string, f interface{}) {
+	AddColorFunctions(func(name string, f any) {
 		cobra.AddTemplateFunc(name, f)
 	})
 }

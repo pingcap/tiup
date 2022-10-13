@@ -131,7 +131,7 @@ func (s *KeyStore) verifySignature(signed []byte, role string, signatures []Sign
 	}
 	keys := ks.(roleKeys)
 
-	var validSigs uint = 0
+	var validSigs uint
 	for _, sig := range signatures {
 		key, ok := keys.keys.Load(sig.KeyID)
 		if !ok {

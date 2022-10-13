@@ -210,26 +210,26 @@ kvcdc_servers:
       log-level: "debug"
 `), &topo)
 	c.Assert(err, IsNil)
-	c.Assert(topo.ServerConfigs.TiDB, DeepEquals, map[string]interface{}{
+	c.Assert(topo.ServerConfigs.TiDB, DeepEquals, map[string]any{
 		"status.address":  10,
 		"port":            1230,
 		"latch.capacity":  20480,
 		"log.file.rotate": "123445.xxx",
 	})
-	c.Assert(topo.ServerConfigs.TiKVCDC, DeepEquals, map[string]interface{}{
+	c.Assert(topo.ServerConfigs.TiKVCDC, DeepEquals, map[string]any{
 		"gc-ttl": 43200,
 	})
 
-	expected := map[string]interface{}{
-		"status": map[string]interface{}{
+	expected := map[string]any{
+		"status": map[string]any{
 			"address": 10,
 		},
 		"port": 1230,
-		"latch": map[string]interface{}{
+		"latch": map[string]any{
 			"capacity": 20480,
 		},
-		"log": map[string]interface{}{
-			"file": map[string]interface{}{
+		"log": map[string]any{
+			"file": map[string]any{
 				"rotate": "123445.xxx",
 			},
 		},
@@ -252,12 +252,12 @@ kvcdc_servers:
   address = 10
 `)
 
-	expected = map[string]interface{}{
-		"latch": map[string]interface{}{
+	expected = map[string]any{
+		"latch": map[string]any{
 			"capacity": 3000,
 		},
-		"log": map[string]interface{}{
-			"file": map[string]interface{}{
+		"log": map[string]any{
+			"file": map[string]any{
 				"rotate": "44444.xxx",
 			},
 		},
@@ -266,12 +266,12 @@ kvcdc_servers:
 	c.Assert(err, IsNil)
 	c.Assert(got, DeepEquals, expected)
 
-	expected = map[string]interface{}{
-		"latch": map[string]interface{}{
+	expected = map[string]any{
+		"latch": map[string]any{
 			"capacity": 5000,
 		},
-		"log": map[string]interface{}{
-			"file": map[string]interface{}{
+		"log": map[string]any{
+			"file": map[string]any{
 				"rotate": "55555.xxx",
 			},
 		},
@@ -280,15 +280,15 @@ kvcdc_servers:
 	c.Assert(err, IsNil)
 	c.Assert(got, DeepEquals, expected)
 
-	expected = map[string]interface{}{}
+	expected = map[string]any{}
 	got = FoldMap(topo.TiKVCDCServers[0].Config)
 	c.Assert(got, DeepEquals, expected)
 
-	expected = map[string]interface{}{}
+	expected = map[string]any{}
 	got = FoldMap(topo.TiKVCDCServers[0].Config)
 	c.Assert(got, DeepEquals, expected)
 
-	expected = map[string]interface{}{
+	expected = map[string]any{
 		"log-level": "debug",
 	}
 	got = FoldMap(topo.TiKVCDCServers[1].Config)
@@ -310,11 +310,11 @@ tikv_servers:
 
 `), &topo)
 	c.Assert(err, IsNil)
-	expected := map[string]interface{}{
-		"config": map[string]interface{}{
+	expected := map[string]any{
+		"config": map[string]any{
 			"item1": 100,
 			"item2": 300,
-			"item3": map[string]interface{}{
+			"item3": map[string]any{
 				"item5": 500,
 				"item6": 600,
 			},
@@ -393,7 +393,7 @@ item2 = 500
 item5 = 700
 item6 = 600
 `
-	got, err := merge2Toml("tikv", topo.ServerConfigs.TiKV, topo.TiKVServers[0].Config)
+	got, err := Merge2Toml("tikv", topo.ServerConfigs.TiKV, topo.TiKVServers[0].Config)
 	c.Assert(err, IsNil)
 	c.Assert(string(got), DeepEquals, expected)
 
@@ -407,7 +407,7 @@ item6 = 600
 gc-ttl = 43200
 log-level = "debug"
 `
-	got, err = merge2Toml("kvcdc", topo.ServerConfigs.TiKVCDC, topo.TiKVCDCServers[0].Config)
+	got, err = Merge2Toml("kvcdc", topo.ServerConfigs.TiKVCDC, topo.TiKVCDCServers[0].Config)
 	c.Assert(err, IsNil)
 	c.Assert(string(got), DeepEquals, expected)
 }
@@ -496,7 +496,7 @@ region-schedule-limit = 2048
 replica-schedule-limit = 164
 split-merge-interval = "1h"
 `
-	got, err := merge2Toml("pd", topo.ServerConfigs.PD, topo.PDServers[1].Config)
+	got, err := Merge2Toml("pd", topo.ServerConfigs.PD, topo.PDServers[1].Config)
 	c.Assert(err, IsNil)
 	c.Assert(string(got), DeepEquals, expected)
 }
@@ -564,7 +564,7 @@ item7 = 700
 	merge1, err := mergeImported(config, spec.ServerConfigs.TiKV)
 	c.Assert(err, IsNil)
 
-	merge2, err := merge2Toml(ComponentTiKV, merge1, spec.TiKVServers[0].Config)
+	merge2, err := Merge2Toml(ComponentTiKV, merge1, spec.TiKVServers[0].Config)
 	c.Assert(err, IsNil)
 	c.Assert(string(merge2), DeepEquals, expected)
 }
@@ -717,9 +717,9 @@ tiflash_servers:
 		c.Assert(ok, IsFalse)
 
 		if storageSection, ok := conf["storage"]; ok {
-			if mainSection, ok := storageSection.(map[string]interface{})["main"]; ok {
-				if mainDirsSection, ok := mainSection.(map[string]interface{})["dir"]; ok {
-					var mainDirs []interface{} = mainDirsSection.([]interface{})
+			if mainSection, ok := storageSection.(map[string]any)["main"]; ok {
+				if mainDirsSection, ok := mainSection.(map[string]any)["dir"]; ok {
+					var mainDirs []any = mainDirsSection.([]any)
 					c.Assert(len(mainDirs), Equals, 2)
 					c.Assert(mainDirs[0].(string), Equals, "/ssd0/tiflash")
 					c.Assert(mainDirs[1].(string), Equals, "/ssd1/tiflash")
@@ -729,9 +729,9 @@ tiflash_servers:
 			} else {
 				c.Error("Can not get storage.main section")
 			}
-			if latestSection, ok := storageSection.(map[string]interface{})["latest"]; ok {
-				if latestDirsSection, ok := latestSection.(map[string]interface{})["dir"]; ok {
-					var latestDirs []interface{} = latestDirsSection.([]interface{})
+			if latestSection, ok := storageSection.(map[string]any)["latest"]; ok {
+				if latestDirsSection, ok := latestSection.(map[string]any)["dir"]; ok {
+					var latestDirs []any = latestDirsSection.([]any)
 					c.Assert(len(latestDirs), Equals, 1)
 					c.Assert(latestDirs[0].(string), Equals, "/ssd0/tiflash")
 				} else {
@@ -874,10 +874,10 @@ tiflash_servers:
 		if usersSection, ok := conf["users"]; !ok {
 			c.Error("Can not get users section")
 		} else {
-			if defaultUser, ok := usersSection.(map[string]interface{})["default"]; !ok {
+			if defaultUser, ok := usersSection.(map[string]any)["default"]; !ok {
 				c.Error("Can not get default users section")
 			} else {
-				var password = defaultUser.(map[string]interface{})["password"]
+				var password = defaultUser.(map[string]any)["password"]
 				c.Assert(password.(string), Equals, "")
 			}
 		}

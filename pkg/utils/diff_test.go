@@ -21,22 +21,22 @@ type diffSuite struct {
 var _ = Suite(&diffSuite{})
 
 type sampleDataMeta struct {
-	IntSlice     []int                    `yaml:"ints,omitempty"`
-	StrSlice     []string                 `yaml:"strs,omitempty" validate:"strs:editable"`
-	MapSlice     []map[string]interface{} `yaml:"maps,omitempty" validate:"maps:ignore"`
-	StrElem      string                   `yaml:"stre" validate:"editable"`
-	StrElem2     string                   `yaml:"str2,omitempty" validate:"str2:expandable"`
-	StructSlice1 []sampleDataElem         `yaml:"slice1" validate:"slice1:editable"`
-	StructSlice2 []sampleDataElem         `yaml:"slice2,omitempty"`
-	StructSlice3 []sampleDataEditable     `yaml:"slice3,omitempty" validate:"slice3:editable"`
+	IntSlice     []int                `yaml:"ints,omitempty"`
+	StrSlice     []string             `yaml:"strs,omitempty" validate:"strs:editable"`
+	MapSlice     []map[string]any     `yaml:"maps,omitempty" validate:"maps:ignore"`
+	StrElem      string               `yaml:"stre" validate:"editable"`
+	StrElem2     string               `yaml:"str2,omitempty" validate:"str2:expandable"`
+	StructSlice1 []sampleDataElem     `yaml:"slice1" validate:"slice1:editable"`
+	StructSlice2 []sampleDataElem     `yaml:"slice2,omitempty"`
+	StructSlice3 []sampleDataEditable `yaml:"slice3,omitempty" validate:"slice3:editable"`
 }
 
 type sampleDataElem struct {
-	StrElem1       string                 `yaml:"str1" validate:"str1:editable"`
-	StrElem2       string                 `yaml:"str2,omitempty" validate:"str2:editable"`
-	IntElem        int                    `yaml:"int"`
-	InterfaceElem  interface{}            `yaml:"interface,omitempty" validate:"interface:editable"`
-	InterfaceSlice map[string]interface{} `yaml:"mapslice,omitempty" validate:"mapslice:editable"`
+	StrElem1       string         `yaml:"str1" validate:"str1:editable"`
+	StrElem2       string         `yaml:"str2,omitempty" validate:"str2:editable"`
+	IntElem        int            `yaml:"int"`
+	InterfaceElem  any            `yaml:"interface,omitempty" validate:"interface:editable"`
+	InterfaceSlice map[string]any `yaml:"mapslice,omitempty" validate:"mapslice:editable"`
 }
 
 type sampleDataEditable struct {

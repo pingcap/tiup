@@ -34,7 +34,7 @@ func setup() {
 	// register checkpoint for ssh command
 	sshCmd = Register(
 		Field("host", reflect.DeepEqual),
-		Field("port", func(a, b interface{}) bool {
+		Field("port", func(a, b any) bool {
 			return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
 		}),
 		Field("user", reflect.DeepEqual),
@@ -45,7 +45,7 @@ func setup() {
 	// register checkpoint for scp command
 	scpCmd = Register(
 		Field("host", reflect.DeepEqual),
-		Field("port", func(a, b interface{}) bool {
+		Field("port", func(a, b any) bool {
 			return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
 		}),
 		Field("user", reflect.DeepEqual),
@@ -65,7 +65,7 @@ func TestCheckPointSimple(t *testing.T) {
 	assert.Nil(err)
 	ctx := NewContext(context.Background())
 
-	p := c.acquire(ctx, sshCmd, "test", map[string]interface{}{
+	p := c.acquire(ctx, sshCmd, "test", map[string]any{
 		"host": "172.16.5.140",
 		"port": 22,
 		"user": "tidb",
@@ -76,14 +76,14 @@ func TestCheckPointSimple(t *testing.T) {
 	assert.Equal(p.Hit()["stdout"], "success")
 	assert.True(p.acquired)
 
-	p1 := c.acquire(ctx, sshCmd, "test", map[string]interface{}{
+	p1 := c.acquire(ctx, sshCmd, "test", map[string]any{
 		"host": "172.16.5.139",
 	})
 	assert.Nil(p1.Hit())
 	assert.False(p1.acquired)
 	p1.Release(nil)
 
-	p2 := c.acquire(ctx, sshCmd, "test", map[string]interface{}{
+	p2 := c.acquire(ctx, sshCmd, "test", map[string]any{
 		"host": "172.16.5.138",
 	})
 	assert.Nil(p2.Hit())
@@ -92,7 +92,7 @@ func TestCheckPointSimple(t *testing.T) {
 
 	p.Release(nil)
 
-	p3 := c.acquire(ctx, sshCmd, "test", map[string]interface{}{
+	p3 := c.acquire(ctx, sshCmd, "test", map[string]any{
 		"host": "172.16.5.137",
 	})
 	assert.Nil(p3.Hit())
@@ -115,7 +115,7 @@ func TestCheckPointMultiple(t *testing.T) {
 	assert.Nil(err)
 	ctx := NewContext(context.Background())
 
-	p := c.acquire(ctx, sshCmd, "test", map[string]interface{}{
+	p := c.acquire(ctx, sshCmd, "test", map[string]any{
 		"host": "172.16.5.140",
 		"port": 22,
 		"user": "tidb",
@@ -126,7 +126,7 @@ func TestCheckPointMultiple(t *testing.T) {
 	assert.Equal(p.Hit()["stdout"], "success")
 	p.Release(nil)
 
-	p = c.acquire(ctx, scpCmd, "test", map[string]interface{}{
+	p = c.acquire(ctx, scpCmd, "test", map[string]any{
 		"host":     "172.16.5.141",
 		"port":     22,
 		"user":     "tidb",
@@ -149,7 +149,7 @@ func TestCheckPointNil(t *testing.T) {
 	assert.Nil(err)
 	ctx := NewContext(context.Background())
 
-	p := c.acquire(ctx, sshCmd, "test", map[string]interface{}{
+	p := c.acquire(ctx, sshCmd, "test", map[string]any{
 		"host": "172.16.5.140",
 		"port": 22,
 		"user": "tidb",
@@ -164,7 +164,7 @@ func TestCheckPointNil(t *testing.T) {
 	c, err = NewCheckPoint(r)
 	assert.Nil(err)
 
-	p = c.acquire(ctx, scpCmd, "test", map[string]interface{}{
+	p = c.acquire(ctx, scpCmd, "test", map[string]any{
 		"host": "172.16.5.140",
 		"port": 22,
 		"user": "tidb",
@@ -179,7 +179,7 @@ func TestCheckPointNil(t *testing.T) {
 	c, err = NewCheckPoint(r)
 	assert.Nil(err)
 
-	p = c.acquire(ctx, sshCmd, "test", map[string]interface{}{
+	p = c.acquire(ctx, sshCmd, "test", map[string]any{
 		"host": "172.16.5.140",
 		"port": 22,
 		"user": "tidb",
@@ -194,7 +194,7 @@ func TestCheckPointNil(t *testing.T) {
 	c, err = NewCheckPoint(r)
 	assert.Nil(err)
 
-	p = c.acquire(ctx, sshCmd, "test", map[string]interface{}{
+	p = c.acquire(ctx, sshCmd, "test", map[string]any{
 		"host": "172.16.5.140",
 		"port": 22,
 		"user": "tidb",
@@ -209,7 +209,7 @@ func TestCheckPointNil(t *testing.T) {
 	c, err = NewCheckPoint(r)
 	assert.Nil(err)
 
-	p = c.acquire(ctx, sshCmd, "test", map[string]interface{}{
+	p = c.acquire(ctx, sshCmd, "test", map[string]any{
 		"host": "172.16.5.140",
 		"port": 22,
 		"user": "tidb",
@@ -224,7 +224,7 @@ func TestCheckPointNil(t *testing.T) {
 	c, err = NewCheckPoint(r)
 	assert.Nil(err)
 
-	p = c.acquire(ctx, sshCmd, "test", map[string]interface{}{
+	p = c.acquire(ctx, sshCmd, "test", map[string]any{
 		"host": "172.16.5.140",
 		"port": 22,
 		"user": "tidb",
@@ -239,5 +239,5 @@ func TestCheckPointNotInited(t *testing.T) {
 	setup()
 
 	assert := require.New(t)
-	assert.Panics(func() { Acquire(context.Background(), sshCmd, map[string]interface{}{}) })
+	assert.Panics(func() { Acquire(context.Background(), sshCmd, map[string]any{}) })
 }

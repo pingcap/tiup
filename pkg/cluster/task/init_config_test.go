@@ -75,7 +75,8 @@ var _ = check.Suite(&initConfigSuite{})
 
 func (s *initConfigSuite) TestCheckConfig(c *check.C) {
 	ctx := ctxt.New(context.Background(), 0, logprinter.NewLogger(""))
-	defer mock.With("FakeExecutor", &fakeExecutor{})()
+	mf := mock.With("FakeExecutor", &fakeExecutor{})
+	defer mf()
 
 	t := &InitConfig{
 		clusterName:    "test-cluster-name",

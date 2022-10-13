@@ -63,7 +63,7 @@ func TestValidateErrIs(t *testing.T) {
 		Target: "test",
 		LHS:    "LHS",
 		RHS:    "RHS",
-		Value: map[string]interface{}{
+		Value: map[string]any{
 			"key1": 1,
 			"key2": "2",
 		},

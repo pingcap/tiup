@@ -24,7 +24,7 @@ import (
 )
 
 var (
-	outputFmt DisplayMode = DisplayModeDefault // global output format of logger
+	outputFmt = DisplayModeDefault // global output format of logger
 
 	stdout io.Writer = os.Stdout
 	stderr io.Writer = os.Stderr
@@ -53,7 +53,7 @@ func fmtDisplayMode(m string) DisplayMode {
 	return dp
 }
 
-func printLog(w io.Writer, mode DisplayMode, level, format string, args ...interface{}) {
+func printLog(w io.Writer, mode DisplayMode, level, format string, args ...any) {
 	switch mode {
 	case DisplayModeJSON:
 		obj := struct {
@@ -90,27 +90,27 @@ func SetDisplayModeFromString(m string) {
 }
 
 // Debugf output the debug message to console
-func Debugf(format string, args ...interface{}) {
+func Debugf(format string, args ...any) {
 	zap.L().Debug(fmt.Sprintf(format, args...))
 }
 
 // Infof output the log message to console
 // Deprecated: Use zap.L().Info() instead
-func Infof(format string, args ...interface{}) {
+func Infof(format string, args ...any) {
 	zap.L().Info(fmt.Sprintf(format, args...))
 	printLog(stdout, outputFmt, "info", format, args...)
 }
 
 // Warnf output the warning message to console
 // Deprecated: Use zap.L().Warn() instead
-func Warnf(format string, args ...interface{}) {
+func Warnf(format string, args ...any) {
 	zap.L().Warn(fmt.Sprintf(format, args...))
 	printLog(stderr, outputFmt, "warn", format, args...)
 }
 
 // Errorf output the error message to console
 // Deprecated: Use zap.L().Error() instead
-func Errorf(format string, args ...interface{}) {
+func Errorf(format string, args ...any) {
 	zap.L().Error(fmt.Sprintf(format, args...))
 	printLog(stderr, outputFmt, "error", format, args...)
 }

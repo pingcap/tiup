@@ -237,7 +237,7 @@ func checkForGlobalConfigs(logger *logprinter.Logger, topoFile string, skipConfi
 		return err
 	}
 
-	var newPart map[string]interface{}
+	var newPart map[string]any
 	if err := yaml.Unmarshal(yamlFile, &newPart); err != nil {
 		return err
 	}

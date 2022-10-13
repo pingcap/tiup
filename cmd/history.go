@@ -35,11 +35,10 @@ func newHistoryCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				r, err := strconv.Atoi(args[0])
-				if err == nil {
-					rows = r
-				} else {
+				if err != nil {
 					return fmt.Errorf("%s: numeric argument required", args[0])
 				}
+				rows = r
 			}
 
 			env := environment.GlobalEnv()

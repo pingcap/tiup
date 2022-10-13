@@ -10,6 +10,7 @@ coverage:
 ignore:
   - "pkg/cluster/api/dmpb"
   - "pkg/cluster/api/typeutil"
+  - "pkg/telemetry/*.pb.go"
 
 flags:
   tiup:

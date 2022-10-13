@@ -16,7 +16,6 @@ package command
 import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/audit"
-	"github.com/pingcap/tiup/pkg/cluster/spec"
 	cspec "github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/spf13/cobra"
 )
@@ -51,7 +50,7 @@ func newAuditCleanupCmd() *cobra.Command {
 				return errors.Errorf("retain-days cannot be less than 0")
 			}
 
-			err := audit.DeleteAuditLog(spec.AuditDir(), retainDays, skipConfirm, gOpt.DisplayMode)
+			err := audit.DeleteAuditLog(cspec.AuditDir(), retainDays, skipConfirm, gOpt.DisplayMode)
 			if err != nil {
 				return err
 			}

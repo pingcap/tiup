@@ -31,11 +31,11 @@ const (
 
 // ValidateErr is the error when meta validation fails with conflicts
 type ValidateErr struct {
-	Type   string      // conflict type
-	Target string      // conflict Target
-	Value  interface{} // conflict Value
-	LHS    string      // object 1
-	RHS    string      // object 2
+	Type   string // conflict type
+	Target string // conflict Target
+	Value  any    // conflict Value
+	LHS    string // object 1
+	RHS    string // object 2
 }
 
 // Error implements the error interface

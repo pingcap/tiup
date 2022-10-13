@@ -68,7 +68,7 @@ func OsArgs0() string {
 }
 
 func init() {
-	AddColorFunctions(func(name string, f interface{}) {
+	AddColorFunctions(func(name string, f any) {
 		templateFuncs[name] = f
 	})
 }
@@ -92,7 +92,7 @@ func CheckCommandArgsAndMayPrintHelp(cmd *cobra.Command, args []string, minArgs 
 	return true, nil
 }
 
-func formatSuggestion(templateStr string, data interface{}) string {
+func formatSuggestion(templateStr string, data any) string {
 	t := template.Must(template.New("suggestion").Funcs(templateFuncs).Parse(templateStr))
 	var buf bytes.Buffer
 	if err := t.Execute(&buf, data); err != nil {
@@ -110,13 +110,13 @@ func SuggestionFromString(str string) (errorx.Property, string) {
 // SuggestionFromTemplate creates a suggestion from go template. Colorize function and some other utilities
 // are available.
 // Usage: SomeErrorX.WithProperty(SuggestionFromTemplate(..))
-func SuggestionFromTemplate(templateStr string, data interface{}) (errorx.Property, string) {
+func SuggestionFromTemplate(templateStr string, data any) (errorx.Property, string) {
 	return SuggestionFromString(formatSuggestion(templateStr, data))
 }
 
 // SuggestionFromFormat creates a suggestion from a format.
 // Usage: SomeErrorX.WithProperty(SuggestionFromFormat(..))
-func SuggestionFromFormat(format string, a ...interface{}) (errorx.Property, string) {
+func SuggestionFromFormat(format string, a ...any) (errorx.Property, string) {
 	s := fmt.Sprintf(format, a...)
 	return SuggestionFromString(s)
 }

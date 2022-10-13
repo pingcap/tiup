@@ -69,7 +69,7 @@ type (
 			executors    map[string]Executor
 			stdouts      map[string][]byte
 			stderrs      map[string][]byte
-			checkResults map[string][]interface{}
+			checkResults map[string][]any
 		}
 
 		// The private/public key is used to access remote server via the user `tidb`
@@ -101,12 +101,12 @@ func New(ctx context.Context, limit int, logger *logprinter.Logger) context.Cont
 				executors    map[string]Executor
 				stdouts      map[string][]byte
 				stderrs      map[string][]byte
-				checkResults map[string][]interface{}
+				checkResults map[string][]any
 			}{
 				executors:    make(map[string]Executor),
 				stdouts:      make(map[string][]byte),
 				stderrs:      make(map[string][]byte),
-				checkResults: make(map[string][]interface{}),
+				checkResults: make(map[string][]any),
 			},
 			Concurrency: concurrency, // default to CPU count
 		},
@@ -177,7 +177,7 @@ func (ctx *Context) SetOutputs(hostID string, stdout []byte, stderr []byte) {
 }
 
 // GetCheckResults get the the check result of a host (if has any)
-func (ctx *Context) GetCheckResults(host string) (results []interface{}, ok bool) {
+func (ctx *Context) GetCheckResults(host string) (results []any, ok bool) {
 	ctx.mutex.RLock()
 	results, ok = ctx.exec.checkResults[host]
 	ctx.mutex.RUnlock()
@@ -185,7 +185,7 @@ func (ctx *Context) GetCheckResults(host string) (results []interface{}, ok bool
 }
 
 // SetCheckResults append the check result of a host to the list
-func (ctx *Context) SetCheckResults(host string, results []interface{}) {
+func (ctx *Context) SetCheckResults(host string, results []any) {
 	ctx.mutex.Lock()
 	if currResult, ok := ctx.exec.checkResults[host]; ok {
 		ctx.exec.checkResults[host] = append(currResult, results...)

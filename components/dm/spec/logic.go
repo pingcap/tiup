@@ -154,11 +154,11 @@ func (i *MasterInstance) InitConfig(
 
 // setTLSConfig set TLS Config to support enable/disable TLS
 // MasterInstance no need to configure TLS
-func (i *MasterInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
+func (i *MasterInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error) {
 	// set TLS configs
 	if enableTLS {
 		if configs == nil {
-			configs = make(map[string]interface{})
+			configs = make(map[string]any)
 		}
 		configs["ssl-ca"] = fmt.Sprintf(
 			"%s/tls/%s",
@@ -332,11 +332,11 @@ func (i *WorkerInstance) InitConfig(
 
 // setTLSConfig set TLS Config to support enable/disable TLS
 // workrsInstance no need to configure TLS
-func (i *WorkerInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
+func (i *WorkerInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error) {
 	// set TLS configs
 	if enableTLS {
 		if configs == nil {
-			configs = make(map[string]interface{})
+			configs = make(map[string]any)
 		}
 		configs["ssl-ca"] = fmt.Sprintf(
 			"%s/tls/%s",

@@ -96,7 +96,6 @@ check-static: tools/bin/golangci-lint
 lint: tools/bin/revive
 	@# Target: run the lint checker revive
 	@echo "linting"
-	./tools/check/check-lint.sh
 	@tools/bin/revive -formatter friendly -config tools/check/revive.toml $(FILES)
 
 vet:
@@ -159,5 +158,5 @@ tools/bin/revive: tools/check/go.mod
 	$(GO) build -o ../bin/revive github.com/mgechev/revive
 
 tools/bin/golangci-lint:
-	@# Target: pull in specific version of golangci-lint (v1.42.1)
-	curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ./tools/bin v1.49.0
+	@# Target: pull in specific version of golangci-lint (v1.50.0)
+	curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ./tools/bin v1.50.0

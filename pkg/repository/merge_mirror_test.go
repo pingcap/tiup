@@ -187,7 +187,11 @@ func TestMergeMirror(t *testing.T) {
 
 	// manifestList := []*v1manifest.Manifest{}
 	// componentInfoList := []model.ComponentInfo{}
-	defer mock.With("Publish", func(manifest *v1manifest.Manifest, info model.ComponentInfo) {
+
+	err = MergeMirror(keys, base, source)
+	assert.Nil(t, err)
+
+	mock.With("Publish", func(manifest *v1manifest.Manifest, info model.ComponentInfo) {
 		assert.Contains(t, []string{
 			"hello-v1.0.0-linux-amd64.tar.gz",
 			"test-v1.0.0-linux-arm64.tar.gz",
@@ -202,9 +206,6 @@ func TestMergeMirror(t *testing.T) {
 			"test-v1.0.1-linux-amd64.tar.gz",
 		}, string(b))
 	})()
-
-	err = MergeMirror(keys, base, source)
-	assert.Nil(t, err)
 }
 
 func TestFetchIndex(t *testing.T) {

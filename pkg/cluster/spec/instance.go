@@ -105,7 +105,7 @@ type Instance interface {
 	Arch() string
 	IsPatched() bool
 	SetPatched(bool)
-	setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error)
+	setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error)
 }
 
 // PortStarted wait until a port is being listened
@@ -159,7 +159,7 @@ func (i *BaseInstance) InitConfig(ctx context.Context, e ctxt.Executor, opt Glob
 	sysCfg := filepath.Join(paths.Cache, fmt.Sprintf("%s-%s-%d.service", comp, host, port))
 
 	// insert checkpoint
-	point := checkpoint.Acquire(ctx, CopyConfigFile, map[string]interface{}{"config-file": sysCfg})
+	point := checkpoint.Acquire(ctx, CopyConfigFile, map[string]any{"config-file": sysCfg})
 	defer func() {
 		point.Release(err, zap.String("config-file", sysCfg))
 	}()
@@ -204,7 +204,7 @@ func (i *BaseInstance) InitConfig(ctx context.Context, e ctxt.Executor, opt Glob
 
 // setTLSConfig set TLS Config to support enable/disable TLS
 // baseInstance no need to configure TLS
-func (i *BaseInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
+func (i *BaseInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error) {
 	return nil, nil
 }
 
@@ -258,9 +258,9 @@ func (i *BaseInstance) IteratorLocalConfigDir(ctx context.Context, local string,
 }
 
 // MergeServerConfig merges the server configuration and overwrite the global configuration
-func (i *BaseInstance) MergeServerConfig(ctx context.Context, e ctxt.Executor, globalConf, instanceConf map[string]interface{}, paths meta.DirPaths) error {
+func (i *BaseInstance) MergeServerConfig(ctx context.Context, e ctxt.Executor, globalConf, instanceConf map[string]any, paths meta.DirPaths) error {
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("%s-%s-%d.toml", i.ComponentName(), i.GetHost(), i.GetPort()))
-	conf, err := merge2Toml(i.ComponentName(), globalConf, instanceConf)
+	conf, err := Merge2Toml(i.ComponentName(), globalConf, instanceConf)
 	if err != nil {
 		return err
 	}
@@ -274,9 +274,9 @@ func (i *BaseInstance) MergeServerConfig(ctx context.Context, e ctxt.Executor, g
 }
 
 // mergeTiFlashLearnerServerConfig merges the server configuration and overwrite the global configuration
-func (i *BaseInstance) mergeTiFlashLearnerServerConfig(ctx context.Context, e ctxt.Executor, globalConf, instanceConf map[string]interface{}, paths meta.DirPaths) error {
+func (i *BaseInstance) mergeTiFlashLearnerServerConfig(ctx context.Context, e ctxt.Executor, globalConf, instanceConf map[string]any, paths meta.DirPaths) error {
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("%s-learner-%s-%d.toml", i.ComponentName(), i.GetHost(), i.GetPort()))
-	conf, err := merge2Toml(i.ComponentName()+"-learner", globalConf, instanceConf)
+	conf, err := Merge2Toml(i.ComponentName()+"-learner", globalConf, instanceConf)
 	if err != nil {
 		return err
 	}
