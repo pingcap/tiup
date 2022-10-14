@@ -44,10 +44,10 @@ type EnvInit struct {
 
 // Execute implements the Task interface
 func (e *EnvInit) Execute(ctx context.Context) error {
-	return e.execute(ctx)
+	return e.exec(ctx)
 }
 
-func (e *EnvInit) execute(ctx context.Context) error {
+func (e *EnvInit) exec(ctx context.Context) error {
 	wrapError := func(err error) *errorx.Error {
 		return ErrEnvInitFailed.Wrap(err, "Failed to initialize TiDB environment on remote host '%s'", e.host)
 	}

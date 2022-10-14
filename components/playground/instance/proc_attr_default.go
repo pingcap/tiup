@@ -19,4 +19,4 @@ package instance
 import "syscall"
 
 // SysProcAttr to be use for every Process we start.
-var SysProcAttr *syscall.SysProcAttr = nil
+var SysProcAttr *syscall.SysProcAttr

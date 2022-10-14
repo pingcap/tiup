@@ -55,7 +55,7 @@ type CheckSys struct {
 }
 
 func storeResults(ctx context.Context, host string, results []*operator.CheckResult) {
-	rr := []interface{}{}
+	rr := []any{}
 	for _, r := range results {
 		rr = append(rr, r)
 	}

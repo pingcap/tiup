@@ -24,7 +24,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pingcap/errors"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
@@ -53,7 +52,7 @@ func Destroy(
 		insts := com.Instances()
 		err := DestroyComponent(ctx, insts, cluster, options)
 		if err != nil && !options.Force {
-			return errors.Annotatef(err, "failed to destroy %s", com.Name())
+			return perrs.Annotatef(err, "failed to destroy %s", com.Name())
 		}
 		for _, inst := range insts {
 			instCount[inst.GetHost()]--
@@ -121,13 +120,13 @@ func StopAndDestroyInstance(
 		tlsCfg,    /* when the forceStop is false, this is use for TiCDC graceful shutdown */
 	); err != nil {
 		if !ignoreErr {
-			return errors.Annotatef(err, "failed to stop %s", compName)
+			return perrs.Annotatef(err, "failed to stop %s", compName)
 		}
 		logger.Warnf("failed to stop %s: %v", compName, err)
 	}
 	if err := DestroyComponent(ctx, []spec.Instance{instance}, cluster, options); err != nil {
 		if !ignoreErr {
-			return errors.Annotatef(err, "failed to destroy %s", compName)
+			return perrs.Annotatef(err, "failed to destroy %s", compName)
 		}
 		logger.Warnf("failed to destroy %s: %v", compName, err)
 	}
@@ -139,13 +138,13 @@ func StopAndDestroyInstance(
 		if monitoredOptions != nil && !instance.IgnoreMonitorAgent() {
 			if err := StopMonitored(ctx, []string{instance.GetHost()}, noAgentHosts, monitoredOptions, options.OptTimeout); err != nil {
 				if !ignoreErr {
-					return errors.Annotatef(err, "failed to stop monitor")
+					return perrs.Annotatef(err, "failed to stop monitor")
 				}
 				logger.Warnf("failed to stop %s: %v", "monitor", err)
 			}
 			if err := DestroyMonitored(ctx, instance, monitoredOptions, options.OptTimeout); err != nil {
 				if !ignoreErr {
-					return errors.Annotatef(err, "failed to destroy monitor")
+					return perrs.Annotatef(err, "failed to destroy monitor")
 				}
 				logger.Warnf("failed to destroy %s: %v", "monitor", err)
 			}
@@ -153,7 +152,7 @@ func StopAndDestroyInstance(
 
 		if err := DeletePublicKey(ctx, instance.GetHost()); err != nil {
 			if !ignoreErr {
-				return errors.Annotatef(err, "failed to delete public key")
+				return perrs.Annotatef(err, "failed to delete public key")
 			}
 			logger.Warnf("failed to delete public key")
 		}
@@ -194,7 +193,7 @@ func DeleteGlobalDirs(ctx context.Context, host string, options *spec.GlobalOpti
 		}
 
 		if err != nil {
-			return errors.Annotatef(err, "failed to clean directory %s on: %s", dir, host)
+			return perrs.Annotatef(err, "failed to clean directory %s on: %s", dir, host)
 		}
 	}
 
@@ -233,7 +232,7 @@ func DeletePublicKey(ctx context.Context, host string) error {
 	}
 
 	if err != nil {
-		return errors.Annotatef(err, "failed to delete pulblic key on: %s", host)
+		return perrs.Annotatef(err, "failed to delete pulblic key on: %s", host)
 	}
 
 	logger.Infof("Delete public key %s success", host)
@@ -283,18 +282,18 @@ func DestroyMonitored(ctx context.Context, inst spec.Instance, options *spec.Mon
 	}
 
 	if err != nil {
-		return errors.Annotatef(err, "failed to destroy monitored: %s", inst.GetHost())
+		return perrs.Annotatef(err, "failed to destroy monitored: %s", inst.GetHost())
 	}
 
 	if err := spec.PortStopped(ctx, e, options.NodeExporterPort, timeout); err != nil {
 		str := fmt.Sprintf("%s failed to destroy node exportoer: %s", inst.GetHost(), err)
 		logger.Errorf(str)
-		return errors.Annotatef(err, str)
+		return perrs.Annotatef(err, str)
 	}
 	if err := spec.PortStopped(ctx, e, options.BlackboxExporterPort, timeout); err != nil {
 		str := fmt.Sprintf("%s failed to destroy blackbox exportoer: %s", inst.GetHost(), err)
 		logger.Errorf(str)
-		return errors.Annotatef(err, str)
+		return perrs.Annotatef(err, str)
 	}
 
 	logger.Infof("Destroy monitored on %s success", inst.GetHost())
@@ -326,7 +325,7 @@ func CleanupComponent(ctx context.Context, delFileMaps map[string]set.StringSet)
 		}
 
 		if err != nil {
-			return errors.Annotatef(err, "failed to cleanup: %s", host)
+			return perrs.Annotatef(err, "failed to cleanup: %s", host)
 		}
 
 		logger.Infof("Cleanup %s success", host)
@@ -443,7 +442,7 @@ func DestroyComponent(ctx context.Context, instances []spec.Instance, cls spec.T
 		}
 
 		if err != nil {
-			return errors.Annotatef(err, "failed to destroy: %s", ins.GetHost())
+			return perrs.Annotatef(err, "failed to destroy: %s", ins.GetHost())
 		}
 
 		logger.Infof("Destroy %s success", ins.GetHost())
@@ -521,12 +520,11 @@ func DestroyClusterTombstone(
 			instCount[instance.GetHost()]--
 			err := StopAndDestroyInstance(ctx, cluster, instance, options, true, instCount[instance.GetHost()] == 0, tlsCfg)
 			if err != nil {
-				if options.Force {
-					logger.Warnf("failed to stop and destroy instance %s (%s), ignored as --force is set, you may need to manually cleanup the files",
-						instance, err)
-				} else {
+				if !options.Force {
 					return err
 				}
+				logger.Warnf("failed to stop and destroy instance %s (%s), ignored as --force is set, you may need to manually cleanup the files",
+					instance, err)
 			}
 		}
 		return nil

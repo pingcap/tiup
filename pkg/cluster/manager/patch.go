@@ -23,7 +23,6 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
-	"github.com/pingcap/errors"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
@@ -161,24 +160,24 @@ func checkPackage(bindVersion spec.BindVersion, specManager *spec.SpecManager, n
 	}
 	cacheDir := specManager.Path(name, "cache", comp+"-"+checksum[:7])
 	if err := os.MkdirAll(cacheDir, 0755); err != nil {
-		return errors.Annotatef(err, "create cache directory %s", cacheDir)
+		return perrs.Annotatef(err, "create cache directory %s", cacheDir)
 	}
 	if err := exec.Command("tar", "-xvf", packagePath, "-C", cacheDir).Run(); err != nil {
-		return errors.Annotatef(err, "decompress %s", packagePath)
+		return perrs.Annotatef(err, "decompress %s", packagePath)
 	}
 
 	fi, err := os.Stat(path.Join(cacheDir, entry))
 	if err != nil {
 		if os.IsNotExist(err) {
-			return errors.Errorf("entry %s not found in package %s", entry, packagePath)
+			return perrs.Errorf("entry %s not found in package %s", entry, packagePath)
 		}
-		return errors.AddStack(err)
+		return perrs.AddStack(err)
 	}
 	if !fi.Mode().IsRegular() {
-		return errors.Errorf("entry %s in package %s is not a regular file", entry, packagePath)
+		return perrs.Errorf("entry %s in package %s is not a regular file", entry, packagePath)
 	}
 	if fi.Mode()&0500 != 0500 {
-		return errors.Errorf("entry %s in package %s is not executable", entry, packagePath)
+		return perrs.Errorf("entry %s in package %s is not executable", entry, packagePath)
 	}
 
 	return nil

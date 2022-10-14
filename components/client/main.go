@@ -144,7 +144,7 @@ func isInstanceAlive(tiupHome, instance string) bool {
 		return false
 	}
 	defer file.Close()
-	var process map[string]interface{}
+	var process map[string]any
 	if err := json.NewDecoder(file).Decode(&process); err != nil {
 		return false
 	}

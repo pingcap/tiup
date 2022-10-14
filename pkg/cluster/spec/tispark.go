@@ -36,20 +36,20 @@ import (
 
 // TiSparkMasterSpec is the topology specification for TiSpark master node
 type TiSparkMasterSpec struct {
-	Host           string                 `yaml:"host"`
-	ListenHost     string                 `yaml:"listen_host,omitempty"`
-	SSHPort        int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported       bool                   `yaml:"imported,omitempty"`
-	Patched        bool                   `yaml:"patched,omitempty"`
-	IgnoreExporter bool                   `yaml:"ignore_exporter,omitempty"`
-	Port           int                    `yaml:"port" default:"7077"`
-	WebPort        int                    `yaml:"web_port" default:"8080"`
-	DeployDir      string                 `yaml:"deploy_dir,omitempty"`
-	JavaHome       string                 `yaml:"java_home,omitempty" validate:"java_home:editable"`
-	SparkConfigs   map[string]interface{} `yaml:"spark_config,omitempty" validate:"spark_config:ignore"`
-	SparkEnvs      map[string]string      `yaml:"spark_env,omitempty" validate:"spark_env:ignore"`
-	Arch           string                 `yaml:"arch,omitempty"`
-	OS             string                 `yaml:"os,omitempty"`
+	Host           string            `yaml:"host"`
+	ListenHost     string            `yaml:"listen_host,omitempty"`
+	SSHPort        int               `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
+	Imported       bool              `yaml:"imported,omitempty"`
+	Patched        bool              `yaml:"patched,omitempty"`
+	IgnoreExporter bool              `yaml:"ignore_exporter,omitempty"`
+	Port           int               `yaml:"port" default:"7077"`
+	WebPort        int               `yaml:"web_port" default:"8080"`
+	DeployDir      string            `yaml:"deploy_dir,omitempty"`
+	JavaHome       string            `yaml:"java_home,omitempty" validate:"java_home:editable"`
+	SparkConfigs   map[string]any    `yaml:"spark_config,omitempty" validate:"spark_config:ignore"`
+	SparkEnvs      map[string]string `yaml:"spark_env,omitempty" validate:"spark_env:ignore"`
+	Arch           string            `yaml:"arch,omitempty"`
+	OS             string            `yaml:"os,omitempty"`
 }
 
 // Role returns the component role of the instance
@@ -171,12 +171,12 @@ type TiSparkMasterInstance struct {
 }
 
 // GetCustomFields get custom spark configs of the instance
-func (i *TiSparkMasterInstance) GetCustomFields() map[string]interface{} {
+func (i *TiSparkMasterInstance) GetCustomFields() map[string]any {
 	v := reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("SparkConfigs")
 	if !v.IsValid() {
 		return nil
 	}
-	return v.Interface().(map[string]interface{})
+	return v.Interface().(map[string]any)
 }
 
 // GetCustomEnvs get custom spark envionment variables of the instance
@@ -210,7 +210,7 @@ func (i *TiSparkMasterInstance) InitConfig(
 	sysCfg := filepath.Join(paths.Cache, fmt.Sprintf("%s-%s-%d.service", comp, host, port))
 
 	// insert checkpoint
-	point := checkpoint.Acquire(ctx, CopyConfigFile, map[string]interface{}{"config-file": sysCfg})
+	point := checkpoint.Acquire(ctx, CopyConfigFile, map[string]any{"config-file": sysCfg})
 	defer func() {
 		point.Release(err, zap.String("config-file", sysCfg))
 	}()
@@ -373,7 +373,7 @@ func (i *TiSparkWorkerInstance) InitConfig(
 	sysCfg := filepath.Join(paths.Cache, fmt.Sprintf("%s-%s-%d.service", comp, host, port))
 
 	// insert checkpoint
-	point := checkpoint.Acquire(ctx, CopyConfigFile, map[string]interface{}{"config-file": sysCfg})
+	point := checkpoint.Acquire(ctx, CopyConfigFile, map[string]any{"config-file": sysCfg})
 	defer func() {
 		point.Release(err, zap.String("config-file", sysCfg))
 	}()
@@ -469,7 +469,7 @@ func (i *TiSparkWorkerInstance) InitConfig(
 
 // setTLSConfig set TLS Config to support enable/disable TLS
 // TiSparkWorkerInstance no need to configure TLS
-func (i *TiSparkWorkerInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
+func (i *TiSparkWorkerInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error) {
 	return nil, nil
 }
 
