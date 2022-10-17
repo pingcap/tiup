@@ -71,7 +71,7 @@ func ParseTopologyYaml(file string, out Topology, ignoreGlobal ...bool) error {
 
 	// keep the global config in out
 	if len(ignoreGlobal) > 0 && ignoreGlobal[0] {
-		var newTopo map[string]interface{}
+		var newTopo map[string]any
 		if err := yaml.Unmarshal(yamlFile, &newTopo); err != nil {
 			return err
 		}
@@ -104,7 +104,7 @@ func ExpandRelativeDir(topo Topology) {
 	expandRelativePath(deployUser(topo), topo)
 }
 
-func expandRelativePath(user string, topo interface{}) {
+func expandRelativePath(user string, topo any) {
 	v := reflect.Indirect(reflect.ValueOf(topo).Elem())
 
 	switch v.Kind() {

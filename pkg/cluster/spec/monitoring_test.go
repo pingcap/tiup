@@ -203,7 +203,7 @@ scrape_configs:
             - 192.168.122.25:20180
 `
 
-	var addition map[string]interface{}
+	var addition map[string]any
 	err = yaml.Unmarshal([]byte(`metric_relabel_configs:
   - source_labels: [__name__]
     separator: ;

@@ -13,19 +13,19 @@
 
 package queue
 
-// AnyQueue is a queue stores interface{}
+// AnyQueue is a queue stores any
 type AnyQueue struct {
-	eq    func(a interface{}, b interface{}) bool
-	slice []interface{}
+	eq    func(a any, b any) bool
+	slice []any
 }
 
 // NewAnyQueue builds a AnyQueue
-func NewAnyQueue(eq func(a interface{}, b interface{}) bool, aa ...interface{}) *AnyQueue {
+func NewAnyQueue(eq func(a any, b any) bool, aa ...any) *AnyQueue {
 	return &AnyQueue{eq, aa}
 }
 
 // Get returns previous stored value that equals to val and remove it from the queue, if not found, return nil
-func (q *AnyQueue) Get(val interface{}) interface{} {
+func (q *AnyQueue) Get(val any) any {
 	for i, a := range q.slice {
 		if q.eq(a, val) {
 			q.slice = append(q.slice[:i], q.slice[i+1:]...)
@@ -36,6 +36,6 @@ func (q *AnyQueue) Get(val interface{}) interface{} {
 }
 
 // Put inserts `val` into `q`.
-func (q *AnyQueue) Put(val interface{}) {
+func (q *AnyQueue) Put(val any) {
 	q.slice = append(q.slice, val)
 }

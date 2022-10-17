@@ -1292,8 +1292,8 @@ func (m *SubTaskStatus) GetSync() *SyncStatus {
 }
 
 // XXX_OneofWrappers is for the internal use of the proto package.
-func (*SubTaskStatus) XXX_OneofWrappers() []interface{} {
-	return []interface{}{
+func (*SubTaskStatus) XXX_OneofWrappers() []any {
+	return []any{
 		(*SubTaskStatus_Msg)(nil),
 		(*SubTaskStatus_Check)(nil),
 		(*SubTaskStatus_Dump)(nil),
@@ -1849,8 +1849,8 @@ func (m *SubTaskError) GetSync() *SyncError {
 }
 
 // XXX_OneofWrappers is for the internal use of the proto package.
-func (*SubTaskError) XXX_OneofWrappers() []interface{} {
-	return []interface{}{
+func (*SubTaskError) XXX_OneofWrappers() []any {
+	return []any{
 		(*SubTaskError_Msg)(nil),
 		(*SubTaskError_Check)(nil),
 		(*SubTaskError_Dump)(nil),
@@ -2883,7 +2883,7 @@ func RegisterWorkerServer(s *grpc.Server, srv WorkerServer) {
 	s.RegisterService(&_Worker_serviceDesc, srv)
 }
 
-func _Worker_QueryStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Worker_QueryStatus_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(QueryStatusRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2895,13 +2895,13 @@ func _Worker_QueryStatus_Handler(srv interface{}, ctx context.Context, dec func(
 		Server:     srv,
 		FullMethod: "/pb.Worker/QueryStatus",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(WorkerServer).QueryStatus(ctx, req.(*QueryStatusRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Worker_PurgeRelay_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Worker_PurgeRelay_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(PurgeRelayRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2913,13 +2913,13 @@ func _Worker_PurgeRelay_Handler(srv interface{}, ctx context.Context, dec func(i
 		Server:     srv,
 		FullMethod: "/pb.Worker/PurgeRelay",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(WorkerServer).PurgeRelay(ctx, req.(*PurgeRelayRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Worker_OperateSchema_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Worker_OperateSchema_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(OperateWorkerSchemaRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2931,13 +2931,13 @@ func _Worker_OperateSchema_Handler(srv interface{}, ctx context.Context, dec fun
 		Server:     srv,
 		FullMethod: "/pb.Worker/OperateSchema",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(WorkerServer).OperateSchema(ctx, req.(*OperateWorkerSchemaRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Worker_OperateV1Meta_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Worker_OperateV1Meta_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(OperateV1MetaRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2949,13 +2949,13 @@ func _Worker_OperateV1Meta_Handler(srv interface{}, ctx context.Context, dec fun
 		Server:     srv,
 		FullMethod: "/pb.Worker/OperateV1Meta",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(WorkerServer).OperateV1Meta(ctx, req.(*OperateV1MetaRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Worker_HandleError_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Worker_HandleError_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(HandleWorkerErrorRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2967,13 +2967,13 @@ func _Worker_HandleError_Handler(srv interface{}, ctx context.Context, dec func(
 		Server:     srv,
 		FullMethod: "/pb.Worker/HandleError",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(WorkerServer).HandleError(ctx, req.(*HandleWorkerErrorRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Worker_GetWorkerCfg_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Worker_GetWorkerCfg_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(GetWorkerCfgRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -2985,7 +2985,7 @@ func _Worker_GetWorkerCfg_Handler(srv interface{}, ctx context.Context, dec func
 		Server:     srv,
 		FullMethod: "/pb.Worker/GetWorkerCfg",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(WorkerServer).GetWorkerCfg(ctx, req.(*GetWorkerCfgRequest))
 	}
 	return interceptor(ctx, in, info, handler)

@@ -62,7 +62,6 @@ check-static:
 lint:
 	@# Target: run the lint checker revive
 	@echo "linting"
-	../../tools/check/check-lint.sh
 	@../../tools/bin/revive -formatter friendly -config ../../tools/check/revive.toml $(FILES)
 
 vet:

@@ -31,24 +31,24 @@ import (
 
 // CDCSpec represents the CDC topology specification in topology.yaml
 type CDCSpec struct {
-	Host            string                 `yaml:"host"`
-	SSHPort         int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported        bool                   `yaml:"imported,omitempty"`
-	Patched         bool                   `yaml:"patched,omitempty"`
-	IgnoreExporter  bool                   `yaml:"ignore_exporter,omitempty"`
-	Port            int                    `yaml:"port" default:"8300"`
-	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
-	DataDir         string                 `yaml:"data_dir,omitempty"`
-	LogDir          string                 `yaml:"log_dir,omitempty"`
-	Offline         bool                   `yaml:"offline,omitempty"`
-	GCTTL           int64                  `yaml:"gc-ttl,omitempty" validate:"gc-ttl:editable"`
-	TZ              string                 `yaml:"tz,omitempty" validate:"tz:editable"`
-	TiCDCClusterID  string                 `yaml:"ticdc_cluster_id"`
-	NumaNode        string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
-	Config          map[string]interface{} `yaml:"config,omitempty" validate:"config:ignore"`
-	ResourceControl meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
-	Arch            string                 `yaml:"arch,omitempty"`
-	OS              string                 `yaml:"os,omitempty"`
+	Host            string               `yaml:"host"`
+	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
+	Imported        bool                 `yaml:"imported,omitempty"`
+	Patched         bool                 `yaml:"patched,omitempty"`
+	IgnoreExporter  bool                 `yaml:"ignore_exporter,omitempty"`
+	Port            int                  `yaml:"port" default:"8300"`
+	DeployDir       string               `yaml:"deploy_dir,omitempty"`
+	DataDir         string               `yaml:"data_dir,omitempty"`
+	LogDir          string               `yaml:"log_dir,omitempty"`
+	Offline         bool                 `yaml:"offline,omitempty"`
+	GCTTL           int64                `yaml:"gc-ttl,omitempty" validate:"gc-ttl:editable"`
+	TZ              string               `yaml:"tz,omitempty" validate:"tz:editable"`
+	TiCDCClusterID  string               `yaml:"ticdc_cluster_id"`
+	NumaNode        string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
+	Config          map[string]any       `yaml:"config,omitempty" validate:"config:ignore"`
+	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
+	Arch            string               `yaml:"arch,omitempty"`
+	OS              string               `yaml:"os,omitempty"`
 }
 
 // Role returns the component role of the instance
@@ -211,7 +211,7 @@ func (i *CDCInstance) InitConfig(
 }
 
 // setTLSConfig set TLS Config to support enable/disable TLS
-func (i *CDCInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
+func (i *CDCInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error) {
 	return nil, nil
 }
 

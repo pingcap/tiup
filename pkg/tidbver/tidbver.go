@@ -49,6 +49,12 @@ func TiFlashSupportMultiDisksDeployment(version string) bool {
 	return semver.Compare(version, "v4.0.9") >= 0 || strings.Contains(version, "nightly")
 }
 
+// TiFlashRequireCPUFlagAVX2 return if given version of TiFlash requires AVX2 CPU flags
+func TiFlashRequireCPUFlagAVX2(version string) bool {
+	// https://github.com/pingcap/tiup/pull/2054
+	return semver.Compare(version, "v6.3.0") >= 0 || strings.Contains(version, "nightly")
+}
+
 // TiFlashDeprecatedUsersConfig return if given version of TiFlash deprecated users.* config
 func TiFlashDeprecatedUsersConfig(version string) bool {
 	// https://github.com/pingcap/tiup/pull/1211

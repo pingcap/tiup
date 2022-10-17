@@ -166,7 +166,7 @@ func SignManifestData(data []byte, ki *KeyInfo) ([]byte, error) {
 		return nil, errors.Annotate(err, "unmarshal manifest")
 	}
 
-	var signed interface{}
+	var signed any
 	if err := json.Unmarshal(m.Signed, &signed); err != nil {
 		return nil, errors.Annotate(err, "unmarshal manifest.signed")
 	}

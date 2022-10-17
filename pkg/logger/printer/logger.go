@@ -73,24 +73,24 @@ func (l *Logger) GetDisplayMode() DisplayMode {
 }
 
 // Debugf output the debug message to console
-func (l *Logger) Debugf(format string, args ...interface{}) {
+func (l *Logger) Debugf(format string, args ...any) {
 	zap.L().Debug(fmt.Sprintf(format, args...))
 }
 
 // Infof output the log message to console
-func (l *Logger) Infof(format string, args ...interface{}) {
+func (l *Logger) Infof(format string, args ...any) {
 	zap.L().Info(fmt.Sprintf(format, args...))
 	printLog(l.stdout, l.outputFmt, "info", format, args...)
 }
 
 // Warnf output the warning message to console
-func (l *Logger) Warnf(format string, args ...interface{}) {
+func (l *Logger) Warnf(format string, args ...any) {
 	zap.L().Warn(fmt.Sprintf(format, args...))
 	printLog(l.stderr, l.outputFmt, "warn", format, args...)
 }
 
 // Errorf output the error message to console
-func (l *Logger) Errorf(format string, args ...interface{}) {
+func (l *Logger) Errorf(format string, args ...any) {
 	zap.L().Error(fmt.Sprintf(format, args...))
 	printLog(l.stderr, l.outputFmt, "error", format, args...)
 }
