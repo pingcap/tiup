@@ -168,7 +168,7 @@ func TestImportFromAnsible(t *testing.T) {
 		Port:      8261,
 		DeployDir: "",
 		LogDir:    "/home/tidb/deploy/log",
-		Config:    map[string]interface{}{"log-level": "info"},
+		Config:    map[string]any{"log-level": "info"},
 		Imported:  true,
 	}
 	assert.Equal(expectedMaster, master)
@@ -185,7 +185,7 @@ func TestImportFromAnsible(t *testing.T) {
 		Port:      8262,
 		DeployDir: "/home/tidb/deploy",
 		LogDir:    "/home/tidb/deploy/log",
-		Config:    map[string]interface{}{"log-level": "info"},
+		Config:    map[string]any{"log-level": "info"},
 		Imported:  true,
 	}
 

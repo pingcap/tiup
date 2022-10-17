@@ -40,17 +40,17 @@ type PDSpec struct {
 	Patched             bool   `yaml:"patched,omitempty"`
 	IgnoreExporter      bool   `yaml:"ignore_exporter,omitempty"`
 	// Use Name to get the name with a default value if it's empty.
-	Name            string                 `yaml:"name"`
-	ClientPort      int                    `yaml:"client_port" default:"2379"`
-	PeerPort        int                    `yaml:"peer_port" default:"2380"`
-	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
-	DataDir         string                 `yaml:"data_dir,omitempty"`
-	LogDir          string                 `yaml:"log_dir,omitempty"`
-	NumaNode        string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
-	Config          map[string]interface{} `yaml:"config,omitempty" validate:"config:ignore"`
-	ResourceControl meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
-	Arch            string                 `yaml:"arch,omitempty"`
-	OS              string                 `yaml:"os,omitempty"`
+	Name            string               `yaml:"name"`
+	ClientPort      int                  `yaml:"client_port" default:"2379"`
+	PeerPort        int                  `yaml:"peer_port" default:"2380"`
+	DeployDir       string               `yaml:"deploy_dir,omitempty"`
+	DataDir         string               `yaml:"data_dir,omitempty"`
+	LogDir          string               `yaml:"log_dir,omitempty"`
+	NumaNode        string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
+	Config          map[string]any       `yaml:"config,omitempty" validate:"config:ignore"`
+	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
+	Arch            string               `yaml:"arch,omitempty"`
+	OS              string               `yaml:"os,omitempty"`
 }
 
 // Status queries current status of the instance
@@ -239,11 +239,11 @@ func (i *PDInstance) InitConfig(
 }
 
 // setTLSConfig set TLS Config to support enable/disable TLS
-func (i *PDInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
+func (i *PDInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error) {
 	// set TLS configs
 	if enableTLS {
 		if configs == nil {
-			configs = make(map[string]interface{})
+			configs = make(map[string]any)
 		}
 		configs["security.cacert-path"] = fmt.Sprintf(
 			"%s/tls/%s",
@@ -337,10 +337,10 @@ func (i *PDInstance) IsLeader(ctx context.Context, topo Topology, apiTimeoutSeco
 	}
 	pdClient := api.NewPDClient(ctx, tidbTopo.GetPDList(), time.Second*5, tlsCfg)
 
-	return i.isLeader(pdClient)
+	return i.checkLeader(pdClient)
 }
 
-func (i *PDInstance) isLeader(pdClient *api.PDClient) (bool, error) {
+func (i *PDInstance) checkLeader(pdClient *api.PDClient) (bool, error) {
 	leader, err := pdClient.GetLeader()
 	if err != nil {
 		return false, errors.Annotatef(err, "failed to get PD leader %s", i.GetHost())
@@ -362,7 +362,7 @@ func (i *PDInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutSe
 	}
 	pdClient := api.NewPDClient(ctx, tidbTopo.GetPDList(), time.Second*5, tlsCfg)
 
-	isLeader, err := i.isLeader(pdClient)
+	isLeader, err := i.checkLeader(pdClient)
 	if err != nil {
 		return err
 	}

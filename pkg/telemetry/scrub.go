@@ -49,13 +49,13 @@ func ScrubYaml(
 	omitFieldNames set.StringSet,
 	salt string,
 ) (scrubed []byte, err error) {
-	mp := make(map[interface{}]interface{})
+	mp := make(map[any]any)
 	err = yaml.Unmarshal(data, mp)
 	if err != nil {
 		return nil, err
 	}
 
-	smp := scrupMap(mp, hashFieldNames, omitFieldNames, false, false, salt).(map[string]interface{})
+	smp := scrupMap(mp, hashFieldNames, omitFieldNames, false, false, salt).(map[string]any)
 	scrubed, err = yaml.Marshal(smp)
 	return
 }
@@ -66,19 +66,19 @@ func ScrubYaml(
 // so configs are ended up with only keys reported, and all field values are hash masked
 // or with zero values.
 func scrupMap(
-	val interface{},
+	val any,
 	hashFieldNames set.StringSet,
 	omitFieldNames set.StringSet,
 	hash, omit bool,
 	salt string,
-) interface{} {
+) any {
 	if val == nil {
 		return nil
 	}
 
-	m, ok := val.(map[interface{}]interface{})
+	m, ok := val.(map[any]any)
 	if ok {
-		ret := make(map[string]interface{})
+		ret := make(map[string]any)
 		for k, v := range m {
 			kk, ok := k.(string)
 			if !ok {
@@ -94,14 +94,14 @@ func scrupMap(
 	rv := reflect.ValueOf(val)
 	switch rv.Kind() {
 	case reflect.Slice:
-		var ret []interface{}
+		var ret []any
 		for i := 0; i < rv.Len(); i++ {
 			ret = append(ret,
 				scrupMap(rv.Index(i).Interface(), hashFieldNames, omitFieldNames, hash, omit, salt))
 		}
 		return ret
 	case reflect.Map:
-		ret := make(map[string]interface{})
+		ret := make(map[string]any)
 		iter := rv.MapRange()
 		for iter.Next() {
 			k := iter.Key().String()

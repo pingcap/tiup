@@ -150,8 +150,8 @@ func (m *Report) GetPlayground() *PlaygroundReport {
 }
 
 // XXX_OneofWrappers is for the internal use of the proto package.
-func (*Report) XXX_OneofWrappers() []interface{} {
-	return []interface{}{
+func (*Report) XXX_OneofWrappers() []any {
+	return []any{
 		(*Report_Tiup)(nil),
 		(*Report_Cluster)(nil),
 		(*Report_Playground)(nil),

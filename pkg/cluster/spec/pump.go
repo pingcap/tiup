@@ -30,21 +30,21 @@ import (
 
 // PumpSpec represents the Pump topology specification in topology.yaml
 type PumpSpec struct {
-	Host            string                 `yaml:"host"`
-	SSHPort         int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported        bool                   `yaml:"imported,omitempty"`
-	Patched         bool                   `yaml:"patched,omitempty"`
-	IgnoreExporter  bool                   `yaml:"ignore_exporter,omitempty"`
-	Port            int                    `yaml:"port" default:"8250"`
-	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
-	DataDir         string                 `yaml:"data_dir,omitempty"`
-	LogDir          string                 `yaml:"log_dir,omitempty"`
-	Offline         bool                   `yaml:"offline,omitempty"`
-	NumaNode        string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
-	Config          map[string]interface{} `yaml:"config,omitempty" validate:"config:ignore"`
-	ResourceControl meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
-	Arch            string                 `yaml:"arch,omitempty"`
-	OS              string                 `yaml:"os,omitempty"`
+	Host            string               `yaml:"host"`
+	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
+	Imported        bool                 `yaml:"imported,omitempty"`
+	Patched         bool                 `yaml:"patched,omitempty"`
+	IgnoreExporter  bool                 `yaml:"ignore_exporter,omitempty"`
+	Port            int                  `yaml:"port" default:"8250"`
+	DeployDir       string               `yaml:"deploy_dir,omitempty"`
+	DataDir         string               `yaml:"data_dir,omitempty"`
+	LogDir          string               `yaml:"log_dir,omitempty"`
+	Offline         bool                 `yaml:"offline,omitempty"`
+	NumaNode        string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
+	Config          map[string]any       `yaml:"config,omitempty" validate:"config:ignore"`
+	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
+	Arch            string               `yaml:"arch,omitempty"`
+	OS              string               `yaml:"os,omitempty"`
 }
 
 // Status queries current status of the instance
@@ -239,11 +239,11 @@ func (i *PumpInstance) InitConfig(
 }
 
 // setTLSConfig set TLS Config to support enable/disable TLS
-func (i *PumpInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
+func (i *PumpInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error) {
 	// set TLS configs
 	if enableTLS {
 		if configs == nil {
-			configs = make(map[string]interface{})
+			configs = make(map[string]any)
 		}
 		configs["security.ssl-ca"] = fmt.Sprintf(
 			"%s/tls/%s",

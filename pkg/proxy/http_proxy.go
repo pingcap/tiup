@@ -100,7 +100,7 @@ func (s *HTTPProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	default:
 		r.RequestURI = ""
 		removeHopHeaders(r.Header)
-		s.serveHTTP(w, r)
+		s.serve(w, r)
 	}
 }
 
@@ -162,13 +162,13 @@ func (s *HTTPProxy) connect(w http.ResponseWriter, r *http.Request) {
 	wg.Wait()
 }
 
-// serveHTTP handles the original http request
+// serve handles the original http request
 // Data flow:
 //  1. Receive request R1 from client
 //  2. Re-post request R1 to remote server(the one client want to connect)
 //  3. Receive response P1 from remote server
 //  4. Send response P1 to client
-func (s *HTTPProxy) serveHTTP(w http.ResponseWriter, r *http.Request) {
+func (s *HTTPProxy) serve(w http.ResponseWriter, r *http.Request) {
 	// Client.Do is different from DefaultTransport.RoundTrip ...
 	// Client.Do will change some part of request as a new request of the server.
 	// The underlying RoundTrip never changes anything of the request.

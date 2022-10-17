@@ -260,7 +260,7 @@ func cloneComponents(repo *V1Repository,
 	defer func() { close(tickets) }()
 
 	for _, name := range components {
-		manifest, err := repo.FetchComponentManifest(name, true)
+		manifest, err := repo.GetComponentManifest(name, true)
 		if err != nil {
 			return nil, errors.Annotatef(err, "fetch component '%s' manifest failed", name)
 		}
@@ -312,7 +312,7 @@ func cloneComponents(repo *V1Repository,
 						continue
 					}
 				}
-				if _, err := repo.FetchComponentManifest(name, false); err != nil || versionItem.Yanked {
+				if _, err := repo.GetComponentManifest(name, false); err != nil || versionItem.Yanked {
 					// The component or the version is yanked, skip download binary
 					continue
 				}

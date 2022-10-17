@@ -27,7 +27,7 @@ type errorMessage struct {
 }
 
 func init() {
-	fn.SetErrorEncoder(func(ctx context.Context, err error) interface{} {
+	fn.SetErrorEncoder(func(ctx context.Context, err error) any {
 		logprinter.Debugf("Response an error message to client")
 		if e, ok := err.(statusError); ok {
 			logprinter.Debugf("Response status error to client: %s", e.Error())

@@ -139,11 +139,11 @@ func (k *RSAPrivKey) Deserialize(key []byte) error {
 	if block == nil {
 		return ErrorDeserializeKey
 	}
-	PrivKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	privKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 	if err != nil {
 		return err
 	}
-	k.key = PrivKey
+	k.key = privKey
 	return nil
 }
 

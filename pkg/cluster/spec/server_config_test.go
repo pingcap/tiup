@@ -29,7 +29,7 @@ server_configs:
 	decimal := bytes.Contains(yamlData, []byte("0.0"))
 	c.Assert(decimal, check.IsTrue)
 
-	get, err := merge2Toml("tidb", topo.ServerConfigs.TiDB, nil)
+	get, err := Merge2Toml("tidb", topo.ServerConfigs.TiDB, nil)
 	c.Assert(err, check.IsNil)
 
 	decimal = bytes.Contains(get, []byte("0.0"))
@@ -58,23 +58,23 @@ server_configs:
 	c.Assert(GetValueFromPath(topo.ServerConfigs.TiDB, "a.b.c.d"), check.Equals, 1)
 	c.Assert(GetValueFromPath(topo.ServerConfigs.TiDB, "a.b.c.e"), check.Equals, 3)
 	c.Assert(GetValueFromPath(topo.ServerConfigs.TiDB, "a.b.c.f"), check.Equals, 4)
-	c.Assert(GetValueFromPath(topo.ServerConfigs.TiDB, "h.i.j.k"), check.DeepEquals, []interface{}{1, 2, 4})
+	c.Assert(GetValueFromPath(topo.ServerConfigs.TiDB, "h.i.j.k"), check.DeepEquals, []any{1, 2, 4})
 	c.Assert(GetValueFromPath(topo.ServerConfigs.TiDB, "e.f"), check.Equals, true)
 }
 
 func (s *configSuite) TestFlattenMap(c *check.C) {
 	var (
-		m map[string]interface{}
-		r map[string]interface{}
+		m map[string]any
+		r map[string]any
 	)
 
-	m = map[string]interface{}{
+	m = map[string]any{
 		"a": 1,
-		"b": map[string]interface{}{
+		"b": map[string]any{
 			"c": 2,
 		},
 		"d.e": 3,
-		"f.g": map[string]interface{}{
+		"f.g": map[string]any{
 			"h": 4,
 			"i": 5,
 		},
@@ -91,39 +91,39 @@ func (s *configSuite) TestFlattenMap(c *check.C) {
 
 func (s *configSuite) TestFoldMap(c *check.C) {
 	var (
-		m map[string]interface{}
-		r map[string]interface{}
+		m map[string]any
+		r map[string]any
 	)
 
-	m = map[string]interface{}{
+	m = map[string]any{
 		"a":   1,
 		"b.c": 2,
 		"b.d": 3,
-		"e.f": map[string]interface{}{
+		"e.f": map[string]any{
 			"g.h": 4,
 		},
-		"i": map[string]interface{}{
+		"i": map[string]any{
 			"j.k": 5,
 			"l":   6,
 		},
 	}
 
 	r = FoldMap(m)
-	c.Assert(r, check.DeepEquals, map[string]interface{}{
+	c.Assert(r, check.DeepEquals, map[string]any{
 		"a": 1,
-		"b": map[string]interface{}{
+		"b": map[string]any{
 			"c": 2,
 			"d": 3,
 		},
-		"e": map[string]interface{}{
-			"f": map[string]interface{}{
-				"g": map[string]interface{}{
+		"e": map[string]any{
+			"f": map[string]any{
+				"g": map[string]any{
 					"h": 4,
 				},
 			},
 		},
-		"i": map[string]interface{}{
-			"j": map[string]interface{}{
+		"i": map[string]any{
+			"j": map[string]any{
 				"k": 5,
 			},
 			"l": 6,
@@ -145,10 +145,10 @@ remote_read:
 `)
 
 	bs, err := encodeRemoteCfg2Yaml(Remote{
-		RemoteWrite: []map[string]interface{}{
+		RemoteWrite: []map[string]any{
 			{
 				"url": "http://127.0.0.1:/8086/write",
-				"queue_config": map[string]interface{}{
+				"queue_config": map[string]any{
 					"batch_send_deadline":  "5m",
 					"capacity":             100000,
 					"max_samples_per_send": 10000,
@@ -156,7 +156,7 @@ remote_read:
 				},
 			},
 		},
-		RemoteRead: []map[string]interface{}{
+		RemoteRead: []map[string]any{
 			{
 				"url": "http://127.0.0.1:/8086/read",
 			},

@@ -195,7 +195,7 @@ func upgradeInstance(
 	tlsCfg *tls.Config,
 ) (err error) {
 	// insert checkpoint
-	point := checkpoint.Acquire(ctx, upgradePoint, map[string]interface{}{"instance": instance.ID()})
+	point := checkpoint.Acquire(ctx, upgradePoint, map[string]any{"instance": instance.ID()})
 	defer func() {
 		point.Release(err, zap.String("instance", instance.ID()))
 	}()
@@ -256,7 +256,7 @@ func increaseScheduleLimit(ctx context.Context, pc *api.PDClient) (
 	currRegionScheduleLimit int,
 	err error) {
 	// insert checkpoint
-	point := checkpoint.Acquire(ctx, increaseLimitPoint, map[string]interface{}{})
+	point := checkpoint.Acquire(ctx, increaseLimitPoint, map[string]any{})
 	defer func() {
 		point.Release(err,
 			zap.Int("currLeaderScheduleLimit", currLeaderScheduleLimit),

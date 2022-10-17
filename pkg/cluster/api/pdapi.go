@@ -338,12 +338,12 @@ func (pc *PDClient) GetMembers() (*pdpb.GetMembersResponse, error) {
 }
 
 // GetConfig returns all PD configs
-func (pc *PDClient) GetConfig() (map[string]interface{}, error) {
+func (pc *PDClient) GetConfig() (map[string]any, error) {
 	endpoints := pc.getEndpoints(pdConfigURI)
 
 	// We don't use the `github.com/tikv/pd/server/config` directly because
 	// there is compatible issue: https://github.com/pingcap/tiup/issues/637
-	pdConfig := map[string]interface{}{}
+	pdConfig := map[string]any{}
 
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		body, err := pc.httpClient.Get(pc.ctx, endpoint)
@@ -363,7 +363,7 @@ func (pc *PDClient) GetConfig() (map[string]interface{}, error) {
 // GetClusterID return cluster ID
 func (pc *PDClient) GetClusterID() (uint64, error) {
 	endpoints := pc.getEndpoints(pdClusterIDURI)
-	var clusterID map[string]interface{}
+	var clusterID map[string]any
 
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		body, err := pc.httpClient.Get(pc.ctx, endpoint)
@@ -372,7 +372,7 @@ func (pc *PDClient) GetClusterID() (uint64, error) {
 		}
 		d := json.NewDecoder(bytes.NewBuffer(body))
 		d.UseNumber()
-		clusterID = make(map[string]interface{})
+		clusterID = make(map[string]any)
 		return nil, d.Decode(&clusterID)
 	})
 	if err != nil {
@@ -558,7 +558,7 @@ func (pc *PDClient) EvictStoreLeader(host string, retryOpt *utils.RetryOption, c
 //     There are 20 stores in total. In this case, there may be no leader to transfer back.
 //
 //     - When the leader count is less than 57, there is possibility that only less than 2/3
-//     leaders are transfered back. `(N-10-9 >= 2/3*N) -> (N>=57)`.
+//     leaders are transferred back. `(N-10-9 >= 2/3*N) -> (N>=57)`.
 //     For example: The target store's leader count is 56. Other stores' leader count are 46.
 //     There are 57 stores in total. In this case, there may be only 37 leaders to transfer back,
 //     and 37/56 < 2/3. Accordingly, if the target store's leader count is 57, then there may be
@@ -962,7 +962,7 @@ func (pc *PDClient) SetReplicationConfig(key string, value int) error {
 		return nil
 	}
 
-	data := map[string]interface{}{"set": map[string]interface{}{key: value}}
+	data := map[string]any{"set": map[string]any{key: value}}
 	body, err := json.Marshal(data)
 	if err != nil {
 		return err
@@ -979,7 +979,7 @@ func (pc *PDClient) SetAllStoreLimits(value int) error {
 		return nil
 	}
 
-	data := map[string]interface{}{"rate": value}
+	data := map[string]any{"rate": value}
 	body, err := json.Marshal(data)
 	if err != nil {
 		return err

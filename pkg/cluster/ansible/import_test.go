@@ -249,7 +249,7 @@ d = "\""
 }
 
 func (s *ansSuite) TestDiffConfig(c *C) {
-	global, locals := diffConfigs([]map[string]interface{}{
+	global, locals := diffConfigs([]map[string]any{
 		{
 			"a":       true,
 			"b":       1,

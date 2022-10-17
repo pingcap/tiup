@@ -44,7 +44,7 @@ func ShowDiff(t1 string, t2 string, w io.Writer) {
 	fmt.Fprint(w, dmp.DiffPrettyText(diffs))
 }
 
-func validateExpandable(fromField, toField interface{}) bool {
+func validateExpandable(fromField, toField any) bool {
 	fromStr, ok := fromField.(string)
 	if !ok {
 		return false
@@ -74,7 +74,7 @@ func validateExpandable(fromField, toField interface{}) bool {
 
 // ValidateSpecDiff checks and validates the new spec to see if the modified
 // keys are all marked as editable
-func ValidateSpecDiff(s1, s2 interface{}) error {
+func ValidateSpecDiff(s1, s2 any) error {
 	differ, err := diff.NewDiffer(
 		diff.TagName(validateTagName),
 		diff.AllowTypeMismatch(true),
@@ -147,9 +147,7 @@ func ValidateSpecDiff(s1, s2 interface{}) error {
 	return nil
 }
 
-func parseValidateTagValue(v string) (string, string) {
-	key := ""
-	ctl := ""
+func parseValidateTagValue(v string) (key, ctl string) {
 	pvs := strings.Split(v, validateTagSeperator)
 	switch len(pvs) {
 	case 1:

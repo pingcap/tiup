@@ -64,7 +64,7 @@ func Base62Tag() string {
 }
 
 // Ternary operator
-func Ternary(condition bool, a, b interface{}) interface{} {
+func Ternary(condition bool, a, b any) any {
 	if condition {
 		return a
 	}

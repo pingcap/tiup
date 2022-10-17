@@ -287,7 +287,7 @@ func (l *httpMirror) Open() error {
 	return nil
 }
 
-func (l *httpMirror) download(url string, to string, maxSize int64) (io.ReadCloser, error) {
+func (l *httpMirror) downloadFile(url string, to string, maxSize int64) (io.ReadCloser, error) {
 	defer func(start time.Time) {
 		logprinter.Verbose("Download resource %s in %s", url, time.Since(start))
 	}(time.Now())
@@ -393,7 +393,7 @@ func (l *httpMirror) Rotate(m *v1manifest.Manifest) error {
 			return err
 		}
 
-		return fmt.Errorf("Unknow error from server, response code: %d response body: %s", resp.StatusCode, buf.String())
+		return fmt.Errorf("unknow error from server, response code: %d response body: %s", resp.StatusCode, buf.String())
 	}
 }
 
@@ -456,7 +456,7 @@ func (l *httpMirror) Publish(manifest *v1manifest.Manifest, info model.Component
 			return err
 		}
 
-		return fmt.Errorf("Unknow error from server, response code: %d response body: %s", resp.StatusCode, buf.String())
+		return fmt.Errorf("unknow error from server, response code: %d response body: %s", resp.StatusCode, buf.String())
 	}
 }
 
@@ -488,7 +488,7 @@ func (l *httpMirror) Download(resource, targetDir string) error {
 		if err != nil && l.isRetryable(err) {
 			logprinter.Warnf("failed to download %s(%s), retrying...", resource, err.Error())
 		}
-		if r, err = l.download(l.prepareURL(resource), tmpFilePath, 0); err != nil {
+		if r, err = l.downloadFile(l.prepareURL(resource), tmpFilePath, 0); err != nil {
 			if l.isRetryable(err) {
 				return err
 			}
@@ -512,7 +512,7 @@ func (l *httpMirror) Download(resource, targetDir string) error {
 
 // Fetch implements the Mirror interface
 func (l *httpMirror) Fetch(resource string, maxSize int64) (io.ReadCloser, error) {
-	return l.download(l.prepareURL(resource), "", maxSize)
+	return l.downloadFile(l.prepareURL(resource), "", maxSize)
 }
 
 // Close implements the Mirror interface
