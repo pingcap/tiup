@@ -53,13 +53,13 @@ type PrometheusSpec struct {
 	Arch                  string                 `yaml:"arch,omitempty"`
 	OS                    string                 `yaml:"os,omitempty"`
 	RuleDir               string                 `yaml:"rule_dir,omitempty" validate:"rule_dir:editable"`
-	AdditionalScrapeConf  map[string]interface{} `yaml:"additional_scrape_conf,omitempty" validate:"additional_scrape_conf:ignore"`
+	AdditionalScrapeConf  map[string]any         `yaml:"additional_scrape_conf,omitempty" validate:"additional_scrape_conf:ignore"`
 }
 
 // Remote prometheus remote config
 type Remote struct {
-	RemoteWrite []map[string]interface{} `yaml:"remote_write,omitempty" validate:"remote_write:ignore"`
-	RemoteRead  []map[string]interface{} `yaml:"remote_read,omitempty" validate:"remote_read:ignore"`
+	RemoteWrite []map[string]any `yaml:"remote_write,omitempty" validate:"remote_write:ignore"`
+	RemoteRead  []map[string]any `yaml:"remote_read,omitempty" validate:"remote_read:ignore"`
 }
 
 // ExternalAlertmanager configs prometheus to include alertmanagers not deployed in current cluster
@@ -387,7 +387,7 @@ func (i *MonitorInstance) InitConfig(
 }
 
 // setTLSConfig set TLS Config to support enable/disable TLS
-func (i *MonitorInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
+func (i *MonitorInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error) {
 	return nil, nil
 }
 
@@ -490,8 +490,8 @@ func (i *MonitorInstance) ScaleConfig(
 	return i.InitConfig(ctx, e, clusterName, clusterVersion, deployUser, paths)
 }
 
-func mergeAdditionalScrapeConf(source string, addition map[string]interface{}) error {
-	var result map[string]interface{}
+func mergeAdditionalScrapeConf(source string, addition map[string]any) error {
+	var result map[string]any
 	bytes, err := os.ReadFile(source)
 	if err != nil {
 		return err
@@ -501,9 +501,9 @@ func mergeAdditionalScrapeConf(source string, addition map[string]interface{}) e
 		return err
 	}
 
-	for _, job := range result["scrape_configs"].([]interface{}) {
+	for _, job := range result["scrape_configs"].([]any) {
 		for k, v := range addition {
-			job.(map[string]interface{})[k] = v
+			job.(map[string]any)[k] = v
 		}
 	}
 	bytes, err = yaml.Marshal(result)

@@ -188,7 +188,7 @@ func showComponentVersions(env *environment.Environment, component string, opt l
 	if opt.installedOnly {
 		comp, err = env.V1Repository().LocalComponentManifest(component, false)
 	} else {
-		comp, err = env.V1Repository().FetchComponentManifest(component, false)
+		comp, err = env.V1Repository().GetComponentManifest(component, false)
 	}
 	if err != nil {
 		return nil, errors.Annotate(err, "failed to fetch component")

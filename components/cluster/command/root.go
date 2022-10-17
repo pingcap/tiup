@@ -30,7 +30,6 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/manager"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/environment"
 	tiupmeta "github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/logger"
@@ -305,7 +304,7 @@ func Execute() {
 		f := func() {
 			defer func() {
 				if r := recover(); r != nil {
-					if environment.DebugMode {
+					if tiupmeta.DebugMode {
 						log.Debugf("Recovered in telemetry report: %v", r)
 					}
 				}
@@ -339,7 +338,7 @@ func Execute() {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 			tele := telemetry.NewTelemetry()
 			err := tele.Report(ctx, teleReport)
-			if environment.DebugMode {
+			if tiupmeta.DebugMode {
 				if err != nil {
 					log.Infof("report failed: %v", err)
 				}

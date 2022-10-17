@@ -82,42 +82,42 @@ func parseInventoryFile(invFile io.Reader) (string, *spec.ClusterMeta, *aini.Inv
 	clsName := ""
 
 	// get global vars
-	if grp, ok := inventory.Groups["all"]; ok && len(grp.Hosts) > 0 {
-		// set global variables
-		clsName = grp.Vars["cluster_name"]
-		clsMeta.User = grp.Vars["ansible_user"]
-		clsMeta.Topology.GlobalOptions.User = clsMeta.User
-		clsMeta.Version = grp.Vars["tidb_version"]
-		clsMeta.Topology.GlobalOptions.DeployDir = grp.Vars["deploy_dir"]
-		// deploy_dir and data_dir of monitored need to be set, otherwise they will be
-		// subdirs of deploy_dir in global options
-		allSame := uniqueVar("deploy_dir", inventory.Groups["monitored_servers"].Hosts)
-		if len(allSame) == 1 {
-			clsMeta.Topology.MonitoredOptions.DeployDir = allSame[0]
-			clsMeta.Topology.MonitoredOptions.DataDir = filepath.Join(
-				clsMeta.Topology.MonitoredOptions.DeployDir,
-				"data",
-			)
-		} else {
-			clsMeta.Topology.MonitoredOptions.DeployDir = clsMeta.Topology.GlobalOptions.DeployDir
-			clsMeta.Topology.MonitoredOptions.DataDir = filepath.Join(
-				clsMeta.Topology.MonitoredOptions.DeployDir,
-				"data",
-			)
-		}
-
-		if grp.Vars["process_supervision"] != "systemd" {
-			return "", nil, inventory, errors.New("only support cluster deployed with systemd")
-		}
-
-		if enableBinlog, err := strconv.ParseBool(grp.Vars["enable_binlog"]); err == nil && enableBinlog {
-			if clsMeta.Topology.ServerConfigs.TiDB == nil {
-				clsMeta.Topology.ServerConfigs.TiDB = make(map[string]interface{})
-			}
-			clsMeta.Topology.ServerConfigs.TiDB["binlog.enable"] = enableBinlog
-		}
-	} else {
+	grp, ok := inventory.Groups["all"]
+	if !ok || len(grp.Hosts) == 0 {
 		return "", nil, inventory, errors.New("no available host in the inventory file")
+	}
+	// set global variables
+	clsName = grp.Vars["cluster_name"]
+	clsMeta.User = grp.Vars["ansible_user"]
+	clsMeta.Topology.GlobalOptions.User = clsMeta.User
+	clsMeta.Version = grp.Vars["tidb_version"]
+	clsMeta.Topology.GlobalOptions.DeployDir = grp.Vars["deploy_dir"]
+	// deploy_dir and data_dir of monitored need to be set, otherwise they will be
+	// subdirs of deploy_dir in global options
+	allSame := uniqueVar("deploy_dir", inventory.Groups["monitored_servers"].Hosts)
+	if len(allSame) == 1 {
+		clsMeta.Topology.MonitoredOptions.DeployDir = allSame[0]
+		clsMeta.Topology.MonitoredOptions.DataDir = filepath.Join(
+			clsMeta.Topology.MonitoredOptions.DeployDir,
+			"data",
+		)
+	} else {
+		clsMeta.Topology.MonitoredOptions.DeployDir = clsMeta.Topology.GlobalOptions.DeployDir
+		clsMeta.Topology.MonitoredOptions.DataDir = filepath.Join(
+			clsMeta.Topology.MonitoredOptions.DeployDir,
+			"data",
+		)
+	}
+
+	if grp.Vars["process_supervision"] != "systemd" {
+		return "", nil, inventory, errors.New("only support cluster deployed with systemd")
+	}
+
+	if enableBinlog, err := strconv.ParseBool(grp.Vars["enable_binlog"]); err == nil && enableBinlog {
+		if clsMeta.Topology.ServerConfigs.TiDB == nil {
+			clsMeta.Topology.ServerConfigs.TiDB = make(map[string]any)
+		}
+		clsMeta.Topology.ServerConfigs.TiDB["binlog.enable"] = enableBinlog
 	}
 
 	return clsName, clsMeta, inventory, err
@@ -143,16 +143,16 @@ func uniqueVar(key string, hosts map[string]*aini.Host) []string {
 }
 
 // parse config files
-func parseConfigFile(cfgfile string) (map[string]interface{}, error) {
-	srvConfigs := make(map[string]interface{})
+func parseConfigFile(cfgfile string) (map[string]any, error) {
+	srvConfigs := make(map[string]any)
 	if _, err := toml.DecodeFile(cfgfile, &srvConfigs); err != nil {
 		return nil, errors.Annotate(err, "decode toml file")
 	}
 	return spec.FlattenMap(srvConfigs), nil
 }
 
-func diffConfigs(configs []map[string]interface{}) (global map[string]interface{}, locals []map[string]interface{}) {
-	global = make(map[string]interface{})
+func diffConfigs(configs []map[string]any) (global map[string]any, locals []map[string]any) {
+	global = make(map[string]any)
 	keySet := set.NewStringSet()
 
 	// parse all configs from file
@@ -214,15 +214,15 @@ func CommentConfig(clsName string) error {
 // LoadConfig files to clusterMeta, include tidbservers, tikvservers, pdservers pumpservers and drainerservers
 func LoadConfig(clsName string, cls *spec.ClusterMeta) error {
 	// deal with tidb config
-	configs := []map[string]interface{}{}
+	configs := []map[string]any{}
 	for _, srv := range cls.Topology.TiDBServers {
 		prefixkey := spec.ComponentTiDB
 		fname := spec.ClusterPath(clsName, spec.AnsibleImportedConfigPath, fmt.Sprintf("%s-%s-%d.toml", prefixkey, srv.Host, srv.Port))
-		if config, err := parseConfigFile(fname); err == nil {
-			configs = append(configs, config)
-		} else {
+		config, err := parseConfigFile(fname)
+		if err != nil {
 			return err
 		}
+		configs = append(configs, config)
 	}
 	global, locals := diffConfigs(configs)
 	cls.Topology.ServerConfigs.TiDB = spec.MergeConfig(cls.Topology.ServerConfigs.TiDB, global)
@@ -231,15 +231,15 @@ func LoadConfig(clsName string, cls *spec.ClusterMeta) error {
 	}
 
 	// deal with tikv config
-	configs = []map[string]interface{}{}
+	configs = []map[string]any{}
 	for _, srv := range cls.Topology.TiKVServers {
 		prefixkey := spec.ComponentTiKV
 		fname := spec.ClusterPath(clsName, spec.AnsibleImportedConfigPath, fmt.Sprintf("%s-%s-%d.toml", prefixkey, srv.Host, srv.Port))
-		if config, err := parseConfigFile(fname); err == nil {
-			configs = append(configs, config)
-		} else {
+		config, err := parseConfigFile(fname)
+		if err != nil {
 			return err
 		}
+		configs = append(configs, config)
 	}
 	global, locals = diffConfigs(configs)
 	cls.Topology.ServerConfigs.TiKV = spec.MergeConfig(cls.Topology.ServerConfigs.TiKV, global)
@@ -248,15 +248,15 @@ func LoadConfig(clsName string, cls *spec.ClusterMeta) error {
 	}
 
 	// deal with pd config
-	configs = []map[string]interface{}{}
+	configs = []map[string]any{}
 	for _, srv := range cls.Topology.PDServers {
 		prefixkey := spec.ComponentPD
 		fname := spec.ClusterPath(clsName, spec.AnsibleImportedConfigPath, fmt.Sprintf("%s-%s-%d.toml", prefixkey, srv.Host, srv.ClientPort))
-		if config, err := parseConfigFile(fname); err == nil {
-			configs = append(configs, config)
-		} else {
+		config, err := parseConfigFile(fname)
+		if err != nil {
 			return err
 		}
+		configs = append(configs, config)
 	}
 	global, locals = diffConfigs(configs)
 	cls.Topology.ServerConfigs.PD = spec.MergeConfig(cls.Topology.ServerConfigs.PD, global)
@@ -265,15 +265,15 @@ func LoadConfig(clsName string, cls *spec.ClusterMeta) error {
 	}
 
 	// deal with pump config
-	configs = []map[string]interface{}{}
+	configs = []map[string]any{}
 	for _, srv := range cls.Topology.PumpServers {
 		prefixkey := spec.ComponentPump
 		fname := spec.ClusterPath(clsName, spec.AnsibleImportedConfigPath, fmt.Sprintf("%s-%s-%d.toml", prefixkey, srv.Host, srv.Port))
-		if config, err := parseConfigFile(fname); err == nil {
-			configs = append(configs, config)
-		} else {
+		config, err := parseConfigFile(fname)
+		if err != nil {
 			return err
 		}
+		configs = append(configs, config)
 	}
 	global, locals = diffConfigs(configs)
 	cls.Topology.ServerConfigs.Pump = spec.MergeConfig(cls.Topology.ServerConfigs.Pump, global)
@@ -282,15 +282,15 @@ func LoadConfig(clsName string, cls *spec.ClusterMeta) error {
 	}
 
 	// deal with drainer config
-	configs = []map[string]interface{}{}
+	configs = []map[string]any{}
 	for _, srv := range cls.Topology.Drainers {
 		prefixkey := spec.ComponentDrainer
 		fname := spec.ClusterPath(clsName, spec.AnsibleImportedConfigPath, fmt.Sprintf("%s-%s-%d.toml", prefixkey, srv.Host, srv.Port))
-		if config, err := parseConfigFile(fname); err == nil {
-			configs = append(configs, config)
-		} else {
+		config, err := parseConfigFile(fname)
+		if err != nil {
 			return err
 		}
+		configs = append(configs, config)
 	}
 	global, locals = diffConfigs(configs)
 	cls.Topology.ServerConfigs.Drainer = spec.MergeConfig(cls.Topology.ServerConfigs.Drainer, global)

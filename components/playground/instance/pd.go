@@ -98,7 +98,7 @@ func (inst *PDInstance) Start(ctx context.Context, version utils.Version) error 
 		}
 		args = append(args, fmt.Sprintf("--join=%s", strings.Join(endpoints, ",")))
 	default:
-		return errors.Errorf("must set the init or join instances.")
+		return errors.Errorf("must set the init or join instances")
 	}
 
 	var err error

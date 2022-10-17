@@ -88,7 +88,7 @@ type (
 		ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
 		OS              string               `yaml:"os,omitempty" default:"linux"`
 		Arch            string               `yaml:"arch,omitempty"`
-		Custom          interface{}          `yaml:"custom,omitempty" validate:"custom:ignore"`
+		Custom          any                  `yaml:"custom,omitempty" validate:"custom:ignore"`
 	}
 
 	// MonitoredOptions represents the monitored node configuration
@@ -104,17 +104,17 @@ type (
 
 	// ServerConfigs represents the server runtime configuration
 	ServerConfigs struct {
-		TiDB           map[string]interface{} `yaml:"tidb"`
-		TiKV           map[string]interface{} `yaml:"tikv"`
-		PD             map[string]interface{} `yaml:"pd"`
-		Dashboard      map[string]interface{} `yaml:"tidb_dashboard"`
-		TiFlash        map[string]interface{} `yaml:"tiflash"`
-		TiFlashLearner map[string]interface{} `yaml:"tiflash-learner"`
-		Pump           map[string]interface{} `yaml:"pump"`
-		Drainer        map[string]interface{} `yaml:"drainer"`
-		CDC            map[string]interface{} `yaml:"cdc"`
-		TiKVCDC        map[string]interface{} `yaml:"kvcdc"`
-		Grafana        map[string]string      `yaml:"grafana"`
+		TiDB           map[string]any    `yaml:"tidb"`
+		TiKV           map[string]any    `yaml:"tikv"`
+		PD             map[string]any    `yaml:"pd"`
+		Dashboard      map[string]any    `yaml:"tidb_dashboard"`
+		TiFlash        map[string]any    `yaml:"tiflash"`
+		TiFlashLearner map[string]any    `yaml:"tiflash-learner"`
+		Pump           map[string]any    `yaml:"pump"`
+		Drainer        map[string]any    `yaml:"drainer"`
+		CDC            map[string]any    `yaml:"cdc"`
+		TiKVCDC        map[string]any    `yaml:"kvcdc"`
+		Grafana        map[string]string `yaml:"grafana"`
 	}
 
 	// Specification represents the specification of topology.yaml
@@ -277,7 +277,7 @@ func (s *Specification) LocationLabels() ([]string, error) {
 	}
 
 	if repLbs := GetValueFromPath(s.ServerConfigs.PD, "replication.location-labels"); repLbs != nil {
-		for _, l := range repLbs.([]interface{}) {
+		for _, l := range repLbs.([]any) {
 			lb, ok := l.(string)
 			if !ok {
 				return nil, errors.Errorf("replication.location-labels contains non-string label: %v", l)
@@ -321,7 +321,7 @@ func AllComponentNames() (roles []string) {
 
 // UnmarshalYAML implements the yaml.Unmarshaler interface,
 // it sets the default values when unmarshaling the topology file
-func (s *Specification) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (s *Specification) UnmarshalYAML(unmarshal func(any) error) error {
 	type topology Specification
 	if err := unmarshal((*topology)(s)); err != nil {
 		return err
@@ -500,7 +500,7 @@ func (s *Specification) Merge(that Topology) Topology {
 }
 
 // fillDefaults tries to fill custom fields to their default values
-func fillCustomDefaults(globalOptions *GlobalOptions, data interface{}) error {
+func fillCustomDefaults(globalOptions *GlobalOptions, data any) error {
 	v := reflect.ValueOf(data).Elem()
 	t := v.Type()
 
@@ -861,7 +861,7 @@ func (s *Specification) FillHostArchOrOS(hostArch map[string]string, fullType Fu
 }
 
 // FillHostArchOrOS fills the topology with the given host->arch
-func FillHostArchOrOS(s interface{}, hostArchOrOS map[string]string, fullType FullHostType) error {
+func FillHostArchOrOS(s any, hostArchOrOS map[string]string, fullType FullHostType) error {
 	for host, arch := range hostArchOrOS {
 		switch arch {
 		case "x86_64":
@@ -928,7 +928,7 @@ func (s *Specification) removeCommitTS() {
 		_, ok2 := spec.Config["initial-commit-ts"]
 		if !ok1 && !ok2 && spec.CommitTS != nil && *spec.CommitTS != -1 {
 			if spec.Config == nil {
-				spec.Config = make(map[string]interface{})
+				spec.Config = make(map[string]any)
 			}
 			spec.Config["initial-commit-ts"] = *spec.CommitTS
 		}

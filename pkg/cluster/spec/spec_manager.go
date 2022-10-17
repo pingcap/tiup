@@ -121,7 +121,7 @@ func (s *SpecManager) SaveMeta(clusterName string, meta Metadata) error {
 }
 
 // Metadata tries to read the metadata of a cluster from file
-func (s *SpecManager) Metadata(clusterName string, meta interface{}) error {
+func (s *SpecManager) Metadata(clusterName string, meta any) error {
 	fname := s.Path(clusterName, metaFileName)
 
 	yamlFile, err := os.ReadFile(fname)

@@ -128,7 +128,7 @@ func (p *Profile) SaveTo(path string, data []byte, perm os.FileMode) error {
 }
 
 // WriteJSON writes struct to a file (in the profile directory) in JSON format
-func (p *Profile) WriteJSON(path string, data interface{}) error {
+func (p *Profile) WriteJSON(path string, data any) error {
 	jsonData, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
 		return errors.Trace(err)
@@ -137,7 +137,7 @@ func (p *Profile) WriteJSON(path string, data interface{}) error {
 }
 
 // readJSON read file and unmarshal to target `data`
-func (p *Profile) readJSON(path string, data interface{}) error {
+func (p *Profile) readJSON(path string, data any) error {
 	fullPath := filepath.Join(p.root, path)
 	file, err := os.Open(fullPath)
 	if err != nil {

@@ -42,11 +42,11 @@ func init() {
 	flag.BoolVar(&opt.retainCode, "retain-code", false, "Retain the generated code when generator exit")
 }
 
-func log(format string, args ...interface{}) {
+func log(format string, args ...any) {
 	fmt.Println(fmt.Sprintf(format, args...))
 }
 
-func fatal(format string, args ...interface{}) {
+func fatal(format string, args ...any) {
 	log(format, args...)
 	os.Exit(1)
 }

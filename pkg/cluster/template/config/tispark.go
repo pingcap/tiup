@@ -25,7 +25,7 @@ import (
 // TiSparkConfig represent the data to generate TiSpark configs
 type TiSparkConfig struct {
 	TiSparkMasters string
-	CustomFields   map[string]interface{}
+	CustomFields   map[string]any
 	Endpoints      []string
 }
 
@@ -41,7 +41,7 @@ func (c *TiSparkConfig) WithMasters(masters string) *TiSparkConfig {
 }
 
 // WithCustomFields sets custom setting fields
-func (c *TiSparkConfig) WithCustomFields(m map[string]interface{}) *TiSparkConfig {
+func (c *TiSparkConfig) WithCustomFields(m map[string]any) *TiSparkConfig {
 	c.CustomFields = m
 	return c
 }
