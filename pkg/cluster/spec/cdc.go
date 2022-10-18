@@ -292,6 +292,7 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 	if err := client.DrainCapture(captureID, apiTimeoutSeconds); err != nil {
 		logger.Debugf("cdc pre-restart finished, drain the capture failed, "+
 			"addr: %s, captureID: %s, err: %+v, elapsed: %+v", address, captureID, err, time.Since(start))
+		// if we drain any one capture failed, no need to drain other captures, just trigger hard restart
 		return nil
 	}
 
