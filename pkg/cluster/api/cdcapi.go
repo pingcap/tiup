@@ -111,7 +111,7 @@ func drainCapture(client *CDCOpenAPIClient, target string) (int, error) {
 // DrainCapture request cdc owner move all tables on the target capture to other captures.
 func (c *CDCOpenAPIClient) DrainCapture(addr, target string, apiTimeoutSeconds int) error {
 	if _, err := c.getCaptureByID(addr); err != nil {
-		c.l().Debugf("cdc drain capture failed, cannot find the capture, target: %s, err: %+v", target, err)
+		c.l().Debugf("cdc drain capture failed, cannot find the capture, address: %s, target: %s, err: %+v", addr, target, err)
 		return err
 	}
 	c.l().Infof("\t Start drain the capture, address: %s, captureID: %s", addr, target)
