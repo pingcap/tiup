@@ -54,6 +54,11 @@ cdc_servers:
   - host: n4
   - host: n5
 
+kvcdc_servers:
+ - host: n3
+ - host: n4
+   data_dir: "/home/tidb/tikv_cdc_data"
+
 tispark_masters:
   - host: n3
 

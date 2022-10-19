@@ -98,7 +98,7 @@ func (s *StepDisplay) Execute(ctx context.Context) error {
 	switch s.Logger.GetDisplayMode() {
 	case logprinter.DisplayModeJSON,
 		logprinter.DisplayModePlain:
-		break
+		// do nothing
 	default:
 		if singleBar, ok := s.progressBar.(*progress.SingleBar); ok {
 			singleBar.StartRenderLoop()
@@ -218,7 +218,7 @@ func (ps *ParallelStepDisplay) Execute(ctx context.Context) error {
 	switch ps.Logger.GetDisplayMode() {
 	case logprinter.DisplayModeJSON,
 		logprinter.DisplayModePlain:
-		break
+		// do nothing
 	default:
 		ps.progressBar.StartRenderLoop()
 		defer ps.progressBar.StopRenderLoop()

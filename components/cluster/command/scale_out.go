@@ -50,12 +50,11 @@ func newScaleOutCmd() *cobra.Command {
 			if opt.Stage2 && len(args) == 1 {
 				clusterName = args[0]
 			} else {
-				if len(args) == 2 {
-					clusterName = args[0]
-					topoFile = args[1]
-				} else {
+				if len(args) != 2 {
 					return cmd.Help()
 				}
+				clusterName = args[0]
+				topoFile = args[1]
 			}
 
 			clusterReport.ID = scrubClusterName(clusterName)

@@ -193,9 +193,9 @@ func (im *Importer) fetchFile(ctx context.Context, host string, port int, fname 
 	return
 }
 
-func setConfig(config *map[string]interface{}, k string, v interface{}) {
+func setConfig(config *map[string]any, k string, v any) {
 	if *config == nil {
-		*config = make(map[string]interface{})
+		*config = make(map[string]any)
 	}
 
 	(*config)[k] = v
@@ -558,16 +558,9 @@ func (im *Importer) ImportFromAnsibleDir(ctx context.Context) (clusterName strin
 				if err != nil {
 					return "", nil, err
 				}
-				_, flags, err := parseRunScript(data)
+				_, _, err = parseRunScript(data)
 				if err != nil {
 					return "", nil, err
-				}
-
-				for k, v := range flags {
-					// Ignore
-					_ = v
-					switch k {
-					}
 				}
 
 				srv.DeployDir = instancDeployDir(spec.ComponentGrafana, srv.Port, host.Vars["deploy_dir"], topo.GlobalOptions.DeployDir)

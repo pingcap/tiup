@@ -46,8 +46,8 @@ include ./tests/Makefile
 build: tiup components
 	@# Target: build tiup and all it's components
 
-components: playground client cluster dm bench server
-	@# Target: build the playground, client, cluster, dm, bench and server components
+components: playground client cluster dm server
+	@# Target: build the playground, client, cluster, dm and server components
 
 tiup:
 	@# Target: build the tiup driver
@@ -69,10 +69,6 @@ dm:
 	@# Target: build the tiup-dm component
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-dm ./components/dm
 
-bench:
-	@# Target: build the tiup-bench component
-	$(MAKE) -C components/bench $(MAKECMDGOALS)
-
 doc:
 	@# Target: build the tiup-doc component
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-doc ./components/doc
@@ -91,7 +87,6 @@ server:
 
 check: fmt lint tidy check-static vet
 	@# Target: run all checkers. (fmt, lint, tidy, check-static and vet)
-	$(MAKE) -C components/bench ${MAKECMDGOALS}
 	$(MAKE) -C components/client ${MAKECMDGOALS}
 
 check-static: tools/bin/golangci-lint
@@ -101,7 +96,6 @@ check-static: tools/bin/golangci-lint
 lint: tools/bin/revive
 	@# Target: run the lint checker revive
 	@echo "linting"
-	./tools/check/check-lint.sh
 	@tools/bin/revive -formatter friendly -config tools/check/revive.toml $(FILES)
 
 vet:
@@ -121,7 +115,6 @@ clean:
 
 test: failpoint-enable run-tests failpoint-disable
 	@# Target: run tests with failpoint enabled
-	$(MAKE) -C components/bench ${MAKECMDGOALS}
 	$(MAKE) -C components/client ${MAKECMDGOALS}
 
 # TODO: refactor integration tests base on v1 manifest
@@ -165,5 +158,5 @@ tools/bin/revive: tools/check/go.mod
 	$(GO) build -o ../bin/revive github.com/mgechev/revive
 
 tools/bin/golangci-lint:
-	@# Target: pull in specific version of golangci-lint (v1.42.1)
-	curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ./tools/bin v1.45.0
+	@# Target: pull in specific version of golangci-lint (v1.50.0)
+	curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ./tools/bin v1.50.0

@@ -88,7 +88,7 @@ type (
 		ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
 		OS              string               `yaml:"os,omitempty" default:"linux"`
 		Arch            string               `yaml:"arch,omitempty"`
-		Custom          interface{}          `yaml:"custom,omitempty" validate:"custom:ignore"`
+		Custom          any                  `yaml:"custom,omitempty" validate:"custom:ignore"`
 	}
 
 	// MonitoredOptions represents the monitored node configuration
@@ -104,15 +104,17 @@ type (
 
 	// ServerConfigs represents the server runtime configuration
 	ServerConfigs struct {
-		TiDB           map[string]interface{} `yaml:"tidb"`
-		TiKV           map[string]interface{} `yaml:"tikv"`
-		PD             map[string]interface{} `yaml:"pd"`
-		TiFlash        map[string]interface{} `yaml:"tiflash"`
-		TiFlashLearner map[string]interface{} `yaml:"tiflash-learner"`
-		Pump           map[string]interface{} `yaml:"pump"`
-		Drainer        map[string]interface{} `yaml:"drainer"`
-		CDC            map[string]interface{} `yaml:"cdc"`
-		Grafana        map[string]string      `yaml:"grafana"`
+		TiDB           map[string]any    `yaml:"tidb"`
+		TiKV           map[string]any    `yaml:"tikv"`
+		PD             map[string]any    `yaml:"pd"`
+		Dashboard      map[string]any    `yaml:"tidb_dashboard"`
+		TiFlash        map[string]any    `yaml:"tiflash"`
+		TiFlashLearner map[string]any    `yaml:"tiflash-learner"`
+		Pump           map[string]any    `yaml:"pump"`
+		Drainer        map[string]any    `yaml:"drainer"`
+		CDC            map[string]any    `yaml:"cdc"`
+		TiKVCDC        map[string]any    `yaml:"kvcdc"`
+		Grafana        map[string]string `yaml:"grafana"`
 	}
 
 	// Specification represents the specification of topology.yaml
@@ -124,9 +126,11 @@ type (
 		TiKVServers      []*TiKVSpec          `yaml:"tikv_servers"`
 		TiFlashServers   []*TiFlashSpec       `yaml:"tiflash_servers"`
 		PDServers        []*PDSpec            `yaml:"pd_servers"`
+		DashboardServers []*DashboardSpec     `yaml:"tidb_dashboard_servers,omitempty"`
 		PumpServers      []*PumpSpec          `yaml:"pump_servers,omitempty"`
 		Drainers         []*DrainerSpec       `yaml:"drainer_servers,omitempty"`
 		CDCServers       []*CDCSpec           `yaml:"cdc_servers,omitempty"`
+		TiKVCDCServers   []*TiKVCDCSpec       `yaml:"kvcdc_servers,omitempty"`
 		TiSparkMasters   []*TiSparkMasterSpec `yaml:"tispark_masters,omitempty"`
 		TiSparkWorkers   []*TiSparkWorkerSpec `yaml:"tispark_workers,omitempty"`
 		Monitors         []*PrometheusSpec    `yaml:"monitoring_servers"`
@@ -273,7 +277,7 @@ func (s *Specification) LocationLabels() ([]string, error) {
 	}
 
 	if repLbs := GetValueFromPath(s.ServerConfigs.PD, "replication.location-labels"); repLbs != nil {
-		for _, l := range repLbs.([]interface{}) {
+		for _, l := range repLbs.([]any) {
 			lb, ok := l.(string)
 			if !ok {
 				return nil, errors.Errorf("replication.location-labels contains non-string label: %v", l)
@@ -317,7 +321,7 @@ func AllComponentNames() (roles []string) {
 
 // UnmarshalYAML implements the yaml.Unmarshaler interface,
 // it sets the default values when unmarshaling the topology file
-func (s *Specification) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (s *Specification) UnmarshalYAML(unmarshal func(any) error) error {
 	type topology Specification
 	if err := unmarshal((*topology)(s)); err != nil {
 		return err
@@ -481,10 +485,12 @@ func (s *Specification) Merge(that Topology) Topology {
 		TiDBServers:      append(s.TiDBServers, spec.TiDBServers...),
 		TiKVServers:      append(s.TiKVServers, spec.TiKVServers...),
 		PDServers:        append(s.PDServers, spec.PDServers...),
+		DashboardServers: append(s.DashboardServers, spec.DashboardServers...),
 		TiFlashServers:   append(s.TiFlashServers, spec.TiFlashServers...),
 		PumpServers:      append(s.PumpServers, spec.PumpServers...),
 		Drainers:         append(s.Drainers, spec.Drainers...),
 		CDCServers:       append(s.CDCServers, spec.CDCServers...),
+		TiKVCDCServers:   append(s.TiKVCDCServers, spec.TiKVCDCServers...),
 		TiSparkMasters:   append(s.TiSparkMasters, spec.TiSparkMasters...),
 		TiSparkWorkers:   append(s.TiSparkWorkers, spec.TiSparkWorkers...),
 		Monitors:         append(s.Monitors, spec.Monitors...),
@@ -494,7 +500,7 @@ func (s *Specification) Merge(that Topology) Topology {
 }
 
 // fillDefaults tries to fill custom fields to their default values
-func fillCustomDefaults(globalOptions *GlobalOptions, data interface{}) error {
+func fillCustomDefaults(globalOptions *GlobalOptions, data any) error {
 	v := reflect.ValueOf(data).Elem()
 	t := v.Type()
 
@@ -574,7 +580,7 @@ func setCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) error 
 			clientPort := reflect.Indirect(field).FieldByName("ClientPort").Int()
 			field.Field(j).Set(reflect.ValueOf(fmt.Sprintf("pd-%s-%d", host, clientPort)))
 		case "DataDir":
-			if reflect.Indirect(field).FieldByName("Imported").Interface().(bool) {
+			if imported := reflect.Indirect(field).FieldByName("Imported"); imported.IsValid() && imported.Interface().(bool) {
 				setDefaultDir(globalOptions.DataDir, field.Addr().Interface().(InstanceSpec).Role(), getPort(field), field.Field(j))
 			}
 
@@ -607,7 +613,7 @@ func setCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) error 
 		case "DeployDir":
 			setDefaultDir(globalOptions.DeployDir, field.Addr().Interface().(InstanceSpec).Role(), getPort(field), field.Field(j))
 		case "LogDir":
-			if reflect.Indirect(field).FieldByName("Imported").Interface().(bool) {
+			if imported := reflect.Indirect(field).FieldByName("Imported"); imported.IsValid() && imported.Interface().(bool) {
 				setDefaultDir(globalOptions.LogDir, field.Addr().Interface().(InstanceSpec).Role(), getPort(field), field.Field(j))
 			}
 
@@ -688,14 +694,16 @@ func (s *Specification) ComponentsByStopOrder() (comps []Component) {
 
 // ComponentsByStartOrder return component in the order need to start.
 func (s *Specification) ComponentsByStartOrder() (comps []Component) {
-	// "pd", "tikv", "pump", "tidb", "tiflash", "drainer", "cdc", "prometheus", "grafana", "alertmanager"
+	// "pd", "dashboard", "tikv", "pump", "tidb", "tiflash", "drainer", "cdc", "tikv-cdc", "prometheus", "grafana", "alertmanager"
 	comps = append(comps, &PDComponent{s})
+	comps = append(comps, &DashboardComponent{s})
 	comps = append(comps, &TiKVComponent{s})
 	comps = append(comps, &PumpComponent{s})
 	comps = append(comps, &TiDBComponent{s})
 	comps = append(comps, &TiFlashComponent{s})
 	comps = append(comps, &DrainerComponent{s})
 	comps = append(comps, &CDCComponent{s})
+	comps = append(comps, &TiKVCDCComponent{s})
 	comps = append(comps, &MonitorComponent{s})
 	comps = append(comps, &GrafanaComponent{s})
 	comps = append(comps, &AlertManagerComponent{s})
@@ -706,9 +714,10 @@ func (s *Specification) ComponentsByStartOrder() (comps []Component) {
 
 // ComponentsByUpdateOrder return component in the order need to be updated.
 func (s *Specification) ComponentsByUpdateOrder() (comps []Component) {
-	// "tiflash", "pd", "tikv", "pump", "tidb", "drainer", "cdc", "prometheus", "grafana", "alertmanager"
+	// "tiflash", "pd", "dashboard", "tikv", "pump", "tidb", "drainer", "cdc", "prometheus", "grafana", "alertmanager"
 	comps = append(comps, &TiFlashComponent{s})
 	comps = append(comps, &PDComponent{s})
+	comps = append(comps, &DashboardComponent{s})
 	comps = append(comps, &TiKVComponent{s})
 	comps = append(comps, &PumpComponent{s})
 	comps = append(comps, &TiDBComponent{s})
@@ -852,7 +861,7 @@ func (s *Specification) FillHostArchOrOS(hostArch map[string]string, fullType Fu
 }
 
 // FillHostArchOrOS fills the topology with the given host->arch
-func FillHostArchOrOS(s interface{}, hostArchOrOS map[string]string, fullType FullHostType) error {
+func FillHostArchOrOS(s any, hostArchOrOS map[string]string, fullType FullHostType) error {
 	for host, arch := range hostArchOrOS {
 		switch arch {
 		case "x86_64":
@@ -919,7 +928,7 @@ func (s *Specification) removeCommitTS() {
 		_, ok2 := spec.Config["initial-commit-ts"]
 		if !ok1 && !ok2 && spec.CommitTS != nil && *spec.CommitTS != -1 {
 			if spec.Config == nil {
-				spec.Config = make(map[string]interface{})
+				spec.Config = make(map[string]any)
 			}
 			spec.Config["initial-commit-ts"] = *spec.CommitTS
 		}

@@ -29,6 +29,7 @@ type Config struct {
 	Host       string `yaml:"host"`
 	Port       int    `yaml:"port"`
 	UpTimeout  int    `yaml:"up_timeout"`
+	Version    string `yaml:"version"`
 }
 
 type instance struct {

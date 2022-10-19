@@ -129,8 +129,6 @@ func ImportConfig(ctx context.Context, name string, clsMeta *spec.ClusterMeta, g
 						false).
 					Build()
 				copyFileTasks = append(copyFileTasks, t)
-			default:
-				break
 			}
 		}
 	}

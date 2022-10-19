@@ -72,6 +72,15 @@ func (u *UpdateMeta) Execute(ctx context.Context) error {
 	}
 	newMeta.Topology.PDServers = pdServers
 
+	dashboardServers := make([]*spec.DashboardSpec, 0)
+	for i, instance := range (&spec.DashboardComponent{Topology: topo}).Instances() {
+		if deleted.Exist(instance.ID()) {
+			continue
+		}
+		dashboardServers = append(dashboardServers, topo.DashboardServers[i])
+	}
+	topo.DashboardServers = dashboardServers
+
 	tiflashServers := make([]*spec.TiFlashSpec, 0)
 	for i, instance := range (&spec.TiFlashComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
@@ -107,6 +116,15 @@ func (u *UpdateMeta) Execute(ctx context.Context) error {
 		cdcServers = append(cdcServers, topo.CDCServers[i])
 	}
 	newMeta.Topology.CDCServers = cdcServers
+
+	tikvCDCServers := make([]*spec.TiKVCDCSpec, 0)
+	for i, instance := range (&spec.TiKVCDCComponent{Topology: topo}).Instances() {
+		if deleted.Exist(instance.ID()) {
+			continue
+		}
+		tikvCDCServers = append(tikvCDCServers, topo.TiKVCDCServers[i])
+	}
+	newMeta.Topology.TiKVCDCServers = tikvCDCServers
 
 	tisparkWorkers := make([]*spec.TiSparkWorkerSpec, 0)
 	for i, instance := range (&spec.TiSparkWorkerComponent{Topology: topo}).Instances() {

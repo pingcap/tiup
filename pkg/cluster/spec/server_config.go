@@ -45,11 +45,11 @@ const (
 // ErrorCheckConfig represent error occurred in config check stage
 var ErrorCheckConfig = errors.New("check config failed")
 
-// strKeyMap tries to convert `map[interface{}]interface{}` to `map[string]interface{}`
-func strKeyMap(val interface{}) interface{} {
-	m, ok := val.(map[interface{}]interface{})
+// strKeyMap tries to convert `map[any]any` to `map[string]any`
+func strKeyMap(val any) any {
+	m, ok := val.(map[any]any)
 	if ok {
-		ret := map[string]interface{}{}
+		ret := map[string]any{}
 		for k, v := range m {
 			kk, ok := k.(string)
 			if !ok {
@@ -62,7 +62,7 @@ func strKeyMap(val interface{}) interface{} {
 
 	rv := reflect.ValueOf(val)
 	if rv.Kind() == reflect.Slice {
-		var ret []interface{}
+		var ret []any
 		for i := 0; i < rv.Len(); i++ {
 			ret = append(ret, strKeyMap(rv.Index(i).Interface()))
 		}
@@ -72,25 +72,25 @@ func strKeyMap(val interface{}) interface{} {
 	return val
 }
 
-func foldKey(key string, val interface{}) (string, interface{}) {
+func foldKey(key string, val any) (string, any) {
 	parts := strings.SplitN(key, ".", 2)
 	if len(parts) == 1 {
 		return key, strKeyMap(val)
 	}
 	subKey, subVal := foldKey(parts[1], val)
-	return parts[0], map[string]interface{}{
+	return parts[0], map[string]any{
 		subKey: strKeyMap(subVal),
 	}
 }
 
-func patch(origin map[string]interface{}, key string, val interface{}) {
+func patch(origin map[string]any, key string, val any) {
 	origVal, found := origin[key]
 	if !found {
 		origin[key] = strKeyMap(val)
 		return
 	}
-	origMap, lhsOk := origVal.(map[string]interface{})
-	valMap, rhsOk := val.(map[string]interface{})
+	origMap, lhsOk := origVal.(map[string]any)
+	valMap, rhsOk := val.(map[string]any)
 	if lhsOk && rhsOk {
 		for k, v := range valMap {
 			patch(origMap, k, v)
@@ -102,12 +102,12 @@ func patch(origin map[string]interface{}, key string, val interface{}) {
 }
 
 // FoldMap convert single layer map to multi-layer
-func FoldMap(ms map[string]interface{}) map[string]interface{} {
+func FoldMap(ms map[string]any) map[string]any {
 	// we flatten map first to deal with the case like:
 	// a.b:
 	//   c.d: xxx
 	ms = FlattenMap(ms)
-	result := map[string]interface{}{}
+	result := map[string]any{}
 	for k, v := range ms {
 		key, val := foldKey(k, v)
 		patch(result, key, val)
@@ -116,15 +116,15 @@ func FoldMap(ms map[string]interface{}) map[string]interface{} {
 }
 
 // FlattenMap convert mutil-layer map to single layer
-func FlattenMap(ms map[string]interface{}) map[string]interface{} {
-	result := map[string]interface{}{}
+func FlattenMap(ms map[string]any) map[string]any {
+	result := map[string]any{}
 	for k, v := range ms {
-		var sub map[string]interface{}
+		var sub map[string]any
 
-		if m, ok := v.(map[string]interface{}); ok {
+		if m, ok := v.(map[string]any); ok {
 			sub = FlattenMap(m)
-		} else if m, ok := v.(map[interface{}]interface{}); ok {
-			fixM := map[string]interface{}{}
+		} else if m, ok := v.(map[any]any); ok {
+			fixM := map[string]any{}
 			for k, v := range m {
 				if sk, ok := k.(string); ok {
 					fixM[sk] = v
@@ -145,22 +145,29 @@ func FlattenMap(ms map[string]interface{}) map[string]interface{} {
 
 // MergeConfig merge two or more config into one and unflat them
 // config1:
-//   a.b.a: 1
-//   a.b.b: 2
+//
+//	a.b.a: 1
+//	a.b.b: 2
+//
 // config2:
-//   a.b.a: 3
-//   a.b.c: 4
+//
+//	a.b.a: 3
+//	a.b.c: 4
+//
 // config3:
-//   b.c = 5
+//
+//	b.c = 5
+//
 // After MergeConfig(config1, config2, config3):
-//   a:
-//     b:
-//       a: 3
-//       b: 2
-//       c: 4
-//   b:
-//     c: 5
-func MergeConfig(orig map[string]interface{}, overwrites ...map[string]interface{}) map[string]interface{} {
+//
+//	a:
+//	  b:
+//	    a: 3
+//	    b: 2
+//	    c: 4
+//	b:
+//	  c: 5
+func MergeConfig(orig map[string]any, overwrites ...map[string]any) map[string]any {
 	lhs := FoldMap(orig)
 	for _, overwrite := range overwrites {
 		rhs := FoldMap(overwrite)
@@ -172,10 +179,10 @@ func MergeConfig(orig map[string]interface{}, overwrites ...map[string]interface
 }
 
 // GetValueFromPath try to find the value by path recursively
-func GetValueFromPath(m map[string]interface{}, p string) interface{} {
+func GetValueFromPath(m map[string]any, p string) any {
 	ss := strings.Split(p, ".")
 
-	searchMap := make(map[interface{}]interface{})
+	searchMap := make(map[any]any)
 	m = FoldMap(m)
 	for k, v := range m {
 		searchMap[k] = v
@@ -184,7 +191,7 @@ func GetValueFromPath(m map[string]interface{}, p string) interface{} {
 	return searchValue(searchMap, ss)
 }
 
-func searchValue(m map[interface{}]interface{}, ss []string) interface{} {
+func searchValue(m map[any]any, ss []string) any {
 	l := len(ss)
 	switch l {
 	case 0:
@@ -194,10 +201,10 @@ func searchValue(m map[interface{}]interface{}, ss []string) interface{} {
 	}
 
 	key := ss[0]
-	if pm, ok := m[key].(map[interface{}]interface{}); ok {
+	if pm, ok := m[key].(map[any]any); ok {
 		return searchValue(pm, ss[1:])
-	} else if pm, ok := m[key].(map[string]interface{}); ok {
-		searchMap := make(map[interface{}]interface{})
+	} else if pm, ok := m[key].(map[string]any); ok {
+		searchMap := make(map[any]any)
 		for k, v := range pm {
 			searchMap[k] = v
 		}
@@ -208,11 +215,7 @@ func searchValue(m map[interface{}]interface{}, ss []string) interface{} {
 }
 
 // Merge2Toml merge the config of global.
-func Merge2Toml(comp string, global, overwrite map[string]interface{}) ([]byte, error) {
-	return merge2Toml(comp, global, overwrite)
-}
-
-func merge2Toml(comp string, global, overwrite map[string]interface{}) ([]byte, error) {
+func Merge2Toml(comp string, global, overwrite map[string]any) ([]byte, error) {
 	lhs := MergeConfig(global, overwrite)
 	buf := bytes.NewBufferString(fmt.Sprintf(`# WARNING: This file is auto-generated. Do not edit! All your modification will be overwritten!
 # You can use 'tiup cluster edit-config' and 'tiup cluster reload' to update the configuration
@@ -246,8 +249,8 @@ func encodeRemoteCfg2Yaml(remote Remote) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func mergeImported(importConfig []byte, specConfigs ...map[string]interface{}) (map[string]interface{}, error) {
-	var configData map[string]interface{}
+func mergeImported(importConfig []byte, specConfigs ...map[string]any) (map[string]any, error) {
+	var configData map[string]any
 	if err := toml.Unmarshal(importConfig, &configData); err != nil {
 		return nil, perrs.Trace(err)
 	}

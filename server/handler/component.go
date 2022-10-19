@@ -75,14 +75,14 @@ func (h *componentSigner) sign(r *http.Request, m *v1manifest.RawManifest) (sr *
 	}
 
 	logprinter.Infof("Sign component manifest for %s, sid: %s", name, sid)
-	if fileName, readCloser, err := h.sm.Read(sid); err == nil {
-		info.ComponentData = &model.TarInfo{
-			Reader: readCloser,
-			Name:   fileName,
-		}
-	} else {
+	fileName, readCloser, rErr := h.sm.Read(sid)
+	if rErr != nil {
 		logprinter.Errorf("Read tar info for component %s, sid: %s", name, sid)
 		return nil, ErrorInternalError
+	}
+	info.ComponentData = &model.TarInfo{
+		Reader: readCloser,
+		Name:   fileName,
 	}
 
 	comp := v1manifest.Component{}

@@ -46,7 +46,7 @@ build: components
 	@# Target: build tiup and all it's components
 
 components: client
-	@# Target: build the playground, client, cluster, dm, bench and server components
+	@# Target: build the playground, client, cluster, dm and server components
 
 client:
 	@# Target: build the tiup-client component
@@ -62,7 +62,6 @@ check-static:
 lint:
 	@# Target: run the lint checker revive
 	@echo "linting"
-	../../tools/check/check-lint.sh
 	@../../tools/bin/revive -formatter friendly -config ../../tools/check/revive.toml $(FILES)
 
 vet:

@@ -45,17 +45,27 @@ import (
 	"go.uber.org/zap"
 )
 
+// DisplayOption represents option of display command
+type DisplayOption struct {
+	ClusterName string
+	ShowUptime  bool
+	ShowProcess bool
+}
+
 // InstInfo represents an instance info
 type InstInfo struct {
-	ID        string `json:"id"`
-	Role      string `json:"role"`
-	Host      string `json:"host"`
-	Ports     string `json:"ports"`
-	OsArch    string `json:"os_arch"`
-	Status    string `json:"status"`
-	Since     string `json:"since"`
-	DataDir   string `json:"data_dir"`
-	DeployDir string `json:"deploy_dir"`
+	ID          string `json:"id"`
+	Role        string `json:"role"`
+	Host        string `json:"host"`
+	Ports       string `json:"ports"`
+	OsArch      string `json:"os_arch"`
+	Status      string `json:"status"`
+	Memory      string `json:"memory"`
+	MemoryLimit string `json:"memory_limit"`
+	CPUquota    string `json:"cpu_quota"`
+	Since       string `json:"since"`
+	DataDir     string `json:"data_dir"`
+	DeployDir   string `json:"deploy_dir"`
 
 	ComponentName string
 	Port          int
@@ -76,16 +86,17 @@ type LabelInfo struct {
 
 // ClusterMetaInfo hold the structure for the JSON output of the dashboard info
 type ClusterMetaInfo struct {
-	ClusterType    string `json:"cluster_type"`
-	ClusterName    string `json:"cluster_name"`
-	ClusterVersion string `json:"cluster_version"`
-	DeployUser     string `json:"deploy_user"`
-	SSHType        string `json:"ssh_type"`
-	TLSEnabled     bool   `json:"tls_enabled"`
-	TLSCACert      string `json:"tls_ca_cert,omitempty"`
-	TLSClientCert  string `json:"tls_client_cert,omitempty"`
-	TLSClientKey   string `json:"tls_client_key,omitempty"`
-	DashboardURL   string `json:"dashboard_url,omitempty"`
+	ClusterType    string   `json:"cluster_type"`
+	ClusterName    string   `json:"cluster_name"`
+	ClusterVersion string   `json:"cluster_version"`
+	DeployUser     string   `json:"deploy_user"`
+	SSHType        string   `json:"ssh_type"`
+	TLSEnabled     bool     `json:"tls_enabled"`
+	TLSCACert      string   `json:"tls_ca_cert,omitempty"`
+	TLSClientCert  string   `json:"tls_client_cert,omitempty"`
+	TLSClientKey   string   `json:"tls_client_key,omitempty"`
+	DashboardURL   string   `json:"dashboard_url,omitempty"`
+	GrafanaURLS    []string `json:"grafana_urls,omitempty"`
 }
 
 // JSONOutput holds the structure for the JSON output of `tiup cluster display --json`
@@ -97,12 +108,13 @@ type JSONOutput struct {
 }
 
 // Display cluster meta and topology.
-func (m *Manager) Display(name string, opt operator.Options) error {
+func (m *Manager) Display(dopt DisplayOption, opt operator.Options) error {
+	name := dopt.ClusterName
 	if err := clusterutil.ValidateClusterNameOrError(name); err != nil {
 		return err
 	}
 
-	clusterInstInfos, err := m.GetClusterTopology(name, opt)
+	clusterInstInfos, err := m.GetClusterTopology(dopt, opt)
 	if err != nil {
 		return err
 	}
@@ -128,6 +140,7 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 				"", // Client Cert
 				"", // Client Key
 				"",
+				nil,
 			},
 			InstanceInfos: clusterInstInfos,
 		}
@@ -161,11 +174,15 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 
 	// display topology
 	var clusterTable [][]string
-	if opt.ShowUptime {
-		clusterTable = append(clusterTable, []string{"ID", "Role", "Host", "Ports", "OS/Arch", "Status", "Since", "Data Dir", "Deploy Dir"})
-	} else {
-		clusterTable = append(clusterTable, []string{"ID", "Role", "Host", "Ports", "OS/Arch", "Status", "Data Dir", "Deploy Dir"})
+	rowHead := []string{"ID", "Role", "Host", "Ports", "OS/Arch", "Status"}
+	if dopt.ShowProcess {
+		rowHead = append(rowHead, "Memory", "Memory Limit", "CPU Quota")
 	}
+	if dopt.ShowUptime {
+		rowHead = append(rowHead, "Since")
+	}
+	rowHead = append(rowHead, "Data Dir", "Deploy Dir")
+	clusterTable = append(clusterTable, rowHead)
 
 	masterActive := make([]string, 0)
 	for _, v := range clusterInstInfos {
@@ -177,7 +194,10 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 			v.OsArch,
 			formatInstanceStatus(v.Status),
 		}
-		if opt.ShowUptime {
+		if dopt.ShowProcess {
+			row = append(row, v.Memory, v.MemoryLimit, v.CPUquota)
+		}
+		if dopt.ShowUptime {
 			row = append(row, v.Since)
 		}
 		row = append(row, v.DataDir, v.DeployDir)
@@ -219,7 +239,12 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 		}
 	}
 
-	if m.logger.GetDisplayMode() != logprinter.DisplayModeJSON {
+	if m.logger.GetDisplayMode() == logprinter.DisplayModeJSON {
+		grafanaURLs := getGrafanaURL(clusterInstInfos)
+		if len(grafanaURLs) != 0 {
+			j.ClusterMetaInfo.GrafanaURLS = grafanaURLs		
+		}
+	} else {
 		urls, exist := getGrafanaURLStr(clusterInstInfos)
 		if exist {
 			fmt.Printf("Grafana URL:        %s\n", cyan.Sprintf("%s", urls))
@@ -265,13 +290,18 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 	return nil
 }
 
-func getGrafanaURLStr(clusterInstInfos []InstInfo) (result string, exist bool) {
+func getGrafanaURL(clusterInstInfos []InstInfo) (result []string) {
 	var grafanaURLs []string
 	for _, instance := range clusterInstInfos {
 		if instance.Role == "grafana" {
 			grafanaURLs = append(grafanaURLs, fmt.Sprintf("http://%s:%d", instance.Host, instance.Port))
 		}
 	}
+	return grafanaURLs
+}
+
+func getGrafanaURLStr(clusterInstInfos []InstInfo) (result string, exist bool) {
+	grafanaURLs := getGrafanaURL(clusterInstInfos)
 	if len(grafanaURLs) == 0 {
 		return "", false
 	}
@@ -279,12 +309,13 @@ func getGrafanaURLStr(clusterInstInfos []InstInfo) (result string, exist bool) {
 }
 
 // DisplayTiKVLabels display cluster tikv labels
-func (m *Manager) DisplayTiKVLabels(name string, opt operator.Options) error {
+func (m *Manager) DisplayTiKVLabels(dopt DisplayOption, opt operator.Options) error {
+	name := dopt.ClusterName
 	if err := clusterutil.ValidateClusterNameOrError(name); err != nil {
 		return err
 	}
 
-	clusterInstInfos, err := m.GetClusterTopology(name, opt)
+	clusterInstInfos, err := m.GetClusterTopology(dopt, opt)
 	if err != nil {
 		return err
 	}
@@ -310,6 +341,7 @@ func (m *Manager) DisplayTiKVLabels(name string, opt operator.Options) error {
 				"", // Client Cert
 				"", // Client Key
 				"",
+				nil,
 			},
 		}
 
@@ -449,12 +481,13 @@ func (m *Manager) DisplayTiKVLabels(name string, opt operator.Options) error {
 }
 
 // GetClusterTopology get the topology of the cluster.
-func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstInfo, error) {
+func (m *Manager) GetClusterTopology(dopt DisplayOption, opt operator.Options) ([]InstInfo, error) {
 	ctx := ctxt.New(
 		context.Background(),
 		opt.Concurrency,
 		m.logger,
 	)
+	name := dopt.ClusterName
 	metadata, err := m.meta(name)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
 		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
@@ -527,7 +560,7 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 			dataDir = insDirs[1]
 		}
 
-		var status string
+		var status, memory string
 		switch ins.ComponentName() {
 		case spec.ComponentPD:
 			status = masterStatus[ins.ID()]
@@ -542,26 +575,25 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 		}
 
 		since := "-"
-		if opt.ShowUptime {
+		if dopt.ShowUptime {
 			since = formatInstanceSince(ins.Uptime(ctx, statusTimeout, tlsCfg))
 		}
 
 		// Query the service status and uptime
-		if status == "-" || (opt.ShowUptime && since == "-") {
+		if status == "-" || (dopt.ShowUptime && since == "-") || dopt.ShowProcess {
 			e, found := ctxt.GetInner(ctx).GetExecutor(ins.GetHost())
 			if found {
+				var active string
 				nctx := checkpoint.NewContext(ctx)
-				active, _ := operator.GetServiceStatus(nctx, e, ins.ServiceName())
+				active, memory, _ = operator.GetServiceStatus(nctx, e, ins.ServiceName())
 				if status == "-" {
-					if parts := strings.Split(strings.TrimSpace(active), " "); len(parts) > 2 {
-						if parts[1] == "active" {
-							status = "Up"
-						} else {
-							status = parts[1]
-						}
+					if active == "active" {
+						status = "Up"
+					} else {
+						status = active
 					}
 				}
-				if opt.ShowUptime && since == "-" {
+				if dopt.ShowUptime && since == "-" {
 					since = formatInstanceSince(parseSystemctlSince(active))
 				}
 			}
@@ -572,6 +604,7 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 		if ins.IsPatched() {
 			roleName += " (patched)"
 		}
+		rc := ins.ResourceControl()
 		mu.Lock()
 		clusterInstInfos = append(clusterInstInfos, InstInfo{
 			ID:            ins.ID(),
@@ -580,6 +613,9 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 			Ports:         utils.JoinInt(ins.UsedPorts(), "/"),
 			OsArch:        tui.OsArch(ins.OS(), ins.Arch()),
 			Status:        status,
+			Memory:        utils.Ternary(memory == "", "-", memory).(string),
+			MemoryLimit:   utils.Ternary(rc.MemoryLimit == "", "-", rc.MemoryLimit).(string),
+			CPUquota:      utils.Ternary(rc.CPUQuota == "", "-", rc.CPUQuota).(string),
 			DataDir:       dataDir,
 			DeployDir:     deployDir,
 			ComponentName: ins.ComponentName(),

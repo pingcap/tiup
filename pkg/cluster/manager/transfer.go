@@ -155,7 +155,7 @@ func renderInstanceSpec(t string, inst spec.Instance) ([]string, error) {
 	return result, nil
 }
 
-func renderSpec(t string, s interface{}, id string) (string, error) {
+func renderSpec(t string, s any, id string) (string, error) {
 	// Only apply on *spec.TiDBInstance and *spec.PDInstance etc.
 	if v := reflect.ValueOf(s); v.Kind() == reflect.Ptr {
 		if v = v.Elem(); !v.IsValid() {

@@ -37,7 +37,7 @@ func TiFlashSupportTLS(version string) bool {
 	return semver.Compare(version, "v4.0.5") >= 0 || strings.Contains(version, "nightly")
 }
 
-//  TiFlashSupportAdvertiseStatusAddr return if given version of  TiFlash support --advertise-status-addr
+// TiFlashSupportAdvertiseStatusAddr return if given version of  TiFlash support --advertise-status-addr
 func TiFlashSupportAdvertiseStatusAddr(version string) bool {
 	// TiFlash support --advertise-status-addr since v4.0.5
 	return semver.Compare(version, "v4.0.5") >= 0 || strings.Contains(version, "nightly")
@@ -47,6 +47,12 @@ func TiFlashSupportAdvertiseStatusAddr(version string) bool {
 func TiFlashSupportMultiDisksDeployment(version string) bool {
 	// https://github.com/pingcap/tiup/pull/931
 	return semver.Compare(version, "v4.0.9") >= 0 || strings.Contains(version, "nightly")
+}
+
+// TiFlashRequireCPUFlagAVX2 return if given version of TiFlash requires AVX2 CPU flags
+func TiFlashRequireCPUFlagAVX2(version string) bool {
+	// https://github.com/pingcap/tiup/pull/2054
+	return semver.Compare(version, "v6.3.0") >= 0 || strings.Contains(version, "nightly")
 }
 
 // TiFlashDeprecatedUsersConfig return if given version of TiFlash deprecated users.* config
@@ -76,6 +82,11 @@ func TiCDCSupportDataDir(version string) bool {
 	return semver.Major(version) == "v4" && semver.Compare(version, "v4.0.14") >= 0
 }
 
+// TiCDCSupportClusterID return if the given version of TiCDC support --cluster-id param to identify TiCDC cluster
+func TiCDCSupportClusterID(version string) bool {
+	return semver.Compare(version, "v6.2.0") >= 0 || strings.Contains(version, "nightly")
+}
+
 // TiCDCSupportRollingUpgrade return if the given version of TiCDC support rolling upgrade
 // TiCDC support graceful rolling upgrade since v6.3.0
 func TiCDCSupportRollingUpgrade(version string) bool {
@@ -97,4 +108,10 @@ func PrometheusHasTiKVAccelerateRules(version string) bool {
 func DMSupportDeploy(version string) bool {
 	// tiup-dm only support version not less than v2.0
 	return semver.Compare(version, "v2.0.0") >= 0 || strings.Contains(version, "nightly")
+}
+
+// TiKVCDCSupportDeploy return if given version of TiDB/TiKV cluster is supported
+func TiKVCDCSupportDeploy(version string) bool {
+	// TiKV-CDC only support TiKV version not less than v6.2.0
+	return semver.Compare(version, "v6.2.0") >= 0 || strings.Contains(version, "nightly")
 }

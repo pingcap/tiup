@@ -36,11 +36,11 @@ func (fs *FieldSet) Slice() []CheckField {
 // CheckField is a field that should be checked
 type CheckField struct {
 	field string
-	eq    func(interface{}, interface{}) bool
+	eq    func(any, any) bool
 }
 
 // Field returns new CheckField
-func Field(name string, eq func(interface{}, interface{}) bool) CheckField {
+func Field(name string, eq func(any, any) bool) CheckField {
 	return CheckField{name, eq}
 }
 
@@ -48,7 +48,7 @@ func Field(name string, eq func(interface{}, interface{}) bool) CheckField {
 // If there are two fields with the same name, the first one will
 // be used
 func Register(fields ...CheckField) FieldSet {
-	s := set.NewAnySet(func(a, b interface{}) bool {
+	s := set.NewAnySet(func(a, b any) bool {
 		return a.(CheckField).field == b.(CheckField).field
 	})
 

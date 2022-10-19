@@ -45,26 +45,26 @@ const (
 
 // TiKVSpec represents the TiKV topology specification in topology.yaml
 type TiKVSpec struct {
-	Host                string                 `yaml:"host"`
-	ListenHost          string                 `yaml:"listen_host,omitempty"`
-	AdvertiseAddr       string                 `yaml:"advertise_addr,omitempty"`
-	SSHPort             int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported            bool                   `yaml:"imported,omitempty"`
-	Patched             bool                   `yaml:"patched,omitempty"`
-	IgnoreExporter      bool                   `yaml:"ignore_exporter,omitempty"`
-	Port                int                    `yaml:"port" default:"20160"`
-	StatusPort          int                    `yaml:"status_port" default:"20180"`
-	AdvertiseStatusAddr string                 `yaml:"advertise_status_addr,omitempty"`
-	DeployDir           string                 `yaml:"deploy_dir,omitempty"`
-	DataDir             string                 `yaml:"data_dir,omitempty"`
-	LogDir              string                 `yaml:"log_dir,omitempty"`
-	Offline             bool                   `yaml:"offline,omitempty"`
-	NumaNode            string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
-	NumaCores           string                 `yaml:"numa_cores,omitempty" validate:"numa_cores:editable"`
-	Config              map[string]interface{} `yaml:"config,omitempty" validate:"config:ignore"`
-	ResourceControl     meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
-	Arch                string                 `yaml:"arch,omitempty"`
-	OS                  string                 `yaml:"os,omitempty"`
+	Host                string               `yaml:"host"`
+	ListenHost          string               `yaml:"listen_host,omitempty"`
+	AdvertiseAddr       string               `yaml:"advertise_addr,omitempty"`
+	SSHPort             int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
+	Imported            bool                 `yaml:"imported,omitempty"`
+	Patched             bool                 `yaml:"patched,omitempty"`
+	IgnoreExporter      bool                 `yaml:"ignore_exporter,omitempty"`
+	Port                int                  `yaml:"port" default:"20160"`
+	StatusPort          int                  `yaml:"status_port" default:"20180"`
+	AdvertiseStatusAddr string               `yaml:"advertise_status_addr,omitempty"`
+	DeployDir           string               `yaml:"deploy_dir,omitempty"`
+	DataDir             string               `yaml:"data_dir,omitempty"`
+	LogDir              string               `yaml:"log_dir,omitempty"`
+	Offline             bool                 `yaml:"offline,omitempty"`
+	NumaNode            string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
+	NumaCores           string               `yaml:"numa_cores,omitempty" validate:"numa_cores:editable"`
+	Config              map[string]any       `yaml:"config,omitempty" validate:"config:ignore"`
+	ResourceControl     meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
+	Arch                string               `yaml:"arch,omitempty"`
+	OS                  string               `yaml:"os,omitempty"`
 }
 
 // checkStoreStatus checks the store status in current cluster
@@ -124,12 +124,12 @@ func (s *TiKVSpec) Labels() (map[string]string, error) {
 	lbs := make(map[string]string)
 
 	if serverLabels := GetValueFromPath(s.Config, "server.labels"); serverLabels != nil {
-		m := map[interface{}]interface{}{}
-		if sm, ok := serverLabels.(map[string]interface{}); ok {
+		m := map[any]any{}
+		if sm, ok := serverLabels.(map[string]any); ok {
 			for k, v := range sm {
 				m[k] = v
 			}
-		} else if im, ok := serverLabels.(map[interface{}]interface{}); ok {
+		} else if im, ok := serverLabels.(map[any]any); ok {
 			m = im
 		}
 		for k, v := range m {
@@ -187,7 +187,7 @@ func (c *TiKVComponent) Instances() []Instance {
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 				return UptimeByHost(s.Host, s.StatusPort, timeout, tlsCfg)
 			},
-		}, c.Topology})
+		}, c.Topology, 0})
 	}
 	return ins
 }
@@ -195,7 +195,8 @@ func (c *TiKVComponent) Instances() []Instance {
 // TiKVInstance represent the TiDB instance
 type TiKVInstance struct {
 	BaseInstance
-	topo Topology
+	topo                     Topology
+	leaderCountBeforeRestart int
 }
 
 // InitConfig implement Instance interface
@@ -275,10 +276,10 @@ func (i *TiKVInstance) InitConfig(
 }
 
 // setTLSConfig set TLS Config to support enable/disable TLS
-func (i *TiKVInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
+func (i *TiKVInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error) {
 	if enableTLS {
 		if configs == nil {
-			configs = make(map[string]interface{})
+			configs = make(map[string]any)
 		}
 		configs["security.ca-path"] = fmt.Sprintf(
 			"%s/tls/%s",
@@ -357,13 +358,19 @@ func (i *TiKVInstance) PreRestart(ctx context.Context, topo Topology, apiTimeout
 		return err
 	}
 
+	// Get and record the leader count before evict leader.
+	leaderCount, err := genLeaderCounter(tidbTopo, tlsCfg)(i.ID())
+	if err != nil {
+		return perrs.Annotatef(err, "failed to get leader count %s", i.GetHost())
+	}
+	i.leaderCountBeforeRestart = leaderCount
+
 	if err := pdClient.EvictStoreLeader(addr(i.InstanceSpec.(*TiKVSpec)), timeoutOpt, genLeaderCounter(tidbTopo, tlsCfg)); err != nil {
-		if utils.IsTimeoutOrMaxRetry(err) {
-			ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger).
-				Warnf("Ignore evicting store leader from %s, %v", i.ID(), err)
-		} else {
+		if !utils.IsTimeoutOrMaxRetry(err) {
 			return perrs.Annotatef(err, "failed to evict store leader %s", i.GetHost())
 		}
+		ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger).
+			Warnf("Ignore evicting store leader from %s, %v", i.ID(), err)
 	}
 	return nil
 }
@@ -384,6 +391,16 @@ func (i *TiKVInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *t
 	// remove store leader evict scheduler after restart
 	if err := pdClient.RemoveStoreEvict(addr(i.InstanceSpec.(*TiKVSpec))); err != nil {
 		return perrs.Annotatef(err, "failed to remove evict store scheduler for %s", i.GetHost())
+	}
+
+	if i.leaderCountBeforeRestart > 0 {
+		if err := pdClient.RecoverStoreLeader(addr(i.InstanceSpec.(*TiKVSpec)), i.leaderCountBeforeRestart, nil, genLeaderCounter(tidbTopo, tlsCfg)); err != nil {
+			if !utils.IsTimeoutOrMaxRetry(err) {
+				return perrs.Annotatef(err, "failed to recover store leader %s", i.GetHost())
+			}
+			ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger).
+				Warnf("Ignore recovering store leader from %s, %v", i.ID(), err)
+		}
 	}
 
 	return nil

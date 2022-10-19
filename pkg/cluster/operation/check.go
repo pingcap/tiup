@@ -523,19 +523,19 @@ func CheckServices(ctx context.Context, e ctxt.Executor, host, service string, d
 		return result
 	}
 
-	active, err := GetServiceStatus(ctx, e, service+".service")
+	active, _, err := GetServiceStatus(ctx, e, service+".service")
 	if err != nil {
 		result.Err = err
 	}
 
 	switch disable {
 	case false:
-		if !strings.Contains(active, "running") {
+		if active != "active" {
 			result.Err = fmt.Errorf("service %s is not running", service)
 			result.Msg = fmt.Sprintf("start %s.service", service)
 		}
 	case true:
-		if strings.Contains(active, "running") {
+		if active == "active" {
 			result.Err = fmt.Errorf("service %s is running but should be stopped", service)
 			result.Msg = fmt.Sprintf("stop %s.service", service)
 		}
@@ -744,15 +744,15 @@ func CheckFIOResult(rr, rw, lat []byte) []*CheckResult {
 	var results []*CheckResult
 
 	// check results for rand read test
-	var rrRes map[string]interface{}
+	var rrRes map[string]any
 	if err := json.Unmarshal(rr, &rrRes); err != nil {
 		results = append(results, &CheckResult{
 			Name: CheckNameFio,
 			Err:  fmt.Errorf("error parsing result of random read test, %s", err),
 		})
 	} else if jobs, ok := rrRes["jobs"]; ok {
-		readRes := jobs.([]interface{})[0].(map[string]interface{})["read"]
-		readIOPS := readRes.(map[string]interface{})["iops"]
+		readRes := jobs.([]any)[0].(map[string]any)["read"]
+		readIOPS := readRes.(map[string]any)["iops"]
 
 		results = append(results, &CheckResult{
 			Name: CheckNameFio,
@@ -766,18 +766,18 @@ func CheckFIOResult(rr, rw, lat []byte) []*CheckResult {
 	}
 
 	// check results for rand read write
-	var rwRes map[string]interface{}
+	var rwRes map[string]any
 	if err := json.Unmarshal(rw, &rwRes); err != nil {
 		results = append(results, &CheckResult{
 			Name: CheckNameFio,
 			Err:  fmt.Errorf("error parsing result of random read write test, %s", err),
 		})
 	} else if jobs, ok := rwRes["jobs"]; ok {
-		readRes := jobs.([]interface{})[0].(map[string]interface{})["read"]
-		readIOPS := readRes.(map[string]interface{})["iops"]
+		readRes := jobs.([]any)[0].(map[string]any)["read"]
+		readIOPS := readRes.(map[string]any)["iops"]
 
-		writeRes := jobs.([]interface{})[0].(map[string]interface{})["write"]
-		writeIOPS := writeRes.(map[string]interface{})["iops"]
+		writeRes := jobs.([]any)[0].(map[string]any)["write"]
+		writeIOPS := writeRes.(map[string]any)["iops"]
 
 		results = append(results, &CheckResult{
 			Name: CheckNameFio,
@@ -791,20 +791,20 @@ func CheckFIOResult(rr, rw, lat []byte) []*CheckResult {
 	}
 
 	// check results for read write latency
-	var latRes map[string]interface{}
+	var latRes map[string]any
 	if err := json.Unmarshal(lat, &latRes); err != nil {
 		results = append(results, &CheckResult{
 			Name: CheckNameFio,
 			Err:  fmt.Errorf("error parsing result of read write latency test, %s", err),
 		})
 	} else if jobs, ok := latRes["jobs"]; ok {
-		readRes := jobs.([]interface{})[0].(map[string]interface{})["read"]
-		readLat := readRes.(map[string]interface{})["lat_ns"]
-		readLatAvg := readLat.(map[string]interface{})["mean"]
+		readRes := jobs.([]any)[0].(map[string]any)["read"]
+		readLat := readRes.(map[string]any)["lat_ns"]
+		readLatAvg := readLat.(map[string]any)["mean"]
 
-		writeRes := jobs.([]interface{})[0].(map[string]interface{})["write"]
-		writeLat := writeRes.(map[string]interface{})["lat_ns"]
-		writeLatAvg := writeLat.(map[string]interface{})["mean"]
+		writeRes := jobs.([]any)[0].(map[string]any)["write"]
+		writeLat := writeRes.(map[string]any)["lat_ns"]
+		writeLatAvg := writeLat.(map[string]any)["mean"]
 
 		results = append(results, &CheckResult{
 			Name: CheckNameFio,

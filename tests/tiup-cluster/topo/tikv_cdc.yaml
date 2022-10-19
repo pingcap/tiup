@@ -1,0 +1,46 @@
+global:
+  user: tidb
+  group: pingcap
+
+server_configs:
+  tikv:
+    storage.reserve-space: 1K
+    storage.api-version: 2
+    storage.enable-ttl: true
+  kvcdc:
+    gc-ttl: 43200
+
+tidb_servers:
+  - host: n1
+  - host: n2
+
+pd_servers:
+  - host: n3
+  - host: n4
+  - host: n5
+
+tikv_servers:
+  - host: n1
+  - host: n3
+    data_dir: "/home/tidb/my_kv_data"
+  - host: n4
+  - host: n5
+
+kvcdc_servers:
+ - host: n3
+ - host: n4
+   data_dir: "/home/tidb/tikv_cdc_data"
+
+monitoring_servers:
+  - host: n1
+    rule_dir: /tmp/local/prometheus
+grafana_servers:
+  - host: n1
+    dashboard_dir: /tmp/local/grafana
+alertmanager_servers:
+  - host: n1
+    config_file: /tmp/local/alertmanager/alertmanager.yml
+
+monitored:
+  node_exporter_port: 9100
+  blackbox_exporter_port: 9115

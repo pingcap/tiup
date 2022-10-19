@@ -42,8 +42,10 @@ const (
 	ComponentTiFlash          = "tiflash"
 	ComponentGrafana          = "grafana"
 	ComponentDrainer          = "drainer"
+	ComponentDashboard        = "tidb-dashboard"
 	ComponentPump             = "pump"
 	ComponentCDC              = "cdc"
+	ComponentTiKVCDC          = "tikv-cdc"
 	ComponentTiSpark          = "tispark"
 	ComponentSpark            = "spark"
 	ComponentAlertmanager     = "alertmanager"
@@ -88,6 +90,7 @@ type Instance interface {
 	ComponentName() string
 	InstanceName() string
 	ServiceName() string
+	ResourceControl() meta.ResourceControl
 	GetHost() string
 	GetPort() int
 	GetSSHPort() int
@@ -102,7 +105,7 @@ type Instance interface {
 	Arch() string
 	IsPatched() bool
 	SetPatched(bool)
-	setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error)
+	setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error)
 }
 
 // PortStarted wait until a port is being listened
@@ -156,7 +159,7 @@ func (i *BaseInstance) InitConfig(ctx context.Context, e ctxt.Executor, opt Glob
 	sysCfg := filepath.Join(paths.Cache, fmt.Sprintf("%s-%s-%d.service", comp, host, port))
 
 	// insert checkpoint
-	point := checkpoint.Acquire(ctx, CopyConfigFile, map[string]interface{}{"config-file": sysCfg})
+	point := checkpoint.Acquire(ctx, CopyConfigFile, map[string]any{"config-file": sysCfg})
 	defer func() {
 		point.Release(err, zap.String("config-file", sysCfg))
 	}()
@@ -165,7 +168,7 @@ func (i *BaseInstance) InitConfig(ctx context.Context, e ctxt.Executor, opt Glob
 		return nil
 	}
 
-	resource := MergeResourceControl(opt.ResourceControl, i.resourceControl())
+	resource := MergeResourceControl(opt.ResourceControl, i.ResourceControl())
 	systemCfg := system.NewConfig(comp, user, paths.Deploy).
 		WithMemoryLimit(resource.MemoryLimit).
 		WithCPUQuota(resource.CPUQuota).
@@ -201,7 +204,7 @@ func (i *BaseInstance) InitConfig(ctx context.Context, e ctxt.Executor, opt Glob
 
 // setTLSConfig set TLS Config to support enable/disable TLS
 // baseInstance no need to configure TLS
-func (i *BaseInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]interface{}, paths meta.DirPaths) (map[string]interface{}, error) {
+func (i *BaseInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error) {
 	return nil, nil
 }
 
@@ -255,9 +258,9 @@ func (i *BaseInstance) IteratorLocalConfigDir(ctx context.Context, local string,
 }
 
 // MergeServerConfig merges the server configuration and overwrite the global configuration
-func (i *BaseInstance) MergeServerConfig(ctx context.Context, e ctxt.Executor, globalConf, instanceConf map[string]interface{}, paths meta.DirPaths) error {
+func (i *BaseInstance) MergeServerConfig(ctx context.Context, e ctxt.Executor, globalConf, instanceConf map[string]any, paths meta.DirPaths) error {
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("%s-%s-%d.toml", i.ComponentName(), i.GetHost(), i.GetPort()))
-	conf, err := merge2Toml(i.ComponentName(), globalConf, instanceConf)
+	conf, err := Merge2Toml(i.ComponentName(), globalConf, instanceConf)
 	if err != nil {
 		return err
 	}
@@ -271,9 +274,9 @@ func (i *BaseInstance) MergeServerConfig(ctx context.Context, e ctxt.Executor, g
 }
 
 // mergeTiFlashLearnerServerConfig merges the server configuration and overwrite the global configuration
-func (i *BaseInstance) mergeTiFlashLearnerServerConfig(ctx context.Context, e ctxt.Executor, globalConf, instanceConf map[string]interface{}, paths meta.DirPaths) error {
+func (i *BaseInstance) mergeTiFlashLearnerServerConfig(ctx context.Context, e ctxt.Executor, globalConf, instanceConf map[string]any, paths meta.DirPaths) error {
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("%s-learner-%s-%d.toml", i.ComponentName(), i.GetHost(), i.GetPort()))
-	conf, err := merge2Toml(i.ComponentName()+"-learner", globalConf, instanceConf)
+	conf, err := Merge2Toml(i.ComponentName()+"-learner", globalConf, instanceConf)
 	if err != nil {
 		return err
 	}
@@ -441,7 +444,8 @@ func MergeResourceControl(lhs, rhs meta.ResourceControl) meta.ResourceControl {
 	return lhs
 }
 
-func (i *BaseInstance) resourceControl() meta.ResourceControl {
+// ResourceControl return cgroups config of instance
+func (i *BaseInstance) ResourceControl() meta.ResourceControl {
 	if v := reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("ResourceControl"); v.IsValid() {
 		return v.Interface().(meta.ResourceControl)
 	}

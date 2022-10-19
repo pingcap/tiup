@@ -413,8 +413,10 @@ func (m *OperateTaskResponse) GetSources() []*CommonWorkerResponse {
 
 // UpdateTaskRequest used to update task after it has beed started
 // task: task's configuration, yaml format
-//       now, only support to update config for routes, filters, column-mappings, block-allow-list
-//       support update partial config for syncer, loader, etc later
+//
+//	now, only support to update config for routes, filters, column-mappings, block-allow-list
+//	support update partial config for syncer, loader, etc later
+//
 // sources need to do update, empty for all sources in processing the task
 type UpdateTaskRequest struct {
 	Task    string   `protobuf:"bytes,1,opt,name=task,proto3" json:"task,omitempty"`
@@ -643,7 +645,9 @@ func (m *QueryStatusListResponse) GetSources() []*QueryStatusResponse {
 // ShowDDLLocksRequest used to query DDL locks which are un-resolved
 // task: task's name, empty for all tasks
 // sources: source need to query, empty for all sources
-//          any DDL lock in which the source is synced or unsynced will return
+//
+//	any DDL lock in which the source is synced or unsynced will return
+//
 // if specify task and sources both, and sources not doing the task , it will return empty DDL locks
 type ShowDDLLocksRequest struct {
 	Task    string   `protobuf:"bytes,1,opt,name=task,proto3" json:"task,omitempty"`
@@ -2187,8 +2191,8 @@ func (m *Members) GetWorker() *ListWorkerMember {
 }
 
 // XXX_OneofWrappers is for the internal use of the proto package.
-func (*Members) XXX_OneofWrappers() []interface{} {
-	return []interface{}{
+func (*Members) XXX_OneofWrappers() []any {
+	return []any{
 		(*Members_Leader)(nil),
 		(*Members_Master)(nil),
 		(*Members_Worker)(nil),
@@ -3705,7 +3709,7 @@ func RegisterMasterServer(s *grpc.Server, srv MasterServer) {
 	s.RegisterService(&_Master_serviceDesc, srv)
 }
 
-func _Master_StartTask_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Master_StartTask_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(StartTaskRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -3717,13 +3721,13 @@ func _Master_StartTask_Handler(srv interface{}, ctx context.Context, dec func(in
 		Server:     srv,
 		FullMethod: "/pb.Master/StartTask",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(MasterServer).StartTask(ctx, req.(*StartTaskRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Master_OperateTask_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Master_OperateTask_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(OperateTaskRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -3735,13 +3739,13 @@ func _Master_OperateTask_Handler(srv interface{}, ctx context.Context, dec func(
 		Server:     srv,
 		FullMethod: "/pb.Master/OperateTask",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(MasterServer).OperateTask(ctx, req.(*OperateTaskRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Master_UpdateTask_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Master_UpdateTask_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(UpdateTaskRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -3753,13 +3757,13 @@ func _Master_UpdateTask_Handler(srv interface{}, ctx context.Context, dec func(i
 		Server:     srv,
 		FullMethod: "/pb.Master/UpdateTask",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(MasterServer).UpdateTask(ctx, req.(*UpdateTaskRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Master_QueryStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Master_QueryStatus_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(QueryStatusListRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -3771,13 +3775,13 @@ func _Master_QueryStatus_Handler(srv interface{}, ctx context.Context, dec func(
 		Server:     srv,
 		FullMethod: "/pb.Master/QueryStatus",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(MasterServer).QueryStatus(ctx, req.(*QueryStatusListRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Master_ShowDDLLocks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Master_ShowDDLLocks_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(ShowDDLLocksRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -3789,13 +3793,13 @@ func _Master_ShowDDLLocks_Handler(srv interface{}, ctx context.Context, dec func
 		Server:     srv,
 		FullMethod: "/pb.Master/ShowDDLLocks",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(MasterServer).ShowDDLLocks(ctx, req.(*ShowDDLLocksRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Master_UnlockDDLLock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Master_UnlockDDLLock_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(UnlockDDLLockRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -3807,13 +3811,13 @@ func _Master_UnlockDDLLock_Handler(srv interface{}, ctx context.Context, dec fun
 		Server:     srv,
 		FullMethod: "/pb.Master/UnlockDDLLock",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(MasterServer).UnlockDDLLock(ctx, req.(*UnlockDDLLockRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Master_OperateWorkerRelayTask_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Master_OperateWorkerRelayTask_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(OperateWorkerRelayRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -3825,13 +3829,13 @@ func _Master_OperateWorkerRelayTask_Handler(srv interface{}, ctx context.Context
 		Server:     srv,
 		FullMethod: "/pb.Master/OperateWorkerRelayTask",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(MasterServer).OperateWorkerRelayTask(ctx, req.(*OperateWorkerRelayRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Master_PurgeWorkerRelay_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Master_PurgeWorkerRelay_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(PurgeWorkerRelayRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -3843,13 +3847,13 @@ func _Master_PurgeWorkerRelay_Handler(srv interface{}, ctx context.Context, dec 
 		Server:     srv,
 		FullMethod: "/pb.Master/PurgeWorkerRelay",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(MasterServer).PurgeWorkerRelay(ctx, req.(*PurgeWorkerRelayRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Master_CheckTask_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Master_CheckTask_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(CheckTaskRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -3861,13 +3865,13 @@ func _Master_CheckTask_Handler(srv interface{}, ctx context.Context, dec func(in
 		Server:     srv,
 		FullMethod: "/pb.Master/CheckTask",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(MasterServer).CheckTask(ctx, req.(*CheckTaskRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Master_OperateSource_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Master_OperateSource_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(OperateSourceRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -3879,13 +3883,13 @@ func _Master_OperateSource_Handler(srv interface{}, ctx context.Context, dec fun
 		Server:     srv,
 		FullMethod: "/pb.Master/OperateSource",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(MasterServer).OperateSource(ctx, req.(*OperateSourceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Master_RegisterWorker_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Master_RegisterWorker_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(RegisterWorkerRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -3897,13 +3901,13 @@ func _Master_RegisterWorker_Handler(srv interface{}, ctx context.Context, dec fu
 		Server:     srv,
 		FullMethod: "/pb.Master/RegisterWorker",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(MasterServer).RegisterWorker(ctx, req.(*RegisterWorkerRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Master_OfflineMember_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Master_OfflineMember_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(OfflineMemberRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -3915,13 +3919,13 @@ func _Master_OfflineMember_Handler(srv interface{}, ctx context.Context, dec fun
 		Server:     srv,
 		FullMethod: "/pb.Master/OfflineMember",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(MasterServer).OfflineMember(ctx, req.(*OfflineMemberRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Master_OperateLeader_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Master_OperateLeader_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(OperateLeaderRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -3933,13 +3937,13 @@ func _Master_OperateLeader_Handler(srv interface{}, ctx context.Context, dec fun
 		Server:     srv,
 		FullMethod: "/pb.Master/OperateLeader",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(MasterServer).OperateLeader(ctx, req.(*OperateLeaderRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Master_ListMember_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Master_ListMember_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(ListMemberRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -3951,13 +3955,13 @@ func _Master_ListMember_Handler(srv interface{}, ctx context.Context, dec func(i
 		Server:     srv,
 		FullMethod: "/pb.Master/ListMember",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(MasterServer).ListMember(ctx, req.(*ListMemberRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Master_OperateSchema_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Master_OperateSchema_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(OperateSchemaRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -3969,13 +3973,13 @@ func _Master_OperateSchema_Handler(srv interface{}, ctx context.Context, dec fun
 		Server:     srv,
 		FullMethod: "/pb.Master/OperateSchema",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(MasterServer).OperateSchema(ctx, req.(*OperateSchemaRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Master_GetSubTaskCfg_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Master_GetSubTaskCfg_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(GetSubTaskCfgRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -3987,13 +3991,13 @@ func _Master_GetSubTaskCfg_Handler(srv interface{}, ctx context.Context, dec fun
 		Server:     srv,
 		FullMethod: "/pb.Master/GetSubTaskCfg",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(MasterServer).GetSubTaskCfg(ctx, req.(*GetSubTaskCfgRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Master_GetCfg_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Master_GetCfg_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(GetCfgRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -4005,13 +4009,13 @@ func _Master_GetCfg_Handler(srv interface{}, ctx context.Context, dec func(inter
 		Server:     srv,
 		FullMethod: "/pb.Master/GetCfg",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(MasterServer).GetCfg(ctx, req.(*GetCfgRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Master_HandleError_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Master_HandleError_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(HandleErrorRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -4023,13 +4027,13 @@ func _Master_HandleError_Handler(srv interface{}, ctx context.Context, dec func(
 		Server:     srv,
 		FullMethod: "/pb.Master/HandleError",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(MasterServer).HandleError(ctx, req.(*HandleErrorRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Master_GetMasterCfg_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Master_GetMasterCfg_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(GetMasterCfgRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -4041,13 +4045,13 @@ func _Master_GetMasterCfg_Handler(srv interface{}, ctx context.Context, dec func
 		Server:     srv,
 		FullMethod: "/pb.Master/GetMasterCfg",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(MasterServer).GetMasterCfg(ctx, req.(*GetMasterCfgRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Master_TransferSource_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Master_TransferSource_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(TransferSourceRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -4059,13 +4063,13 @@ func _Master_TransferSource_Handler(srv interface{}, ctx context.Context, dec fu
 		Server:     srv,
 		FullMethod: "/pb.Master/TransferSource",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(MasterServer).TransferSource(ctx, req.(*TransferSourceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Master_OperateRelay_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Master_OperateRelay_Handler(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
 	in := new(OperateRelayRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -4077,7 +4081,7 @@ func _Master_OperateRelay_Handler(srv interface{}, ctx context.Context, dec func
 		Server:     srv,
 		FullMethod: "/pb.Master/OperateRelay",
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, req any) (any, error) {
 		return srv.(MasterServer).OperateRelay(ctx, req.(*OperateRelayRequest))
 	}
 	return interceptor(ctx, in, info, handler)

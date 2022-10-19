@@ -28,7 +28,7 @@ var (
 	// register checkpoint for ssh command
 	sshPoint = checkpoint.Register(
 		checkpoint.Field("host", reflect.DeepEqual),
-		checkpoint.Field("port", func(a, b interface{}) bool {
+		checkpoint.Field("port", func(a, b any) bool {
 			return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
 		}),
 		checkpoint.Field("user", reflect.DeepEqual),
@@ -39,7 +39,7 @@ var (
 	// register checkpoint for scp command
 	scpPoint = checkpoint.Register(
 		checkpoint.Field("host", reflect.DeepEqual),
-		checkpoint.Field("port", func(a, b interface{}) bool {
+		checkpoint.Field("port", func(a, b any) bool {
 			return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
 		}),
 		checkpoint.Field("user", reflect.DeepEqual),
@@ -50,9 +50,10 @@ var (
 )
 
 // CheckPointExecutor wraps Executor and inject checkpoints
-//   ATTENTION please: the result of CheckPointExecutor shouldn't be used to impact
-//                     external system like PD, otherwise, the external system may
-//                     take wrong action.
+//
+//	ATTENTION please: the result of CheckPointExecutor shouldn't be used to impact
+//	                  external system like PD, otherwise, the external system may
+//	                  take wrong action.
 type CheckPointExecutor struct {
 	ctxt.Executor
 	config *SSHConfig
@@ -60,7 +61,7 @@ type CheckPointExecutor struct {
 
 // Execute implements Executor interface.
 func (c *CheckPointExecutor) Execute(ctx context.Context, cmd string, sudo bool, timeout ...time.Duration) (stdout []byte, stderr []byte, err error) {
-	point := checkpoint.Acquire(ctx, sshPoint, map[string]interface{}{
+	point := checkpoint.Acquire(ctx, sshPoint, map[string]any{
 		"host": c.config.Host,
 		"port": c.config.Port,
 		"user": c.config.User,
@@ -87,7 +88,7 @@ func (c *CheckPointExecutor) Execute(ctx context.Context, cmd string, sudo bool,
 
 // Transfer implements Executer interface.
 func (c *CheckPointExecutor) Transfer(ctx context.Context, src, dst string, download bool, limit int, compress bool) (err error) {
-	point := checkpoint.Acquire(ctx, scpPoint, map[string]interface{}{
+	point := checkpoint.Acquire(ctx, scpPoint, map[string]any{
 		"host":     c.config.Host,
 		"port":     c.config.Port,
 		"user":     c.config.User,

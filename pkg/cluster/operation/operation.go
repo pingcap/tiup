@@ -55,9 +55,6 @@ type Options struct {
 	RetainDataRoles []string
 	RetainDataNodes []string
 
-	// Show uptime or not
-	ShowUptime bool
-
 	DisplayMode string // the output format
 	Operation   Operation
 
