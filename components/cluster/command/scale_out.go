@@ -94,7 +94,7 @@ func newScaleOutCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&opt.NoLabels, "no-labels", "", false, "Don't check TiKV labels")
 	cmd.Flags().BoolVarP(&opt.Stage1, "stage1", "", false, "Don't start the new instance after scale-out, need to manually execute cluster scale-out --stage2")
 	cmd.Flags().BoolVarP(&opt.Stage2, "stage2", "", false, "Start the new instance and init config after scale-out --stage1")
-	cmd.Flags().StringSliceVar(&gOpt.IngoreInitConfigComps, "ignore-generate-config", nil, "ignore generate config in specified components(tidb,pd,tikv)")
+	cmd.Flags().StringSliceVar(&gOpt.IngoreInitConfigRoles, "ignore-config-roles", nil, "ignore generate config in specified components(tidb,pd,tikv)")
 
 	return cmd
 }

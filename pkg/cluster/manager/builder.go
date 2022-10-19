@@ -630,7 +630,7 @@ func buildInitConfigTasks(
 		}
 		compName := instance.ComponentName()
 
-		for _, IgnoreComp := range gOpt.IngoreInitConfigComps {
+		for _, IgnoreComp := range gOpt.IngoreInitConfigRoles {
 			if IgnoreComp == compName {
 				return
 			}

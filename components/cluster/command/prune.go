@@ -43,7 +43,7 @@ func newPruneCmd() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&gOpt.Force, "force", false, "Ignore errors when deleting the instance with data from the cluster")
-	cmd.Flags().StringSliceVar(&gOpt.IngoreInitConfigComps, "ignore-generate-config", nil, "ignore generate config in specified components(tidb,pd,tikv)")
+	cmd.Flags().StringSliceVar(&gOpt.IngoreInitConfigRoles, "ignore-config-roles", nil, "ignore generate config in specified components(tidb,pd,tikv)")
 
 	return cmd
 }

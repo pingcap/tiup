@@ -63,7 +63,7 @@ func newScaleInCmd() *cobra.Command {
 	cmd.Flags().StringSliceVarP(&gOpt.Nodes, "node", "N", nil, "Specify the nodes (required)")
 	cmd.Flags().Uint64Var(&gOpt.APITimeout, "transfer-timeout", 600, "Timeout in seconds when transferring PD and TiKV store leaders, also for TiCDC drain one capture")
 	cmd.Flags().BoolVar(&gOpt.Force, "force", false, "Force just try stop and destroy instance before removing the instance from topo")
-	cmd.Flags().StringSliceVar(&gOpt.IngoreInitConfigComps, "ignore-generate-config", nil, "ignore generate config in specified components(tidb,pd,tikv)")
+	cmd.Flags().StringSliceVar(&gOpt.IngoreInitConfigRoles, "ignore-config-roles", nil, "ignore generate config in specified components(tidb,pd,tikv)")
 
 	_ = cmd.MarkFlagRequired("node")
 
