@@ -120,7 +120,7 @@ func (ms *FsManifests) save(manifest *Manifest, filename string) error {
 	}
 
 	// Save all manifests in `$TIUP_HOME/manifests`
-	path := filepath.Join(ms.profile.Root(), localdata.ManifestParentDir, filename)
+	path := filepath.Join(ms.profile.Root(), localdata.ManifestParentDir, ms.profile.Name(), filename)
 
 	// create sub directory if needed
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
@@ -194,7 +194,7 @@ func (ms *FsManifests) load(filename string) (string, error) {
 		return str.(string), nil
 	}
 
-	fullPath := filepath.Join(ms.profile.Root(), localdata.ManifestParentDir, filename)
+	fullPath := filepath.Join(ms.profile.Root(), localdata.ManifestParentDir, ms.profile.Name(), filename)
 	file, err := os.Open(fullPath)
 	if err != nil {
 		if os.IsNotExist(err) {

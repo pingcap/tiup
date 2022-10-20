@@ -32,15 +32,16 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-// Profile represents the `tiup` profile
+// Profile represents the `one tiup mirror` profile
 type Profile struct {
 	root   string
+	name   string
 	Config *TiUPConfig
 }
 
 // NewProfile returns a new profile instance
-func NewProfile(root string, config *TiUPConfig) *Profile {
-	return &Profile{root: root, Config: config}
+func NewProfile(root, name string, config *TiUPConfig) *Profile {
+	return &Profile{root: root, name: name, Config: config}
 }
 
 // InitProfile creates a new profile using environment variables and defaults.
@@ -63,7 +64,7 @@ func InitProfile() *Profile {
 	if err != nil {
 		panic("cannot read config: " + err.Error())
 	}
-	return NewProfile(profileDir, cfg)
+	return NewProfile(profileDir, "todo", cfg)
 }
 
 // Path returns a full path which is related to profile root directory
@@ -74,6 +75,10 @@ func (p *Profile) Path(relpath ...string) string {
 // Root returns the root path of the `tiup`
 func (p *Profile) Root() string {
 	return p.root
+}
+
+func (p *Profile) Name() string {
+	return p.name
 }
 
 // GetComponentInstalledVersion return the installed version of component.

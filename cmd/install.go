@@ -14,7 +14,10 @@
 package cmd
 
 import (
-	"github.com/pingcap/tiup/pkg/environment"
+	"os"
+
+	"github.com/pingcap/tiup/pkg/client"
+	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/spf13/cobra"
 )
 
@@ -34,11 +37,15 @@ of the same component:
   tiup install tidb:v3.0.5 tidb:v3.0.8 tikv:v3.0.9`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			teleCommand = cmd.CommandPath()
-			env := environment.GlobalEnv()
+			//env := environment.GlobalEnv()
 			if len(args) == 0 {
 				return cmd.Help()
 			}
-			return env.UpdateComponents(args, false, force)
+			c, err := client.NewTiUPClient(os.Getenv(localdata.EnvNameHome))
+			if err != nil {
+				return err
+			}
+			return c.Install(args[0])
 		},
 	}
 	cmd.Flags().BoolVar(&force, "force", false, "If the specified version was already installed, force a reinstallation")

@@ -60,7 +60,7 @@ func TestPollutedManifest(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(profileDir)
 
-	profile := localdata.NewProfile(profileDir, &localdata.TiUPConfig{})
+	profile := localdata.NewProfile(profileDir, "todo", &localdata.TiUPConfig{})
 	local, err := v1manifest.NewManifests(profile)
 	assert.Nil(t, err)
 
