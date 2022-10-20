@@ -27,12 +27,17 @@ type configBase struct {
 // TiUPConfig represent the config file of TiUP
 type TiUPConfig struct {
 	configBase
-	Mirror string `toml:"mirror"`
+	Mirror  string            `toml:"mirror"`
+	Mirrors []string          `toml:"mirrors"`
+	Aliases map[string]string `toml:"aliases"`
 }
 
 // InitConfig returns a TiUPConfig struct which can flush config back to disk
 func InitConfig(root string) (*TiUPConfig, error) {
-	config := TiUPConfig{configBase{path.Join(root, "tiup.toml")}, ""}
+	config := TiUPConfig{
+		configBase: configBase{path.Join(root, "tiup.toml")},
+		Mirror:     "",
+	}
 	if utils.IsNotExist(config.file) {
 		return &config, nil
 	}
