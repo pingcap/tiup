@@ -40,11 +40,14 @@ func NewTiUPClient(tiupHome string) (*client, error) {
 	for _, mirror := range config.Mirrors {
 
 		initRepo := time.Now()
-		profile := localdata.NewProfile(tiupHome, mirror, config)
+		profile := localdata.NewProfile(tiupHome, mirror.Name, config)
 
 		// Initialize the repository
 		// Replace the mirror if some sub-commands use different mirror address
-		mirrorAddr := "https://" + mirror
+		mirrorAddr := mirror.URL
+		if mirrorAddr == "" {
+			mirrorAddr = "https://" + mirror.Name
+		}
 		m := repository.NewMirror(mirrorAddr, repository.MirrorOptions{})
 		if err := m.Open(); err != nil {
 			return nil, err
@@ -62,7 +65,7 @@ func NewTiUPClient(tiupHome string) (*client, error) {
 
 		zap.L().Debug("Initialize repository finished", zap.Duration("duration", time.Since(initRepo)))
 
-		c.repositories[mirror] = v1repo
+		c.repositories[mirror.Name] = v1repo
 	}
 
 	return c, err

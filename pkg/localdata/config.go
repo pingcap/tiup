@@ -28,8 +28,13 @@ type configBase struct {
 type TiUPConfig struct {
 	configBase
 	Mirror  string            `toml:"mirror"`
-	Mirrors []string          `toml:"mirrors"`
+	Mirrors []singleMirror    `toml:"mirrors"`
 	Aliases map[string]string `toml:"aliases"`
+}
+
+type singleMirror struct {
+	Name string `toml:"name"`
+	URL  string `url:"url,omitempty"`
 }
 
 // InitConfig returns a TiUPConfig struct which can flush config back to disk
