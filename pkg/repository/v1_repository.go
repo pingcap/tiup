@@ -154,7 +154,7 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 			}
 		}
 
-		targetDir := filepath.Join(r.local.TargetRootDir(), localdata.ComponentParentDir, spec.ID, spec.Version)
+		targetDir := filepath.Join(r.local.TargetRootDir(), localdata.ComponentParentDir,r.local.Name(), spec.ID, spec.Version)
 		if spec.TargetDir != "" {
 			targetDir = spec.TargetDir
 		}

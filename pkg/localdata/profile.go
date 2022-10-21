@@ -190,7 +190,7 @@ func (p *Profile) InstalledComponents() ([]string, error) {
 
 // InstalledVersions returns the installed versions of specific component
 func (p *Profile) InstalledVersions(component string) ([]string, error) {
-	path := filepath.Join(p.root, ComponentParentDir, component)
+	path := filepath.Join(p.root, ComponentParentDir, p.name, component)
 	if utils.IsNotExist(path) {
 		return nil, nil
 	}

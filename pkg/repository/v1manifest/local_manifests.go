@@ -51,6 +51,8 @@ type LocalManifests interface {
 
 	// TargetRootDir returns the root directory of target
 	TargetRootDir() string
+
+	Name() string
 }
 
 // FsManifests represents a collection of v1 manifests on disk.
@@ -286,6 +288,11 @@ func (ms *FsManifests) TargetRootDir() string {
 	return ms.profile.Root()
 }
 
+// Name implements LocalManifests.
+func (ms *FsManifests) Name() string {
+	return ms.profile.Name()
+}
+
 // MockManifests is a LocalManifests implementation for testing.
 type MockManifests struct {
 	Manifests map[string]*Manifest
@@ -402,6 +409,11 @@ func (ms *MockManifests) KeyStore() *KeyStore {
 // TargetRootDir implements LocalManifests.
 func (ms *MockManifests) TargetRootDir() string {
 	return "/tmp/mock"
+}
+
+// Name implements LocalManifests.
+func (ms *MockManifests) Name() string {
+	return "mock"
 }
 
 // ManifestVersion implements LocalManifests.
