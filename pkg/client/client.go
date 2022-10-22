@@ -2,6 +2,7 @@ package client
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,6 +16,7 @@ import (
 )
 
 type Client struct {
+	tiupHome     string
 	config       *localdata.TiUPConfig
 	repositories map[string]*repository.V1Repository
 }
@@ -33,42 +35,41 @@ func NewTiUPClient(tiupHome string) (*Client, error) {
 		return nil, err
 	}
 	c := &Client{
+		tiupHome:     tiupHome,
 		config:       config,
 		repositories: make(map[string]*repository.V1Repository),
 	}
 
 	for _, mirror := range config.Mirrors {
-
-		initRepo := time.Now()
-		profile := localdata.NewProfile(tiupHome, mirror.Name, config)
-
-		// Initialize the repository
-		// Replace the mirror if some sub-commands use different mirror address
-		mirrorAddr := mirror.URL
-		if mirrorAddr == "" {
-			mirrorAddr = "https://" + mirror.Name
-		}
-		m := repository.NewMirror(mirrorAddr, repository.MirrorOptions{})
-		if err := m.Open(); err != nil {
+		v1repo, err := c.initRepository(mirror.Name, mirror.URL)
+		if err != nil {
 			return nil, err
 		}
-
-		var v1repo *repository.V1Repository
-		var err error
-
-		var local v1manifest.LocalManifests
-		local, err = v1manifest.NewManifests(profile)
-		if err != nil {
-			return nil, errors.Annotatef(err, "initial repository from mirror(%s) failed", mirrorAddr)
-		}
-		v1repo = repository.NewV1Repo(m, repository.Options{}, local)
-
-		zap.L().Debug("Initialize repository finished", zap.Duration("duration", time.Since(initRepo)))
-
 		c.repositories[mirror.Name] = v1repo
 	}
 
 	return c, err
+}
+
+// List components from all mirror, duplicate will be hide
+func (c *Client) AddMirror(mirror localdata.SingleMirror, rootJSON io.Reader) error {
+	// todo: add check
+	c.config.Mirrors = append(c.config.Mirrors, mirror)
+
+	os.MkdirAll(filepath.Join(c.tiupHome, localdata.TrustedDir, mirror.Name), 0755)
+	f, err := os.OpenFile(filepath.Join(c.tiupHome, localdata.TrustedDir, mirror.Name, "root.json"), os.O_WRONLY|os.O_CREATE, 0755)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	io.Copy(f, rootJSON)
+
+	v1repo, err := c.initRepository(mirror.Name, mirror.URL)
+	if err != nil {
+		return err
+	}
+	c.repositories[mirror.Name] = v1repo
+	return nil
 }
 
 // List components from all mirror, duplicate will be hide
@@ -116,12 +117,39 @@ func (c *Client) Uninstall(name, version string) error {
 	return nil
 }
 
-func (c *Client) SaveConfig(name, version string) error {
+func (c *Client) SaveConfig() error {
 	return c.config.Flush()
 }
 
 func (c *Client) addAlias(k, v string) error {
 	return nil
+}
+
+func (c *Client) initRepository(name, url string) (*repository.V1Repository, error) {
+	initRepo := time.Now()
+	profile := localdata.NewProfile(c.tiupHome, name, c.config)
+
+	// Initialize the repository
+	// Replace the mirror if some sub-commands use different mirror address
+	mirrorAddr := url
+	if mirrorAddr == "" {
+		mirrorAddr = "https://" + name
+	}
+	m := repository.NewMirror(mirrorAddr, repository.MirrorOptions{})
+	if err := m.Open(); err != nil {
+		return nil, err
+	}
+
+	var v1repo *repository.V1Repository
+	var local v1manifest.LocalManifests
+	local, err := v1manifest.NewManifests(profile)
+	if err != nil {
+		return nil, errors.Annotatef(err, "initial repository from mirror(%s) failed", mirrorAddr)
+	}
+	v1repo = repository.NewV1Repo(m, repository.Options{}, local)
+	zap.L().Debug("Initialize repository finished", zap.Duration("duration", time.Since(initRepo)))
+
+	return v1repo, nil
 }
 
 func ParseComponentVersion(s string) (mirror, component, tag string, err error) {

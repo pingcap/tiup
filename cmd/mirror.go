@@ -19,6 +19,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -70,6 +72,7 @@ of components or the repository itself.`,
 		newMirrorPublishCmd(),
 		newMirrorShowCmd(),
 		newMirrorSetCmd(),
+		newMirrorAddCmd(),
 		newMirrorModifyCmd(),
 		newMirrorRenewCmd(),
 		newMirrorGrantCmd(),
@@ -205,6 +208,54 @@ The root manifest in $TIUP_HOME will be replaced with the one in given repositor
 	}
 	cmd.Flags().StringVarP(&root, "root", "r", root, "Specify the path of `root.json`")
 	cmd.Flags().BoolVar(&reset, "reset", false, "Reset mirror to use the default address.")
+
+	return cmd
+}
+
+// the `mirror add` sub command
+func newMirrorAddCmd() *cobra.Command {
+	var (
+		root string
+		url  string
+	)
+	cmd := &cobra.Command{
+		Use:   "add <mirror-name>",
+		Short: "Set mirror name(typically domain)",
+		Long:  `Set mirror name, just use domain for mirror with https. For http and local mirror, url param is needed to provide full path.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			teleCommand = cmd.CommandPath()
+			if len(args) != 1 {
+				return cmd.Help()
+			}
+			singleMirror := localdata.SingleMirror{Name: args[0], URL: url}
+
+			var rootJSON io.ReadCloser
+			var err error
+			if root != "" {
+				rootJSON, err = os.Open(root)
+				if err != nil {
+					return err
+				}
+			} else {
+				fmt.Println(color.YellowString("WARN: adding root certificate via internet: %s", root))
+				resp, err := http.Get(singleMirror.GetURL() + "/root.json")
+				if err != nil {
+					return err
+				}
+				rootJSON = resp.Body
+			}
+			defer rootJSON.Close()
+
+			err = tiupC.AddMirror(singleMirror, rootJSON)
+			if err != nil {
+				return err
+			}
+			fmt.Printf("Successfully add mirror %s (%s)\n", singleMirror.Name, singleMirror.GetURL())
+			return tiupC.SaveConfig()
+		},
+	}
+	cmd.Flags().StringVar(&root, "root", root, "Specify the path of `root.json`")
+	cmd.Flags().StringVar(&url, "url", root, "Specify the url of mirror")
 
 	return cmd
 }
