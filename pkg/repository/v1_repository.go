@@ -28,7 +28,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fatih/color"
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/localdata"
@@ -118,12 +117,7 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 	for _, spec := range specs {
 		manifest, err := r.updateComponentManifest(spec.ID, false)
 		if err != nil {
-			if errors.Cause(err) == ErrUnknownComponent {
-				fmt.Println(color.YellowString("The component `%s` not found (may be deleted from repository); skipped", spec.ID))
-			} else {
-				errs = append(errs, err.Error())
-			}
-			continue
+			errs = append(errs, err.Error())
 		}
 
 		if spec.Version == utils.NightlyVersionAlias {
@@ -154,7 +148,7 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 			}
 		}
 
-		targetDir := filepath.Join(r.local.TargetRootDir(), localdata.ComponentParentDir,r.local.Name(), spec.ID, spec.Version)
+		targetDir := filepath.Join(r.local.TargetRootDir(), localdata.ComponentParentDir, r.local.Name(), spec.ID, spec.Version)
 		if spec.TargetDir != "" {
 			targetDir = spec.TargetDir
 		}
