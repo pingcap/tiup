@@ -14,10 +14,6 @@
 package cmd
 
 import (
-	"os"
-
-	"github.com/pingcap/tiup/pkg/client"
-	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/spf13/cobra"
 )
 
@@ -41,11 +37,7 @@ of the same component:
 			if len(args) == 0 {
 				return cmd.Help()
 			}
-			c, err := client.NewTiUPClient(os.Getenv(localdata.EnvNameHome))
-			if err != nil {
-				return err
-			}
-			return c.Install(args[0])
+			return tiupC.Install(args[0])
 		},
 	}
 	cmd.Flags().BoolVar(&force, "force", false, "If the specified version was already installed, force a reinstallation")

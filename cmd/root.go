@@ -27,6 +27,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/google/uuid"
 	perrs "github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/client"
 	"github.com/pingcap/tiup/pkg/environment"
 	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/localdata"
@@ -51,6 +52,7 @@ var (
 var (
 	binPath string
 	tag     string
+	tiupC   *client.Client
 )
 
 func init() {
@@ -102,6 +104,11 @@ the latest stable version will be downloaded from the repository.`,
 					return err
 				}
 				environment.SetGlobalEnv(e)
+
+				tiupC, err = client.NewTiUPClient(os.Getenv(localdata.EnvNameHome))
+				if err != nil {
+					return err
+				}
 			}
 			return nil
 		},

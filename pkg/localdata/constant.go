@@ -45,6 +45,10 @@ const (
 	// StorageParentDir represent the parent directory of running component
 	StorageParentDir = "storage"
 
+
+	// TrustedDir represent the parent directory of root.json of mirrors
+	TrustedDir = "trusted"
+
 	// EnvNameInstanceDataDir represents the working directory of specific instance
 	EnvNameInstanceDataDir = "TIUP_INSTANCE_DATA_DIR"
 
