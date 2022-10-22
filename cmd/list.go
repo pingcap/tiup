@@ -117,12 +117,12 @@ func showComponentList(opt listOptions) (*listResult, error) {
 	// single mirror
 	if len(tiupC.ListMirrors()) == 0 {
 		env := environment.GlobalEnv()
-		components, err = showMirrorComponentList(environment.Mirror(), env.V1Repository(), opt)
+		components, err = showComponentListOfMirror(environment.Mirror(), env.V1Repository(), opt)
 	} else {
 		// multi-mirror
 		for _, name := range opt.mirrorList {
 
-			c, err := showMirrorComponentList(name, tiupC.GetRepository(name), opt)
+			c, err := showComponentListOfMirror(name, tiupC.GetRepository(name), opt)
 			if err != nil {
 				log.Warnf("get component list from mirror %s failed", name)
 				continue
@@ -141,7 +141,7 @@ func showComponentList(opt listOptions) (*listResult, error) {
 	}, nil
 }
 
-func showMirrorComponentList(mirror string, repo *repository.V1Repository, opt listOptions) ([][]string, error) {
+func showComponentListOfMirror(mirror string, repo *repository.V1Repository, opt listOptions) ([][]string, error) {
 	if !opt.installedOnly {
 		err := repo.UpdateComponentManifests()
 		if err != nil {
@@ -241,13 +241,13 @@ func showComponentVersions(component string, opt listOptions) (*listResult, erro
 	// single mirror
 	if len(tiupC.ListMirrors()) == 0 {
 		env := environment.GlobalEnv()
-		components, err = showMirrorComponentVersions(environment.Mirror(), env.V1Repository(), component, opt)
+		components, err = showComponentVersionsOfMirror(environment.Mirror(), env.V1Repository(), component, opt)
 	} else {
 		// multi-mirror
 		// multi-mirror
 		for _, name := range opt.mirrorList {
 
-			c, err := showMirrorComponentVersions(name, tiupC.GetRepository(name), component, opt)
+			c, err := showComponentVersionsOfMirror(name, tiupC.GetRepository(name), component, opt)
 			if err != nil {
 				log.Debugf("Not found %s in mirror %s", component, name)
 				continue
@@ -266,7 +266,7 @@ func showComponentVersions(component string, opt listOptions) (*listResult, erro
 	}, nil
 }
 
-func showMirrorComponentVersions(mirror string, repo *repository.V1Repository, component string, opt listOptions) ([][]string, error) {
+func showComponentVersionsOfMirror(mirror string, repo *repository.V1Repository, component string, opt listOptions) ([][]string, error) {
 	var comp *v1manifest.Component
 	var err error
 	if opt.installedOnly {

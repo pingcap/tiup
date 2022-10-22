@@ -171,7 +171,6 @@ func (p *Profile) ReadMetaFile(dirName string) (*Process, error) {
 func (p *Profile) InstalledComponents() ([]string, error) {
 	compDir := filepath.Join(p.root, ComponentParentDir, p.name)
 	fileInfos, err := os.ReadDir(compDir)
-	fmt.Println(compDir)
 	if err != nil && os.IsNotExist(err) {
 		return nil, nil
 	}

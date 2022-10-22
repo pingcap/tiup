@@ -12,6 +12,7 @@ import (
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
+	"github.com/pingcap/tiup/pkg/utils"
 	"go.uber.org/zap"
 )
 
@@ -53,6 +54,10 @@ func NewTiUPClient(tiupHome string) (*Client, error) {
 	return c, err
 }
 
+func (c *Client) TiUPHomePath() string {
+	return c.tiupHome
+}
+
 // ListMirrors show all Mirrors
 func (c *Client) ListMirrors() []localdata.SingleMirror {
 	return c.config.Mirrors
@@ -76,16 +81,6 @@ func (c *Client) AddMirror(mirror localdata.SingleMirror, rootJSON io.Reader) er
 		return err
 	}
 	c.repositories[mirror.Name] = v1repo
-	return nil
-}
-
-// List components from all mirror, duplicate will be hide
-func (c *Client) ListComponents() error {
-	return nil
-}
-
-// list component info from first available mirror
-func (c *Client) ListComponentDetail(component string) error {
 	return nil
 }
 
@@ -120,7 +115,39 @@ func (c *Client) Install(s string) error {
 	return fmt.Errorf("cannot found %s", s)
 }
 
-func (c *Client) Uninstall(name, version string) error {
+func (c *Client) Uninstall(s string) error {
+	mirror, component, version, err := ParseComponentVersion(s)
+	if err != nil {
+		return err
+	}
+
+	paths := []string{}
+
+	repo := c.GetRepository(mirror)
+
+	dir, err := os.ReadDir(repo.Local().ProfilePath(localdata.ComponentParentDir, mirror, component))
+	if err != nil {
+		return errors.Trace(err)
+	}
+	if version == utils.NightlyVersionAlias {
+		for _, fi := range dir {
+			if utils.Version(fi.Name()).IsNightly() {
+				paths = append(paths, repo.Local().ProfilePath(localdata.ComponentParentDir, mirror, component, fi.Name()))
+			}
+		}
+	} else {
+		paths = append(paths, repo.Local().ProfilePath(localdata.ComponentParentDir, mirror, component, version))
+	}
+	if len(dir)-len(paths) < 1 {
+		paths = append(paths, repo.Local().ProfilePath(localdata.ComponentParentDir, mirror, component))
+	}
+
+	for _, path := range paths {
+		if err := os.RemoveAll(path); err != nil {
+			return errors.Trace(err)
+		}
+	}
+
 	return nil
 }
 
@@ -193,6 +220,6 @@ func (c *Client) Repositories() map[string]*repository.V1Repository {
 }
 
 // Repositories return all repo
-func (c *Client) GetRepository(name string) *repository.V1Repository {
-	return c.repositories[name]
+func (c *Client) GetRepository(mirror string) *repository.V1Repository {
+	return c.repositories[mirror]
 }
