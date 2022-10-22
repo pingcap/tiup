@@ -71,6 +71,7 @@ of components or the repository itself.`,
 		newMirrorMergeCmd(),
 		newMirrorPublishCmd(),
 		newMirrorShowCmd(),
+		newMirrorListCmd(),
 		newMirrorSetCmd(),
 		newMirrorAddCmd(),
 		newMirrorModifyCmd(),
@@ -152,11 +153,45 @@ func newMirrorSignCmd() *cobra.Command {
 func newMirrorShowCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "show",
-		Short: "Show mirror address",
-		Long:  `Show current mirror address`,
+		Short: "Show mirror address for single mirror",
+		Long:  `Show current mirror address, multi-mirror is not supported`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			teleCommand = cmd.CommandPath()
 			fmt.Println(environment.Mirror())
+			return nil
+		},
+	}
+
+	return cmd
+}
+
+// the `mirror list` sub command
+// for multi-mirrors
+func newMirrorListCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "list",
+		Short: "List all mirror address",
+		Long:  `List all mirror address for multi-mirror`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			teleCommand = cmd.CommandPath()
+
+			r := &listResult{
+				cmpTable: [][]string{
+					{
+						"ID", "Name", "Address",
+					},
+				},
+			}
+
+			for i, m := range tiupC.ListMirrors() {
+				r.cmpTable = append(r.cmpTable, []string{
+					fmt.Sprintf("%d", i+1),
+					m.Name,
+					m.GetURL(),
+				})
+			}
+
+			r.print()
 			return nil
 		},
 	}

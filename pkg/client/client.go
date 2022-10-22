@@ -51,7 +51,12 @@ func NewTiUPClient(tiupHome string) (*Client, error) {
 	return c, err
 }
 
-// List components from all mirror, duplicate will be hide
+// ListMirrors show all Mirrors
+func (c *Client) ListMirrors() []localdata.SingleMirror {
+	return c.config.Mirrors
+}
+
+// AddMirror add a new tiup morror
 func (c *Client) AddMirror(mirror localdata.SingleMirror, rootJSON io.Reader) error {
 	// todo: add check
 	c.config.Mirrors = append(c.config.Mirrors, mirror)
