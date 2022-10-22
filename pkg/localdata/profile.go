@@ -64,7 +64,7 @@ func InitProfile() *Profile {
 	if err != nil {
 		panic("cannot read config: " + err.Error())
 	}
-	return NewProfile(profileDir, "todo", cfg)
+	return NewProfile(profileDir, "../bin", cfg)
 }
 
 // Path returns a full path which is related to profile root directory
