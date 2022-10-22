@@ -14,12 +14,12 @@ import (
 	"go.uber.org/zap"
 )
 
-type client struct {
+type Client struct {
 	config       *localdata.TiUPConfig
 	repositories map[string]*repository.V1Repository
 }
 
-func NewTiUPClient(tiupHome string) (*client, error) {
+func NewTiUPClient(tiupHome string) (*Client, error) {
 	if tiupHome == "" {
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
@@ -32,7 +32,7 @@ func NewTiUPClient(tiupHome string) (*client, error) {
 	if err != nil {
 		return nil, err
 	}
-	c := &client{
+	c := &Client{
 		config:       config,
 		repositories: make(map[string]*repository.V1Repository),
 	}
@@ -72,24 +72,24 @@ func NewTiUPClient(tiupHome string) (*client, error) {
 }
 
 // List components from all mirror, duplicate will be hide
-func (c *client) ListComponents() error {
+func (c *Client) ListComponents() error {
 	return nil
 }
 
 // list component info from first available mirror
-func (c *client) ListComponentDetail(component string) error {
+func (c *Client) ListComponentDetail(component string) error {
 	return nil
 }
 
-func (c *client) Download(name, version string) error {
+func (c *Client) Download(name, version string) error {
 	return nil
 }
 
-func (c *client) Remove(name, version string) error {
+func (c *Client) Remove(name, version string) error {
 	return nil
 }
 
-func (c *client) Install(s string) error {
+func (c *Client) Install(s string) error {
 	mirror, component, version, err := ParseComponentVersion(s)
 	if err != nil {
 		return err
@@ -112,15 +112,15 @@ func (c *client) Install(s string) error {
 	return fmt.Errorf("cannot found %s", s)
 }
 
-func (c *client) Uninstall(name, version string) error {
+func (c *Client) Uninstall(name, version string) error {
 	return nil
 }
 
-func (c *client) SaveConfig(name, version string) error {
+func (c *Client) SaveConfig(name, version string) error {
 	return c.config.Flush()
 }
 
-func (c *client) addAlias(k, v string) error {
+func (c *Client) addAlias(k, v string) error {
 	return nil
 }
 
