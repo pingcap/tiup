@@ -101,7 +101,7 @@ func (p *Profile) GetComponentInstalledVersion(component string, ver utils.Versi
 	sort.Slice(versions, func(i, j int) bool {
 		return semver.Compare(versions[i], versions[j]) < 0
 	})
-	if ver.String() != utils.NightlyVersionAlias {
+	if ver.String() == utils.NightlyVersionAlias {
 		for i := len(versions); i > 0; i-- {
 			if utils.Version(versions[i-1]).IsNightly() {
 				return utils.Version(versions[i-1]), nil

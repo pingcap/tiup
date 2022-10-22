@@ -45,7 +45,6 @@ const (
 	// StorageParentDir represent the parent directory of running component
 	StorageParentDir = "storage"
 
-
 	// TrustedDir represent the parent directory of root.json of mirrors
 	TrustedDir = "trusted"
 

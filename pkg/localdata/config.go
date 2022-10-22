@@ -29,7 +29,7 @@ type TiUPConfig struct {
 	configBase
 	Mirror  string            `toml:"mirror"`
 	Mirrors []SingleMirror    `toml:"mirrors"`
-	Aliases map[string]string `toml:"aliases"`
+	Aliases map[string]string `toml:"aliases,omitempty"`
 }
 
 type SingleMirror struct {

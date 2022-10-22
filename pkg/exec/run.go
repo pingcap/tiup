@@ -26,6 +26,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/client"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/telemetry"
@@ -35,14 +36,18 @@ import (
 )
 
 // RunComponent start a component and wait it
-func RunComponent(env *environment.Environment, tag, spec, binPath string, args []string) error {
-	component, version := environment.ParseCompVersion(spec)
+func RunComponent(tiupC *client.Client, env *environment.Environment, tag, spec, binPath string, args []string) error {
+	mirror, component, version, err := client.ParseComponentVersion(spec)
+	if err != nil {
+		return err
+	}
+	// component, version := environment.ParseCompVersion(spec)
 
 	if version == "" {
-		cmdCheckUpdate(component, version, 2)
+		// cmdCheckUpdate(component, utils.Version(version), 2)
 	}
 
-	binPath, err := PrepareBinary(component, version, binPath)
+	binPath, err = PrepareBinary2(tiupC, mirror, component, version, binPath)
 	if err != nil {
 		return err
 	}
@@ -62,7 +67,7 @@ func RunComponent(env *environment.Environment, tag, spec, binPath string, args 
 
 	params := &PrepareCommandParams{
 		Component:   component,
-		Version:     version,
+		Version:     utils.Version(version),
 		BinPath:     binPath,
 		Tag:         tag,
 		InstanceDir: instanceDir,
@@ -218,6 +223,28 @@ func PrepareBinary(component string, version utils.Version, binPath string) (str
 		}
 
 		binPath, err = environment.GlobalEnv().BinaryPath(component, selectVer)
+		if err != nil {
+			return "", err
+		}
+	}
+	return binPath, nil
+}
+
+// PrepareBinary2 use given binpath or download from tiup mirror
+func PrepareBinary2(tiupC *client.Client, mirror, component, version, binPath string) (string, error) {
+	if binPath != "" {
+		tmp, err := filepath.Abs(binPath)
+		if err != nil {
+			return "", errors.Trace(err)
+		}
+		binPath = tmp
+	} else {
+		v1repo := tiupC.GetRepository(mirror)
+		selectVer, err := v1repo.Local().GetComponentInstalledVersion(component, utils.Version(version))
+		if err != nil {
+			return "", err
+		}
+		binPath, err = v1repo.BinaryPath(v1repo.Local().ProfilePath(localdata.ComponentParentDir, mirror, component, selectVer.String()), component, selectVer.String())
 		if err != nil {
 			return "", err
 		}

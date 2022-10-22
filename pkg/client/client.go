@@ -193,6 +193,6 @@ func (c *Client) Repositories() map[string]*repository.V1Repository {
 }
 
 // Repositories return all repo
-func (c *Client) GetRepositorie(name string) *repository.V1Repository {
+func (c *Client) GetRepository(name string) *repository.V1Repository {
 	return c.repositories[name]
 }

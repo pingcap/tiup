@@ -122,7 +122,7 @@ func showComponentList(opt listOptions) (*listResult, error) {
 		// multi-mirror
 		for _, name := range opt.mirrorList {
 
-			c, err := showMirrorComponentList(name, tiupC.GetRepositorie(name), opt)
+			c, err := showMirrorComponentList(name, tiupC.GetRepository(name), opt)
 			if err != nil {
 				log.Warnf("get component list from mirror %s failed", name)
 				continue
@@ -247,7 +247,7 @@ func showComponentVersions(component string, opt listOptions) (*listResult, erro
 		// multi-mirror
 		for _, name := range opt.mirrorList {
 
-			c, err := showMirrorComponentVersions(name, tiupC.GetRepositorie(name), component, opt)
+			c, err := showMirrorComponentVersions(name, tiupC.GetRepository(name), component, opt)
 			if err != nil {
 				log.Debugf("Not found %s in mirror %s", component, name)
 				continue

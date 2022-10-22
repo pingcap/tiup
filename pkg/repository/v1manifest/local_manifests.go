@@ -321,7 +321,7 @@ func (ms *FsManifests) Name() string {
 
 // Path returns a full path which is related to profile root directory
 func (ms *FsManifests) ProfilePath(relpath ...string) string {
-	return ms.profile.Path()
+	return ms.profile.Path(relpath...)
 }
 
 // Root returns the root path of the `tiup`

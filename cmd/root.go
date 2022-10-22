@@ -179,7 +179,7 @@ the latest stable version will be downloaded from the repository.`,
 			}
 
 			teleCommand = fmt.Sprintf("%s %s", cmd.CommandPath(), componentSpec)
-			return tiupexec.RunComponent(env, tag, componentSpec, binPath, args)
+			return tiupexec.RunComponent(tiupC, env, tag, componentSpec, binPath, args)
 		},
 		SilenceUsage: true,
 		// implement auto completion for tiup components
