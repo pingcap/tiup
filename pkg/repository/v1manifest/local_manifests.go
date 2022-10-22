@@ -52,6 +52,30 @@ type LocalManifests interface {
 	// TargetRootDir returns the root directory of target
 	TargetRootDir() string
 
+	// copy from local profile
+
+	// Path returns a full path which is related to profile root directory
+	ProfilePath(relpath ...string) string
+	// Root returns the root path of the `tiup`
+	ProfileRoot() string
+	ProfileName() string
+
+	// GetComponentInstalledVersion return the installed version of component.
+	GetComponentInstalledVersion(component string, ver utils.Version) (utils.Version, error)
+	// ComponentInstalledPath returns the path where the component installed
+	ComponentInstalledPath(component string, version utils.Version) (string, error)
+
+	// InstalledComponents returns the installed components
+	InstalledComponents() ([]string, error)
+	// InstalledVersions returns the installed versions of specific component
+	InstalledVersions(component string) ([]string, error)
+	// VersionIsInstalled returns true if exactly version of component is installed.
+	VersionIsInstalled(component, version string) (bool, error)
+	// ResetMirror reset root.json and cleanup manifests directory
+	ResetMirror(addr, root string) error
+	// ReadMetaFile reads a Process object from dirName/MetaFilename. Returns (nil, nil) if a metafile does not exist.
+	ReadMetaFile(dirName string) (*localdata.Process, error)
+
 	Name() string
 }
 
@@ -293,6 +317,56 @@ func (ms *FsManifests) Name() string {
 	return ms.profile.Name()
 }
 
+// copy from profile
+
+// Path returns a full path which is related to profile root directory
+func (ms *FsManifests) ProfilePath(relpath ...string) string {
+	return ms.profile.Path()
+}
+
+// Root returns the root path of the `tiup`
+func (ms *FsManifests) ProfileRoot() string {
+	return ms.profile.Root()
+}
+func (ms *FsManifests) ProfileName() string {
+	return ms.profile.Name()
+}
+
+// GetComponentInstalledVersion return the installed version of component.
+func (ms *FsManifests) GetComponentInstalledVersion(component string, ver utils.Version) (utils.Version, error) {
+	return ms.profile.GetComponentInstalledVersion(component, ver)
+}
+
+// ComponentInstalledPath returns the path where the component installed
+func (ms *FsManifests) ComponentInstalledPath(component string, version utils.Version) (string, error) {
+	return ms.profile.ComponentInstalledPath(component, version)
+}
+
+// InstalledComponents returns the installed components
+func (ms *FsManifests) InstalledComponents() ([]string, error) {
+	return ms.profile.InstalledComponents()
+}
+
+// InstalledVersions returns the installed versions of specific component
+func (ms *FsManifests) InstalledVersions(component string) ([]string, error) {
+	return ms.profile.InstalledVersions(component)
+}
+
+// VersionIsInstalled returns true if exactly version of component is installed.
+func (ms *FsManifests) VersionIsInstalled(component, version string) (bool, error) {
+	return ms.profile.VersionIsInstalled(component, version)
+}
+
+// ResetMirror reset root.json and cleanup manifests directory
+func (ms *FsManifests) ResetMirror(addr, root string) error {
+	return ms.profile.ResetMirror(addr, root)
+}
+
+// ReadMetaFile reads a Process object from dirName/MetaFilename. Returns (nil, nil) if a metafile does not exist.
+func (ms *FsManifests) ReadMetaFile(dirName string) (*localdata.Process, error) {
+	return ms.profile.ReadMetaFile(dirName)
+}
+
 // MockManifests is a LocalManifests implementation for testing.
 type MockManifests struct {
 	Manifests map[string]*Manifest
@@ -423,4 +497,61 @@ func (ms *MockManifests) ManifestVersion(filename string) uint {
 		return manifest.Signed.Base().Version
 	}
 	return 0
+}
+
+// copy from profile
+
+// Path returns a full path which is related to profile root directory
+func (ms *MockManifests) ProfilePath(relpath ...string) string {
+	return "mock"
+}
+
+// Root returns the root path of the `tiup`
+func (ms *MockManifests) ProfileRoot() string {
+	return "mock"
+}
+func (ms *MockManifests) ProfileName() string {
+	return "mock"
+}
+
+// GetComponentInstalledVersion return the installed version of component.
+func (ms *MockManifests) GetComponentInstalledVersion(component string, ver utils.Version) (utils.Version, error) {
+	return utils.Version(ms.Installed[component].Version), nil
+}
+
+// ComponentInstalledPath returns the path where the component installed
+func (ms *MockManifests) ComponentInstalledPath(component string, version utils.Version) (string, error) {
+	return "mock", nil
+}
+
+// InstalledComponents returns the installed components
+func (ms *MockManifests) InstalledComponents() ([]string, error) {
+	installed := []string{}
+
+	for c, _ := range ms.Installed {
+		installed = append(installed, c)
+	}
+
+	return installed, nil
+}
+
+// InstalledVersions returns the installed versions of specific component
+func (ms *MockManifests) InstalledVersions(component string) ([]string, error) {
+
+	return []string{ms.Installed[component].Version}, nil
+}
+
+// VersionIsInstalled returns true if exactly version of component is installed.
+func (ms *MockManifests) VersionIsInstalled(component, version string) (bool, error) {
+	return ms.Installed[component].Version == version, nil
+}
+
+// ResetMirror reset root.json and cleanup manifests directory
+func (ms *MockManifests) ResetMirror(addr, root string) error {
+	return nil
+}
+
+// ReadMetaFile reads a Process object from dirName/MetaFilename. Returns (nil, nil) if a metafile does not exist.
+func (ms *MockManifests) ReadMetaFile(dirName string) (*localdata.Process, error) {
+	return nil, nil
 }

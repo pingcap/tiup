@@ -62,7 +62,7 @@ func cleanData(env *environment.Environment, names []string, all bool) error {
 			continue
 		}
 
-		process, err := env.Profile().ReadMetaFile(dir.Name())
+		process, err := env.V1Repository().Local().ReadMetaFile(dir.Name())
 		if err != nil {
 			return err
 		}

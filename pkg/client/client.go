@@ -16,8 +16,10 @@ import (
 )
 
 type Client struct {
-	tiupHome     string
-	config       *localdata.TiUPConfig
+	tiupHome string
+	config   *localdata.TiUPConfig
+	// repo represents the components repository of TiUP, it can be a
+	// local file system or a HTTP URL
 	repositories map[string]*repository.V1Repository
 }
 
@@ -183,4 +185,14 @@ func ParseComponentVersion(s string) (mirror, component, tag string, err error) 
 	// TBD: convert mirror from alias to url
 
 	return mirror, component, tag, nil
+}
+
+// Repositories return all repo
+func (c *Client) Repositories() map[string]*repository.V1Repository {
+	return c.repositories
+}
+
+// Repositories return all repo
+func (c *Client) GetRepositorie(name string) *repository.V1Repository {
+	return c.repositories[name]
 }

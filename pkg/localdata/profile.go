@@ -123,7 +123,7 @@ func (p *Profile) ComponentInstalledPath(component string, version utils.Version
 
 // SaveTo saves file to the profile directory, path is relative to the
 // profile directory of current user
-func (p *Profile) SaveTo(path string, data []byte, perm os.FileMode) error {
+func (p *Profile) saveTo(path string, data []byte, perm os.FileMode) error {
 	fullPath := filepath.Join(p.root, path)
 	// create sub directory if needed
 	if err := os.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
@@ -133,12 +133,12 @@ func (p *Profile) SaveTo(path string, data []byte, perm os.FileMode) error {
 }
 
 // WriteJSON writes struct to a file (in the profile directory) in JSON format
-func (p *Profile) WriteJSON(path string, data any) error {
+func (p *Profile) writeJSON(path string, data any) error {
 	jsonData, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
 		return errors.Trace(err)
 	}
-	return p.SaveTo(path, jsonData, 0644)
+	return p.saveTo(path, jsonData, 0644)
 }
 
 // readJSON read file and unmarshal to target `data`

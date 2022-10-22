@@ -21,6 +21,7 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/environment"
+	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
@@ -33,6 +34,7 @@ type listOptions struct {
 	installedOnly bool
 	verbose       bool
 	showAll       bool
+	mirrorList    []string
 }
 
 func newListCmd() *cobra.Command {
@@ -54,14 +56,21 @@ components or versions which have not been installed.
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			teleCommand = cmd.CommandPath()
-			env := environment.GlobalEnv()
+
+			if len(opt.mirrorList) == 0 {
+				for _, m := range tiupC.ListMirrors() {
+					opt.mirrorList = append(opt.mirrorList, m.Name)
+				}
+
+			}
+
 			switch len(args) {
 			case 0:
-				result, err := showComponentList(env, opt)
+				result, err := showComponentList(opt)
 				result.print()
 				return err
 			case 1:
-				result, err := showComponentVersions(env, args[0], opt)
+				result, err := showComponentVersions(args[0], opt)
 				result.print()
 				return err
 			default:
@@ -71,6 +80,7 @@ components or versions which have not been installed.
 	}
 
 	cmd.Flags().BoolVar(&opt.installedOnly, "installed", false, "List installed components only.")
+	cmd.Flags().StringSliceVar(&opt.mirrorList, "mirrors", []string{}, "Specify the components that display mirrors.")
 	cmd.Flags().BoolVar(&opt.verbose, "verbose", false, "Show detailed component information.")
 	cmd.Flags().BoolVar(&opt.showAll, "all", false, "Show all components include hidden ones.")
 
@@ -90,28 +100,64 @@ func (lr *listResult) print() {
 	tui.PrintTable(lr.cmpTable, true)
 }
 
-func showComponentList(env *environment.Environment, opt listOptions) (*listResult, error) {
+func showComponentList(opt listOptions) (*listResult, error) {
+
+	var (
+		cmpTable   [][]string
+		components [][]string
+		err        error
+	)
+
+	if opt.verbose {
+		cmpTable = append(cmpTable, []string{"Mirror", "Name", "Owner", "Installed", "Platforms", "Description"})
+	} else {
+		cmpTable = append(cmpTable, []string{"Mirror", "Name", "Owner", "Description"})
+	}
+
+	// single mirror
+	if len(tiupC.ListMirrors()) == 0 {
+		env := environment.GlobalEnv()
+		components, err = showMirrorComponentList(environment.Mirror(), env.V1Repository(), opt)
+	} else {
+		// multi-mirror
+		for _, name := range opt.mirrorList {
+
+			c, err := showMirrorComponentList(name, tiupC.GetRepositorie(name), opt)
+			if err != nil {
+				log.Warnf("get component list from mirror %s failed", name)
+				continue
+			}
+			components = append(components, c...)
+		}
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &listResult{
+		header:   "Available components:\n",
+		cmpTable: append(cmpTable, components...),
+	}, nil
+}
+
+func showMirrorComponentList(mirror string, repo *repository.V1Repository, opt listOptions) ([][]string, error) {
 	if !opt.installedOnly {
-		err := env.V1Repository().UpdateComponentManifests()
+		err := repo.UpdateComponentManifests()
 		if err != nil {
 			tui.ColorWarningMsg.Fprint(os.Stderr, "Warn: Update component manifest failed, err_msg=[", err.Error(), "]\n")
 		}
 	}
 
-	installed, err := env.Profile().InstalledComponents()
+	installed, err := repo.Local().InstalledComponents()
 	if err != nil {
 		return nil, err
 	}
 
 	var cmpTable [][]string
-	if opt.verbose {
-		cmpTable = append(cmpTable, []string{"Name", "Owner", "Installed", "Platforms", "Description"})
-	} else {
-		cmpTable = append(cmpTable, []string{"Name", "Owner", "Description"})
-	}
 
 	index := v1manifest.Index{}
-	_, exists, err := env.V1Repository().Local().LoadManifest(&index)
+	_, exists, err := repo.Local().LoadManifest(&index)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +183,7 @@ func showComponentList(env *environment.Environment, opt listOptions) (*listResu
 		}
 
 		filename := v1manifest.ComponentManifestFilename(id)
-		manifest, err := env.V1Repository().Local().LoadComponentManifest(&comp, filename)
+		manifest, err := repo.Local().LoadComponentManifest(&comp, filename)
 		if err != nil {
 			return nil, err
 		}
@@ -149,7 +195,7 @@ func showComponentList(env *environment.Environment, opt listOptions) (*listResu
 		if opt.verbose {
 			installStatus := ""
 			if localComponents.Exist(id) {
-				versions, err := env.Profile().InstalledVersions(id)
+				versions, err := repo.Local().InstalledVersions(id)
 				if err != nil {
 					return nil, err
 				}
@@ -161,6 +207,7 @@ func showComponentList(env *environment.Environment, opt listOptions) (*listResu
 				platforms = append(platforms, p)
 			}
 			cmpTable = append(cmpTable, []string{
+				mirror,
 				id,
 				comp.Owner,
 				installStatus,
@@ -169,6 +216,7 @@ func showComponentList(env *environment.Environment, opt listOptions) (*listResu
 			})
 		} else {
 			cmpTable = append(cmpTable, []string{
+				mirror,
 				id,
 				comp.Owner,
 				manifest.Description,
@@ -176,32 +224,67 @@ func showComponentList(env *environment.Environment, opt listOptions) (*listResu
 		}
 	}
 
+	return cmpTable, nil
+}
+
+func showComponentVersions(component string, opt listOptions) (*listResult, error) {
+
+	var (
+		components [][]string
+		err        error
+	)
+
+	cmpTable := [][]string{
+		{"Mirror", "Version", "Installed", "Release", "Platforms"},
+	}
+
+	// single mirror
+	if len(tiupC.ListMirrors()) == 0 {
+		env := environment.GlobalEnv()
+		components, err = showMirrorComponentVersions(environment.Mirror(), env.V1Repository(), component, opt)
+	} else {
+		// multi-mirror
+		// multi-mirror
+		for _, name := range opt.mirrorList {
+
+			c, err := showMirrorComponentVersions(name, tiupC.GetRepositorie(name), component, opt)
+			if err != nil {
+				log.Debugf("Not found %s in mirror %s", component, name)
+				continue
+			}
+			components = append(components, c...)
+		}
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
 	return &listResult{
 		header:   "Available components:\n",
-		cmpTable: cmpTable,
+		cmpTable: append(cmpTable, components...),
 	}, nil
 }
 
-func showComponentVersions(env *environment.Environment, component string, opt listOptions) (*listResult, error) {
+func showMirrorComponentVersions(mirror string, repo *repository.V1Repository, component string, opt listOptions) ([][]string, error) {
 	var comp *v1manifest.Component
 	var err error
 	if opt.installedOnly {
-		comp, err = env.V1Repository().LocalComponentManifest(component, false)
+		comp, err = repo.LocalComponentManifest(component, false)
 	} else {
-		comp, err = env.V1Repository().GetComponentManifest(component, false)
+		comp, err = repo.GetComponentManifest(component, false)
 	}
 	if err != nil {
 		return nil, errors.Annotate(err, "failed to fetch component")
 	}
 
-	versions, err := env.Profile().InstalledVersions(component)
+	versions, err := repo.Local().InstalledVersions(component)
 	if err != nil {
 		return nil, err
 	}
 	installed := set.NewStringSet(versions...)
 
 	var cmpTable [][]string
-	cmpTable = append(cmpTable, []string{"Version", "Installed", "Release", "Platforms"})
 
 	platforms := make(map[string][]string)
 	released := make(map[string]string)
@@ -233,11 +316,8 @@ func showComponentVersions(env *environment.Environment, component string, opt l
 		} else if opt.installedOnly {
 			continue
 		}
-		cmpTable = append(cmpTable, []string{v, installStatus, released[v], strings.Join(platforms[v], ",")})
+		cmpTable = append(cmpTable, []string{mirror, v, installStatus, released[v], strings.Join(platforms[v], ",")})
 	}
 
-	return &listResult{
-		header:   fmt.Sprintf("Available versions for %s:\n", component),
-		cmpTable: cmpTable,
-	}, nil
+	return cmpTable, nil
 }
