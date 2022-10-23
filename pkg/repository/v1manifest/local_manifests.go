@@ -227,7 +227,11 @@ func (ms *FsManifests) load(filename string) (string, error) {
 		if os.IsNotExist(err) {
 			// Use the hardcode root.json if there is no root.json currently
 			if filename == ManifestFilenameRoot {
-				initRoot, err := filepath.Abs(filepath.Join(ms.profile.Root(), localdata.TrustedDir, ms.Name(), "root.json"))
+				rootPath := ms.profile.Path(localdata.TrustedDir, ms.Name(), "root.json")
+				if ms.Name() == "" {
+					rootPath = ms.profile.Path("bin", "root.json")
+				}
+				initRoot, err := filepath.Abs(rootPath)
 				if err != nil {
 					return "", errors.Trace(err)
 				}

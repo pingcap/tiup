@@ -64,7 +64,7 @@ func InitProfile() *Profile {
 	if err != nil {
 		panic("cannot read config: " + err.Error())
 	}
-	return NewProfile(profileDir, "../bin", cfg)
+	return NewProfile(profileDir, "", cfg)
 }
 
 // Path returns a full path which is related to profile root directory
@@ -234,7 +234,12 @@ func (p *Profile) ResetMirror(addr, root string) error {
 	if _, err := io.Copy(shaWriter, strings.NewReader(addr)); err != nil {
 		return err
 	}
-	localRoot := p.Path("bin", fmt.Sprintf("%s.root.json", hex.EncodeToString(shaWriter.Sum(nil))[:16]))
+
+	localRoot := p.Path(p.name, TrustedDir, fmt.Sprintf("%s.root.json", hex.EncodeToString(shaWriter.Sum(nil))[:16]))
+
+	if p.name == "" {
+		localRoot = p.Path("bin", fmt.Sprintf("%s.root.json", hex.EncodeToString(shaWriter.Sum(nil))[:16]))
+	}
 
 	if root == "" {
 		switch {
@@ -268,7 +273,11 @@ func (p *Profile) ResetMirror(addr, root string) error {
 	}
 	defer wc.Close()
 
-	f, err := os.OpenFile(p.Path(TrustedDir, p.name, "root.json"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0664)
+	rootPath := p.Path(TrustedDir, p.name, "root.json")
+	if p.name == "" {
+		rootPath = p.Path("bin", "root.json")
+	}
+	f, err := os.OpenFile(rootPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0664)
 	if err != nil {
 		return err
 	}
@@ -287,11 +296,27 @@ func (p *Profile) ResetMirror(addr, root string) error {
 		_ = utils.Copy(p.Path("bin", "root.json"), localRoot)
 	}
 
-	if err := os.RemoveAll(p.Path(ManifestParentDir)); err != nil {
-		return err
+	// delete manifests
+	delPath := []string{}
+	manifestDir, err := os.ReadDir(p.Path(p.name, ManifestParentDir))
+	for _, file := range manifestDir {
+		if !file.IsDir() {
+			delPath = append(delPath, p.Path(p.name, ManifestParentDir, file.Name()))
+		}
 	}
 
-	p.Config.Mirror = addr
+	for _, path := range delPath {
+		if err := os.RemoveAll(path); err != nil {
+			return errors.Trace(err)
+		}
+	}
+
+	if p.name == "" {
+		p.Config.Mirror = addr
+	} else {
+		p.Config.ResetMirror(p.name, addr)
+	}
+
 	return p.Config.Flush()
 }
 

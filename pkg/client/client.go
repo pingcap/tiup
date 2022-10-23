@@ -103,7 +103,10 @@ func (c *Client) DownloadComponents(specs []string, nightly, force bool) error {
 		if version == "" && nightly {
 			version = utils.NightlyVersionAlias
 		}
-		mirrorSpecs[mirror] = append(mirrorSpecs[mirror], repository.ComponentSpec{ID: component, Version: version, Force: force})
+		mirrorSpecs[mirror] = append(mirrorSpecs[mirror],
+			repository.ComponentSpec{
+				ID: component, Version: version.String(), Force: force,
+			})
 	}
 
 	// download
@@ -135,7 +138,9 @@ func (c *Client) Install(s string) error {
 		return err
 	}
 	var v1specs []repository.ComponentSpec
-	v1specs = append(v1specs, repository.ComponentSpec{ID: component, Version: version, Force: false})
+	v1specs = append(v1specs, repository.ComponentSpec{
+		ID: component, Version: version.String(), Force: false,
+	})
 
 	if mirror != "" {
 		if v1repo, ok := c.repositories[mirror]; ok {
@@ -146,10 +151,16 @@ func (c *Client) Install(s string) error {
 
 	for _, v1repo := range c.repositories {
 		err = v1repo.UpdateComponents(v1specs)
-		if err == nil {
-			c.tryAddAlias(component, fmt.Sprintf("%s/%s", v1repo.Local().Name(), component))
-			return nil
+		if err != nil {
+			// Ignore ErrUnknownComponent
+			if strings.Contains(err.Error(), repository.ErrUnknownComponent.Error()) {
+				continue
+			}
+			return err
 		}
+
+		c.tryAddAlias(component, fmt.Sprintf("%s/%s", v1repo.Local().Name(), component))
+		return nil
 	}
 	return fmt.Errorf("Component %s not found in all mirrors", s)
 }
@@ -178,7 +189,7 @@ func (c *Client) Uninstall(s string) error {
 			}
 		}
 	} else {
-		paths = append(paths, repo.Local().ProfilePath(localdata.ComponentParentDir, mirror, component, version))
+		paths = append(paths, repo.Local().ProfilePath(localdata.ComponentParentDir, mirror, component, version.String()))
 	}
 	if len(dir)-len(paths) < 1 {
 		paths = append(paths, repo.Local().ProfilePath(localdata.ComponentParentDir, mirror, component))
@@ -231,7 +242,7 @@ func (c *Client) initRepository(name, url string) (*repository.V1Repository, err
 	return v1repo, nil
 }
 
-func (c *Client) ParseComponentVersion(s string) (mirror, component, tag string, err error) {
+func (c *Client) ParseComponentVersion(s string) (mirror, component string, tag utils.Version, err error) {
 
 	// get mrror/component from alias
 	if _, ok := c.config.Aliases[s]; ok {
@@ -243,9 +254,9 @@ func (c *Client) ParseComponentVersion(s string) (mirror, component, tag string,
 	case 1:
 		tag = ""
 	case 2:
-		tag = splited[1]
+		tag = utils.Version(splited[1])
 	default:
-		return "", "", "", fmt.Errorf("fail to parse %s", s)
+		return "", "", utils.Version(""), fmt.Errorf("fail to parse %s", s)
 	}
 
 	splited = strings.Split(splited[0], "/")
@@ -257,12 +268,12 @@ func (c *Client) ParseComponentVersion(s string) (mirror, component, tag string,
 		mirror = splited[0]
 		component = splited[1]
 	default:
-		return "", "", "", fmt.Errorf("fail to parse %s", s)
+		return "", "", utils.Version(""), fmt.Errorf("fail to parse %s", s)
 	}
 
 	// TBD: convert mirror from alias to url
 
-	return mirror, component, tag, nil
+	return mirror, component, utils.Version(tag), nil
 }
 
 // Repositories return all repo

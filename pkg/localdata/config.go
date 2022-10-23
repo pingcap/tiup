@@ -56,6 +56,17 @@ func (t TiUPConfig) GetMirrorAddress(mirror string) (string, error) {
 	return "", errors.Errorf("get mirror url failed, error not found mirror %s", mirror)
 }
 
+func (t *TiUPConfig) ResetMirror(mirror, address string) {
+	for _, m := range t.Mirrors {
+		if m.Name == mirror {
+			m.URL = address
+			return
+		}
+	}
+	t.Mirrors = append(t.Mirrors, SingleMirror{mirror, address})
+	return
+}
+
 // InitConfig returns a TiUPConfig struct which can flush config back to disk
 func InitConfig(root string) (*TiUPConfig, error) {
 	config := TiUPConfig{

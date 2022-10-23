@@ -37,19 +37,38 @@ import (
 
 // RunComponent start a component and wait it
 func RunComponent(tiupC *client.Client, env *environment.Environment, tag, spec, binPath string, args []string) error {
-	mirror, component, version, err := tiupC.ParseComponentVersion(spec)
-	if err != nil {
-		return err
-	}
-	// component, version := environment.ParseCompVersion(spec)
 
-	if version == "" {
-		// cmdCheckUpdate(component, utils.Version(version), 2)
-	}
+	var (
+		err       error
+		version   utils.Version
+		component string
+		mirror    string
+	)
 
-	binPath, err = PrepareBinary2(tiupC, mirror, component, version, binPath)
-	if err != nil {
-		return err
+	//  use single mirror
+	if len(tiupC.ListMirrors()) == 0 {
+		component, version = environment.ParseCompVersion(spec)
+		if version == "" {
+			cmdCheckUpdate(component, version, 2)
+		}
+
+		binPath, err = PrepareBinary(component, version, binPath)
+		if err != nil {
+			return err
+		}
+
+	} else {
+		mirror, component, version, err = tiupC.ParseComponentVersion(spec)
+		if err != nil {
+			return err
+		}
+		if version == "" {
+			// cmdCheckUpdate(component, utils.Version(version), 2)
+		}
+		binPath, err = PrepareBinary2(tiupC, mirror, component, version, binPath)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Clean data if current instance is a temporary
@@ -67,7 +86,7 @@ func RunComponent(tiupC *client.Client, env *environment.Environment, tag, spec,
 
 	params := &PrepareCommandParams{
 		Component:   component,
-		Version:     utils.Version(version),
+		Version:     version,
 		BinPath:     binPath,
 		Tag:         tag,
 		InstanceDir: instanceDir,
@@ -231,7 +250,7 @@ func PrepareBinary(component string, version utils.Version, binPath string) (str
 }
 
 // PrepareBinary2 use given binpath or download from tiup mirror
-func PrepareBinary2(tiupC *client.Client, mirror, component, version, binPath string) (string, error) {
+func PrepareBinary2(tiupC *client.Client, mirror, component string, version utils.Version, binPath string) (string, error) {
 	if binPath != "" {
 		tmp, err := filepath.Abs(binPath)
 		if err != nil {

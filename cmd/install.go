@@ -14,6 +14,7 @@
 package cmd
 
 import (
+	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/spf13/cobra"
 )
 
@@ -37,6 +38,12 @@ of the same component:
 			if len(args) == 0 {
 				return cmd.Help()
 			}
+
+			// use single mirror
+			if len(tiupC.ListMirrors()) == 0 {
+				return environment.GlobalEnv().UpdateComponents(args, false, force)
+			}
+
 			return tiupC.Install(args[0])
 		},
 	}

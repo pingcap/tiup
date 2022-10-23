@@ -117,8 +117,8 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 	for _, spec := range specs {
 		manifest, err := r.updateComponentManifest(spec.ID, false)
 		if err != nil {
-			errs = append(errs, fmt.Sprintf("%s, component: %s, mirror %s", err, spec.ID, r.local.Name()))
-			if err == ErrUnknownComponent {
+			errs = append(errs, fmt.Sprintf("%s, component: %s, mirror %s", errors.Cause(err), spec.ID, r.local.Name()))
+			if errors.Cause(err) == ErrUnknownComponent {
 				continue
 			}
 		}
