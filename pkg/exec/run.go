@@ -37,7 +37,7 @@ import (
 
 // RunComponent start a component and wait it
 func RunComponent(tiupC *client.Client, env *environment.Environment, tag, spec, binPath string, args []string) error {
-	mirror, component, version, err := client.ParseComponentVersion(spec)
+	mirror, component, version, err := tiupC.ParseComponentVersion(spec)
 	if err != nil {
 		return err
 	}
@@ -239,7 +239,10 @@ func PrepareBinary2(tiupC *client.Client, mirror, component, version, binPath st
 		}
 		binPath = tmp
 	} else {
-		v1repo := tiupC.GetRepository(mirror)
+		v1repo, err := tiupC.GetRepository(mirror)
+		if err != nil {
+			return "", err
+		}
 		selectVer, err := v1repo.Local().GetComponentInstalledVersion(component, utils.Version(version))
 		if err != nil {
 			return "", err

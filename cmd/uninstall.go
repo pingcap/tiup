@@ -95,6 +95,7 @@ which is used to uninstall tiup.
 					if err != nil {
 						return errors.Trace(err)
 					}
+					fmt.Printf("Uninstalled %s successfully!\n", spec)
 				}
 				return nil
 			case len(args) == 0 && len(opt.mirrorList) > 0:
@@ -103,8 +104,12 @@ which is used to uninstall tiup.
 					return nil
 				}
 				for _, mirror := range opt.mirrorList {
-					repo := tiupC.GetRepository(mirror)
-					if err := os.RemoveAll(repo.Local().ProfilePath(localdata.ComponentParentDir, mirror)); err != nil {
+					repo, err := tiupC.GetRepository(mirror)
+					if err != nil {
+						return errors.Trace(err)
+					}
+					err = os.RemoveAll(repo.Local().ProfilePath(localdata.ComponentParentDir, mirror))
+					if err != nil {
 						return errors.Trace(err)
 					}
 					fmt.Printf("Uninstalled all components of mirror %s successfully!\n", mirror)

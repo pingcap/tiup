@@ -17,6 +17,7 @@ import (
 	"path"
 
 	"github.com/BurntSushi/toml"
+	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -43,6 +44,16 @@ func (m SingleMirror) GetURL() string {
 	} else {
 		return "https://" + m.Name
 	}
+}
+
+// GetMirrorAddress get mirror url
+func (t TiUPConfig) GetMirrorAddress(mirror string) (string, error) {
+	for _, m := range t.Mirrors {
+		if m.Name == mirror {
+			return m.GetURL(), nil
+		}
+	}
+	return "", errors.Errorf("get mirror url failed, error not found mirror %s", mirror)
 }
 
 // InitConfig returns a TiUPConfig struct which can flush config back to disk

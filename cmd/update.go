@@ -18,7 +18,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
@@ -36,24 +35,26 @@ installed locally, but you can use --force explicitly to overwrite an
 existing installation. Use --self which is used to update TiUP to the 
 latest version. All other flags will be ignored if the flag --self is given.
 
-  $ tiup update --all                     # Update all components to the latest stable version
-  $ tiup update --nightly --all           # Update all components to the latest nightly version
-  $ tiup update playground:v0.0.3 --force # Overwrite an existing local installation
-  $ tiup update --self                    # Update TiUP to the latest version`,
+  $ tiup update --all                     								# Update all components to the latest stable version of all mirrors
+  $ tiup update --nightly --all           								# Update all components to the latest nightly version of all mirrors
+  $ tiup update playground 												# Update the specific component to the latest stable version of default mirror
+  $ tiup update playground:v0.0.3 --force			 					# Overwrite an existing local installation of default mirror
+  $ tiup update tiup-mirrors.pingcap.com/playground 					# Update the specific component to the latest stable version of a specific mirror
+  $ tiup update tiup-mirrors.pingcap.com/playground:v0.0.3 --force		# Overwrite an existing local installation of default mirror
+  $ tiup update --self                    								# Update TiUP to the latest version of default mirror`,
 		RunE: func(cmd *cobra.Command, components []string) error {
 			teleCommand = cmd.CommandPath()
 			if (len(components) == 0 && !all && !force && !self) || (len(components) > 0 && all) {
 				return cmd.Help()
 			}
 
-			env := environment.GlobalEnv()
 			if self {
-				if err := checkTiUPBinary(env); err != nil {
+				if err := checkTiUPBinary(); err != nil {
 					return err
 				}
 
-				originFile := env.LocalPath("bin", "tiup")
-				renameFile := env.LocalPath("bin", "tiup.tmp")
+				originFile := filepath.Join(tiupC.TiUPHomePath(), "bin", "tiup")
+				renameFile := filepath.Join(tiupC.TiUPHomePath(), "bin", "tiup.tmp")
 				if err := os.Rename(originFile, renameFile); err != nil {
 					fmt.Printf("Backup of `%s` to `%s` failed.\n", originFile, renameFile)
 					return err
@@ -72,13 +73,13 @@ latest version. All other flags will be ignored if the flag --self is given.
 					}
 				}()
 
-				err = env.SelfUpdate()
+				err = tiupC.SelfUpdate()
 				if err != nil {
 					return err
 				}
 			}
 			if force || all || len(components) > 0 {
-				err := updateComponents(env, components, nightly, force)
+				err := updateComponents(components, nightly, force)
 				if err != nil {
 					return err
 				}
@@ -94,21 +95,26 @@ latest version. All other flags will be ignored if the flag --self is given.
 	return cmd
 }
 
-func updateComponents(env *environment.Environment, components []string, nightly, force bool) error {
+func updateComponents(components []string, nightly, force bool) error {
+	//env := environment.GlobalEnv()
+
 	if len(components) == 0 {
-		installed, err := env.Profile().InstalledComponents()
-		if err != nil {
-			return err
+		for _, repo := range tiupC.Repositories() {
+			installed, err := repo.Local().InstalledComponentsWithMirror()
+			if err != nil {
+				return err
+			}
+			components = append(components, installed...)
 		}
-		components = installed
+
 	}
 
-	return env.UpdateComponents(components, nightly, force)
+	return tiupC.DownloadComponents(components, nightly, force)
 }
 
 // checkTiUPBinary check if TiUP exists in TiUP_HOME
-func checkTiUPBinary(env *environment.Environment) error {
-	tiUPHomePath, _ := filepath.Abs(env.LocalPath("bin", "tiup"))
+func checkTiUPBinary() error {
+	tiUPHomePath, _ := filepath.Abs(filepath.Join(tiupC.TiUPHomePath(), "bin", "tiup"))
 
 	realTiUPPath, err := os.Executable()
 	if err != nil {

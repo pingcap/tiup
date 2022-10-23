@@ -268,7 +268,7 @@ func (p *Profile) ResetMirror(addr, root string) error {
 	}
 	defer wc.Close()
 
-	f, err := os.OpenFile(p.Path("bin", "root.json"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0664)
+	f, err := os.OpenFile(p.Path(TrustedDir, p.name, "root.json"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0664)
 	if err != nil {
 		return err
 	}

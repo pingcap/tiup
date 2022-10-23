@@ -8,8 +8,9 @@ import (
 
 func TestGenerateAndParserD1agHeader(t *testing.T) {
 	assert := require.New(t)
-
-	mirror, comp, tag, err := ParseComponentVersion("tiup.io/playground:v1.2.3")
+	tiupC, err := NewTiUPClient("")
+	assert.Nil(err)
+	mirror, comp, tag, err := tiupC.ParseComponentVersion("tiup.io/playground:v1.2.3")
 	assert.Nil(err)
 	assert.EqualValues("tiup.io", mirror)
 	assert.EqualValues("playground", comp)

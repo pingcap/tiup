@@ -37,6 +37,11 @@ func NewTiUPClient(tiupHome string) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if config.Aliases == nil {
+		config.Aliases = make(map[string]string)
+	}
+
 	c := &Client{
 		tiupHome:     tiupHome,
 		config:       config,
@@ -65,6 +70,10 @@ func (c *Client) ListMirrors() []localdata.SingleMirror {
 
 // AddMirror add a new tiup morror
 func (c *Client) AddMirror(mirror localdata.SingleMirror, rootJSON io.Reader) error {
+	if _, ok := c.repositories[mirror.Name]; ok {
+		return errors.Errorf("mirror %s already exists", mirror.Name)
+	}
+
 	// todo: add check
 	c.config.Mirrors = append(c.config.Mirrors, mirror)
 
@@ -84,7 +93,35 @@ func (c *Client) AddMirror(mirror localdata.SingleMirror, rootJSON io.Reader) er
 	return nil
 }
 
-func (c *Client) Download(name, version string) error {
+func (c *Client) DownloadComponents(specs []string, nightly, force bool) error {
+	mirrorSpecs := map[string][]repository.ComponentSpec{}
+	for _, spec := range specs {
+		mirror, component, version, err := c.ParseComponentVersion(spec)
+		if err != nil {
+			return err
+		}
+		if version == "" && nightly {
+			version = utils.NightlyVersionAlias
+		}
+		mirrorSpecs[mirror] = append(mirrorSpecs[mirror], repository.ComponentSpec{ID: component, Version: version, Force: force})
+	}
+
+	// download
+	var errs []string
+	for mirror, specs := range mirrorSpecs {
+		repo, err := c.GetRepository(mirror)
+		if err != nil {
+			return err
+		}
+		if err := repo.UpdateComponents(specs); err != nil {
+			errs = append(errs, err.Error())
+		}
+	}
+
+	if len(errs) > 0 {
+		return errors.New(strings.Join(append([]string{"update falied"}, errs...), "\n"))
+	}
+
 	return nil
 }
 
@@ -93,7 +130,7 @@ func (c *Client) Remove(name, version string) error {
 }
 
 func (c *Client) Install(s string) error {
-	mirror, component, version, err := ParseComponentVersion(s)
+	mirror, component, version, err := c.ParseComponentVersion(s)
 	if err != nil {
 		return err
 	}
@@ -102,6 +139,7 @@ func (c *Client) Install(s string) error {
 
 	if mirror != "" {
 		if v1repo, ok := c.repositories[mirror]; ok {
+			c.tryAddAlias(component, fmt.Sprintf("%s/%s", v1repo.Local().Name(), component))
 			return v1repo.UpdateComponents(v1specs)
 		}
 	}
@@ -109,21 +147,25 @@ func (c *Client) Install(s string) error {
 	for _, v1repo := range c.repositories {
 		err = v1repo.UpdateComponents(v1specs)
 		if err == nil {
+			c.tryAddAlias(component, fmt.Sprintf("%s/%s", v1repo.Local().Name(), component))
 			return nil
 		}
 	}
-	return fmt.Errorf("cannot found %s", s)
+	return fmt.Errorf("Component %s not found in all mirrors", s)
 }
 
 func (c *Client) Uninstall(s string) error {
-	mirror, component, version, err := ParseComponentVersion(s)
+	mirror, component, version, err := c.ParseComponentVersion(s)
 	if err != nil {
 		return err
 	}
 
 	paths := []string{}
 
-	repo := c.GetRepository(mirror)
+	repo, err := c.GetRepository(mirror)
+	if err != nil {
+		return err
+	}
 
 	dir, err := os.ReadDir(repo.Local().ProfilePath(localdata.ComponentParentDir, mirror, component))
 	if err != nil {
@@ -155,8 +197,11 @@ func (c *Client) SaveConfig() error {
 	return c.config.Flush()
 }
 
-func (c *Client) addAlias(k, v string) error {
-	return nil
+func (c *Client) tryAddAlias(component, mirrorComp string) {
+	_, exist := c.config.Aliases[component]
+	if !exist {
+		c.config.Aliases[component] = mirrorComp
+	}
 }
 
 func (c *Client) initRepository(name, url string) (*repository.V1Repository, error) {
@@ -186,7 +231,13 @@ func (c *Client) initRepository(name, url string) (*repository.V1Repository, err
 	return v1repo, nil
 }
 
-func ParseComponentVersion(s string) (mirror, component, tag string, err error) {
+func (c *Client) ParseComponentVersion(s string) (mirror, component, tag string, err error) {
+
+	// get mrror/component from alias
+	if _, ok := c.config.Aliases[s]; ok {
+		s = c.config.Aliases[s]
+	}
+
 	splited := strings.Split(s, ":")
 	switch len(splited) {
 	case 1:
@@ -220,6 +271,37 @@ func (c *Client) Repositories() map[string]*repository.V1Repository {
 }
 
 // Repositories return all repo
-func (c *Client) GetRepository(mirror string) *repository.V1Repository {
-	return c.repositories[mirror]
+func (c *Client) GetRepository(mirror string) (*repository.V1Repository, error) {
+	repo, ok := c.repositories[mirror]
+	if !ok {
+		return nil, errors.Errorf("morror [%s] not found", mirror)
+	}
+
+	return repo, nil
+}
+
+// SelfUpdate updates TiUP.
+func (c *Client) SelfUpdate() error {
+	// get default mirror
+	mirror, _, _, err := c.ParseComponentVersion(repository.TiUPBinaryName)
+	if err != nil {
+		return err
+	}
+
+	repo, err := c.GetRepository(mirror)
+	if err != nil {
+		return err
+	}
+
+	err = repo.DownloadTiUP(repo.Local().ProfilePath("bin"))
+	if err != nil {
+		return err
+	}
+
+	url, err := c.config.GetMirrorAddress(mirror)
+	if err != nil {
+		return err
+	}
+
+	return repo.Local().ResetMirror(url, "")
 }

@@ -120,11 +120,15 @@ func showComponentList(opt listOptions) (*listResult, error) {
 		components, err = showComponentListOfMirror(environment.Mirror(), env.V1Repository(), opt)
 	} else {
 		// multi-mirror
-		for _, name := range opt.mirrorList {
+		for _, mirror := range opt.mirrorList {
 
-			c, err := showComponentListOfMirror(name, tiupC.GetRepository(name), opt)
+			repo, err := tiupC.GetRepository(mirror)
 			if err != nil {
-				log.Warnf("get component list from mirror %s failed", name)
+				return nil, err
+			}
+			c, err := showComponentListOfMirror(mirror, repo, opt)
+			if err != nil {
+				log.Warnf("get component list from mirror %s failed", mirror)
 				continue
 			}
 			components = append(components, c...)
@@ -245,11 +249,16 @@ func showComponentVersions(component string, opt listOptions) (*listResult, erro
 	} else {
 		// multi-mirror
 		// multi-mirror
-		for _, name := range opt.mirrorList {
+		for _, mirror := range opt.mirrorList {
 
-			c, err := showComponentVersionsOfMirror(name, tiupC.GetRepository(name), component, opt)
+			repo, err := tiupC.GetRepository(mirror)
 			if err != nil {
-				log.Debugf("Not found %s in mirror %s", component, name)
+				return nil, err
+			}
+
+			c, err := showComponentVersionsOfMirror(mirror, repo, component, opt)
+			if err != nil {
+				log.Debugf("Not found %s in mirror %s", component, mirror)
 				continue
 			}
 			components = append(components, c...)

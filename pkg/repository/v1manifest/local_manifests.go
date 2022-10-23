@@ -54,11 +54,10 @@ type LocalManifests interface {
 
 	// copy from local profile
 
-	// Path returns a full path which is related to profile root directory
+	// ProfilePath returns a full path which is related to profile root directory
 	ProfilePath(relpath ...string) string
 	// Root returns the root path of the `tiup`
-	ProfileRoot() string
-	ProfileName() string
+	Root() string
 
 	// GetComponentInstalledVersion return the installed version of component.
 	GetComponentInstalledVersion(component string, ver utils.Version) (utils.Version, error)
@@ -67,6 +66,8 @@ type LocalManifests interface {
 
 	// InstalledComponents returns the installed components
 	InstalledComponents() ([]string, error)
+	// InstalledComponents returns the installed components with mirror name
+	InstalledComponentsWithMirror() ([]string, error)
 	// InstalledVersions returns the installed versions of specific component
 	InstalledVersions(component string) ([]string, error)
 	// VersionIsInstalled returns true if exactly version of component is installed.
@@ -319,17 +320,14 @@ func (ms *FsManifests) Name() string {
 
 // copy from profile
 
-// Path returns a full path which is related to profile root directory
+// ProfilePath returns a full path which is related to profile root directory
 func (ms *FsManifests) ProfilePath(relpath ...string) string {
 	return ms.profile.Path(relpath...)
 }
 
 // Root returns the root path of the `tiup`
-func (ms *FsManifests) ProfileRoot() string {
+func (ms *FsManifests) Root() string {
 	return ms.profile.Root()
-}
-func (ms *FsManifests) ProfileName() string {
-	return ms.profile.Name()
 }
 
 // GetComponentInstalledVersion return the installed version of component.
@@ -345,6 +343,20 @@ func (ms *FsManifests) ComponentInstalledPath(component string, version utils.Ve
 // InstalledComponents returns the installed components
 func (ms *FsManifests) InstalledComponents() ([]string, error) {
 	return ms.profile.InstalledComponents()
+}
+
+// InstalledComponentsWithMirror returns the installed components
+func (ms *FsManifests) InstalledComponentsWithMirror() ([]string, error) {
+	components, err := ms.profile.InstalledComponents()
+	if err != nil {
+		return components, err
+	}
+
+	mirrorComponents := []string{}
+	for _, c := range components {
+		mirrorComponents = append(mirrorComponents, fmt.Sprintf("%s/%s", ms.Name(), c))
+	}
+	return mirrorComponents, nil
 }
 
 // InstalledVersions returns the installed versions of specific component
@@ -501,16 +513,13 @@ func (ms *MockManifests) ManifestVersion(filename string) uint {
 
 // copy from profile
 
-// Path returns a full path which is related to profile root directory
+// ProfilePath returns a full path which is related to profile root directory
 func (ms *MockManifests) ProfilePath(relpath ...string) string {
 	return "mock"
 }
 
 // Root returns the root path of the `tiup`
-func (ms *MockManifests) ProfileRoot() string {
-	return "mock"
-}
-func (ms *MockManifests) ProfileName() string {
+func (ms *MockManifests) Root() string {
 	return "mock"
 }
 
@@ -528,7 +537,19 @@ func (ms *MockManifests) ComponentInstalledPath(component string, version utils.
 func (ms *MockManifests) InstalledComponents() ([]string, error) {
 	installed := []string{}
 
-	for c, _ := range ms.Installed {
+	for c := range ms.Installed {
+		installed = append(installed, c)
+	}
+
+	return installed, nil
+}
+
+// InstalledComponentsWithMirror returns the installed components
+func (ms *MockManifests) InstalledComponentsWithMirror() ([]string, error) {
+	installed := []string{}
+
+	for c := range ms.Installed {
+		c = fmt.Sprintf("%s/%s", "mock", c)
 		installed = append(installed, c)
 	}
 

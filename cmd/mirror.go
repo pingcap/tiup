@@ -216,7 +216,6 @@ The root manifest in $TIUP_HOME will be replaced with the one in given repositor
 			if !reset && len(args) != 1 {
 				return cmd.Help()
 			}
-
 			var addr string
 			if reset {
 				addr = repository.DefaultMirror
@@ -272,8 +271,9 @@ func newMirrorAddCmd() *cobra.Command {
 					return err
 				}
 			} else {
+				root = singleMirror.GetURL() + "/root.json"
 				fmt.Println(color.YellowString("WARN: adding root certificate via internet: %s", root))
-				resp, err := http.Get(singleMirror.GetURL() + "/root.json")
+				resp, err := http.Get(root)
 				if err != nil {
 					return err
 				}

@@ -117,7 +117,10 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 	for _, spec := range specs {
 		manifest, err := r.updateComponentManifest(spec.ID, false)
 		if err != nil {
-			errs = append(errs, err.Error())
+			errs = append(errs, fmt.Sprintf("%s, component: %s, mirror %s", err, spec.ID, r.local.Name()))
+			if err == ErrUnknownComponent {
+				continue
+			}
 		}
 
 		if spec.Version == utils.NightlyVersionAlias {
@@ -132,7 +135,7 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 		if spec.Version == "" {
 			ver, _, err := r.LatestStableVersion(spec.ID, false)
 			if err != nil {
-				errs = append(errs, err.Error())
+				errs = append(errs, fmt.Sprintf("%s, component: %s, mirror %s", err, spec.ID, r.local.Name()))
 				continue
 			}
 			spec.Version = ver.String()
@@ -162,14 +165,14 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 		err = r.DownloadComponent(versionItem, target)
 		if err != nil {
 			os.RemoveAll(targetDir)
-			errs = append(errs, err.Error())
+			errs = append(errs, fmt.Sprintf("%s, component: %s, mirror %s", err, spec.ID, r.local.Name()))
 			continue
 		}
 
 		reader, err := os.Open(target)
 		if err != nil {
 			os.RemoveAll(targetDir)
-			errs = append(errs, err.Error())
+			errs = append(errs, fmt.Sprintf("%s, component: %s, mirror %s", err, spec.ID, r.local.Name()))
 			continue
 		}
 
@@ -178,7 +181,7 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 
 		if err != nil {
 			os.RemoveAll(targetDir)
-			errs = append(errs, err.Error())
+			errs = append(errs, fmt.Sprintf("%s, component: %s, mirror %s", err, spec.ID, r.local.Name()))
 		}
 
 		// remove the source gzip target if expand is on && no keep source
