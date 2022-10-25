@@ -242,7 +242,7 @@ func (m *Manager) Display(dopt DisplayOption, opt operator.Options) error {
 	if m.logger.GetDisplayMode() == logprinter.DisplayModeJSON {
 		grafanaURLs := getGrafanaURL(clusterInstInfos)
 		if len(grafanaURLs) != 0 {
-			j.ClusterMetaInfo.GrafanaURLS = grafanaURLs		
+			j.ClusterMetaInfo.GrafanaURLS = grafanaURLs
 		}
 	} else {
 		urls, exist := getGrafanaURLStr(clusterInstInfos)
