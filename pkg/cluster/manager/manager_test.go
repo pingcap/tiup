@@ -38,6 +38,57 @@ func TestVersionCompare(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func TestCheckTiFlashCPUFlags(t *testing.T) {
+	topo := spec.Specification{}
+	err := yaml.Unmarshal([]byte(`
+global:
+  user: "test1"
+  ssh_port: 220
+  deploy_dir: "test-deploy"
+  data_dir: "test-data"
+tidb_servers:
+  - host: 172.16.5.138
+    deploy_dir: "tidb-deploy"
+tiflash_servers:
+  - host: 172.16.5.53
+    data_dir: "tiflash-data"
+`), &topo)
+	assert := require.New(t)
+	assert.Nil(err)
+
+	for _, tiflash := range topo.TiFlashServers {
+		tiflash.CPUFlags = "sse2"
+		tiflash.Arch = "amd64"
+		tiflash.OS = "linux"
+	}
+	err = checkTiFlashCPUFlags(&topo, "v5.0.0")
+	assert.Nil(err)
+	err = checkTiFlashCPUFlags(&topo, "v6.3.0")
+	assert.NotNil(err)
+	err = checkTiFlashCPUFlags(&topo, "nightly")
+	assert.NotNil(err)
+
+	for _, tiflash := range topo.TiFlashServers {
+		tiflash.CPUFlags = ""
+		tiflash.Arch = "aarch64"
+		tiflash.OS = "linux"
+	}
+	err = checkTiFlashCPUFlags(&topo, "v6.3.0")
+	assert.Nil(err)
+	err = checkTiFlashCPUFlags(&topo, "nightly")
+	assert.Nil(err)
+
+	for _, tiflash := range topo.TiFlashServers {
+		tiflash.CPUFlags = "sse2 avx2"
+		tiflash.Arch = "amd64"
+		tiflash.OS = "linux"
+	}
+	err = checkTiFlashCPUFlags(&topo, "v6.3.0")
+	assert.Nil(err)
+	err = checkTiFlashCPUFlags(&topo, "nightly")
+	assert.Nil(err)
+}
+
 func TestValidateNewTopo(t *testing.T) {
 	topo := spec.Specification{}
 	err := yaml.Unmarshal([]byte(`
