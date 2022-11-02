@@ -186,16 +186,19 @@ func (m *Manager) fillHostArchOrOS(s, p *tui.SSHConnectionProps, topo spec.Topol
 	var detectTasks []*task.StepDisplay
 
 	topo.IterInstance(func(inst spec.Instance) {
-		if fullType == spec.FullOSType {
+		switch fullType {
+		case spec.FullOSType:
 			if inst.OS() != "" {
 				return
 			}
-		} else if fullType == spec.FullCPUFlagsType {
+		case spec.FullCPUFlagsType:
 			if inst.CPUFlags() != "" {
 				return
 			}
-		} else if inst.Arch() != "" {
-			return
+		default:
+			if inst.Arch() != "" {
+				return
+			}
 		}
 
 		if _, ok := hostArchOrOS[inst.GetHost()]; ok {
