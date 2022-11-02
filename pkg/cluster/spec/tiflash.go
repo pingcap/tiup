@@ -63,6 +63,7 @@ type TiFlashSpec struct {
 	ResourceControl      meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
 	Arch                 string               `yaml:"arch,omitempty"`
 	OS                   string               `yaml:"os,omitempty"`
+	CPUFlags             string               `yaml:"cpu_flags,omitempty"`
 }
 
 // Status queries current status of the instance
@@ -105,7 +106,6 @@ const (
 	TiFlashStorageKeyMainDirs   string = "storage.main.dir"
 	TiFlashStorageKeyLatestDirs string = "storage.latest.dir"
 	TiFlashStorageKeyRaftDirs   string = "storage.raft.dir"
-	TiFlashRequiredCPUFlags     string = "avx2 popcnt movbe"
 )
 
 // GetOverrideDataDir returns the data dir.
@@ -614,17 +614,6 @@ func (i *TiFlashInstance) setTLSConfig(ctx context.Context, enableTLS bool, conf
 	return configs, nil
 }
 
-// getTiFlashRequiredCPUFlagsWithVersion return required CPU flags for TiFlash by given version
-func getTiFlashRequiredCPUFlagsWithVersion(clusterVersion string, arch string) string {
-	arch = strings.ToLower(arch)
-	if arch == "x86_64" || arch == "amd64" {
-		if tidbver.TiFlashRequireCPUFlagAVX2(clusterVersion) {
-			return TiFlashRequiredCPUFlags
-		}
-	}
-	return ""
-}
-
 // InitConfig implement Instance interface
 func (i *TiFlashInstance) InitConfig(
 	ctx context.Context,
@@ -665,7 +654,6 @@ func (i *TiFlashInstance) InitConfig(
 		WithTmpDir(spec.TmpDir).
 		WithNumaNode(spec.NumaNode).
 		WithNumaCores(spec.NumaCores).
-		WithRequiredCPUFlags(getTiFlashRequiredCPUFlagsWithVersion(clusterVersion, spec.Arch)).
 		AppendEndpoints(topo.Endpoints(deployUser)...)
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tiflash_%s_%d.sh", i.GetHost(), i.GetPort()))

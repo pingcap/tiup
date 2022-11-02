@@ -69,6 +69,10 @@ func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Optio
 		return err
 	}
 
+	if err := checkTiFlashCPUFlags(topo, clusterVersion); err != nil {
+		return err
+	}
+
 	if !skipConfirm {
 		if err := tui.PromptForConfirmOrAbortError(
 			"This operation will upgrade %s %s cluster %s to %s.\nDo you want to continue? [y/N]:",

@@ -817,7 +817,7 @@ func setDMCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) erro
 			if field.Field(j).String() != "" {
 				field.Field(j).Set(reflect.ValueOf(strings.ToLower(field.Field(j).String())))
 			}
-		case "OS":
+		case "OS", "CPUFlags":
 			// convert to lower case
 			if field.Field(j).String() != "" {
 				field.Field(j).Set(reflect.ValueOf(strings.ToLower(field.Field(j).String())))

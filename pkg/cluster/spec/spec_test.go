@@ -656,20 +656,6 @@ pd_servers:
 	c.Assert(err, NotNil)
 }
 
-func (s *metaSuiteTopo) TestTiFlashRequiredCPUFlags(c *C) {
-	cfg := scripts.NewTiFlashScript("", "", "", "", "", "")
-	cfg.WithRequiredCPUFlags(getTiFlashRequiredCPUFlagsWithVersion("v6.3.0", "AMD64"))
-	c.Assert(cfg.RequiredCPUFlags, Equals, TiFlashRequiredCPUFlags)
-	cfg.WithRequiredCPUFlags(getTiFlashRequiredCPUFlagsWithVersion("v6.3.0", "X86_64"))
-	c.Assert(cfg.RequiredCPUFlags, Equals, TiFlashRequiredCPUFlags)
-	cfg.WithRequiredCPUFlags(getTiFlashRequiredCPUFlagsWithVersion("nightly", "amd64"))
-	c.Assert(cfg.RequiredCPUFlags, Equals, TiFlashRequiredCPUFlags)
-	cfg.WithRequiredCPUFlags(getTiFlashRequiredCPUFlagsWithVersion("v6.3.0", "aarch64"))
-	c.Assert(cfg.RequiredCPUFlags, Equals, "")
-	cfg.WithRequiredCPUFlags(getTiFlashRequiredCPUFlagsWithVersion("v6.2.0", "amd64"))
-	c.Assert(cfg.RequiredCPUFlags, Equals, "")
-}
-
 func (s *metaSuiteTopo) TestTiFlashStorageSection(c *C) {
 	ctx := context.Background()
 	spec := &Specification{}

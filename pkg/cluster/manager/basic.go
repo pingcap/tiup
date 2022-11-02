@@ -306,6 +306,21 @@ func checkTiFlashWithTLS(topo spec.Topology, version string) error {
 	return nil
 }
 
+// checkTiFlashCPUFlags check tiflash required CPU flags
+func checkTiFlashCPUFlags(topo spec.Topology, version string) error {
+	var err error = nil
+	if tidbver.TiFlashRequireCPUFlagAVX2(version) {
+		topo.IterInstance(func(inst spec.Instance) {
+			if spec.ComponentTiFlash == inst.ComponentName() && inst.Arch() == "amd64" && inst.OS() == "linux" {
+				if strings.Index(inst.CPUFlags(), "avx2") == -1 {
+					err = fmt.Errorf("Fail to check CPU flags in host `%s`. TiFlash requires `avx2` since `v6.3.0`.", inst.GetHost())
+				}
+			}
+		})
+	}
+	return err
+}
+
 // BackupClusterMeta backup cluster meta to given filepath
 func (m *Manager) BackupClusterMeta(clusterName, filePath string) error {
 	exist, err := m.specManager.Exist(clusterName)

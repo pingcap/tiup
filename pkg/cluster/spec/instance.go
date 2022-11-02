@@ -103,6 +103,7 @@ type Instance interface {
 	LogDir() string
 	OS() string // only linux supported now
 	Arch() string
+	CPUFlags() string // only linux supported now
 	IsPatched() bool
 	SetPatched(bool)
 	setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error)
@@ -395,6 +396,15 @@ func (i *BaseInstance) OS() string {
 // Arch implements Instance interface
 func (i *BaseInstance) Arch() string {
 	v := reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("Arch")
+	if !v.IsValid() {
+		return ""
+	}
+	return v.Interface().(string)
+}
+
+// CPUFlags implements Instance interface
+func (i *BaseInstance) CPUFlags() string {
+	v := reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("CPUFlags")
 	if !v.IsValid() {
 		return ""
 	}

@@ -124,6 +124,9 @@ func (m *Manager) ScaleOut(
 	if err := m.fillHost(sshConnProps, sshProxyProps, newPart, &gOpt, opt.User); err != nil {
 		return err
 	}
+	if err := checkTiFlashCPUFlags(newPart, base.Version); err != nil {
+		return err
+	}
 
 	var mergedTopo spec.Topology
 	// in satge2, not need mergedTopo

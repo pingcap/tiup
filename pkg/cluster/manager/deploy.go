@@ -153,6 +153,10 @@ func (m *Manager) Deploy(
 		return err
 	}
 
+	if err := checkTiFlashCPUFlags(topo, clusterVersion); err != nil {
+		return err
+	}
+
 	if !skipConfirm && strings.ToLower(gOpt.DisplayMode) != "json" {
 		if err := m.confirmTopology(name, clusterVersion, topo, set.NewStringSet()); err != nil {
 			return err

@@ -53,6 +53,8 @@ const (
 	FullArchType FullHostType = "Arch"
 	// FullOSType kernel-name
 	FullOSType FullHostType = "OS"
+	// FullCPUFlagsType cpu-flags
+	FullCPUFlagsType FullHostType = "CPUFlags"
 )
 
 // general role names
@@ -657,7 +659,7 @@ func setCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) error 
 			if field.Field(j).String() != "" {
 				field.Field(j).Set(reflect.ValueOf(strings.ToLower(field.Field(j).String())))
 			}
-		case "OS":
+		case "OS", "CPUFlags":
 			// convert to lower case
 			if field.Field(j).String() != "" {
 				field.Field(j).Set(reflect.ValueOf(strings.ToLower(field.Field(j).String())))
@@ -906,11 +908,16 @@ func setHostArchOrOS(field reflect.Value, hostArchOrOS map[string]string, fullTy
 	host := field.FieldByName("Host")
 	arch := field.FieldByName("Arch")
 	os := field.FieldByName("OS")
+	cpu_flags := field.FieldByName("CPUFlags")
 
 	// set arch only if not set before
 	if fullType == FullOSType {
 		if !host.IsZero() && os.CanSet() && len(os.String()) == 0 {
 			os.Set(reflect.ValueOf(hostArchOrOS[host.String()]))
+		}
+	} else if fullType == FullCPUFlagsType {
+		if !host.IsZero() && cpu_flags.CanSet() && len(cpu_flags.String()) == 0 {
+			cpu_flags.Set(reflect.ValueOf(hostArchOrOS[host.String()]))
 		}
 	} else {
 		if !host.IsZero() && arch.CanSet() && len(arch.String()) == 0 {

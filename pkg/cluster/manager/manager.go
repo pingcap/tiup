@@ -172,7 +172,11 @@ func (m *Manager) fillHost(s, p *tui.SSHConnectionProps, topo spec.Topology, gOp
 		return err
 	}
 
-	return m.fillHostArchOrOS(s, p, topo, gOpt, user, spec.FullOSType)
+	if err := m.fillHostArchOrOS(s, p, topo, gOpt, user, spec.FullOSType); err != nil {
+		return err
+	}
+
+	return m.fillHostArchOrOS(s, p, topo, gOpt, user, spec.FullCPUFlagsType)
 }
 
 // fillHostArchOrOS full host cpu-arch or kernel-name
@@ -184,6 +188,10 @@ func (m *Manager) fillHostArchOrOS(s, p *tui.SSHConnectionProps, topo spec.Topol
 	topo.IterInstance(func(inst spec.Instance) {
 		if fullType == spec.FullOSType {
 			if inst.OS() != "" {
+				return
+			}
+		} else if fullType == spec.FullCPUFlagsType {
+			if inst.CPUFlags() != "" {
 				return
 			}
 		} else if inst.Arch() != "" {
@@ -219,6 +227,8 @@ func (m *Manager) fillHostArchOrOS(s, p *tui.SSHConnectionProps, topo spec.Topol
 		switch fullType {
 		case spec.FullOSType:
 			tf = tf.Shell(inst.GetHost(), "uname -s", "", false)
+		case spec.FullCPUFlagsType:
+			tf = tf.Shell(inst.GetHost(), "cat /proc/cpuinfo 2>&1 | grep flags | head -n 1 || echo", "", false)
 		default:
 			tf = tf.Shell(inst.GetHost(), "uname -m", "", false)
 		}
@@ -246,7 +256,18 @@ func (m *Manager) fillHostArchOrOS(s, p *tui.SSHConnectionProps, topo spec.Topol
 		if !ok {
 			return fmt.Errorf("no check results found for %s", host)
 		}
-		hostArchOrOS[host] = strings.Trim(string(stdout), "\n")
+		if fullType == spec.FullCPUFlagsType {
+			cpu_flags := strings.Trim(string(stdout), "\n")
+			flags := strings.Split(cpu_flags, ":")
+			if len(flags) != 2 {
+				cpu_flags = "unknown"
+			} else {
+				cpu_flags = strings.Trim(flags[1], " ")
+			}
+			hostArchOrOS[host] = cpu_flags
+		} else {
+			hostArchOrOS[host] = strings.Trim(string(stdout), "\n")
+		}
 	}
 	return topo.FillHostArchOrOS(hostArchOrOS, fullType)
 }
