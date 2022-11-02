@@ -257,14 +257,14 @@ func (m *Manager) fillHostArchOrOS(s, p *tui.SSHConnectionProps, topo spec.Topol
 			return fmt.Errorf("no check results found for %s", host)
 		}
 		if fullType == spec.FullCPUFlagsType {
-			cpu_flags := strings.Trim(string(stdout), "\n")
-			flags := strings.Split(cpu_flags, ":")
+			cpuFlags := strings.Trim(string(stdout), "\n")
+			flags := strings.Split(cpuFlags, ":")
 			if len(flags) != 2 {
-				cpu_flags = "unknown"
+				cpuFlags = "unknown"
 			} else {
-				cpu_flags = strings.Trim(flags[1], " ")
+				cpuFlags = strings.Trim(flags[1], " ")
 			}
-			hostArchOrOS[host] = cpu_flags
+			hostArchOrOS[host] = cpuFlags
 		} else {
 			hostArchOrOS[host] = strings.Trim(string(stdout), "\n")
 		}
