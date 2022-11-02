@@ -422,9 +422,9 @@ func genLeaderCounter(topo *Specification, tlsCfg *tls.Config) func(string) (int
 		statusAddress := ""
 		foundIds := []string{}
 		for _, kv := range topo.TiKVServers {
-			kvid := fmt.Sprintf("%s:%d", kv.Host, kv.Port)
+			kvid := utils.JoinHostPort(kv.Host, kv.Port)
 			if id == kvid {
-				statusAddress = fmt.Sprintf("%s:%d", kv.Host, kv.StatusPort)
+				statusAddress = utils.JoinHostPort(kv.Host, kv.StatusPort)
 				break
 			}
 			foundIds = append(foundIds, kvid)

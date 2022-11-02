@@ -35,7 +35,7 @@ func (m *monitor) renderSDFile(cid2targets map[string][]string) error {
 		Labels  map[string]string `json:"labels"`
 	}
 
-	cid2targets["prometheus"] = []string{fmt.Sprintf("%s:%d", m.host, m.port)}
+	cid2targets["prometheus"] = []string{utils.JoinHostPort(m.host, m.port)}
 
 	var items []Item
 
@@ -91,7 +91,7 @@ func newMonitor(ctx context.Context, version string, host, dir string) (*monitor
 	if err != nil {
 		return nil, err
 	}
-	addr := fmt.Sprintf("%s:%d", host, port)
+	addr := utils.JoinHostPort(host, port)
 
 	tmpl := `
 global:
@@ -131,7 +131,7 @@ scrape_configs:
 	args := []string{
 		fmt.Sprintf("--config.file=%s", filepath.Join(dir, "prometheus.yml")),
 		fmt.Sprintf("--web.external-url=http://%s", addr),
-		fmt.Sprintf("--web.listen-address=%s:%d", host, port),
+		fmt.Sprintf("--web.listen-address=%s", utils.JoinHostPort(host, port)),
 		fmt.Sprintf("--storage.tsdb.path=%s", filepath.Join(dir, "data")),
 	}
 

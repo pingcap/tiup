@@ -63,7 +63,7 @@ type Instance interface {
 
 func (inst *instance) StatusAddrs() (addrs []string) {
 	if inst.Host != "" && inst.StatusPort != 0 {
-		addrs = append(addrs, fmt.Sprintf("%s:%d", inst.Host, inst.StatusPort))
+		addrs = append(addrs, utils.JoinHostPort(inst.Host, inst.StatusPort))
 	}
 	return
 }
@@ -105,9 +105,9 @@ func pdEndpoints(pds []*PDInstance, isHTTP bool) []string {
 	var endpoints []string
 	for _, pd := range pds {
 		if isHTTP {
-			endpoints = append(endpoints, fmt.Sprintf("http://%s:%d", AdvertiseHost(pd.Host), pd.StatusPort))
+			endpoints = append(endpoints, "http://"+utils.JoinHostPort(AdvertiseHost(pd.Host), pd.StatusPort))
 		} else {
-			endpoints = append(endpoints, fmt.Sprintf("%s:%d", AdvertiseHost(pd.Host), pd.StatusPort))
+			endpoints = append(endpoints, utils.JoinHostPort(AdvertiseHost(pd.Host), pd.StatusPort))
 		}
 	}
 	return endpoints

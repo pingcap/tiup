@@ -22,6 +22,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/proxy"
+	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 
@@ -77,7 +78,7 @@ func data(topo *spec.Specification, tcpProxy *proxy.TCPProxy) error {
 
 	for _, spec := range topo.TiDBServers {
 		spec := spec
-		endpoint := fmt.Sprintf("%s:%d", spec.Host, spec.Port)
+		endpoint := utils.JoinHostPort(spec.Host, spec.Port)
 		errg.Go(func() error {
 			if tcpProxy != nil {
 				closeC := tcpProxy.Run([]string{endpoint})
@@ -99,7 +100,7 @@ func data(topo *spec.Specification, tcpProxy *proxy.TCPProxy) error {
 				return errors.New("table test.ti_cluster is empty")
 			}
 
-			fmt.Printf("check data %s:%d success\n", spec.Host, spec.Port)
+			fmt.Printf("check data %s success\n", utils.JoinHostPort(spec.Host, spec.Port))
 			return nil
 		})
 	}
@@ -112,7 +113,7 @@ func writable(topo *spec.Specification, tcpProxy *proxy.TCPProxy) error {
 
 	for _, spec := range topo.TiDBServers {
 		spec := spec
-		endpoint := fmt.Sprintf("%s:%d", spec.Host, spec.Port)
+		endpoint := utils.JoinHostPort(spec.Host, spec.Port)
 		errg.Go(func() error {
 			if tcpProxy != nil {
 				closeC := tcpProxy.Run([]string{endpoint})
@@ -134,7 +135,7 @@ func writable(topo *spec.Specification, tcpProxy *proxy.TCPProxy) error {
 				return err
 			}
 
-			fmt.Printf("write %s:%d success\n", spec.Host, spec.Port)
+			fmt.Printf("write %s success\n", utils.JoinHostPort(spec.Host, spec.Port))
 			return nil
 		})
 	}

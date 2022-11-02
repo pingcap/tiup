@@ -27,6 +27,7 @@ import (
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/tidbver"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // CDCSpec represents the CDC topology specification in topology.yaml
@@ -219,7 +220,7 @@ var _ RollingUpdateInstance = &CDCInstance{}
 
 // GetAddr return the address of this TiCDC instance
 func (i *CDCInstance) GetAddr() string {
-	return fmt.Sprintf("%s:%d", i.GetHost(), i.GetPort())
+	return utils.JoinHostPort(i.GetHost(), i.GetPort())
 }
 
 // PreRestart implements RollingUpdateInstance interface.
