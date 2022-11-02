@@ -313,7 +313,7 @@ func checkTiFlashCPUFlags(topo spec.Topology, version string) error {
 		topo.IterInstance(func(inst spec.Instance) {
 			if spec.ComponentTiFlash == inst.ComponentName() && inst.Arch() == "amd64" && inst.OS() == "linux" {
 				if strings.Index(inst.CPUFlags(), "avx2") == -1 {
-					err = fmt.Errorf("Fail to check CPU flags in host `%s`. TiFlash requires `avx2` under `x86-64` platform since `v6.3.0`.", inst.GetHost())
+					err = fmt.Errorf("Fail to check CPU flags in host `%s`. TiFlash requires `avx2` under `x86-64` platform since `v6.3.0`. ", inst.GetHost())
 				}
 			}
 		})
