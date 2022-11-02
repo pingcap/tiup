@@ -308,7 +308,7 @@ func checkTiFlashWithTLS(topo spec.Topology, version string) error {
 
 // checkTiFlashCPUFlags check tiflash required CPU flags
 func checkTiFlashCPUFlags(topo spec.Topology, version string) error {
-	var err error = nil
+	var err error
 	if tidbver.TiFlashRequireCPUFlagAVX2(version) {
 		topo.IterInstance(func(inst spec.Instance) {
 			if spec.ComponentTiFlash == inst.ComponentName() && inst.Arch() == "amd64" && inst.OS() == "linux" {
