@@ -23,6 +23,7 @@ import (
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
@@ -35,7 +36,7 @@ import (
 )
 
 // Upgrade the cluster.
-func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Options, skipConfirm, offline bool) error {
+func (m *Manager) Upgrade(name string, clusterVersion string, gOpt operator.Options, skipConfirm, offline bool, opt DeployOptions) error {
 	if err := clusterutil.ValidateClusterNameOrError(name); err != nil {
 		return err
 	}
@@ -66,6 +67,26 @@ func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Optio
 	)
 
 	if err := versionCompare(base.Version, clusterVersion); err != nil {
+		return err
+	}
+
+	var (
+		sshConnProps  *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
+		sshProxyProps *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
+	)
+	if gOpt.SSHType != executor.SSHTypeNone {
+		var err error
+		if sshConnProps, err = tui.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword); err != nil {
+			return err
+		}
+		if len(gOpt.SSHProxyHost) != 0 {
+			if sshProxyProps, err = tui.ReadIdentityFileOrPassword(gOpt.SSHProxyIdentity, gOpt.SSHProxyUsePassword); err != nil {
+				return err
+			}
+		}
+	}
+
+	if err := m.fillHost(sshConnProps, sshProxyProps, topo, &gOpt, opt.User); err != nil {
 		return err
 	}
 
@@ -177,7 +198,7 @@ func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Optio
 				m.specManager,
 				inst,
 				base.User,
-				opt.IgnoreConfigCheck,
+				gOpt.IgnoreConfigCheck,
 				meta.DirPaths{
 					Deploy: deployDir,
 					Data:   dataDirs,
@@ -200,24 +221,24 @@ func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Optio
 	if err != nil {
 		return err
 	}
-	b, err := m.sshTaskBuilder(name, topo, base.User, opt)
+	b, err := m.sshTaskBuilder(name, topo, base.User, gOpt)
 	if err != nil {
 		return err
 	}
 	t := b.
 		Parallel(false, downloadCompTasks...).
-		Parallel(opt.Force, copyCompTasks...).
+		Parallel(gOpt.Force, copyCompTasks...).
 		Func("UpgradeCluster", func(ctx context.Context) error {
 			if offline {
 				return nil
 			}
-			return operator.Upgrade(ctx, topo, opt, tlsCfg, base.Version)
+			return operator.Upgrade(ctx, topo, gOpt, tlsCfg, base.Version)
 		}).
 		Build()
 
 	ctx := ctxt.New(
 		context.Background(),
-		opt.Concurrency,
+		gOpt.Concurrency,
 		m.logger,
 	)
 	if err := t.Execute(ctx); err != nil {

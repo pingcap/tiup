@@ -263,7 +263,7 @@ func (m *Manager) fillHostArchOrOS(s, p *tui.SSHConnectionProps, topo spec.Topol
 			cpuFlags := strings.Trim(string(stdout), "\n")
 			flags := strings.Split(cpuFlags, ":")
 			if len(flags) != 2 {
-				cpuFlags = "unknown"
+				cpuFlags = ""
 			} else {
 				cpuFlags = strings.Trim(flags[1], " ")
 			}

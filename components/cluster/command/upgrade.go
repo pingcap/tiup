@@ -14,13 +14,18 @@
 package command
 
 import (
+	"path/filepath"
+
+	"github.com/pingcap/tiup/pkg/cluster/manager"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
 func newUpgradeCmd() *cobra.Command {
 	offlineMode := false
-
+	opt := manager.DeployOptions{
+		IdentityFile: filepath.Join(utils.UserHome(), ".ssh", "id_rsa"),
+	}
 	cmd := &cobra.Command{
 		Use:   "upgrade <cluster-name> <version>",
 		Short: "Upgrade a specified TiDB cluster",
@@ -38,7 +43,7 @@ func newUpgradeCmd() *cobra.Command {
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 			teleCommand = append(teleCommand, version)
 
-			return cm.Upgrade(clusterName, version, gOpt, skipConfirm, offlineMode)
+			return cm.Upgrade(clusterName, version, gOpt, skipConfirm, offlineMode, opt)
 		},
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 			switch len(args) {
@@ -49,6 +54,9 @@ func newUpgradeCmd() *cobra.Command {
 			}
 		},
 	}
+	cmd.Flags().StringVarP(&opt.User, "user", "u", utils.CurrentUser(), "The user name to login via SSH. The user must has root (or sudo) privilege.")
+	cmd.Flags().StringVarP(&opt.IdentityFile, "identity_file", "i", opt.IdentityFile, "The path of the SSH identity file. If specified, public key authentication will be used.")
+	cmd.Flags().BoolVarP(&opt.UsePassword, "password", "p", false, "Use password of target hosts. If specified, password authentication will be used.")
 	cmd.Flags().BoolVar(&gOpt.Force, "force", false, "Force upgrade without transferring PD leader")
 	cmd.Flags().Uint64Var(&gOpt.APITimeout, "transfer-timeout", 600, "Timeout in seconds when transferring PD and TiKV store leaders, also for TiCDC drain one capture")
 	cmd.Flags().BoolVarP(&gOpt.IgnoreConfigCheck, "ignore-config-check", "", false, "Ignore the config check result")

@@ -14,12 +14,18 @@
 package command
 
 import (
+	"path/filepath"
+
+	"github.com/pingcap/tiup/pkg/cluster/manager"
+	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
 func newUpgradeCmd() *cobra.Command {
 	offlineMode := false
-
+	opt := manager.DeployOptions{
+		IdentityFile: filepath.Join(utils.UserHome(), ".ssh", "id_rsa"),
+	}
 	cmd := &cobra.Command{
 		Use:   "upgrade <cluster-name> <version>",
 		Short: "Upgrade a specified DM cluster",
@@ -28,7 +34,7 @@ func newUpgradeCmd() *cobra.Command {
 				return cmd.Help()
 			}
 
-			return cm.Upgrade(args[0], args[1], gOpt, skipConfirm, offlineMode)
+			return cm.Upgrade(args[0], args[1], gOpt, skipConfirm, offlineMode, opt)
 		},
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 			switch len(args) {
@@ -40,6 +46,9 @@ func newUpgradeCmd() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringVarP(&opt.User, "user", "u", utils.CurrentUser(), "The user name to login via SSH. The user must has root (or sudo) privilege.")
+	cmd.Flags().StringVarP(&opt.IdentityFile, "identity_file", "i", opt.IdentityFile, "The path of the SSH identity file. If specified, public key authentication will be used.")
+	cmd.Flags().BoolVarP(&opt.UsePassword, "password", "p", false, "Use password of target hosts. If specified, password authentication will be used.")
 	cmd.Flags().BoolVarP(&offlineMode, "offline", "", false, "Upgrade a stopped cluster")
 
 	return cmd
