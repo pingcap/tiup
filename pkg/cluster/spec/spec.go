@@ -911,15 +911,16 @@ func setHostArchOrOS(field reflect.Value, hostArchOrOS map[string]string, fullTy
 	cpuFlags := field.FieldByName("CPUFlags")
 
 	// set arch only if not set before
-	if fullType == FullOSType {
+	switch fullType {
+	case FullOSType:
 		if !host.IsZero() && os.CanSet() && len(os.String()) == 0 {
 			os.Set(reflect.ValueOf(hostArchOrOS[host.String()]))
 		}
-	} else if fullType == FullCPUFlagsType {
+	case FullCPUFlagsType:
 		if !host.IsZero() && cpuFlags.CanSet() && len(cpuFlags.String()) == 0 {
 			cpuFlags.Set(reflect.ValueOf(hostArchOrOS[host.String()]))
 		}
-	} else {
+	default:
 		if !host.IsZero() && arch.CanSet() && len(arch.String()) == 0 {
 			arch.Set(reflect.ValueOf(hostArchOrOS[host.String()]))
 		}
