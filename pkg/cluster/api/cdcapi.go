@@ -109,7 +109,12 @@ func drainCapture(client *CDCOpenAPIClient, target string) (int, error) {
 }
 
 // DrainCapture request cdc owner move all tables on the target capture to other captures.
-func (c *CDCOpenAPIClient) DrainCapture(target string, apiTimeoutSeconds int) error {
+func (c *CDCOpenAPIClient) DrainCapture(addr, target string, apiTimeoutSeconds int) error {
+	if _, err := c.getCaptureByID(target); err != nil {
+		c.l().Debugf("cdc drain capture failed, cannot find the capture, address: %s, target: %s, err: %+v", addr, target, err)
+		return err
+	}
+	c.l().Infof("\t Start drain the capture, address: %s, captureID: %s", addr, target)
 	start := time.Now()
 	err := utils.Retry(func() error {
 		count, err := drainCapture(c, target)
@@ -193,6 +198,27 @@ func (c *CDCOpenAPIClient) GetOwner() (result *Capture, err error) {
 		Timeout: 10 * time.Second,
 	})
 
+	return result, err
+}
+
+func (c *CDCOpenAPIClient) getCaptureByID(id string) (*Capture, error) {
+	var result *Capture
+	err := utils.Retry(func() error {
+		captures, err := c.GetAllCaptures()
+		if err != nil {
+			return err
+		}
+		for _, capture := range captures {
+			if capture.ID == id {
+				result = capture
+				return nil
+			}
+		}
+		return fmt.Errorf("target capture not found")
+	}, utils.RetryOption{
+		Delay:   time.Second,
+		Timeout: 10 * time.Second,
+	})
 	return result, err
 }
 
