@@ -80,7 +80,7 @@ scrape_configs:
       - source_labels: [__param_target]
         target_label: instance
       - target_label: __address__
-        replacement: {{.BlackboxAddr}}
+        replacement: '{{.BlackboxAddr}}'
 {{- end}}
 {{- if .LightningAddrs}}
   - job_name: "lightning"
@@ -226,7 +226,7 @@ scrape_configs:
       - source_labels: [__param_target]
         target_label: instance
       - target_label: __address__
-        replacement: {{.BlackboxAddr}}
+        replacement: '{{.BlackboxAddr}}'
 {{- end}}
 {{- if .CDCAddrs}}
   - job_name: "ticdc"
@@ -321,7 +321,7 @@ scrape_configs:
       - source_labels: [__param_target]
         target_label: instance
       - target_label: __address__
-        replacement: {{.BlackboxAddr}}
+        replacement: '{{.BlackboxAddr}}'
   - job_name: "monitor_port_probe"
     scrape_interval: 30s
     metrics_path: /probe
@@ -358,7 +358,7 @@ scrape_configs:
       - source_labels: [__param_target]
         target_label: instance
       - target_label: __address__
-        replacement: {{.BlackboxAddr}}
+        replacement: '{{.BlackboxAddr}}'
 {{- range $addr := .BlackboxExporterAddrs}}
   - job_name: "blackbox_exporter_{{$addr}}_icmp"
     scrape_interval: 6s
@@ -382,7 +382,7 @@ scrape_configs:
       - source_labels: []
         regex: .*
         target_label: __address__
-        replacement: {{$addr}}
+        replacement: '{{$addr}}'
 {{- end}}
 
 {{- if .DMMasterAddrs}}
