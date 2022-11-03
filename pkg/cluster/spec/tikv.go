@@ -414,7 +414,7 @@ func addr(spec *TiKVSpec) string {
 	if spec.Port == 0 || spec.Port == 80 {
 		panic(fmt.Sprintf("invalid TiKV port %d", spec.Port))
 	}
-	return spec.Host + ":" + strconv.Itoa(spec.Port)
+	return utils.JoinHostPort(spec.Host, spec.Port)
 }
 
 func genLeaderCounter(topo *Specification, tlsCfg *tls.Config) func(string) (int, error) {
