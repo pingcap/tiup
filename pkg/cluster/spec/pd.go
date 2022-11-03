@@ -59,7 +59,7 @@ func (s *PDSpec) Status(ctx context.Context, timeout time.Duration, tlsCfg *tls.
 		timeout = statusQueryTimeout
 	}
 
-	addr := fmt.Sprintf("%s:%d", s.Host, s.ClientPort)
+	addr := utils.JoinHostPort(s.Host, s.ClientPort)
 	pc := api.NewPDClient(ctx, []string{addr}, timeout, tlsCfg)
 
 	// check health
@@ -385,7 +385,7 @@ func (i *PDInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tls
 		Delay:    time.Second,
 		Timeout:  120 * time.Second,
 	}
-	currentPDAddrs := []string{fmt.Sprintf("%s:%d", i.Host, i.Port)}
+	currentPDAddrs := []string{utils.JoinHostPort(i.Host, i.Port)}
 	pdClient := api.NewPDClient(ctx, currentPDAddrs, 5*time.Second, tlsCfg)
 
 	if err := utils.Retry(pdClient.CheckHealth, timeoutOpt); err != nil {

@@ -15,7 +15,6 @@ package manager
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/fatih/color"
@@ -27,6 +26,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // ExecOptions for exec shell commanm.
@@ -55,7 +55,7 @@ func (m *Manager) Exec(name string, opt ExecOptions, gOpt operator.Options) erro
 	var shellTasks []task.Task
 	uniqueHosts := map[string]set.StringSet{} // host-sshPort -> {command}
 	topo.IterInstance(func(inst spec.Instance) {
-		key := fmt.Sprintf("%s:%d", inst.GetHost(), inst.GetSSHPort())
+		key := utils.JoinHostPort(inst.GetHost(), inst.GetSSHPort())
 		if _, found := uniqueHosts[key]; !found {
 			if len(gOpt.Roles) > 0 && !filterRoles.Exist(inst.Role()) {
 				return

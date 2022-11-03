@@ -138,7 +138,7 @@ func statusByHost(host string, port int, path string, timeout time.Duration, tls
 	if path == "" {
 		path = "/"
 	}
-	url := fmt.Sprintf("%s://%s:%d%s", scheme, host, port, path)
+	url := fmt.Sprintf("%s://%s%s", scheme, utils.JoinHostPort(host, port), path)
 
 	// body doesn't have any status section needed
 	body, err := client.Get(context.TODO(), url)
@@ -158,7 +158,7 @@ func UptimeByHost(host string, port int, timeout time.Duration, tlsCfg *tls.Conf
 	if tlsCfg != nil {
 		scheme = "https"
 	}
-	url := fmt.Sprintf("%s://%s:%d/metrics", scheme, host, port)
+	url := fmt.Sprintf("%s://%s/metrics", scheme, utils.JoinHostPort(host, port))
 
 	client := utils.NewHTTPClient(timeout, tlsCfg)
 

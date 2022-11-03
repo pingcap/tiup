@@ -31,6 +31,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	system "github.com/pingcap/tiup/pkg/cluster/template/systemd"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/utils"
 	"go.uber.org/zap"
 )
 
@@ -235,11 +236,11 @@ func (i *TiSparkMasterInstance) InitConfig(
 	// transfer default config
 	pdList := make([]string, 0)
 	for _, pd := range topo.Endpoints(deployUser) {
-		pdList = append(pdList, fmt.Sprintf("%s:%d", pd.IP, pd.ClientPort))
+		pdList = append(pdList, utils.JoinHostPort(pd.IP, pd.ClientPort))
 	}
 	masterList := make([]string, 0)
 	for _, master := range topo.TiSparkMasters {
-		masterList = append(masterList, fmt.Sprintf("%s:%d", master.Host, master.Port))
+		masterList = append(masterList, utils.JoinHostPort(master.Host, master.Port))
 	}
 
 	cfg := config.NewTiSparkConfig(pdList).WithMasters(strings.Join(masterList, ",")).
@@ -398,11 +399,11 @@ func (i *TiSparkWorkerInstance) InitConfig(
 	// transfer default config
 	pdList := make([]string, 0)
 	for _, pd := range topo.Endpoints(deployUser) {
-		pdList = append(pdList, fmt.Sprintf("%s:%d", pd.IP, pd.ClientPort))
+		pdList = append(pdList, utils.JoinHostPort(pd.IP, pd.ClientPort))
 	}
 	masterList := make([]string, 0)
 	for _, master := range topo.TiSparkMasters {
-		masterList = append(masterList, fmt.Sprintf("%s:%d", master.Host, master.Port))
+		masterList = append(masterList, utils.JoinHostPort(master.Host, master.Port))
 	}
 
 	cfg := config.NewTiSparkConfig(pdList).WithMasters(strings.Join(masterList, ",")).

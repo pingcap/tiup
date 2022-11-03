@@ -964,10 +964,9 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 func (p *Playground) updateMonitorTopology(componentID string, info MonitorInfo) {
 	info.IP = instance.AdvertiseHost(info.IP)
 	fmt.Print(color.GreenString(
-		"To view the %s: http://%s:%d\n",
+		"To view the %s: http://%s\n",
 		cases.Title(language.English).String(componentID),
-		info.IP,
-		info.Port,
+		utils.JoinHostPort(info.IP, info.Port),
 	))
 	if len(p.pds) == 0 {
 		return
@@ -1221,7 +1220,7 @@ func (p *Playground) bootGrafana(ctx context.Context, env *environment.Environme
 
 	grafana := newGrafana(options.Version, options.Host)
 	// fmt.Println("Start Grafana instance...")
-	err = grafana.start(ctx, grafanaDir, fmt.Sprintf("http://%s:%d", monitorInfo.IP, monitorInfo.Port))
+	err = grafana.start(ctx, grafanaDir, "http://"+utils.JoinHostPort(monitorInfo.IP, monitorInfo.Port))
 	if err != nil {
 		return nil, err
 	}

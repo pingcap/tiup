@@ -21,6 +21,7 @@ import (
 	"text/template"
 
 	"github.com/pingcap/tiup/embed"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // NgMonitoringConfig represent the data to generate NgMonitoring config
@@ -47,9 +48,9 @@ func NewNgMonitoringConfig(clusterName, clusterVersion string, enableTLS bool) *
 // AddPD add a PD address
 func (c *NgMonitoringConfig) AddPD(ip string, port uint64) *NgMonitoringConfig {
 	if c.PDAddrs == "" {
-		c.PDAddrs = fmt.Sprintf("\"%s:%d\"", ip, port)
+		c.PDAddrs = fmt.Sprintf("\"%s\"", utils.JoinHostPort(ip, int(port)))
 	} else {
-		c.PDAddrs += fmt.Sprintf(",\"%s:%d\"", ip, port)
+		c.PDAddrs += fmt.Sprintf(",\"%s\"", utils.JoinHostPort(ip, int(port)))
 	}
 	return c
 }

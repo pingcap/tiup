@@ -28,6 +28,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 const (
@@ -146,7 +147,7 @@ func (s *MasterSpec) Status(_ context.Context, timeout time.Duration, tlsCfg *tl
 		timeout = statusQueryTimeout
 	}
 
-	addr := fmt.Sprintf("%s:%d", s.Host, s.Port)
+	addr := utils.JoinHostPort(s.Host, s.Port)
 	dc := api.NewDMMasterClient([]string{addr}, timeout, tlsCfg)
 	isFound, isActive, isLeader, err := dc.GetMaster(s.Name)
 	if err != nil {
@@ -689,7 +690,7 @@ func (s *Specification) GetMasterList() []string {
 	var masterList []string
 
 	for _, master := range s.Masters {
-		masterList = append(masterList, fmt.Sprintf("%s:%d", master.Host, master.Port))
+		masterList = append(masterList, utils.JoinHostPort(master.Host, master.Port))
 	}
 
 	return masterList

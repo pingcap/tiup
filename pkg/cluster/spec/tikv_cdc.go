@@ -27,6 +27,7 @@ import (
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/tidbver"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // TiKVCDCSpec represents the TiKVCDC topology specification in topology.yaml
@@ -211,7 +212,7 @@ var _ RollingUpdateInstance = &TiKVCDCInstance{}
 
 // GetAddr return the address of this TiKV-CDC instance
 func (i *TiKVCDCInstance) GetAddr() string {
-	return fmt.Sprintf("%s:%d", i.GetHost(), i.GetPort())
+	return utils.JoinHostPort(i.GetHost(), i.GetPort())
 }
 
 // PreRestart implements RollingUpdateInstance interface.

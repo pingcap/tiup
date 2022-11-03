@@ -22,6 +22,7 @@ import (
 	"text/template"
 
 	"github.com/pingcap/tiup/embed"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // PDScript represent the data to generate pd config
@@ -47,8 +48,8 @@ func NewPDScript(name, ip, deployDir, dataDir, logDir string) *PDScript {
 		Name:                name,
 		Scheme:              "http",
 		IP:                  ip,
-		AdvertiseClientAddr: fmt.Sprintf("http://%s:%d", ip, 2379),
-		AdvertisePeerAddr:   fmt.Sprintf("http://%s:%d", ip, 2380),
+		AdvertiseClientAddr: "http://" + utils.JoinHostPort(ip, 2379),
+		AdvertisePeerAddr:   "http://" + utils.JoinHostPort(ip, 2380),
 		ClientPort:          2379,
 		PeerPort:            2380,
 		DeployDir:           deployDir,
@@ -58,8 +59,8 @@ func NewPDScript(name, ip, deployDir, dataDir, logDir string) *PDScript {
 }
 
 func (c *PDScript) resetAdvertise() {
-	c.AdvertiseClientAddr = fmt.Sprintf("%s://%s:%d", c.Scheme, c.IP, c.ClientPort)
-	c.AdvertisePeerAddr = fmt.Sprintf("%s://%s:%d", c.Scheme, c.IP, c.PeerPort)
+	c.AdvertiseClientAddr = fmt.Sprintf("%s://%s", c.Scheme, utils.JoinHostPort(c.IP, c.ClientPort))
+	c.AdvertisePeerAddr = fmt.Sprintf("%s://%s", c.Scheme, utils.JoinHostPort(c.IP, c.PeerPort))
 }
 
 // WithListenHost set listenHost field of PDScript
