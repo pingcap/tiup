@@ -294,7 +294,7 @@ func getGrafanaURL(clusterInstInfos []InstInfo) (result []string) {
 	var grafanaURLs []string
 	for _, instance := range clusterInstInfos {
 		if instance.Role == "grafana" {
-			grafanaURLs = append(grafanaURLs, utils.JoinHostPort(instance.Host, instance.Port))
+			grafanaURLs = append(grafanaURLs, "http://"+utils.JoinHostPort(instance.Host, instance.Port))
 		}
 	}
 	return grafanaURLs
