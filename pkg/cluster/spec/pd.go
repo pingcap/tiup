@@ -210,6 +210,7 @@ func (i *PDInstance) InitConfig(
 		DataDir:            paths.Data[0],
 		LogDir:             paths.Log,
 		InitialCluster:     strings.Join(initialCluster, ","),
+		NumaNode:           spec.NumaNode,
 	}
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pd_%s_%d.sh", i.GetHost(), i.GetPort()))
@@ -332,6 +333,7 @@ func (i *PDInstance) ScaleConfig(
 		DataDir:            paths.Data[0],
 		LogDir:             paths.Log,
 		InitialCluster:     strings.Join(initialCluster, ","),
+		NumaNode:           spec.NumaNode,
 	}
 
 	cfg := scripts.NewPDScaleScript(cfg0)
