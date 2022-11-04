@@ -803,21 +803,18 @@ func (s *Specification) Endpoints(user string) []*scripts.PDScript {
 		// log dir will always be with values, but might not used by the component
 		logDir := Abs(user, spec.LogDir)
 
-		script := scripts.NewPDScript(
-			spec.Name,
-			spec.Host,
-			deployDir,
-			dataDir,
-			logDir,
-		).
-			WithClientPort(spec.ClientPort).
-			WithPeerPort(spec.PeerPort).
-			WithListenHost(spec.ListenHost)
-		if s.GlobalOptions.TLSEnabled {
-			script = script.WithScheme("https")
+		script := &scripts.PDScript{
+			Name:       spec.Name,
+			IP:         spec.Host,
+			ListenHost: spec.ListenHost,
+			DeployDir:  deployDir,
+			DataDir:    dataDir,
+			LogDir:     logDir,
+			NumaNode:   spec.NumaNode,
+			TLSEnabled: s.GlobalOptions.TLSEnabled,
+			ClientPort: spec.ClientPort,
+			PeerPort:   spec.PeerPort,
 		}
-		script = script.WithAdvertiseClientAddr(spec.AdvertiseClientAddr).
-			WithAdvertisePeerAddr(spec.AdvertisePeerAddr)
 		ends = append(ends, script)
 	}
 	return ends

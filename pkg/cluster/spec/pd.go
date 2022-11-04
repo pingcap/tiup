@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/pingcap/errors"
@@ -105,6 +106,24 @@ func (s *PDSpec) IgnoreMonitorAgent() bool {
 	return s.IgnoreExporter
 }
 
+// GetAdvertiseClientURL returns AdvertiseClientURL
+func (s *PDSpec) GetAdvertiseClientURL(enableTLS bool) string {
+	if s.AdvertiseClientAddr != "" {
+		return s.AdvertiseClientAddr
+	}
+	scheme := utils.Ternary(enableTLS, "https", "http").(string)
+	return fmt.Sprintf("%s://%s", scheme, utils.JoinHostPort(s.Host, s.ClientPort))
+}
+
+// GetAdvertisePeerURL returns AdvertisePeerURL
+func (s *PDSpec) GetAdvertisePeerURL(enableTLS bool) string {
+	if s.AdvertisePeerAddr != "" {
+		return s.AdvertisePeerAddr
+	}
+	scheme := utils.Ternary(enableTLS, "https", "http").(string)
+	return fmt.Sprintf("%s://%s", scheme, utils.JoinHostPort(s.Host, s.PeerPort))
+}
+
 // PDComponent represents PD component.
 type PDComponent struct{ Topology *Specification }
 
@@ -175,19 +194,23 @@ func (i *PDInstance) InitConfig(
 
 	enableTLS := topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(*PDSpec)
-	cfg := scripts.
-		NewPDScript(spec.Name, i.GetHost(), paths.Deploy, paths.Data[0], paths.Log).
-		WithNumaNode(spec.NumaNode).
-		WithClientPort(spec.ClientPort).
-		WithPeerPort(spec.PeerPort).
-		AppendEndpoints(topo.Endpoints(deployUser)...).
-		WithListenHost(i.GetListenHost())
+	scheme := utils.Ternary(enableTLS, "https", "http").(string)
 
-	if enableTLS {
-		cfg = cfg.WithScheme("https")
+	initialCluster := []string{}
+	for _, pdspec := range topo.PDServers {
+		initialCluster = append(initialCluster, fmt.Sprintf("%s=%s", pdspec.Name, pdspec.GetAdvertisePeerURL(enableTLS)))
 	}
-	cfg = cfg.WithAdvertiseClientAddr(spec.AdvertiseClientAddr).
-		WithAdvertisePeerAddr(spec.AdvertisePeerAddr)
+	cfg := &scripts.PDScript{
+		Name:               spec.Name,
+		ClientURL:          fmt.Sprintf("%s://%s", scheme, utils.JoinHostPort(i.ListenHost, spec.ClientPort)),
+		AdvertiseClientURL: spec.GetAdvertiseClientURL(enableTLS),
+		PeerURL:            fmt.Sprintf("%s://%s", scheme, utils.JoinHostPort(i.ListenHost, spec.PeerPort)),
+		AdvertisePeerURL:   spec.GetAdvertisePeerURL(enableTLS),
+		DeployDir:          paths.Deploy,
+		DataDir:            paths.Data[0],
+		LogDir:             paths.Log,
+		InitialCluster:     strings.Join(initialCluster, ","),
+	}
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pd_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
@@ -294,22 +317,23 @@ func (i *PDInstance) ScaleConfig(
 
 	cluster := mustBeClusterTopo(topo)
 	spec := i.InstanceSpec.(*PDSpec)
-	cfg0 := scripts.NewPDScript(
-		i.Name,
-		i.GetHost(),
-		paths.Deploy,
-		paths.Data[0],
-		paths.Log,
-	).WithPeerPort(spec.PeerPort).
-		WithNumaNode(spec.NumaNode).
-		WithClientPort(spec.ClientPort).
-		AppendEndpoints(cluster.Endpoints(deployUser)...).
-		WithListenHost(i.GetListenHost())
-	if topo.BaseTopo().GlobalOptions.TLSEnabled {
-		cfg0 = cfg0.WithScheme("https")
+
+	initialCluster := []string{}
+	for _, pdspec := range cluster.PDServers {
+		initialCluster = append(initialCluster, fmt.Sprintf("%s=%s", pdspec.Name, pdspec.GetAdvertisePeerURL(cluster.GlobalOptions.TLSEnabled)))
 	}
-	cfg0 = cfg0.WithAdvertiseClientAddr(spec.AdvertiseClientAddr).
-		WithAdvertisePeerAddr(spec.AdvertisePeerAddr)
+	cfg0 := &scripts.PDScript{
+		Name:               spec.Name,
+		ClientURL:          spec.GetAdvertiseClientURL(cluster.GlobalOptions.TLSEnabled),
+		AdvertiseClientURL: spec.AdvertiseClientAddr,
+		PeerURL:            spec.GetAdvertisePeerURL(cluster.GlobalOptions.TLSEnabled),
+		AdvertisePeerURL:   spec.AdvertisePeerAddr,
+		DeployDir:          paths.Deploy,
+		DataDir:            paths.Data[0],
+		LogDir:             paths.Log,
+		InitialCluster:     strings.Join(initialCluster, ","),
+	}
+
 	cfg := scripts.NewPDScaleScript(cfg0)
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pd_%s_%d.sh", i.GetHost(), i.GetPort()))

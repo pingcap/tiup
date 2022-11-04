@@ -234,10 +234,7 @@ func (i *TiSparkMasterInstance) InitConfig(
 	}
 
 	// transfer default config
-	pdList := make([]string, 0)
-	for _, pd := range topo.Endpoints(deployUser) {
-		pdList = append(pdList, utils.JoinHostPort(pd.IP, pd.ClientPort))
-	}
+	pdList := topo.GetPDList()
 	masterList := make([]string, 0)
 	for _, master := range topo.TiSparkMasters {
 		masterList = append(masterList, utils.JoinHostPort(master.Host, master.Port))
@@ -397,10 +394,7 @@ func (i *TiSparkWorkerInstance) InitConfig(
 	}
 
 	// transfer default config
-	pdList := make([]string, 0)
-	for _, pd := range topo.Endpoints(deployUser) {
-		pdList = append(pdList, utils.JoinHostPort(pd.IP, pd.ClientPort))
-	}
+	pdList := topo.GetPDList()
 	masterList := make([]string, 0)
 	for _, master := range topo.TiSparkMasters {
 		masterList = append(masterList, utils.JoinHostPort(master.Host, master.Port))
