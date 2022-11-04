@@ -20,112 +20,42 @@ import (
 	"text/template"
 
 	"github.com/pingcap/tiup/embed"
-	"github.com/pingcap/tiup/pkg/tidbver"
-	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // TiKVScript represent the data to generate TiKV config
 type TiKVScript struct {
-	IP                         string
-	ListenHost                 string
+	Addr                       string
 	AdvertiseAddr              string
-	AdvertiseStatusAddr        string
-	Port                       int
-	StatusPort                 int
-	DeployDir                  string
-	DataDir                    string
-	LogDir                     string
+	StatusAddr                 string
 	SupportAdvertiseStatusAddr bool
-	NumaNode                   string
-	NumaCores                  string
-	Endpoints                  []*PDScript
-}
+	AdvertiseStatusAddr        string
+	PD                         string
 
-// NewTiKVScript returns a TiKVScript with given arguments
-func NewTiKVScript(version, ip string, port, statusPort int, deployDir, dataDir, logDir string) *TiKVScript {
-	return &TiKVScript{
-		IP:                         ip,
-		AdvertiseAddr:              utils.JoinHostPort(ip, port),
-		AdvertiseStatusAddr:        utils.JoinHostPort(ip, statusPort),
-		Port:                       port,
-		StatusPort:                 statusPort,
-		DeployDir:                  deployDir,
-		DataDir:                    dataDir,
-		LogDir:                     logDir,
-		SupportAdvertiseStatusAddr: tidbver.TiKVSupportAdvertiseStatusAddr(version),
-	}
-}
+	DeployDir string
+	DataDir   string
+	LogDir    string
 
-// WithListenHost set ListenHost field of TiKVScript
-func (c *TiKVScript) WithListenHost(listenHost string) *TiKVScript {
-	c.ListenHost = listenHost
-	return c
-}
-
-// WithAdvertiseAddr set AdvertiseAddr of TiKVScript
-func (c *TiKVScript) WithAdvertiseAddr(addr string) *TiKVScript {
-	if addr != "" {
-		c.AdvertiseAddr = addr
-	}
-	return c
-}
-
-// WithAdvertiseStatusAddr set AdvertiseStatusAddr of TiKVScript
-func (c *TiKVScript) WithAdvertiseStatusAddr(addr string) *TiKVScript {
-	if addr != "" {
-		c.AdvertiseStatusAddr = addr
-	}
-	return c
-}
-
-// WithNumaNode set NumaNode field of TiKVScript
-func (c *TiKVScript) WithNumaNode(numa string) *TiKVScript {
-	c.NumaNode = numa
-	return c
-}
-
-// WithNumaCores set NumaCores field of TiKVScript
-func (c *TiKVScript) WithNumaCores(numaCores string) *TiKVScript {
-	c.NumaCores = numaCores
-	return c
-}
-
-// AppendEndpoints add new PDScript to Endpoints field
-func (c *TiKVScript) AppendEndpoints(ends ...*PDScript) *TiKVScript {
-	c.Endpoints = append(c.Endpoints, ends...)
-	return c
-}
-
-// Config generate the config file data.
-func (c *TiKVScript) Config() ([]byte, error) {
-	fp := path.Join("templates", "scripts", "run_tikv.sh.tpl")
-	tpl, err := embed.ReadTemplate(fp)
-	if err != nil {
-		return nil, err
-	}
-	return c.ConfigWithTemplate(string(tpl))
+	NumaNode  string
+	NumaCores string
 }
 
 // ConfigToFile write config content to specific path
 func (c *TiKVScript) ConfigToFile(file string) error {
-	config, err := c.Config()
+	fp := path.Join("templates", "scripts", "run_tikv.sh.tpl")
+	tpl, err := embed.ReadTemplate(fp)
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(file, config, 0755)
-}
 
-// ConfigWithTemplate generate the TiKV config content by tpl
-func (c *TiKVScript) ConfigWithTemplate(tpl string) ([]byte, error) {
-	tmpl, err := template.New("TiKV").Parse(tpl)
+	tmpl, err := template.New("TiKV").Parse(string(tpl))
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	content := bytes.NewBufferString("")
 	if err := tmpl.Execute(content, c); err != nil {
-		return nil, err
+		return err
 	}
 
-	return content.Bytes(), nil
+	return os.WriteFile(file, content.Bytes(), 0755)
 }
