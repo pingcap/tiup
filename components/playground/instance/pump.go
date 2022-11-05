@@ -58,7 +58,7 @@ func (p *Pump) NodeID() string {
 
 // Ready return nil when pump is ready to serve.
 func (p *Pump) Ready(ctx context.Context) error {
-	url := fmt.Sprintf("http://%s:%d/status", p.Host, p.Port)
+	url := fmt.Sprintf("http://%s/status", utils.JoinHostPort(p.Host, p.Port))
 
 	ready := func() bool {
 		resp, err := http.Get(url)
@@ -85,7 +85,7 @@ func (p *Pump) Ready(ctx context.Context) error {
 
 // Addr return the address of Pump.
 func (p *Pump) Addr() string {
-	return fmt.Sprintf("%s:%d", AdvertiseHost(p.Host), p.Port)
+	return utils.JoinHostPort(AdvertiseHost(p.Host), p.Port)
 }
 
 // Start implements Instance interface.
@@ -94,8 +94,8 @@ func (p *Pump) Start(ctx context.Context, version utils.Version) error {
 
 	args := []string{
 		fmt.Sprintf("--node-id=%s", p.NodeID()),
-		fmt.Sprintf("--addr=%s:%d", p.Host, p.Port),
-		fmt.Sprintf("--advertise-addr=%s:%d", AdvertiseHost(p.Host), p.Port),
+		fmt.Sprintf("--addr=%s", utils.JoinHostPort(p.Host, p.Port)),
+		fmt.Sprintf("--advertise-addr=%s", utils.JoinHostPort(AdvertiseHost(p.Host), p.Port)),
 		fmt.Sprintf("--pd-urls=%s", strings.Join(endpoints, ",")),
 		fmt.Sprintf("--log-file=%s", p.LogFile()),
 	}

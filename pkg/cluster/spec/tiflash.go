@@ -68,7 +68,7 @@ type TiFlashSpec struct {
 
 // Status queries current status of the instance
 func (s *TiFlashSpec) Status(ctx context.Context, timeout time.Duration, tlsCfg *tls.Config, pdList ...string) string {
-	storeAddr := fmt.Sprintf("%s:%d", s.Host, s.FlashServicePort)
+	storeAddr := utils.JoinHostPort(s.Host, s.FlashServicePort)
 	state := checkStoreStatus(ctx, storeAddr, tlsCfg, pdList...)
 	if s.Offline && strings.ToLower(state) == "offline" {
 		state = "Pending Offline" // avoid misleading
@@ -632,7 +632,7 @@ func (i *TiFlashInstance) InitConfig(
 
 	tidbStatusAddrs := []string{}
 	for _, tidb := range topo.TiDBServers {
-		tidbStatusAddrs = append(tidbStatusAddrs, fmt.Sprintf("%s:%d", tidb.Host, uint64(tidb.StatusPort)))
+		tidbStatusAddrs = append(tidbStatusAddrs, utils.JoinHostPort(tidb.Host, tidb.StatusPort))
 	}
 	tidbStatusStr := strings.Join(tidbStatusAddrs, ",")
 
@@ -766,7 +766,7 @@ type replicateConfig struct {
 func (i *TiFlashInstance) getEndpoints(topo Topology) []string {
 	var endpoints []string
 	for _, pd := range topo.(*Specification).PDServers {
-		endpoints = append(endpoints, fmt.Sprintf("%s:%d", pd.Host, uint64(pd.ClientPort)))
+		endpoints = append(endpoints, utils.JoinHostPort(pd.Host, pd.ClientPort))
 	}
 	return endpoints
 }
@@ -810,7 +810,7 @@ func (i *TiFlashInstance) Ready(ctx context.Context, e ctxt.Executor, timeout ui
 	if i.topo.BaseTopo().GlobalOptions.TLSEnabled {
 		scheme = "https"
 	}
-	addr := fmt.Sprintf("%s://%s:%d/tiflash/store-status", scheme, i.Host, i.GetStatusPort())
+	addr := fmt.Sprintf("%s://%s/tiflash/store-status", scheme, utils.JoinHostPort(i.Host, i.GetStatusPort()))
 	req, err := http.NewRequest("GET", addr, nil)
 	if err != nil {
 		return err

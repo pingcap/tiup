@@ -33,6 +33,7 @@ import (
 	"github.com/pingcap/tiup/pkg/proxy"
 	"github.com/pingcap/tiup/pkg/tidbver"
 	"github.com/pingcap/tiup/pkg/tui"
+	"github.com/pingcap/tiup/pkg/utils"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.uber.org/zap"
 )
@@ -296,7 +297,7 @@ func (s *Specification) GetTiKVLabels() (map[string]map[string]string, []map[str
 	kvs := s.TiKVServers
 	locationLabels := map[string]map[string]string{}
 	for _, kv := range kvs {
-		address := fmt.Sprintf("%s:%d", kv.Host, kv.GetMainPort())
+		address := utils.JoinHostPort(kv.Host, kv.GetMainPort())
 		var err error
 		if locationLabels[address], err = kv.Labels(); err != nil {
 			return nil, nil, err
@@ -409,7 +410,7 @@ func (s *Specification) GetPDList() []string {
 	var pdList []string
 
 	for _, pd := range s.PDServers {
-		pdList = append(pdList, fmt.Sprintf("%s:%d", pd.Host, pd.ClientPort))
+		pdList = append(pdList, utils.JoinHostPort(pd.Host, pd.ClientPort))
 	}
 
 	return pdList
@@ -419,7 +420,7 @@ func (s *Specification) GetPDList() []string {
 func (s *Specification) GetCDCList() []string {
 	var result []string
 	for _, server := range s.CDCServers {
-		result = append(result, fmt.Sprintf("%s:%d", server.Host, server.Port))
+		result = append(result, utils.JoinHostPort(server.Host, server.Port))
 	}
 	return result
 }

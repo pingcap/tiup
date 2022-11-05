@@ -83,13 +83,13 @@ type replicateEnablePlacementRulesConfig struct {
 
 // Addr return the address of tiflash
 func (inst *TiFlashInstance) Addr() string {
-	return fmt.Sprintf("%s:%d", AdvertiseHost(inst.Host), inst.ServicePort)
+	return utils.JoinHostPort(AdvertiseHost(inst.Host), inst.ServicePort)
 }
 
 // StatusAddrs implements Instance interface.
 func (inst *TiFlashInstance) StatusAddrs() (addrs []string) {
-	addrs = append(addrs, fmt.Sprintf("%s:%d", inst.Host, inst.StatusPort))
-	addrs = append(addrs, fmt.Sprintf("%s:%d", inst.Host, inst.ProxyStatusPort))
+	addrs = append(addrs, utils.JoinHostPort(inst.Host, inst.StatusPort))
+	addrs = append(addrs, utils.JoinHostPort(inst.Host, inst.ProxyStatusPort))
 	return
 }
 
@@ -99,7 +99,7 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version utils.Version) e
 
 	tidbStatusAddrs := make([]string, 0, len(inst.dbs))
 	for _, db := range inst.dbs {
-		tidbStatusAddrs = append(tidbStatusAddrs, fmt.Sprintf("%s:%d", AdvertiseHost(db.Host), uint64(db.StatusPort)))
+		tidbStatusAddrs = append(tidbStatusAddrs, utils.JoinHostPort(AdvertiseHost(db.Host), db.StatusPort))
 	}
 	wd, err := filepath.Abs(inst.Dir)
 	if err != nil {
@@ -179,7 +179,7 @@ func (inst *TiFlashInstance) Cmd() *exec.Cmd {
 
 // StoreAddr return the store address of TiFlash
 func (inst *TiFlashInstance) StoreAddr() string {
-	return fmt.Sprintf("%s:%d", AdvertiseHost(inst.Host), inst.ServicePort)
+	return utils.JoinHostPort(AdvertiseHost(inst.Host), inst.ServicePort)
 }
 
 func (inst *TiFlashInstance) checkConfig(deployDir, clusterManagerPath string, version utils.Version, tidbStatusAddrs, endpoints []string) error {

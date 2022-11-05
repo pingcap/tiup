@@ -33,6 +33,7 @@ import (
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // CheckOptions contains the options for check command
@@ -339,7 +340,7 @@ func checkSystemInfo(
 				"",
 				false,
 			).
-			BuildAsStep(fmt.Sprintf("  - Getting system info of %s:%d", inst.GetHost(), inst.GetSSHPort()))
+			BuildAsStep("  - Getting system info of " + utils.JoinHostPort(inst.GetHost(), inst.GetSSHPort()))
 		collectTasks = append(collectTasks, t2)
 
 		t3 := task.NewBuilder(logger).
@@ -363,7 +364,7 @@ func checkSystemInfo(
 				topo.GlobalOptions.SSHType,
 			).
 			Rmdir(inst.GetHost(), task.CheckToolsPathDir).
-			BuildAsStep(fmt.Sprintf("  - Cleanup check files on %s:%d", inst.GetHost(), inst.GetSSHPort()))
+			BuildAsStep("  - Cleanup check files on " + utils.JoinHostPort(inst.GetHost(), inst.GetSSHPort()))
 		cleanTasks = append(cleanTasks, t3)
 	}
 

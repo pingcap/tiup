@@ -51,7 +51,7 @@ func NewTiKVInstance(binPath string, dir, host, configPath string, id int, pds [
 
 // Addr return the address of tikv.
 func (inst *TiKVInstance) Addr() string {
-	return fmt.Sprintf("%s:%d", inst.Host, inst.Port)
+	return utils.JoinHostPort(inst.Host, inst.Port)
 }
 
 // Start calls set inst.cmd and Start
@@ -62,9 +62,9 @@ func (inst *TiKVInstance) Start(ctx context.Context, version utils.Version) erro
 
 	endpoints := pdEndpoints(inst.pds, true)
 	args := []string{
-		fmt.Sprintf("--addr=%s:%d", inst.Host, inst.Port),
-		fmt.Sprintf("--advertise-addr=%s:%d", AdvertiseHost(inst.Host), inst.Port),
-		fmt.Sprintf("--status-addr=%s:%d", inst.Host, inst.StatusPort),
+		fmt.Sprintf("--addr=%s", utils.JoinHostPort(inst.Host, inst.Port)),
+		fmt.Sprintf("--advertise-addr=%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.Port)),
+		fmt.Sprintf("--status-addr=%s", utils.JoinHostPort(inst.Host, inst.StatusPort)),
 		fmt.Sprintf("--pd=%s", strings.Join(endpoints, ",")),
 		fmt.Sprintf("--config=%s", inst.ConfigPath),
 		fmt.Sprintf("--data-dir=%s", filepath.Join(inst.Dir, "data")),
@@ -94,7 +94,7 @@ func (inst *TiKVInstance) LogFile() string {
 
 // StoreAddr return the store address of TiKV
 func (inst *TiKVInstance) StoreAddr() string {
-	return fmt.Sprintf("%s:%d", AdvertiseHost(inst.Host), inst.Port)
+	return utils.JoinHostPort(AdvertiseHost(inst.Host), inst.Port)
 }
 
 func (inst *TiKVInstance) checkConfig() error {
