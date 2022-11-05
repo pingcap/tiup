@@ -231,7 +231,7 @@ func (m *Manager) fillHostArchOrOS(s, p *tui.SSHConnectionProps, topo spec.Topol
 		case spec.FullOSType:
 			tf = tf.Shell(inst.GetHost(), "uname -s", "", false)
 		case spec.FullCPUFlagsType:
-			tf = tf.Shell(inst.GetHost(), "cat /proc/cpuinfo 2>&1 | grep flags | head -n 1 || echo", "", false)
+			tf = tf.Shell(inst.GetHost(), "command -v lscpu >/dev/null 2>&1 && lscpu || true", "", false)
 		default:
 			tf = tf.Shell(inst.GetHost(), "uname -m", "", false)
 		}
@@ -261,7 +261,7 @@ func (m *Manager) fillHostArchOrOS(s, p *tui.SSHConnectionProps, topo spec.Topol
 		}
 		if fullType == spec.FullCPUFlagsType {
 			cpuFlags := strings.Trim(string(stdout), "\n")
-			flags := strings.Split(cpuFlags, ":")
+			flags := strings.Split(cpuFlags, "Flags:")
 			if len(flags) != 2 {
 				cpuFlags = ""
 			} else {
