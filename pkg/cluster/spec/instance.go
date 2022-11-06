@@ -332,7 +332,7 @@ func (i *BaseInstance) GetHost() string {
 func (i *BaseInstance) GetListenHost() string {
 	if i.ListenHost == "" {
 		// ipv6 address
-		if strings.Contains(i.Host, "") {
+		if strings.Contains(i.Host, ":") {
 			return "::"
 		}
 		return "0.0.0.0"

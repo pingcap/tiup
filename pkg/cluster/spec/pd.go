@@ -202,9 +202,9 @@ func (i *PDInstance) InitConfig(
 	}
 	cfg := &scripts.PDScript{
 		Name:               spec.Name,
-		ClientURL:          fmt.Sprintf("%s://%s", scheme, utils.JoinHostPort(i.ListenHost, spec.ClientPort)),
+		ClientURL:          fmt.Sprintf("%s://%s", scheme, utils.JoinHostPort(i.GetListenHost(), spec.ClientPort)),
 		AdvertiseClientURL: spec.GetAdvertiseClientURL(enableTLS),
-		PeerURL:            fmt.Sprintf("%s://%s", scheme, utils.JoinHostPort(i.ListenHost, spec.PeerPort)),
+		PeerURL:            fmt.Sprintf("%s://%s", scheme, utils.JoinHostPort(i.GetListenHost(), spec.PeerPort)),
 		AdvertisePeerURL:   spec.GetAdvertisePeerURL(enableTLS),
 		DeployDir:          paths.Deploy,
 		DataDir:            paths.Data[0],

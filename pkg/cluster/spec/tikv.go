@@ -222,9 +222,9 @@ func (i *TiKVInstance) InitConfig(
 		pds = append(pds, utils.JoinHostPort(pdspec.Host, pdspec.ClientPort))
 	}
 	cfg := &scripts.TiKVScript{
-		Addr:                       utils.JoinHostPort(i.ListenHost, spec.Port),
+		Addr:                       utils.JoinHostPort(i.GetListenHost(), spec.Port),
 		AdvertiseAddr:              utils.Ternary(spec.AdvertiseAddr != "", spec.AdvertiseAddr, utils.JoinHostPort(spec.Host, spec.Port)).(string),
-		StatusAddr:                 utils.JoinHostPort(i.ListenHost, spec.StatusPort),
+		StatusAddr:                 utils.JoinHostPort(i.GetListenHost(), spec.StatusPort),
 		SupportAdvertiseStatusAddr: tidbver.TiKVSupportAdvertiseStatusAddr(clusterVersion),
 		AdvertiseStatusAddr:        utils.Ternary(spec.AdvertiseStatusAddr != "", spec.AdvertiseStatusAddr, utils.JoinHostPort(spec.Host, spec.StatusPort)).(string),
 		PD:                         strings.Join(pds, ","),
