@@ -23,6 +23,8 @@ import (
 	. "github.com/pingcap/check"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/tidbver"
+	"github.com/pingcap/tiup/pkg/utils"
 	"gopkg.in/yaml.v2"
 )
 
@@ -832,8 +834,12 @@ cdc_servers:
 
 	checkByVersion := func(version string) {
 		ins := instances[0].(*CDCInstance)
-		cfg := scripts.NewCDCScript(ins.GetHost(), "", "", false, 0, "").
-			PatchByVersion(version, ins.DataDir())
+		cfg := &scripts.CDCScript{
+			DataDirEnabled:    tidbver.TiCDCSupportDataDir(version),
+			ConfigFileEnabled: tidbver.TiCDCSupportConfigFile(version),
+			TLSEnabled:        false,
+			DataDir:           utils.Ternary(tidbver.TiCDCSupportSortOrDataDir(version), ins.DataDir(), "").(string),
+		}
 
 		wanted := expected[version]
 
