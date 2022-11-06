@@ -18,6 +18,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/pingcap/errors"
@@ -171,15 +172,24 @@ func (i *TiKVCDCInstance) InitConfig(
 	globalConfig := topo.ServerConfigs.TiKVCDC
 	instanceConfig := spec.Config
 
-	cfg := scripts.NewTiKVCDCScript(
-		i.GetHost(),
-		paths.Deploy,
-		paths.Log,
-		paths.Data[0],
-		enableTLS,
-		spec.GCTTL,
-		spec.TZ,
-	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).AppendEndpoints(topo.Endpoints(deployUser)...)
+	pds := []string{}
+	for _, pdspec := range topo.PDServers {
+		pds = append(pds, pdspec.GetAdvertiseClientURL(enableTLS))
+	}
+	cfg := &scripts.TiKVCDCScript{
+		Addr:          utils.JoinHostPort(i.GetListenHost(), spec.Port),
+		AdvertiseAddr: utils.JoinHostPort(spec.Host, spec.Port),
+		PD:            strings.Join(pds, ","),
+		GCTTL:         spec.GCTTL,
+		TZ:            spec.TZ,
+		TLSEnabled:    enableTLS,
+
+		DeployDir: paths.Deploy,
+		LogDir:    paths.Log,
+		DataDir:   paths.Data[0],
+
+		NumaNode: spec.NumaNode,
+	}
 
 	// doesn't work.
 	if _, err := i.setTLSConfig(ctx, false, nil, paths); err != nil {
