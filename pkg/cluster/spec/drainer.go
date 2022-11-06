@@ -20,12 +20,14 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // DrainerSpec represents the Drainer topology specification in topology.yaml
@@ -184,13 +186,22 @@ func (i *DrainerInstance) InitConfig(
 	if i.IsImported() {
 		nodeID = ""
 	}
-	cfg := scripts.NewDrainerScript(
-		nodeID,
-		i.GetHost(),
-		paths.Deploy,
-		paths.Data[0],
-		paths.Log,
-	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).AppendEndpoints(topo.Endpoints(deployUser)...)
+
+	pds := []string{}
+	for _, pdspec := range topo.PDServers {
+		pds = append(pds, pdspec.GetAdvertiseClientURL(enableTLS))
+	}
+	cfg := &scripts.DrainerScript{
+		NodeID: nodeID,
+		Addr:   utils.JoinHostPort(spec.Host, spec.Port),
+		PD:     strings.Join(pds, ","),
+
+		DeployDir: paths.Deploy,
+		DataDir:   paths.Data[0],
+		LogDir:    paths.Log,
+
+		NumaNode: spec.NumaNode,
+	}
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_drainer_%s_%d.sh", i.GetHost(), i.GetPort()))
 
