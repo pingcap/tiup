@@ -371,7 +371,7 @@ func checkTiFlashStorageConfigWithVersion(clusterVersion string, config map[stri
 }
 
 // InitTiFlashConfig initializes TiFlash config file with the configurations in server_configs
-func (i *TiFlashInstance) initTiFlashConfig(ctx context.Context, cfg *scripts.TiFlashScript, clusterVersion string, src map[string]any, paths meta.DirPaths) (map[string]any, error) {
+func (i *TiFlashInstance) initTiFlashConfig(ctx context.Context, clusterVersion string, src map[string]any, paths meta.DirPaths) (map[string]any, error) {
 	var (
 		pathConfig            string
 		isStorageDirsDefined  bool
@@ -386,7 +386,7 @@ func (i *TiFlashInstance) initTiFlashConfig(ctx context.Context, cfg *scripts.Ti
 	if isStorageDirsDefined {
 		pathConfig = "#"
 	} else {
-		pathConfig = fmt.Sprintf(`path: "%s"`, cfg.DataDir)
+		pathConfig = fmt.Sprintf(`path: "%s"`, strings.Join(paths.Data, ","))
 	}
 
 	if tidbver.TiFlashDeprecatedUsersConfig(clusterVersion) {
@@ -419,6 +419,11 @@ func (i *TiFlashInstance) initTiFlashConfig(ctx context.Context, cfg *scripts.Ti
 	port := "http_port"
 	enableTLS := i.topo.(*Specification).GlobalOptions.TLSEnabled
 
+	tidbStatusAddrs := []string{}
+	for _, tidb := range i.topo.(*Specification).TiDBServers {
+		tidbStatusAddrs = append(tidbStatusAddrs, utils.JoinHostPort(tidb.Host, tidb.StatusPort))
+	}
+
 	if enableTLS {
 		port = "https_port"
 	}
@@ -441,14 +446,14 @@ server_configs:
   tiflash:
     default_profile: "default"
     display_name: "TiFlash"
-    listen_host: "0.0.0.0"
+    listen_host: "%[7]s"
     mark_cache_size: 5368709120
     tmp_path: "%[11]s"
     %[1]s
     tcp_port: %[3]d
     `+port+`: %[4]d
     flash.tidb_status_addr: "%[5]s"
-    flash.service_addr: "%[6]s:%[7]d"
+    flash.service_addr: "%[6]s"
     flash.flash_cluster.cluster_manager_path: "%[10]s/bin/tiflash/flash_cluster_manager"
     flash.flash_cluster.log: "%[2]s/tiflash_cluster_manager.log"
     flash.flash_cluster.master_ttl: 60
@@ -465,8 +470,21 @@ server_configs:
     raft.pd_addr: "%[9]s"
     profiles.default.max_memory_usage: 0
     %[12]s
-`, pathConfig, cfg.LogDir, cfg.TCPPort, cfg.HTTPPort, cfg.TiDBStatusAddrs, cfg.IP, cfg.FlashServicePort,
-		cfg.StatusPort, cfg.PDAddrs, cfg.DeployDir, cfg.TmpDir, deprecatedUsersConfig, daemonConfig)), &topo)
+`,
+		pathConfig,
+		paths.Log,
+		spec.TCPPort,
+		spec.HTTPPort,
+		strings.Join(tidbStatusAddrs, ","),
+		utils.JoinHostPort(spec.Host, spec.FlashServicePort),
+		i.GetListenHost(),
+		spec.StatusPort,
+		strings.Join(i.getEndpoints(i.topo), ","),
+		paths.Deploy,
+		fmt.Sprintf("%s/tmp", paths.Data[0]),
+		deprecatedUsersConfig,
+		daemonConfig,
+	)), &topo)
 
 	if err != nil {
 		return nil, err
@@ -494,25 +512,26 @@ func (i *TiFlashInstance) mergeTiFlashInstanceConfig(clusterVersion string, glob
 }
 
 // InitTiFlashLearnerConfig initializes TiFlash learner config file
-func (i *TiFlashInstance) InitTiFlashLearnerConfig(ctx context.Context, cfg *scripts.TiFlashScript, clusterVersion string, src map[string]any, paths meta.DirPaths) (map[string]any, error) {
+func (i *TiFlashInstance) InitTiFlashLearnerConfig(ctx context.Context, clusterVersion string, src map[string]any, paths meta.DirPaths) (map[string]any, error) {
+	spec := i.InstanceSpec.(*TiFlashSpec)
 	topo := Specification{}
 	var statusAddr string
 
-	firstDataDir := strings.Split(cfg.DataDir, ",")[0]
-
 	if tidbver.TiFlashSupportAdvertiseStatusAddr(clusterVersion) {
-		statusAddr = fmt.Sprintf(`server.status-addr: "0.0.0.0:%[2]d"
-    server.advertise-status-addr: "%[1]s:%[2]d"`, cfg.IP, cfg.FlashProxyStatusPort)
+		statusAddr = fmt.Sprintf(`server.status-addr: "%s"
+    server.advertise-status-addr: "%s"`,
+			utils.JoinHostPort(i.GetListenHost(), spec.FlashProxyStatusPort),
+			utils.JoinHostPort(spec.Host, spec.FlashProxyStatusPort))
 	} else {
-		statusAddr = fmt.Sprintf(`server.status-addr: "%[1]s:%[2]d"`, cfg.IP, cfg.FlashProxyStatusPort)
+		statusAddr = fmt.Sprintf(`server.status-addr: "%s"`, utils.JoinHostPort(spec.Host, spec.FlashProxyStatusPort))
 	}
 	err := yaml.Unmarshal([]byte(fmt.Sprintf(`
 server_configs:
   tiflash-learner:
     log-file: "%[1]s/tiflash_tikv.log"
-    server.engine-addr: "%[2]s:%[3]d"
-    server.addr: "0.0.0.0:%[4]d"
-    server.advertise-addr: "%[2]s:%[4]d"
+    server.engine-addr: "%[2]s"
+    server.addr: "%[3]s"
+    server.advertise-addr: "%[4]s"
     %[5]s
     storage.data-dir: "%[6]s/flash"
     rocksdb.wal-dir: ""
@@ -522,14 +541,20 @@ server_configs:
     # Normally the number of TiFlash nodes is smaller than TiKV nodes, and we need more raft threads to match the write speed of TiKV.
     raftstore.apply-pool-size: 4
     raftstore.store-pool-size: 4
-`, cfg.LogDir, cfg.IP, cfg.FlashServicePort, cfg.FlashProxyPort, statusAddr, firstDataDir)), &topo)
+`,
+		paths.Log,
+		utils.JoinHostPort(spec.Host, spec.FlashServicePort),
+		utils.JoinHostPort(i.GetListenHost(), spec.FlashProxyPort),
+		utils.JoinHostPort(spec.Host, spec.FlashProxyPort),
+		statusAddr,
+		paths.Data[0],
+	)), &topo)
 
 	if err != nil {
 		return nil, err
 	}
 
 	enableTLS := i.topo.(*Specification).GlobalOptions.TLSEnabled
-	spec := i.InstanceSpec.(*TiFlashSpec)
 	// set TLS configs
 	spec.LearnerConfig, err = i.setTLSConfigWithTiFlashLearner(ctx, enableTLS, spec.LearnerConfig, paths)
 	if err != nil {
@@ -638,35 +663,17 @@ func (i *TiFlashInstance) InitConfig(
 	if err := i.BaseInstance.InitConfig(ctx, e, topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
-
 	spec := i.InstanceSpec.(*TiFlashSpec)
 
-	tidbStatusAddrs := []string{}
-	for _, tidb := range topo.TiDBServers {
-		tidbStatusAddrs = append(tidbStatusAddrs, utils.JoinHostPort(tidb.Host, tidb.StatusPort))
+	cfg := &scripts.TiFlashScript{
+		RequiredCPUFlags: getTiFlashRequiredCPUFlagsWithVersion(clusterVersion, spec.Arch),
+
+		DeployDir: paths.Deploy,
+		LogDir:    paths.Log,
+
+		NumaNode:  spec.NumaCores,
+		NumaCores: spec.NumaCores,
 	}
-	tidbStatusStr := strings.Join(tidbStatusAddrs, ",")
-
-	pdStr := strings.Join(i.getEndpoints(i.topo), ",")
-
-	cfg := scripts.NewTiFlashScript(
-		i.GetHost(),
-		paths.Deploy,
-		strings.Join(paths.Data, ","),
-		paths.Log,
-		tidbStatusStr,
-		pdStr,
-	).WithTCPPort(spec.TCPPort).
-		WithHTTPPort(spec.HTTPPort).
-		WithFlashServicePort(spec.FlashServicePort).
-		WithFlashProxyPort(spec.FlashProxyPort).
-		WithFlashProxyStatusPort(spec.FlashProxyStatusPort).
-		WithStatusPort(spec.StatusPort).
-		WithTmpDir(spec.TmpDir).
-		WithNumaNode(spec.NumaNode).
-		WithNumaCores(spec.NumaCores).
-		WithRequiredCPUFlags(getTiFlashRequiredCPUFlagsWithVersion(clusterVersion, spec.Arch)).
-		AppendEndpoints(topo.Endpoints(deployUser)...)
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tiflash_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
@@ -682,7 +689,7 @@ func (i *TiFlashInstance) InitConfig(
 		return err
 	}
 
-	conf, err := i.InitTiFlashLearnerConfig(ctx, cfg, clusterVersion, topo.ServerConfigs.TiFlashLearner, paths)
+	conf, err := i.InitTiFlashLearnerConfig(ctx, clusterVersion, topo.ServerConfigs.TiFlashLearner, paths)
 	if err != nil {
 		return err
 	}
@@ -715,7 +722,7 @@ func (i *TiFlashInstance) InitConfig(
 	}
 
 	// Init the configuration using cfg and server_configs
-	if conf, err = i.initTiFlashConfig(ctx, cfg, clusterVersion, topo.ServerConfigs.TiFlash, paths); err != nil {
+	if conf, err = i.initTiFlashConfig(ctx, clusterVersion, topo.ServerConfigs.TiFlash, paths); err != nil {
 		return err
 	}
 
