@@ -24,6 +24,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/template/config"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // AlertmanagerSpec represents the AlertManager topology specification in topology.yaml
@@ -97,6 +98,7 @@ func (c *AlertManagerComponent) Instances() []Instance {
 				InstanceSpec: s,
 				Name:         c.Name(),
 				Host:         s.Host,
+				ListenHost:   s.ListenHost,
 				Port:         s.WebPort,
 				SSHP:         s.SSHPort,
 
@@ -141,14 +143,25 @@ func (i *AlertManagerInstance) InitConfig(
 		return err
 	}
 
-	alertmanagers := i.topo.BaseTopo().Alertmanagers
-
-	enableTLS := gOpts.TLSEnabled
 	// Transfer start script
 	spec := i.InstanceSpec.(*AlertmanagerSpec)
-	cfg := scripts.NewAlertManagerScript(spec.Host, spec.ListenHost, paths.Deploy, paths.Data[0], paths.Log, enableTLS).
-		WithWebPort(spec.WebPort).WithClusterPort(spec.ClusterPort).WithNumaNode(spec.NumaNode).
-		AppendEndpoints(AlertManagerEndpoints(alertmanagers, deployUser, enableTLS))
+
+	peers := []string{}
+	for _, amspec := range i.topo.BaseTopo().Alertmanagers {
+		peers = append(peers, utils.JoinHostPort(amspec.Host, amspec.ClusterPort))
+	}
+	cfg := &scripts.AlertManagerScript{
+		WebListenAddr:     utils.JoinHostPort(i.GetListenHost(), spec.WebPort),
+		WebExternalURL:    fmt.Sprintf("http://%s", utils.JoinHostPort(spec.Host, spec.WebPort)),
+		ClusterPeers:      peers,
+		ClusterListenAddr: utils.JoinHostPort(i.GetListenHost(), spec.ClusterPort),
+
+		DeployDir: paths.Deploy,
+		LogDir:    paths.Log,
+		DataDir:   paths.Data[0],
+
+		NumaNode: spec.NumaNode,
+	}
 
 	// doesn't work
 	if _, err := i.setTLSConfig(ctx, false, nil, paths); err != nil {
