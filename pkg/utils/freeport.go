@@ -14,7 +14,6 @@
 package utils
 
 import (
-	"fmt"
 	"net"
 	"sync"
 	"time"
@@ -43,7 +42,7 @@ func MustGetFreePort(host string, priority int) int {
 }
 
 func getPort(host string, port int) (int, error) {
-	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", host, port))
+	addr, err := net.ResolveTCPAddr("tcp", JoinHostPort(host, port))
 	if err != nil {
 		return 0, err
 	}
@@ -56,7 +55,7 @@ func getPort(host string, port int) (int, error) {
 	port = l.Addr().(*net.TCPAddr).Port
 	l.Close()
 
-	key := fmt.Sprintf("%s:%d", host, port)
+	key := JoinHostPort(host, port)
 	if t, ok := portCache.Load(key); ok && t.(time.Time).Add(time.Minute).After(time.Now()) {
 		return getPort(host, (port+1)%65536)
 	}

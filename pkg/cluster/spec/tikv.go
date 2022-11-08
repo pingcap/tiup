@@ -414,7 +414,7 @@ func addr(spec *TiKVSpec) string {
 	if spec.Port == 0 || spec.Port == 80 {
 		panic(fmt.Sprintf("invalid TiKV port %d", spec.Port))
 	}
-	return spec.Host + ":" + strconv.Itoa(spec.Port)
+	return utils.JoinHostPort(spec.Host, spec.Port)
 }
 
 func genLeaderCounter(topo *Specification, tlsCfg *tls.Config) func(string) (int, error) {
@@ -422,9 +422,9 @@ func genLeaderCounter(topo *Specification, tlsCfg *tls.Config) func(string) (int
 		statusAddress := ""
 		foundIds := []string{}
 		for _, kv := range topo.TiKVServers {
-			kvid := fmt.Sprintf("%s:%d", kv.Host, kv.Port)
+			kvid := utils.JoinHostPort(kv.Host, kv.Port)
 			if id == kvid {
-				statusAddress = fmt.Sprintf("%s:%d", kv.Host, kv.StatusPort)
+				statusAddress = utils.JoinHostPort(kv.Host, kv.StatusPort)
 				break
 			}
 			foundIds = append(foundIds, kvid)

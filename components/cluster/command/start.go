@@ -23,6 +23,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/crypto/rand"
 	"github.com/pingcap/tiup/pkg/proxy"
+	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 
 	// for sql/driver
@@ -116,7 +117,7 @@ func initPassword(clusterName string) (string, error) {
 	var lastErr error
 	for _, spec := range metadata.Topology.TiDBServers {
 		spec := spec
-		endpoint := fmt.Sprintf("%s:%d", spec.Host, spec.Port)
+		endpoint := utils.JoinHostPort(spec.Host, spec.Port)
 		if tcpProxy != nil {
 			closeC := tcpProxy.Run([]string{endpoint})
 			defer tcpProxy.Close(closeC)

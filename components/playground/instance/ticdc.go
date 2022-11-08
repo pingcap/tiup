@@ -56,8 +56,8 @@ func (c *TiCDC) Start(ctx context.Context, version utils.Version) error {
 
 	args := []string{
 		"server",
-		fmt.Sprintf("--addr=%s:%d", c.Host, c.Port),
-		fmt.Sprintf("--advertise-addr=%s:%d", AdvertiseHost(c.Host), c.Port),
+		fmt.Sprintf("--addr=%s", utils.JoinHostPort(c.Host, c.Port)),
+		fmt.Sprintf("--advertise-addr=%s", utils.JoinHostPort(AdvertiseHost(c.Host), c.Port)),
 		fmt.Sprintf("--pd=%s", strings.Join(endpoints, ",")),
 		fmt.Sprintf("--log-file=%s", c.LogFile()),
 	}

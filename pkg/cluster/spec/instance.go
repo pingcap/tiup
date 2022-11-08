@@ -31,6 +31,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/module"
 	system "github.com/pingcap/tiup/pkg/cluster/template/systemd"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/utils"
 	"go.uber.org/zap"
 )
 
@@ -291,7 +292,7 @@ func (i *BaseInstance) mergeTiFlashLearnerServerConfig(ctx context.Context, e ct
 
 // ID returns the identifier of this instance, the ID is constructed by host:port
 func (i *BaseInstance) ID() string {
-	return fmt.Sprintf("%s:%d", i.Host, i.Port)
+	return utils.JoinHostPort(i.Host, i.Port)
 }
 
 // ComponentName implements Instance interface
