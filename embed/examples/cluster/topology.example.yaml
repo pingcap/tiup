@@ -330,6 +330,8 @@ monitoring_servers:
     # log_dir: "/tidb-deploy/prometheus-8249/log"
     # prometheus rule dir on TiUP machine
     # rule_dir: /home/tidb/prometheus_rule
+    # scrape_interval: 15s
+    # scrape_timeout: 10s
 # # Server configs are used to specify the configuration of Grafana Servers.  
 grafana_servers:
   # # The ip address of the Grafana Server.
