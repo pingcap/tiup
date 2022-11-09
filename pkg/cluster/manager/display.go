@@ -207,7 +207,7 @@ func (m *Manager) Display(dopt DisplayOption, opt operator.Options) error {
 			continue
 		}
 		if strings.HasPrefix(v.Status, "Up") || strings.HasPrefix(v.Status, "Healthy") {
-			instAddr := fmt.Sprintf("%s:%d", v.Host, v.Port)
+			instAddr := utils.JoinHostPort(v.Host, v.Port)
 			masterActive = append(masterActive, instAddr)
 		}
 	}
@@ -242,7 +242,7 @@ func (m *Manager) Display(dopt DisplayOption, opt operator.Options) error {
 	if m.logger.GetDisplayMode() == logprinter.DisplayModeJSON {
 		grafanaURLs := getGrafanaURL(clusterInstInfos)
 		if len(grafanaURLs) != 0 {
-			j.ClusterMetaInfo.GrafanaURLS = grafanaURLs		
+			j.ClusterMetaInfo.GrafanaURLS = grafanaURLs
 		}
 	} else {
 		urls, exist := getGrafanaURLStr(clusterInstInfos)
@@ -294,7 +294,7 @@ func getGrafanaURL(clusterInstInfos []InstInfo) (result []string) {
 	var grafanaURLs []string
 	for _, instance := range clusterInstInfos {
 		if instance.Role == "grafana" {
-			grafanaURLs = append(grafanaURLs, fmt.Sprintf("http://%s:%d", instance.Host, instance.Port))
+			grafanaURLs = append(grafanaURLs, "http://"+utils.JoinHostPort(instance.Host, instance.Port))
 		}
 	}
 	return grafanaURLs
@@ -401,7 +401,7 @@ func (m *Manager) DisplayTiKVLabels(dopt DisplayOption, opt operator.Options) er
 		if ins.ComponentName() == spec.ComponentPD {
 			status := ins.Status(ctx, statusTimeout, tlsCfg, masterList...)
 			if strings.HasPrefix(status, "Up") || strings.HasPrefix(status, "Healthy") {
-				instAddr := fmt.Sprintf("%s:%d", ins.GetHost(), ins.GetPort())
+				instAddr := utils.JoinHostPort(ins.GetHost(), ins.GetPort())
 				mu.Lock()
 				masterActive = append(masterActive, instAddr)
 				mu.Unlock()
@@ -529,7 +529,7 @@ func (m *Manager) GetClusterTopology(dopt DisplayOption, opt operator.Options) (
 		status := ins.Status(ctx, statusTimeout, tlsCfg, masterList...)
 		mu.Lock()
 		if strings.HasPrefix(status, "Up") || strings.HasPrefix(status, "Healthy") {
-			instAddr := fmt.Sprintf("%s:%d", ins.GetHost(), ins.GetPort())
+			instAddr := utils.JoinHostPort(ins.GetHost(), ins.GetPort())
 			masterActive = append(masterActive, instAddr)
 		}
 		masterStatus[ins.ID()] = status
@@ -564,7 +564,7 @@ func (m *Manager) GetClusterTopology(dopt DisplayOption, opt operator.Options) (
 		switch ins.ComponentName() {
 		case spec.ComponentPD:
 			status = masterStatus[ins.ID()]
-			instAddr := fmt.Sprintf("%s:%d", ins.GetHost(), ins.GetPort())
+			instAddr := utils.JoinHostPort(ins.GetHost(), ins.GetPort())
 			if dashboardAddr == instAddr {
 				status += "|UI"
 			}
@@ -778,7 +778,7 @@ func (m *Manager) DisplayDashboardInfo(clusterName string, timeout time.Duration
 
 	pdEndpoints := make([]string, 0)
 	for _, pd := range metadata.Topology.PDServers {
-		pdEndpoints = append(pdEndpoints, fmt.Sprintf("%s:%d", pd.Host, pd.ClientPort))
+		pdEndpoints = append(pdEndpoints, utils.JoinHostPort(pd.Host, pd.ClientPort))
 	}
 
 	ctx := context.WithValue(context.Background(), logprinter.ContextKeyLogger, m.logger)

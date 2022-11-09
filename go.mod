@@ -35,7 +35,7 @@ require (
 	github.com/pingcap/errors v0.11.5-0.20201126102027-b0a155152ca3
 	github.com/pingcap/failpoint v0.0.0-20220801062533-2eaa32854a6c
 	github.com/pingcap/fn v1.0.0
-	github.com/pingcap/kvproto v0.0.0-20220525022339-6aaebf466305
+	github.com/pingcap/kvproto v0.0.0-20220913050750-f6d05706948a
 	github.com/pingcap/tidb-insight/collector v0.0.0-20220902034607-fb5ae0ddc8c1
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_model v0.2.0

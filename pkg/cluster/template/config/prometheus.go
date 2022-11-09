@@ -15,13 +15,13 @@ package config
 
 import (
 	"bytes"
-	"fmt"
 	"os"
 	"path"
 	"text/template"
 
 	"github.com/pingcap/tiup/embed"
 	"github.com/pingcap/tiup/pkg/tidbver"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // PrometheusConfig represent the data to generate Prometheus config
@@ -68,73 +68,73 @@ func NewPrometheusConfig(clusterName, clusterVersion string, enableTLS bool) *Pr
 
 // AddNodeExpoertor add a node expoter address
 func (c *PrometheusConfig) AddNodeExpoertor(ip string, port uint64) *PrometheusConfig {
-	c.NodeExporterAddrs = append(c.NodeExporterAddrs, fmt.Sprintf("%s:%d", ip, port))
+	c.NodeExporterAddrs = append(c.NodeExporterAddrs, utils.JoinHostPort(ip, int(port)))
 	return c
 }
 
 // AddTiDB add a TiDB address
 func (c *PrometheusConfig) AddTiDB(ip string, port uint64) *PrometheusConfig {
-	c.TiDBStatusAddrs = append(c.TiDBStatusAddrs, fmt.Sprintf("%s:%d", ip, port))
+	c.TiDBStatusAddrs = append(c.TiDBStatusAddrs, utils.JoinHostPort(ip, int(port)))
 	return c
 }
 
 // AddTiKV add a TiKV address
 func (c *PrometheusConfig) AddTiKV(ip string, port uint64) *PrometheusConfig {
-	c.TiKVStatusAddrs = append(c.TiKVStatusAddrs, fmt.Sprintf("%s:%d", ip, port))
+	c.TiKVStatusAddrs = append(c.TiKVStatusAddrs, utils.JoinHostPort(ip, int(port)))
 	return c
 }
 
 // AddPD add a PD address
 func (c *PrometheusConfig) AddPD(ip string, port uint64) *PrometheusConfig {
-	c.PDAddrs = append(c.PDAddrs, fmt.Sprintf("%s:%d", ip, port))
+	c.PDAddrs = append(c.PDAddrs, utils.JoinHostPort(ip, int(port)))
 	return c
 }
 
 // AddTiFlashLearner add a TiFlash learner address
 func (c *PrometheusConfig) AddTiFlashLearner(ip string, port uint64) *PrometheusConfig {
-	c.TiFlashLearnerStatusAddrs = append(c.TiFlashLearnerStatusAddrs, fmt.Sprintf("%s:%d", ip, port))
+	c.TiFlashLearnerStatusAddrs = append(c.TiFlashLearnerStatusAddrs, utils.JoinHostPort(ip, int(port)))
 	return c
 }
 
 // AddTiFlash add a TiFlash address
 func (c *PrometheusConfig) AddTiFlash(ip string, port uint64) *PrometheusConfig {
-	c.TiFlashStatusAddrs = append(c.TiFlashStatusAddrs, fmt.Sprintf("%s:%d", ip, port))
+	c.TiFlashStatusAddrs = append(c.TiFlashStatusAddrs, utils.JoinHostPort(ip, int(port)))
 	return c
 }
 
 // AddPump add a pump address
 func (c *PrometheusConfig) AddPump(ip string, port uint64) *PrometheusConfig {
-	c.PumpAddrs = append(c.PumpAddrs, fmt.Sprintf("%s:%d", ip, port))
+	c.PumpAddrs = append(c.PumpAddrs, utils.JoinHostPort(ip, int(port)))
 	return c
 }
 
 // AddDrainer add a drainer address
 func (c *PrometheusConfig) AddDrainer(ip string, port uint64) *PrometheusConfig {
-	c.DrainerAddrs = append(c.DrainerAddrs, fmt.Sprintf("%s:%d", ip, port))
+	c.DrainerAddrs = append(c.DrainerAddrs, utils.JoinHostPort(ip, int(port)))
 	return c
 }
 
 // AddCDC add a cdc address
 func (c *PrometheusConfig) AddCDC(ip string, port uint64) *PrometheusConfig {
-	c.CDCAddrs = append(c.CDCAddrs, fmt.Sprintf("%s:%d", ip, port))
+	c.CDCAddrs = append(c.CDCAddrs, utils.JoinHostPort(ip, int(port)))
 	return c
 }
 
 // AddTiKVCDC add a tikv-cdc address
 func (c *PrometheusConfig) AddTiKVCDC(ip string, port uint64) *PrometheusConfig {
-	c.TiKVCDCAddrs = append(c.TiKVCDCAddrs, fmt.Sprintf("%s:%d", ip, port))
+	c.TiKVCDCAddrs = append(c.TiKVCDCAddrs, utils.JoinHostPort(ip, int(port)))
 	return c
 }
 
 // AddBlackboxExporter add a BlackboxExporter address
 func (c *PrometheusConfig) AddBlackboxExporter(ip string, port uint64) *PrometheusConfig {
-	c.BlackboxExporterAddrs = append(c.BlackboxExporterAddrs, fmt.Sprintf("%s:%d", ip, port))
+	c.BlackboxExporterAddrs = append(c.BlackboxExporterAddrs, utils.JoinHostPort(ip, int(port)))
 	return c
 }
 
 // AddLightning add a lightning address
 func (c *PrometheusConfig) AddLightning(ip string, port uint64) *PrometheusConfig {
-	c.LightningAddrs = append(c.LightningAddrs, fmt.Sprintf("%s:%d", ip, port))
+	c.LightningAddrs = append(c.LightningAddrs, utils.JoinHostPort(ip, int(port)))
 	return c
 }
 
@@ -146,43 +146,43 @@ func (c *PrometheusConfig) AddMonitoredServer(ip string) *PrometheusConfig {
 
 // AddAlertmanager add an alertmanager address
 func (c *PrometheusConfig) AddAlertmanager(ip string, port uint64) *PrometheusConfig {
-	c.AlertmanagerAddrs = append(c.AlertmanagerAddrs, fmt.Sprintf("%s:%d", ip, port))
+	c.AlertmanagerAddrs = append(c.AlertmanagerAddrs, utils.JoinHostPort(ip, int(port)))
 	return c
 }
 
 // AddPushgateway add an pushgateway address
 func (c *PrometheusConfig) AddPushgateway(ip string, port uint64) *PrometheusConfig {
-	c.PushgatewayAddr = fmt.Sprintf("%s:%d", ip, port)
+	c.PushgatewayAddr = utils.JoinHostPort(ip, int(port))
 	return c
 }
 
 // AddBlackbox add an blackbox address
 func (c *PrometheusConfig) AddBlackbox(ip string, port uint64) *PrometheusConfig {
-	c.BlackboxAddr = fmt.Sprintf("%s:%d", ip, port)
+	c.BlackboxAddr = utils.JoinHostPort(ip, int(port))
 	return c
 }
 
 // AddNGMonitoring add an ng-monitoring server exporter address
 func (c *PrometheusConfig) AddNGMonitoring(ip string, port uint64) *PrometheusConfig {
-	c.NGMonitoringAddrs = append(c.NGMonitoringAddrs, fmt.Sprintf("%s:%d", ip, port))
+	c.NGMonitoringAddrs = append(c.NGMonitoringAddrs, utils.JoinHostPort(ip, int(port)))
 	return c
 }
 
 // AddGrafana add an Grafana address
 func (c *PrometheusConfig) AddGrafana(ip string, port uint64) *PrometheusConfig {
-	c.GrafanaAddr = fmt.Sprintf("%s:%d", ip, port)
+	c.GrafanaAddr = utils.JoinHostPort(ip, int(port))
 	return c
 }
 
 // AddDMMaster add an dm-master address
 func (c *PrometheusConfig) AddDMMaster(ip string, port uint64) *PrometheusConfig {
-	c.DMMasterAddrs = append(c.DMMasterAddrs, fmt.Sprintf("%s:%d", ip, port))
+	c.DMMasterAddrs = append(c.DMMasterAddrs, utils.JoinHostPort(ip, int(port)))
 	return c
 }
 
 // AddDMWorker add an dm-worker address
 func (c *PrometheusConfig) AddDMWorker(ip string, port uint64) *PrometheusConfig {
-	c.DMWorkerAddrs = append(c.DMWorkerAddrs, fmt.Sprintf("%s:%d", ip, port))
+	c.DMWorkerAddrs = append(c.DMWorkerAddrs, utils.JoinHostPort(ip, int(port)))
 	return c
 }
 

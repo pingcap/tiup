@@ -15,13 +15,13 @@ package scripts
 
 import (
 	"bytes"
-	"fmt"
 	"os"
 	"path"
 	"text/template"
 
 	"github.com/pingcap/tiup/embed"
 	"github.com/pingcap/tiup/pkg/tidbver"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // TiKVScript represent the data to generate TiKV config
@@ -45,8 +45,8 @@ type TiKVScript struct {
 func NewTiKVScript(version, ip string, port, statusPort int, deployDir, dataDir, logDir string) *TiKVScript {
 	return &TiKVScript{
 		IP:                         ip,
-		AdvertiseAddr:              fmt.Sprintf("%s:%d", ip, port),
-		AdvertiseStatusAddr:        fmt.Sprintf("%s:%d", ip, statusPort),
+		AdvertiseAddr:              utils.JoinHostPort(ip, port),
+		AdvertiseStatusAddr:        utils.JoinHostPort(ip, statusPort),
 		Port:                       port,
 		StatusPort:                 statusPort,
 		DeployDir:                  deployDir,
