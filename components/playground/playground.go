@@ -814,7 +814,8 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 	p.bootOptions = options
 
-	if options.PD.Num < 1 || options.TiKV.Num < 1 {
+	// All others components depend on the pd, we just ensure the pd count must be great than 0
+	if options.PD.Num < 1 {
 		return fmt.Errorf("all components count must be great than 0 (tikv=%v, pd=%v)", options.TiKV.Num, options.PD.Num)
 	}
 
