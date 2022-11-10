@@ -18,7 +18,7 @@ exec bin/pd-server \
     --peer-urls="{{.PeerURL}}" \
     --advertise-peer-urls="{{.AdvertisePeerURL}}" \
     --data-dir="{{.DataDir}}" \
-    --join="{{.InitialCluster}}" \
+    --join="{{.Join}}" \
     --config=conf/pd.toml \
     --log-file="{{.LogDir}}/pd.log" 2>> "{{.LogDir}}/pd_stderr.log"
   

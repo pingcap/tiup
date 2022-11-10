@@ -72,11 +72,12 @@ func (c *PDScript) ConfigToFile(file string) error {
 // PDScaleScript represent the data to generate pd config on scaling
 type PDScaleScript struct {
 	PDScript
+	Join string
 }
 
 // NewPDScaleScript return a new PDScaleScript
-func NewPDScaleScript(pdScript *PDScript) *PDScaleScript {
-	return &PDScaleScript{*pdScript}
+func NewPDScaleScript(pdScript *PDScript, join string) *PDScaleScript {
+	return &PDScaleScript{PDScript:*pdScript, Join: join}
 }
 
 // ConfigToFile write config content to specific path

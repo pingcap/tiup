@@ -318,6 +318,7 @@ func (i *PDInstance) ScaleConfig(
 
 	cluster := mustBeClusterTopo(topo)
 	spec := i.InstanceSpec.(*PDSpec)
+	scheme := utils.Ternary(cluster.GlobalOptions.TLSEnabled, "https", "http").(string)
 
 	initialCluster := []string{}
 	for _, pdspec := range cluster.PDServers {
@@ -325,10 +326,10 @@ func (i *PDInstance) ScaleConfig(
 	}
 	cfg0 := &scripts.PDScript{
 		Name:               spec.Name,
-		ClientURL:          spec.GetAdvertiseClientURL(cluster.GlobalOptions.TLSEnabled),
-		AdvertiseClientURL: spec.AdvertiseClientAddr,
-		PeerURL:            spec.GetAdvertisePeerURL(cluster.GlobalOptions.TLSEnabled),
-		AdvertisePeerURL:   spec.AdvertisePeerAddr,
+		ClientURL:          fmt.Sprintf("%s://%s", scheme, utils.JoinHostPort(i.GetListenHost(), spec.ClientPort)),
+		AdvertiseClientURL: spec.GetAdvertiseClientURL(cluster.GlobalOptions.TLSEnabled),
+		PeerURL:            fmt.Sprintf("%s://%s", scheme, utils.JoinHostPort(i.GetListenHost(), spec.PeerPort)),
+		AdvertisePeerURL:   spec.GetAdvertisePeerURL(cluster.GlobalOptions.TLSEnabled),
 		DeployDir:          paths.Deploy,
 		DataDir:            paths.Data[0],
 		LogDir:             paths.Log,
@@ -336,7 +337,11 @@ func (i *PDInstance) ScaleConfig(
 		NumaNode:           spec.NumaNode,
 	}
 
-	cfg := scripts.NewPDScaleScript(cfg0)
+	join := []string{}
+	for _, pdspec := range cluster.PDServers {
+		join = append(join, pdspec.GetAdvertiseClientURL(cluster.GlobalOptions.TLSEnabled))
+	}
+	cfg := scripts.NewPDScaleScript(cfg0, strings.Join(join, ","))
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pd_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
