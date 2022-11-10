@@ -54,8 +54,8 @@ type PrometheusSpec struct {
 	OS                    string                 `yaml:"os,omitempty"`
 	RuleDir               string                 `yaml:"rule_dir,omitempty" validate:"rule_dir:editable"`
 	AdditionalScrapeConf  map[string]any         `yaml:"additional_scrape_conf,omitempty" validate:"additional_scrape_conf:ignore"`
-	ScrapeInterval        string                 `yaml:"scrape_interval,omitempty" default:"15s" validate:"scrape_interval:editable"`
-	ScrapeTimeout         string                 `yaml:"scrape_timeout,omitempty" default:"10s" validate:"scrape_timeout:editable"`
+	ScrapeInterval        string                 `yaml:"scrape_interval,omitempty" validate:"scrape_interval:editable"`
+	ScrapeTimeout         string                 `yaml:"scrape_timeout,omitempty" validate:"scrape_timeout:editable"`
 }
 
 // Remote prometheus remote config

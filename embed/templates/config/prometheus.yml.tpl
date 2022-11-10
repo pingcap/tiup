@@ -1,8 +1,14 @@
 ---
 global:
-  scrape_interval: {{.ScrapeInterval}} # By default, scrape targets every 15 seconds.
+{{- if .ScrapeInterval}}
+  scrape_interval: {{.ScrapeInterval}}
+{{- else}}
+  scrape_interval: 15s # By default, scrape targets every 15 seconds.
+{{- end}}
   evaluation_interval: 15s # By default, scrape targets every 15 seconds.
+{{- if .ScrapeTimeout}}
   scrape_timeout: {{.ScrapeTimeout}}
+{{- end}}
   external_labels:
     cluster: '{{.ClusterName}}'
     monitor: "prometheus"
