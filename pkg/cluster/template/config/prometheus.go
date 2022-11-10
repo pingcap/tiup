@@ -27,6 +27,8 @@ import (
 // PrometheusConfig represent the data to generate Prometheus config
 type PrometheusConfig struct {
 	ClusterName               string
+	ScrapeInterval            string
+	ScrapeTimeout             string
 	TLSEnabled                bool
 	NodeExporterAddrs         []string
 	TiDBStatusAddrs           []string
