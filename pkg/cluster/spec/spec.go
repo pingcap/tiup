@@ -803,50 +803,18 @@ func (s *Specification) Endpoints(user string) []*scripts.PDScript {
 		// log dir will always be with values, but might not used by the component
 		logDir := Abs(user, spec.LogDir)
 
-		script := scripts.NewPDScript(
-			spec.Name,
-			spec.Host,
-			deployDir,
-			dataDir,
-			logDir,
-		).
-			WithClientPort(spec.ClientPort).
-			WithPeerPort(spec.PeerPort).
-			WithListenHost(spec.ListenHost)
-		if s.GlobalOptions.TLSEnabled {
-			script = script.WithScheme("https")
+		script := &scripts.PDScript{
+			Name:       spec.Name,
+			IP:         spec.Host,
+			ListenHost: spec.ListenHost,
+			DeployDir:  deployDir,
+			DataDir:    dataDir,
+			LogDir:     logDir,
+			NumaNode:   spec.NumaNode,
+			TLSEnabled: s.GlobalOptions.TLSEnabled,
+			ClientPort: spec.ClientPort,
+			PeerPort:   spec.PeerPort,
 		}
-		script = script.WithAdvertiseClientAddr(spec.AdvertiseClientAddr).
-			WithAdvertisePeerAddr(spec.AdvertisePeerAddr)
-		ends = append(ends, script)
-	}
-	return ends
-}
-
-// AlertManagerEndpoints returns the AlertManager endpoints configurations
-func AlertManagerEndpoints(alertmanager []*AlertmanagerSpec, user string, enableTLS bool) []*scripts.AlertManagerScript {
-	var ends []*scripts.AlertManagerScript
-	for _, spec := range alertmanager {
-		deployDir := Abs(user, spec.DeployDir)
-		// data dir would be empty for components which don't need it
-		dataDir := spec.DataDir
-		// the default data_dir is relative to deploy_dir
-		if dataDir != "" && !strings.HasPrefix(dataDir, "/") {
-			dataDir = filepath.Join(deployDir, dataDir)
-		}
-		// log dir will always be with values, but might not used by the component
-		logDir := Abs(user, spec.LogDir)
-
-		script := scripts.NewAlertManagerScript(
-			spec.Host,
-			spec.ListenHost,
-			deployDir,
-			dataDir,
-			logDir,
-			enableTLS,
-		).
-			WithWebPort(spec.WebPort).
-			WithClusterPort(spec.ClusterPort)
 		ends = append(ends, script)
 	}
 	return ends

@@ -222,3 +222,33 @@ scrape_configs:
 
 	assert.Equal(t, expected, string(result))
 }
+
+func TestGetRetention(t *testing.T) {
+	var val string
+	val = getRetention("-1d")
+	assert.EqualValues(t, "30d", val)
+
+	val = getRetention("0d")
+	assert.EqualValues(t, "30d", val)
+
+	val = getRetention("01d")
+	assert.EqualValues(t, "30d", val)
+
+	val = getRetention("1dd")
+	assert.EqualValues(t, "30d", val)
+
+	val = getRetention("*1d")
+	assert.EqualValues(t, "30d", val)
+
+	val = getRetention("1d ")
+	assert.EqualValues(t, "30d", val)
+
+	val = getRetention("ddd")
+	assert.EqualValues(t, "30d", val)
+
+	val = getRetention("60d")
+	assert.EqualValues(t, "60d", val)
+
+	val = getRetention("999d")
+	assert.EqualValues(t, "999d", val)
+}

@@ -73,6 +73,12 @@ func TiCDCSupportConfigFile(version string) bool {
 	return semver.Compare(version, "v4.0.13") >= 0 && version != "v5.0.0-rc" || strings.Contains(version, "nightly")
 }
 
+// TiCDCSupportSortOrDataDir return if given version of TiCDC support --sort-dir or --data-dir
+func TiCDCSupportSortOrDataDir(version string) bool {
+	// config support since v4.0.13, ignore v5.0.0-rc
+	return semver.Compare(version, "v4.0.13") >= 0 && version != "v5.0.0-rc" || strings.Contains(version, "nightly")
+}
+
 // TiCDCSupportDataDir return if given version of TiCDC support --data-dir
 func TiCDCSupportDataDir(version string) bool {
 	// TiCDC support --data-dir since v4.0.14 and v5.0.3

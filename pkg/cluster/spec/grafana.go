@@ -148,7 +148,8 @@ func (i *GrafanaInstance) InitConfig(
 	}
 
 	// transfer run script
-	cfg := scripts.NewGrafanaScript(clusterName, paths.Deploy)
+	cfg := &scripts.GrafanaScript{DeployDir: paths.Deploy}
+
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_grafana_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
