@@ -54,6 +54,8 @@ type PrometheusSpec struct {
 	OS                    string                 `yaml:"os,omitempty"`
 	RuleDir               string                 `yaml:"rule_dir,omitempty" validate:"rule_dir:editable"`
 	AdditionalScrapeConf  map[string]interface{} `yaml:"additional_scrape_conf,omitempty" validate:"additional_scrape_conf:ignore"`
+	ScrapeInterval        string                 `yaml:"scrape_interval,omitempty" validate:"scrape_interval:editable"`
+	ScrapeTimeout         string                 `yaml:"scrape_timeout,omitempty" validate:"scrape_timeout:editable"`
 }
 
 // Remote prometheus remote config
@@ -199,6 +201,8 @@ func (i *MonitorInstance) InitConfig(
 	if monitoredOptions != nil {
 		cfig.AddBlackbox(i.GetHost(), uint64(monitoredOptions.BlackboxExporterPort))
 	}
+	cfig.ScrapeInterval = spec.ScrapeInterval
+	cfig.ScrapeTimeout = spec.ScrapeTimeout
 	uniqueHosts := set.NewStringSet()
 
 	if servers, found := topoHasField("PDServers"); found {
