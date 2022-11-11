@@ -28,7 +28,6 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
-	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/proxy"
 	"github.com/pingcap/tiup/pkg/tidbver"
@@ -787,37 +786,6 @@ func IterHost(topo Topology, fn func(instance Instance)) {
 			}
 		}
 	}
-}
-
-// Endpoints returns the PD endpoints configurations
-func (s *Specification) Endpoints(user string) []*scripts.PDScript {
-	var ends []*scripts.PDScript
-	for _, spec := range s.PDServers {
-		deployDir := Abs(user, spec.DeployDir)
-		// data dir would be empty for components which don't need it
-		dataDir := spec.DataDir
-		// the default data_dir is relative to deploy_dir
-		if dataDir != "" && !strings.HasPrefix(dataDir, "/") {
-			dataDir = filepath.Join(deployDir, dataDir)
-		}
-		// log dir will always be with values, but might not used by the component
-		logDir := Abs(user, spec.LogDir)
-
-		script := &scripts.PDScript{
-			Name:       spec.Name,
-			IP:         spec.Host,
-			ListenHost: spec.ListenHost,
-			DeployDir:  deployDir,
-			DataDir:    dataDir,
-			LogDir:     logDir,
-			NumaNode:   spec.NumaNode,
-			TLSEnabled: s.GlobalOptions.TLSEnabled,
-			ClientPort: spec.ClientPort,
-			PeerPort:   spec.PeerPort,
-		}
-		ends = append(ends, script)
-	}
-	return ends
 }
 
 // FillHostArchOrOS fills the topology with the given host->arch
