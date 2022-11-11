@@ -28,6 +28,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/template/config"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/utils"
 	"gopkg.in/ini.v1"
 )
 
@@ -235,9 +236,11 @@ func (i *GrafanaInstance) InitConfig(
 		return errors.New("no prometheus found in topology")
 	}
 	fp = filepath.Join(paths.Cache, fmt.Sprintf("datasource_%s.yml", i.GetHost()))
-	if err := config.NewDatasourceConfig(clusterName, monitors[0].Host).
-		WithPort(uint64(monitors[0].Port)).
-		ConfigToFile(fp); err != nil {
+	datasourceCfg := &config.DatasourceConfig{
+		ClusterName: clusterName,
+		URL:         fmt.Sprintf("http://%s", utils.JoinHostPort(monitors[0].Host, monitors[0].Port)),
+	}
+	if err := datasourceCfg.ConfigToFile(fp); err != nil {
 		return err
 	}
 	dst = filepath.Join(paths.Deploy, "provisioning", "datasources", "datasource.yml")
