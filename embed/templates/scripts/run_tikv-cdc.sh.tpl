@@ -6,24 +6,14 @@ set -e
 DEPLOY_DIR={{.DeployDir}}
 cd "${DEPLOY_DIR}" || exit 1
 
-{{- define "PDList"}}
-  {{- range $idx, $pd := .}}
-    {{- if eq $idx 0}}
-      {{- $pd.Scheme}}://{{$pd.IP}}:{{$pd.ClientPort}}
-    {{- else -}}
-      ,{{- $pd.Scheme}}://{{$pd.IP}}:{{$pd.ClientPort}}
-    {{- end}}
-  {{- end}}
-{{- end}}
-
 {{- if .NumaNode}}
 exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/tikv-cdc server \
 {{- else}}
 exec bin/tikv-cdc server \
 {{- end}}
-    --addr "0.0.0.0:{{.Port}}" \
-    --advertise-addr "{{.IP}}:{{.Port}}" \
-    --pd "{{template "PDList" .Endpoints}}" \
+    --addr "{{.Addr}}" \
+    --advertise-addr "{{.AdvertiseAddr}}" \
+    --pd "{{.PD}}" \
 {{- if .DataDir}}
     --data-dir="{{.DataDir}}" \
 {{- end}}

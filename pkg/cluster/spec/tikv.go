@@ -32,6 +32,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/tidbver"
 	"github.com/pingcap/tiup/pkg/utils"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/prom2json"
@@ -215,14 +216,26 @@ func (i *TiKVInstance) InitConfig(
 
 	enableTLS := topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(*TiKVSpec)
-	cfg := scripts.
-		NewTiKVScript(clusterVersion, i.GetHost(), spec.Port, spec.StatusPort, paths.Deploy, paths.Data[0], paths.Log).
-		WithNumaNode(spec.NumaNode).
-		WithNumaCores(spec.NumaCores).
-		AppendEndpoints(topo.Endpoints(deployUser)...).
-		WithListenHost(i.GetListenHost()).
-		WithAdvertiseAddr(spec.AdvertiseAddr).
-		WithAdvertiseStatusAddr(spec.AdvertiseStatusAddr)
+
+	pds := []string{}
+	for _, pdspec := range topo.PDServers {
+		pds = append(pds, utils.JoinHostPort(pdspec.Host, pdspec.ClientPort))
+	}
+	cfg := &scripts.TiKVScript{
+		Addr:                       utils.JoinHostPort(i.GetListenHost(), spec.Port),
+		AdvertiseAddr:              utils.Ternary(spec.AdvertiseAddr != "", spec.AdvertiseAddr, utils.JoinHostPort(spec.Host, spec.Port)).(string),
+		StatusAddr:                 utils.JoinHostPort(i.GetListenHost(), spec.StatusPort),
+		SupportAdvertiseStatusAddr: tidbver.TiKVSupportAdvertiseStatusAddr(clusterVersion),
+		AdvertiseStatusAddr:        utils.Ternary(spec.AdvertiseStatusAddr != "", spec.AdvertiseStatusAddr, utils.JoinHostPort(spec.Host, spec.StatusPort)).(string),
+		PD:                         strings.Join(pds, ","),
+
+		DeployDir: paths.Deploy,
+		DataDir:   paths.Data[0],
+		LogDir:    paths.Log,
+
+		NumaNode:  spec.NumaNode,
+		NumaCores: spec.NumaCores,
+	}
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tikv_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {

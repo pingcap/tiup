@@ -18,6 +18,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/pingcap/errors"
@@ -177,21 +178,31 @@ func (i *CDCInstance) InitConfig(
 		return errors.New("ticdc_cluster_id is only supported with TiCDC version v6.2.0 or later")
 	}
 
-	cfg := scripts.NewCDCScript(
-		i.GetHost(),
-		paths.Deploy,
-		paths.Log,
-		enableTLS,
-		spec.GCTTL,
-		spec.TZ,
-	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).AppendEndpoints(topo.Endpoints(deployUser)...).WithCDCClusterID(spec.TiCDCClusterID)
+	pds := []string{}
+	for _, pdspec := range topo.PDServers {
+		pds = append(pds, pdspec.GetAdvertiseClientURL(enableTLS))
+	}
+	cfg := &scripts.CDCScript{
+		Addr:              utils.JoinHostPort(i.GetListenHost(), spec.Port),
+		AdvertiseAddr:     i.GetAddr(),
+		PD:                strings.Join(pds, ","),
+		GCTTL:             spec.GCTTL,
+		TZ:                spec.TZ,
+		ClusterID:         spec.TiCDCClusterID,
+		DataDirEnabled:    tidbver.TiCDCSupportDataDir(clusterVersion),
+		ConfigFileEnabled: tidbver.TiCDCSupportConfigFile(clusterVersion),
+		TLSEnabled:        enableTLS,
+
+		DeployDir: paths.Deploy,
+		LogDir:    paths.Log,
+		DataDir:   utils.Ternary(tidbver.TiCDCSupportSortOrDataDir(clusterVersion), spec.DataDir, "").(string),
+
+		NumaNode: spec.NumaNode,
+	}
 
 	// doesn't work
 	if _, err := i.setTLSConfig(ctx, false, nil, paths); err != nil {
 		return err
-	}
-	if len(paths.Data) != 0 {
-		cfg = cfg.PatchByVersion(clusterVersion, paths.Data[0])
 	}
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_cdc_%s_%d.sh", i.GetHost(), i.GetPort()))

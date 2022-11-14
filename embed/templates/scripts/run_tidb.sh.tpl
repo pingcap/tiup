@@ -7,16 +7,6 @@ DEPLOY_DIR={{.DeployDir}}
 
 cd "${DEPLOY_DIR}" || exit 1
 
-{{- define "PDList"}}
-  {{- range $idx, $pd := .}}
-    {{- if eq $idx 0}}
-      {{- $pd.IP}}:{{$pd.ClientPort}}
-    {{- else -}}
-      ,{{$pd.IP}}:{{$pd.ClientPort}}
-    {{- end}}
-  {{- end}}
-{{- end}}
-
 {{- if and .NumaNode .NumaCores}}
 exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} -C {{.NumaCores}} env GODEBUG=madvdontneed=1 bin/tidb-server \
 {{- else if .NumaNode}}
@@ -32,7 +22,7 @@ exec env GODEBUG=madvdontneed=1 bin/tidb-server \
 {{- if .SupportSecboot}}
     --initialize-insecure \
 {{- end}}
-    --path="{{template "PDList" .Endpoints}}" \
+    --path="{{.PD}}" \
     --log-slow-query="{{.LogDir}}/tidb_slow_query.log" \
     --config=conf/tidb.toml \
     --log-file="{{.LogDir}}/tidb.log" 2>> "{{.LogDir}}/tidb_stderr.log"

@@ -331,6 +331,10 @@ func (i *BaseInstance) GetHost() string {
 // GetListenHost implements Instance interface
 func (i *BaseInstance) GetListenHost() string {
 	if i.ListenHost == "" {
+		// ipv6 address
+		if strings.Contains(i.Host, ":") {
+			return "::"
+		}
 		return "0.0.0.0"
 	}
 	return i.ListenHost

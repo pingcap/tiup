@@ -32,7 +32,7 @@ type DashboardScript struct {
 	DataDir     string
 	NumaNode    string
 	TLSEnabled  bool
-	Endpoints   []*PDScript
+	PD          string
 }
 
 // ConfigToFile write config content to specific file.
@@ -54,10 +54,4 @@ func (s *DashboardScript) ConfigToFile(file string) error {
 	}
 
 	return os.WriteFile(file, content.Bytes(), 0755)
-}
-
-// AppendEndpoints add new PDScript to Endpoints field
-func (s *DashboardScript) AppendEndpoints(ends ...*PDScript) *DashboardScript {
-	s.Endpoints = append(s.Endpoints, ends...)
-	return s
 }
