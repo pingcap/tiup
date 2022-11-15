@@ -1045,6 +1045,9 @@ func (p *Playground) terminate(sig syscall.Signal) {
 	}
 	// tidb must exit earlier then pd
 	for _, inst := range p.tidbs {
+		if inst.TempConfig != "" {
+			os.Remove(inst.TempConfig)
+		}
 		if inst.Process != nil {
 			kill(inst.Component(), inst.Pid(), inst.Wait)
 		}
