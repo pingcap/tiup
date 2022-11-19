@@ -77,7 +77,7 @@ type PDScaleScript struct {
 
 // NewPDScaleScript return a new PDScaleScript
 func NewPDScaleScript(pdScript *PDScript, join string) *PDScaleScript {
-	return &PDScaleScript{PDScript:*pdScript, Join: join}
+	return &PDScaleScript{PDScript: *pdScript, Join: join}
 }
 
 // ConfigToFile write config content to specific path
