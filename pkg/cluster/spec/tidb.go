@@ -19,12 +19,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/tidbver"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // TiDBSpec represents the TiDB topology specification in topology.yaml
@@ -139,16 +141,26 @@ func (i *TiDBInstance) InitConfig(
 
 	enableTLS := topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(*TiDBSpec)
-	cfg := scripts.
-		NewTiDBScript(i.GetHost(), paths.Deploy, paths.Log).
-		WithPort(spec.Port).
-		WithNumaNode(spec.NumaNode).
-		WithNumaCores(spec.NumaCores).
-		WithStatusPort(spec.StatusPort).
-		AppendEndpoints(topo.Endpoints(deployUser)...).
-		WithListenHost(i.GetListenHost()).
-		WithAdvertiseAddr(spec.Host).
-		SupportSecureBootstrap(tidbver.TiDBSupportSecureBoot(clusterVersion))
+
+	pds := []string{}
+	for _, pdspec := range topo.PDServers {
+		pds = append(pds, utils.JoinHostPort(pdspec.Host, pdspec.ClientPort))
+	}
+	cfg := &scripts.TiDBScript{
+		Port:           spec.Port,
+		StatusPort:     spec.StatusPort,
+		ListenHost:     i.GetListenHost(),
+		AdvertiseAddr:  utils.Ternary(spec.AdvertiseAddr != "", spec.AdvertiseAddr, spec.Host).(string),
+		PD:             strings.Join(pds, ","),
+		SupportSecboot: tidbver.TiDBSupportSecureBoot(clusterVersion),
+
+		DeployDir: paths.Deploy,
+		LogDir:    paths.Log,
+
+		NumaNode:  spec.NumaNode,
+		NumaCores: spec.NumaCores,
+	}
+
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tidb_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err

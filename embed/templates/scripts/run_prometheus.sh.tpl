@@ -40,7 +40,7 @@ exec bin/prometheus/prometheus \
 {{- end}}
     --config.file="{{.DeployDir}}/conf/prometheus.yml" \
     --web.listen-address=":{{.Port}}" \
-    --web.external-url="http://{{.IP}}:{{.Port}}/" \
+    --web.external-url="{{.WebExternalURL}}/" \
     --web.enable-admin-api \
     --log.level="info" \
     --storage.tsdb.path="{{.DataDir}}" \

@@ -23,6 +23,8 @@ import (
 	. "github.com/pingcap/check"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/tidbver"
+	"github.com/pingcap/tiup/pkg/utils"
 	"gopkg.in/yaml.v2"
 )
 
@@ -657,17 +659,16 @@ pd_servers:
 }
 
 func (s *metaSuiteTopo) TestTiFlashRequiredCPUFlags(c *C) {
-	cfg := scripts.NewTiFlashScript("", "", "", "", "", "")
-	cfg.WithRequiredCPUFlags(getTiFlashRequiredCPUFlagsWithVersion("v6.3.0", "AMD64"))
-	c.Assert(cfg.RequiredCPUFlags, Equals, TiFlashRequiredCPUFlags)
-	cfg.WithRequiredCPUFlags(getTiFlashRequiredCPUFlagsWithVersion("v6.3.0", "X86_64"))
-	c.Assert(cfg.RequiredCPUFlags, Equals, TiFlashRequiredCPUFlags)
-	cfg.WithRequiredCPUFlags(getTiFlashRequiredCPUFlagsWithVersion("nightly", "amd64"))
-	c.Assert(cfg.RequiredCPUFlags, Equals, TiFlashRequiredCPUFlags)
-	cfg.WithRequiredCPUFlags(getTiFlashRequiredCPUFlagsWithVersion("v6.3.0", "aarch64"))
-	c.Assert(cfg.RequiredCPUFlags, Equals, "")
-	cfg.WithRequiredCPUFlags(getTiFlashRequiredCPUFlagsWithVersion("v6.2.0", "amd64"))
-	c.Assert(cfg.RequiredCPUFlags, Equals, "")
+	obtained := getTiFlashRequiredCPUFlagsWithVersion("v6.3.0", "AMD64")
+	c.Assert(obtained, Equals, TiFlashRequiredCPUFlags)
+	obtained = getTiFlashRequiredCPUFlagsWithVersion("v6.3.0", "X86_64")
+	c.Assert(obtained, Equals, TiFlashRequiredCPUFlags)
+	obtained = getTiFlashRequiredCPUFlagsWithVersion("nightly", "amd64")
+	c.Assert(obtained, Equals, TiFlashRequiredCPUFlags)
+	obtained = getTiFlashRequiredCPUFlagsWithVersion("v6.3.0", "aarch64")
+	c.Assert(obtained, Equals, "")
+	obtained = getTiFlashRequiredCPUFlagsWithVersion("v6.2.0", "amd64")
+	c.Assert(obtained, Equals, "")
 }
 
 func (s *metaSuiteTopo) TestTiFlashStorageSection(c *C) {
@@ -689,22 +690,19 @@ tiflash_servers:
 	// parse using clusterVersion<"v4.0.9"
 	{
 		ins := instances[0]
-		// This should be the same with tiflash_server instance's "data_dir"
-		dataDir := "/hdd0/tiflash,/hdd1/tiflash"
-		cfg := scripts.NewTiFlashScript(ins.GetHost(), "", dataDir, "", "", "")
-		conf, err := ins.(*TiFlashInstance).initTiFlashConfig(ctx, cfg, "v4.0.8", spec.ServerConfigs.TiFlash, meta.DirPaths{})
+		dataDirs := MultiDirAbs("", spec.TiFlashServers[0].DataDir)
+		conf, err := ins.(*TiFlashInstance).initTiFlashConfig(ctx, "v4.0.8", spec.ServerConfigs.TiFlash, meta.DirPaths{Deploy: spec.TiFlashServers[0].DeployDir, Data: dataDirs, Log: spec.TiFlashServers[0].LogDir})
 		c.Assert(err, IsNil)
 
 		path, ok := conf["path"]
 		c.Assert(ok, IsTrue)
-		c.Assert(path, Equals, dataDir)
+		c.Assert(path, Equals, "/ssd0/tiflash,/ssd1/tiflash")
 	}
 	// parse using clusterVersion>="v4.0.9"
 	checkWithVersion := func(ver string) {
 		ins := instances[0].(*TiFlashInstance)
-		dataDir := "/ssd0/tiflash"
-		cfg := scripts.NewTiFlashScript(ins.GetHost(), "", dataDir, "", "", "")
-		conf, err := ins.initTiFlashConfig(ctx, cfg, ver, spec.ServerConfigs.TiFlash, meta.DirPaths{})
+		dataDirs := MultiDirAbs("", spec.TiFlashServers[0].DataDir)
+		conf, err := ins.initTiFlashConfig(ctx, ver, spec.ServerConfigs.TiFlash, meta.DirPaths{Deploy: spec.TiFlashServers[0].DeployDir, Data: dataDirs, Log: spec.TiFlashServers[0].LogDir})
 		c.Assert(err, IsNil)
 
 		_, ok := conf["path"]
@@ -832,8 +830,12 @@ cdc_servers:
 
 	checkByVersion := func(version string) {
 		ins := instances[0].(*CDCInstance)
-		cfg := scripts.NewCDCScript(ins.GetHost(), "", "", false, 0, "").
-			PatchByVersion(version, ins.DataDir())
+		cfg := &scripts.CDCScript{
+			DataDirEnabled:    tidbver.TiCDCSupportDataDir(version),
+			ConfigFileEnabled: tidbver.TiCDCSupportConfigFile(version),
+			TLSEnabled:        false,
+			DataDir:           utils.Ternary(tidbver.TiCDCSupportSortOrDataDir(version), ins.DataDir(), "").(string),
+		}
 
 		wanted := expected[version]
 
@@ -865,9 +867,8 @@ tiflash_servers:
 	// parse using clusterVersion<"v4.0.12" || == "5.0.0-rc"
 	checkBackwardCompatibility := func(ver string) {
 		ins := instances[0].(*TiFlashInstance)
-		dataDir := "/ssd0/tiflash"
-		cfg := scripts.NewTiFlashScript(ins.GetHost(), "", dataDir, "", "", "")
-		conf, err := ins.initTiFlashConfig(ctx, cfg, ver, spec.ServerConfigs.TiFlash, meta.DirPaths{})
+		dataDirs := MultiDirAbs("", spec.TiFlashServers[0].DataDir)
+		conf, err := ins.initTiFlashConfig(ctx, ver, spec.ServerConfigs.TiFlash, meta.DirPaths{Deploy: spec.TiFlashServers[0].DeployDir, Data: dataDirs, Log: spec.TiFlashServers[0].LogDir})
 		c.Assert(err, IsNil)
 
 		// We need an empty string for 'users.default.password' for backward compatibility. Or the TiFlash process will fail to start with older versions
@@ -888,9 +889,8 @@ tiflash_servers:
 	// parse using clusterVersion>="v4.0.12"
 	checkWithVersion := func(ver string) {
 		ins := instances[0].(*TiFlashInstance)
-		dataDir := "/ssd0/tiflash"
-		cfg := scripts.NewTiFlashScript(ins.GetHost(), "", dataDir, "", "", "")
-		conf, err := ins.initTiFlashConfig(ctx, cfg, ver, spec.ServerConfigs.TiFlash, meta.DirPaths{})
+		dataDirs := MultiDirAbs("", spec.TiFlashServers[0].DataDir)
+		conf, err := ins.initTiFlashConfig(ctx, ver, spec.ServerConfigs.TiFlash, meta.DirPaths{Deploy: spec.TiFlashServers[0].DeployDir, Data: dataDirs, Log: spec.TiFlashServers[0].LogDir})
 		c.Assert(err, IsNil)
 
 		// Those deprecated settings are ignored in newer versions

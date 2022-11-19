@@ -18,6 +18,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
@@ -162,6 +163,10 @@ func (i *DashboardInstance) InitConfig(
 	enableTLS := topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(*DashboardSpec)
 
+	pds := []string{}
+	for _, pdspec := range topo.PDServers {
+		pds = append(pds, pdspec.GetAdvertiseClientURL(enableTLS))
+	}
 	cfg := &scripts.DashboardScript{
 		TidbVersion: clusterVersion,
 		IP:          i.GetHost(),
@@ -170,7 +175,7 @@ func (i *DashboardInstance) InitConfig(
 		LogDir:      paths.Log,
 		Port:        spec.Port,
 		NumaNode:    spec.NumaNode,
-		Endpoints:   topo.Endpoints(deployUser),
+		PD:          strings.Join(pds, ","),
 		TLSEnabled:  enableTLS,
 	}
 

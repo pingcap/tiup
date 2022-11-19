@@ -10,16 +10,6 @@ stat=$(time sync || sync)
 echo ok
 echo $stat
 
-{{- define "PDList"}}
-  {{- range $idx, $pd := .}}
-    {{- if eq $idx 0}}
-      {{- $pd.IP}}:{{$pd.ClientPort}}
-    {{- else -}}
-      ,{{$pd.IP}}:{{$pd.ClientPort}}
-    {{- end}}
-  {{- end}}
-{{- end}}
-
 export MALLOC_CONF="prof:true,prof_active:false"
 
 {{- if and .NumaNode .NumaCores}}
@@ -29,13 +19,13 @@ exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/tikv-server
 {{- else}}
 exec bin/tikv-server \
 {{- end}}
-    --addr "{{.ListenHost}}:{{.Port}}" \
+    --addr "{{.Addr}}" \
     --advertise-addr "{{.AdvertiseAddr}}" \
-    --status-addr "{{.ListenHost}}:{{.StatusPort}}" \
+    --status-addr "{{.StatusAddr}}" \
 {{- if .SupportAdvertiseStatusAddr}}
     --advertise-status-addr "{{.AdvertiseStatusAddr}}" \
 {{- end}}
-    --pd "{{template "PDList" .Endpoints}}" \
+    --pd "{{.PD}}" \
     --data-dir "{{.DataDir}}" \
     --config conf/tikv.toml \
     --log-file "{{.LogDir}}/tikv.log" 2>> "{{.LogDir}}/tikv_stderr.log"

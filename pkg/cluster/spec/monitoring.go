@@ -21,6 +21,7 @@ import (
 	"path"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 	"time"
 
@@ -30,6 +31,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/utils"
 	"gopkg.in/yaml.v3"
 )
 
@@ -54,6 +56,8 @@ type PrometheusSpec struct {
 	OS                    string                 `yaml:"os,omitempty"`
 	RuleDir               string                 `yaml:"rule_dir,omitempty" validate:"rule_dir:editable"`
 	AdditionalScrapeConf  map[string]any         `yaml:"additional_scrape_conf,omitempty" validate:"additional_scrape_conf:ignore"`
+	ScrapeInterval        string                 `yaml:"scrape_interval,omitempty" validate:"scrape_interval:editable"`
+	ScrapeTimeout         string                 `yaml:"scrape_timeout,omitempty" validate:"scrape_timeout:editable"`
 }
 
 // Remote prometheus remote config
@@ -165,15 +169,19 @@ func (i *MonitorInstance) InitConfig(
 	enableTLS := gOpts.TLSEnabled
 	// transfer run script
 	spec := i.InstanceSpec.(*PrometheusSpec)
-	cfg := scripts.NewPrometheusScript(
-		i.GetHost(),
-		paths.Deploy,
-		paths.Data[0],
-		paths.Log,
-	).WithPort(spec.Port).
-		WithNumaNode(spec.NumaNode).
-		WithRetention(spec.Retention).
-		WithNG(spec.NgPort)
+
+	cfg := &scripts.PrometheusScript{
+		Port:           spec.Port,
+		WebExternalURL: fmt.Sprintf("http://%s", utils.JoinHostPort(spec.Host, spec.Port)),
+		Retention:      getRetention(spec.Retention),
+		EnableNG:       spec.NgPort > 0,
+
+		DeployDir: paths.Deploy,
+		LogDir:    paths.Log,
+		DataDir:   paths.Data[0],
+
+		NumaNode: spec.NumaNode,
+	}
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_prometheus_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
@@ -199,6 +207,8 @@ func (i *MonitorInstance) InitConfig(
 	if monitoredOptions != nil {
 		cfig.AddBlackbox(i.GetHost(), uint64(monitoredOptions.BlackboxExporterPort))
 	}
+	cfig.ScrapeInterval = spec.ScrapeInterval
+	cfig.ScrapeTimeout = spec.ScrapeTimeout
 	uniqueHosts := set.NewStringSet()
 
 	if servers, found := topoHasField("PDServers"); found {
@@ -511,4 +521,12 @@ func mergeAdditionalScrapeConf(source string, addition map[string]any) error {
 		return err
 	}
 	return os.WriteFile(source, bytes, 0644)
+}
+
+func getRetention(retention string) string {
+	valid, _ := regexp.MatchString("^[1-9]\\d*d$", retention)
+	if retention == "" || !valid {
+		return "30d"
+	}
+	return retention
 }
