@@ -25,10 +25,9 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
-	"github.com/pingcap/tiup/pkg/cluster/spec"
-
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -40,7 +39,6 @@ type TiFlashInstance struct {
 	ServicePort     int
 	ProxyPort       int
 	ProxyStatusPort int
-	ProxyConfigPath string
 	pds             []*PDInstance
 	dbs             []*TiDBInstance
 	Process
@@ -62,7 +60,6 @@ func NewTiFlashInstance(binPath, dir, host, configPath string, id int, pds []*PD
 		ServicePort:     utils.MustGetFreePort(host, 3930),
 		ProxyPort:       utils.MustGetFreePort(host, 20170),
 		ProxyStatusPort: utils.MustGetFreePort(host, 20292),
-		ProxyConfigPath: configPath,
 		pds:             pds,
 		dbs:             dbs,
 	}
@@ -185,7 +182,8 @@ func (inst *TiFlashInstance) StoreAddr() string {
 	return utils.JoinHostPort(AdvertiseHost(inst.Host), inst.ServicePort)
 }
 
-func (inst *TiFlashInstance) checkConfig(deployDir, clusterManagerPath string, version utils.Version, tidbStatusAddrs, endpoints []string) error {
+func (inst *TiFlashInstance) checkConfig(deployDir, clusterManagerPath string,
+	version utils.Version, tidbStatusAddrs, endpoints []string) (err error) {
 	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
 		return errors.Trace(err)
 	}
@@ -194,86 +192,78 @@ func (inst *TiFlashInstance) checkConfig(deployDir, clusterManagerPath string, v
 		flashBuf = new(bytes.Buffer)
 		proxyBuf = new(bytes.Buffer)
 
-		flashConfigPath = path.Join(inst.Dir, "tiflash.toml")
-		proxyConfigPath = path.Join(inst.Dir, "tiflash-learner.toml")
+		flashCfgPath = path.Join(inst.Dir, "tiflash.toml")
+		proxyCfgPath = path.Join(inst.Dir, "tiflash-learner.toml")
 	)
+
+	defer func() {
+		if err != nil {
+			return
+		}
+		if err = os.WriteFile(flashCfgPath, flashBuf.Bytes(), 0644); err != nil {
+			return
+		}
+
+		if err = os.WriteFile(proxyCfgPath, proxyBuf.Bytes(), 0644); err != nil {
+			return
+		}
+
+		inst.ConfigPath = flashCfgPath
+	}()
+
+	// Write default config to buffer
 	if err := writeTiFlashConfig(flashBuf, version, inst.TCPPort, inst.Port, inst.ServicePort, inst.StatusPort,
 		inst.Host, deployDir, clusterManagerPath, tidbStatusAddrs, endpoints); err != nil {
 		return errors.Trace(err)
 	}
-	if err := writeTiFlashProxyConfig(proxyBuf, version, inst.Host, deployDir, inst.ServicePort, inst.ProxyPort, inst.ProxyStatusPort); err != nil {
+	if err := writeTiFlashProxyConfig(proxyBuf, version, inst.Host, deployDir,
+		inst.ServicePort, inst.ProxyPort, inst.ProxyStatusPort); err != nil {
 		return errors.Trace(err)
 	}
 
-	if inst.ConfigPath != "" {
-		cfg := make(map[string]any)
-		err := toml.Unmarshal(flashBuf.Bytes(), &cfg)
-		if err != nil {
-			return errors.Trace(err)
-		}
-
-		// Read config from file
-		data, err := os.ReadFile(inst.ConfigPath)
-		if err != nil {
-			return errors.Trace(err)
-		}
-		override := make(map[string]any)
-		err = toml.Unmarshal(data, &override)
-		if err != nil {
-			return errors.Trace(err)
-		}
-
-		// Reuse the buffer
-		flashBuf.Reset()
-		err = toml.NewEncoder(flashBuf).Encode(spec.MergeConfig(cfg, override))
-		if err != nil {
-			return errors.Trace(err)
-		}
+	if inst.ConfigPath == "" {
+		return
 	}
-	if inst.ProxyConfigPath != "" {
-		cfg := make(map[string]any)
-		err := toml.Unmarshal(proxyBuf.Bytes(), &cfg)
-		if err != nil {
-			return errors.Trace(err)
-		}
 
-		// Read config from file
-		data, err := os.ReadFile(inst.ProxyConfigPath)
-		if err != nil {
-			return errors.Trace(err)
-		}
-		override := make(map[string]any)
-		err = toml.Unmarshal(data, &override)
-		if err != nil {
-			return errors.Trace(err)
-		}
-
-		// Reuse the buffer
-		proxyBuf.Reset()
-		err = toml.NewEncoder(proxyBuf).Encode(spec.MergeConfig(cfg, override))
-		if err != nil {
-			return errors.Trace(err)
-		}
-	}
-	flashFile, err := os.Create(flashConfigPath)
+	cfg, err := unmarshalConfig(inst.ConfigPath)
 	if err != nil {
 		return errors.Trace(err)
 	}
-	_, err = flashFile.Write(flashBuf.Bytes())
-	if err != nil {
-		return errors.Trace(err)
+	proxyPath := getTiFlashProxyConfigPath(cfg)
+	if proxyPath != "" {
+		proxyCfg, err := unmarshalConfig(proxyPath)
+		if err != nil {
+			return errors.Trace(err)
+		}
+		err = overwriteBuf(proxyBuf, proxyCfg)
+		if err != nil {
+			return errors.Trace(err)
+		}
 	}
 
-	proxyFile, err := os.Create(proxyConfigPath)
-	if err != nil {
-		return errors.Trace(err)
-	}
-	_, err = proxyFile.Write(proxyBuf.Bytes())
-	if err != nil {
-		return errors.Trace(err)
-	}
+	// Always use the tiflash proxy config file in the instance directory
+	setTiFlashProxyConfigPath(cfg, proxyCfgPath)
+	return errors.Trace(overwriteBuf(flashBuf, cfg))
+}
 
-	inst.ConfigPath = flashConfigPath
-	inst.ProxyConfigPath = proxyConfigPath
-	return nil
+func unmarshalConfig(path string) (map[string]any, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	c := make(map[string]any)
+	err = toml.Unmarshal(data, &c)
+	if err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
+func overwriteBuf(buf *bytes.Buffer, overwrite map[string]any) (err error) {
+	cfg := make(map[string]any)
+	if err = toml.Unmarshal(buf.Bytes(), &cfg); err != nil {
+		return
+	}
+	buf.Reset()
+	return toml.NewEncoder(buf).Encode(spec.MergeConfig(cfg, overwrite))
 }
