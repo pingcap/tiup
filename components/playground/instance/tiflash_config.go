@@ -119,7 +119,9 @@ func writeTiFlashConfig(w io.Writer, version utils.Version, tcpPort, httpPort, s
 
 func getTiFlashProxyConfigPath(cfg map[string]any) string {
 	defer func() {
-		recover()
+		if r := recover(); r != nil {
+			return
+		}
 	}()
 	return cfg["flash"].(map[string]any)["proxy"].(map[string]any)["config"].(string)
 }
