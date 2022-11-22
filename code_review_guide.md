@@ -16,6 +16,7 @@
 
 * I will add a suggestion here
 
+* Add a new line
 
 ## Things to check during the review process
 
