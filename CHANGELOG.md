@@ -4,7 +4,7 @@ TiUP Changelog
 
 ## Note
 
-tiup bench has been **moved** to https://github.com/PingCAP-QE/tiup-bench and not release with tiup
+`tiup bench` has been **moved** to https://github.com/PingCAP-QE/tiup-bench and not release with tiup
 
 ### Fixes
 
