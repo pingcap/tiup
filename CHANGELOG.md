@@ -8,7 +8,7 @@ TiUP Changelog
 
 ### Fixes
 
-- Set madvdontneed=1 for PD to shrink RSS after GC in `tiup-cluster` ([#2019](https://github.com/pingcap/tiup/pull/2019), [@lhy1024](https://github.com/lhy1024))
+- Set `madvdontneed=1` for PD to shrink RSS after GC in `tiup-cluster` ([#2019](https://github.com/pingcap/tiup/pull/2019), [@lhy1024](https://github.com/lhy1024))
 - Fix playground may panic when component fail to start in `tiup-playground` ([#2076](https://github.com/pingcap/tiup/pull/2076), [@nexustar](https://github.com/nexustar))
 
 ### Improvements
