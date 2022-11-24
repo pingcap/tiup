@@ -1012,34 +1012,34 @@ func (p *Playground) terminate(sig syscall.Signal) {
 		timer.Stop()
 	}
 
-	if p.monitor != nil {
+	if p.monitor != nil && p.monitor.cmd != nil && p.monitor.cmd.Process != nil {
 		go kill("prometheus", p.monitor.cmd.Process.Pid, p.monitor.wait)
 	}
 
-	if p.ngmonitoring != nil {
+	if p.ngmonitoring != nil && p.ngmonitoring.cmd != nil && p.ngmonitoring.cmd.Process != nil {
 		go kill("ng-monitoring", p.ngmonitoring.cmd.Process.Pid, p.ngmonitoring.wait)
 	}
 
-	if p.grafana != nil {
+	if p.grafana != nil && p.grafana.cmd != nil && p.grafana.cmd.Process != nil {
 		go kill("grafana", p.grafana.cmd.Process.Pid, p.grafana.wait)
 	}
 	for _, inst := range p.tiflashs {
-		if inst.Process != nil {
+		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
 			kill(inst.Component(), inst.Pid(), inst.Wait)
 		}
 	}
 	for _, inst := range p.ticdcs {
-		if inst.Process != nil {
+		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
 			kill(inst.Component(), inst.Pid(), inst.Wait)
 		}
 	}
 	for _, inst := range p.tikvCdcs {
-		if inst.Process != nil {
+		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
 			kill(inst.Component(), inst.Pid(), inst.Wait)
 		}
 	}
 	for _, inst := range p.drainers {
-		if inst.Process != nil {
+		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
 			kill(inst.Component(), inst.Pid(), inst.Wait)
 		}
 	}
@@ -1048,22 +1048,22 @@ func (p *Playground) terminate(sig syscall.Signal) {
 		if inst.TempConfig != "" {
 			os.Remove(inst.TempConfig)
 		}
-		if inst.Process != nil {
+		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
 			kill(inst.Component(), inst.Pid(), inst.Wait)
 		}
 	}
 	for _, inst := range p.pumps {
-		if inst.Process != nil {
+		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
 			kill(inst.Component(), inst.Pid(), inst.Wait)
 		}
 	}
 	for _, inst := range p.tikvs {
-		if inst.Process != nil {
+		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
 			kill(inst.Component(), inst.Pid(), inst.Wait)
 		}
 	}
 	for _, inst := range p.pds {
-		if inst.Process != nil {
+		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
 			kill(inst.Component(), inst.Pid(), inst.Wait)
 		}
 	}
