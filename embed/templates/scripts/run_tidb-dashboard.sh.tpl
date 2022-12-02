@@ -17,7 +17,12 @@ exec bin/tidb-dashboard \
     --port="{{.Port}}" \
     --pd="{{.PD}}" \
     --data-dir="{{.DataDir}}" \
-{{- if .TLSEnabled}}
+{{- if .ClusterTLSEnabled}}
+    --tidb-ca tls/ca.crt \
+    --tidb-cert tls/tidb-dashboard.crt \
+    --tidb-key tls/tidb-dashboard.pem \
+{{- end}}
+{{- if .MysqlClientTLSEnabled}}
     --tidb-ca tls/ca.crt \
     --tidb-cert tls/tidb-dashboard.crt \
     --tidb-key tls/tidb-dashboard.pem \

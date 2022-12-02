@@ -22,17 +22,30 @@ import (
 	"github.com/pingcap/tiup/embed"
 )
 
-// DashboardScript represent the data to generate cdc config
+// DashboardScript represents the data structure for generating startup shell scripts,
+// with the help of Go Templates.
 type DashboardScript struct {
-	TidbVersion string
-	IP          string
-	Port        int
-	DeployDir   string
-	LogDir      string
-	DataDir     string
-	NumaNode    string
-	TLSEnabled  bool
-	PD          string
+	TidbVersion  string
+	IP           string
+	Port         int
+	DeployDir    string
+	LogDir       string
+	DataDir      string
+	NumaNode     string
+	PD           string
+	Telemetry    bool
+	Experimental bool
+	PathPrefix   string
+
+	ClusterTLSEnabled  bool
+	ClusterTLSCAPath   string
+	ClusterTLSCertPath string
+	ClusterTLSKeyPath  string
+
+	MysqlClientTLSEnabled  bool
+	MysqlClientTLSCAPath   string
+	MysqlClientTLSCertPath string
+	MysqlClientTLSKeyPath  string
 }
 
 // ConfigToFile write config content to specific file.

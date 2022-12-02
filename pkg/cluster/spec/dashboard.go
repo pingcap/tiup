@@ -168,15 +168,16 @@ func (i *DashboardInstance) InitConfig(
 		pds = append(pds, pdspec.GetAdvertiseClientURL(enableTLS))
 	}
 	cfg := &scripts.DashboardScript{
-		TidbVersion: clusterVersion,
-		IP:          i.GetHost(),
-		DeployDir:   paths.Deploy,
-		DataDir:     paths.Data[0],
-		LogDir:      paths.Log,
-		Port:        spec.Port,
-		NumaNode:    spec.NumaNode,
-		PD:          strings.Join(pds, ","),
-		TLSEnabled:  enableTLS,
+		TidbVersion:       clusterVersion,
+		IP:                i.GetHost(),
+		DeployDir:         paths.Deploy,
+		DataDir:           paths.Data[0],
+		LogDir:            paths.Log,
+		Port:              spec.Port,
+		NumaNode:          spec.NumaNode,
+		PD:                strings.Join(pds, ","),
+		ClusterTLSEnabled: enableTLS,
+		ClusterTLSCAPath:  "placeholder",
 	}
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tidb-dashboard_%s_%d.sh", i.GetHost(), i.GetPort()))
@@ -203,7 +204,10 @@ func (i *DashboardInstance) InitConfig(
 	return checkConfig(ctx, e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths, nil)
 }
 
-// setTLSConfig set TLS Config to support enable/disable TLS
-func (i *DashboardInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error) {
-	return nil, nil
+func (i *DashboardInstance) setClusterTLS() {
+
+}
+
+func (i *DashboardInstance) setMysqlClientTLS() {
+
 }
