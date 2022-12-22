@@ -30,18 +30,13 @@ type PDScript struct {
 	AdvertiseClientURL string
 	PeerURL            string
 	AdvertisePeerURL   string
-	DeployDir          string
-	DataDir            string
-	LogDir             string
 	InitialCluster     string
 
-	IP         string
-	ListenHost string
-	ClientPort int
-	PeerPort   int
-	TLSEnabled bool
-	NumaNode   string
-	Endpoints  []*PDScript
+	DeployDir string
+	DataDir   string
+	LogDir    string
+
+	NumaNode string
 }
 
 // ConfigToFile write config content to specific path
@@ -77,7 +72,7 @@ type PDScaleScript struct {
 
 // NewPDScaleScript return a new PDScaleScript
 func NewPDScaleScript(pdScript *PDScript, join string) *PDScaleScript {
-	return &PDScaleScript{PDScript:*pdScript, Join: join}
+	return &PDScaleScript{PDScript: *pdScript, Join: join}
 }
 
 // ConfigToFile write config content to specific path
