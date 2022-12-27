@@ -30,7 +30,7 @@ on:
 
 jobs:
   dm:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       fail-fast: true
       matrix:
