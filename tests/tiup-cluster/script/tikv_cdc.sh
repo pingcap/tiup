@@ -68,8 +68,9 @@ function tikv_cdc_test() {
 
 	# Patch
 	if [[ ! -z "$tikv_cdc_patch" ]]; then
+		wget https://tiup-mirrors.pingcap.com/tikv-cdc-v${tikv_cdc_patch}-linux-amd64.tar.gz
 		tiup install tikv-cdc:v${tikv_cdc_patch}
-		tiup-cluster --yes patch $name ~/.tiup/storage/cluster/packages/tikv-cdc-v${tikv_cdc_patch}-linux-amd64.tar.gz -R tikv-cdc --offline
+		tiup-cluster --yes patch $name ./tikv-cdc-v${tikv_cdc_patch}-linux-amd64.tar.gz -R tikv-cdc --offline
 		tiup-cluster display $name | grep "tikv-cdc (patched)"
 	fi
 
@@ -81,9 +82,9 @@ function tikv_cdc_test() {
 
 	# test patch overwrite
 	if [[ ! -z "$tikv_cdc_patch" ]]; then
-		tiup-cluster --yes patch $name ~/.tiup/storage/cluster/packages/tikv-cdc-v${tikv_cdc_patch}-linux-amd64.tar.gz -R tikv-cdc --overwrite
+		tiup-cluster --yes patch $name ./tikv-cdc-v${tikv_cdc_patch}-linux-amd64.tar.gz -R tikv-cdc --overwrite
 		# overwrite with the same tarball twice
-		tiup-cluster --yes patch $name ~/.tiup/storage/cluster/packages/tikv-cdc-v${tikv_cdc_patch}-linux-amd64.tar.gz -R tikv-cdc --overwrite
+		tiup-cluster --yes patch $name ./tikv-cdc-v${tikv_cdc_patch}-linux-amd64.tar.gz -R tikv-cdc --overwrite
 	fi
 
 	tiup-cluster --yes stop $name
