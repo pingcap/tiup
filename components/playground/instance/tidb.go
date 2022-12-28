@@ -16,6 +16,7 @@ package instance
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -30,12 +31,24 @@ type TiDBInstance struct {
 	pds []*PDInstance
 	Process
 	enableBinlog bool
+	TempConfig   string
 }
 
 // NewTiDBInstance return a TiDBInstance
 func NewTiDBInstance(binPath string, dir, host, configPath string, id, port int, pds []*PDInstance, enableBinlog bool) *TiDBInstance {
+	var tempName string
 	if port <= 0 {
 		port = 4000
+	}
+	if configPath == "" {
+		tempFile, err := os.CreateTemp("", "tidb-playground-config")
+		if err == nil {
+			_, err2 := tempFile.WriteString("[security]\nauto-tls=true\n")
+			if err2 == nil {
+				configPath = tempFile.Name()
+				tempName = configPath
+			}
+		}
 	}
 	return &TiDBInstance{
 		instance: instance{
@@ -49,6 +62,7 @@ func NewTiDBInstance(binPath string, dir, host, configPath string, id, port int,
 		},
 		pds:          pds,
 		enableBinlog: enableBinlog,
+		TempConfig:   tempName,
 	}
 }
 
