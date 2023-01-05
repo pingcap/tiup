@@ -1,5 +1,24 @@
 TiUP Changelog
 
+## [1.11.1] 2022-11-24
+
+## Note
+
+`tiup bench` has been **moved** to https://github.com/PingCAP-QE/tiup-bench and not release with tiup
+
+### Fixes
+
+- Set `madvdontneed=1` for PD to shrink RSS after GC in `tiup-cluster` ([#2019](https://github.com/pingcap/tiup/pull/2019), [@lhy1024](https://github.com/lhy1024))
+- Fix playground may panic when component fail to start in `tiup-playground` ([#2076](https://github.com/pingcap/tiup/pull/2076), [@nexustar](https://github.com/nexustar))
+
+### Improvements
+
+- Support configuring `scrape_interval` and `scrape_timeout` for prometheus in `tiup-cluster` ([#2071](https://github.com/pingcap/tiup/pull/2071), [@nexustar](https://github.com/nexustar))
+- Remove the restriction that tikv num must be greater than 0 in `tiup-playground` ([#2073](https://github.com/pingcap/tiup/pull/2073), [@lilinghai](https://github.com/lilinghai))
+- Mark kylin v10 as supported OS in `tiup-cluster` ([#2079](https://github.com/pingcap/tiup/pull/2079), [@nexustar](https://github.com/nexustar))
+- Set `ETCDCTL_API=v3` to get the v3 API in `tiup-ctl` ([#2081](https://github.com/pingcap/tiup/pull/2081), [@dveeden](https://github.com/dveeden))
+- Avoid redirect when grafana `root_url` is set in `tiup-cluster` ([#2082](https://github.com/pingcap/tiup/pull/2082), [@nexustar](https://github.com/nexustar))
+
 ## [1.11.0] 2022-09-23
 
 ### New Features
