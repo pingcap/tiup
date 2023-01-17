@@ -67,6 +67,8 @@ func cleanData(env *environment.Environment, names []string, all bool) error {
 			return err
 		}
 		if process == nil {
+			fmt.Fprintf(os.Stderr, "Can't clean directory due to missing meta file: %s\n",
+				filepath.Join(dataDir, dir.Name()))
 			continue
 		}
 
