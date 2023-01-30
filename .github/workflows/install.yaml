@@ -16,7 +16,7 @@ on:
 jobs:
   install:
     name: Install
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     env:
       working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
     steps:
