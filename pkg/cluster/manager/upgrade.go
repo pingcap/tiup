@@ -71,7 +71,13 @@ func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Optio
 
 	if !skipConfirm {
 		if err := tui.PromptForConfirmOrAbortError(
-			"This operation will upgrade %s %s cluster %s to %s.\nDo you want to continue? [y/N]:",
+			`%s:Before the upgrade, it is recommended to use the %s(https://docs.pingcap.com/tidb/stable/sql-statement-admin-show-ddl) command to check whether the TiDB cluster has an ongoing DDL job.
+If the cluster has a DDL job, wait until the DDL execution is finished or use the %s(https://docs.pingcap.com/tidb/stable/sql-statement-admin-cancel-ddl) command to cancel the DDL job before you upgrade the cluster.
+This operation will upgrade %s %s cluster %s to %s.
+Do you want to continue? [y/N]:`,
+			color.RedString("Important"),
+			color.HiBlueString("\"ADMIN SHOW DDL\""),
+			color.HiBlueString("\"ADMIN CANCEL DDL\""),
 			m.sysName,
 			color.HiYellowString(base.Version),
 			color.HiYellowString(name),
