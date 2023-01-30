@@ -28,6 +28,7 @@ import (
 
 // ScpDownload downloads a file from remote with SCP
 // The implementation is partially inspired by github.com/dtylman/scp
+// Do not support pattern, src and dst must be dir or file path
 func ScpDownload(session *ssh.Session, client *ssh.Client, src, dst string, limit int, compress bool) error {
 	r, err := session.StdoutPipe()
 	if err != nil {
@@ -58,7 +59,7 @@ func ScpDownload(session *ssh.Session, client *ssh.Client, src, dst string, limi
 	}
 
 	wd := dst
-	for {
+	for firstCommand := true; ; firstCommand = false {
 		// parse scp command
 		line, err := bufr.ReadString('\n')
 		if err == io.EOF {
@@ -84,7 +85,13 @@ func ScpDownload(session *ssh.Session, client *ssh.Client, src, dst string, limi
 				return err
 			}
 
-			targetFile, err := os.OpenFile(filepath.Join(wd, name), os.O_RDWR|os.O_CREATE|os.O_TRUNC, mode|0700)
+			fp := filepath.Join(wd, name)
+			// fisrt scp command is 'C' means src is a single file
+			if firstCommand {
+				fp = dst
+			}
+
+			targetFile, err := os.OpenFile(fp, os.O_RDWR|os.O_CREATE|os.O_TRUNC, mode|0700)
 			if err != nil {
 				return err
 			}
@@ -111,6 +118,19 @@ func ScpDownload(session *ssh.Session, client *ssh.Client, src, dst string, limi
 			}
 
 			wd = filepath.Join(wd, name)
+			// fisrt scp command is 'D' means src is a dir
+			if firstCommand {
+				fi, err := os.Stat(wd)
+				if err == nil && fi.IsDir() {
+					// do not create subdir if dst exist
+					wd = dst
+					break
+				}
+				if err == nil && !fi.IsDir() {
+					return fmt.Errorf("%s cannot be an exist file", wd)
+				}
+			}
+
 			err = os.MkdirAll(wd, mode)
 			if err != nil {
 				return err
