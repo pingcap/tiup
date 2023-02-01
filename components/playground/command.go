@@ -109,7 +109,7 @@ func newScaleOut() *cobra.Command {
 	cmd.Flags().StringVarP(&opt.TiDB.ConfigPath, "db.config", "", opt.TiDB.ConfigPath, "TiDB instance configuration file")
 	cmd.Flags().StringVarP(&opt.TiKV.ConfigPath, "kv.config", "", opt.TiKV.ConfigPath, "TiKV instance configuration file")
 	cmd.Flags().StringVarP(&opt.PD.ConfigPath, "pd.config", "", opt.PD.ConfigPath, "PD instance configuration file")
-	cmd.Flags().StringVarP(&opt.TiDB.ConfigPath, "tiflash.config", "", opt.TiDB.ConfigPath, "TiFlash instance configuration file")
+	cmd.Flags().StringVarP(&opt.TiFlash.ConfigPath, "tiflash.config", "", opt.TiFlash.ConfigPath, "TiFlash instance configuration file")
 	cmd.Flags().StringVarP(&opt.Pump.ConfigPath, "pump.config", "", opt.Pump.ConfigPath, "Pump instance configuration file")
 	cmd.Flags().StringVarP(&opt.Drainer.ConfigPath, "drainer.config", "", opt.Drainer.ConfigPath, "Drainer instance configuration file")
 
