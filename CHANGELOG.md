@@ -1,5 +1,18 @@
 TiUP Changelog
 
+## [1.11.2] 2023-02-02
+
+### Fixes
+
+- base52: Check for invalid chars in Decode() ([#2103](https://github.com/pingcap/tiup/pull/2103), [@AstroProfundis](https://github.com/AstroProfundis))
+
+### Improvements
+
+- Update upgrade message in `tiup-cluster` ([#2110](https://github.com/pingcap/tiup/pull/2110), [@nexustar](https://github.com/nexustar))
+- Comment out tidb-dashboard in template in `tiup-cluster` ([#2112](https://github.com/pingcap/tiup/pull/2112), [@nexustar](https://github.com/nexustar))
+- Warn for cleanup failures due to missing datadir in `tiup clean` ([#2105](https://github.com/pingcap/tiup/pull/2105), [@dveeden](https://github.com/dveeden))
+- Improve tiup timeout message in `tiup` ([#2109](https://github.com/pingcap/tiup/pull/2109), [@nexustar](https://github.com/nexustar))
+
 ## [1.11.1] 2022-11-24
 
 ## Note
