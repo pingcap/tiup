@@ -16,6 +16,7 @@ To build TiUP, run `make`.
 
 For development, you don't want to use any global directories. You may also want to supply your own metadata. TiUP can be modified using the following environment variables:
 
+* `TIUP_VERBOSE` this enables verbose logging when set to `enabled`.
 * `TIUP_HOME` the profile directory, where TiUP stores its metadata. If not set, `~/.tiup` will be used.
 * `TIUP_MIRRORS` set the location of TiUP's registry, can be a directory or URL. If not set, `https://tiup-mirrors.pingcap.com` will be used.
 

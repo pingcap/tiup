@@ -294,20 +294,20 @@ kvcdc_servers:
     data_dir: "/data1/tidb-data/tikv-cdc-8600"
     log_dir: "/data1/tidb-deploy/tikv-cdc-8600/log"
 
-# # Server configs are used to specify the configuration of TiDB Dashboard Servers.
-tidb_dashboard_servers:
+# # Server configs are used to specify the configuration of TiDB Dashboard Servers. Available from v6.5.0
+# tidb_dashboard_servers:
   # # The ip address of the PD Server.
-  - host: 10.0.1.11
+#  - host: 10.0.1.11
     # # SSH port of the server.
     # ssh_port: 22
     # # port of TiDB Dashboard
-    # port: 2380
+    # port: 12333
     # # TiDB Dashboard deployment file, startup script, configuration file storage directory.
-    # deploy_dir: "/tidb-deploy/tidb-dashboard-23333"
+    # deploy_dir: "/tidb-deploy/tidb-dashboard-12333"
     # # PD Server data storage directory.
-    # data_dir: "/tidb-data/tidb-dashboard-23333"
+    # data_dir: "/tidb-data/tidb-dashboard-12333"
     # # PD Server log file storage directory.
-    # log_dir: "/tidb-deploy/tidb-dashboard-23333/log"
+    # log_dir: "/tidb-deploy/tidb-dashboard-12333/log"
     # # numa node bindings.
     # numa_node: "0,1"
 
