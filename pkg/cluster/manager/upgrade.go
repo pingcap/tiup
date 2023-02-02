@@ -71,7 +71,10 @@ func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Optio
 
 	if !skipConfirm {
 		if err := tui.PromptForConfirmOrAbortError(
-			"This operation will upgrade %s %s cluster %s to %s.\nDo you want to continue? [y/N]:",
+			`%s
+This operation will upgrade %s %s cluster %s to %s.
+Do you want to continue? [y/N]:`,
+			color.YellowString("Before the upgrade, it is recommended to read the upgrade guide at https://docs.pingcap.com/tidb/stable/upgrade-tidb-using-tiup and finish the preparation steps."),
 			m.sysName,
 			color.HiYellowString(base.Version),
 			color.HiYellowString(name),
