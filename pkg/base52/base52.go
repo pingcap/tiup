@@ -45,7 +45,11 @@ func Decode(encoded string) (int64, error) {
 	}
 	var id int64
 	for i := 0; i < len(encoded); i++ {
-		id = id*int64(base) + int64(strings.IndexByte(space, encoded[i]))
+		idx := strings.IndexByte(space, encoded[i])
+		if idx < 0 {
+			return 0, fmt.Errorf("invalid encoded string: '%s' contains invalid character", encoded)
+		}
+		id = id*int64(base) + int64(idx)
 	}
 	return id, nil
 }

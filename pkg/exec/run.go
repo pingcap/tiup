@@ -176,7 +176,7 @@ func cmdCheckUpdate(component string, version utils.Version, timeoutSec int) {
 	// timeout for check update
 	go func() {
 		time.Sleep(time.Duration(timeoutSec) * time.Second)
-		updateC <- color.RedString("timeout!")
+		updateC <- color.YellowString("timeout(%ds)!", timeoutSec)
 	}()
 
 	go func() {
