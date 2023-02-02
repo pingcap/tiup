@@ -296,7 +296,7 @@ kvcdc_servers:
 
 # # Server configs are used to specify the configuration of TiDB Dashboard Servers.
 tidb_dashboard_servers:
-  # # The ip address of the PD Server.
+  # # The ip address of the TiDB Dashboard server.
   - host: 10.0.1.11
     # # SSH port of the server.
     # ssh_port: 22

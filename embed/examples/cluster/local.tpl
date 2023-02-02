@@ -63,3 +63,9 @@ alertmanager_servers:
   - host: {{ . }}
 {{- end }}
 {{ end }}
+{{- if .TidbDashboardServers }}
+tidb_dashboard_servers:
+ {{- range .TidbDashboardServers }}
+  - host: {{ . }}
+{{- end }}
+{{ end }}
