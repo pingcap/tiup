@@ -4,7 +4,7 @@ TiUP Changelog
 
 ### Fixes
 
-- base52: Check for invalid chars in Decode() ([#2103](https://github.com/pingcap/tiup/pull/2103), [@AstroProfundis](https://github.com/AstroProfundis))
+- base52: Check for invalid chars in `Decode()` ([#2103](https://github.com/pingcap/tiup/pull/2103), [@AstroProfundis](https://github.com/AstroProfundis))
 
 ### Improvements
 
