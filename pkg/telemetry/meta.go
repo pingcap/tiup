@@ -37,7 +37,7 @@ const (
 	DisableStatus Status = "disable"
 )
 
-const defaultStatus = EnableStatus
+const defaultStatus = ""
 
 // Meta data of telemetry.
 type Meta struct {
@@ -78,8 +78,7 @@ func LoadFrom(fname string) (meta *Meta, err error) {
 
 	if err != nil {
 		if os.IsNotExist(err) {
-			meta = NewMeta()
-			return meta, meta.SaveTo(fname)
+			return &Meta{}, nil
 		}
 		return
 	}
