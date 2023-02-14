@@ -117,7 +117,6 @@ func ScpDownload(session *ssh.Session, client *ssh.Client, src, dst string, limi
 				return err
 			}
 
-			wd = filepath.Join(wd, name)
 			// fisrt scp command is 'D' means src is a dir
 			if firstCommand {
 				fi, err := os.Stat(wd)
@@ -131,6 +130,7 @@ func ScpDownload(session *ssh.Session, client *ssh.Client, src, dst string, limi
 				}
 			}
 
+			wd = filepath.Join(wd, name)
 			err = os.MkdirAll(wd, mode)
 			if err != nil {
 				return err
