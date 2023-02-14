@@ -1,5 +1,11 @@
 TiUP Changelog
 
+## [1.11.3] 2023-02-14
+
+### Improvement
+
+- Disable telemetry by default ([#2119](https://github.com/pingcap/tiup/pull/2119), [@nexustar](https://github.com/nexustar))
+
 ## [1.11.2] 2023-02-02
 
 ### Fixes
