@@ -23,8 +23,8 @@ func (s *teleSuite) TestTelemetry(c *check.C) {
 	// Should no error and get a default meta.
 	meta, err := LoadFrom(fname)
 	c.Assert(err, check.IsNil)
-	c.Assert(meta.Status, check.Equals, defaultStatus)
-	c.Assert(len(meta.UUID), check.Greater, 0)
+	c.Assert(meta.Status, check.Equals, Status(""))
+	c.Assert(len(meta.UUID), check.Equals, 0)
 
 	// Save and load back
 	err = meta.SaveTo(fname)
