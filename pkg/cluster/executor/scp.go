@@ -117,17 +117,22 @@ func ScpDownload(session *ssh.Session, client *ssh.Client, src, dst string, limi
 				return err
 			}
 
+			// normally, workdir is like this
 			wd = filepath.Join(wd, name)
+
 			// fisrt scp command is 'D' means src is a dir
 			if firstCommand {
-				fi, err := os.Stat(wd)
-				if err == nil && fi.IsDir() {
-					// do not create subdir if dst exist
-					wd = dst
-					break
-				}
-				if err == nil && !fi.IsDir() {
+				fi, err := os.Stat(dst)
+				if err != nil && !os.IsNotExist(err) {
+					return err
+				} else if err == nil && !fi.IsDir() {
 					return fmt.Errorf("%s cannot be an exist file", wd)
+				} else if os.IsNotExist(err) {
+					// dst is not exist, so dst is the target dir
+					wd = dst
+				} else {
+					// dst is exist, dst/name is the target dir
+					break
 				}
 			}
 
