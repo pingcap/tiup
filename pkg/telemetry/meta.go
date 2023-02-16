@@ -37,8 +37,6 @@ const (
 	DisableStatus Status = "disable"
 )
 
-const defaultStatus = EnableStatus
-
 // Meta data of telemetry.
 type Meta struct {
 	UUID   string `yaml:"uuid,omitempty"`
@@ -78,8 +76,7 @@ func LoadFrom(fname string) (meta *Meta, err error) {
 
 	if err != nil {
 		if os.IsNotExist(err) {
-			meta = NewMeta()
-			return meta, meta.SaveTo(fname)
+			return &Meta{}, nil
 		}
 		return
 	}
@@ -89,11 +86,11 @@ func LoadFrom(fname string) (meta *Meta, err error) {
 
 	// populate UUID and secret if not set
 	var updated bool
-	if meta.UUID == "" {
+	if meta.UUID == "" && meta.Status == EnableStatus {
 		meta.UUID = NewUUID()
 		updated = true
 	}
-	if meta.Secret == "" {
+	if meta.Secret == "" && meta.Status == EnableStatus {
 		meta.Secret = NewSecret()
 		updated = true
 	}
