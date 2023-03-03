@@ -41,6 +41,8 @@ const (
 	ComponentTiKV             = "tikv"
 	ComponentPD               = "pd"
 	ComponentTiFlash          = "tiflash"
+	ComponentTiFlashCompute   = "tiflash_compute"
+	ComponentTiFlashWrite     = "tiflash_write"
 	ComponentGrafana          = "grafana"
 	ComponentDrainer          = "drainer"
 	ComponentDashboard        = "tidb-dashboard"
