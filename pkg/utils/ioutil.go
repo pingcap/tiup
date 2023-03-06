@@ -242,17 +242,6 @@ func Move(src, dst string) error {
 	return errors.Trace(os.RemoveAll(src))
 }
 
-// CreateDir creates the directory if it not exists.
-func CreateDir(path string) error {
-	if _, err := os.Stat(path); err != nil {
-		if os.IsNotExist(err) {
-			return os.MkdirAll(path, 0755)
-		}
-		return err
-	}
-	return nil
-}
-
 // Checksum returns the sha1 sum of target file
 func Checksum(file string) (string, error) {
 	tarball, err := os.OpenFile(file, os.O_RDONLY, 0)

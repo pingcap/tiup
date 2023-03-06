@@ -379,7 +379,7 @@ func (e *NativeSSHExecutor) Transfer(ctx context.Context, src, dst string, downl
 
 	if download {
 		targetPath := filepath.Dir(dst)
-		if err := utils.CreateDir(targetPath); err != nil {
+		if err := os.MkdirAll(targetPath, 0755); err != nil {
 			return err
 		}
 		args = append(args, fmt.Sprintf("%s@%s:%s", e.Config.User, e.Config.Host, src), dst)
