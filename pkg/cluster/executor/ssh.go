@@ -217,6 +217,10 @@ func (e *EasySSHExecutor) Transfer(ctx context.Context, src, dst string, downloa
 	defer client.Close()
 	defer session.Close()
 
+	err = os.MkdirAll(filepath.Dir(dst), 0755)
+	if err != nil {
+		return nil
+	}
 	return ScpDownload(session, client, src, dst, limit, compress)
 }
 
