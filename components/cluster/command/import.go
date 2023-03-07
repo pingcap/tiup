@@ -123,7 +123,7 @@ func newImportCmd() *cobra.Command {
 			}
 
 			// copy SSH key to TiUP profile directory
-			if err = tiuputils.CreateDir(spec.ClusterPath(clsName, "ssh")); err != nil {
+			if err = os.MkdirAll(spec.ClusterPath(clsName, "ssh"), 0755); err != nil {
 				return err
 			}
 			srcKeyPathPriv := ansible.SSHKeyPath()
