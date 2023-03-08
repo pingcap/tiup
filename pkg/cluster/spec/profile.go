@@ -19,8 +19,6 @@ import (
 	"path"
 	"path/filepath"
 
-	utils2 "github.com/pingcap/tiup/pkg/utils"
-
 	"github.com/pingcap/errors"
 	tiuplocaldata "github.com/pingcap/tiup/pkg/localdata"
 )
@@ -82,7 +80,7 @@ func Initialize(base string) error {
 	})
 	initialized = true
 	// make sure the dir exist
-	return utils2.CreateDir(profileDir)
+	return os.MkdirAll(profileDir, 0755)
 }
 
 // ProfileDir returns the full profile directory path of TiUP.
