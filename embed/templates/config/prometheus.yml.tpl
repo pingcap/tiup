@@ -321,6 +321,14 @@ scrape_configs:
       labels:
         group: 'tiflash'
 {{- end}}
+{{- if .CDCAddrs}}
+    - targets:
+    {{- range .CDCAddrs}}
+       - '{{.}}'
+    {{- end}}
+      labels:
+        group: 'ticdc'
+{{- end}}
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target
