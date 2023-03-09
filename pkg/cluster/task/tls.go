@@ -18,6 +18,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"net"
+	"os"
 	"path/filepath"
 
 	"github.com/pingcap/errors"
@@ -64,7 +65,7 @@ func (c *TLSCert) Execute(ctx context.Context) error {
 	}
 
 	// make sure the cache dir exist
-	if err := utils.CreateDir(c.paths.Cache); err != nil {
+	if err := os.MkdirAll(c.paths.Cache, 0755); err != nil {
 		return err
 	}
 

@@ -17,6 +17,8 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
@@ -194,11 +196,33 @@ Do you want to continue? [y/N]:`,
 			return err
 		}
 	}
-
+	ctx := ctxt.New(
+		context.Background(),
+		opt.Concurrency,
+		m.logger,
+	)
 	tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
 	if err != nil {
 		return err
 	}
+
+	// make sure the cluster is stopped
+	if offline && !opt.Force {
+		running := false
+		topo.IterInstance(func(ins spec.Instance) {
+			if !running {
+				status := ins.Status(ctx, time.Duration(opt.APITimeout), tlsCfg, topo.BaseTopo().MasterList...)
+				if strings.HasPrefix(status, "Up") || strings.HasPrefix(status, "Healthy") {
+					running = true
+				}
+			}
+		}, opt.Concurrency)
+
+		if running {
+			return perrs.Errorf("cluster is running and cannot be upgraded offline")
+		}
+	}
+
 	b, err := m.sshTaskBuilder(name, topo, base.User, opt)
 	if err != nil {
 		return err
@@ -214,11 +238,6 @@ Do you want to continue? [y/N]:`,
 		}).
 		Build()
 
-	ctx := ctxt.New(
-		context.Background(),
-		opt.Concurrency,
-		m.logger,
-	)
 	if err := t.Execute(ctx); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
