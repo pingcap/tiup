@@ -472,7 +472,7 @@ server_configs:
     raft.pd_addr: "%[9]s"
     profiles.default.max_memory_usage: 0
     %[12]s
-	%[13]s
+    %[14]s
 `,
 		pathConfig,
 		paths.Log,
