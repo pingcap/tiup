@@ -104,6 +104,8 @@ const (
 	dbPort      = "db.port"
 	pdHost      = "pd.host"
 	pdPort      = "pd.port"
+	ticdcHost   = "ticdc.host"
+	ticdcPort   = "ticdc.port"
 
 	// config paths
 	dbConfig      = "db.config"
@@ -338,6 +340,8 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 	rootCmd.Flags().Int(dbPort, defaultOptions.TiDB.Port, "Playground TiDB port. If not provided, TiDB will use 4000 as its port")
 	rootCmd.Flags().String(pdHost, defaultOptions.PD.Host, "Playground PD host. If not provided, PD will still use `host` flag as its host")
 	rootCmd.Flags().Int(pdPort, defaultOptions.PD.Port, "Playground PD port. If not provided, PD will use 2379 as its port")
+	rootCmd.Flags().String(ticdcHost, defaultOptions.TiCDC.Host, "Playground TiCDC host. If not provided, TiDB will still use `host` flag as its host")
+	rootCmd.Flags().Int(ticdcPort, defaultOptions.TiCDC.Port, "Playground TiCDC port. If not provided, TiCDC will use 8300 as its port")
 
 	rootCmd.Flags().String(dbConfig, defaultOptions.TiDB.ConfigPath, "TiDB instance configuration file")
 	rootCmd.Flags().String(kvConfig, defaultOptions.TiKV.ConfigPath, "TiKV instance configuration file")
@@ -497,6 +501,13 @@ func populateOpt(flagSet *pflag.FlagSet) (err error) {
 			options.TiDB.Host = flag.Value.String()
 		case dbPort:
 			options.TiDB.Port, err = strconv.Atoi(flag.Value.String())
+			if err != nil {
+				return
+			}
+		case ticdcHost:
+			options.TiCDC.Host = flag.Value.String()
+		case ticdcPort:
+			options.TiCDC.Port, err = strconv.Atoi(flag.Value.String())
 			if err != nil {
 				return
 			}
