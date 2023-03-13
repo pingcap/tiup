@@ -377,6 +377,7 @@ func (i *TiFlashInstance) initTiFlashConfig(ctx context.Context, clusterVersion 
 		isStorageDirsDefined  bool
 		deprecatedUsersConfig string
 		daemonConfig          string
+		markCacheSize         string
 		err                   error
 	)
 	if isStorageDirsDefined, err = checkTiFlashStorageConfigWithVersion(clusterVersion, src); err != nil {
@@ -438,8 +439,10 @@ func (i *TiFlashInstance) initTiFlashConfig(ctx context.Context, clusterVersion 
 	if tidbver.TiFlashNotNeedSomeConfig(clusterVersion) {
 		// For 5.4.0 or later, TiFlash can ignore application.runAsDaemon setting
 		daemonConfig = "#"
+		markCacheSize = "#"
 	} else {
 		daemonConfig = `application.runAsDaemon: true`
+		markCacheSize = `mark_cache_size: 5368709120`
 	}
 	err = yaml.Unmarshal([]byte(fmt.Sprintf(`
 server_configs:
@@ -447,7 +450,6 @@ server_configs:
     default_profile: "default"
     display_name: "TiFlash"
     listen_host: "%[7]s"
-    mark_cache_size: 5368709120
     tmp_path: "%[11]s"
     %[1]s
     tcp_port: %[3]d
@@ -470,6 +472,7 @@ server_configs:
     raft.pd_addr: "%[9]s"
     profiles.default.max_memory_usage: 0
     %[12]s
+	%[13]s
 `,
 		pathConfig,
 		paths.Log,
@@ -484,6 +487,7 @@ server_configs:
 		fmt.Sprintf("%s/tmp", paths.Data[0]),
 		deprecatedUsersConfig,
 		daemonConfig,
+		markCacheSize,
 	)), &topo)
 
 	if err != nil {
