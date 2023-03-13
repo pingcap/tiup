@@ -437,7 +437,7 @@ func (i *TiFlashInstance) initTiFlashConfig(ctx context.Context, clusterVersion 
 	topo := Specification{}
 
 	if tidbver.TiFlashNotNeedSomeConfig(clusterVersion) {
-		// For 5.4.0 or later, TiFlash can ignore application.runAsDaemon setting
+		// For 5.4.0 or later, TiFlash can ignore application.runAsDaemon and mark_cache_size setting
 		daemonConfig = "#"
 		markCacheSize = "#"
 	} else {
@@ -472,7 +472,7 @@ server_configs:
     raft.pd_addr: "%[9]s"
     profiles.default.max_memory_usage: 0
     %[12]s
-	%[13]s
+	%[14]s
 `,
 		pathConfig,
 		paths.Log,
