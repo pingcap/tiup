@@ -17,6 +17,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	perrs "github.com/pingcap/errors"
@@ -108,7 +109,7 @@ func (m *Manager) genAndSaveCertificate(clusterName string, globalOptions *spec.
 	if globalOptions.TLSEnabled {
 		// generate CA
 		tlsPath := m.specManager.Path(clusterName, spec.TLSCertKeyDir)
-		if err := utils.CreateDir(tlsPath); err != nil {
+		if err := os.MkdirAll(tlsPath, 0755); err != nil {
 			return nil, err
 		}
 		ca, err := genAndSaveClusterCA(clusterName, tlsPath)

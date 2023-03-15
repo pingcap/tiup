@@ -22,7 +22,7 @@ const (
 	lowerLetters = "abcdefghijkmnpqrstuvwxyz"
 	upperLetters = "ABCDEFGHJKLMNPQRSTUVWXYZ"
 	digits       = "0123456789"
-	symbols      = "!@#$%^&*+-=_"
+	symbols      = "@^*+-_"
 )
 
 // Password generates a random password

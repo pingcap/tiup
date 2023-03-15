@@ -199,7 +199,7 @@ func (s *SpecManager) GetAllClusters() (map[string]Metadata, error) {
 
 // ensureDir ensures that the cluster directory exists.
 func (s *SpecManager) ensureDir(clusterName string) error {
-	if err := utils.CreateDir(s.Path(clusterName)); err != nil {
+	if err := os.MkdirAll(s.Path(clusterName), 0755); err != nil {
 		return ErrCreateDirFailed.
 			Wrap(err, "Failed to create cluster metadata directory '%s'", s.Path(clusterName)).
 			WithProperty(tui.SuggestionFromString("Please check file system permissions and try again."))

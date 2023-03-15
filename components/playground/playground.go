@@ -684,7 +684,7 @@ func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins i
 		ins = inst
 		p.tiflashs = append(p.tiflashs, inst)
 	case spec.ComponentCDC:
-		inst := instance.NewTiCDC(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds)
+		inst := instance.NewTiCDC(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds)
 		ins = inst
 		p.ticdcs = append(p.ticdcs, inst)
 	case spec.ComponentTiKVCDC:

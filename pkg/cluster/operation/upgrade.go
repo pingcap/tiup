@@ -211,6 +211,11 @@ func upgradeInstance(
 		rollingInstance, isRollingInstance = instance.(spec.RollingUpdateInstance)
 	}
 
+	err = executeSSHCommand(ctx, "Executing pre-upgrade command", instance.GetHost(), options.SSHCustomScripts.BeforeRestartInstance.Command())
+	if err != nil {
+		return err
+	}
+
 	if isRollingInstance {
 		err := rollingInstance.PreRestart(ctx, topo, int(options.APITimeout), tlsCfg)
 		if err != nil && !options.Force {
@@ -227,6 +232,11 @@ func upgradeInstance(
 		if err != nil && !options.Force {
 			return err
 		}
+	}
+
+	err = executeSSHCommand(ctx, "Executing post-upgrade command", instance.GetHost(), options.SSHCustomScripts.AfterRestartInstance.Command())
+	if err != nil {
+		return err
 	}
 
 	return nil
