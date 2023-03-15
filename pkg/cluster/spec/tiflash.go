@@ -94,20 +94,20 @@ const (
 // GetExtendedRole get extended name for TiFlash to distinguish disaggregated mode.
 func (s *TiFlashSpec) GetExtendedRole(ctx context.Context, tlsCfg *tls.Config, pdList ...string) string {
 	if len(pdList) < 1 {
-		return ComponentTiFlash
+		return ""
 	}
 	storeAddr := utils.JoinHostPort(s.Host, s.FlashServicePort)
 	pdapi := api.NewPDClient(ctx, pdList, statusQueryTimeout, tlsCfg)
 	store, err := pdapi.GetCurrentStore(storeAddr)
 	if err != nil {
-		return ComponentTiFlash
+		return ""
 	}
 	isWriteNode := false
 	isTiFlash := false
 	for _, label := range store.Store.Labels {
 		if label.Key == EngineLabelKey {
 			if label.Value == EngineLabelTiFlashCompute {
-				return ComponentTiFlashCompute
+				return " (compute)"
 			}
 			if label.Value == EngineLabelTiFlash {
 				isTiFlash = true
@@ -117,10 +117,10 @@ func (s *TiFlashSpec) GetExtendedRole(ctx context.Context, tlsCfg *tls.Config, p
 			isWriteNode = true
 		}
 		if isTiFlash && isWriteNode {
-			return ComponentTiFlashWrite
+			return " (write)"
 		}
 	}
-	return ComponentTiFlash
+	return ""
 }
 
 // Role returns the component role of the instance

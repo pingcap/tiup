@@ -605,7 +605,7 @@ func (m *Manager) GetClusterTopology(dopt DisplayOption, opt operator.Options) (
 		if ins.ComponentName() == spec.ComponentTiFlash {
 			tiflashInstance := ins.(*spec.TiFlashInstance)
 			tiflashSpec := tiflashInstance.InstanceSpec.(*spec.TiFlashSpec)
-			roleName = tiflashSpec.GetExtendedRole(ctx, tlsCfg, masterActive...)
+			roleName += tiflashSpec.GetExtendedRole(ctx, tlsCfg, masterActive...)
 		}
 		if ins.IsPatched() {
 			roleName += " (patched)"
