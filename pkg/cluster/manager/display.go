@@ -601,6 +601,12 @@ func (m *Manager) GetClusterTopology(dopt DisplayOption, opt operator.Options) (
 
 		// check if the role is patched
 		roleName := ins.Role()
+		// get extended name for TiFlash to distinguish disaggregated mode.
+		if ins.ComponentName() == spec.ComponentTiFlash {
+			tiflashInstance := ins.(*spec.TiFlashInstance)
+			tiflashSpec := tiflashInstance.InstanceSpec.(*spec.TiFlashSpec)
+			roleName += tiflashSpec.GetExtendedRole(ctx, tlsCfg, masterActive...)
+		}
 		if ins.IsPatched() {
 			roleName += " (patched)"
 		}
