@@ -50,7 +50,7 @@ type PrometheusSpec struct {
 	NumaNode              string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
 	RemoteConfig          Remote                 `yaml:"remote_config,omitempty" validate:"remote_config:ignore"`
 	ExternalAlertmanagers []ExternalAlertmanager `yaml:"external_alertmanagers" validate:"external_alertmanagers:ignore"`
-	PushgatewayAddrs      []string               `yaml:"pushgateway_addrs" validate:"pushgateway_addrs:ignore"`
+	PushgatewayAddrs      []string               `yaml:"pushgateway_addrs,omitempty" validate:"pushgateway_addrs:ignore"`
 	Retention             string                 `yaml:"storage_retention,omitempty" validate:"storage_retention:editable"`
 	ResourceControl       meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
 	Arch                  string                 `yaml:"arch,omitempty"`
