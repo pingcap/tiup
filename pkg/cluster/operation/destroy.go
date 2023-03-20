@@ -380,7 +380,9 @@ func DestroyComponent(ctx context.Context, instances []spec.Instance, cls spec.T
 		if ins.ComponentName() == spec.ComponentTiFlash {
 			tiflashInstance := ins.(*spec.TiFlashInstance)
 			tiflashSpec := tiflashInstance.InstanceSpec.(*spec.TiFlashSpec)
-			delPaths.Insert(tiflashSpec.Config[spec.TiFlashRemoteCacheDir].(string))
+			if remoteCacheDir, ok := tiflashSpec.Config[spec.TiFlashRemoteCacheDir]; ok {
+				delPaths.Insert(remoteCacheDir.(string))
+			}
 		}
 
 		logDir := ins.LogDir()
