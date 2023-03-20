@@ -73,9 +73,21 @@ func cleanData(env *environment.Environment, names []string, all bool) error {
 		}
 
 		if p, err := gops.NewProcess(int32(process.Pid)); err == nil {
-			fmt.Printf("Kill instance of `%s`, pid: %v\n", process.Component, process.Pid)
-			if err := p.Kill(); err != nil {
-				return err
+			pName, err := p.Name()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Failed to get process info for `%s`, pid: %v\n",
+					process.Component, process.Pid)
+			} else {
+				if pName != "tiup-playground" {
+					fmt.Printf("Process name mismatch (`%s` != `tiup-playground`, not killing it.\n",
+						pName)
+				} else {
+					fmt.Printf("Kill instance of `%s`, pid: %v\n",
+						process.Component, process.Pid)
+					if err := p.Kill(); err != nil {
+						return err
+					}
+				}
 			}
 		}
 

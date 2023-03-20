@@ -29,15 +29,17 @@ runAsDaemon = true
 
 `
 
+const tiflashMarkCacheSize = `mark_cache_size = 5368709120`
+
 const tiflashConfig = `
 default_profile = "default"
 display_name = "TiFlash"
 http_port = %[2]d
 listen_host = "0.0.0.0"
-mark_cache_size = 5368709120
 path = "%[5]s"
 tcp_port = %[3]d
 tmp_path = "%[6]s"
+%[14]s
 %[13]s
 [flash]
 service_addr = "%[10]s:%[8]d"
@@ -107,11 +109,11 @@ func writeTiFlashConfig(w io.Writer, version utils.Version, tcpPort, httpPort, s
 	if tidbver.TiFlashNotNeedSomeConfig(version.String()) {
 		conf = fmt.Sprintf(tiflashConfig, pdAddrs, httpPort, tcpPort,
 			deployDir, dataDir, tmpDir, logDir, servicePort, metricsPort,
-			ip, strings.Join(tidbStatusAddrs, ","), clusterManagerPath, "")
+			ip, strings.Join(tidbStatusAddrs, ","), clusterManagerPath, "", "")
 	} else {
 		conf = fmt.Sprintf(tiflashConfig, pdAddrs, httpPort, tcpPort,
 			deployDir, dataDir, tmpDir, logDir, servicePort, metricsPort,
-			ip, strings.Join(tidbStatusAddrs, ","), clusterManagerPath, tiflashDaemonConfig)
+			ip, strings.Join(tidbStatusAddrs, ","), clusterManagerPath, tiflashDaemonConfig, tiflashMarkCacheSize)
 	}
 	_, err := w.Write([]byte(conf))
 	return err

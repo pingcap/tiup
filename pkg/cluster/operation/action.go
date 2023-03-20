@@ -653,3 +653,21 @@ func monitorPortMap(options *spec.MonitoredOptions) map[string]int {
 		spec.ComponentBlackboxExporter: options.BlackboxExporterPort,
 	}
 }
+
+func executeSSHCommand(ctx context.Context, action, host, command string) error {
+	if command == "" {
+		return nil
+	}
+	e, found := ctxt.GetInner(ctx).GetExecutor(host)
+	if !found {
+		return fmt.Errorf("no executor")
+	}
+	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
+	logger.Infof("\t%s on %s", action, host)
+	stdout, stderr, err := e.Execute(ctx, command, false)
+	if err != nil {
+		return errors.Annotatef(err, "stderr: %s", string(stderr))
+	}
+	logger.Infof("\t%s", stdout)
+	return nil
+}

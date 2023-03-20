@@ -75,6 +75,54 @@ func (s *TiFlashSpec) Status(ctx context.Context, timeout time.Duration, tlsCfg 
 	return state
 }
 
+const (
+	// EngineLabelKey is the label that indicates the backend of store instance:
+	// tikv or tiflash. TiFlash instance will contain a label of 'engine: tiflash'.
+	EngineLabelKey = "engine"
+	// EngineLabelTiFlash is the label value, which a TiFlash instance will have with
+	// a label key of EngineLabelKey.
+	EngineLabelTiFlash = "tiflash"
+	// EngineLabelTiFlashCompute is for disaggregated tiflash mode,
+	// it's the lable of tiflash_compute nodes.
+	EngineLabelTiFlashCompute = "tiflash_compute"
+	// EngineRoleLabelKey is the label that indicates if the TiFlash instance is a write node.
+	EngineRoleLabelKey = "engine_role"
+	// EngineRoleLabelWrite is for disaggregated tiflash write node.
+	EngineRoleLabelWrite = "write"
+)
+
+// GetExtendedRole get extended name for TiFlash to distinguish disaggregated mode.
+func (s *TiFlashSpec) GetExtendedRole(ctx context.Context, tlsCfg *tls.Config, pdList ...string) string {
+	if len(pdList) < 1 {
+		return ""
+	}
+	storeAddr := utils.JoinHostPort(s.Host, s.FlashServicePort)
+	pdapi := api.NewPDClient(ctx, pdList, statusQueryTimeout, tlsCfg)
+	store, err := pdapi.GetCurrentStore(storeAddr)
+	if err != nil {
+		return ""
+	}
+	isWriteNode := false
+	isTiFlash := false
+	for _, label := range store.Store.Labels {
+		if label.Key == EngineLabelKey {
+			if label.Value == EngineLabelTiFlashCompute {
+				return " (compute)"
+			}
+			if label.Value == EngineLabelTiFlash {
+				isTiFlash = true
+			}
+		}
+		if label.Key == EngineRoleLabelKey && label.Value == EngineRoleLabelWrite {
+			isWriteNode = true
+		}
+		if isTiFlash && isWriteNode {
+			return " (write)"
+		}
+	}
+	return ""
+}
+
 // Role returns the component role of the instance
 func (s *TiFlashSpec) Role() string {
 	return ComponentTiFlash
@@ -377,6 +425,7 @@ func (i *TiFlashInstance) initTiFlashConfig(ctx context.Context, clusterVersion 
 		isStorageDirsDefined  bool
 		deprecatedUsersConfig string
 		daemonConfig          string
+		markCacheSize         string
 		err                   error
 	)
 	if isStorageDirsDefined, err = checkTiFlashStorageConfigWithVersion(clusterVersion, src); err != nil {
@@ -436,10 +485,12 @@ func (i *TiFlashInstance) initTiFlashConfig(ctx context.Context, clusterVersion 
 	topo := Specification{}
 
 	if tidbver.TiFlashNotNeedSomeConfig(clusterVersion) {
-		// For 5.4.0 or later, TiFlash can ignore application.runAsDaemon setting
+		// For 5.4.0 or later, TiFlash can ignore application.runAsDaemon and mark_cache_size setting
 		daemonConfig = "#"
+		markCacheSize = "#"
 	} else {
 		daemonConfig = `application.runAsDaemon: true`
+		markCacheSize = `mark_cache_size: 5368709120`
 	}
 	err = yaml.Unmarshal([]byte(fmt.Sprintf(`
 server_configs:
@@ -447,7 +498,6 @@ server_configs:
     default_profile: "default"
     display_name: "TiFlash"
     listen_host: "%[7]s"
-    mark_cache_size: 5368709120
     tmp_path: "%[11]s"
     %[1]s
     tcp_port: %[3]d
@@ -470,6 +520,7 @@ server_configs:
     raft.pd_addr: "%[9]s"
     profiles.default.max_memory_usage: 0
     %[12]s
+    %[14]s
 `,
 		pathConfig,
 		paths.Log,
@@ -484,6 +535,7 @@ server_configs:
 		fmt.Sprintf("%s/tmp", paths.Data[0]),
 		deprecatedUsersConfig,
 		daemonConfig,
+		markCacheSize,
 	)), &topo)
 
 	if err != nil {
