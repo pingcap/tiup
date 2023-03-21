@@ -50,6 +50,7 @@ type PrometheusSpec struct {
 	NumaNode              string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
 	RemoteConfig          Remote                 `yaml:"remote_config,omitempty" validate:"remote_config:ignore"`
 	ExternalAlertmanagers []ExternalAlertmanager `yaml:"external_alertmanagers" validate:"external_alertmanagers:ignore"`
+	PushgatewayAddrs      []string               `yaml:"pushgateway_addrs,omitempty" validate:"pushgateway_addrs:ignore"`
 	Retention             string                 `yaml:"storage_retention,omitempty" validate:"storage_retention:editable"`
 	ResourceControl       meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
 	Arch                  string                 `yaml:"arch,omitempty"`
@@ -328,6 +329,7 @@ func (i *MonitorInstance) InitConfig(
 	for _, alertmanager := range spec.ExternalAlertmanagers {
 		cfig.AddAlertmanager(alertmanager.Host, uint64(alertmanager.WebPort))
 	}
+	cfig.AddPushgateway(spec.PushgatewayAddrs)
 
 	if spec.RuleDir != "" {
 		filter := func(name string) bool { return strings.HasSuffix(name, ".rules.yml") }

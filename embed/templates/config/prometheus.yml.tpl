@@ -65,28 +65,15 @@ alerting:
 {{- end}}
 
 scrape_configs:
-{{- if .PushgatewayAddr}}
+{{- if .PushgatewayAddrs}}
   - job_name: 'overwritten-cluster'
     scrape_interval: 15s
     honor_labels: true # don't overwrite job & instance labels
     static_configs:
-      - targets: ['{{.PushgatewayAddr}}']
-
-  - job_name: "blackbox_exporter_http"
-    scrape_interval: 30s
-    metrics_path: /probe
-    params:
-      module: [http_2xx]
-    static_configs:
     - targets:
-      - 'http://{{.PushgatewayAddr}}/metrics'
-    relabel_configs:
-      - source_labels: [__address__]
-        target_label: __param_target
-      - source_labels: [__param_target]
-        target_label: instance
-      - target_label: __address__
-        replacement: '{{.BlackboxAddr}}'
+{{- range .PushgatewayAddrs}}
+      - '{{.}}'
+{{- end}}
 {{- end}}
 {{- if .LightningAddrs}}
   - job_name: "lightning"
@@ -342,9 +329,11 @@ scrape_configs:
     params:
       module: [tcp_connect]
     static_configs:
-{{- if .PushgatewayAddr}}
+{{- if .PushgatewayAddrs}}
     - targets:
-      - '{{.PushgatewayAddr}}'
+{{- range .PushgatewayAddrs}}
+      - '{{.}}'
+{{- end}}
       labels:
         group: 'pushgateway'
 {{- end}}
