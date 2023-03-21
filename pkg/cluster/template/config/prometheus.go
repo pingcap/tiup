@@ -45,7 +45,7 @@ type PrometheusConfig struct {
 	MonitoredServers          []string
 	AlertmanagerAddrs         []string
 	NGMonitoringAddrs         []string
-	PushgatewayAddr           string
+	PushgatewayAddrs          []string
 	BlackboxAddr              string
 	GrafanaAddr               string
 	HasTiKVAccelerateRules    bool
@@ -153,8 +153,8 @@ func (c *PrometheusConfig) AddAlertmanager(ip string, port uint64) *PrometheusCo
 }
 
 // AddPushgateway add an pushgateway address
-func (c *PrometheusConfig) AddPushgateway(ip string, port uint64) *PrometheusConfig {
-	c.PushgatewayAddr = utils.JoinHostPort(ip, int(port))
+func (c *PrometheusConfig) AddPushgateway(addresses []string) *PrometheusConfig {
+	c.PushgatewayAddrs = addresses
 	return c
 }
 
