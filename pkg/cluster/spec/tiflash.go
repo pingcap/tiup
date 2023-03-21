@@ -153,6 +153,7 @@ const (
 	TiFlashStorageKeyMainDirs   string = "storage.main.dir"
 	TiFlashStorageKeyLatestDirs string = "storage.latest.dir"
 	TiFlashStorageKeyRaftDirs   string = "storage.raft.dir"
+	TiFlashRemoteCacheDir       string = "storage.remote.cache.dir"
 	TiFlashRequiredCPUFlags     string = "avx2 popcnt movbe"
 )
 
