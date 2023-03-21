@@ -33,7 +33,7 @@ func ImportConfig(ctx context.Context, name string, clsMeta *spec.ClusterMeta, g
 	// if err := utils.MkdirAll(meta.ClusterPath(name), 0755); err != nil {
 	// 	 return err
 	// }
-	// if err := os.WriteFile(meta.ClusterPath(name, "topology.yaml"), yamlFile, 0664); err != nil {
+	// if err := utils.WriteFile(meta.ClusterPath(name, "topology.yaml"), yamlFile, 0664); err != nil {
 	// 	 return err
 	// }
 

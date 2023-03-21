@@ -363,6 +363,14 @@ func SaveFileWithBackup(path string, data []byte, backupDir string) error {
 	return nil
 }
 
+func findPerm(path string, perm os.FileMode) os.FileMode {
+	fi, err := os.Stat(filepath.Dir(path))
+	if err == nil {
+		perm |= fi.Mode().Perm()
+	}
+	return perm
+}
+
 // MkdirAll basically copied from os.MkdirAll, but use max(parent permission,minPerm)
 func MkdirAll(path string, minPerm os.FileMode) error {
 	// Fast path: if we can tell whether path is a directory or file, stop with success or error.
@@ -393,15 +401,8 @@ func MkdirAll(path string, minPerm os.FileMode) error {
 		}
 	}
 
-	// Parent now exists; inheritance parent perm
-	perm := minPerm
-	fi, err := os.Stat(filepath.Dir(path))
-	if err == nil {
-		perm |= fi.Mode().Perm()
-	}
-
-	// Parent now exists; invoke Mkdir and use its result.
-	err = os.Mkdir(path, perm)
+	// Parent now exists; invoke Mkdir and use its result; inheritance parent perm.
+	err = os.Mkdir(path, findPerm(path, minPerm))
 	if err != nil {
 		// Handle arguments like "foo/." by
 		// double-checking that directory doesn't exist.
@@ -412,4 +413,9 @@ func MkdirAll(path string, minPerm os.FileMode) error {
 		return err
 	}
 	return nil
+}
+
+// WriteFile call os.MkdirAll, but use max(parent permission,minPerm)
+func WriteFile(name string, data []byte, perm os.FileMode) error {
+	return os.WriteFile(name, data, findPerm(filepath.Dir(name), perm))
 }

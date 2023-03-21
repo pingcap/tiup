@@ -124,7 +124,7 @@ func (p *Profile) SaveTo(path string, data []byte, perm os.FileMode) error {
 	if err := utils.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
 		return errors.Trace(err)
 	}
-	return os.WriteFile(fullPath, data, perm)
+	return utils.WriteFile(fullPath, data, perm)
 }
 
 // WriteJSON writes struct to a file (in the profile directory) in JSON format

@@ -271,7 +271,7 @@ func (s *SpecManager) NewScaleOutLock(clusterName string, topo Topology) error {
 		return wrapError(err)
 	}
 
-	err = os.WriteFile(lockFile, data, 0644)
+	err = utils.WriteFile(lockFile, data, 0644)
 	if err != nil {
 		return wrapError(err)
 	}

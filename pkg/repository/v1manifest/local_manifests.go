@@ -127,7 +127,7 @@ func (ms *FsManifests) save(manifest *Manifest, filename string) error {
 		return errors.Trace(err)
 	}
 
-	err = os.WriteFile(path, bytes, os.ModePerm)
+	err = utils.WriteFile(path, bytes, os.ModePerm)
 	if err != nil {
 		return err
 	}

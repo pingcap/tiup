@@ -26,6 +26,7 @@ import (
 
 	. "github.com/pingcap/check"
 	"github.com/pingcap/tiup/pkg/base52"
+	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/sync/errgroup"
 )
 

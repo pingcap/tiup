@@ -200,11 +200,11 @@ func (inst *TiFlashInstance) checkConfig(deployDir, clusterManagerPath string,
 		if err != nil {
 			return
 		}
-		if err = os.WriteFile(flashCfgPath, flashBuf.Bytes(), 0644); err != nil {
+		if err = utils.WriteFile(flashCfgPath, flashBuf.Bytes(), 0644); err != nil {
 			return
 		}
 
-		if err = os.WriteFile(proxyCfgPath, proxyBuf.Bytes(), 0644); err != nil {
+		if err = utils.WriteFile(proxyCfgPath, proxyBuf.Bytes(), 0644); err != nil {
 			return
 		}
 

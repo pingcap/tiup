@@ -15,7 +15,6 @@ package config
 
 import (
 	"bytes"
-	"os"
 	"path"
 	"text/template"
 
@@ -231,5 +230,5 @@ func (c *PrometheusConfig) ConfigToFile(file string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(file, config, 0755)
+	return utils.WriteFile(file, config, 0755)
 }

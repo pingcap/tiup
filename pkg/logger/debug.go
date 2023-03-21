@@ -51,7 +51,7 @@ func OutputDebugLog(prefix string) {
 	fileName := time.Now().Format(fmt.Sprintf("%s-debug-2006-01-02-15-04-05.log", prefix))
 	filePath := filepath.Join(logDir, fileName)
 
-	err := os.WriteFile(filePath, debugBuffer.Bytes(), 0644)
+	err := utils.WriteFile(filePath, debugBuffer.Bytes(), 0644)
 	if err != nil {
 		_, _ = tui.ColorWarningMsg.Fprint(os.Stderr, "\nWarn: Failed to write error debug log.\n")
 	} else {

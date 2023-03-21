@@ -15,11 +15,11 @@ package system
 
 import (
 	"bytes"
-	"os"
 	"path"
 	"text/template"
 
 	"github.com/pingcap/tiup/embed"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // Config represent the data to generate systemd config
@@ -84,7 +84,7 @@ func (c *Config) ConfigToFile(file string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(file, config, 0755)
+	return utils.WriteFile(file, config, 0755)
 }
 
 // Config generate the config file data.

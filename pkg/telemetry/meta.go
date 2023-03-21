@@ -109,7 +109,7 @@ func (m *Meta) SaveTo(fname string) error {
 		return errors.AddStack(err)
 	}
 
-	return os.WriteFile(fname, data, 0644)
+	return utils.WriteFile(fname, data, 0644)
 }
 
 // GetMeta read the telemeta from disk

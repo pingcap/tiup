@@ -20,6 +20,7 @@ import (
 
 	"github.com/pingcap/check"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 type scrubSuite struct{}

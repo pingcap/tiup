@@ -15,11 +15,11 @@ package scripts
 
 import (
 	"bytes"
-	"os"
 	"path"
 	"text/template"
 
 	"github.com/pingcap/tiup/embed"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // DrainerScript represent the data to generate drainer config
@@ -55,5 +55,5 @@ func (c *DrainerScript) ConfigToFile(file string) error {
 		return err
 	}
 
-	return os.WriteFile(file, content.Bytes(), 0755)
+	return utils.WriteFile(file, content.Bytes(), 0755)
 }

@@ -265,7 +265,7 @@ func (i *BaseInstance) MergeServerConfig(ctx context.Context, e ctxt.Executor, g
 	if err != nil {
 		return err
 	}
-	err = os.WriteFile(fp, conf, os.ModePerm)
+	err = utils.WriteFile(fp, conf, os.ModePerm)
 	if err != nil {
 		return err
 	}
@@ -281,7 +281,7 @@ func (i *BaseInstance) mergeTiFlashLearnerServerConfig(ctx context.Context, e ct
 	if err != nil {
 		return err
 	}
-	err = os.WriteFile(fp, conf, os.ModePerm)
+	err = utils.WriteFile(fp, conf, os.ModePerm)
 	if err != nil {
 		return err
 	}

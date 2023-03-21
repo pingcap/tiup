@@ -186,7 +186,7 @@ func main() {
 		}
 		buffer.WriteString("\n")
 	}
-	if err := os.WriteFile(outpath, buffer.Bytes(), os.ModePerm); err != nil {
+	if err := utils.WriteFile(outpath, buffer.Bytes(), os.ModePerm); err != nil {
 		panic(err)
 	}
 }

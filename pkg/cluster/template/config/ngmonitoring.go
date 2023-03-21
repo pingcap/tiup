@@ -15,11 +15,11 @@ package config
 
 import (
 	"bytes"
-	"os"
 	"path"
 	"text/template"
 
 	"github.com/pingcap/tiup/embed"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // NgMonitoringConfig represent the data to generate NgMonitoring config
@@ -53,5 +53,5 @@ func (c *NgMonitoringConfig) ConfigToFile(file string) error {
 		return err
 	}
 
-	return os.WriteFile(file, content.Bytes(), 0755)
+	return utils.WriteFile(file, content.Bytes(), 0755)
 }
