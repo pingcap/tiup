@@ -16,7 +16,6 @@ package task
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/google/uuid"
@@ -29,6 +28,7 @@ import (
 	system "github.com/pingcap/tiup/pkg/cluster/template/systemd"
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/utils"
 	"go.uber.org/zap"
 )
 
@@ -56,7 +56,7 @@ func (m *MonitoredConfig) Execute(ctx context.Context) error {
 		return ErrNoExecutor
 	}
 
-	if err := os.MkdirAll(m.paths.Cache, 0755); err != nil {
+	if err := utils.MkdirAll(m.paths.Cache, 0755); err != nil {
 		return err
 	}
 

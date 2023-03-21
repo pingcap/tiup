@@ -121,7 +121,7 @@ func (p *Profile) ComponentInstalledPath(component string, version utils.Version
 func (p *Profile) SaveTo(path string, data []byte, perm os.FileMode) error {
 	fullPath := filepath.Join(p.root, path)
 	// create sub directory if needed
-	if err := os.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
+	if err := utils.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
 		return errors.Trace(err)
 	}
 	return os.WriteFile(fullPath, data, perm)

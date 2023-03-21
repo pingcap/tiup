@@ -61,7 +61,7 @@ func HistoryRecord(env *Environment, command []string, date time.Time, code int)
 
 	historyPath := env.LocalPath(HistoryDir)
 	if utils.IsNotExist(historyPath) {
-		err := os.MkdirAll(historyPath, 0755)
+		err := utils.MkdirAll(historyPath, 0755)
 		if err != nil {
 			return err
 		}

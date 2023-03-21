@@ -16,7 +16,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -47,7 +46,7 @@ func (m *ngMonitoring) wait() error {
 
 // the cmd is not started after return
 func newNGMonitoring(ctx context.Context, version string, host, dir string, pds []*instance.PDInstance) (*ngMonitoring, error) {
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := utils.MkdirAll(dir, 0755); err != nil {
 		return nil, errors.AddStack(err)
 	}
 

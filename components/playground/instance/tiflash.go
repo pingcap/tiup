@@ -184,7 +184,7 @@ func (inst *TiFlashInstance) StoreAddr() string {
 
 func (inst *TiFlashInstance) checkConfig(deployDir, clusterManagerPath string,
 	version utils.Version, tidbStatusAddrs, endpoints []string) (err error) {
-	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
+	if err := utils.MkdirAll(inst.Dir, 0755); err != nil {
 		return errors.Trace(err)
 	}
 

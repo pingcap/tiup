@@ -81,7 +81,7 @@ func main() {
 	}
 
 	targetDir := filepath.Join(opt.source, autoDirectoryName)
-	if err := os.MkdirAll(targetDir, 0755); err != nil {
+	if err := utils.MkdirAll(targetDir, 0755); err != nil {
 		fatal("Cannot create the errdoc: %+v", err)
 	}
 

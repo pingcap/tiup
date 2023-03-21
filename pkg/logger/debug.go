@@ -22,6 +22,7 @@ import (
 
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/tui"
+	"github.com/pingcap/tiup/pkg/utils"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -41,7 +42,7 @@ func OutputDebugLog(prefix string) {
 		profile := localdata.InitProfile()
 		logDir = profile.Path("logs")
 	}
-	if err := os.MkdirAll(logDir, 0755); err != nil {
+	if err := utils.MkdirAll(logDir, 0755); err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "\nCreate debug logs(%s) directory failed %v.\n", logDir, err)
 		return
 	}

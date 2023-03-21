@@ -24,6 +24,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/tui"
+	"github.com/pingcap/tiup/pkg/utils"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
@@ -123,7 +124,7 @@ func newImportCmd() *cobra.Command {
 			}
 
 			// copy SSH key to TiUP profile directory
-			if err = os.MkdirAll(spec.ClusterPath(clsName, "ssh"), 0755); err != nil {
+			if err = utils.MkdirAll(spec.ClusterPath(clsName, "ssh"), 0755); err != nil {
 				return err
 			}
 			srcKeyPathPriv := ansible.SSHKeyPath()

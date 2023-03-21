@@ -27,6 +27,7 @@ import (
 	"github.com/blevesearch/bleve/search/query"
 	"github.com/pingcap/tiup/components/errdoc/spec"
 	"github.com/pingcap/tiup/pkg/localdata"
+	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -126,7 +127,7 @@ func loadIndex() (bleve.Index, map[string]*spec.ErrorSpec, error) {
 
 	if needIndex {
 		indexMapping := bleve.NewIndexMapping()
-		if err := os.MkdirAll(indexPath, 0755); err != nil {
+		if err := utils.MkdirAll(indexPath, 0755); err != nil {
 			return nil, nil, err
 		}
 		index, err = bleve.New(indexPath, indexMapping)

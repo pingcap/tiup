@@ -186,7 +186,7 @@ Examples:
 				dataDir = filepath.Join(tiupHome, localdata.DataParentDir, tag)
 				deleteWhenExit = true
 			}
-			err := os.MkdirAll(dataDir, os.ModePerm)
+			err := utils.MkdirAll(dataDir, os.ModePerm)
 			if err != nil {
 				return err
 			}

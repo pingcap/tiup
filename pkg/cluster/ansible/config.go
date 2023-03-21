@@ -30,7 +30,7 @@ import (
 // ImportConfig copies config files from cluster which deployed through tidb-ansible
 func ImportConfig(ctx context.Context, name string, clsMeta *spec.ClusterMeta, gOpt operator.Options) error {
 	// there may be already cluster dir, skip create
-	// if err := os.MkdirAll(meta.ClusterPath(name), 0755); err != nil {
+	// if err := utils.MkdirAll(meta.ClusterPath(name), 0755); err != nil {
 	// 	 return err
 	// }
 	// if err := os.WriteFile(meta.ClusterPath(name, "topology.yaml"), yamlFile, 0664); err != nil {

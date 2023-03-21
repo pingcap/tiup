@@ -17,7 +17,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -159,7 +158,7 @@ func (m *Manager) Deploy(
 		}
 	}
 
-	if err := os.MkdirAll(m.specManager.Path(name), 0755); err != nil {
+	if err := utils.MkdirAll(m.specManager.Path(name), 0755); err != nil {
 		return errorx.InitializationFailed.
 			Wrap(err, "Failed to create cluster metadata directory '%s'", m.specManager.Path(name)).
 			WithProperty(tui.SuggestionFromString("Please check file system permissions and try again."))

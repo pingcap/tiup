@@ -83,7 +83,7 @@ func (m *monitor) wait() error {
 
 // the cmd is not started after return
 func newMonitor(ctx context.Context, version string, host, dir string) (*monitor, error) {
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := utils.MkdirAll(dir, 0755); err != nil {
 		return nil, errors.AddStack(err)
 	}
 
