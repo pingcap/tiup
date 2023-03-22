@@ -280,7 +280,7 @@ func (l *httpMirror) Source() string {
 // Open implements the Mirror interface
 func (l *httpMirror) Open() error {
 	tmpDir := filepath.Join(os.TempDir(), strconv.Itoa(rand.Int()))
-	if err := utils.MkdirAll(tmpDir, os.ModePerm); err != nil {
+	if err := os.MkdirAll(tmpDir, os.ModePerm); err != nil {
 		return errors.Trace(err)
 	}
 	l.tmpDir = tmpDir
