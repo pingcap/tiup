@@ -25,7 +25,6 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
-	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -131,10 +130,10 @@ func newImportCmd() *cobra.Command {
 			srcKeyPathPub := srcKeyPathPriv + ".pub"
 			dstKeyPathPriv := spec.ClusterPath(clsName, "ssh", "id_rsa")
 			dstKeyPathPub := dstKeyPathPriv + ".pub"
-			if err = tiuputils.Copy(srcKeyPathPriv, dstKeyPathPriv); err != nil {
+			if err = utils.Copy(srcKeyPathPriv, dstKeyPathPriv); err != nil {
 				return err
 			}
-			if err = tiuputils.Copy(srcKeyPathPub, dstKeyPathPub); err != nil {
+			if err = utils.Copy(srcKeyPathPub, dstKeyPathPub); err != nil {
 				return err
 			}
 
@@ -160,13 +159,13 @@ func newImportCmd() *cobra.Command {
 			// backup ansible files
 			if noBackup {
 				// rename original TiDB-Ansible inventory file
-				if err = tiuputils.Move(filepath.Join(ansibleDir, inventoryFileName), backupFile); err != nil {
+				if err = utils.Move(filepath.Join(ansibleDir, inventoryFileName), backupFile); err != nil {
 					return err
 				}
 				log.Infof("Ansible inventory renamed to %s.", color.HiCyanString(backupFile))
 			} else {
 				// move original TiDB-Ansible directory to a staged location
-				if err = tiuputils.Move(ansibleDir, backupDir); err != nil {
+				if err = utils.Move(ansibleDir, backupDir); err != nil {
 					return err
 				}
 				log.Infof("Ansible inventory saved in %s.", color.HiCyanString(backupDir))

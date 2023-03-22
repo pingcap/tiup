@@ -19,7 +19,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/stretchr/testify/assert"
 )
 

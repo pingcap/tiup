@@ -26,7 +26,6 @@ import (
 
 	ui "github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
-	"github.com/pingcap/tiup/pkg/utils"
 	gops "github.com/shirou/gopsutil/process"
 	"github.com/spf13/cobra"
 	_ "github.com/xo/usql/drivers/mysql"
@@ -214,7 +213,7 @@ func selectEndpoint(endpoints []*endpoint) *endpoint {
 	uiEvents := ui.PollEvents()
 	for {
 		e := <-uiEvents
-		_ = utils.WriteFile("/tmp/log", []byte(e.ID+"\n"), 0664)
+		_ = os.WriteFile("/tmp/log", []byte(e.ID+"\n"), 0664)
 		switch e.ID {
 		case "q", "<C-c>":
 			return nil

@@ -415,7 +415,7 @@ func MkdirAll(path string, minPerm os.FileMode) error {
 	return nil
 }
 
-// WriteFile call os.MkdirAll, but use max(parent permission,minPerm)
+// WriteFile call os.WriteFile, but use max(parent permission,minPerm)
 func WriteFile(name string, data []byte, perm os.FileMode) error {
 	return os.WriteFile(name, data, findPerm(filepath.Dir(name), perm))
 }
