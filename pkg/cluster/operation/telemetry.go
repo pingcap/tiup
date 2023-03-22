@@ -61,7 +61,7 @@ func GetNodeInfo(
 	var nodesMu sync.Mutex
 	foundHosts := make(map[string]struct{})
 	topo.IterInstance(func(inst spec.Instance) {
-		host := inst.GetHost()
+		host := inst.GetManageHost()
 
 		if _, ok := foundHosts[host]; ok {
 			return

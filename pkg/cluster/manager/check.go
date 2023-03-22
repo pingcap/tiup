@@ -218,7 +218,7 @@ func checkSystemInfo(
 			// checks that applies to each instance
 			if opt.ExistCluster {
 				t1 = t1.CheckSys(
-					inst.GetHost(),
+					inst.GetManageHost(),
 					inst.DeployDir(),
 					task.CheckTypePermission,
 					topo,
@@ -227,28 +227,28 @@ func checkSystemInfo(
 			} else {
 				t1 = t1.
 					CheckSys(
-						inst.GetHost(),
+						inst.GetManageHost(),
 						inst.DeployDir(),
 						task.ChecktypeIsExist,
 						topo,
 						opt.Opr,
 					).
 					CheckSys(
-						inst.GetHost(),
+						inst.GetManageHost(),
 						inst.DataDir(),
 						task.ChecktypeIsExist,
 						topo,
 						opt.Opr,
 					).
 					CheckSys(
-						inst.GetHost(),
+						inst.GetManageHost(),
 						inst.LogDir(),
 						task.ChecktypeIsExist,
 						topo,
 						opt.Opr,
 					).
 					CheckSys(
-						inst.GetHost(),
+						inst.GetManageHost(),
 						fmt.Sprintf("/etc/systemd/system/%s-%d.service", inst.ComponentName(), inst.GetPort()),
 						task.ChecktypeIsExist,
 						topo,
@@ -262,7 +262,7 @@ func checkSystemInfo(
 				// build checking tasks
 				t1 = t1.
 					CheckSys(
-						inst.GetHost(),
+						inst.GetManageHost(),
 						dataDir,
 						task.CheckTypeFIO,
 						topo,
@@ -271,7 +271,7 @@ func checkSystemInfo(
 
 				if opt.ExistCluster {
 					t1 = t1.CheckSys(
-						inst.GetHost(),
+						inst.GetManageHost(),
 						dataDir,
 						task.CheckTypePermission,
 						topo,
@@ -282,11 +282,11 @@ func checkSystemInfo(
 
 			checkSysTasks = append(
 				checkSysTasks,
-				t1.BuildAsStep(fmt.Sprintf("  - Checking node %s", inst.GetHost())),
+				t1.BuildAsStep(fmt.Sprintf("  - Checking node %s", inst.GetManageHost())),
 			)
 
-			if _, found := uniqueHosts[inst.GetHost()]; !found {
-				uniqueHosts[inst.GetHost()] = inst.GetSSHPort()
+			if _, found := uniqueHosts[inst.GetManageHost()]; !found {
+				uniqueHosts[inst.GetManageHost()] = inst.GetSSHPort()
 				insightNodes = append(insightNodes, inst)
 			}
 		}
@@ -296,17 +296,15 @@ func checkSystemInfo(
 	if len(existPD) < 1 {
 		return fmt.Errorf("cannot find PD in exist cluster")
 	}
-	if _, found := uniqueHosts[existPD[0].GetHost()]; !found {
+	if _, found := uniqueHosts[existPD[0].GetManageHost()]; !found {
 		insightNodes = append(insightNodes, existPD[0])
 	}
-	// checks that applies to each host
-	//		if _, found := uniqueHosts[inst.GetHost()]; !found {
-	//			uniqueHosts[inst.GetHost()] = inst.GetSSHPort()
+
 	for _, inst := range insightNodes {
 		// build system info collecting tasks
 		t2 := task.NewBuilder(logger).
 			RootSSH(
-				inst.GetHost(),
+				inst.GetManageHost(),
 				inst.GetSSHPort(),
 				opt.User,
 				s.Password,
@@ -324,28 +322,28 @@ func checkSystemInfo(
 				gOpt.SSHType,
 				topo.GlobalOptions.SSHType,
 			).
-			Mkdir(opt.User, inst.GetHost(), filepath.Join(task.CheckToolsPathDir, "bin")).
+			Mkdir(opt.User, inst.GetManageHost(), filepath.Join(task.CheckToolsPathDir, "bin")).
 			CopyComponent(
 				spec.ComponentCheckCollector,
 				inst.OS(),
 				inst.Arch(),
 				insightVer,
 				"", // use default srcPath
-				inst.GetHost(),
+				inst.GetManageHost(),
 				task.CheckToolsPathDir,
 			).
 			Shell(
-				inst.GetHost(),
+				inst.GetManageHost(),
 				filepath.Join(task.CheckToolsPathDir, "bin", "insight"),
 				"",
 				false,
 			).
-			BuildAsStep("  - Getting system info of " + utils.JoinHostPort(inst.GetHost(), inst.GetSSHPort()))
+			BuildAsStep("  - Getting system info of " + utils.JoinHostPort(inst.GetManageHost(), inst.GetSSHPort()))
 		collectTasks = append(collectTasks, t2)
 
 		t3 := task.NewBuilder(logger).
 			RootSSH(
-				inst.GetHost(),
+				inst.GetManageHost(),
 				inst.GetSSHPort(),
 				opt.User,
 				s.Password,
@@ -363,8 +361,8 @@ func checkSystemInfo(
 				gOpt.SSHType,
 				topo.GlobalOptions.SSHType,
 			).
-			Rmdir(inst.GetHost(), task.CheckToolsPathDir).
-			BuildAsStep("  - Cleanup check files on " + utils.JoinHostPort(inst.GetHost(), inst.GetSSHPort()))
+			Rmdir(inst.GetManageHost(), task.CheckToolsPathDir).
+			BuildAsStep("  - Cleanup check files on " + utils.JoinHostPort(inst.GetManageHost(), inst.GetSSHPort()))
 		cleanTasks = append(cleanTasks, t3)
 	}
 

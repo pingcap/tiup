@@ -106,7 +106,8 @@ func (m *Manager) confirmTopology(name, version string, topo spec.Topology, patc
 		}
 		clusterTable = append(clusterTable, []string{
 			comp,
-			instance.GetHost(),
+			utils.Ternary(instance.GetHost() == instance.GetManageHost(), instance.GetHost(),
+				fmt.Sprintf("%s/%s", instance.GetHost(), instance.GetManageHost())).(string),
 			utils.JoinInt(instance.UsedPorts(), "/"),
 			tui.OsArch(instance.OS(), instance.Arch()),
 			strings.Join(instance.UsedDirs(), ","),
@@ -190,14 +191,14 @@ func (m *Manager) fillHostArchOrOS(s, p *tui.SSHConnectionProps, topo spec.Topol
 			return
 		}
 
-		if _, ok := hostArchOrOS[inst.GetHost()]; ok {
+		if _, ok := hostArchOrOS[inst.GetManageHost()]; ok {
 			return
 		}
-		hostArchOrOS[inst.GetHost()] = ""
+		hostArchOrOS[inst.GetManageHost()] = ""
 
 		tf := task.NewBuilder(m.logger).
 			RootSSH(
-				inst.GetHost(),
+				inst.GetManageHost(),
 				inst.GetSSHPort(),
 				user,
 				s.Password,
@@ -218,11 +219,11 @@ func (m *Manager) fillHostArchOrOS(s, p *tui.SSHConnectionProps, topo spec.Topol
 
 		switch fullType {
 		case spec.FullOSType:
-			tf = tf.Shell(inst.GetHost(), "uname -s", "", false)
+			tf = tf.Shell(inst.GetManageHost(), "uname -s", "", false)
 		default:
-			tf = tf.Shell(inst.GetHost(), "uname -m", "", false)
+			tf = tf.Shell(inst.GetManageHost(), "uname -m", "", false)
 		}
-		detectTasks = append(detectTasks, tf.BuildAsStep(fmt.Sprintf("  - Detecting node %s %s info", inst.GetHost(), string(fullType))))
+		detectTasks = append(detectTasks, tf.BuildAsStep(fmt.Sprintf("  - Detecting node %s %s info", inst.GetManageHost(), string(fullType))))
 	})
 	if len(detectTasks) == 0 {
 		return nil

@@ -41,6 +41,7 @@ import (
 // TiFlashSpec represents the TiFlash topology specification in topology.yaml
 type TiFlashSpec struct {
 	Host                 string               `yaml:"host"`
+	ManageHost           string               `yaml:"manage_host,omitempty"`
 	SSHPort              int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported             bool                 `yaml:"imported,omitempty"`
 	Patched              bool                 `yaml:"patched,omitempty"`
@@ -82,7 +83,11 @@ func (s *TiFlashSpec) Role() string {
 
 // SSH returns the host and SSH port of the instance
 func (s *TiFlashSpec) SSH() (string, int) {
-	return s.Host, s.SSHPort
+	host := s.Host
+	if s.ManageHost != "" {
+		host = s.ManageHost
+	}
+	return host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance

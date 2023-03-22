@@ -38,6 +38,7 @@ import (
 // TiSparkMasterSpec is the topology specification for TiSpark master node
 type TiSparkMasterSpec struct {
 	Host           string            `yaml:"host"`
+	ManageHost     string            `yaml:"manage_host,omitempty"`
 	ListenHost     string            `yaml:"listen_host,omitempty"`
 	SSHPort        int               `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported       bool              `yaml:"imported,omitempty"`
@@ -60,7 +61,11 @@ func (s *TiSparkMasterSpec) Role() string {
 
 // SSH returns the host and SSH port of the instance
 func (s *TiSparkMasterSpec) SSH() (string, int) {
-	return s.Host, s.SSHPort
+	host := s.Host
+	if s.ManageHost != "" {
+		host = s.ManageHost
+	}
+	return host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance

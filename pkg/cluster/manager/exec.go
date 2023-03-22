@@ -55,13 +55,13 @@ func (m *Manager) Exec(name string, opt ExecOptions, gOpt operator.Options) erro
 	var shellTasks []task.Task
 	uniqueHosts := map[string]set.StringSet{} // host-sshPort -> {command}
 	topo.IterInstance(func(inst spec.Instance) {
-		key := utils.JoinHostPort(inst.GetHost(), inst.GetSSHPort())
+		key := utils.JoinHostPort(inst.GetManageHost(), inst.GetSSHPort())
 		if _, found := uniqueHosts[key]; !found {
 			if len(gOpt.Roles) > 0 && !filterRoles.Exist(inst.Role()) {
 				return
 			}
 
-			if len(gOpt.Nodes) > 0 && !filterNodes.Exist(inst.GetHost()) {
+			if len(gOpt.Nodes) > 0 && (!filterNodes.Exist(inst.GetHost()) || filterNodes.Exist(inst.GetManageHost())) {
 				return
 			}
 

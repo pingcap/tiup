@@ -265,9 +265,9 @@ func (m *Manager) Deploy(
 			filepath.Join(deployDir, "scripts"),
 		}
 
-		t := task.NewSimpleUerSSH(m.logger, inst.GetHost(), inst.GetSSHPort(), globalOptions.User, gOpt, sshProxyProps, globalOptions.SSHType).
-			Mkdir(globalOptions.User, inst.GetHost(), deployDirs...).
-			Mkdir(globalOptions.User, inst.GetHost(), dataDirs...)
+		t := task.NewSimpleUerSSH(m.logger, inst.GetManageHost(), inst.GetSSHPort(), globalOptions.User, gOpt, sshProxyProps, globalOptions.SSHType).
+			Mkdir(globalOptions.User, inst.GetManageHost(), deployDirs...).
+			Mkdir(globalOptions.User, inst.GetManageHost(), dataDirs...)
 
 		if deployerInstance, ok := inst.(DeployerInstance); ok {
 			deployerInstance.Deploy(t, "", deployDir, version, name, clusterVersion)
@@ -291,14 +291,14 @@ func (m *Manager) Deploy(
 					inst.Arch(),
 					version,
 					"", // use default srcPath
-					inst.GetHost(),
+					inst.GetManageHost(),
 					deployDir,
 				)
 			}
 		}
 
 		deployCompTasks = append(deployCompTasks,
-			t.BuildAsStep(fmt.Sprintf("  - Copy %s -> %s", inst.ComponentName(), inst.GetHost())),
+			t.BuildAsStep(fmt.Sprintf("  - Copy %s -> %s", inst.ComponentName(), inst.GetManageHost())),
 		)
 	})
 

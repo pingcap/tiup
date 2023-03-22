@@ -142,7 +142,7 @@ func (b *Builder) ClusterSSH(
 	var tasks []Task
 	topo.IterInstance(func(inst spec.Instance) {
 		tasks = append(tasks, &UserSSH{
-			host:            inst.GetHost(),
+			host:            inst.GetManageHost(),
 			port:            inst.GetSSHPort(),
 			deployUser:      deployUser,
 			timeout:         sshTimeout,
@@ -437,10 +437,10 @@ func (b *Builder) DeploySpark(inst spec.Instance, sparkVersion, srcPath, deployD
 		inst.Arch(),
 		sparkVersion,
 		srcPath,
-		inst.GetHost(),
+		inst.GetManageHost(),
 		deployDir,
 	).Shell( // spark is under a subdir, move it to deploy dir
-		inst.GetHost(),
+		inst.GetManageHost(),
 		fmt.Sprintf(
 			"cp -rf %[1]s %[2]s/ && cp -rf %[3]s/* %[2]s/ && rm -rf %[1]s %[3]s",
 			filepath.Join(deployDir, "bin", sparkSubPath),
@@ -455,10 +455,10 @@ func (b *Builder) DeploySpark(inst spec.Instance, sparkVersion, srcPath, deployD
 		inst.Arch(),
 		"", // use the latest stable version
 		srcPath,
-		inst.GetHost(),
+		inst.GetManageHost(),
 		deployDir,
 	).Shell( // move tispark jar to correct path
-		inst.GetHost(),
+		inst.GetManageHost(),
 		fmt.Sprintf(
 			"cp -f %[1]s/*.jar %[2]s/jars/ && rm -f %[1]s/*.jar",
 			filepath.Join(deployDir, "bin"),

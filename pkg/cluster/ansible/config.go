@@ -56,7 +56,7 @@ func ImportConfig(ctx context.Context, name string, clsMeta *spec.ClusterMeta, g
 						spec.ClusterPath(name, "ssh", "id_rsa"),
 						spec.ClusterPath(name, "ssh", "id_rsa.pub")).
 					UserSSH(
-						inst.GetHost(),
+						inst.GetManageHost(),
 						inst.GetSSHPort(),
 						clsMeta.User,
 						gOpt.SSHTimeout,
@@ -78,7 +78,7 @@ func ImportConfig(ctx context.Context, name string, clsMeta *spec.ClusterMeta, g
 								inst.ComponentName(),
 								inst.GetHost(),
 								inst.GetPort())),
-						inst.GetHost(),
+						inst.GetManageHost(),
 						true,
 						0,
 						false).
@@ -90,7 +90,7 @@ func ImportConfig(ctx context.Context, name string, clsMeta *spec.ClusterMeta, g
 						spec.ClusterPath(name, "ssh", "id_rsa"),
 						spec.ClusterPath(name, "ssh", "id_rsa.pub")).
 					UserSSH(
-						inst.GetHost(),
+						inst.GetManageHost(),
 						inst.GetSSHPort(),
 						clsMeta.User,
 						gOpt.SSHTimeout,
@@ -112,7 +112,7 @@ func ImportConfig(ctx context.Context, name string, clsMeta *spec.ClusterMeta, g
 								inst.ComponentName(),
 								inst.GetHost(),
 								inst.GetPort())),
-						inst.GetHost(),
+						inst.GetManageHost(),
 						true,
 						0,
 						false).
@@ -123,7 +123,7 @@ func ImportConfig(ctx context.Context, name string, clsMeta *spec.ClusterMeta, g
 								inst.ComponentName(),
 								inst.GetHost(),
 								inst.GetPort())),
-						inst.GetHost(),
+						inst.GetManageHost(),
 						true,
 						0,
 						false).

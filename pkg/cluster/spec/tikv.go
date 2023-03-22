@@ -47,6 +47,7 @@ const (
 // TiKVSpec represents the TiKV topology specification in topology.yaml
 type TiKVSpec struct {
 	Host                string               `yaml:"host"`
+	ManageHost          string               `yaml:"manage_host,omitempty"`
 	ListenHost          string               `yaml:"listen_host,omitempty"`
 	AdvertiseAddr       string               `yaml:"advertise_addr,omitempty"`
 	SSHPort             int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
@@ -102,7 +103,11 @@ func (s *TiKVSpec) Role() string {
 
 // SSH returns the host and SSH port of the instance
 func (s *TiKVSpec) SSH() (string, int) {
-	return s.Host, s.SSHPort
+	host := s.Host
+	if s.ManageHost != "" {
+		host = s.ManageHost
+	}
+	return host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance

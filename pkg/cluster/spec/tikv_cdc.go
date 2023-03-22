@@ -34,6 +34,7 @@ import (
 // TiKVCDCSpec represents the TiKVCDC topology specification in topology.yaml
 type TiKVCDCSpec struct {
 	Host            string               `yaml:"host"`
+	ManageHost      string               `yaml:"manage_host,omitempty"`
 	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported        bool                 `yaml:"imported,omitempty"`
 	Patched         bool                 `yaml:"patched,omitempty"`
@@ -59,7 +60,11 @@ func (s *TiKVCDCSpec) Role() string {
 
 // SSH returns the host and SSH port of the instance
 func (s *TiKVCDCSpec) SSH() (string, int) {
-	return s.Host, s.SSHPort
+	host := s.Host
+	if s.ManageHost != "" {
+		host = s.ManageHost
+	}
+	return host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance

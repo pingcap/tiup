@@ -401,7 +401,7 @@ func (m *Manager) DisplayTiKVLabels(dopt DisplayOption, opt operator.Options) er
 		if ins.ComponentName() == spec.ComponentPD {
 			status := ins.Status(ctx, statusTimeout, tlsCfg, masterList...)
 			if strings.HasPrefix(status, "Up") || strings.HasPrefix(status, "Healthy") {
-				instAddr := utils.JoinHostPort(ins.GetHost(), ins.GetPort())
+				instAddr := utils.JoinHostPort(ins.GetManageHost(), ins.GetPort())
 				mu.Lock()
 				masterActive = append(masterActive, instAddr)
 				mu.Unlock()
@@ -529,7 +529,7 @@ func (m *Manager) GetClusterTopology(dopt DisplayOption, opt operator.Options) (
 		status := ins.Status(ctx, statusTimeout, tlsCfg, masterList...)
 		mu.Lock()
 		if strings.HasPrefix(status, "Up") || strings.HasPrefix(status, "Healthy") {
-			instAddr := utils.JoinHostPort(ins.GetHost(), ins.GetPort())
+			instAddr := utils.JoinHostPort(ins.GetManageHost(), ins.GetPort())
 			masterActive = append(masterActive, instAddr)
 		}
 		masterStatus[ins.ID()] = status
@@ -564,7 +564,7 @@ func (m *Manager) GetClusterTopology(dopt DisplayOption, opt operator.Options) (
 		switch ins.ComponentName() {
 		case spec.ComponentPD:
 			status = masterStatus[ins.ID()]
-			instAddr := utils.JoinHostPort(ins.GetHost(), ins.GetPort())
+			instAddr := utils.JoinHostPort(ins.GetManageHost(), ins.GetPort())
 			if dashboardAddr == instAddr {
 				status += "|UI"
 			}
@@ -581,7 +581,7 @@ func (m *Manager) GetClusterTopology(dopt DisplayOption, opt operator.Options) (
 
 		// Query the service status and uptime
 		if status == "-" || (dopt.ShowUptime && since == "-") || dopt.ShowProcess {
-			e, found := ctxt.GetInner(ctx).GetExecutor(ins.GetHost())
+			e, found := ctxt.GetInner(ctx).GetExecutor(ins.GetManageHost())
 			if found {
 				var active string
 				nctx := checkpoint.NewContext(ctx)
@@ -607,9 +607,10 @@ func (m *Manager) GetClusterTopology(dopt DisplayOption, opt operator.Options) (
 		rc := ins.ResourceControl()
 		mu.Lock()
 		clusterInstInfos = append(clusterInstInfos, InstInfo{
-			ID:            ins.ID(),
-			Role:          roleName,
-			Host:          ins.GetHost(),
+			ID:   ins.ID(),
+			Role: roleName,
+			Host: utils.Ternary(ins.GetHost() == ins.GetManageHost(), ins.GetHost(),
+				fmt.Sprintf("%s/%s", ins.GetHost(), ins.GetManageHost())).(string),
 			Ports:         utils.JoinInt(ins.UsedPorts(), "/"),
 			OsArch:        tui.OsArch(ins.OS(), ins.Arch()),
 			Status:        status,
@@ -750,7 +751,7 @@ func SetClusterSSH(ctx context.Context, topo spec.Topology, deployUser string, s
 	for _, com := range topo.ComponentsByStartOrder() {
 		for _, in := range com.Instances() {
 			cf := executor.SSHConfig{
-				Host:    in.GetHost(),
+				Host:    in.GetManageHost(),
 				Port:    in.GetSSHPort(),
 				KeyFile: ctxt.GetInner(ctx).PrivateKeyPath,
 				User:    deployUser,
@@ -761,7 +762,7 @@ func SetClusterSSH(ctx context.Context, topo spec.Topology, deployUser string, s
 			if err != nil {
 				return err
 			}
-			ctxt.GetInner(ctx).SetExecutor(in.GetHost(), e)
+			ctxt.GetInner(ctx).SetExecutor(in.GetManageHost(), e)
 		}
 	}
 

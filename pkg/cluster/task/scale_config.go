@@ -37,7 +37,7 @@ type ScaleConfig struct {
 // Execute implements the Task interface
 func (c *ScaleConfig) Execute(ctx context.Context) error {
 	// Copy to remote server
-	exec, found := ctxt.GetInner(ctx).GetExecutor(c.instance.GetHost())
+	exec, found := ctxt.GetInner(ctx).GetExecutor(c.instance.GetManageHost())
 	if !found {
 		return ErrNoExecutor
 	}
@@ -58,5 +58,5 @@ func (c *ScaleConfig) Rollback(ctx context.Context) error {
 // String implements the fmt.Stringer interface
 func (c *ScaleConfig) String() string {
 	return fmt.Sprintf("ScaleConfig: cluster=%s, user=%s, host=%s, service=%s, %s",
-		c.clusterName, c.deployUser, c.instance.GetHost(), c.instance.ServiceName(), c.paths)
+		c.clusterName, c.deployUser, c.instance.GetManageHost(), c.instance.ServiceName(), c.paths)
 }
