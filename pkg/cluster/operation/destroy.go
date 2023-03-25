@@ -376,6 +376,15 @@ func DestroyComponent(ctx context.Context, instances []spec.Instance, cls spec.T
 			}
 		}
 
+		// For TiFlash, we need to delete storage.remote.cache.dir
+		if ins.ComponentName() == spec.ComponentTiFlash {
+			tiflashInstance := ins.(*spec.TiFlashInstance)
+			tiflashSpec := tiflashInstance.InstanceSpec.(*spec.TiFlashSpec)
+			if remoteCacheDir, ok := tiflashSpec.Config[spec.TiFlashRemoteCacheDir]; ok {
+				delPaths.Insert(remoteCacheDir.(string))
+			}
+		}
+
 		logDir := ins.LogDir()
 
 		// In TiDB-Ansible, deploy dir are shared by all components on the same
