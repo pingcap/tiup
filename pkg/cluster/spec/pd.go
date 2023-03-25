@@ -153,6 +153,7 @@ func (c *PDComponent) Instances() []Instance {
 				InstanceSpec: s,
 				Name:         c.Name(),
 				Host:         s.Host,
+				ManageHost:   s.ManageHost,
 				ListenHost:   s.ListenHost,
 				Port:         s.ClientPort,
 				SSHP:         s.SSHPort,

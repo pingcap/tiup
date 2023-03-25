@@ -86,6 +86,7 @@ func (s *TiSparkMasterSpec) IgnoreMonitorAgent() bool {
 // TiSparkWorkerSpec is the topology specification for TiSpark slave nodes
 type TiSparkWorkerSpec struct {
 	Host           string `yaml:"host"`
+	ManageHost     string `yaml:"manage_host,omitempty"`
 	ListenHost     string `yaml:"listen_host,omitempty"`
 	SSHPort        int    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported       bool   `yaml:"imported,omitempty"`
@@ -106,7 +107,11 @@ func (s *TiSparkWorkerSpec) Role() string {
 
 // SSH returns the host and SSH port of the instance
 func (s *TiSparkWorkerSpec) SSH() (string, int) {
-	return s.Host, s.SSHPort
+	host := s.Host
+	if s.ManageHost != "" {
+		host = s.ManageHost
+	}
+	return host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
@@ -146,6 +151,7 @@ func (c *TiSparkMasterComponent) Instances() []Instance {
 			BaseInstance: BaseInstance{
 				InstanceSpec: s,
 				Name:         c.Name(),
+				ManageHost:   s.ManageHost,
 				Host:         s.Host,
 				Port:         s.Port,
 				SSHP:         s.SSHPort,
@@ -324,6 +330,7 @@ func (c *TiSparkWorkerComponent) Instances() []Instance {
 			BaseInstance: BaseInstance{
 				InstanceSpec: s,
 				Name:         c.Name(),
+				ManageHost:   s.ManageHost,
 				Host:         s.Host,
 				Port:         s.Port,
 				SSHP:         s.SSHPort,

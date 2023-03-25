@@ -111,6 +111,7 @@ func (c *GrafanaComponent) Instances() []Instance {
 				InstanceSpec: s,
 				Name:         c.Name(),
 				Host:         s.Host,
+				ManageHost:   s.ManageHost,
 				Port:         s.Port,
 				SSHP:         s.SSHPort,
 

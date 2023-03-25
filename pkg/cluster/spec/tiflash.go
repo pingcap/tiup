@@ -224,6 +224,7 @@ func (c *TiFlashComponent) Instances() []Instance {
 			InstanceSpec: s,
 			Name:         c.Name(),
 			Host:         s.Host,
+			ManageHost:   s.ManageHost,
 			Port:         s.GetMainPort(),
 			SSHP:         s.SSHPort,
 

@@ -841,6 +841,10 @@ func setHostArchOrOS(field reflect.Value, hostArchOrOS map[string]string, fullTy
 	}
 
 	host := field.FieldByName("Host")
+	if field.FieldByName("ManageHost").String() != "" {
+		host = field.FieldByName("ManageHost")
+	}
+
 	arch := field.FieldByName("Arch")
 	os := field.FieldByName("OS")
 
