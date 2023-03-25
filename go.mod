@@ -89,14 +89,10 @@ require (
 	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.3.2 // indirect
 	github.com/couchbase/vellum v1.0.2 // indirect
-	github.com/cweill/gotests v1.6.0 // indirect
 	github.com/danwakefield/fnmatch v0.0.0-20160403171240-cbb64ac3d964 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dchest/bcrypt_pbkdf v0.0.0-20150205184540-83f37f9c154a // indirect
 	github.com/dlclark/regexp2 v1.1.6 // indirect
-	github.com/fatih/camelcase v1.0.0 // indirect
-	github.com/fatih/gomodifytags v1.16.0 // indirect
-	github.com/fatih/structtag v1.2.0 // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/glycerine/go-unsnap-stream v0.0.0-20181221182339-f9677308dec2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
