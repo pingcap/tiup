@@ -69,14 +69,6 @@ dm:
 	@# Target: build the tiup-dm component
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-dm ./components/dm
 
-doc:
-	@# Target: build the tiup-doc component
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-doc ./components/doc
-
-errdoc:
-	@# Target: build the tiup-errdoc component
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-errdoc ./components/errdoc
-
 ctl:
 	@# Target: build the tiup-ctl component
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-ctl ./components/ctl

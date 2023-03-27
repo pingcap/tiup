@@ -132,7 +132,7 @@ func newMirrorSignCmd() *cobra.Command {
 				return err
 			}
 
-			if err = os.WriteFile(args[0], data, 0664); err != nil {
+			if err = utils.WriteFile(args[0], data, 0664); err != nil {
 				return perrs.Annotatef(err, "write manifest file %s", args[0])
 			}
 

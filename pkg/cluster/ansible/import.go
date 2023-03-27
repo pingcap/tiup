@@ -29,6 +29,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/relex/aini"
 )
 
@@ -202,7 +203,7 @@ func CommentConfig(clsName string) error {
 		for idx := range lines {
 			lines[idx] = "# " + lines[idx]
 		}
-		if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0644); err != nil {
+		if err := utils.WriteFile(path, []byte(strings.Join(lines, "\n")), 0644); err != nil {
 			return errors.Annotatef(err, "write config file %s", path)
 		}
 

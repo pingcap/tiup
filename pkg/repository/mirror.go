@@ -220,7 +220,7 @@ func (l *localFilesystem) Download(resource, targetDir string) error {
 	}
 	defer reader.Close()
 
-	if err := os.MkdirAll(targetDir, 0755); err != nil {
+	if err := utils.MkdirAll(targetDir, 0755); err != nil {
 		return errors.Trace(err)
 	}
 	outPath := filepath.Join(targetDir, resource)
@@ -504,7 +504,7 @@ func (l *httpMirror) Download(resource, targetDir string) error {
 		return err
 	}
 
-	if err := os.MkdirAll(targetDir, 0755); err != nil {
+	if err := utils.MkdirAll(targetDir, 0755); err != nil {
 		return errors.Trace(err)
 	}
 	return utils.Move(tmpFilePath, dstFilePath)
@@ -546,7 +546,7 @@ func (l *MockMirror) Download(resource, targetDir string) error {
 		return errors.Annotatef(ErrNotFound, "resource %s", resource)
 	}
 
-	if err := os.MkdirAll(targetDir, 0755); err != nil {
+	if err := utils.MkdirAll(targetDir, 0755); err != nil {
 		return err
 	}
 	target := filepath.Join(targetDir, resource)

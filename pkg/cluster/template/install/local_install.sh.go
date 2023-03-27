@@ -13,13 +13,11 @@
 
 package install
 
-import (
-	"os"
-)
+import "github.com/pingcap/tiup/pkg/utils"
 
 // WriteLocalInstallScript writes the install script into specified path
 func WriteLocalInstallScript(path string) error {
-	return os.WriteFile(path, []byte(script), 0755)
+	return utils.WriteFile(path, []byte(script), 0755)
 }
 
 var script = `#!/bin/sh

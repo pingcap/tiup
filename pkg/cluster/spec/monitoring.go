@@ -534,7 +534,7 @@ func mergeAdditionalScrapeConf(source string, addition map[string]any) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(source, bytes, 0644)
+	return utils.WriteFile(source, bytes, 0644)
 }
 
 func getRetention(retention string) string {

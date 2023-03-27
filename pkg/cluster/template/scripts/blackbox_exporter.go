@@ -15,11 +15,11 @@ package scripts
 
 import (
 	"bytes"
-	"os"
 	"path"
 	"text/template"
 
 	"github.com/pingcap/tiup/embed"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // BlackboxExporterScript represent the data to generate BlackboxExporter config
@@ -67,7 +67,7 @@ func (c *BlackboxExporterScript) ConfigToFile(file string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(file, config, 0755)
+	return utils.WriteFile(file, config, 0755)
 }
 
 // ConfigWithTemplate generate the BlackboxExporter config content by tpl

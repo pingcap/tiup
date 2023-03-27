@@ -57,7 +57,7 @@ func CloneMirror(repo *V1Repository,
 	fmt.Printf("Start to clone mirror, targetDir is %s, source mirror is %s, selectedVersions are [%s]\n", targetDir, repo.Mirror().Source(), strings.Join(selectedVersions, ","))
 	fmt.Println("If this does not meet expectations, please abort this process, read `tiup mirror clone --help` and run again")
 
-	if err := os.MkdirAll(targetDir, 0755); err != nil {
+	if err := utils.MkdirAll(targetDir, 0755); err != nil {
 		return err
 	}
 
@@ -65,10 +65,10 @@ func CloneMirror(repo *V1Repository,
 	tmpDir := filepath.Join(targetDir, fmt.Sprintf("_tmp_%d", time.Now().UnixNano()))
 	keyDir := filepath.Join(targetDir, "keys")
 
-	if err := os.MkdirAll(tmpDir, 0755); err != nil {
+	if err := utils.MkdirAll(tmpDir, 0755); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(keyDir, 0755); err != nil {
+	if err := utils.MkdirAll(keyDir, 0755); err != nil {
 		return err
 	}
 	defer os.RemoveAll(tmpDir)

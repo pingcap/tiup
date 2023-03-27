@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -136,7 +137,7 @@ func ScpDownload(session *ssh.Session, client *ssh.Client, src, dst string, limi
 				}
 			}
 
-			err = os.MkdirAll(wd, mode)
+			err = utils.MkdirAll(wd, mode)
 			if err != nil {
 				return err
 			}

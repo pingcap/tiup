@@ -16,11 +16,11 @@ package task
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // ScaleConfig is used to copy all configurations to the target directory of path
@@ -43,7 +43,7 @@ func (c *ScaleConfig) Execute(ctx context.Context) error {
 	}
 
 	c.paths.Cache = c.specManager.Path(c.clusterName, spec.TempConfigPath)
-	if err := os.MkdirAll(c.paths.Cache, 0755); err != nil {
+	if err := utils.MkdirAll(c.paths.Cache, 0755); err != nil {
 		return err
 	}
 
