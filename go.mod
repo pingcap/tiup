@@ -12,7 +12,6 @@ require (
 	github.com/alecthomas/assert v1.0.0
 	github.com/appleboy/easyssh-proxy v1.3.10-0.20211209134747-6671f69d85f5
 	github.com/asaskevich/EventBus v0.0.0-20200907212545-49d423059eef
-	github.com/blevesearch/bleve v1.0.14
 	github.com/cavaliergopher/grab/v3 v3.0.1
 	github.com/cheggaaa/pb/v3 v3.1.0
 	github.com/creasty/defaults v1.6.0
@@ -46,11 +45,9 @@ require (
 	github.com/sergi/go-diff v1.2.0
 	github.com/sethvargo/go-password v0.2.0
 	github.com/shirou/gopsutil v3.21.11+incompatible
-	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/spf13/cobra v1.5.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.0
-	github.com/tj/go-termd v0.0.1
 	go.etcd.io/etcd/client/pkg/v3 v3.5.4
 	go.etcd.io/etcd/client/v3 v3.5.4
 	go.uber.org/atomic v1.10.0
@@ -70,64 +67,32 @@ require (
 )
 
 require (
-	github.com/RoaringBitmap/roaring v0.4.23 // indirect
 	github.com/VividCortex/ewma v1.2.0 // indirect
-	github.com/alecthomas/chroma v0.6.8 // indirect
 	github.com/alecthomas/colour v0.1.0 // indirect
 	github.com/alecthomas/repr v0.0.0-20210801044451-80ca428c5142 // indirect
-	github.com/aybabtme/rgbterm v0.0.0-20170906152045-cc83f3b3ce59 // indirect
 	github.com/benbjohnson/clock v1.3.0 // indirect
-	github.com/blevesearch/go-porterstemmer v1.0.3 // indirect
-	github.com/blevesearch/mmap-go v1.0.2 // indirect
-	github.com/blevesearch/segment v0.9.0 // indirect
-	github.com/blevesearch/snowballstem v0.9.0 // indirect
-	github.com/blevesearch/zap/v11 v11.0.14 // indirect
-	github.com/blevesearch/zap/v12 v12.0.14 // indirect
-	github.com/blevesearch/zap/v13 v13.0.6 // indirect
-	github.com/blevesearch/zap/v14 v14.0.5 // indirect
-	github.com/blevesearch/zap/v15 v15.0.3 // indirect
 	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.3.2 // indirect
-	github.com/couchbase/vellum v1.0.2 // indirect
-	github.com/danwakefield/fnmatch v0.0.0-20160403171240-cbb64ac3d964 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dchest/bcrypt_pbkdf v0.0.0-20150205184540-83f37f9c154a // indirect
-	github.com/dlclark/regexp2 v1.1.6 // indirect
-	github.com/fsnotify/fsnotify v1.5.1 // indirect
-	github.com/glycerine/go-unsnap-stream v0.0.0-20181221182339-f9677308dec2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
-	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/kr/pretty v0.3.0 // indirect
-	github.com/kr/text v0.2.0 // indirect
 	github.com/lorenzosaino/go-sysctl v0.3.1 // indirect
 	github.com/lunixbochs/vtclean v1.0.0 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
-	github.com/mitchellh/go-wordwrap v1.0.0 // indirect
-	github.com/mschoch/smat v0.2.0 // indirect
-	github.com/onsi/ginkgo v1.16.5 // indirect
-	github.com/onsi/gomega v1.18.1 // indirect
-	github.com/philhofer/fwd v1.1.1 // indirect
 	github.com/pingcap/log v1.1.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
-	github.com/russross/blackfriday v2.0.0+incompatible // indirect
-	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
-	github.com/steveyen/gtreap v0.1.0 // indirect
-	github.com/syndtr/goleveldb v1.0.1-0.20210305035536-64b5b1c73954 // indirect
-	github.com/tinylib/msgp v1.1.6 // indirect
-	github.com/tj/go-css v0.0.0-20191108133013-220a796d1705 // indirect
 	github.com/tklauser/go-sysconf v0.3.10 // indirect
 	github.com/tklauser/numcpus v0.5.0 // indirect
 	github.com/vishvananda/netlink v0.0.0-20210530105856-14e832ae1e8f // indirect
 	github.com/vishvananda/netns v0.0.0-20200728191858-db3c7e526aae // indirect
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
-	github.com/willf/bitset v1.1.10 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
-	go.etcd.io/bbolt v1.3.6 // indirect
 	go.etcd.io/etcd/api/v3 v3.5.4 // indirect
 	go.uber.org/goleak v1.1.12 // indirect
 	go.uber.org/multierr v1.8.0 // indirect

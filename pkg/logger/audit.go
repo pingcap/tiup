@@ -15,9 +15,9 @@ package logger
 
 import (
 	"bytes"
-	"os"
 
 	"github.com/pingcap/tiup/pkg/cluster/audit"
+	"github.com/pingcap/tiup/pkg/utils"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -50,7 +50,7 @@ func OutputAuditLogToFileIfEnabled(dir, fileSuffix string) error {
 		return nil
 	}
 
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := utils.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
 

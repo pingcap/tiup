@@ -16,7 +16,6 @@ package scripts
 import (
 	"bytes"
 	"errors"
-	"os"
 	"path"
 	"text/template"
 
@@ -105,7 +104,7 @@ func (c *DMMasterScript) ConfigToFile(file string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(file, config, 0755)
+	return utils.WriteFile(file, config, 0755)
 }
 
 // ConfigWithTemplate generate the TiDB config content by tpl
@@ -188,5 +187,5 @@ func (c *DMMasterScaleScript) ConfigToFile(file string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(file, config, 0755)
+	return utils.WriteFile(file, config, 0755)
 }

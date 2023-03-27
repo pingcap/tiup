@@ -649,7 +649,7 @@ func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins i
 
 	id := p.allocID(componentID)
 	dir := filepath.Join(dataDir, fmt.Sprintf("%s-%d", componentID, id))
-	if err = os.MkdirAll(dir, 0755); err != nil {
+	if err = utils.MkdirAll(dir, 0755); err != nil {
 		return nil, err
 	}
 	// look more like listen ip?
@@ -1195,7 +1195,7 @@ func (p *Playground) bootGrafana(ctx context.Context, env *environment.Environme
 	}
 
 	dashboardDir := filepath.Join(grafanaDir, "dashboards")
-	err = os.MkdirAll(dashboardDir, 0755)
+	err = utils.MkdirAll(dashboardDir, 0755)
 	if err != nil {
 		return nil, errors.AddStack(err)
 	}

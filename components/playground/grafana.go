@@ -69,7 +69,7 @@ datasources:
 `
 
 	s := fmt.Sprintf(tpl, clusterName, p8sURL)
-	err = os.WriteFile(fname, []byte(s), 0644)
+	err = utils.WriteFile(fname, []byte(s), 0644)
 	if err != nil {
 		return errors.AddStack(err)
 	}
@@ -104,7 +104,7 @@ func replaceDatasource(dashboardDir string, datasourceName string) error {
 		s = strings.ReplaceAll(s, "${DS_LIGHTNING}", datasourceName)
 		s = re.ReplaceAllLiteralString(s, datasourceName)
 
-		return os.WriteFile(path, []byte(s), 0644)
+		return utils.WriteFile(path, []byte(s), 0644)
 	})
 
 	if err != nil {
@@ -134,7 +134,7 @@ providers:
 `
 	s := fmt.Sprintf(tpl, clusterName, clusterName, dir)
 
-	err = os.WriteFile(fname, []byte(s), 0644)
+	err = utils.WriteFile(fname, []byte(s), 0644)
 	if err != nil {
 		return errors.AddStack(err)
 	}
@@ -143,7 +143,7 @@ providers:
 }
 
 func makeSureDir(fname string) error {
-	return os.MkdirAll(filepath.Dir(fname), 0755)
+	return utils.MkdirAll(filepath.Dir(fname), 0755)
 }
 
 var clusterName = "Test-Cluster"
@@ -176,7 +176,7 @@ http_addr = %s
 # The http port to use
 http_port = %d
 `
-	err = os.MkdirAll(filepath.Join(dir, "conf"), 0755)
+	err = utils.MkdirAll(filepath.Join(dir, "conf"), 0755)
 	if err != nil {
 		return errors.AddStack(err)
 	}
@@ -184,7 +184,7 @@ http_port = %d
 	custome := fmt.Sprintf(tpl, g.host, g.port)
 	customeFName := filepath.Join(dir, "conf", "custom.ini")
 
-	err = os.WriteFile(customeFName, []byte(custome), 0644)
+	err = utils.WriteFile(customeFName, []byte(custome), 0644)
 	if err != nil {
 		return errors.AddStack(err)
 	}
