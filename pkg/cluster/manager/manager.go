@@ -94,24 +94,39 @@ func (m *Manager) confirmTopology(name, version string, topo spec.Topology, patc
 		fmt.Printf("TLS encryption:  %s\n", cyan.Sprint("enabled"))
 	}
 
+	// check if managehost is set
+	manageHost := false
+	topo.IterInstance(func(inst spec.Instance) {
+		if inst.GetHost() != inst.GetManageHost() {
+			manageHost = true
+			return
+		}
+	})
+
 	clusterTable := [][]string{
 		// Header
-		{"Role", "Host", "Ports", "OS/Arch", "Directories"},
+		{"Role", "Host"},
 	}
+	if manageHost {
+		clusterTable[0] = append(clusterTable[0], "Manage Host")
+	}
+	clusterTable[0] = append(clusterTable[0], "Ports", "OS/Arch", "Directories")
 
 	topo.IterInstance(func(instance spec.Instance) {
 		comp := instance.ComponentName()
 		if patchedRoles.Exist(comp) || instance.IsPatched() {
 			comp += " (patched)"
 		}
-		clusterTable = append(clusterTable, []string{
-			comp,
-			utils.Ternary(instance.GetHost() == instance.GetManageHost(), instance.GetHost(),
-				fmt.Sprintf("%s/%s", instance.GetHost(), instance.GetManageHost())).(string),
+		instInfo := []string{comp, instance.GetHost()}
+		if manageHost {
+			instInfo = append(instInfo, instance.GetManageHost())
+		}
+		instInfo = append(instInfo,
 			utils.JoinInt(instance.UsedPorts(), "/"),
 			tui.OsArch(instance.OS(), instance.Arch()),
-			strings.Join(instance.UsedDirs(), ","),
-		})
+			strings.Join(instance.UsedDirs(), ","))
+
+		clusterTable = append(clusterTable, instInfo)
 	})
 
 	tui.PrintTable(clusterTable, true)

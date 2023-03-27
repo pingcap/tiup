@@ -47,9 +47,10 @@ import (
 
 // DisplayOption represents option of display command
 type DisplayOption struct {
-	ClusterName string
-	ShowUptime  bool
-	ShowProcess bool
+	ClusterName    string
+	ShowUptime     bool
+	ShowProcess    bool
+	ShowManageHost bool
 }
 
 // InstInfo represents an instance info
@@ -57,6 +58,7 @@ type InstInfo struct {
 	ID          string `json:"id"`
 	Role        string `json:"role"`
 	Host        string `json:"host"`
+	ManageHost  string `json:"manage_host"`
 	Ports       string `json:"ports"`
 	OsArch      string `json:"os_arch"`
 	Status      string `json:"status"`
@@ -124,6 +126,16 @@ func (m *Manager) Display(dopt DisplayOption, opt operator.Options) error {
 	base := metadata.GetBaseMeta()
 	cyan := color.New(color.FgCyan, color.Bold)
 
+	// check if managehost is set
+	if !dopt.ShowManageHost {
+		topo.IterInstance(func(inst spec.Instance) {
+			if inst.GetHost() != inst.GetManageHost() {
+				dopt.ShowManageHost = true
+				return
+			}
+		})
+	}
+
 	statusTimeout := time.Duration(opt.APITimeout) * time.Second
 	// display cluster meta
 	var j *JSONOutput
@@ -174,7 +186,14 @@ func (m *Manager) Display(dopt DisplayOption, opt operator.Options) error {
 
 	// display topology
 	var clusterTable [][]string
-	rowHead := []string{"ID", "Role", "Host", "Ports", "OS/Arch", "Status"}
+	rowHead := []string{"ID", "Role", "Host"}
+
+	if dopt.ShowManageHost {
+		rowHead = append(rowHead, "Manage Host")
+	}
+
+	rowHead = append(rowHead, "Ports", "OS/Arch", "Status")
+
 	if dopt.ShowProcess {
 		rowHead = append(rowHead, "Memory", "Memory Limit", "CPU Quota")
 	}
@@ -190,10 +209,17 @@ func (m *Manager) Display(dopt DisplayOption, opt operator.Options) error {
 			color.CyanString(v.ID),
 			v.Role,
 			v.Host,
+		}
+
+		if dopt.ShowManageHost {
+			row = append(row, v.ManageHost)
+		}
+
+		row = append(row,
 			v.Ports,
 			v.OsArch,
-			formatInstanceStatus(v.Status),
-		}
+			formatInstanceStatus(v.Status))
+
 		if dopt.ShowProcess {
 			row = append(row, v.Memory, v.MemoryLimit, v.CPUquota)
 		}
@@ -613,10 +639,10 @@ func (m *Manager) GetClusterTopology(dopt DisplayOption, opt operator.Options) (
 		rc := ins.ResourceControl()
 		mu.Lock()
 		clusterInstInfos = append(clusterInstInfos, InstInfo{
-			ID:   ins.ID(),
-			Role: roleName,
-			Host: utils.Ternary(ins.GetHost() == ins.GetManageHost(), ins.GetHost(),
-				fmt.Sprintf("%s/%s", ins.GetHost(), ins.GetManageHost())).(string),
+			ID:            ins.ID(),
+			Role:          roleName,
+			Host:          ins.GetHost(),
+			ManageHost:    ins.GetManageHost(),
 			Ports:         utils.JoinInt(ins.UsedPorts(), "/"),
 			OsArch:        tui.OsArch(ins.OS(), ins.Arch()),
 			Status:        status,
