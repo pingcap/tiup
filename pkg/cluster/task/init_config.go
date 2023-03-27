@@ -16,12 +16,12 @@ package task
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // InitConfig is used to copy all configurations to the target directory of path
@@ -43,7 +43,7 @@ func (c *InitConfig) Execute(ctx context.Context) error {
 		return ErrNoExecutor
 	}
 
-	if err := os.MkdirAll(c.paths.Cache, 0755); err != nil {
+	if err := utils.MkdirAll(c.paths.Cache, 0755); err != nil {
 		return errors.Annotatef(err, "create cache directory failed: %s", c.paths.Cache)
 	}
 

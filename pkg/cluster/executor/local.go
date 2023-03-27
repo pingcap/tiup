@@ -17,7 +17,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"os"
 	"os/exec"
 	"os/user"
 	"path/filepath"
@@ -27,6 +26,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/tui"
+	"github.com/pingcap/tiup/pkg/utils"
 	"go.uber.org/zap"
 )
 
@@ -110,7 +110,7 @@ func (l *Local) Execute(ctx context.Context, cmd string, sudo bool, timeout ...t
 // Transfer implements Executer interface.
 func (l *Local) Transfer(ctx context.Context, src, dst string, download bool, limit int, _ bool) error {
 	targetPath := filepath.Dir(dst)
-	if err := os.MkdirAll(targetPath, 0755); err != nil {
+	if err := utils.MkdirAll(targetPath, 0755); err != nil {
 		return err
 	}
 

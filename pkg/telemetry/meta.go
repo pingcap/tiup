@@ -23,6 +23,7 @@ import (
 	"github.com/pingcap/tiup/pkg/crypto/rand"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
+	"github.com/pingcap/tiup/pkg/utils"
 	"gopkg.in/yaml.v2"
 )
 
@@ -108,13 +109,13 @@ func (m *Meta) SaveTo(fname string) error {
 		return errors.AddStack(err)
 	}
 
-	return os.WriteFile(fname, data, 0644)
+	return utils.WriteFile(fname, data, 0644)
 }
 
 // GetMeta read the telemeta from disk
 func GetMeta(env *environment.Environment) (meta *Meta, fname string, err error) {
 	dir := env.Profile().Path(localdata.TelemetryDir)
-	err = os.MkdirAll(dir, 0755)
+	err = utils.MkdirAll(dir, 0755)
 	if err != nil {
 		return
 	}

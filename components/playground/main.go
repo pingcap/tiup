@@ -186,7 +186,7 @@ Examples:
 				dataDir = filepath.Join(tiupHome, localdata.DataParentDir, tag)
 				deleteWhenExit = true
 			}
-			err := os.MkdirAll(dataDir, os.ModePerm)
+			err := utils.MkdirAll(dataDir, os.ModePerm)
 			if err != nil {
 				return err
 			}
@@ -626,7 +626,7 @@ func getAbsolutePath(path string) (string, error) {
 }
 
 func dumpPort(fname string, port int) error {
-	return os.WriteFile(fname, []byte(strconv.Itoa(port)), 0644)
+	return utils.WriteFile(fname, []byte(strconv.Itoa(port)), 0644)
 }
 
 func loadPort(dir string) (port int, err error) {
@@ -644,7 +644,7 @@ func dumpDSN(fname string, dbs []*instance.TiDBInstance) {
 	for _, db := range dbs {
 		dsn = append(dsn, fmt.Sprintf("mysql://root@%s", db.Addr()))
 	}
-	_ = os.WriteFile(fname, []byte(strings.Join(dsn, "\n")), 0644)
+	_ = utils.WriteFile(fname, []byte(strings.Join(dsn, "\n")), 0644)
 }
 
 func newEtcdClient(endpoint string) (*clientv3.Client, error) {

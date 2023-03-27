@@ -15,11 +15,11 @@ package scripts
 
 import (
 	"bytes"
-	"os"
 	"path"
 	"text/template"
 
 	"github.com/pingcap/tiup/embed"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // TiDBScript represent the data to generate TiDB config
@@ -56,5 +56,5 @@ func (c *TiDBScript) ConfigToFile(file string) error {
 		return err
 	}
 
-	return os.WriteFile(file, content.Bytes(), 0755)
+	return utils.WriteFile(file, content.Bytes(), 0755)
 }

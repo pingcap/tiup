@@ -37,7 +37,7 @@ func Download(component, nodeOS, arch string, version string) error {
 	fileName := fmt.Sprintf("%s-%s-%s.tar.gz", resName, nodeOS, arch)
 	srcPath := spec.ProfilePath(spec.TiUPPackageCacheDir, fileName)
 
-	if err := os.MkdirAll(spec.ProfilePath(spec.TiUPPackageCacheDir), 0755); err != nil {
+	if err := utils.MkdirAll(spec.ProfilePath(spec.TiUPPackageCacheDir), 0755); err != nil {
 		return err
 	}
 
