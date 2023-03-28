@@ -277,11 +277,11 @@ func getMonitorHosts(topo spec.Topology) (map[string]hostInfo, set.StringSet) {
 	topo.IterInstance(func(inst spec.Instance) {
 		// add the instance to ignore list if it marks itself as ignore_exporter
 		if inst.IgnoreMonitorAgent() {
-			noAgentHosts.Insert(inst.GetHost())
+			noAgentHosts.Insert(inst.GetManageHost())
 		}
 
-		if _, found := uniqueHosts[inst.GetHost()]; !found {
-			uniqueHosts[inst.GetHost()] = hostInfo{
+		if _, found := uniqueHosts[inst.GetManageHost()]; !found {
+			uniqueHosts[inst.GetManageHost()] = hostInfo{
 				ssh:  inst.GetSSHPort(),
 				os:   inst.OS(),
 				arch: inst.Arch(),

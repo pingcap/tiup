@@ -109,9 +109,9 @@ func Upgrade(
 
 		for _, instance := range instances {
 			// monitors
-			uniqueHosts.Insert(instance.GetHost())
+			uniqueHosts.Insert(instance.GetManageHost())
 			if instance.IgnoreMonitorAgent() {
-				noAgentHosts.Insert(instance.GetHost())
+				noAgentHosts.Insert(instance.GetManageHost())
 			}
 			switch component.Name() {
 			case spec.ComponentPD:
@@ -211,7 +211,7 @@ func upgradeInstance(
 		rollingInstance, isRollingInstance = instance.(spec.RollingUpdateInstance)
 	}
 
-	err = executeSSHCommand(ctx, "Executing pre-upgrade command", instance.GetHost(), options.SSHCustomScripts.BeforeRestartInstance.Command())
+	err = executeSSHCommand(ctx, "Executing pre-upgrade command", instance.GetManageHost(), options.SSHCustomScripts.BeforeRestartInstance.Command())
 	if err != nil {
 		return err
 	}
@@ -234,7 +234,7 @@ func upgradeInstance(
 		}
 	}
 
-	err = executeSSHCommand(ctx, "Executing post-upgrade command", instance.GetHost(), options.SSHCustomScripts.AfterRestartInstance.Command())
+	err = executeSSHCommand(ctx, "Executing post-upgrade command", instance.GetManageHost(), options.SSHCustomScripts.AfterRestartInstance.Command())
 	if err != nil {
 		return err
 	}
@@ -247,7 +247,7 @@ func Addr(ins spec.Instance) string {
 	if ins.GetPort() == 0 || ins.GetPort() == 80 {
 		panic(ins)
 	}
-	return ins.GetHost() + ":" + strconv.Itoa(ins.GetPort())
+	return ins.GetManageHost() + ":" + strconv.Itoa(ins.GetPort())
 }
 
 var (
