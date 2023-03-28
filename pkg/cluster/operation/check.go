@@ -211,6 +211,8 @@ func checkOSInfo(opt *CheckOptions, osInfo *sysinfo.OS) *CheckResult {
 			result.Warn = false
 			return result
 		}
+	case "openEuler":
+		return result
 	default:
 		result.Err = fmt.Errorf("os vendor %s not supported", osInfo.Vendor)
 		return result
