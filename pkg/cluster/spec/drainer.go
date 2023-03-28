@@ -33,6 +33,7 @@ import (
 // DrainerSpec represents the Drainer topology specification in topology.yaml
 type DrainerSpec struct {
 	Host            string               `yaml:"host"`
+	ManageHost      string               `yaml:"manage_host,omitempty"`
 	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported        bool                 `yaml:"imported,omitempty"`
 	Patched         bool                 `yaml:"patched,omitempty"`
@@ -82,7 +83,11 @@ func (s *DrainerSpec) Role() string {
 
 // SSH returns the host and SSH port of the instance
 func (s *DrainerSpec) SSH() (string, int) {
-	return s.Host, s.SSHPort
+	host := s.Host
+	if s.ManageHost != "" {
+		host = s.ManageHost
+	}
+	return host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
@@ -122,6 +127,7 @@ func (c *DrainerComponent) Instances() []Instance {
 			InstanceSpec: s,
 			Name:         c.Name(),
 			Host:         s.Host,
+			ManageHost:   s.ManageHost,
 			Port:         s.Port,
 			SSHP:         s.SSHPort,
 

@@ -65,9 +65,9 @@ func Enable(
 	instCount := map[string]int{}
 	cluster.IterInstance(func(inst spec.Instance) {
 		if inst.IgnoreMonitorAgent() {
-			noAgentHosts.Insert(inst.GetHost())
+			noAgentHosts.Insert(inst.GetManageHost())
 		} else {
-			instCount[inst.GetHost()]++
+			instCount[inst.GetManageHost()]++
 		}
 	})
 
@@ -80,7 +80,7 @@ func Enable(
 
 		for _, inst := range insts {
 			if !inst.IgnoreMonitorAgent() {
-				instCount[inst.GetHost()]--
+				instCount[inst.GetManageHost()]--
 			}
 		}
 	}
@@ -119,7 +119,7 @@ func Start(
 
 	cluster.IterInstance(func(inst spec.Instance) {
 		if inst.IgnoreMonitorAgent() {
-			noAgentHosts.Insert(inst.GetHost())
+			noAgentHosts.Insert(inst.GetManageHost())
 		}
 	})
 
@@ -133,7 +133,7 @@ func Start(
 		errg, _ := errgroup.WithContext(ctx)
 		for _, inst := range insts {
 			if !inst.IgnoreMonitorAgent() {
-				uniqueHosts.Insert(inst.GetHost())
+				uniqueHosts.Insert(inst.GetManageHost())
 			}
 
 			if restoreLeader {
@@ -185,9 +185,9 @@ func Stop(
 	instCount := map[string]int{}
 	cluster.IterInstance(func(inst spec.Instance) {
 		if inst.IgnoreMonitorAgent() {
-			noAgentHosts.Insert(inst.GetHost())
+			noAgentHosts.Insert(inst.GetManageHost())
 		} else {
-			instCount[inst.GetHost()]++
+			instCount[inst.GetManageHost()]++
 		}
 	})
 
@@ -208,7 +208,7 @@ func Stop(
 		}
 		for _, inst := range insts {
 			if !inst.IgnoreMonitorAgent() {
-				instCount[inst.GetHost()]--
+				instCount[inst.GetManageHost()]--
 			}
 		}
 	}
@@ -354,17 +354,17 @@ func systemctlMonitor(ctx context.Context, hosts []string, noAgentHosts set.Stri
 }
 
 func restartInstance(ctx context.Context, ins spec.Instance, timeout uint64, tlsCfg *tls.Config) error {
-	e := ctxt.GetInner(ctx).Get(ins.GetHost())
+	e := ctxt.GetInner(ctx).Get(ins.GetManageHost())
 	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 	logger.Infof("\tRestarting instance %s", ins.ID())
 
 	if err := systemctl(ctx, e, ins.ServiceName(), "restart", timeout); err != nil {
-		return toFailedActionError(err, "restart", ins.GetHost(), ins.ServiceName(), ins.LogDir())
+		return toFailedActionError(err, "restart", ins.GetManageHost(), ins.ServiceName(), ins.LogDir())
 	}
 
 	// Check ready.
 	if err := ins.Ready(ctx, e, timeout, tlsCfg); err != nil {
-		return toFailedActionError(err, "restart", ins.GetHost(), ins.ServiceName(), ins.LogDir())
+		return toFailedActionError(err, "restart", ins.GetManageHost(), ins.ServiceName(), ins.LogDir())
 	}
 
 	logger.Infof("\tRestart instance %s success", ins.ID())
@@ -373,7 +373,7 @@ func restartInstance(ctx context.Context, ins spec.Instance, timeout uint64, tls
 }
 
 func enableInstance(ctx context.Context, ins spec.Instance, timeout uint64, isEnable bool) error {
-	e := ctxt.GetInner(ctx).Get(ins.GetHost())
+	e := ctxt.GetInner(ctx).Get(ins.GetManageHost())
 	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 
 	action := "disable"
@@ -384,7 +384,7 @@ func enableInstance(ctx context.Context, ins spec.Instance, timeout uint64, isEn
 
 	// Enable/Disable by systemd.
 	if err := systemctl(ctx, e, ins.ServiceName(), action, timeout); err != nil {
-		return toFailedActionError(err, action, ins.GetHost(), ins.ServiceName(), ins.LogDir())
+		return toFailedActionError(err, action, ins.GetManageHost(), ins.ServiceName(), ins.LogDir())
 	}
 
 	logger.Infof("\t%s instance %s success", actionPostMsgs[action], ins.ID())
@@ -393,17 +393,17 @@ func enableInstance(ctx context.Context, ins spec.Instance, timeout uint64, isEn
 }
 
 func startInstance(ctx context.Context, ins spec.Instance, timeout uint64, tlsCfg *tls.Config) error {
-	e := ctxt.GetInner(ctx).Get(ins.GetHost())
+	e := ctxt.GetInner(ctx).Get(ins.GetManageHost())
 	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 	logger.Infof("\tStarting instance %s", ins.ID())
 
 	if err := systemctl(ctx, e, ins.ServiceName(), "start", timeout); err != nil {
-		return toFailedActionError(err, "start", ins.GetHost(), ins.ServiceName(), ins.LogDir())
+		return toFailedActionError(err, "start", ins.GetManageHost(), ins.ServiceName(), ins.LogDir())
 	}
 
 	// Check ready.
 	if err := ins.Ready(ctx, e, timeout, tlsCfg); err != nil {
-		return toFailedActionError(err, "start", ins.GetHost(), ins.ServiceName(), ins.LogDir())
+		return toFailedActionError(err, "start", ins.GetManageHost(), ins.ServiceName(), ins.LogDir())
 	}
 
 	logger.Infof("\tStart instance %s success", ins.ID())
@@ -465,8 +465,8 @@ func EnableComponent(ctx context.Context, instances []spec.Instance, noAgentHost
 		switch name {
 		case spec.ComponentNodeExporter,
 			spec.ComponentBlackboxExporter:
-			if noAgentHosts.Exist(ins.GetHost()) {
-				logger.Debugf("Ignored enabling/disabling %s for %s:%d", name, ins.GetHost(), ins.GetPort())
+			if noAgentHosts.Exist(ins.GetManageHost()) {
+				logger.Debugf("Ignored enabling/disabling %s for %s:%d", name, ins.GetManageHost(), ins.GetPort())
 				continue
 			}
 		}
@@ -517,8 +517,8 @@ func StartComponent(ctx context.Context, instances []spec.Instance, noAgentHosts
 		switch name {
 		case spec.ComponentNodeExporter,
 			spec.ComponentBlackboxExporter:
-			if noAgentHosts.Exist(ins.GetHost()) {
-				logger.Debugf("Ignored starting %s for %s:%d", name, ins.GetHost(), ins.GetPort())
+			if noAgentHosts.Exist(ins.GetManageHost()) {
+				logger.Debugf("Ignored starting %s for %s:%d", name, ins.GetManageHost(), ins.GetPort())
 				continue
 			}
 		}
@@ -551,12 +551,12 @@ func serialStartInstances(ctx context.Context, instances []spec.Instance, option
 }
 
 func stopInstance(ctx context.Context, ins spec.Instance, timeout uint64) error {
-	e := ctxt.GetInner(ctx).Get(ins.GetHost())
+	e := ctxt.GetInner(ctx).Get(ins.GetManageHost())
 	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
-	logger.Infof("\tStopping instance %s", ins.GetHost())
+	logger.Infof("\tStopping instance %s", ins.GetManageHost())
 
 	if err := systemctl(ctx, e, ins.ServiceName(), "stop", timeout); err != nil {
-		return toFailedActionError(err, "stop", ins.GetHost(), ins.ServiceName(), ins.LogDir())
+		return toFailedActionError(err, "stop", ins.GetManageHost(), ins.ServiceName(), ins.LogDir())
 	}
 
 	logger.Infof("\tStop %s %s success", ins.ComponentName(), ins.ID())
@@ -589,8 +589,8 @@ func StopComponent(ctx context.Context,
 		switch name {
 		case spec.ComponentNodeExporter,
 			spec.ComponentBlackboxExporter:
-			if noAgentHosts.Exist(ins.GetHost()) {
-				logger.Debugf("Ignored stopping %s for %s:%d", name, ins.GetHost(), ins.GetPort())
+			if noAgentHosts.Exist(ins.GetManageHost()) {
+				logger.Debugf("Ignored stopping %s for %s:%d", name, ins.GetManageHost(), ins.GetPort())
 				continue
 			}
 		case spec.ComponentCDC:

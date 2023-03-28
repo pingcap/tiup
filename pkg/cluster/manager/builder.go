@@ -60,10 +60,10 @@ func buildReloadPromAndGrafanaTasks(
 		t := task.NewBuilder(logger)
 		if inst.ComponentName() == spec.ComponentPrometheus {
 			// reload Prometheus
-			t = t.SystemCtl(inst.GetHost(), inst.ServiceName(), "reload", true, true)
+			t = t.SystemCtl(inst.GetManageHost(), inst.ServiceName(), "reload", true, true)
 		} else {
 			// restart grafana
-			t = t.SystemCtl(inst.GetHost(), inst.ServiceName(), "restart", true, false)
+			t = t.SystemCtl(inst.GetManageHost(), inst.ServiceName(), "restart", true, false)
 		}
 
 		tasks = append(tasks, t.BuildAsStep(fmt.Sprintf("  - Reload %s -> %s", inst.ComponentName(), inst.ID())))
@@ -102,12 +102,12 @@ func buildScaleOutTask(
 	// Initialize the environments
 	initializedHosts := set.NewStringSet()
 	metadata.GetTopology().IterInstance(func(instance spec.Instance) {
-		initializedHosts.Insert(instance.GetHost())
+		initializedHosts.Insert(instance.GetManageHost())
 	})
 	// uninitializedHosts are hosts which haven't been initialized yet
 	uninitializedHosts := make(map[string]hostInfo) // host -> ssh-port, os, arch
 	newPart.IterInstance(func(instance spec.Instance) {
-		host := instance.GetHost()
+		host := instance.GetManageHost()
 		if initializedHosts.Exist(host) {
 			return
 		}
@@ -134,7 +134,7 @@ func buildScaleOutTask(
 
 		t := task.NewBuilder(m.logger).
 			RootSSH(
-				instance.GetHost(),
+				instance.GetManageHost(),
 				instance.GetSSHPort(),
 				opt.User,
 				s.Password,
@@ -152,8 +152,8 @@ func buildScaleOutTask(
 				gOpt.SSHType,
 				globalOptions.SSHType,
 			).
-			EnvInit(instance.GetHost(), base.User, base.Group, opt.SkipCreateUser || globalOptions.User == opt.User).
-			Mkdir(globalOptions.User, instance.GetHost(), dirs...).
+			EnvInit(instance.GetManageHost(), base.User, base.Group, opt.SkipCreateUser || globalOptions.User == opt.User).
+			Mkdir(globalOptions.User, instance.GetManageHost(), dirs...).
 			BuildAsStep(fmt.Sprintf("  - Initialized host %s ", host))
 		envInitTasks = append(envInitTasks, t)
 	})
@@ -186,10 +186,10 @@ func buildScaleOutTask(
 			filepath.Join(deployDir, "scripts"),
 		}
 		// Deploy component
-		tb := task.NewSimpleUerSSH(m.logger, inst.GetHost(), inst.GetSSHPort(), base.User, gOpt, p, sshType).
-			Mkdir(base.User, inst.GetHost(), deployDirs...).
-			Mkdir(base.User, inst.GetHost(), dataDirs...).
-			Mkdir(base.User, inst.GetHost(), logDir)
+		tb := task.NewSimpleUerSSH(m.logger, inst.GetManageHost(), inst.GetSSHPort(), base.User, gOpt, p, sshType).
+			Mkdir(base.User, inst.GetManageHost(), deployDirs...).
+			Mkdir(base.User, inst.GetManageHost(), dataDirs...).
+			Mkdir(base.User, inst.GetManageHost(), logDir)
 
 		srcPath := ""
 		if patchedComponents.Exist(inst.ComponentName()) {
@@ -215,7 +215,7 @@ func buildScaleOutTask(
 					inst.Arch(),
 					version,
 					srcPath,
-					inst.GetHost(),
+					inst.GetManageHost(),
 					deployDir,
 				)
 			}
@@ -239,7 +239,7 @@ func buildScaleOutTask(
 			case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertmanager:
 				version := m.bindVersion(compName, base.Version)
 				tb.Download(compName, inst.OS(), inst.Arch(), version).
-					CopyComponent(compName, inst.OS(), inst.Arch(), version, "", inst.GetHost(), deployDir)
+					CopyComponent(compName, inst.OS(), inst.Arch(), version, "", inst.GetManageHost(), deployDir)
 			}
 			deployCompTasks = append(deployCompTasks, tb.BuildAsStep(fmt.Sprintf("  - Deploy instance %s -> %s", inst.ComponentName(), inst.ID())))
 		}
@@ -396,7 +396,7 @@ func buildScaleConfigTasks(
 		// log dir will always be with values, but might not used by the component
 		logDir := spec.Abs(base.User, inst.LogDir())
 
-		t := task.NewSimpleUerSSH(m.logger, inst.GetHost(), inst.GetSSHPort(), base.User, gOpt, p, topo.BaseTopo().GlobalOptions.SSHType).
+		t := task.NewSimpleUerSSH(m.logger, inst.GetManageHost(), inst.GetSSHPort(), base.User, gOpt, p, topo.BaseTopo().GlobalOptions.SSHType).
 			ScaleConfig(
 				name,
 				base.Version,
@@ -648,7 +648,7 @@ func buildInitConfigTasks(
 						instance.Arch(),
 						version,
 						"", // use default srcPath
-						instance.GetHost(),
+						instance.GetManageHost(),
 						deployDir,
 					)
 			}
@@ -842,8 +842,8 @@ func buildCertificateTasks(
 			deployDir := spec.Abs(base.User, inst.DeployDir())
 			tlsDir := filepath.Join(deployDir, spec.TLSCertKeyDir)
 
-			tb := task.NewSimpleUerSSH(m.logger, inst.GetHost(), inst.GetSSHPort(), base.User, gOpt, p, topo.BaseTopo().GlobalOptions.SSHType).
-				Mkdir(base.User, inst.GetHost(), deployDir, tlsDir)
+			tb := task.NewSimpleUerSSH(m.logger, inst.GetManageHost(), inst.GetSSHPort(), base.User, gOpt, p, topo.BaseTopo().GlobalOptions.SSHType).
+				Mkdir(base.User, inst.GetManageHost(), deployDir, tlsDir)
 
 			ca, err := crypto.ReadCA(
 				name,

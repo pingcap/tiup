@@ -78,6 +78,7 @@ func (c *DMMasterComponent) Instances() []Instance {
 				InstanceSpec: s,
 				Name:         c.Name(),
 				Host:         s.Host,
+				ManageHost:   s.ManageHost,
 				Port:         s.Port,
 				SSHP:         s.SSHPort,
 
@@ -257,6 +258,7 @@ func (c *DMWorkerComponent) Instances() []Instance {
 				InstanceSpec: s,
 				Name:         c.Name(),
 				Host:         s.Host,
+				ManageHost:   s.ManageHost,
 				Port:         s.Port,
 				SSHP:         s.SSHPort,
 

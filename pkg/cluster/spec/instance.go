@@ -93,6 +93,7 @@ type Instance interface {
 	ServiceName() string
 	ResourceControl() meta.ResourceControl
 	GetHost() string
+	GetManageHost() string
 	GetPort() int
 	GetSSHPort() int
 	DeployDir() string
@@ -137,6 +138,7 @@ type BaseInstance struct {
 
 	Name       string
 	Host       string
+	ManageHost string
 	ListenHost string
 	Port       int
 	SSHP       int
@@ -325,6 +327,14 @@ func (i *BaseInstance) ServiceName() string {
 
 // GetHost implements Instance interface
 func (i *BaseInstance) GetHost() string {
+	return i.Host
+}
+
+// GetManageHost implements Instance interface
+func (i *BaseInstance) GetManageHost() string {
+	if i.ManageHost != "" {
+		return i.ManageHost
+	}
 	return i.Host
 }
 

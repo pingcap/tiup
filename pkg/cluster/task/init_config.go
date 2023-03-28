@@ -38,7 +38,7 @@ type InitConfig struct {
 // Execute implements the Task interface
 func (c *InitConfig) Execute(ctx context.Context) error {
 	// Copy to remote server
-	exec, found := ctxt.GetInner(ctx).GetExecutor(c.instance.GetHost())
+	exec, found := ctxt.GetInner(ctx).GetExecutor(c.instance.GetManageHost())
 	if !found {
 		return ErrNoExecutor
 	}
@@ -52,7 +52,7 @@ func (c *InitConfig) Execute(ctx context.Context) error {
 		if c.ignoreCheck && errors.Cause(err) == spec.ErrorCheckConfig {
 			return nil
 		}
-		return errors.Annotatef(err, "init config failed: %s:%d", c.instance.GetHost(), c.instance.GetPort())
+		return errors.Annotatef(err, "init config failed: %s:%d", c.instance.GetManageHost(), c.instance.GetPort())
 	}
 	return nil
 }
@@ -65,7 +65,7 @@ func (c *InitConfig) Rollback(ctx context.Context) error {
 // String implements the fmt.Stringer interface
 func (c *InitConfig) String() string {
 	return fmt.Sprintf("InitConfig: cluster=%s, user=%s, host=%s, path=%s, %s",
-		c.clusterName, c.deployUser, c.instance.GetHost(),
+		c.clusterName, c.deployUser, c.instance.GetManageHost(),
 		c.specManager.Path(c.clusterName, spec.TempConfigPath, c.instance.ServiceName()),
 		c.paths)
 }

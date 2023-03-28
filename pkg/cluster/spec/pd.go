@@ -33,6 +33,7 @@ import (
 // PDSpec represents the PD topology specification in topology.yaml
 type PDSpec struct {
 	Host                string `yaml:"host"`
+	ManageHost          string `yaml:"manage_host,omitempty"`
 	ListenHost          string `yaml:"listen_host,omitempty"`
 	AdvertiseClientAddr string `yaml:"advertise_client_addr,omitempty"`
 	AdvertisePeerAddr   string `yaml:"advertise_peer_addr,omitempty"`
@@ -88,7 +89,11 @@ func (s *PDSpec) Role() string {
 
 // SSH returns the host and SSH port of the instance
 func (s *PDSpec) SSH() (string, int) {
-	return s.Host, s.SSHPort
+	host := s.Host
+	if s.ManageHost != "" {
+		host = s.ManageHost
+	}
+	return host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
@@ -148,6 +153,7 @@ func (c *PDComponent) Instances() []Instance {
 				InstanceSpec: s,
 				Name:         c.Name(),
 				Host:         s.Host,
+				ManageHost:   s.ManageHost,
 				ListenHost:   s.ListenHost,
 				Port:         s.ClientPort,
 				SSHP:         s.SSHPort,
