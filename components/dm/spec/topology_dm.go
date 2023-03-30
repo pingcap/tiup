@@ -196,6 +196,12 @@ func (s *MasterSpec) IgnoreMonitorAgent() bool {
 	return s.IgnoreExporter
 }
 
+// GetAdvertisePeerURL returns AdvertisePeerURL
+func (s *MasterSpec) GetAdvertisePeerURL(enableTLS bool) string {
+	scheme := utils.Ternary(enableTLS, "https", "http").(string)
+	return fmt.Sprintf("%s://%s", scheme, utils.JoinHostPort(s.Host, s.PeerPort))
+}
+
 // WorkerSpec represents the Master topology specification in topology.yaml
 type WorkerSpec struct {
 	Host           string `yaml:"host"`

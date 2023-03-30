@@ -6,27 +6,17 @@ set -e
 DEPLOY_DIR={{.DeployDir}}
 cd "${DEPLOY_DIR}" || exit 1
 
-{{- define "MasterList"}}
-  {{- range $idx, $master := .}}
-    {{- if eq $idx 0}}
-      {{- $master.IP}}:{{$master.Port}}
-    {{- else -}}
-      ,{{- $master.IP}}:{{$master.Port}}
-    {{- end}}
-  {{- end}}
-{{- end}}
-
 {{- if .NumaNode}}
 exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/dm-master/dm-master \
 {{- else}}
 exec bin/dm-master/dm-master \
 {{- end}}
     --name="{{.Name}}" \
-    --master-addr="0.0.0.0:{{.Port}}" \
-    --advertise-addr="{{.IP}}:{{.Port}}" \
-    --peer-urls="{{.Scheme}}://0.0.0.0:{{.PeerPort}}" \
-    --advertise-peer-urls="{{.Scheme}}://{{.IP}}:{{.PeerPort}}" \
+    --master-addr="{{.MasterAddr}}" \
+    --advertise-addr="{{.AdvertiseAddr}}" \
+    --peer-urls="{{.PeerURL}}" \
+    --advertise-peer-urls="{{.AdvertisePeerURL}}" \
     --log-file="{{.LogDir}}/dm-master.log" \
     --data-dir="{{.DataDir}}" \
-    --join="{{template "MasterList" .Endpoints}}" \
+    --join="{{.Join}}" \
     --config=conf/dm-master.toml >> "{{.LogDir}}/dm-master_stdout.log" 2>> "{{.LogDir}}/dm-master_stderr.log"
