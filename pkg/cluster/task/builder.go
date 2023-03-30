@@ -334,6 +334,16 @@ func (b *Builder) EnvInit(host, deployUser string, userGroup string, skipCreateU
 	return b
 }
 
+// RotateSSH appends a RotateSSH task to the current task collection
+func (b *Builder) RotateSSH(host, deployUser, newPublicKeyPath string) *Builder {
+	b.tasks = append(b.tasks, &RotateSSH{
+		host:             host,
+		deployUser:       deployUser,
+		newPublicKeyPath: newPublicKeyPath,
+	})
+	return b
+}
+
 // ClusterOperate appends a cluster operation task.
 // All the UserSSH needed must be init first.
 func (b *Builder) ClusterOperate(
