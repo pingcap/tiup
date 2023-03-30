@@ -26,6 +26,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/tui"
 )
 
 // RotateSSH rotate public keys of target nodes
@@ -35,13 +36,19 @@ func (m *Manager) RotateSSH(name string, gOpt operator.Options, skipConfirm bool
 		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
 		return err
 	}
+
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
+	if !skipConfirm {
+		if err := tui.PromptForConfirmOrAbortError(
+			"This operation will rotate ssh keys for user '%s' .\nDo you want to continue? [y/N]:",
+			base.User); err != nil {
+			return err
+		}
+	}
 
 	var rotateSSHTasks []*task.StepDisplay // tasks which are used to initialize environment
-
 	uniqueHosts, _ := getMonitorHosts(topo)
-
 	for host, hostInfo := range uniqueHosts {
 		t, err := m.sshTaskBuilder(name, topo, base.User, gOpt)
 		if err != nil {
