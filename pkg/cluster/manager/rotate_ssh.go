@@ -87,5 +87,6 @@ func (m *Manager) RotateSSH(name string, gOpt operator.Options, skipConfirm bool
 		}
 		return err
 	}
+	m.logger.Infof("ssh keys are successfully updated")
 	return nil
 }
