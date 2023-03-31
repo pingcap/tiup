@@ -170,6 +170,7 @@ please backup your data before process.`,
 		newReplayCmd(),
 		newTemplateCmd(),
 		newMetaCmd(),
+		newRotateSSHCmd(),
 	)
 }
 

@@ -248,6 +248,7 @@ func Addr(ins spec.Instance) string {
 		panic(ins)
 	}
 	return ins.GetManageHost() + ":" + strconv.Itoa(ins.GetPort())
+	// return utils.JoinHostPort(ins.GetHost(), ins.GetPort())
 }
 
 var (
