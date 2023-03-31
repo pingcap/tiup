@@ -807,9 +807,6 @@ func findVersionFromManifest(id, constraint, platform string, manifest *v1manife
 	versions := manifest.VersionList(platform)
 	verList := make([]string, 0, len(versions))
 	for v := range versions {
-		if v == manifest.Nightly {
-			continue
-		}
 		verList = append(verList, v)
 	}
 	sort.Slice(verList, func(p, q int) bool {
