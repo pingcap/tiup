@@ -122,6 +122,7 @@ func AllDMComponentNames() (roles []string) {
 // MasterSpec represents the Master topology specification in topology.yaml
 type MasterSpec struct {
 	Host           string `yaml:"host"`
+	ManageHost     string `yaml:"manage_host,omitempty"`
 	SSHPort        int    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported       bool   `yaml:"imported,omitempty"`
 	Patched        bool   `yaml:"patched,omitempty"`
@@ -173,7 +174,11 @@ func (s *MasterSpec) Role() string {
 
 // SSH returns the host and SSH port of the instance
 func (s *MasterSpec) SSH() (string, int) {
-	return s.Host, s.SSHPort
+	host := s.Host
+	if s.ManageHost != "" {
+		host = s.ManageHost
+	}
+	return host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
@@ -191,9 +196,16 @@ func (s *MasterSpec) IgnoreMonitorAgent() bool {
 	return s.IgnoreExporter
 }
 
+// GetAdvertisePeerURL returns AdvertisePeerURL
+func (s *MasterSpec) GetAdvertisePeerURL(enableTLS bool) string {
+	scheme := utils.Ternary(enableTLS, "https", "http").(string)
+	return fmt.Sprintf("%s://%s", scheme, utils.JoinHostPort(s.Host, s.PeerPort))
+}
+
 // WorkerSpec represents the Master topology specification in topology.yaml
 type WorkerSpec struct {
 	Host           string `yaml:"host"`
+	ManageHost     string `yaml:"manage_host,omitempty"`
 	SSHPort        int    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported       bool   `yaml:"imported,omitempty"`
 	Patched        bool   `yaml:"patched,omitempty"`
@@ -238,7 +250,11 @@ func (s *WorkerSpec) Role() string {
 
 // SSH returns the host and SSH port of the instance
 func (s *WorkerSpec) SSH() (string, int) {
-	return s.Host, s.SSHPort
+	host := s.Host
+	if s.ManageHost != "" {
+		host = s.ManageHost
+	}
+	return host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance

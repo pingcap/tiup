@@ -16,11 +16,11 @@ package scripts
 import (
 	"bytes"
 	"errors"
-	"os"
 	"path"
 	"text/template"
 
 	"github.com/pingcap/tiup/embed"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // PDScript represent the data to generate pd config
@@ -61,7 +61,7 @@ func (c *PDScript) ConfigToFile(file string) error {
 		return err
 	}
 
-	return os.WriteFile(file, content.Bytes(), 0755)
+	return utils.WriteFile(file, content.Bytes(), 0755)
 }
 
 // PDScaleScript represent the data to generate pd config on scaling
@@ -97,5 +97,5 @@ func (c *PDScaleScript) ConfigToFile(file string) error {
 		return err
 	}
 
-	return os.WriteFile(file, content.Bytes(), 0755)
+	return utils.WriteFile(file, content.Bytes(), 0755)
 }

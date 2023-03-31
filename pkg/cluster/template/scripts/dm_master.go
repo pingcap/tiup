@@ -16,7 +16,6 @@ package scripts
 import (
 	"bytes"
 	"errors"
-	"os"
 	"path"
 	"text/template"
 
@@ -26,167 +25,81 @@ import (
 
 // DMMasterScript represent the data to generate TiDB config
 type DMMasterScript struct {
-	Name         string
-	Scheme       string
-	IP           string
-	Port         int
-	PeerPort     int
-	DeployDir    string
-	DataDir      string
-	LogDir       string
-	NumaNode     string
-	V1SourcePath string
-	Endpoints    []*DMMasterScript
-}
+	Name             string
+	V1SourcePath     string
+	MasterAddr       string
+	AdvertiseAddr    string
+	PeerURL          string
+	AdvertisePeerURL string
+	InitialCluster   string
 
-// NewDMMasterScript returns a DMMasterScript with given arguments
-func NewDMMasterScript(name, ip, deployDir, dataDir, logDir string, enableTLS bool) *DMMasterScript {
-	return &DMMasterScript{
-		Name:      name,
-		Scheme:    utils.Ternary(enableTLS, "https", "http").(string),
-		IP:        ip,
-		Port:      8261,
-		PeerPort:  8291,
-		DeployDir: deployDir,
-		DataDir:   dataDir,
-		LogDir:    logDir,
-	}
-}
+	DeployDir string
+	DataDir   string
+	LogDir    string
 
-// WithV1SourcePath set Scheme field of V1SourcePath
-func (c *DMMasterScript) WithV1SourcePath(path string) *DMMasterScript {
-	c.V1SourcePath = path
-	return c
-}
-
-// WithScheme set Scheme field of NewDMMasterScript
-func (c *DMMasterScript) WithScheme(scheme string) *DMMasterScript {
-	c.Scheme = scheme
-	return c
-}
-
-// WithPort set Port field of DMMasterScript
-func (c *DMMasterScript) WithPort(port int) *DMMasterScript {
-	c.Port = port
-	return c
-}
-
-// WithNumaNode set NumaNode field of DMMasterScript
-func (c *DMMasterScript) WithNumaNode(numa string) *DMMasterScript {
-	c.NumaNode = numa
-	return c
-}
-
-// WithPeerPort set PeerPort field of DMMasterScript
-func (c *DMMasterScript) WithPeerPort(port int) *DMMasterScript {
-	c.PeerPort = port
-	return c
-}
-
-// AppendEndpoints add new DMMasterScript to Endpoints field
-func (c *DMMasterScript) AppendEndpoints(ends ...*DMMasterScript) *DMMasterScript {
-	c.Endpoints = append(c.Endpoints, ends...)
-	return c
-}
-
-// Config generate the config file data.
-func (c *DMMasterScript) Config() ([]byte, error) {
-	fp := path.Join("templates", "scripts", "run_dm-master.sh.tpl")
-	tpl, err := embed.ReadTemplate(fp)
-	if err != nil {
-		return nil, err
-	}
-	return c.ConfigWithTemplate(string(tpl))
+	NumaNode string
 }
 
 // ConfigToFile write config content to specific path
 func (c *DMMasterScript) ConfigToFile(file string) error {
-	config, err := c.Config()
+	fp := path.Join("templates", "scripts", "run_dm-master.sh.tpl")
+	tpl, err := embed.ReadTemplate(fp)
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(file, config, 0755)
-}
-
-// ConfigWithTemplate generate the TiDB config content by tpl
-func (c *DMMasterScript) ConfigWithTemplate(tpl string) ([]byte, error) {
-	tmpl, err := template.New("dm-master").Parse(tpl)
+	tmpl, err := template.New("dm-master").Parse(string(tpl))
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if c.Name == "" {
-		return nil, errors.New("empty name")
-	}
-	for _, s := range c.Endpoints {
-		if s.Name == "" {
-			return nil, errors.New("empty name")
-		}
+		return errors.New("empty name")
 	}
 
 	content := bytes.NewBufferString("")
 	if err := tmpl.Execute(content, c); err != nil {
-		return nil, err
+		return err
 	}
 
-	return content.Bytes(), nil
+	return utils.WriteFile(file, content.Bytes(), 0755)
 }
 
 // DMMasterScaleScript represent the data to generate dm-master config on scaling
 type DMMasterScaleScript struct {
-	DMMasterScript
-}
+	Name             string
+	V1SourcePath     string
+	MasterAddr       string
+	AdvertiseAddr    string
+	PeerURL          string
+	AdvertisePeerURL string
+	Join             string
 
-// NewDMMasterScaleScript return a new DMMasterScaleScript
-func NewDMMasterScaleScript(name, ip, deployDir, dataDir, logDir string, enableTLS bool) *DMMasterScaleScript {
-	return &DMMasterScaleScript{*NewDMMasterScript(name, ip, deployDir, dataDir, logDir, enableTLS)}
-}
+	DeployDir string
+	DataDir   string
+	LogDir    string
 
-// WithScheme set Scheme field of DMMasterScaleScript
-func (c *DMMasterScaleScript) WithScheme(scheme string) *DMMasterScaleScript {
-	c.Scheme = scheme
-	return c
-}
-
-// WithPort set Port field of DMMasterScript
-func (c *DMMasterScaleScript) WithPort(port int) *DMMasterScaleScript {
-	c.Port = port
-	return c
-}
-
-// WithNumaNode set NumaNode field of DMMasterScript
-func (c *DMMasterScaleScript) WithNumaNode(numa string) *DMMasterScaleScript {
-	c.NumaNode = numa
-	return c
-}
-
-// WithPeerPort set PeerPort field of DMMasterScript
-func (c *DMMasterScaleScript) WithPeerPort(port int) *DMMasterScaleScript {
-	c.PeerPort = port
-	return c
-}
-
-// AppendEndpoints add new DMMasterScript to Endpoints field
-func (c *DMMasterScaleScript) AppendEndpoints(ends ...*DMMasterScript) *DMMasterScaleScript {
-	c.Endpoints = append(c.Endpoints, ends...)
-	return c
-}
-
-// Config generate the config file data.
-func (c *DMMasterScaleScript) Config() ([]byte, error) {
-	fp := path.Join("templates", "scripts", "run_dm-master_scale.sh.tpl")
-	tpl, err := embed.ReadTemplate(fp)
-	if err != nil {
-		return nil, err
-	}
-	return c.ConfigWithTemplate(string(tpl))
+	NumaNode string
 }
 
 // ConfigToFile write config content to specific path
 func (c *DMMasterScaleScript) ConfigToFile(file string) error {
-	config, err := c.Config()
+	fp := path.Join("templates", "scripts", "run_dm-master_scale.sh.tpl")
+	tpl, err := embed.ReadTemplate(fp)
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(file, config, 0755)
+	tmpl, err := template.New("dm-master").Parse(string(tpl))
+	if err != nil {
+		return err
+	}
+
+	if c.Name == "" {
+		return errors.New("empty name")
+	}
+
+	content := bytes.NewBufferString("")
+	if err := tmpl.Execute(content, c); err != nil {
+		return err
+	}
+	return utils.WriteFile(file, content.Bytes(), 0755)
 }

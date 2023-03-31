@@ -15,8 +15,9 @@ package scripts
 
 import (
 	"bytes"
-	"os"
 	"text/template"
+
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // TiSparkEnv represent the data to generate TiSpark environment config
@@ -86,7 +87,7 @@ func (c *TiSparkEnv) ScriptToFile(file string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(file, script, 0755)
+	return utils.WriteFile(file, script, 0755)
 }
 
 // ScriptWithTemplate parses the template file

@@ -99,7 +99,7 @@ func ScaleInCluster(
 	for _, component := range cluster.ComponentsByStartOrder() {
 		for _, instance := range component.Instances() {
 			instances[instance.ID()] = instance
-			instCount[instance.GetHost()]++
+			instCount[instance.GetManageHost()]++
 		}
 	}
 
@@ -200,8 +200,8 @@ func ScaleInCluster(
 					}
 				}
 
-				instCount[instance.GetHost()]--
-				if err := StopAndDestroyInstance(ctx, cluster, instance, options, true, instCount[instance.GetHost()] == 0, tlsCfg); err != nil {
+				instCount[instance.GetManageHost()]--
+				if err := StopAndDestroyInstance(ctx, cluster, instance, options, true, instCount[instance.GetManageHost()] == 0, tlsCfg); err != nil {
 					logger.Warnf("failed to stop/destroy %s: %v", compName, err)
 				}
 
@@ -295,8 +295,8 @@ func ScaleInCluster(
 			}
 
 			if !asyncOfflineComps.Exist(instance.ComponentName()) {
-				instCount[instance.GetHost()]--
-				if err := StopAndDestroyInstance(ctx, cluster, instance, options, false, instCount[instance.GetHost()] == 0, tlsCfg); err != nil {
+				instCount[instance.GetManageHost()]--
+				if err := StopAndDestroyInstance(ctx, cluster, instance, options, false, instCount[instance.GetManageHost()] == 0, tlsCfg); err != nil {
 					return err
 				}
 			} else {
@@ -321,8 +321,8 @@ func ScaleInCluster(
 			}
 
 			if !asyncOfflineComps.Exist(instance.ComponentName()) {
-				instCount[instance.GetHost()]--
-				if err := StopAndDestroyInstance(ctx, cluster, instance, options, false, instCount[instance.GetHost()] == 0, tlsCfg); err != nil {
+				instCount[instance.GetManageHost()]--
+				if err := StopAndDestroyInstance(ctx, cluster, instance, options, false, instCount[instance.GetManageHost()] == 0, tlsCfg); err != nil {
 					return err
 				}
 			} else {
@@ -441,8 +441,8 @@ func scaleInCDC(
 		g, _ := errgroup.WithContext(ctx)
 		for _, ins := range instances {
 			ins := ins
-			instCount[ins.GetHost()]++
-			destroyNode := instCount[ins.GetHost()] == 0
+			instCount[ins.GetManageHost()]++
+			destroyNode := instCount[ins.GetManageHost()] == 0
 			g.Go(func() error {
 				return StopAndDestroyInstance(ctx, cluster, ins, options, true, destroyNode, tlsCfg)
 			})
@@ -460,8 +460,8 @@ func scaleInCDC(
 			// this may be caused by that the instance is not running, or the specified version of cdc does not support open api
 			logger.Debugf("scale-in cdc, get capture by address failed, stop the instance by force, "+
 				"addr: %s, err: %+v", address, err)
-			instCount[instance.GetHost()]--
-			if err := StopAndDestroyInstance(ctx, cluster, instance, options, true, instCount[instance.GetHost()] == 0, tlsCfg); err != nil {
+			instCount[instance.GetManageHost()]--
+			if err := StopAndDestroyInstance(ctx, cluster, instance, options, true, instCount[instance.GetManageHost()] == 0, tlsCfg); err != nil {
 				return err
 			}
 			continue
@@ -473,15 +473,15 @@ func scaleInCDC(
 			continue
 		}
 
-		instCount[instance.GetHost()]--
-		if err := StopAndDestroyInstance(ctx, cluster, instance, options, false, instCount[instance.GetHost()] == 0, tlsCfg); err != nil {
+		instCount[instance.GetManageHost()]--
+		if err := StopAndDestroyInstance(ctx, cluster, instance, options, false, instCount[instance.GetManageHost()] == 0, tlsCfg); err != nil {
 			return err
 		}
 	}
 
 	for _, instance := range deferInstances {
-		instCount[instance.GetHost()]--
-		if err := StopAndDestroyInstance(ctx, cluster, instance, options, false, instCount[instance.GetHost()] == 0, tlsCfg); err != nil {
+		instCount[instance.GetManageHost()]--
+		if err := StopAndDestroyInstance(ctx, cluster, instance, options, false, instCount[instance.GetManageHost()] == 0, tlsCfg); err != nil {
 			return err
 		}
 	}

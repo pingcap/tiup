@@ -17,7 +17,6 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -38,6 +37,7 @@ import (
 // TiSparkMasterSpec is the topology specification for TiSpark master node
 type TiSparkMasterSpec struct {
 	Host           string            `yaml:"host"`
+	ManageHost     string            `yaml:"manage_host,omitempty"`
 	ListenHost     string            `yaml:"listen_host,omitempty"`
 	SSHPort        int               `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported       bool              `yaml:"imported,omitempty"`
@@ -60,7 +60,11 @@ func (s *TiSparkMasterSpec) Role() string {
 
 // SSH returns the host and SSH port of the instance
 func (s *TiSparkMasterSpec) SSH() (string, int) {
-	return s.Host, s.SSHPort
+	host := s.Host
+	if s.ManageHost != "" {
+		host = s.ManageHost
+	}
+	return host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
@@ -81,6 +85,7 @@ func (s *TiSparkMasterSpec) IgnoreMonitorAgent() bool {
 // TiSparkWorkerSpec is the topology specification for TiSpark slave nodes
 type TiSparkWorkerSpec struct {
 	Host           string `yaml:"host"`
+	ManageHost     string `yaml:"manage_host,omitempty"`
 	ListenHost     string `yaml:"listen_host,omitempty"`
 	SSHPort        int    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported       bool   `yaml:"imported,omitempty"`
@@ -101,7 +106,11 @@ func (s *TiSparkWorkerSpec) Role() string {
 
 // SSH returns the host and SSH port of the instance
 func (s *TiSparkWorkerSpec) SSH() (string, int) {
-	return s.Host, s.SSHPort
+	host := s.Host
+	if s.ManageHost != "" {
+		host = s.ManageHost
+	}
+	return host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
@@ -141,6 +150,7 @@ func (c *TiSparkMasterComponent) Instances() []Instance {
 			BaseInstance: BaseInstance{
 				InstanceSpec: s,
 				Name:         c.Name(),
+				ManageHost:   s.ManageHost,
 				Host:         s.Host,
 				Port:         s.Port,
 				SSHP:         s.SSHPort,
@@ -274,7 +284,7 @@ func (i *TiSparkMasterInstance) InitConfig(
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(fp, log4jFile, 0644); err != nil {
+	if err := utils.WriteFile(fp, log4jFile, 0644); err != nil {
 		return err
 	}
 	dst = filepath.Join(paths.Deploy, "conf", "log4j.properties")
@@ -319,6 +329,7 @@ func (c *TiSparkWorkerComponent) Instances() []Instance {
 			BaseInstance: BaseInstance{
 				InstanceSpec: s,
 				Name:         c.Name(),
+				ManageHost:   s.ManageHost,
 				Host:         s.Host,
 				Port:         s.Port,
 				SSHP:         s.SSHPort,
@@ -441,7 +452,7 @@ func (i *TiSparkWorkerInstance) InitConfig(
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(fp, slaveSh, 0755); err != nil {
+	if err := utils.WriteFile(fp, slaveSh, 0755); err != nil {
 		return err
 	}
 	dst = filepath.Join(paths.Deploy, "sbin", "start-slave.sh")
@@ -455,7 +466,7 @@ func (i *TiSparkWorkerInstance) InitConfig(
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(fp, log4jFile, 0644); err != nil {
+	if err := utils.WriteFile(fp, log4jFile, 0644); err != nil {
 		return err
 	}
 	dst = filepath.Join(paths.Deploy, "conf", "log4j.properties")

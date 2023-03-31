@@ -14,11 +14,11 @@
 package config
 
 import (
-	"os"
 	"path"
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/embed"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // AlertManagerConfig represent the data to generate AlertManager config
@@ -50,7 +50,7 @@ func (c *AlertManagerConfig) ConfigToFile(file string) error {
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(file, config, 0755); err != nil {
+	if err := utils.WriteFile(file, config, 0755); err != nil {
 		return errors.AddStack(err)
 	}
 	return nil

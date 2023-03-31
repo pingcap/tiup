@@ -16,11 +16,11 @@ package task
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // ScaleConfig is used to copy all configurations to the target directory of path
@@ -37,13 +37,13 @@ type ScaleConfig struct {
 // Execute implements the Task interface
 func (c *ScaleConfig) Execute(ctx context.Context) error {
 	// Copy to remote server
-	exec, found := ctxt.GetInner(ctx).GetExecutor(c.instance.GetHost())
+	exec, found := ctxt.GetInner(ctx).GetExecutor(c.instance.GetManageHost())
 	if !found {
 		return ErrNoExecutor
 	}
 
 	c.paths.Cache = c.specManager.Path(c.clusterName, spec.TempConfigPath)
-	if err := os.MkdirAll(c.paths.Cache, 0755); err != nil {
+	if err := utils.MkdirAll(c.paths.Cache, 0755); err != nil {
 		return err
 	}
 
@@ -58,5 +58,5 @@ func (c *ScaleConfig) Rollback(ctx context.Context) error {
 // String implements the fmt.Stringer interface
 func (c *ScaleConfig) String() string {
 	return fmt.Sprintf("ScaleConfig: cluster=%s, user=%s, host=%s, service=%s, %s",
-		c.clusterName, c.deployUser, c.instance.GetHost(), c.instance.ServiceName(), c.paths)
+		c.clusterName, c.deployUser, c.instance.GetManageHost(), c.instance.ServiceName(), c.paths)
 }

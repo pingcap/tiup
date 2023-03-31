@@ -123,11 +123,11 @@ func (ms *FsManifests) save(manifest *Manifest, filename string) error {
 	path := filepath.Join(ms.profile.Root(), localdata.ManifestParentDir, filename)
 
 	// create sub directory if needed
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+	if err := utils.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return errors.Trace(err)
 	}
 
-	err = os.WriteFile(path, bytes, 0644)
+	err = utils.WriteFile(path, bytes, os.ModePerm)
 	if err != nil {
 		return err
 	}
@@ -239,7 +239,7 @@ func (ms *FsManifests) InstallComponent(reader io.Reader, targetDir, component, 
 		return utils.Untar(reader, targetDir)
 	}
 
-	if err := os.MkdirAll(targetDir, 0755); err != nil {
+	if err := utils.MkdirAll(targetDir, 0755); err != nil {
 		return errors.Trace(err)
 	}
 	writer, err := os.OpenFile(filepath.Join(targetDir, filename), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)

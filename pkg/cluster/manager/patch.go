@@ -85,8 +85,8 @@ func (m *Manager) Patch(name string, packagePath string, opt operator.Options, o
 	for _, inst := range insts {
 		deployDir := spec.Abs(base.User, inst.DeployDir())
 		tb := task.NewBuilder(m.logger)
-		tb.BackupComponent(inst.ComponentName(), base.Version, inst.GetHost(), deployDir).
-			InstallPackage(packagePath, inst.GetHost(), deployDir)
+		tb.BackupComponent(inst.ComponentName(), base.Version, inst.GetManageHost(), deployDir).
+			InstallPackage(packagePath, inst.GetManageHost(), deployDir)
 		replacePackageTasks = append(replacePackageTasks, tb.Build())
 	}
 
@@ -159,7 +159,7 @@ func checkPackage(bindVersion spec.BindVersion, specManager *spec.SpecManager, n
 		return err
 	}
 	cacheDir := specManager.Path(name, "cache", comp+"-"+checksum[:7])
-	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+	if err := utils.MkdirAll(cacheDir, 0755); err != nil {
 		return perrs.Annotatef(err, "create cache directory %s", cacheDir)
 	}
 	if err := exec.Command("tar", "-xvf", packagePath, "-C", cacheDir).Run(); err != nil {
@@ -184,7 +184,7 @@ func checkPackage(bindVersion spec.BindVersion, specManager *spec.SpecManager, n
 }
 
 func overwritePatch(specManager *spec.SpecManager, name, comp, packagePath string) error {
-	if err := os.MkdirAll(specManager.Path(name, spec.PatchDirName), 0755); err != nil {
+	if err := utils.MkdirAll(specManager.Path(name, spec.PatchDirName), 0755); err != nil {
 		return err
 	}
 

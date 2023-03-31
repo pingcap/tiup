@@ -211,6 +211,8 @@ func checkOSInfo(opt *CheckOptions, osInfo *sysinfo.OS) *CheckResult {
 			result.Warn = false
 			return result
 		}
+	case "openEuler":
+		return result
 	default:
 		result.Err = fmt.Errorf("os vendor %s not supported", osInfo.Vendor)
 		return result
@@ -576,7 +578,7 @@ func CheckListeningPort(opt *CheckOptions, host string, topo *spec.Specification
 	ports := make(map[int]struct{})
 
 	topo.IterInstance(func(inst spec.Instance) {
-		if inst.GetHost() != host {
+		if inst.GetManageHost() != host {
 			return
 		}
 		for _, up := range inst.UsedPorts() {
@@ -628,7 +630,7 @@ func CheckPartitions(opt *CheckOptions, host string, topo *spec.Specification, r
 	uniqueStores := make(map[string][]storePartitionInfo) // host+partition -> info
 
 	topo.IterInstance(func(inst spec.Instance) {
-		if inst.GetHost() != host {
+		if inst.GetManageHost() != host {
 			return
 		}
 		for _, dataDir := range spec.MultiDirAbs(topo.GlobalOptions.User, inst.DataDir()) {

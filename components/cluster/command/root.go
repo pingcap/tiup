@@ -213,6 +213,7 @@ func init() {
 		newTemplateCmd(),
 		newTLSCmd(),
 		newMetaCmd(),
+		newRotateSSHCmd(),
 	)
 }
 

@@ -38,6 +38,7 @@ import (
 // PrometheusSpec represents the Prometheus Server topology specification in topology.yaml
 type PrometheusSpec struct {
 	Host                  string                 `yaml:"host"`
+	ManageHost            string                 `yaml:"manage_host,omitempty"`
 	SSHPort               int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported              bool                   `yaml:"imported,omitempty"`
 	Patched               bool                   `yaml:"patched,omitempty"`
@@ -80,7 +81,11 @@ func (s *PrometheusSpec) Role() string {
 
 // SSH returns the host and SSH port of the instance
 func (s *PrometheusSpec) SSH() (string, int) {
-	return s.Host, s.SSHPort
+	host := s.Host
+	if s.ManageHost != "" {
+		host = s.ManageHost
+	}
+	return host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
@@ -122,6 +127,7 @@ func (c *MonitorComponent) Instances() []Instance {
 			InstanceSpec: s,
 			Name:         c.Name(),
 			Host:         s.Host,
+			ManageHost:   s.ManageHost,
 			Port:         s.Port,
 			SSHP:         s.SSHPort,
 
@@ -528,7 +534,7 @@ func mergeAdditionalScrapeConf(source string, addition map[string]any) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(source, bytes, 0644)
+	return utils.WriteFile(source, bytes, 0644)
 }
 
 func getRetention(retention string) string {

@@ -264,7 +264,7 @@ func (dm *DMMasterClient) OfflineMember(query string, retryOpt *utils.RetryOptio
 		_, err := dm.deleteMember(endpoints)
 		return err
 	}, *retryOpt); err != nil {
-		return fmt.Errorf("error offline member %s, %v", query, err)
+		return fmt.Errorf("error offline member %s, %v, %s", query, err, endpoints[0])
 	}
 	return nil
 }

@@ -123,7 +123,7 @@ Do you want to continue? [y/N]:`,
 
 			// for some component, dataDirs might need to be created due to upgrade
 			// eg: TiCDC support DataDir since v4.0.13
-			tb = tb.Mkdir(topo.BaseTopo().GlobalOptions.User, inst.GetHost(), dataDirs...)
+			tb = tb.Mkdir(topo.BaseTopo().GlobalOptions.User, inst.GetManageHost(), dataDirs...)
 
 			if inst.IsImported() {
 				switch inst.ComponentName() {
@@ -134,7 +134,7 @@ Do you want to continue? [y/N]:`,
 						inst.Arch(),
 						version,
 						"", // use default srcPath
-						inst.GetHost(),
+						inst.GetManageHost(),
 						deployDir,
 					)
 				}
@@ -142,7 +142,7 @@ Do you want to continue? [y/N]:`,
 			}
 
 			// backup files of the old version
-			tb = tb.BackupComponent(inst.ComponentName(), base.Version, inst.GetHost(), deployDir)
+			tb = tb.BackupComponent(inst.ComponentName(), base.Version, inst.GetManageHost(), deployDir)
 
 			if deployerInstance, ok := inst.(DeployerInstance); ok {
 				deployerInstance.Deploy(tb, "", deployDir, version, name, clusterVersion)
@@ -166,7 +166,7 @@ Do you want to continue? [y/N]:`,
 						inst.Arch(),
 						version,
 						"", // use default srcPath
-						inst.GetHost(),
+						inst.GetManageHost(),
 						deployDir,
 					)
 				}

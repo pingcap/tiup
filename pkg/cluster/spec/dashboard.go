@@ -29,6 +29,7 @@ import (
 // DashboardSpec represents the Dashboard topology specification in topology.yaml
 type DashboardSpec struct {
 	Host            string               `yaml:"host"`
+	ManageHost      string               `yaml:"manage_host,omitempty"`
 	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Version         string               `yaml:"version,omitempty"`
 	Patched         bool                 `yaml:"patched,omitempty"`
@@ -62,7 +63,11 @@ func (s *DashboardSpec) Role() string {
 
 // SSH returns the host and SSH port of the instance
 func (s *DashboardSpec) SSH() (string, int) {
-	return s.Host, s.SSHPort
+	host := s.Host
+	if s.ManageHost != "" {
+		host = s.ManageHost
+	}
+	return host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
@@ -103,6 +108,7 @@ func (c *DashboardComponent) Instances() []Instance {
 			InstanceSpec: s,
 			Name:         c.Name(),
 			Host:         s.Host,
+			ManageHost:   s.ManageHost,
 			Port:         s.Port,
 			SSHP:         s.SSHPort,
 
