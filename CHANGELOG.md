@@ -1,5 +1,38 @@
 TiUP Changelog
 
+## [1.12.0] 2023-3-31
+
+### New Features
+
+- Support ipv6 in `tiup-cluster` and `tiup-dm` (#2068 #2069 #2070 #2075 #2117, @nexustar)
+- Add support for displaying the grafana URLs in JSON output in `tiup-cluster` and `tiup-dm` (#2041, @onlyacat)
+- Allow download directory when use builtin scp (#2098, @nexustar)
+- Support set manage host in `tiup-cluster` and `tiup-dm` (#2147, @srstack)
+- User perm from parent dir in `tiup-cluster` (#2143, @nexustar)
+- Support display tiflash uptime in `tiup-cluster` (#2094, @srstack)
+- Add ticdc port prob config in `tiup-cluster` (#2124, @sdojjy)
+- Allow users to run custom shell commands during the cluster rolling upgrade in `tiup-cluster` (#2130, @darkelf21cn)
+- Check upgrade offline in `tiup-cluster` (#2116, @srstack)
+- Check required CPU flags for TiFlash >= v6.3.0 in `tiup-cluster` (#2054, @solotzg)
+- Support connect to external Pushgateway in `tiup-cluster` (#2137, @nexustar)
+- Allow setting the TiCDC port in `tiup-playground` (#2140, @dveeden)
+
+### Improvements
+
+- Check the cdc capture can be found before drain the capture in `tiup-cluster` (#2059, @3AceShowHand)
+- Enable AutoTLS by default in `tiup-playground` (#2077, @dveeden)
+- Wait for leader to transfer back during rolling restart in `tiup-cluster` (#2051, @cosven)
+- Sync pdapi & typeutil with pd 6.3.0 in `tiup-cluster` (#2063, @AstroProfundis)
+- Optimize checks & tests (#2056, @AstroProfundis)
+- Mark openEuler as supported in `tiup-cluster` (#2145, @nexustar)
+- Merge tiflash config in tiup playground to reduce handwrite config in `tiup-playground` (#2086, @iosmanthus)
+- Add TIUP_VERBOSE in doc (#2111, @dveeden)
+- Delete storage.remote.cache.dir when prune in `tiup-cluster` (#2142, @hehechen)
+- Check process name before killing it in `tiup clean` (#2141, @dveeden)
+- Display disaggregated mode of TiFlash in `tiup-cluster` (#2133, @hehechen)
+- Remove mark_cache_size default value of tiflash.toml after v5.4.0 (#2138, @hongyunyan)
+- Delete !#$%&= from init password in `tiup-cluster` (#2136, @nexustar)
+
 ## [1.11.3] 2023-02-14
 
 ### Improvement
