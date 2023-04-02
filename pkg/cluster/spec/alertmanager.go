@@ -37,6 +37,7 @@ type AlertmanagerSpec struct {
 	IgnoreExporter  bool                 `yaml:"ignore_exporter,omitempty"`
 	WebPort         int                  `yaml:"web_port" default:"9093"`
 	ClusterPort     int                  `yaml:"cluster_port" default:"9094"`
+	AdvertisePort   int                  `yaml:"advertise_port" default:"9093"`
 	ListenHost      string               `yaml:"listen_host,omitempty" validate:"listen_host:editable"`
 	DeployDir       string               `yaml:"deploy_dir,omitempty"`
 	DataDir         string               `yaml:"data_dir,omitempty"`
@@ -157,10 +158,11 @@ func (i *AlertManagerInstance) InitConfig(
 		peers = append(peers, utils.JoinHostPort(amspec.Host, amspec.ClusterPort))
 	}
 	cfg := &scripts.AlertManagerScript{
-		WebListenAddr:     utils.JoinHostPort(i.GetListenHost(), spec.WebPort),
-		WebExternalURL:    fmt.Sprintf("http://%s", utils.JoinHostPort(spec.Host, spec.WebPort)),
-		ClusterPeers:      peers,
-		ClusterListenAddr: utils.JoinHostPort(i.GetListenHost(), spec.ClusterPort),
+		WebListenAddr:        utils.JoinHostPort(i.GetListenHost(), spec.WebPort),
+		WebExternalURL:       fmt.Sprintf("http://%s", utils.JoinHostPort(spec.Host, spec.WebPort)),
+		ClusterPeers:         peers,
+		ClusterListenAddr:    utils.JoinHostPort(i.GetListenHost(), spec.ClusterPort),
+		ClusterAdvertiseAddr: utils.JoinHostPort(i.GetListenHost(), spec.AdvertisePort),
 
 		DeployDir: paths.Deploy,
 		LogDir:    paths.Log,
