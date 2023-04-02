@@ -27,4 +27,4 @@ exec bin/alertmanager/alertmanager \
 {{- end}}
 {{- end}}
     --cluster.listen-address="{{.ClusterListenAddr}}" \
-    --cluster.advertise-address=="{{.ClusterAdvertiseAddr}}"
+    --cluster.advertise-address="{{.ClusterAdvertiseAddr}}"
