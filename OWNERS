@@ -1,0 +1,10 @@
+# See the OWNERS docs at https://go.k8s.io/owners
+approvers:
+  # tiup-maintainers:
+  - lucklove
+  - srstack
+  - kaaaaaaang
+  # tiup-committers: 0 members
+reviewers:
+  # tiup-reviewers:
+  - breezewish
