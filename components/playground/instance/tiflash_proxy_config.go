@@ -46,7 +46,7 @@ data-dir = "%[6]s"
 max-open-files = 256
 `
 
-func writeTiFlashProxyConfig(w io.Writer, version utils.Version, host, deployDir string, servicePort, proxyPort, proxyStatusPort int) error {
+func writeTiFlashProxyConfigForStartViaConfig(w io.Writer, version utils.Version, host, deployDir string, servicePort, proxyPort, proxyStatusPort int) error {
 	// TODO: support multi-dir
 	dataDir := fmt.Sprintf("%s/flash", deployDir)
 	logDir := fmt.Sprintf("%s/log", deployDir)
