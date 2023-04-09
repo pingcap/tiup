@@ -285,10 +285,6 @@ server_configs:
     storage.main.dir: [/data1/tiflash]
 tiflash_servers:
   - host: 172.16.5.140
-    data_dir: /ssd0/tiflash,/ssd1/tiflash,/ssd2/tiflash
-    config:
-      storage.main.dir: [/ssd0/tiflash, /ssd1/tiflash, /ssd2/tiflash]
-      storage.latest.dir: [/ssd0/tiflash, /ssd1/tiflash, /ssd2/tiflash]
 `, func(file string) {
 		topo := Specification{}
 		err := ParseTopologyYaml(file, &topo)
@@ -302,10 +298,6 @@ server_configs:
     storage.latest.dir: [/data1/tiflash]
 tiflash_servers:
   - host: 172.16.5.140
-    data_dir: /ssd0/tiflash,/ssd1/tiflash,/ssd2/tiflash
-    config:
-      storage.main.dir: [/ssd0/tiflash, /ssd1/tiflash, /ssd2/tiflash]
-      storage.latest.dir: [/ssd0/tiflash, /ssd1/tiflash, /ssd2/tiflash]
 `, func(file string) {
 		topo := Specification{}
 		err := ParseTopologyYaml(file, &topo)
@@ -354,7 +346,7 @@ tiflash_servers:
 tiflash_servers:
   - host: 172.16.5.140
     # if storage.main.dir is defined, data_dir will be ignored
-    data_dir: /hdd0/tiflash 
+    data_dir: /hdd0/tiflash
     config:
       storage.main.dir: [/ssd0/tiflash, /ssd1/tiflash, /ssd2/tiflash]
 `, func(file string) {
@@ -408,8 +400,8 @@ tiflash_servers:
 		c.Assert(topo.TiFlashServers[0].LogDir, check.Equals, "/home/tidb/deploy/tiflash-9000/log")
 	})
 
-	// test tiflash storage section defined data dir
-	// should always define storage.main.dir if any 'storage.*' is defined
+	// test tiflash storage.latest section defined data dir
+	// should always define storage.main.dir if 'storage.latest' is defined
 	withTempFile(`
 tiflash_servers:
   - host: 172.16.5.140
@@ -421,6 +413,35 @@ tiflash_servers:
 		topo := Specification{}
 		err := ParseTopologyYaml(file, &topo)
 		c.Assert(err, check.NotNil)
+	})
+
+	// test tiflash storage.raft section defined data dir
+	// should always define storage.main.dir if 'storage.raft' is defined
+	withTempFile(`
+tiflash_servers:
+  - host: 172.16.5.140
+    data_dir: /ssd0/tiflash
+    config:
+      #storage.main.dir: [/hdd0/tiflash, /hdd1/tiflash, /hdd2/tiflash]
+      storage.raft.dir: [/ssd0/tiflash, /ssd1/tiflash, /ssd2/tiflash, /hdd0/tiflash]
+`, func(file string) {
+		topo := Specification{}
+		err := ParseTopologyYaml(file, &topo)
+		c.Assert(err, check.NotNil)
+	})
+
+	// test tiflash storage.remote section defined data dir
+	// should be fine even when `storage.main.dir` is not defined.
+	withTempFile(`
+tiflash_servers:
+  - host: 172.16.5.140
+    data_dir: /ssd0/tiflash
+    config:
+      storage.remote.dir: /tmp/tiflash/remote
+`, func(file string) {
+		topo := Specification{}
+		err := ParseTopologyYaml(file, &topo)
+		c.Assert(err, check.IsNil)
 	})
 
 	// test tiflash storage section defined data dir
