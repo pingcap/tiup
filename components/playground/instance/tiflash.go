@@ -109,6 +109,11 @@ func (inst *TiFlashInstance) startViaArgs(ctx context.Context, version utils.Ver
 
 	args := []string{
 		"server",
+	}
+	if inst.ConfigPath != "" {
+		args = append(args, fmt.Sprintf("--config-file=%s", inst.ConfigPath))
+	}
+	args = append(args,
 		"--",
 		fmt.Sprintf("--tmp_path=%s", filepath.Join(inst.Dir, "tmp")),
 		fmt.Sprintf("--path=%s", filepath.Join(inst.Dir, "data")),
@@ -123,12 +128,9 @@ func (inst *TiFlashInstance) startViaArgs(ctx context.Context, version utils.Ver
 		fmt.Sprintf("--flash.proxy.addr=%s", utils.JoinHostPort(inst.Host, inst.ProxyPort)),
 		fmt.Sprintf("--flash.proxy.advertise-addr=%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.ProxyPort)),
 		fmt.Sprintf("--flash.proxy.status-addr=%s", utils.JoinHostPort(inst.Host, inst.ProxyStatusPort)),
-		fmt.Sprintf("--flash.proxy.data-dir=%s", filepath.Join(inst.Dir, "proxy-data")),
+		fmt.Sprintf("--flash.proxy.data-dir=%s", filepath.Join(inst.Dir, "proxy_data")),
 		fmt.Sprintf("--flash.proxy.log-file=%s", filepath.Join(inst.Dir, "tiflash_tikv.log")),
-	}
-	if inst.ConfigPath != "" {
-		args = append(args, fmt.Sprintf("--config-file=%s", inst.ConfigPath))
-	}
+	)
 
 	var err error
 	if inst.BinPath, err = tiupexec.PrepareBinary("tiflash", version, inst.BinPath); err != nil {
