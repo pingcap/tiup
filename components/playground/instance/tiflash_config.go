@@ -34,7 +34,7 @@ const tiflashMarkCacheSize = `mark_cache_size = 5368709120`
 const tiflashConfig = `
 default_profile = "default"
 display_name = "TiFlash"
-http_port = %[2]d
+%[1]s
 listen_host = "0.0.0.0"
 path = "%[5]s"
 tcp_port = %[3]d
@@ -106,12 +106,19 @@ func writeTiFlashConfig(w io.Writer, version utils.Version, tcpPort, httpPort, s
 	logDir := fmt.Sprintf("%s/log", deployDir)
 	ip := AdvertiseHost(host)
 	var conf string
+
+	port := "#"
+	// For 7.1.0 or later, TiFlash HTTP service is removed, so we don't need to set http_port
+	if !tidbver.TiFlashNotNeedHTTPPortConfig(version.String()) {
+		port = fmt.Sprintf(`http_port: %d`, httpPort)
+	}
+
 	if tidbver.TiFlashNotNeedSomeConfig(version.String()) {
-		conf = fmt.Sprintf(tiflashConfig, pdAddrs, httpPort, tcpPort,
+		conf = fmt.Sprintf(tiflashConfig, pdAddrs, port, tcpPort,
 			deployDir, dataDir, tmpDir, logDir, servicePort, metricsPort,
 			ip, strings.Join(tidbStatusAddrs, ","), clusterManagerPath, "", "")
 	} else {
-		conf = fmt.Sprintf(tiflashConfig, pdAddrs, httpPort, tcpPort,
+		conf = fmt.Sprintf(tiflashConfig, pdAddrs, port, tcpPort,
 			deployDir, dataDir, tmpDir, logDir, servicePort, metricsPort,
 			ip, strings.Join(tidbStatusAddrs, ","), clusterManagerPath, tiflashDaemonConfig, tiflashMarkCacheSize)
 	}
