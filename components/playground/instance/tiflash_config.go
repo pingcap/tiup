@@ -34,7 +34,7 @@ const tiflashMarkCacheSize = `mark_cache_size = 5368709120`
 const tiflashConfig = `
 default_profile = "default"
 display_name = "TiFlash"
-%[1]s
+%[2]s
 listen_host = "0.0.0.0"
 path = "%[5]s"
 tcp_port = %[3]d
