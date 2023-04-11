@@ -67,6 +67,12 @@ func TiFlashNotNeedSomeConfig(version string) bool {
 	return semver.Compare(version, "v5.4.0") >= 0 || strings.Contains(version, "nightly")
 }
 
+// TiFlashSupportRunWithoutConfig return true if the given version of TiFlash could be started without
+// a config file.
+func TiFlashSupportRunWithoutConfig(version string) bool {
+	return semver.Compare(version, "v7.1.0") >= 0 || strings.Contains(version, "nightly")
+}
+
 // TiCDCSupportConfigFile return if given version of TiCDC support config file
 func TiCDCSupportConfigFile(version string) bool {
 	// config support since v4.0.13, ignore v5.0.0-rc
