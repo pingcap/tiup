@@ -49,7 +49,7 @@ type TiFlashInstance struct {
 func NewTiFlashInstance(binPath, dir, host, configPath string, id int, pds []*PDInstance, dbs []*TiDBInstance, version string) *TiFlashInstance {
 	httpPort := 8123
 	if !tidbver.TiFlashNotNeedHTTPPortConfig(version) {
-		httpPort = utils.MustGetFreePort(host, 8123)
+		httpPort = utils.MustGetFreePort(host, httpPort)
 	}
 	return &TiFlashInstance{
 		instance: instance{

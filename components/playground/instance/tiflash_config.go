@@ -110,7 +110,7 @@ func writeTiFlashConfig(w io.Writer, version utils.Version, tcpPort, httpPort, s
 	port := "#"
 	// For 7.1.0 or later, TiFlash HTTP service is removed, so we don't need to set http_port
 	if !tidbver.TiFlashNotNeedHTTPPortConfig(version.String()) {
-		port = fmt.Sprintf(`http_port: %d`, httpPort)
+		port = fmt.Sprintf(`http_port = %d`, httpPort)
 	}
 
 	if tidbver.TiFlashNotNeedSomeConfig(version.String()) {
