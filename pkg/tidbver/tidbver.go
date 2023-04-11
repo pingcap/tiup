@@ -67,7 +67,7 @@ func TiFlashNotNeedSomeConfig(version string) bool {
 	return semver.Compare(version, "v5.4.0") >= 0 || strings.Contains(version, "nightly")
 }
 
-// TiFlashSupportRunByArg return true if the given version of TiFlash could be started without
+// TiFlashSupportRunWithoutConfig return true if the given version of TiFlash could be started without
 // a config file.
 func TiFlashSupportRunWithoutConfig(version string) bool {
 	return semver.Compare(version, "v7.1.0") >= 0 || strings.Contains(version, "nightly")

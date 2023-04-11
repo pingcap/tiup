@@ -99,9 +99,8 @@ func (inst *TiFlashInstance) StatusAddrs() (addrs []string) {
 func (inst *TiFlashInstance) Start(ctx context.Context, version utils.Version) error {
 	if tidbver.TiFlashSupportRunWithoutConfig(version.String()) {
 		return inst.startViaArgs(ctx, version)
-	} else {
-		return inst.startViaConfig(ctx, version)
 	}
+	return inst.startViaConfig(ctx, version)
 }
 
 func (inst *TiFlashInstance) startViaArgs(ctx context.Context, version utils.Version) error {
