@@ -363,30 +363,21 @@ func isValidStringArray(key string, config map[string]any, couldEmpty bool) (boo
 	return isKeyDefined, fmt.Errorf("'%s' should be a non-empty string array, please check the tiflash configuration in your yaml file", TiFlashStorageKeyMainDirs)
 }
 
-// checkTiFlashStorageConfig detect the "storage" section in `config`
-// is valid or not.
+// checkTiFlashStorageConfig ensures `storage.main` is defined when
+// `storage.latest` or `storage.raft` is used.
 func checkTiFlashStorageConfig(config map[string]any) (bool, error) {
-	var (
-		isStorageDirsDefined bool
-		err                  error
-	)
-	if isStorageDirsDefined, err = isValidStringArray(TiFlashStorageKeyMainDirs, config, false); err != nil {
-		return isStorageDirsDefined, err
+	isMainStorageDefined, err := isValidStringArray(TiFlashStorageKeyMainDirs, config, false)
+	if err != nil {
+		return false, err
 	}
-	if !isStorageDirsDefined {
-		containsStorageSectionKey := func(config map[string]any) (string, bool) {
-			for k := range config {
-				if strings.HasPrefix(k, "storage.") {
-					return k, true
-				}
+	if !isMainStorageDefined {
+		for k := range config {
+			if strings.HasPrefix(k, "storage.latest") || strings.HasPrefix(k, "storage.raft") {
+				return false, fmt.Errorf("You must set '%s' before setting '%s', please check the tiflash configuration in your yaml file", TiFlashStorageKeyMainDirs, k)
 			}
-			return "", false
-		}
-		if key, contains := containsStorageSectionKey(config); contains {
-			return isStorageDirsDefined, fmt.Errorf("You must set '%s' before setting '%s', please check the tiflash configuration in your yaml file", TiFlashStorageKeyMainDirs, key)
 		}
 	}
-	return isStorageDirsDefined, nil
+	return isMainStorageDefined, nil
 }
 
 // CheckIncorrectConfigs checks incorrect settings
