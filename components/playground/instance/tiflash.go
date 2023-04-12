@@ -120,7 +120,6 @@ func (inst *TiFlashInstance) startViaArgs(ctx context.Context, version utils.Ver
 		"--",
 		fmt.Sprintf("--tmp_path=%s", filepath.Join(inst.Dir, "tmp")),
 		fmt.Sprintf("--path=%s", filepath.Join(inst.Dir, "data")),
-		fmt.Sprintf("--http_port=%d", inst.Port),
 		fmt.Sprintf("--listen_host=%s", inst.Host),
 		fmt.Sprintf("--tcp_port=%d", inst.TCPPort),
 		fmt.Sprintf("--logger.log=%s", inst.LogFile()),
