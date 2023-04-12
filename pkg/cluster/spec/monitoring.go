@@ -357,18 +357,20 @@ func (i *MonitorInstance) InitConfig(
 	}
 
 	if spec.NgPort > 0 {
-		pds := []string{}
+		var pds_str string
 		if servers, found := topoHasField("PDServers"); found {
+			pds := []string{}
 			for i := 0; i < servers.Len(); i++ {
 				pd := servers.Index(i).Interface().(*PDSpec)
 				pds = append(pds, fmt.Sprintf("\"%s\"", utils.JoinHostPort(pd.Host, pd.ClientPort)))
 			}
+			pds_str = strings.Replace((fmt.Sprint(pds)), " ", ",", -1)
 		}
 		ngcfg := &config.NgMonitoringConfig{
 			ClusterName:      clusterName,
 			Address:          utils.JoinHostPort(i.GetListenHost(), spec.NgPort),
 			AdvertiseAddress: utils.JoinHostPort(i.GetHost(), spec.NgPort),
-			PDAddrs:          pds,
+			PDAddrs:          pds_str,
 			TLSEnabled:       enableTLS,
 
 			DeployDir: paths.Deploy,
