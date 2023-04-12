@@ -22,6 +22,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/BurntSushi/toml"
@@ -100,6 +101,51 @@ func (inst *TiFlashInstance) StatusAddrs() (addrs []string) {
 
 // Start calls set inst.cmd and Start
 func (inst *TiFlashInstance) Start(ctx context.Context, version utils.Version) error {
+	if tidbver.TiFlashSupportRunWithoutConfig(version.String()) {
+		return inst.startViaArgs(ctx, version)
+	}
+	return inst.startViaConfig(ctx, version)
+}
+
+func (inst *TiFlashInstance) startViaArgs(ctx context.Context, version utils.Version) error {
+	endpoints := pdEndpoints(inst.pds, false)
+
+	args := []string{
+		"server",
+	}
+	if inst.ConfigPath != "" {
+		args = append(args, fmt.Sprintf("--config-file=%s", inst.ConfigPath))
+	}
+	args = append(args,
+		"--",
+		fmt.Sprintf("--tmp_path=%s", filepath.Join(inst.Dir, "tmp")),
+		fmt.Sprintf("--path=%s", filepath.Join(inst.Dir, "data")),
+		fmt.Sprintf("--http_port=%d", inst.Port),
+		fmt.Sprintf("--listen_host=%s", inst.Host),
+		fmt.Sprintf("--tcp_port=%d", inst.TCPPort),
+		fmt.Sprintf("--logger.log=%s", inst.LogFile()),
+		fmt.Sprintf("--logger.errorlog=%s", filepath.Join(inst.Dir, "tiflash_error.log")),
+		fmt.Sprintf("--status.metrics_port=%d", inst.StatusPort),
+		fmt.Sprintf("--flash.service_addr=%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.ServicePort)),
+		fmt.Sprintf("--raft.pd_addr=%s", strings.Join(endpoints, ",")),
+		fmt.Sprintf("--flash.proxy.addr=%s", utils.JoinHostPort(inst.Host, inst.ProxyPort)),
+		fmt.Sprintf("--flash.proxy.advertise-addr=%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.ProxyPort)),
+		fmt.Sprintf("--flash.proxy.status-addr=%s", utils.JoinHostPort(inst.Host, inst.ProxyStatusPort)),
+		fmt.Sprintf("--flash.proxy.data-dir=%s", filepath.Join(inst.Dir, "proxy_data")),
+		fmt.Sprintf("--flash.proxy.log-file=%s", filepath.Join(inst.Dir, "tiflash_tikv.log")),
+	)
+
+	var err error
+	if inst.BinPath, err = tiupexec.PrepareBinary("tiflash", version, inst.BinPath); err != nil {
+		return err
+	}
+	inst.Process = &process{cmd: PrepareCommand(ctx, inst.BinPath, args, nil, inst.Dir)}
+
+	logIfErr(inst.Process.SetOutputFile(inst.LogFile()))
+	return inst.Process.Start()
+}
+
+func (inst *TiFlashInstance) startViaConfig(ctx context.Context, version utils.Version) error {
 	endpoints := pdEndpoints(inst.pds, false)
 
 	tidbStatusAddrs := make([]string, 0, len(inst.dbs))
@@ -150,7 +196,7 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version utils.Version) e
 
 	dirPath := filepath.Dir(inst.BinPath)
 	clusterManagerPath := getFlashClusterPath(dirPath)
-	if err = inst.checkConfig(wd, clusterManagerPath, version, tidbStatusAddrs, endpoints); err != nil {
+	if err = inst.checkConfigForStartViaConfig(wd, clusterManagerPath, version, tidbStatusAddrs, endpoints); err != nil {
 		return err
 	}
 
@@ -187,7 +233,7 @@ func (inst *TiFlashInstance) StoreAddr() string {
 	return utils.JoinHostPort(AdvertiseHost(inst.Host), inst.ServicePort)
 }
 
-func (inst *TiFlashInstance) checkConfig(deployDir, clusterManagerPath string,
+func (inst *TiFlashInstance) checkConfigForStartViaConfig(deployDir, clusterManagerPath string,
 	version utils.Version, tidbStatusAddrs, endpoints []string) (err error) {
 	if err := utils.MkdirAll(inst.Dir, 0755); err != nil {
 		return errors.Trace(err)
@@ -217,11 +263,11 @@ func (inst *TiFlashInstance) checkConfig(deployDir, clusterManagerPath string,
 	}()
 
 	// Write default config to buffer
-	if err := writeTiFlashConfig(flashBuf, version, inst.TCPPort, inst.Port, inst.ServicePort, inst.StatusPort,
+	if err := writeTiFlashConfigForStartViaConfig(flashBuf, version, inst.TCPPort, inst.Port, inst.ServicePort, inst.StatusPort,
 		inst.Host, deployDir, clusterManagerPath, tidbStatusAddrs, endpoints); err != nil {
 		return errors.Trace(err)
 	}
-	if err := writeTiFlashProxyConfig(proxyBuf, version, inst.Host, deployDir,
+	if err := writeTiFlashProxyConfigForStartViaConfig(proxyBuf, version, inst.Host, deployDir,
 		inst.ServicePort, inst.ProxyPort, inst.ProxyStatusPort); err != nil {
 		return errors.Trace(err)
 	}
