@@ -28,7 +28,7 @@ type NgMonitoringConfig struct {
 	Address          string
 	AdvertiseAddress string
 	TLSEnabled       bool
-	PDAddrs          []string
+	PDAddrs          string
 
 	DeployDir string
 	DataDir   string
