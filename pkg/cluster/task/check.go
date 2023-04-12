@@ -75,13 +75,12 @@ func (c *CheckSys) Execute(ctx context.Context) error {
 	case CheckTypeSystemLimits:
 		storeResults(ctx, c.host, operator.CheckSysLimits(c.opt, c.topo.GlobalOptions.User, stdout))
 	case CheckTypeSystemConfig:
-		results := operator.CheckKernelParameters(c.opt, stdout)
 		e, ok := ctxt.GetInner(ctx).GetExecutor(c.host)
 		if !ok {
 			return ErrNoExecutor
 		}
-		results = append(
-			results,
+		results := append(
+			operator.CheckKernelParameters(c.opt, stdout, ctx, e),
 			operator.CheckSELinux(ctx, e),
 			operator.CheckTHP(ctx, e),
 		)

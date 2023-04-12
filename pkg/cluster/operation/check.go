@@ -418,7 +418,7 @@ func CheckSysLimits(opt *CheckOptions, user string, l []byte) []*CheckResult {
 }
 
 // CheckKernelParameters checks kernel parameter values
-func CheckKernelParameters(opt *CheckOptions, p []byte) []*CheckResult {
+func CheckKernelParameters(opt *CheckOptions, p []byte, ctx context.Context, e ctxt.Executor) []*CheckResult {
 	var results []*CheckResult
 
 	for _, line := range strings.Split(string(p), "\n") {
@@ -483,6 +483,34 @@ func CheckKernelParameters(opt *CheckOptions, p []byte) []*CheckResult {
 					Msg:  "vm.swappiness = 0",
 				})
 			}
+		case "vm.min_free_kbytes":
+			val, _ := strconv.Atoi(fields[2])
+			// get numa node number
+			stdout, stderr, err := e.Execute(ctx, "numactl --hardware | grep available", false)
+			if err != nil || len(stderr) > 0 {
+				results = append(results, &CheckResult{
+					Name: CheckNameSysctl,
+					Err:  fmt.Errorf("numactl not usable, %s", strings.Trim(string(stderr), "\n")),
+					Msg:  "numactl is not installed properly",
+				})
+			} else {
+				splited := strings.Split(string(stdout), " ")
+				if len(splited) >= 2 {
+					numaNodes, err := strconv.Atoi(splited[1])
+					if err == nil {
+						if numaNodes*133716 == val {
+							// no err, no warn
+							break
+						}
+					}
+				}
+			}
+
+			results = append(results, &CheckResult{
+				Name: CheckNameSysctl,
+				Warn: true,
+				Msg:  fmt.Sprintf("It is suggested to set vm.min_free_kbytes to 133716 * \"NUMA nodes\". But value detected is %d", val),
+			})
 		}
 	}
 
