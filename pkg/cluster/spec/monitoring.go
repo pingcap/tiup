@@ -368,7 +368,7 @@ func (i *MonitorInstance) InitConfig(
 			ClusterName:      clusterName,
 			Address:          utils.JoinHostPort(i.GetListenHost(), spec.NgPort),
 			AdvertiseAddress: utils.JoinHostPort(i.GetHost(), spec.NgPort),
-			PDAddrs:          pds,
+			PDAddrs:          strings.Join(pds, ","),
 			TLSEnabled:       enableTLS,
 
 			DeployDir: paths.Deploy,
