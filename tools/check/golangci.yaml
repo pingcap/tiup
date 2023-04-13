@@ -19,7 +19,7 @@ linters:
     - gosimple
     - govet
     - ineffassign
-    - interfacer
+    # - interfacer
     - misspell
     - rowserrcheck
     - staticcheck
