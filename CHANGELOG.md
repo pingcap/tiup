@@ -1,5 +1,19 @@
 TiUP Changelog
 
+## [1.12.1] 2023-4-13
+
+### Fix
+
+- Fix ngm config in `tiup-cluster` (#2175, @Mystery-cyf)
+
+### Improvements
+
+- Remove TiFlash http service in `tiup-cluster` and `tiup-playground` (#2165, Lloyd-Pottige)
+- Remove ":" on default backup filename in `tiup-cluster` (#2174, @nexustar)
+- Allows setting other storage config for TiFlash when `storage.main` is not defined in `tiup-cluster` (#2161, @breezewish)
+- Support run TiFlash via args in `tiup-playground` (#2162, @breezewish)
+- Tidy output in `tiup-playground` (#2163, @breezewish)
+
 ## [1.12.0] 2023-3-31
 
 ### New Features
