@@ -107,18 +107,12 @@ func writeTiFlashConfigForStartViaConfig(w io.Writer, version utils.Version, tcp
 	ip := AdvertiseHost(host)
 	var conf string
 
-	port := "#"
-	// For 7.1.0 or later, TiFlash HTTP service is removed, so we don't need to set http_port
-	if !tidbver.TiFlashNotNeedHTTPPortConfig(version.String()) {
-		port = fmt.Sprintf(`http_port = %d`, httpPort)
-	}
-
 	if tidbver.TiFlashNotNeedSomeConfig(version.String()) {
-		conf = fmt.Sprintf(tiflashConfig, pdAddrs, port, tcpPort,
+		conf = fmt.Sprintf(tiflashConfig, pdAddrs, "", tcpPort,
 			deployDir, dataDir, tmpDir, logDir, servicePort, metricsPort,
 			ip, strings.Join(tidbStatusAddrs, ","), clusterManagerPath, "", "")
 	} else {
-		conf = fmt.Sprintf(tiflashConfig, pdAddrs, port, tcpPort,
+		conf = fmt.Sprintf(tiflashConfig, pdAddrs, fmt.Sprintf(`http_port = %d`, httpPort), tcpPort,
 			deployDir, dataDir, tmpDir, logDir, servicePort, metricsPort,
 			ip, strings.Join(tidbStatusAddrs, ","), clusterManagerPath, tiflashDaemonConfig, tiflashMarkCacheSize)
 	}
