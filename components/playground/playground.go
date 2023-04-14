@@ -534,7 +534,7 @@ func (p *Playground) commandHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Mapping command line component id to internal spec component id.
-	if cmd.ComponentID == ticdc {
+	if cmd.ComponentID == "ticdc" {
 		cmd.ComponentID = spec.ComponentCDC
 	}
 
