@@ -39,6 +39,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/environment"
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
+	"github.com/pingcap/tiup/pkg/tidbver"
 	"github.com/pingcap/tiup/pkg/tui/progress"
 	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/mod/semver"
@@ -324,7 +325,7 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 				}
 
 				go p.killTiFlashIfTombstone(inst)
-				fmt.Fprintf(w, "tiflash will be stop when tombstone\n")
+				fmt.Fprintf(w, "TiFlash will be stop when tombstone\n")
 				return nil
 			}
 		}
@@ -465,7 +466,8 @@ func (p *Playground) handleScaleOut(w io.Writer, cmd *Command) error {
 	if err != nil {
 		return err
 	}
-	inst, err := p.addInstance(cmd.ComponentID, cmd.Config)
+	// TODO: Support scale-out in disaggregated mode
+	inst, err := p.addInstance(cmd.ComponentID, instance.TiFlashRoleNormal, cmd.Config)
 	if err != nil {
 		return err
 	}
@@ -534,7 +536,7 @@ func (p *Playground) commandHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Mapping command line component id to internal spec component id.
-	if cmd.ComponentID == ticdc {
+	if cmd.ComponentID == "ticdc" {
 		cmd.ComponentID = spec.ComponentCDC
 	}
 
@@ -621,6 +623,7 @@ func (p *Playground) WalkInstances(fn func(componentID string, ins instance.Inst
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -628,7 +631,7 @@ func (p *Playground) enableBinlog() bool {
 	return p.bootOptions.Pump.Num > 0
 }
 
-func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins instance.Instance, err error) {
+func (p *Playground) addInstance(componentID string, tiflashRole instance.TiFlashRole, cfg instance.Config) (ins instance.Instance, err error) {
 	if cfg.BinPath != "" {
 		cfg.BinPath, err = getAbsolutePath(cfg.BinPath)
 		if err != nil {
@@ -670,7 +673,7 @@ func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins i
 			}
 		}
 	case spec.ComponentTiDB:
-		inst := instance.NewTiDBInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, p.enableBinlog())
+		inst := instance.NewTiDBInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, p.enableBinlog(), p.bootOptions.Mode == "tidb-disagg")
 		ins = inst
 		p.tidbs = append(p.tidbs, inst)
 	case spec.ComponentTiKV:
@@ -678,7 +681,7 @@ func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins i
 		ins = inst
 		p.tikvs = append(p.tikvs, inst)
 	case spec.ComponentTiFlash:
-		inst := instance.NewTiFlashInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, p.tidbs, cfg.Version)
+		inst := instance.NewTiFlashInstance(tiflashRole, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, p.tidbs, cfg.Version)
 		ins = inst
 		p.tiflashs = append(p.tiflashs, inst)
 	case spec.ComponentCDC:
@@ -799,6 +802,8 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		&options.TiDB,
 		&options.TiKV,
 		&options.TiFlash,
+		&options.TiFlashCompute,
+		&options.TiFlashWrite,
 		&options.Pump,
 		&options.Drainer,
 		&options.TiKVCDC,
@@ -828,23 +833,45 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		}
 	}
 
-	instances := []struct {
-		comp string
+	type InstancePair struct {
+		comp        string
+		tiflashRole instance.TiFlashRole
 		instance.Config
-	}{
-		{spec.ComponentPD, options.PD},
-		{spec.ComponentTiKV, options.TiKV},
-		{spec.ComponentPump, options.Pump},
-		{spec.ComponentTiDB, options.TiDB},
-		{spec.ComponentCDC, options.TiCDC},
-		{spec.ComponentTiKVCDC, options.TiKVCDC},
-		{spec.ComponentDrainer, options.Drainer},
-		{spec.ComponentTiFlash, options.TiFlash},
+	}
+
+	instances := []InstancePair{
+		{spec.ComponentPD, "", options.PD},
+		{spec.ComponentTiKV, "", options.TiKV},
+		{spec.ComponentPump, "", options.Pump},
+		{spec.ComponentTiDB, "", options.TiDB},
+		{spec.ComponentCDC, "", options.TiCDC},
+		{spec.ComponentTiKVCDC, "", options.TiKVCDC},
+		{spec.ComponentDrainer, "", options.Drainer},
+	}
+
+	if options.Mode == "tidb" {
+		instances = append(
+			instances,
+			InstancePair{spec.ComponentTiFlash, instance.TiFlashRoleNormal, options.TiFlash},
+		)
+	} else if options.Mode == "tidb-disagg" {
+		if !tidbver.TiDBSupportDisagg(options.Version) {
+			return fmt.Errorf("TiDB cluster doesn't support disaggregated mode in version %s", options.Version)
+		}
+		if !tidbver.TiFlashPlaygroundNewStartMode(options.Version) {
+			// For simplicitly, currently we only implemented disagg mode when TiFlash can run without config.
+			return fmt.Errorf("TiUP playground only supports disaggregated mode for TiDB cluster >= v7.1.0 (or nightly)")
+		}
+		instances = append(
+			instances,
+			InstancePair{spec.ComponentTiFlash, instance.TiFlashRoleDisaggWrite, options.TiFlashWrite},
+			InstancePair{spec.ComponentTiFlash, instance.TiFlashRoleDisaggCompute, options.TiFlashCompute},
+		)
 	}
 
 	for _, inst := range instances {
 		for i := 0; i < inst.Num; i++ {
-			_, err := p.addInstance(inst.comp, inst.Config)
+			_, err := p.addInstance(inst.comp, inst.tiflashRole, inst.Config)
 			if err != nil {
 				return err
 			}
@@ -1037,9 +1064,6 @@ func (p *Playground) terminate(sig syscall.Signal) {
 	}
 	// tidb must exit earlier then pd
 	for _, inst := range p.tidbs {
-		if inst.TempConfig != "" {
-			os.Remove(inst.TempConfig)
-		}
 		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
 			kill(inst.Component(), inst.Pid(), inst.Wait)
 		}

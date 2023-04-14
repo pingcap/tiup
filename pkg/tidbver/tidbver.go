@@ -72,10 +72,16 @@ func TiFlashNotNeedSomeConfig(version string) bool {
 	return semver.Compare(version, "v5.4.0") >= 0 || strings.Contains(version, "nightly")
 }
 
-// TiFlashSupportRunWithoutConfig return true if the given version of TiFlash could be started without
-// a config file.
-func TiFlashSupportRunWithoutConfig(version string) bool {
+// TiFlashPlaygroundNewStartMode return true if the given version of TiFlash could be started
+// with the new implementation in TiUP playground.
+func TiFlashPlaygroundNewStartMode(version string) bool {
 	return semver.Compare(version, "v7.1.0") >= 0 || strings.Contains(version, "nightly")
+}
+
+// TiDBSupportDisagg returns true if the given version of TiDB and TiFlash supports
+// disaggregated mode.
+func TiDBSupportDisagg(version string) bool {
+	return semver.Compare(version, "v7.0.0") >= 0 || strings.Contains(version, "nightly")
 }
 
 // TiCDCSupportConfigFile return if given version of TiCDC support config file

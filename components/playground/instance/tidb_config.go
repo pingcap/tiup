@@ -13,10 +13,14 @@
 
 package instance
 
-func (inst *TiKVInstance) getConfig() map[string]any {
+func (inst *TiDBInstance) getConfig() map[string]any {
 	config := make(map[string]any)
-	config["rocksdb.max-open-files"] = 256
-	config["raftdb.max-open-files"] = 256
-	config["storage.reserve-space"] = 0
+	config["security.auto-tls"] = true
+
+	if inst.isDisaggMode {
+		config["use-autoscaler"] = false
+		config["disaggregated-tiflash"] = true
+	}
+
 	return config
 }

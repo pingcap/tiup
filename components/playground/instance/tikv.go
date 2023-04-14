@@ -16,12 +16,9 @@ package instance
 import (
 	"context"
 	"fmt"
-	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
-	"github.com/pingcap/errors"
 	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -56,7 +53,12 @@ func (inst *TiKVInstance) Addr() string {
 
 // Start calls set inst.cmd and Start
 func (inst *TiKVInstance) Start(ctx context.Context, version utils.Version) error {
-	if err := inst.checkConfig(); err != nil {
+	configPath := filepath.Join(inst.Dir, "tikv.toml")
+	if err := prepareConfig(
+		configPath,
+		inst.ConfigPath,
+		inst.getConfig(),
+	); err != nil {
 		return err
 	}
 
@@ -66,7 +68,7 @@ func (inst *TiKVInstance) Start(ctx context.Context, version utils.Version) erro
 		fmt.Sprintf("--advertise-addr=%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.Port)),
 		fmt.Sprintf("--status-addr=%s", utils.JoinHostPort(inst.Host, inst.StatusPort)),
 		fmt.Sprintf("--pd-endpoints=%s", strings.Join(endpoints, ",")),
-		fmt.Sprintf("--config=%s", inst.ConfigPath),
+		fmt.Sprintf("--config=%s", configPath),
 		fmt.Sprintf("--data-dir=%s", filepath.Join(inst.Dir, "data")),
 		fmt.Sprintf("--log-file=%s", inst.LogFile()),
 	}
@@ -95,33 +97,4 @@ func (inst *TiKVInstance) LogFile() string {
 // StoreAddr return the store address of TiKV
 func (inst *TiKVInstance) StoreAddr() string {
 	return utils.JoinHostPort(AdvertiseHost(inst.Host), inst.Port)
-}
-
-func (inst *TiKVInstance) checkConfig() error {
-	if err := utils.MkdirAll(inst.Dir, 0755); err != nil {
-		return err
-	}
-	if inst.ConfigPath == "" {
-		inst.ConfigPath = path.Join(inst.Dir, "tikv.toml")
-	}
-
-	_, err := os.Stat(inst.ConfigPath)
-	if err == nil || os.IsExist(err) {
-		return nil
-	}
-	if !os.IsNotExist(err) {
-		return errors.Trace(err)
-	}
-
-	cf, err := os.Create(inst.ConfigPath)
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	defer cf.Close()
-	if err := writeTiKVConfig(cf); err != nil {
-		return errors.Trace(err)
-	}
-
-	return nil
 }
