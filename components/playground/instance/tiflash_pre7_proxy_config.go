@@ -21,7 +21,7 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
-const tiflashProxyConfig = `
+const tiflashProxyConfigOld = `
 log-file = "%[1]s/tiflash_tikv.log"
 
 [rocksdb]
@@ -46,7 +46,8 @@ data-dir = "%[6]s"
 max-open-files = 256
 `
 
-func writeTiFlashProxyConfigForStartViaConfig(w io.Writer, version utils.Version, host, deployDir string, servicePort, proxyPort, proxyStatusPort int) error {
+// writeTiFlashProxyConfigOld is for < 7.1.0. Not maintained any more. Do not introduce new features.
+func writeTiFlashProxyConfigOld(w io.Writer, version utils.Version, host, deployDir string, servicePort, proxyPort, proxyStatusPort int) error {
 	// TODO: support multi-dir
 	dataDir := fmt.Sprintf("%s/flash", deployDir)
 	logDir := fmt.Sprintf("%s/log", deployDir)
@@ -58,7 +59,7 @@ advertise-status-addr = "%[1]s:%[2]d"`, ip, proxyStatusPort)
 	} else {
 		statusAddr = fmt.Sprintf(`status-addr = "%[1]s:%[2]d"`, ip, proxyStatusPort)
 	}
-	conf := fmt.Sprintf(tiflashProxyConfig, logDir, ip, servicePort, proxyPort, statusAddr, dataDir)
+	conf := fmt.Sprintf(tiflashProxyConfigOld, logDir, ip, servicePort, proxyPort, statusAddr, dataDir)
 	_, err := w.Write([]byte(conf))
 	return err
 }
