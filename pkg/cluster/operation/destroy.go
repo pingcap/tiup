@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -33,6 +32,7 @@ import (
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/proxy"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // Destroy the cluster.
@@ -546,7 +546,7 @@ func DestroyClusterTombstone(
 			continue
 		}
 
-		id := s.Host + ":" + strconv.Itoa(s.Port)
+		id := utils.JoinHostPort(s.Host, s.Port)
 
 		tombstone, err := pdClient.IsTombStone(id)
 		if err != nil {
@@ -576,7 +576,7 @@ func DestroyClusterTombstone(
 			continue
 		}
 
-		id := s.Host + ":" + strconv.Itoa(s.FlashServicePort)
+		id := utils.JoinHostPort(s.Host, s.FlashServicePort)
 
 		tombstone, err := pdClient.IsTombStone(id)
 		if err != nil {
@@ -594,7 +594,7 @@ func DestroyClusterTombstone(
 		}
 
 		instances := (&spec.TiFlashComponent{Topology: cluster}).Instances()
-		id = s.Host + ":" + strconv.Itoa(s.GetMainPort())
+		id = utils.JoinHostPort(s.Host, s.GetMainPort())
 		if err := maybeDestroyMonitor(instances, id); err != nil {
 			return nil, err
 		}
@@ -607,7 +607,7 @@ func DestroyClusterTombstone(
 			continue
 		}
 
-		id := s.Host + ":" + strconv.Itoa(s.Port)
+		id := utils.JoinHostPort(s.Host, s.Port)
 
 		tombstone, err := binlogClient.IsPumpTombstone(ctx, id)
 		if err != nil {
@@ -637,7 +637,7 @@ func DestroyClusterTombstone(
 			continue
 		}
 
-		id := s.Host + ":" + strconv.Itoa(s.Port)
+		id := utils.JoinHostPort(s.Host, s.Port)
 
 		tombstone, err := binlogClient.IsDrainerTombstone(ctx, id)
 		if err != nil {

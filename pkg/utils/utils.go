@@ -76,3 +76,12 @@ func Ternary(condition bool, a, b any) any {
 func JoinHostPort(host string, port int) string {
 	return net.JoinHostPort(host, strconv.Itoa(port))
 }
+
+// ParseHostPort Prase host and port
+func ParseHostPort(hostport string) (host, port string) {
+	colon := strings.LastIndex(hostport, ":")
+
+	host = strings.TrimSuffix(strings.TrimPrefix(hostport[:colon], "["), "]")
+	port = hostport[colon+1:]
+	return
+}
