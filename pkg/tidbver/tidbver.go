@@ -61,15 +61,20 @@ func TiFlashDeprecatedUsersConfig(version string) bool {
 	return semver.Compare(version, "v4.0.12") >= 0 && version != "v5.0.0-rc" || strings.Contains(version, "nightly")
 }
 
+// TiFlashNotNeedHTTPPortConfig return if given version of TiFlash do not need http_port config
+func TiFlashNotNeedHTTPPortConfig(version string) bool {
+	return semver.Compare(version, "v7.1.0") >= 0 || strings.Contains(version, "nightly")
+}
+
 // TiFlashNotNeedSomeConfig return if given version of TiFlash do not need some config like runAsDaemon
 func TiFlashNotNeedSomeConfig(version string) bool {
 	// https://github.com/pingcap/tiup/pull/1673
 	return semver.Compare(version, "v5.4.0") >= 0 || strings.Contains(version, "nightly")
 }
 
-// TiFlashSupportRunWithoutConfig return true if the given version of TiFlash could be started without
-// a config file.
-func TiFlashSupportRunWithoutConfig(version string) bool {
+// TiFlashPlaygroundNewStartMode return true if the given version of TiFlash could be started
+// using the new implementation in TiUP playground
+func TiFlashPlaygroundNewStartMode(version string) bool {
 	return semver.Compare(version, "v7.1.0") >= 0 || strings.Contains(version, "nightly")
 }
 

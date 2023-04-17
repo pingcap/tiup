@@ -22,19 +22,19 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
-const tiflashDaemonConfig = `
+const tiflashDaemonConfigOld = `
 
 [application]
 runAsDaemon = true
 
 `
 
-const tiflashMarkCacheSize = `mark_cache_size = 5368709120`
+const tiflashMarkCacheSizeOld = `mark_cache_size = 5368709120`
 
-const tiflashConfig = `
+const tiflashConfigOld = `
 default_profile = "default"
 display_name = "TiFlash"
-http_port = %[2]d
+%[2]s
 listen_host = "0.0.0.0"
 path = "%[5]s"
 tcp_port = %[3]d
@@ -99,27 +99,29 @@ quota = "default"
 ip = "::/0"
 `
 
-func writeTiFlashConfigForStartViaConfig(w io.Writer, version utils.Version, tcpPort, httpPort, servicePort, metricsPort int, host, deployDir, clusterManagerPath string, tidbStatusAddrs, endpoints []string) error {
+// writeTiFlashConfigOld is for < 7.1.0. Not maintained any more. Do not introduce new features.
+func writeTiFlashConfigOld(w io.Writer, version utils.Version, tcpPort, httpPort, servicePort, metricsPort int, host, deployDir, clusterManagerPath string, tidbStatusAddrs, endpoints []string) error {
 	pdAddrs := strings.Join(endpoints, ",")
 	dataDir := fmt.Sprintf("%s/data", deployDir)
 	tmpDir := fmt.Sprintf("%s/tmp", deployDir)
 	logDir := fmt.Sprintf("%s/log", deployDir)
 	ip := AdvertiseHost(host)
 	var conf string
+
 	if tidbver.TiFlashNotNeedSomeConfig(version.String()) {
-		conf = fmt.Sprintf(tiflashConfig, pdAddrs, httpPort, tcpPort,
+		conf = fmt.Sprintf(tiflashConfigOld, pdAddrs, "", tcpPort,
 			deployDir, dataDir, tmpDir, logDir, servicePort, metricsPort,
 			ip, strings.Join(tidbStatusAddrs, ","), clusterManagerPath, "", "")
 	} else {
-		conf = fmt.Sprintf(tiflashConfig, pdAddrs, httpPort, tcpPort,
+		conf = fmt.Sprintf(tiflashConfigOld, pdAddrs, fmt.Sprintf(`http_port = %d`, httpPort), tcpPort,
 			deployDir, dataDir, tmpDir, logDir, servicePort, metricsPort,
-			ip, strings.Join(tidbStatusAddrs, ","), clusterManagerPath, tiflashDaemonConfig, tiflashMarkCacheSize)
+			ip, strings.Join(tidbStatusAddrs, ","), clusterManagerPath, tiflashDaemonConfigOld, tiflashMarkCacheSizeOld)
 	}
 	_, err := w.Write([]byte(conf))
 	return err
 }
 
-func getTiFlashProxyConfigPath(cfg map[string]any) string {
+func getTiFlashProxyConfigPathOld(cfg map[string]any) string {
 	defer func() {
 		if r := recover(); r != nil {
 			return
@@ -128,6 +130,6 @@ func getTiFlashProxyConfigPath(cfg map[string]any) string {
 	return cfg["flash"].(map[string]any)["proxy"].(map[string]any)["config"].(string)
 }
 
-func setTiFlashProxyConfigPath(cfg map[string]any, path string) {
+func setTiFlashProxyConfigPathOld(cfg map[string]any, path string) {
 	cfg["flash"].(map[string]any)["proxy"].(map[string]any)["config"] = path
 }
