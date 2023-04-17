@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -341,7 +340,7 @@ func ScaleInCluster(
 
 	for i := 0; i < len(cluster.TiKVServers); i++ {
 		s := cluster.TiKVServers[i]
-		id := s.Host + ":" + strconv.Itoa(s.Port)
+		id := utils.JoinHostPort(s.Host, s.Port)
 		if !deletedNodes.Exist(id) {
 			continue
 		}
@@ -351,7 +350,7 @@ func ScaleInCluster(
 
 	for i := 0; i < len(cluster.TiFlashServers); i++ {
 		s := cluster.TiFlashServers[i]
-		id := s.Host + ":" + strconv.Itoa(s.TCPPort)
+		id := utils.JoinHostPort(s.Host, s.TCPPort)
 		if !deletedNodes.Exist(id) {
 			continue
 		}
@@ -361,7 +360,7 @@ func ScaleInCluster(
 
 	for i := 0; i < len(cluster.PumpServers); i++ {
 		s := cluster.PumpServers[i]
-		id := s.Host + ":" + strconv.Itoa(s.Port)
+		id := utils.JoinHostPort(s.Host, s.Port)
 		if !deletedNodes.Exist(id) {
 			continue
 		}
@@ -371,7 +370,7 @@ func ScaleInCluster(
 
 	for i := 0; i < len(cluster.Drainers); i++ {
 		s := cluster.Drainers[i]
-		id := s.Host + ":" + strconv.Itoa(s.Port)
+		id := utils.JoinHostPort(s.Host, s.Port)
 		if !deletedNodes.Exist(id) {
 			continue
 		}
@@ -401,7 +400,7 @@ func deleteMember(
 			return err
 		}
 	case spec.ComponentTiFlash:
-		addr := instance.GetHost() + ":" + strconv.Itoa(instance.(*spec.TiFlashInstance).GetServicePort())
+		addr := utils.JoinHostPort(instance.GetHost(), instance.(*spec.TiFlashInstance).GetServicePort())
 		if err := pdClient.DelStore(addr, timeoutOpt); err != nil {
 			return err
 		}
@@ -410,13 +409,13 @@ func deleteMember(
 			return err
 		}
 	case spec.ComponentDrainer:
-		addr := instance.GetHost() + ":" + strconv.Itoa(instance.GetPort())
+		addr := utils.JoinHostPort(instance.GetHost(), instance.GetPort())
 		err := binlogClient.OfflineDrainer(ctx, addr)
 		if err != nil {
 			return err
 		}
 	case spec.ComponentPump:
-		addr := instance.GetHost() + ":" + strconv.Itoa(instance.GetPort())
+		addr := utils.JoinHostPort(instance.GetHost(), instance.GetPort())
 		err := binlogClient.OfflinePump(ctx, addr)
 		if err != nil {
 			return err

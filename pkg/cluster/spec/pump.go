@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -63,7 +62,7 @@ func (s *PumpSpec) Status(ctx context.Context, timeout time.Duration, tlsCfg *tl
 		if err != nil {
 			return state
 		}
-		id := s.Host + ":" + strconv.Itoa(s.Port)
+		id := utils.JoinHostPort(s.Host, s.Port)
 		tombstone, _ := binlogClient.IsPumpTombstone(ctx, id)
 
 		if tombstone {
