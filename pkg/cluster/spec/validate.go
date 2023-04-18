@@ -449,7 +449,8 @@ type TiKVLabelProvider interface {
 }
 
 func getHostFromAddress(addr string) string {
-	return strings.Split(addr, ":")[0]
+	host, _ := utils.ParseHostPort(addr)
+	return host
 }
 
 // CheckTiKVLabels will check if tikv missing label or have wrong label
