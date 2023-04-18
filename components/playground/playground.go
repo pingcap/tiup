@@ -33,6 +33,8 @@ import (
 	"github.com/AstroProfundis/tabby"
 	"github.com/fatih/color"
 	"github.com/juju/ansiterm"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/playground/instance"
 	"github.com/pingcap/tiup/pkg/cluster/api"
@@ -862,6 +864,32 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			// For simplicitly, currently we only implemented disagg mode when TiFlash can run without config.
 			return fmt.Errorf("TiUP playground only supports disaggregated mode for TiDB cluster >= v7.1.0 (or nightly)")
 		}
+
+		// Preflight check whether specified object storage is available.
+		s3Client, err := minio.New(options.DisaggOpts.S3Endpoint, &minio.Options{
+			Creds:  credentials.NewStaticV4(options.DisaggOpts.AccessKey, options.DisaggOpts.SecretKey, ""),
+			Secure: false,
+		})
+		if err != nil {
+			return errors.Annotate(err, "Disaggregate mode preflight check failed")
+		}
+
+		ctxCheck, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		bucketExists, err := s3Client.BucketExists(ctxCheck, options.DisaggOpts.Bucket)
+		if err != nil {
+			return errors.Annotate(err, "Disaggregate mode preflight check failed")
+		}
+
+		if !bucketExists {
+			// Try to create bucket.
+			err := s3Client.MakeBucket(ctxCheck, options.DisaggOpts.Bucket, minio.MakeBucketOptions{})
+			if err != nil {
+				return fmt.Errorf("Disaggregate mode preflight check failed: Bucket %s doesn't exist", options.DisaggOpts.Bucket)
+			}
+		}
+
 		instances = append(
 			instances,
 			InstancePair{spec.ComponentTiFlash, instance.TiFlashRoleDisaggWrite, options.TiFlashWrite},
