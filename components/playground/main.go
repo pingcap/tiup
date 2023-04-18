@@ -320,8 +320,7 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 
 	rootCmd.Flags().StringVar(&options.TiKVCDC.Version, "kvcdc.version", "", "TiKV-CDC instance version")
 
-	// 9000 is occupied by TiFlash..
-	rootCmd.Flags().StringVar(&options.DisaggOpts.S3Endpoint, "disagg.s3_endpoint", "127.0.0.1:9222", "Object store URL for the disaggregated TiFlash, available when --mode=tidb-disagg")
+	rootCmd.Flags().StringVar(&options.DisaggOpts.S3Endpoint, "disagg.s3_endpoint", "127.0.0.1:9000", "Object store URL for the disaggregated TiFlash, available when --mode=tidb-disagg")
 	rootCmd.Flags().StringVar(&options.DisaggOpts.Bucket, "disagg.bucket", "tiflash", "Object store bucket for the disaggregated TiFlash, available when --mode=tidb-disagg")
 	rootCmd.Flags().StringVar(&options.DisaggOpts.AccessKey, "disagg.access_key", "minioadmin", "Object store access key, available when --mode=tidb-disagg")
 	rootCmd.Flags().StringVar(&options.DisaggOpts.SecretKey, "disagg.secret_key", "minioadmin", "Object store secret key, available when --mode=tidb-disagg")
