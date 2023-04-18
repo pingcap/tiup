@@ -33,10 +33,18 @@ const (
 	TiFlashRoleDisaggCompute TiFlashRole = "compute"
 )
 
+type DisaggOptions struct {
+	S3Endpoint string `yaml:"s3_endpoint"`
+	Bucket     string `yaml:"bucket"`
+	AccessKey  string `yaml:"access_key"`
+	SecretKey  string `yaml:"secret_key"`
+}
+
 // TiFlashInstance represent a running TiFlash
 type TiFlashInstance struct {
 	instance
 	Role            TiFlashRole
+	DisaggOpts      DisaggOptions
 	TCPPort         int
 	ServicePort     int
 	ProxyPort       int
@@ -47,7 +55,7 @@ type TiFlashInstance struct {
 }
 
 // NewTiFlashInstance return a TiFlashInstance
-func NewTiFlashInstance(role TiFlashRole, binPath, dir, host, configPath string, id int, pds []*PDInstance, dbs []*TiDBInstance, version string) *TiFlashInstance {
+func NewTiFlashInstance(role TiFlashRole, disaggOptions DisaggOptions, binPath, dir, host, configPath string, id int, pds []*PDInstance, dbs []*TiDBInstance, version string) *TiFlashInstance {
 	if role != TiFlashRoleNormal && role != TiFlashRoleDisaggWrite && role != TiFlashRoleDisaggCompute {
 		panic(fmt.Sprintf("Unknown TiFlash role %s", role))
 	}
@@ -67,6 +75,7 @@ func NewTiFlashInstance(role TiFlashRole, binPath, dir, host, configPath string,
 			ConfigPath: configPath,
 		},
 		Role:            role,
+		DisaggOpts:      disaggOptions,
 		TCPPort:         utils.MustGetFreePort(host, 9000),
 		ServicePort:     utils.MustGetFreePort(host, 3930),
 		ProxyPort:       utils.MustGetFreePort(host, 20170),
@@ -94,15 +103,22 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version utils.Version) e
 		return inst.startOld(ctx, version)
 	}
 
+	configPath := filepath.Join(inst.Dir, "tiflash.toml")
+	if err := prepareConfig(
+		configPath,
+		inst.ConfigPath,
+		inst.getConfig(),
+	); err != nil {
+		return err
+	}
+
 	endpoints := pdEndpoints(inst.pds, false)
 
 	args := []string{
 		"server",
 	}
-	if inst.ConfigPath != "" {
-		args = append(args, fmt.Sprintf("--config-file=%s", inst.ConfigPath))
-	}
 	args = append(args,
+		fmt.Sprintf("--config-file=%s", configPath),
 		"--",
 		fmt.Sprintf("--tmp_path=%s", filepath.Join(inst.Dir, "tmp")),
 		fmt.Sprintf("--path=%s", filepath.Join(inst.Dir, "data")),

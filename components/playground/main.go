@@ -54,20 +54,21 @@ import (
 
 // BootOptions is the topology and options used to start a playground cluster
 type BootOptions struct {
-	Mode           string          `yaml:"mode"`
-	Version        string          `yaml:"version"`
-	PD             instance.Config `yaml:"pd"`
-	TiDB           instance.Config `yaml:"tidb"`
-	TiKV           instance.Config `yaml:"tikv"`
-	TiFlash        instance.Config `yaml:"tiflash"`         // ignored when mode == tidb-disagg
-	TiFlashWrite   instance.Config `yaml:"tiflash_write"`   // Only available when mode == tidb-disagg
-	TiFlashCompute instance.Config `yaml:"tiflash_compute"` // Only available when mode == tidb-disagg
-	TiCDC          instance.Config `yaml:"ticdc"`
-	TiKVCDC        instance.Config `yaml:"tikv_cdc"`
-	Pump           instance.Config `yaml:"pump"`
-	Drainer        instance.Config `yaml:"drainer"`
-	Host           string          `yaml:"host"`
-	Monitor        bool            `yaml:"monitor"`
+	Mode           string                 `yaml:"mode"`
+	Version        string                 `yaml:"version"`
+	PD             instance.Config        `yaml:"pd"`
+	TiDB           instance.Config        `yaml:"tidb"`
+	TiKV           instance.Config        `yaml:"tikv"`
+	TiFlash        instance.Config        `yaml:"tiflash"`         // ignored when mode == tidb-disagg
+	TiFlashWrite   instance.Config        `yaml:"tiflash_write"`   // Only available when mode == tidb-disagg
+	TiFlashCompute instance.Config        `yaml:"tiflash_compute"` // Only available when mode == tidb-disagg
+	TiCDC          instance.Config        `yaml:"ticdc"`
+	TiKVCDC        instance.Config        `yaml:"tikv_cdc"`
+	Pump           instance.Config        `yaml:"pump"`
+	Drainer        instance.Config        `yaml:"drainer"`
+	Host           string                 `yaml:"host"`
+	Monitor        bool                   `yaml:"monitor"`
+	DisaggOpts     instance.DisaggOptions `yaml:"disagg"` // Only available when mode == tidb-disagg
 }
 
 var (
@@ -271,7 +272,7 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 	rootCmd.Flags().BoolVar(&options.Monitor, "monitor", true, "Start prometheus and grafana component")
 	_ = rootCmd.Flags().MarkDeprecated("monitor", "Please use --without-monitor to control whether to disable monitor.")
 
-	// NOTE: Do not set default values, if they may be changed in different modes.
+	// NOTE: Do not set default values if they may be changed in different modes.
 
 	rootCmd.Flags().IntVar(&options.TiDB.Num, "db", 0, "TiDB instance number")
 	rootCmd.Flags().IntVar(&options.TiKV.Num, "kv", 0, "TiKV instance number")
@@ -319,6 +320,11 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 
 	rootCmd.Flags().StringVar(&options.TiKVCDC.Version, "kvcdc.version", "", "TiKV-CDC instance version")
 
+	rootCmd.Flags().StringVar(&options.DisaggOpts.S3Endpoint, "disagg.s3_endpoint", "127.0.0.1:9222", "Object store URL for the disaggregated TiFlash, available when --mode=tidb-disagg")
+	rootCmd.Flags().StringVar(&options.DisaggOpts.Bucket, "disagg.bucket", "tiflash", "Object store bucket for the disaggregated TiFlash, available when --mode=tidb-disagg")
+	rootCmd.Flags().StringVar(&options.DisaggOpts.AccessKey, "disagg.access_key", "minioadmin", "Object store access key, available when --mode=tidb-disagg")
+	rootCmd.Flags().StringVar(&options.DisaggOpts.SecretKey, "disagg.secret_key", "minioadmin", "Object store secret key, available when --mode=tidb-disagg")
+
 	rootCmd.AddCommand(newDisplay())
 	rootCmd.AddCommand(newScaleOut())
 	rootCmd.AddCommand(newScaleIn())
@@ -338,15 +344,13 @@ func setIfZeroStr(variable *string, defaultValue string) {
 	}
 }
 
-func populateDefaultOpt(flagSet *pflag.FlagSet) (err error) {
-	mode, _ := flagSet.GetString("mode")
-
+func populateDefaultOpt(flagSet *pflag.FlagSet) error {
 	if flagSet.Lookup("without-monitor").Changed {
 		v, _ := flagSet.GetBool("without-monitor")
 		options.Monitor = !v
 	}
 
-	switch mode {
+	switch options.Mode {
 	case "tidb":
 		setIfZeroInt(&options.TiDB.Num, 1)
 		setIfZeroInt(&options.TiKV.Num, 1)
@@ -369,11 +373,10 @@ func populateDefaultOpt(flagSet *pflag.FlagSet) (err error) {
 		setIfZeroStr(&options.TiFlashCompute.ConfigPath, options.TiFlash.ConfigPath)
 		options.TiFlashCompute.UpTimeout = options.TiFlash.UpTimeout
 	default:
-		err = errors.Errorf("Unknown --mode %s", mode)
-		return
+		return errors.Errorf("Unknown --mode %s", options.Mode)
 	}
 
-	return
+	return nil
 }
 
 func tryConnect(dsn string) error {
