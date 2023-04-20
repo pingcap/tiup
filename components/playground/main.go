@@ -332,45 +332,45 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 	return rootCmd.Execute()
 }
 
-func setIfZeroInt(variable *int, defaultValue int) {
-	if *variable == 0 {
-		*variable = defaultValue
-	}
-}
-
-func setIfZeroStr(variable *string, defaultValue string) {
-	if *variable == "" {
-		*variable = defaultValue
-	}
-}
-
 func populateDefaultOpt(flagSet *pflag.FlagSet) error {
 	if flagSet.Lookup("without-monitor").Changed {
 		v, _ := flagSet.GetBool("without-monitor")
 		options.Monitor = !v
 	}
 
+	defaultInt := func(variable *int, flagName string, defaultValue int) {
+		if !flagSet.Lookup(flagName).Changed {
+			*variable = defaultValue
+		}
+	}
+
+	defaultStr := func(variable *string, flagName string, defaultValue string) {
+		if !flagSet.Lookup(flagName).Changed {
+			*variable = defaultValue
+		}
+	}
+
 	switch options.Mode {
 	case "tidb":
-		setIfZeroInt(&options.TiDB.Num, 1)
-		setIfZeroInt(&options.TiKV.Num, 1)
-		setIfZeroInt(&options.PD.Num, 1)
-		setIfZeroInt(&options.TiFlash.Num, 1)
+		defaultInt(&options.TiDB.Num, "db", 1)
+		defaultInt(&options.TiKV.Num, "kv", 1)
+		defaultInt(&options.PD.Num, "pd", 1)
+		defaultInt(&options.TiFlash.Num, "tiflash", 1)
 	case "tikv-slim":
-		setIfZeroInt(&options.TiKV.Num, 1)
-		setIfZeroInt(&options.PD.Num, 1)
+		defaultInt(&options.TiKV.Num, "kv", 1)
+		defaultInt(&options.PD.Num, "pd", 1)
 	case "tidb-disagg":
-		setIfZeroInt(&options.TiDB.Num, 1)
-		setIfZeroInt(&options.TiKV.Num, 1)
-		setIfZeroInt(&options.PD.Num, 1)
-		setIfZeroInt(&options.TiFlash.Num, 1)
-		setIfZeroInt(&options.TiFlashWrite.Num, options.TiFlash.Num)
-		setIfZeroStr(&options.TiFlashWrite.BinPath, options.TiFlash.BinPath)
-		setIfZeroStr(&options.TiFlashWrite.ConfigPath, options.TiFlash.ConfigPath)
+		defaultInt(&options.TiDB.Num, "db", 1)
+		defaultInt(&options.TiKV.Num, "kv", 1)
+		defaultInt(&options.PD.Num, "pd", 1)
+		defaultInt(&options.TiFlash.Num, "tiflash", 1)
+		defaultInt(&options.TiFlashWrite.Num, "tiflash.write", options.TiFlash.Num)
+		defaultStr(&options.TiFlashWrite.BinPath, "tiflash.write.binpath", options.TiFlash.BinPath)
+		defaultStr(&options.TiFlashWrite.ConfigPath, "tiflash.write.config", options.TiFlash.ConfigPath)
 		options.TiFlashWrite.UpTimeout = options.TiFlash.UpTimeout
-		setIfZeroInt(&options.TiFlashCompute.Num, options.TiFlash.Num)
-		setIfZeroStr(&options.TiFlashCompute.BinPath, options.TiFlash.BinPath)
-		setIfZeroStr(&options.TiFlashCompute.ConfigPath, options.TiFlash.ConfigPath)
+		defaultInt(&options.TiFlashCompute.Num, "tiflash.compute", options.TiFlash.Num)
+		defaultStr(&options.TiFlashCompute.BinPath, "tiflash.compute.binpath", options.TiFlash.BinPath)
+		defaultStr(&options.TiFlashCompute.ConfigPath, "tiflash.compute.config", options.TiFlash.ConfigPath)
 		options.TiFlashCompute.UpTimeout = options.TiFlash.UpTimeout
 	default:
 		return errors.Errorf("Unknown --mode %s", options.Mode)
