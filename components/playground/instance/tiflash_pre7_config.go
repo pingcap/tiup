@@ -109,7 +109,7 @@ func writeTiFlashConfigOld(w io.Writer, version utils.Version, tcpPort, httpPort
 	var conf string
 
 	if tidbver.TiFlashNotNeedSomeConfig(version.String()) {
-		conf = fmt.Sprintf(tiflashConfigOld, pdAddrs, "", tcpPort,
+		conf = fmt.Sprintf(tiflashConfigOld, pdAddrs, fmt.Sprintf(`http_port = %d`, httpPort), tcpPort,
 			deployDir, dataDir, tmpDir, logDir, servicePort, metricsPort,
 			ip, strings.Join(tidbStatusAddrs, ","), clusterManagerPath, "", "")
 	} else {
