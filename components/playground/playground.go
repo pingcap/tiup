@@ -925,7 +925,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		for _, dbAddr := range succ {
 			ss := strings.Split(dbAddr, ":")
 			fmt.Printf("Connect TiDB:   ")
-			colorCmd.Printf("mysql --host %s --port %s -u root\n", ss[0], ss[1])
+			colorCmd.Printf("mysql --comments --host %s --port %s -u root\n", ss[0], ss[1])
 		}
 	}
 
