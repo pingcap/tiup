@@ -15,8 +15,19 @@ package instance
 
 import "path/filepath"
 
+func (inst *TiFlashInstance) getProxyConfig() map[string]any {
+	config := make(map[string]any)
+	config["rocksdb.max-open-files"] = 256
+	config["raftdb.max-open-files"] = 256
+	config["storage.reserve-space"] = 0
+	config["storage.reserve-raft-space"] = 0
+	return config
+}
+
 func (inst *TiFlashInstance) getConfig() map[string]any {
 	config := make(map[string]any)
+
+	config["flash.proxy.config"] = filepath.Join(inst.Dir, "tiflash_proxy.toml")
 
 	if inst.Role == TiFlashRoleDisaggWrite {
 		config["storage.s3.endpoint"] = inst.DisaggOpts.S3Endpoint

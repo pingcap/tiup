@@ -103,6 +103,15 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version utils.Version) e
 		return inst.startOld(ctx, version)
 	}
 
+	proxyConfigPath := filepath.Join(inst.Dir, "tiflash_proxy.toml")
+	if err := prepareConfig(
+		proxyConfigPath,
+		"",
+		inst.getProxyConfig(),
+	); err != nil {
+		return err
+	}
+
 	configPath := filepath.Join(inst.Dir, "tiflash.toml")
 	if err := prepareConfig(
 		configPath,
