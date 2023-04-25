@@ -6,6 +6,7 @@ on:
     branches:
       - ci/gh-*
       - release-*
+      - master
     paths-ignore:
       - '**.html'
       - '**.md'
