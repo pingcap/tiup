@@ -58,7 +58,7 @@ jobs:
         working-directory: ${{ env.working-directory }}
         if: github.event_name != 'release'
         run: |
-          STAGING_VER=`git describe --tags | sed -r "s/([^-]*-g)/r\1/"`
+          STAGING_VER=`git describe --tags | sed 's/-[^-]*$//' | sed -r 's/(-[^-]*$)/-nightly\1/'`
           echo ::set-output name=STAGING::$STAGING_VER
 
       - name: Get git ref and commit
@@ -90,7 +90,7 @@ jobs:
 
           if [ ! -z ${{ steps.check_staging.outputs.STAGING }} ]; then
             export EXTRA_LDFLAGS="-X \"github.com/${{ github.repository }}/pkg/version.TiUPVerName=${{ steps.check_staging.outputs.STAGING }}\""
-            export REL_VER=${{ steps.check_staging.outputs.STAGING }}+staging
+            export REL_VER=${{ steps.check_staging.outputs.STAGING }}
           else
             export REL_VER=`git describe --tags --always`
           fi
