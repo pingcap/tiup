@@ -18,5 +18,6 @@ func (inst *TiKVInstance) getConfig() map[string]any {
 	config["rocksdb.max-open-files"] = 256
 	config["raftdb.max-open-files"] = 256
 	config["storage.reserve-space"] = 0
+	config["storage.reserve-raft-space"] = 0
 	return config
 }
