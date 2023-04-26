@@ -320,27 +320,27 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 	return rootCmd.Execute()
 }
 
-func setIfZeroInt(variable *int, defaultValue int) {
-	if *variable == 0 {
-		*variable = defaultValue
-	}
-}
-
 func populateDefaultOpt(flagSet *pflag.FlagSet) error {
 	if flagSet.Lookup("without-monitor").Changed {
 		v, _ := flagSet.GetBool("without-monitor")
 		options.Monitor = !v
 	}
 
+	defaultInt := func(variable *int, flagName string, defaultValue int) {
+		if !flagSet.Lookup(flagName).Changed {
+			*variable = defaultValue
+		}
+	}
+
 	switch options.Mode {
 	case "tidb":
-		setIfZeroInt(&options.TiDB.Num, 1)
-		setIfZeroInt(&options.TiKV.Num, 1)
-		setIfZeroInt(&options.PD.Num, 1)
-		setIfZeroInt(&options.TiFlash.Num, 1)
+		defaultInt(&options.TiDB.Num, "db", 1)
+		defaultInt(&options.TiKV.Num, "kv", 1)
+		defaultInt(&options.PD.Num, "pd", 1)
+		defaultInt(&options.TiFlash.Num, "tiflash", 1)
 	case "tikv-slim":
-		setIfZeroInt(&options.TiKV.Num, 1)
-		setIfZeroInt(&options.PD.Num, 1)
+		defaultInt(&options.TiKV.Num, "kv", 1)
+		defaultInt(&options.PD.Num, "pd", 1)
 	default:
 		return errors.Errorf("Unknown --mode %s", options.Mode)
 	}
