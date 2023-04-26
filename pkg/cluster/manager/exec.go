@@ -15,7 +15,6 @@ package manager
 
 import (
 	"context"
-	"strings"
 
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
@@ -80,7 +79,7 @@ func (m *Manager) Exec(name string, opt ExecOptions, gOpt operator.Options) erro
 	})
 
 	for hostKey, i := range uniqueHosts {
-		host := strings.Split(hostKey, ":")[0]
+		host, _ := utils.ParseHostPort(hostKey)
 		for _, cmd := range i.Slice() {
 			shellTasks = append(shellTasks,
 				task.NewBuilder(m.logger).
@@ -113,7 +112,7 @@ func (m *Manager) Exec(name string, opt ExecOptions, gOpt operator.Options) erro
 
 	// print outputs
 	for hostKey, i := range uniqueHosts {
-		host := strings.Split(hostKey, "-")[0]
+		host, _ := utils.ParseHostPort(hostKey)
 		for _, cmd := range i.Slice() {
 			stdout, stderr, ok := ctxt.GetInner(execCtx).GetOutputs(hostKey + cmd)
 			if !ok {
