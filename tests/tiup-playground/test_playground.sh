@@ -62,7 +62,7 @@ sleep 3
 trap "kill_all" EXIT
 
 # wait start cluster successfully
-timeout 300 grep -q "TiDB Cluster is started" <(tail -f $outfile)
+timeout 300 grep -q "TiDB Playground Cluster is started" <(tail -f $outfile)
 
 tiup-playground display | grep -qv "exit"
 tiup-playground scale-out --db 2
@@ -110,7 +110,7 @@ tiup-playground $TIDB_VERSION > $outfile 2>&1 &
 sleep 3
 
 # wait start cluster successfully
-timeout 300 grep -q "TiDB Cluster is started" <(tail -f $outfile)
+timeout 300 grep -q "TiDB Playground Cluster is started" <(tail -f $outfile)
 
 cat $outfile | grep ":3930" | grep -q "Done"
 
@@ -120,7 +120,7 @@ outfile_1=/tmp/tiup-playground-test_1.out
 # no TiFlash to speed up
 tiup-playground $TIDB_VERSION --tag $TAG --db 2 --tiflash 0 > $outfile_1 2>&1 &
 sleep 3
-timeout 300 grep -q "TiDB Cluster is started" <(tail -f $outfile_1)
+timeout 300 grep -q "TiDB Playground Cluster is started" <(tail -f $outfile_1)
 tiup-playground --tag $TAG display | grep -qv "exit"
 
 # TiDB scale-out to 4
@@ -144,7 +144,7 @@ sleep 100
 echo -e "\033[0;36m<<< Run TiKV-CDC test >>>\033[0m"
 tiup-playground $TIDB_VERSION --db 1 --pd 1 --kv 1 --tiflash 0 --kvcdc 1 --kvcdc.version v1.0.0 > $outfile 2>&1 &
 sleep 3
-timeout 300 grep -q "TiDB Cluster is started" <(tail -f $outfile)
+timeout 300 grep -q "TiDB Playground Cluster is started" <(tail -f $outfile)
 tiup-playground display | grep -qv "exit"
 # scale out
 tiup-playground scale-out --kvcdc 2
