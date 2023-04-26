@@ -288,6 +288,8 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 	rootCmd.Flags().IntVar(&options.TiDB.Port, "db.port", 0, "Playground TiDB port. If not provided, TiDB will use 4000 as its port")
 	rootCmd.Flags().StringVar(&options.PD.Host, "pd.host", "", "Playground PD host. If not provided, PD will still use `host` flag as its host")
 	rootCmd.Flags().IntVar(&options.PD.Port, "pd.port", 0, "Playground PD port. If not provided, PD will use 2379 as its port")
+	rootCmd.Flags().StringVar(&options.TiKV.Host, "kv.host", "", "Playground TiKV host. If not provided, TiKV will still use `host` flag as its host")
+	rootCmd.Flags().IntVar(&options.TiKV.Port, "kv.port", 0, "Playground TiKV port. If not provided, TiKV will use 20160 as its port")
 	rootCmd.Flags().StringVar(&options.TiCDC.Host, "ticdc.host", "", "Playground TiCDC host. If not provided, TiDB will still use `host` flag as its host")
 	rootCmd.Flags().IntVar(&options.TiCDC.Port, "ticdc.port", 0, "Playground TiCDC port. If not provided, TiCDC will use 8300 as its port")
 
@@ -318,27 +320,27 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 	return rootCmd.Execute()
 }
 
-func setIfZeroInt(variable *int, defaultValue int) {
-	if *variable == 0 {
-		*variable = defaultValue
-	}
-}
-
 func populateDefaultOpt(flagSet *pflag.FlagSet) error {
 	if flagSet.Lookup("without-monitor").Changed {
 		v, _ := flagSet.GetBool("without-monitor")
 		options.Monitor = !v
 	}
 
+	defaultInt := func(variable *int, flagName string, defaultValue int) {
+		if !flagSet.Lookup(flagName).Changed {
+			*variable = defaultValue
+		}
+	}
+
 	switch options.Mode {
 	case "tidb":
-		setIfZeroInt(&options.TiDB.Num, 1)
-		setIfZeroInt(&options.TiKV.Num, 1)
-		setIfZeroInt(&options.PD.Num, 1)
-		setIfZeroInt(&options.TiFlash.Num, 1)
+		defaultInt(&options.TiDB.Num, "db", 1)
+		defaultInt(&options.TiKV.Num, "kv", 1)
+		defaultInt(&options.PD.Num, "pd", 1)
+		defaultInt(&options.TiFlash.Num, "tiflash", 1)
 	case "tikv-slim":
-		setIfZeroInt(&options.TiKV.Num, 1)
-		setIfZeroInt(&options.PD.Num, 1)
+		defaultInt(&options.TiKV.Num, "kv", 1)
+		defaultInt(&options.PD.Num, "pd", 1)
 	default:
 		return errors.Errorf("Unknown --mode %s", options.Mode)
 	}
