@@ -920,7 +920,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		p.waitAllTiFlashUp()
 
 		fmt.Println()
-		color.New(color.FgGreen, color.Bold).Println("🎉 TiDB Cluster is started, enjoy!")
+		color.New(color.FgGreen, color.Bold).Println("🎉 TiDB Playground Cluster is started, enjoy!")
 		fmt.Println()
 		for _, dbAddr := range succ {
 			ss := strings.Split(dbAddr, ":")
