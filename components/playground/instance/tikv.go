@@ -34,14 +34,17 @@ type TiKVInstance struct {
 }
 
 // NewTiKVInstance return a TiKVInstance
-func NewTiKVInstance(binPath string, dir, host, configPath string, id int, pds []*PDInstance) *TiKVInstance {
+func NewTiKVInstance(binPath string, dir, host, configPath string, id int, port int, pds []*PDInstance) *TiKVInstance {
+	if port <= 0 {
+		port = 20160
+	}
 	return &TiKVInstance{
 		instance: instance{
 			BinPath:    binPath,
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
-			Port:       utils.MustGetFreePort(host, 20160),
+			Port:       utils.MustGetFreePort(host, port),
 			StatusPort: utils.MustGetFreePort(host, 20180),
 			ConfigPath: configPath,
 		},
