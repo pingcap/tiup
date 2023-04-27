@@ -679,7 +679,7 @@ func (p *Playground) addInstance(componentID string, tiflashRole instance.TiFlas
 		ins = inst
 		p.tidbs = append(p.tidbs, inst)
 	case spec.ComponentTiKV:
-		inst := instance.NewTiKVInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds)
+		inst := instance.NewTiKVInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds)
 		ins = inst
 		p.tikvs = append(p.tikvs, inst)
 	case spec.ComponentTiFlash:
@@ -975,12 +975,12 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		p.waitAllTiFlashUp()
 
 		fmt.Println()
-		color.New(color.FgGreen, color.Bold).Println("🎉 TiDB Cluster is started, enjoy!")
+		color.New(color.FgGreen, color.Bold).Println("🎉 TiDB Playground Cluster is started, enjoy!")
 		fmt.Println()
 		for _, dbAddr := range succ {
 			ss := strings.Split(dbAddr, ":")
 			fmt.Printf("Connect TiDB:   ")
-			colorCmd.Printf("mysql --host %s --port %s -u root\n", ss[0], ss[1])
+			colorCmd.Printf("mysql --comments --host %s --port %s -u root\n", ss[0], ss[1])
 		}
 	}
 
