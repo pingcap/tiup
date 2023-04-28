@@ -934,6 +934,15 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		colorCmd.Printf("http://%s/dashboard\n", pdAddr)
 	}
 
+	if p.bootOptions.Mode == "tikv-slim" {
+		var pdAddrs []string
+		for _, pd := range p.pds {
+			pdAddrs = append(pdAddrs, pd.Addr())
+		}
+		fmt.Printf("PD Endpoints:   ")
+		colorCmd.Printf("%s\n", strings.Join(pdAddrs, ","))
+	}
+
 	if monitorInfo != nil {
 		p.updateMonitorTopology(spec.ComponentPrometheus, *monitorInfo)
 	}
