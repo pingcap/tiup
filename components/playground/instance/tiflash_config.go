@@ -47,8 +47,6 @@ func (inst *TiFlashInstance) getConfig() map[string]any {
 		config["storage.remote.cache.capacity"] = 1000000000 // 1GB
 		config["flash.disaggregated_mode"] = "tiflash_compute"
 		config["flash.use_autoscaler"] = false
-	} else if inst.Role == TiFlashRoleNormal {
-		// Currently nothing to write to config in normal role.
 	}
 
 	return config

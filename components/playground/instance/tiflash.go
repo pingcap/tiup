@@ -25,14 +25,20 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
+// TiFlashRole is the role of TiFlash.
 type TiFlashRole string
 
 const (
-	TiFlashRoleNormal        TiFlashRole = "normal"
-	TiFlashRoleDisaggWrite   TiFlashRole = "write"
+	// TiFlashRoleNormal is used when TiFlash is not in disaggregated mode.
+	TiFlashRoleNormal TiFlashRole = "normal"
+
+	// TiFlashRoleDisaggWrite is used when TiFlash is in disaggregated mode and is the write node.
+	TiFlashRoleDisaggWrite TiFlashRole = "write"
+	// TiFlashRoleDisaggCompute is used when TiFlash is in disaggregated mode and is the compute node.
 	TiFlashRoleDisaggCompute TiFlashRole = "compute"
 )
 
+// DisaggOptions contains configs to run TiFlash in disaggregated mode.
 type DisaggOptions struct {
 	S3Endpoint string `yaml:"s3_endpoint"`
 	Bucket     string `yaml:"bucket"`
