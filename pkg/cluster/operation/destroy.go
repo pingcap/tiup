@@ -241,6 +241,9 @@ func DeletePublicKey(ctx context.Context, host string) error {
 
 // DestroyMonitored destroy the monitored service.
 func DestroyMonitored(ctx context.Context, inst spec.Instance, options *spec.MonitoredOptions, timeout uint64) error {
+	if inst.IgnoreMonitorAgent(){
+		return nil
+	}
 	e := ctxt.GetInner(ctx).Get(inst.GetManageHost())
 	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 
