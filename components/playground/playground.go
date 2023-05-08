@@ -43,8 +43,6 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 )
 
 // The duration process need to quit gracefully, or we kill the process.
@@ -536,7 +534,7 @@ func (p *Playground) commandHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Mapping command line component id to internal spec component id.
-	if cmd.ComponentID == ticdc {
+	if cmd.ComponentID == "ticdc" {
 		cmd.ComponentID = spec.ComponentCDC
 	}
 
@@ -676,11 +674,11 @@ func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins i
 		ins = inst
 		p.tidbs = append(p.tidbs, inst)
 	case spec.ComponentTiKV:
-		inst := instance.NewTiKVInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds)
+		inst := instance.NewTiKVInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds)
 		ins = inst
 		p.tikvs = append(p.tikvs, inst)
 	case spec.ComponentTiFlash:
-		inst := instance.NewTiFlashInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, p.tidbs)
+		inst := instance.NewTiFlashInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, p.tidbs, cfg.Version)
 		ins = inst
 		p.tiflashs = append(p.tiflashs, inst)
 	case spec.ComponentCDC:
@@ -853,8 +851,6 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		}
 	}
 
-	fmt.Println("Playground Bootstrapping...")
-
 	anyPumpReady := false
 	// Start all instance except tiflash.
 	err := p.WalkInstances(func(cid string, ins instance.Instance) error {
@@ -908,6 +904,8 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		}
 	}
 
+	colorCmd := color.New(color.FgHiCyan, color.Bold)
+
 	if len(succ) > 0 {
 		// start TiFlash after at least one TiDB is up.
 		var started []*instance.TiFlashInstance
@@ -921,23 +919,20 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		p.tiflashs = started
 		p.waitAllTiFlashUp()
 
-		fmt.Println(color.GreenString("CLUSTER START SUCCESSFULLY, Enjoy it ^-^"))
+		fmt.Println()
+		color.New(color.FgGreen, color.Bold).Println("🎉 TiDB Playground Cluster is started, enjoy!")
+		fmt.Println()
 		for _, dbAddr := range succ {
 			ss := strings.Split(dbAddr, ":")
-			connectMsg := "To connect TiDB: mysql --comments --host %s --port %s -u root -p (no password)"
-			fmt.Println(color.GreenString(connectMsg, ss[0], ss[1]))
+			fmt.Printf("Connect TiDB:   ")
+			colorCmd.Printf("mysql --comments --host %s --port %s -u root\n", ss[0], ss[1])
 		}
 	}
 
 	if pdAddr := p.pds[0].Addr(); len(p.tidbs) > 0 && hasDashboard(pdAddr) {
-		fmt.Println(color.GreenString("To view the dashboard: http://%s/dashboard", pdAddr))
+		fmt.Printf("TiDB Dashboard: ")
+		colorCmd.Printf("http://%s/dashboard\n", pdAddr)
 	}
-
-	var pdAddrs []string
-	for _, pd := range p.pds {
-		pdAddrs = append(pdAddrs, pd.Addr())
-	}
-	fmt.Println(color.GreenString("PD client endpoints: %v", pdAddrs))
 
 	if monitorInfo != nil {
 		p.updateMonitorTopology(spec.ComponentPrometheus, *monitorInfo)
@@ -957,6 +952,8 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 	if g := p.grafana; g != nil {
 		p.updateMonitorTopology(spec.ComponentGrafana, MonitorInfo{g.host, g.port, g.cmd.Path})
+		fmt.Printf("Grafana:        ")
+		colorCmd.Printf("http://%s\n", utils.JoinHostPort(g.host, g.port))
 	}
 
 	return nil
@@ -964,11 +961,6 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 func (p *Playground) updateMonitorTopology(componentID string, info MonitorInfo) {
 	info.IP = instance.AdvertiseHost(info.IP)
-	fmt.Print(color.GreenString(
-		"To view the %s: http://%s\n",
-		cases.Title(language.English).String(componentID),
-		utils.JoinHostPort(info.IP, info.Port),
-	))
 	if len(p.pds) == 0 {
 		return
 	}

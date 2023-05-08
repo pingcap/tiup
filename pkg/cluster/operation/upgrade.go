@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"os"
 	"reflect"
-	"strconv"
 	"strings"
 	"time"
 
@@ -30,6 +29,7 @@ import (
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tidbver"
+	"github.com/pingcap/tiup/pkg/utils"
 	"go.uber.org/zap"
 )
 
@@ -247,8 +247,8 @@ func Addr(ins spec.Instance) string {
 	if ins.GetPort() == 0 || ins.GetPort() == 80 {
 		panic(ins)
 	}
-	return ins.GetManageHost() + ":" + strconv.Itoa(ins.GetPort())
-	// return utils.JoinHostPort(ins.GetHost(), ins.GetPort())
+
+	return utils.JoinHostPort(ins.GetManageHost(), ins.GetPort())
 }
 
 var (

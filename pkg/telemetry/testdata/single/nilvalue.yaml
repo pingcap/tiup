@@ -39,7 +39,6 @@ tikv_servers:
 tiflash_servers:
   - host: 172.19.0.101
     tcp_port: 19000
-    http_port: 18123
     flash_service_port: 13930
     flash_proxy_port: 10170
     flash_proxy_status_port: 10292

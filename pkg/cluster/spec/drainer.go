@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -64,7 +63,7 @@ func (s *DrainerSpec) Status(ctx context.Context, timeout time.Duration, tlsCfg 
 		if err != nil {
 			return state
 		}
-		id := s.Host + ":" + strconv.Itoa(s.Port)
+		id := utils.JoinHostPort(s.Host, s.Port)
 		tombstone, _ := binlogClient.IsDrainerTombstone(ctx, id)
 
 		if tombstone {
@@ -187,7 +186,7 @@ func (i *DrainerInstance) InitConfig(
 	}
 	enableTLS := topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(*DrainerSpec)
-	nodeID := i.GetHost() + ":" + strconv.Itoa(i.GetPort())
+	nodeID := utils.JoinHostPort(i.GetHost(), i.GetPort())
 	// keep origin node id if is imported
 	if i.IsImported() {
 		nodeID = ""

@@ -34,14 +34,17 @@ type TiKVInstance struct {
 }
 
 // NewTiKVInstance return a TiKVInstance
-func NewTiKVInstance(binPath string, dir, host, configPath string, id int, pds []*PDInstance) *TiKVInstance {
+func NewTiKVInstance(binPath string, dir, host, configPath string, id int, port int, pds []*PDInstance) *TiKVInstance {
+	if port <= 0 {
+		port = 20160
+	}
 	return &TiKVInstance{
 		instance: instance{
 			BinPath:    binPath,
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
-			Port:       utils.MustGetFreePort(host, 20160),
+			Port:       utils.MustGetFreePort(host, port),
 			StatusPort: utils.MustGetFreePort(host, 20180),
 			ConfigPath: configPath,
 		},
@@ -65,7 +68,7 @@ func (inst *TiKVInstance) Start(ctx context.Context, version utils.Version) erro
 		fmt.Sprintf("--addr=%s", utils.JoinHostPort(inst.Host, inst.Port)),
 		fmt.Sprintf("--advertise-addr=%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.Port)),
 		fmt.Sprintf("--status-addr=%s", utils.JoinHostPort(inst.Host, inst.StatusPort)),
-		fmt.Sprintf("--pd=%s", strings.Join(endpoints, ",")),
+		fmt.Sprintf("--pd-endpoints=%s", strings.Join(endpoints, ",")),
 		fmt.Sprintf("--config=%s", inst.ConfigPath),
 		fmt.Sprintf("--data-dir=%s", filepath.Join(inst.Dir, "data")),
 		fmt.Sprintf("--log-file=%s", inst.LogFile()),

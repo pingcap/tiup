@@ -47,7 +47,7 @@ type TiFlashSpec struct {
 	Patched              bool                 `yaml:"patched,omitempty"`
 	IgnoreExporter       bool                 `yaml:"ignore_exporter,omitempty"`
 	TCPPort              int                  `yaml:"tcp_port" default:"9000"`
-	HTTPPort             int                  `yaml:"http_port" default:"8123"`
+	HTTPPort             int                  `yaml:"http_port" default:"8123"` // Deprecated since v7.1.0
 	FlashServicePort     int                  `yaml:"flash_service_port" default:"3930"`
 	FlashProxyPort       int                  `yaml:"flash_proxy_port" default:"20170"`
 	FlashProxyStatusPort int                  `yaml:"flash_proxy_status_port" default:"20292"`
@@ -363,30 +363,21 @@ func isValidStringArray(key string, config map[string]any, couldEmpty bool) (boo
 	return isKeyDefined, fmt.Errorf("'%s' should be a non-empty string array, please check the tiflash configuration in your yaml file", TiFlashStorageKeyMainDirs)
 }
 
-// checkTiFlashStorageConfig detect the "storage" section in `config`
-// is valid or not.
+// checkTiFlashStorageConfig ensures `storage.main` is defined when
+// `storage.latest` or `storage.raft` is used.
 func checkTiFlashStorageConfig(config map[string]any) (bool, error) {
-	var (
-		isStorageDirsDefined bool
-		err                  error
-	)
-	if isStorageDirsDefined, err = isValidStringArray(TiFlashStorageKeyMainDirs, config, false); err != nil {
-		return isStorageDirsDefined, err
+	isMainStorageDefined, err := isValidStringArray(TiFlashStorageKeyMainDirs, config, false)
+	if err != nil {
+		return false, err
 	}
-	if !isStorageDirsDefined {
-		containsStorageSectionKey := func(config map[string]any) (string, bool) {
-			for k := range config {
-				if strings.HasPrefix(k, "storage.") {
-					return k, true
-				}
+	if !isMainStorageDefined {
+		for k := range config {
+			if strings.HasPrefix(k, "storage.latest") || strings.HasPrefix(k, "storage.raft") {
+				return false, fmt.Errorf("You must set '%s' before setting '%s', please check the tiflash configuration in your yaml file", TiFlashStorageKeyMainDirs, k)
 			}
-			return "", false
-		}
-		if key, contains := containsStorageSectionKey(config); contains {
-			return isStorageDirsDefined, fmt.Errorf("You must set '%s' before setting '%s', please check the tiflash configuration in your yaml file", TiFlashStorageKeyMainDirs, key)
 		}
 	}
-	return isStorageDirsDefined, nil
+	return isMainStorageDefined, nil
 }
 
 // CheckIncorrectConfigs checks incorrect settings
@@ -471,18 +462,23 @@ func (i *TiFlashInstance) initTiFlashConfig(ctx context.Context, clusterVersion 
 `
 	}
 
-	spec := i.InstanceSpec.(*TiFlashSpec)
-	port := "http_port"
-	enableTLS := i.topo.(*Specification).GlobalOptions.TLSEnabled
-
 	tidbStatusAddrs := []string{}
 	for _, tidb := range i.topo.(*Specification).TiDBServers {
 		tidbStatusAddrs = append(tidbStatusAddrs, utils.JoinHostPort(tidb.Host, tidb.StatusPort))
 	}
 
-	if enableTLS {
-		port = "https_port"
+	spec := i.InstanceSpec.(*TiFlashSpec)
+	enableTLS := i.topo.(*Specification).GlobalOptions.TLSEnabled
+	httpPort := "#"
+	// For 7.1.0 or later, TiFlash HTTP service is removed, so we don't need to set http_port
+	if !tidbver.TiFlashNotNeedHTTPPortConfig(clusterVersion) {
+		if enableTLS {
+			httpPort = fmt.Sprintf(`https_port: %d`, spec.HTTPPort)
+		} else {
+			httpPort = fmt.Sprintf(`http_port: %d`, spec.HTTPPort)
+		}
 	}
+
 	// set TLS configs
 	spec.Config, err = i.setTLSConfig(ctx, enableTLS, spec.Config, paths)
 	if err != nil {
@@ -508,7 +504,7 @@ server_configs:
     tmp_path: "%[11]s"
     %[1]s
     tcp_port: %[3]d
-    `+port+`: %[4]d
+    %[4]s
     flash.tidb_status_addr: "%[5]s"
     flash.service_addr: "%[6]s"
     flash.flash_cluster.cluster_manager_path: "%[10]s/bin/tiflash/flash_cluster_manager"
@@ -532,7 +528,7 @@ server_configs:
 		pathConfig,
 		paths.Log,
 		spec.TCPPort,
-		spec.HTTPPort,
+		httpPort,
 		strings.Join(tidbStatusAddrs, ","),
 		utils.JoinHostPort(spec.Host, spec.FlashServicePort),
 		i.GetListenHost(),
