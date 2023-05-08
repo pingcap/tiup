@@ -266,7 +266,8 @@ func (m *Manager) Deploy(
 
 		t := task.NewSimpleUerSSH(m.logger, inst.GetManageHost(), inst.GetSSHPort(), globalOptions.User, gOpt, sshProxyProps, globalOptions.SSHType).
 			Mkdir(globalOptions.User, inst.GetManageHost(), deployDirs...).
-			Mkdir(globalOptions.User, inst.GetManageHost(), dataDirs...)
+			Mkdir(globalOptions.User, inst.GetManageHost(), dataDirs...).
+			Mkdir(globalOptions.User, inst.GetManageHost(), inst.ExtraDirs()...)
 
 		if deployerInstance, ok := inst.(DeployerInstance); ok {
 			deployerInstance.Deploy(t, "", deployDir, version, name, clusterVersion)
