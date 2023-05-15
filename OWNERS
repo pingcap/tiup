@@ -1,10 +1,15 @@
 # See the OWNERS docs at https://go.k8s.io/owners
 approvers:
-  # tiup-maintainers:
-  - lucklove
-  - srstack
-  - kaaaaaaang
-  # tiup-committers: 0 members
+# tiup-maintainers:
+- kaaaaaaang
+# tiup-committers: 0 members
+emeritus_approvers:
+- lonng
+- lucklove
+- AstroProfundis
 reviewers:
-  # tiup-reviewers:
-  - breezewish
+# tiup-reviewers:
+- nexustar
+- breezewish
+- srstack
+- iguoyr
