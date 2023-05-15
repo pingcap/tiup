@@ -17,7 +17,12 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
+	"path/filepath"
 
+	"github.com/BurntSushi/toml"
+	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -111,4 +116,46 @@ func pdEndpoints(pds []*PDInstance, isHTTP bool) []string {
 		}
 	}
 	return endpoints
+}
+
+// prepareConfig accepts a user specified config and merge user config with a
+// pre-defined one.
+func prepareConfig(outputConfigPath string, userConfigPath string, preDefinedConfig map[string]any) error {
+	dir := filepath.Dir(outputConfigPath)
+	if err := utils.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+
+	userConfig, err := unmarshalConfig(userConfigPath)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	if userConfig == nil {
+		userConfig = make(map[string]any)
+	}
+
+	cf, err := os.Create(outputConfigPath)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	enc := toml.NewEncoder(cf)
+	enc.Indent = ""
+	return enc.Encode(spec.MergeConfig(preDefinedConfig, userConfig))
+}
+
+func unmarshalConfig(path string) (map[string]any, error) {
+	if path == "" {
+		return nil, nil
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	c := make(map[string]any)
+	err = toml.Unmarshal(data, &c)
+	if err != nil {
+		return nil, err
+	}
+	return c, nil
 }

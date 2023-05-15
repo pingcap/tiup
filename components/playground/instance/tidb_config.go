@@ -1,4 +1,4 @@
-// Copyright 2020 PingCAP, Inc.
+// Copyright 2023 PingCAP, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,11 +13,14 @@
 
 package instance
 
-func (inst *TiKVInstance) getConfig() map[string]any {
+func (inst *TiDBInstance) getConfig() map[string]any {
 	config := make(map[string]any)
-	config["rocksdb.max-open-files"] = 256
-	config["raftdb.max-open-files"] = 256
-	config["storage.reserve-space"] = 0
-	config["storage.reserve-raft-space"] = 0
+	config["security.auto-tls"] = true
+
+	if inst.isDisaggMode {
+		config["use-autoscaler"] = false
+		config["disaggregated-tiflash"] = true
+	}
+
 	return config
 }
