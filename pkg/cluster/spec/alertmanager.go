@@ -157,10 +157,11 @@ func (i *AlertManagerInstance) InitConfig(
 		peers = append(peers, utils.JoinHostPort(amspec.Host, amspec.ClusterPort))
 	}
 	cfg := &scripts.AlertManagerScript{
-		WebListenAddr:     utils.JoinHostPort(i.GetListenHost(), spec.WebPort),
-		WebExternalURL:    fmt.Sprintf("http://%s", utils.JoinHostPort(spec.Host, spec.WebPort)),
-		ClusterPeers:      peers,
-		ClusterListenAddr: utils.JoinHostPort(i.GetListenHost(), spec.ClusterPort),
+		WebListenAddr:        utils.JoinHostPort(i.GetListenHost(), spec.WebPort),
+		WebExternalURL:       fmt.Sprintf("http://%s", utils.JoinHostPort(spec.Host, spec.WebPort)),
+		ClusterPeers:         peers,
+		ClusterListenAddr:    utils.JoinHostPort(i.GetListenHost(), spec.ClusterPort),
+		ClusterAdvertiseAddr: utils.JoinHostPort(i.GetHost(), spec.ClusterPort),
 
 		DeployDir: paths.Deploy,
 		LogDir:    paths.Log,
