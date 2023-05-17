@@ -57,7 +57,7 @@ func Destroy(
 		for _, inst := range insts {
 			instCount[inst.GetManageHost()]--
 			if instCount[inst.GetManageHost()] == 0 {
-				if cluster.GetMonitoredOptions() != nil {
+				if cluster.GetMonitoredOptions() != nil && !inst.IgnoreMonitorAgent(){
 					if err := DestroyMonitored(ctx, inst, cluster.GetMonitoredOptions(), options.OptTimeout); err != nil && !options.Force {
 						return err
 					}
@@ -241,9 +241,6 @@ func DeletePublicKey(ctx context.Context, host string) error {
 
 // DestroyMonitored destroy the monitored service.
 func DestroyMonitored(ctx context.Context, inst spec.Instance, options *spec.MonitoredOptions, timeout uint64) error {
-	if inst.IgnoreMonitorAgent(){
-		return nil
-	}
 	e := ctxt.GetInner(ctx).Get(inst.GetManageHost())
 	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 
