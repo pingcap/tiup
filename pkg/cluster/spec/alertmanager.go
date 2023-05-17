@@ -157,10 +157,11 @@ func (i *AlertManagerInstance) InitConfig(
 		peers = append(peers, utils.JoinHostPort(amspec.Host, amspec.ClusterPort))
 	}
 	cfg := &scripts.AlertManagerScript{
-		WebListenAddr:     utils.JoinHostPort(i.GetListenHost(), spec.WebPort),
-		WebExternalURL:    fmt.Sprintf("http://%s", utils.JoinHostPort(spec.Host, spec.WebPort)),
-		ClusterPeers:      peers,
-		ClusterListenAddr: utils.JoinHostPort(i.GetListenHost(), spec.ClusterPort),
+		WebListenAddr:  utils.JoinHostPort(i.GetListenHost(), spec.WebPort),
+		WebExternalURL: fmt.Sprintf("http://%s", utils.JoinHostPort(spec.Host, spec.WebPort)),
+		ClusterPeers:   peers,
+		// ClusterListenAddr cannot use i.GetListenHost due to https://github.com/prometheus/alertmanager/issues/2284 and https://github.com/prometheus/alertmanager/issues/1271
+		ClusterListenAddr: utils.JoinHostPort(i.GetHost(), spec.ClusterPort),
 
 		DeployDir: paths.Deploy,
 		LogDir:    paths.Log,
