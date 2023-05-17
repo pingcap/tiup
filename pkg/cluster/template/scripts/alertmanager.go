@@ -24,11 +24,10 @@ import (
 
 // AlertManagerScript represent the data to generate AlertManager start script
 type AlertManagerScript struct {
-	WebListenAddr        string
-	WebExternalURL       string
-	ClusterPeers         []string
-	ClusterListenAddr    string
-	ClusterAdvertiseAddr string
+	WebListenAddr     string
+	WebExternalURL    string
+	ClusterPeers      []string
+	ClusterListenAddr string
 
 	DeployDir string
 	LogDir    string
