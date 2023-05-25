@@ -64,6 +64,7 @@ type Playground struct {
 	tikvs            []*instance.TiKVInstance
 	tidbs            []*instance.TiDBInstance
 	tiflashs         []*instance.TiFlashInstance
+	tiproxys         []*instance.TiProxy
 	ticdcs           []*instance.TiCDC
 	tikvCdcs         []*instance.TiKVCDC
 	pumps            []*instance.Pump
@@ -429,6 +430,8 @@ func (p *Playground) sanitizeComponentConfig(cid string, cfg *instance.Config) e
 }
 
 func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) error {
+	var version utils.Version
+	var err error
 	boundVersion := p.bindVersion(inst.Component(), p.bootOptions.Version)
 	component := inst.Component()
 	if strings.HasPrefix(component, "pd") {
@@ -491,6 +494,15 @@ func (p *Playground) handleScaleOut(w io.Writer, cmd *Command) error {
 		if checkDB(addr, cmd.UpTimeout) {
 			ss := strings.Split(addr, ":")
 			connectMsg := "To connect new added TiDB: mysql --comments --host %s --port %s -u root -p (no password)"
+			fmt.Println(color.GreenString(connectMsg, ss[0], ss[1]))
+			fmt.Fprintln(w, color.GreenString(connectMsg, ss[0], ss[1]))
+		}
+	}
+	if cmd.ComponentID == "tiproxy" {
+		addr := p.tiproxys[len(p.tidbs)-1].Addr()
+		if checkDB(addr, cmd.UpTimeout) {
+			ss := strings.Split(addr, ":")
+			connectMsg := "To connect new added TiProxy: mysql --comments --host %s --port %s -u root -p (no password)"
 			fmt.Println(color.GreenString(connectMsg, ss[0], ss[1]))
 			fmt.Fprintln(w, color.GreenString(connectMsg, ss[0], ss[1]))
 		}
@@ -602,6 +614,13 @@ func (p *Playground) WalkInstances(fn func(componentID string, ins instance.Inst
 		}
 	}
 
+	for _, ins := range p.tiproxys {
+		err := fn(spec.ComponentTiProxy, ins)
+		if err != nil {
+			return err
+		}
+	}
+
 	for _, ins := range p.ticdcs {
 		err := fn(spec.ComponentCDC, ins)
 		if err != nil {
@@ -683,7 +702,7 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 			p.pds = append(p.pds, inst)
 		}
 	case spec.ComponentTiDB:
-		inst := instance.NewTiDBInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, p.enableBinlog(), p.bootOptions.Mode == "tidb-disagg")
+		inst := instance.NewTiDBInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, p.enableBinlog(), p.bootOptions.Mode == "tidb-disagg", p.tiproxys)
 		ins = inst
 		p.tidbs = append(p.tidbs, inst)
 	case spec.ComponentTiKV:
@@ -694,6 +713,10 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 		inst := instance.NewTiFlashInstance(tiflashRole, p.bootOptions.DisaggOpts, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, p.tidbs, cfg.Version)
 		ins = inst
 		p.tiflashs = append(p.tiflashs, inst)
+	case spec.ComponentTiProxy:
+		inst := instance.NewTiProxy(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds)
+		ins = inst
+		p.tiproxys = append(p.tiproxys, inst)
 	case spec.ComponentCDC:
 		inst := instance.NewTiCDC(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds)
 		ins = inst
@@ -717,12 +740,13 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 	return
 }
 
-func (p *Playground) waitAllTidbUp() []string {
-	var succ []string
+func (p *Playground) waitAllDBUp() ([]string, []string) {
+	var tidbSucc []string
+	var tiproxySucc []string
 	if len(p.tidbs) > 0 {
 		var wg sync.WaitGroup
-		var appendMutex sync.Mutex
-		bars := progress.NewMultiBar(color.YellowString("Waiting for tidb instances ready"))
+		var tidbMu, tiproxyMu sync.Mutex
+		bars := progress.NewMultiBar(color.YellowString("Waiting for tidb and tiproxy instances ready"))
 		for _, db := range p.tidbs {
 			wg.Add(1)
 			prefix := color.YellowString(db.Addr())
@@ -731,9 +755,33 @@ func (p *Playground) waitAllTidbUp() []string {
 				defer wg.Done()
 				if s := checkDB(dbInst.Addr(), options.TiDB.UpTimeout); s {
 					{
-						appendMutex.Lock()
-						succ = append(succ, dbInst.Addr())
-						appendMutex.Unlock()
+						tidbMu.Lock()
+						tidbSucc = append(tidbSucc, dbInst.Addr())
+						tidbMu.Unlock()
+					}
+					bar.UpdateDisplay(&progress.DisplayProps{
+						Prefix: prefix,
+						Mode:   progress.ModeDone,
+					})
+				} else {
+					bar.UpdateDisplay(&progress.DisplayProps{
+						Prefix: prefix,
+						Mode:   progress.ModeError,
+					})
+				}
+			}(db)
+		}
+		for _, db := range p.tiproxys {
+			wg.Add(1)
+			prefix := color.YellowString(db.Addr())
+			bar := bars.AddBar(prefix)
+			go func(dbInst *instance.TiProxy) {
+				defer wg.Done()
+				if s := checkDB(dbInst.Addr(), options.TiProxy.UpTimeout); s {
+					{
+						tiproxyMu.Lock()
+						tiproxySucc = append(tiproxySucc, dbInst.Addr())
+						tiproxyMu.Unlock()
 					}
 					bar.UpdateDisplay(&progress.DisplayProps{
 						Prefix: prefix,
@@ -751,7 +799,7 @@ func (p *Playground) waitAllTidbUp() []string {
 		wg.Wait()
 		bars.StopRenderLoop()
 	}
-	return succ
+	return tidbSucc, tiproxySucc
 }
 
 func (p *Playground) waitAllTiFlashUp() {
@@ -801,6 +849,8 @@ func (p *Playground) bindVersion(comp string, version string) (bindVersion strin
 	switch comp {
 	case spec.ComponentTiKVCDC:
 		return p.bootOptions.TiKVCDC.Version
+	case spec.ComponentTiProxy:
+		return "nightly"
 	default:
 		return version
 	}
@@ -812,6 +862,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		&options.PDAPI,
 		&options.PDTSO,
 		&options.PDRM,
+		&options.TiProxy,
 		&options.TiDB,
 		&options.TiKV,
 		&options.TiFlash,
@@ -854,6 +905,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 	}
 
 	instances := []InstancePair{
+		{spec.ComponentTiProxy, "", options.TiProxy},
 		{spec.ComponentTiKV, "", "", options.TiKV},
 		{spec.ComponentPump, "", "", options.Pump},
 		{spec.ComponentTiDB, "", "", options.TiDB},
@@ -963,7 +1015,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 	p.booted = true
 
-	succ := p.waitAllTidbUp()
+	tidbSucc, tiproxySucc := p.waitAllDBUp()
 
 	var monitorInfo *MonitorInfo
 	if options.Monitor {
@@ -987,7 +1039,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 	colorCmd := color.New(color.FgHiCyan, color.Bold)
 
-	if len(succ) > 0 {
+	if len(tidbSucc) > 0 {
 		// start TiFlash after at least one TiDB is up.
 		var started []*instance.TiFlashInstance
 		for _, flash := range p.tiflashs {
@@ -1003,15 +1055,20 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		fmt.Println()
 		color.New(color.FgGreen, color.Bold).Println("🎉 TiDB Playground Cluster is started, enjoy!")
 		fmt.Println()
-		for _, dbAddr := range succ {
+		for _, dbAddr := range tidbSucc {
 			ss := strings.Split(dbAddr, ":")
-			fmt.Printf("Connect TiDB:   ")
+			fmt.Printf("Connect TiDB:    ")
+			colorCmd.Printf("mysql --comments --host %s --port %s -u root\n", ss[0], ss[1])
+		}
+		for _, dbAddr := range tiproxySucc {
+			ss := strings.Split(dbAddr, ":")
+			fmt.Printf("Connect TiProxy: ")
 			colorCmd.Printf("mysql --comments --host %s --port %s -u root\n", ss[0], ss[1])
 		}
 	}
 
 	if pdAddr := p.pds[0].Addr(); len(p.tidbs) > 0 && hasDashboard(pdAddr) {
-		fmt.Printf("TiDB Dashboard: ")
+		fmt.Printf("TiDB Dashboard:  ")
 		colorCmd.Printf("http://%s/dashboard\n", pdAddr)
 	}
 
