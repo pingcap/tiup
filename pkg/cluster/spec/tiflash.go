@@ -533,7 +533,7 @@ server_configs:
 		utils.JoinHostPort(spec.Host, spec.FlashServicePort),
 		i.GetListenHost(),
 		spec.StatusPort,
-		strings.Join(i.getEndpoints(i.topo), ","),
+		strings.Join(i.topo.(*Specification).GetPDList(), ","),
 		paths.Deploy,
 		fmt.Sprintf("%s/tmp", paths.Data[0]),
 		deprecatedUsersConfig,
@@ -837,14 +837,6 @@ type replicateConfig struct {
 	EnablePlacementRules string `json:"enable-placement-rules"`
 }
 
-func (i *TiFlashInstance) getEndpoints(topo Topology) []string {
-	var endpoints []string
-	for _, pd := range topo.(*Specification).PDServers {
-		endpoints = append(endpoints, utils.JoinHostPort(pd.Host, pd.ClientPort))
-	}
-	return endpoints
-}
-
 // PrepareStart checks TiFlash requirements before starting
 func (i *TiFlashInstance) PrepareStart(ctx context.Context, tlsCfg *tls.Config) error {
 	// set enable-placement-rules to true via PDClient
@@ -867,7 +859,7 @@ func (i *TiFlashInstance) PrepareStart(ctx context.Context, tlsCfg *tls.Config) 
 		topo = i.topo
 	}
 
-	endpoints := i.getEndpoints(topo)
+	endpoints := i.topo.(*Specification).GetPDListWithManageHost()
 	pdClient := api.NewPDClient(ctx, endpoints, 10*time.Second, tlsCfg)
 	return pdClient.UpdateReplicateConfig(bytes.NewBuffer(enablePlacementRules))
 }

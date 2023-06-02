@@ -29,6 +29,7 @@ require (
 	github.com/joomcode/errorx v1.1.0
 	github.com/juju/ansiterm v1.0.0
 	github.com/mattn/go-runewidth v0.0.14
+	github.com/minio/minio-go/v7 v7.0.52
 	github.com/otiai10/copy v1.9.0
 	github.com/pingcap/check v0.0.0-20211026125417-57bd13f7b5f0
 	github.com/pingcap/errors v0.11.5-0.20201126102027-b0a155152ca3
@@ -89,7 +90,6 @@ require (
 	github.com/mattn/go-isatty v0.0.18 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
-	github.com/minio/minio-go/v7 v7.0.52 // indirect
 	github.com/minio/sha256-simd v1.0.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect

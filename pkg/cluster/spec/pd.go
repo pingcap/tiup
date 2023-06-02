@@ -61,7 +61,7 @@ func (s *PDSpec) Status(ctx context.Context, timeout time.Duration, tlsCfg *tls.
 		timeout = statusQueryTimeout
 	}
 
-	addr := utils.JoinHostPort(s.Host, s.ClientPort)
+	addr := utils.JoinHostPort(s.GetManageHost(), s.ClientPort)
 	pc := api.NewPDClient(ctx, []string{addr}, timeout, tlsCfg)
 
 	// check health
@@ -99,6 +99,14 @@ func (s *PDSpec) SSH() (string, int) {
 // GetMainPort returns the main port of the instance
 func (s *PDSpec) GetMainPort() int {
 	return s.ClientPort
+}
+
+// GetManageHost returns the manage host of the instance
+func (s *PDSpec) GetManageHost() string {
+	if s.ManageHost != "" {
+		return s.ManageHost
+	}
+	return s.Host
 }
 
 // IsImported returns if the node is imported from TiDB-Ansible
@@ -372,7 +380,7 @@ func (i *PDInstance) IsLeader(ctx context.Context, topo Topology, apiTimeoutSeco
 	if !ok {
 		panic("topo should be type of tidb topology")
 	}
-	pdClient := api.NewPDClient(ctx, tidbTopo.GetPDList(), time.Second*5, tlsCfg)
+	pdClient := api.NewPDClient(ctx, tidbTopo.GetPDListWithManageHost(), time.Second*5, tlsCfg)
 
 	return i.checkLeader(pdClient)
 }
@@ -397,7 +405,7 @@ func (i *PDInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutSe
 	if !ok {
 		panic("topo should be type of tidb topology")
 	}
-	pdClient := api.NewPDClient(ctx, tidbTopo.GetPDList(), time.Second*5, tlsCfg)
+	pdClient := api.NewPDClient(ctx, tidbTopo.GetPDListWithManageHost(), time.Second*5, tlsCfg)
 
 	isLeader, err := i.checkLeader(pdClient)
 	if err != nil {
@@ -422,7 +430,7 @@ func (i *PDInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tls
 		Delay:    time.Second,
 		Timeout:  120 * time.Second,
 	}
-	currentPDAddrs := []string{utils.JoinHostPort(i.Host, i.Port)}
+	currentPDAddrs := []string{utils.JoinHostPort(i.GetManageHost(), i.Port)}
 	pdClient := api.NewPDClient(ctx, currentPDAddrs, 5*time.Second, tlsCfg)
 
 	if err := utils.Retry(pdClient.CheckHealth, timeoutOpt); err != nil {

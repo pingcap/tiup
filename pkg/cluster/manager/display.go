@@ -809,13 +809,8 @@ func (m *Manager) DisplayDashboardInfo(clusterName string, timeout time.Duration
 		return err
 	}
 
-	pdEndpoints := make([]string, 0)
-	for _, pd := range metadata.Topology.PDServers {
-		pdEndpoints = append(pdEndpoints, utils.JoinHostPort(pd.Host, pd.ClientPort))
-	}
-
 	ctx := context.WithValue(context.Background(), logprinter.ContextKeyLogger, m.logger)
-	pdAPI := api.NewPDClient(ctx, pdEndpoints, timeout, tlsCfg)
+	pdAPI := api.NewPDClient(ctx, metadata.Topology.GetPDListWithManageHost(), timeout, tlsCfg)
 	dashboardAddr, err := pdAPI.GetDashboardAddress()
 	if err != nil {
 		return fmt.Errorf("failed to retrieve TiDB Dashboard instance from PD: %s", err)

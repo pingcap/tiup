@@ -413,6 +413,17 @@ func (s *Specification) GetPDList() []string {
 	return pdList
 }
 
+// GetPDListWithManageHost returns a list of PD API hosts of the current cluster
+func (s *Specification) GetPDListWithManageHost() []string {
+	var pdList []string
+
+	for _, pd := range s.PDServers {
+		pdList = append(pdList, utils.JoinHostPort(pd.GetManageHost(), pd.ClientPort))
+	}
+
+	return pdList
+}
+
 // GetCDCList returns a list of CDC API hosts of the current cluster
 func (s *Specification) GetCDCList() []string {
 	var result []string
