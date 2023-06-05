@@ -861,7 +861,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			return fmt.Errorf("TiDB cluster doesn't support disaggregated mode in version %s", options.Version)
 		}
 		if !tidbver.TiFlashPlaygroundNewStartMode(options.Version) {
-			// For simplicitly, currently we only implemented disagg mode when TiFlash can run without config.
+			// For simplicity, currently we only implemented disagg mode when TiFlash can run without config.
 			return fmt.Errorf("TiUP playground only supports disaggregated mode for TiDB cluster >= v7.1.0 (or nightly)")
 		}
 

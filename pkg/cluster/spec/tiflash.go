@@ -859,7 +859,7 @@ func (i *TiFlashInstance) PrepareStart(ctx context.Context, tlsCfg *tls.Config) 
 		topo = i.topo
 	}
 
-	endpoints := i.topo.(*Specification).GetPDListWithManageHost()
+	endpoints := topo.(*Specification).GetPDListWithManageHost()
 	pdClient := api.NewPDClient(ctx, endpoints, 10*time.Second, tlsCfg)
 	return pdClient.UpdateReplicateConfig(bytes.NewBuffer(enablePlacementRules))
 }

@@ -127,7 +127,7 @@ func ScaleInDMCluster(
 	var dmMasterEndpoint []string
 	for _, instance := range (&dm.DMMasterComponent{Topology: topo}).Instances() {
 		if !deletedNodes.Exist(instance.ID()) {
-			dmMasterEndpoint = append(dmMasterEndpoint, utils.JoinHostPort(ins.GetManageHost(), ins.GetPort()))
+			dmMasterEndpoint = append(dmMasterEndpoint, utils.JoinHostPort(instance.GetManageHost(), instance.GetPort()))
 		}
 	}
 
