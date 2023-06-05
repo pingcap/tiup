@@ -143,7 +143,7 @@ func Upgrade(
 
 				// during the upgrade process, endpoint addresses should not change, so only new the client once.
 				if cdcOpenAPIClient == nil {
-					cdcOpenAPIClient = api.NewCDCOpenAPIClient(ctx, topo.(*spec.Specification).GetCDCList(), 5*time.Second, tlsCfg)
+					cdcOpenAPIClient = api.NewCDCOpenAPIClient(ctx, topo.(*spec.Specification).GetCDCListWithManageHost(), 5*time.Second, tlsCfg)
 				}
 
 				capture, err := cdcOpenAPIClient.GetCaptureByAddr(address)

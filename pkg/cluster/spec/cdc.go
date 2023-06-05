@@ -190,7 +190,7 @@ func (i *CDCInstance) InitConfig(
 	}
 	cfg := &scripts.CDCScript{
 		Addr:              utils.JoinHostPort(i.GetListenHost(), spec.Port),
-		AdvertiseAddr:     i.GetAddr(),
+		AdvertiseAddr:     utils.JoinHostPort(i.GetHost(), i.GetPort()),
 		PD:                strings.Join(pds, ","),
 		GCTTL:             spec.GCTTL,
 		TZ:                spec.TZ,
@@ -261,7 +261,7 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 	}
 
 	start := time.Now()
-	client := api.NewCDCOpenAPIClient(ctx, topo.(*Specification).GetCDCList(), 5*time.Second, tlsCfg)
+	client := api.NewCDCOpenAPIClient(ctx, topo.(*Specification).GetCDCListWithManageHost(), 5*time.Second, tlsCfg)
 	if err := client.Healthy(); err != nil {
 		logger.Debugf("cdc pre-restart skipped, the cluster unhealthy, trigger hard restart, "+
 			"addr: %s, err: %+v, elapsed: %+v", address, err, time.Since(start))
@@ -328,7 +328,7 @@ func (i *CDCInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tl
 	start := time.Now()
 	address := i.GetAddr()
 
-	client := api.NewCDCOpenAPIClient(ctx, []string{address}, 5*time.Second, tlsCfg)
+	client := api.NewCDCOpenAPIClient(ctx, []string{utils.JoinHostPort(i.GetManageHost(), i.GetPort())}, 5*time.Second, tlsCfg)
 	err := client.IsCaptureAlive()
 	if err != nil {
 		logger.Debugf("cdc post-restart finished, get capture status failed, addr: %s, err: %+v, elapsed: %+v", address, err, time.Since(start))

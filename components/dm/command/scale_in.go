@@ -27,6 +27,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -126,7 +127,7 @@ func ScaleInDMCluster(
 	var dmMasterEndpoint []string
 	for _, instance := range (&dm.DMMasterComponent{Topology: topo}).Instances() {
 		if !deletedNodes.Exist(instance.ID()) {
-			dmMasterEndpoint = append(dmMasterEndpoint, operator.Addr(instance))
+			dmMasterEndpoint = append(dmMasterEndpoint, utils.JoinHostPort(instance.GetManageHost(), instance.GetPort()))
 		}
 	}
 
