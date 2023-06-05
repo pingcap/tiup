@@ -67,6 +67,14 @@ func (s *AlertmanagerSpec) GetMainPort() int {
 	return s.WebPort
 }
 
+// GetManageHost returns the manage host of the instance
+func (s *AlertmanagerSpec) GetManageHost() string {
+	if s.ManageHost != "" {
+		return s.ManageHost
+	}
+	return s.Host
+}
+
 // IsImported returns if the node is imported from TiDB-Ansible
 func (s *AlertmanagerSpec) IsImported() bool {
 	return s.Imported
@@ -117,10 +125,10 @@ func (c *AlertManagerComponent) Instances() []Instance {
 					s.DataDir,
 				},
 				StatusFn: func(_ context.Context, timeout time.Duration, _ *tls.Config, _ ...string) string {
-					return statusByHost(s.Host, s.WebPort, "/-/ready", timeout, nil)
+					return statusByHost(s.GetManageHost(), s.WebPort, "/-/ready", timeout, nil)
 				},
 				UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
-					return UptimeByHost(s.Host, s.WebPort, timeout, tlsCfg)
+					return UptimeByHost(s.GetManageHost(), s.WebPort, timeout, tlsCfg)
 				},
 			},
 			topo: c.Topology,

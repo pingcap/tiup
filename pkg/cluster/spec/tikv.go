@@ -115,6 +115,14 @@ func (s *TiKVSpec) GetMainPort() int {
 	return s.Port
 }
 
+// GetManageHost returns the manage host of the instance
+func (s *TiKVSpec) GetManageHost() string {
+	if s.ManageHost != "" {
+		return s.ManageHost
+	}
+	return s.Host
+}
+
 // IsImported returns if the node is imported from TiDB-Ansible
 func (s *TiKVSpec) IsImported() bool {
 	return s.Imported
@@ -192,7 +200,7 @@ func (c *TiKVComponent) Instances() []Instance {
 			},
 			StatusFn: s.Status,
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
-				return UptimeByHost(s.Host, s.StatusPort, timeout, tlsCfg)
+				return UptimeByHost(s.GetManageHost(), s.StatusPort, timeout, tlsCfg)
 			},
 		}, c.Topology, 0})
 	}
@@ -367,7 +375,7 @@ func (i *TiKVInstance) PreRestart(ctx context.Context, topo Topology, apiTimeout
 		return nil
 	}
 
-	pdClient := api.NewPDClient(ctx, tidbTopo.GetPDList(), 5*time.Second, tlsCfg)
+	pdClient := api.NewPDClient(ctx, tidbTopo.GetPDListWithManageHost(), 5*time.Second, tlsCfg)
 
 	// Make sure there's leader of PD.
 	// Although we evict pd leader when restart pd,
@@ -405,7 +413,7 @@ func (i *TiKVInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *t
 		return nil
 	}
 
-	pdClient := api.NewPDClient(ctx, tidbTopo.GetPDList(), 5*time.Second, tlsCfg)
+	pdClient := api.NewPDClient(ctx, tidbTopo.GetPDListWithManageHost(), 5*time.Second, tlsCfg)
 
 	// remove store leader evict scheduler after restart
 	if err := pdClient.RemoveStoreEvict(addr(i.InstanceSpec.(*TiKVSpec))); err != nil {
@@ -443,7 +451,7 @@ func genLeaderCounter(topo *Specification, tlsCfg *tls.Config) func(string) (int
 		for _, kv := range topo.TiKVServers {
 			kvid := utils.JoinHostPort(kv.Host, kv.Port)
 			if id == kvid {
-				statusAddress = utils.JoinHostPort(kv.Host, kv.StatusPort)
+				statusAddress = utils.JoinHostPort(kv.GetManageHost(), kv.StatusPort)
 				break
 			}
 			foundIds = append(foundIds, kvid)
