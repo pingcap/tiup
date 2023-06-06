@@ -226,11 +226,6 @@ func (i *TiKVCDCInstance) setTLSConfig(ctx context.Context, enableTLS bool, conf
 
 var _ RollingUpdateInstance = &TiKVCDCInstance{}
 
-// GetAddr return the address of this TiKV-CDC instance
-func (i *TiKVCDCInstance) GetAddr() string {
-	return utils.JoinHostPort(i.GetHost(), i.GetPort())
-}
-
 // PreRestart implements RollingUpdateInstance interface.
 // All errors are ignored, to trigger hard restart.
 func (i *TiKVCDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config) error {
@@ -244,7 +239,7 @@ func (i *TiKVCDCInstance) PreRestart(ctx context.Context, topo Topology, apiTime
 		panic("logger not found")
 	}
 
-	address := i.GetAddr()
+	address := utils.JoinHostPort(i.GetHost(), i.GetPort())
 	// cdc rolling upgrade strategy only works if there are more than 2 captures
 	if len(tidbTopo.TiKVCDCServers) <= 1 {
 		logger.Debugf("tikv-cdc pre-restart skipped, only one capture in the topology, addr: %s", address)
@@ -252,7 +247,7 @@ func (i *TiKVCDCInstance) PreRestart(ctx context.Context, topo Topology, apiTime
 	}
 
 	start := time.Now()
-	client := api.NewTiKVCDCOpenAPIClient(ctx, []string{address}, 5*time.Second, tlsCfg)
+	client := api.NewTiKVCDCOpenAPIClient(ctx, []string{utils.JoinHostPort(i.GetManageHost(), i.GetPort())}, 5*time.Second, tlsCfg)
 	captures, err := client.GetAllCaptures()
 	if err != nil {
 		logger.Debugf("tikv-cdc pre-restart skipped, cannot get all captures, trigger hard restart, addr: %s, elapsed: %+v", address, time.Since(start))
@@ -303,9 +298,9 @@ func (i *TiKVCDCInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg
 	}
 
 	start := time.Now()
-	address := i.GetAddr()
+	address := utils.JoinHostPort(i.GetHost(), i.GetPort())
 
-	client := api.NewTiKVCDCOpenAPIClient(ctx, []string{address}, 5*time.Second, tlsCfg)
+	client := api.NewTiKVCDCOpenAPIClient(ctx, []string{utils.JoinHostPort(i.GetManageHost(), i.GetPort())}, 5*time.Second, tlsCfg)
 	err := client.IsCaptureAlive()
 	if err != nil {
 		logger.Debugf("tikv-cdc post-restart finished, get capture status failed, addr: %s, err: %+v, elapsed: %+v", address, err, time.Since(start))
