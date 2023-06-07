@@ -143,6 +143,14 @@ func (s *TiFlashSpec) GetMainPort() int {
 	return s.TCPPort
 }
 
+// GetManageHost returns the manage host of the instance
+func (s *TiFlashSpec) GetManageHost() string {
+	if s.ManageHost != "" {
+		return s.ManageHost
+	}
+	return s.Host
+}
+
 // IsImported returns if the node is imported from TiDB-Ansible
 func (s *TiFlashSpec) IsImported() bool {
 	return s.Imported
@@ -291,7 +299,7 @@ func (c *TiFlashComponent) Instances() []Instance {
 			},
 			StatusFn: s.Status,
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
-				return UptimeByHost(s.Host, s.StatusPort, timeout, tlsCfg)
+				return UptimeByHost(s.GetManageHost(), s.StatusPort, timeout, tlsCfg)
 			},
 		}, c.Topology})
 	}
@@ -876,7 +884,7 @@ func (i *TiFlashInstance) Ready(ctx context.Context, e ctxt.Executor, timeout ui
 	if i.topo.BaseTopo().GlobalOptions.TLSEnabled {
 		scheme = "https"
 	}
-	addr := fmt.Sprintf("%s://%s/tiflash/store-status", scheme, utils.JoinHostPort(i.Host, i.GetStatusPort()))
+	addr := fmt.Sprintf("%s://%s/tiflash/store-status", scheme, utils.JoinHostPort(i.GetManageHost(), i.GetStatusPort()))
 	req, err := http.NewRequest("GET", addr, nil)
 	if err != nil {
 		return err

@@ -56,7 +56,7 @@ func (s *DrainerSpec) Status(ctx context.Context, timeout time.Duration, tlsCfg 
 		timeout = statusQueryTimeout
 	}
 
-	state := statusByHost(s.Host, s.Port, "/status", timeout, tlsCfg)
+	state := statusByHost(s.GetManageHost(), s.Port, "/status", timeout, tlsCfg)
 
 	if s.Offline {
 		binlogClient, err := api.NewBinlogClient(pdList, timeout, tlsCfg)
@@ -92,6 +92,14 @@ func (s *DrainerSpec) SSH() (string, int) {
 // GetMainPort returns the main port of the instance
 func (s *DrainerSpec) GetMainPort() int {
 	return s.Port
+}
+
+// GetManageHost returns the manage host of the instance
+func (s *DrainerSpec) GetManageHost() string {
+	if s.ManageHost != "" {
+		return s.ManageHost
+	}
+	return s.Host
 }
 
 // IsImported returns if the node is imported from TiDB-Ansible
@@ -139,7 +147,7 @@ func (c *DrainerComponent) Instances() []Instance {
 			},
 			StatusFn: s.Status,
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
-				return UptimeByHost(s.Host, s.Port, timeout, tlsCfg)
+				return UptimeByHost(s.GetManageHost(), s.Port, timeout, tlsCfg)
 			},
 		}, c.Topology})
 	}

@@ -51,7 +51,7 @@ func (s *DashboardSpec) Status(ctx context.Context, timeout time.Duration, tlsCf
 		timeout = statusQueryTimeout
 	}
 
-	state := statusByHost(s.Host, s.Port, "/status", timeout, tlsCfg)
+	state := statusByHost(s.GetManageHost(), s.Port, "/status", timeout, tlsCfg)
 
 	return state
 }
@@ -73,6 +73,14 @@ func (s *DashboardSpec) SSH() (string, int) {
 // GetMainPort returns the main port of the instance
 func (s *DashboardSpec) GetMainPort() int {
 	return s.Port
+}
+
+// GetManageHost returns the manage host of the instance
+func (s *DashboardSpec) GetManageHost() string {
+	if s.ManageHost != "" {
+		return s.ManageHost
+	}
+	return s.Host
 }
 
 // IsImported returns if the node is imported from TiDB-Ansible
@@ -121,7 +129,7 @@ func (c *DashboardComponent) Instances() []Instance {
 			},
 			StatusFn: s.Status,
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
-				return UptimeByHost(s.Host, s.Port, timeout, tlsCfg)
+				return UptimeByHost(s.GetManageHost(), s.Port, timeout, tlsCfg)
 			},
 		}, c.Topology})
 	}
