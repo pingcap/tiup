@@ -884,7 +884,7 @@ func (i *TiFlashInstance) Ready(ctx context.Context, e ctxt.Executor, timeout ui
 	if i.topo.BaseTopo().GlobalOptions.TLSEnabled {
 		scheme = "https"
 	}
-	addr := fmt.Sprintf("%s://%s/tiflash/store-status", scheme, utils.JoinHostPort(i.Host, i.GetStatusPort()))
+	addr := fmt.Sprintf("%s://%s/tiflash/store-status", scheme, utils.JoinHostPort(i.GetManageHost(), i.GetStatusPort()))
 	req, err := http.NewRequest("GET", addr, nil)
 	if err != nil {
 		return err
