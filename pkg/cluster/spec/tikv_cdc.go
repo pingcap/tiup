@@ -72,6 +72,14 @@ func (s *TiKVCDCSpec) GetMainPort() int {
 	return s.Port
 }
 
+// GetManageHost returns the manage host of the instance
+func (s *TiKVCDCSpec) GetManageHost() string {
+	if s.ManageHost != "" {
+		return s.ManageHost
+	}
+	return s.Host
+}
+
 // IsImported returns if the node is imported from TiDB-Ansible
 func (s *TiKVCDCSpec) IsImported() bool {
 	// TiDB-Ansible do not support TiKV-CDC
@@ -116,10 +124,10 @@ func (c *TiKVCDCComponent) Instances() []Instance {
 				s.DeployDir,
 			},
 			StatusFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config, _ ...string) string {
-				return statusByHost(s.Host, s.Port, "/status", timeout, tlsCfg)
+				return statusByHost(s.GetManageHost(), s.Port, "/status", timeout, tlsCfg)
 			},
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
-				return UptimeByHost(s.Host, s.Port, timeout, tlsCfg)
+				return UptimeByHost(s.GetManageHost(), s.Port, timeout, tlsCfg)
 			},
 		}, c.Topology}
 		if s.DataDir != "" {
