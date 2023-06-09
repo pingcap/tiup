@@ -35,7 +35,7 @@ import (
 // GrafanaSpec represents the Grafana topology specification in topology.yaml
 type GrafanaSpec struct {
 	Host            string               `yaml:"host"`
-	ManageHost      string               `yaml:"manage_host,omitempty"`
+	ManageHost      string               `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
 	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported        bool                 `yaml:"imported,omitempty"`
 	Patched         bool                 `yaml:"patched,omitempty"`
