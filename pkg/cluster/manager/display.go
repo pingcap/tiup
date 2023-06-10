@@ -233,7 +233,7 @@ func (m *Manager) Display(dopt DisplayOption, opt operator.Options) error {
 			continue
 		}
 		if strings.HasPrefix(v.Status, "Up") || strings.HasPrefix(v.Status, "Healthy") {
-			instAddr := utils.JoinHostPort(v.Host, v.Port)
+			instAddr := utils.JoinHostPort(v.ManageHost, v.Port)
 			masterActive = append(masterActive, instAddr)
 		}
 	}

@@ -79,7 +79,7 @@ func Upgrade(
 				pdEndpoints = strings.Split(forcePDEndpoints, ",")
 				logger.Warnf("%s is set, using %s as PD endpoints", EnvNamePDEndpointOverwrite, pdEndpoints)
 			} else {
-				pdEndpoints = topo.(*spec.Specification).GetPDList()
+				pdEndpoints = topo.(*spec.Specification).GetPDListWithManageHost()
 			}
 			pdClient := api.NewPDClient(ctx, pdEndpoints, 10*time.Second, tlsCfg)
 			origLeaderScheduleLimit, origRegionScheduleLimit, err = increaseScheduleLimit(ctx, pdClient)

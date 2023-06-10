@@ -675,7 +675,7 @@ func (s *Specification) BaseTopo() *spec.BaseTopo {
 	return &spec.BaseTopo{
 		GlobalOptions:    &s.GlobalOptions,
 		MonitoredOptions: s.GetMonitoredOptions(),
-		MasterList:       s.GetMasterList(),
+		MasterList:       s.GetMasterListWithManageHost(),
 		Monitors:         s.Monitors,
 		Grafanas:         s.Grafanas,
 		Alertmanagers:    s.Alertmanagers,
@@ -701,12 +701,16 @@ func (s *Specification) MergeTopo(rhs spec.Topology) spec.Topology {
 	return s.Merge(other)
 }
 
-// GetMasterList returns a list of Master API hosts of the current cluster
-func (s *Specification) GetMasterList() []string {
+// GetMasterListWithManageHost returns a list of Master API hosts of the current cluster
+func (s *Specification) GetMasterListWithManageHost() []string {
 	var masterList []string
 
 	for _, master := range s.Masters {
-		masterList = append(masterList, utils.JoinHostPort(master.Host, master.Port))
+		host := master.Host
+		if master.ManageHost != "" {
+			host = master.ManageHost
+		}
+		masterList = append(masterList, utils.JoinHostPort(host, master.Port))
 	}
 
 	return masterList
