@@ -33,7 +33,7 @@ import (
 // PDSpec represents the PD topology specification in topology.yaml
 type PDSpec struct {
 	Host                string `yaml:"host"`
-	ManageHost          string `yaml:"manage_host,omitempty"`
+	ManageHost          string `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
 	ListenHost          string `yaml:"listen_host,omitempty"`
 	AdvertiseClientAddr string `yaml:"advertise_client_addr,omitempty"`
 	AdvertisePeerAddr   string `yaml:"advertise_peer_addr,omitempty"`
