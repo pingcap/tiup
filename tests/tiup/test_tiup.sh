@@ -27,6 +27,7 @@ tiup list
 tiup
 tiup help
 tiup install tidb:v5.2.2
+tiup install tidb:v3.0.13
 tiup update tidb
 tiup update tidb --nightly
 tiup --binary tidb:nightly
