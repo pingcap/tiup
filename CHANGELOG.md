@@ -1,5 +1,16 @@
 TiUP Changelog
 
+## [1.12.3] 2023-6-14
+
+### Fixes
+
+- Fix cannot edit manage_host on an exist cluster in `tiup-cluster` (#2210, @nexustar)
+- Fix still use host instead of manage_host in `tiup-cluster` (#2206 #2207, @nexustar)
+
+### Improvement
+
+- Check if the compnoent exists when uninstall in `tiup` (#2209, @srstack)
+
 ## [1.12.2] 2023-5-19
 
 ### Notes
