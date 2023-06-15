@@ -390,7 +390,6 @@ func (s *Specification) portConflictsDetect() error {
 		"PeerPort",
 		"ClientPort",
 		"WebPort",
-		"TCPPort",
 		"HTTPPort",
 		"ClusterPort",
 	}
@@ -852,7 +851,7 @@ func setDMCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) erro
 func getPort(v reflect.Value) string {
 	for i := 0; i < v.NumField(); i++ {
 		switch v.Type().Field(i).Name {
-		case "Port", "ClientPort", "WebPort", "TCPPort", "NodeExporterPort":
+		case "Port", "ClientPort", "WebPort", "NodeExporterPort":
 			return fmt.Sprintf("%d", v.Field(i).Int())
 		}
 	}

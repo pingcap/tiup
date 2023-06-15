@@ -234,8 +234,6 @@ tiflash_servers:
   - host: 10.0.1.24
     # # SSH port of the server.
     # ssh_port: 22
-    # # TiFlash TCP Service port.
-    # tcp_port: 9000
     # # TiFlash raft service and coprocessor service listening address.
     # flash_service_port: 3930
     # # TiFlash Proxy service port.
@@ -256,7 +254,6 @@ tiflash_servers:
     # log_dir: /tidb-deploy/tiflash-9000/log
   - host: 10.0.1.25
     # ssh_port: 22
-    # tcp_port: 9000
     # flash_service_port: 3930
     # flash_proxy_port: 20170
     # flash_proxy_status_port: 20292

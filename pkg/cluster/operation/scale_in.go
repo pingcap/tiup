@@ -350,7 +350,7 @@ func ScaleInCluster(
 
 	for i := 0; i < len(cluster.TiFlashServers); i++ {
 		s := cluster.TiFlashServers[i]
-		id := utils.JoinHostPort(s.Host, s.TCPPort)
+		id := utils.JoinHostPort(s.Host, s.FlashServicePort)
 		if !deletedNodes.Exist(id) {
 			continue
 		}
