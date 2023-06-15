@@ -623,7 +623,6 @@ func (s *Specification) portConflictsDetect() error {
 		"PeerPort",
 		"ClientPort",
 		"WebPort",
-		"TCPPort",
 		"HTTPPort",
 		"FlashServicePort",
 		"FlashProxyPort",

@@ -325,9 +325,6 @@ func parseGroupVars(ctx context.Context, dir, ansCfgFile string, clsMeta *spec.C
 				OS:       "linux",
 			}
 
-			if tcpPort, ok := grpVars["tcp_port"]; ok {
-				tmpIns.TCPPort, _ = strconv.Atoi(tcpPort)
-			}
 			if !tidbver.TiFlashNotNeedHTTPPortConfig(clsMeta.Version) {
 				if httpPort, ok := grpVars["http_port"]; ok {
 					tmpIns.HTTPPort, _ = strconv.Atoi(httpPort)
@@ -347,9 +344,6 @@ func parseGroupVars(ctx context.Context, dir, ansCfgFile string, clsMeta *spec.C
 			}
 
 			// apply values from the host
-			if tcpPort, ok := srv.Vars["tcp_port"]; ok {
-				tmpIns.TCPPort, _ = strconv.Atoi(tcpPort)
-			}
 			if !tidbver.TiFlashNotNeedHTTPPortConfig(clsMeta.Version) {
 				if httpPort, ok := srv.Vars["http_port"]; ok {
 					tmpIns.HTTPPort, _ = strconv.Atoi(httpPort)

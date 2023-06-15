@@ -51,7 +51,6 @@ type TiFlashInstance struct {
 	instance
 	Role            TiFlashRole
 	DisaggOpts      DisaggOptions
-	TCPPort         int
 	ServicePort     int
 	ProxyPort       int
 	ProxyStatusPort int
@@ -82,7 +81,6 @@ func NewTiFlashInstance(role TiFlashRole, disaggOptions DisaggOptions, binPath, 
 		},
 		Role:            role,
 		DisaggOpts:      disaggOptions,
-		TCPPort:         utils.MustGetFreePort(host, 9100), // 9000 for default object store port
 		ServicePort:     utils.MustGetFreePort(host, 3930),
 		ProxyPort:       utils.MustGetFreePort(host, 20170),
 		ProxyStatusPort: utils.MustGetFreePort(host, 20292),
@@ -138,7 +136,6 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version utils.Version) e
 		fmt.Sprintf("--tmp_path=%s", filepath.Join(inst.Dir, "tmp")),
 		fmt.Sprintf("--path=%s", filepath.Join(inst.Dir, "data")),
 		fmt.Sprintf("--listen_host=%s", inst.Host),
-		fmt.Sprintf("--tcp_port=%d", inst.TCPPort),
 		fmt.Sprintf("--logger.log=%s", inst.LogFile()),
 		fmt.Sprintf("--logger.errorlog=%s", filepath.Join(inst.Dir, "tiflash_error.log")),
 		fmt.Sprintf("--status.metrics_port=%d", inst.StatusPort),
