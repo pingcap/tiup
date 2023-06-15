@@ -76,6 +76,7 @@ topology:
     - host: 172.16.1.222
       ssh_port: 9999
       imported: true
+      tcp_port: 9000
       flash_service_port: 3930
       flash_proxy_port: 20170
       flash_proxy_status_port: 20292
@@ -87,6 +88,7 @@ topology:
     - host: 172.16.1.223
       ssh_port: 30000
       imported: true
+      tcp_port: 9000
       flash_service_port: 3930
       flash_proxy_port: 20170
       flash_proxy_status_port: 20292

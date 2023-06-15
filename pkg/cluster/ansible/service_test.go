@@ -23,6 +23,7 @@ default_profile = "default"
 display_name = "TiFlash"
 listen_host = "0.0.0.0"
 path = "/data1/test-cluster/leiysky-ansible-test-deploy/tiflash/data/db"
+tcp_port = 11315
 tmp_path = "/data1/test-cluster/leiysky-ansible-test-deploy/tiflash/data/db/tmp"
 
 [flash]

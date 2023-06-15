@@ -46,7 +46,7 @@ type TiFlashSpec struct {
 	Imported             bool                 `yaml:"imported,omitempty"`
 	Patched              bool                 `yaml:"patched,omitempty"`
 	IgnoreExporter       bool                 `yaml:"ignore_exporter,omitempty"`
-	TCPPort              int                  `yaml:"tcp_port" default:"9000"`  // Deprecated since v7.2.0
+	TCPPort              int                  `yaml:"tcp_port" default:"9000"`
 	HTTPPort             int                  `yaml:"http_port" default:"8123"` // Deprecated since v7.1.0
 	FlashServicePort     int                  `yaml:"flash_service_port" default:"3930"`
 	FlashProxyPort       int                  `yaml:"flash_proxy_port" default:"20170"`
