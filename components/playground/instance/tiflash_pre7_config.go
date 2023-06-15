@@ -38,13 +38,13 @@ display_name = "TiFlash"
 listen_host = "0.0.0.0"
 path = "%[4]s"
 tmp_path = "%[5]s"
-%[14]s
 %[13]s
+%[12]s
 [flash]
 service_addr = "%[9]s:%[7]d"
 tidb_status_addr = "%[10]s"
 [flash.flash_cluster]
-cluster_manager_path = "%[12]s"
+cluster_manager_path = "%[11]s"
 log = "%[6]s/tiflash_cluster_manager.log"
 master_ttl = 60
 refresh_interval = 20
