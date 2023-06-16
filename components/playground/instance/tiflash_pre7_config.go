@@ -34,29 +34,30 @@ const tiflashMarkCacheSizeOld = `mark_cache_size = 5368709120`
 const tiflashConfigOld = `
 default_profile = "default"
 display_name = "TiFlash"
-%[2]s
+http_port = %[2]d
+tcp_port = %[3]d
 listen_host = "0.0.0.0"
-path = "%[4]s"
-tmp_path = "%[5]s"
+path = "%[5]s"
+tmp_path = "%[6]s"
+%[14]s
 %[13]s
-%[12]s
 [flash]
-service_addr = "%[9]s:%[7]d"
-tidb_status_addr = "%[10]s"
+service_addr = "%[10]s:%[8]d"
+tidb_status_addr = "%[11]s"
 [flash.flash_cluster]
-cluster_manager_path = "%[11]s"
-log = "%[6]s/tiflash_cluster_manager.log"
+cluster_manager_path = "%[12]s"
+log = "%[7]s/tiflash_cluster_manager.log"
 master_ttl = 60
 refresh_interval = 20
 update_rule_interval = 5
 [flash.proxy]
-config = "%[3]s/tiflash-learner.toml"
+config = "%[4]s/tiflash-learner.toml"
 
 [logger]
 count = 20
-errorlog = "%[6]s/tiflash_error.log"
+errorlog = "%[7]s/tiflash_error.log"
 level = "debug"
-log = "%[6]s/tiflash.log"
+log = "%[7]s/tiflash.log"
 size = "1000M"
 
 [profiles]
@@ -81,7 +82,7 @@ result_rows = 0
 pd_addr = "%[1]s"
 
 [status]
-metrics_port = %[8]d
+metrics_port = %[9]d
 
 [users]
 [users.default]
@@ -99,7 +100,7 @@ ip = "::/0"
 `
 
 // writeTiFlashConfigOld is for < 7.1.0. Not maintained any more. Do not introduce new features.
-func writeTiFlashConfigOld(w io.Writer, version utils.Version, httpPort, servicePort, metricsPort int, host, deployDir, clusterManagerPath string, tidbStatusAddrs, endpoints []string) error {
+func writeTiFlashConfigOld(w io.Writer, version utils.Version, tcpPort, httpPort, servicePort, metricsPort int, host, deployDir, clusterManagerPath string, tidbStatusAddrs, endpoints []string) error {
 	pdAddrs := strings.Join(endpoints, ",")
 	dataDir := fmt.Sprintf("%s/data", deployDir)
 	tmpDir := fmt.Sprintf("%s/tmp", deployDir)
@@ -108,11 +109,11 @@ func writeTiFlashConfigOld(w io.Writer, version utils.Version, httpPort, service
 	var conf string
 
 	if tidbver.TiFlashNotNeedSomeConfig(version.String()) {
-		conf = fmt.Sprintf(tiflashConfigOld, pdAddrs, fmt.Sprintf(`http_port = %d`, httpPort),
+		conf = fmt.Sprintf(tiflashConfigOld, pdAddrs, httpPort, tcpPort,
 			deployDir, dataDir, tmpDir, logDir, servicePort, metricsPort,
 			ip, strings.Join(tidbStatusAddrs, ","), clusterManagerPath, "", "")
 	} else {
-		conf = fmt.Sprintf(tiflashConfigOld, pdAddrs, fmt.Sprintf(`http_port = %d`, httpPort),
+		conf = fmt.Sprintf(tiflashConfigOld, pdAddrs, httpPort, tcpPort,
 			deployDir, dataDir, tmpDir, logDir, servicePort, metricsPort,
 			ip, strings.Join(tidbStatusAddrs, ","), clusterManagerPath, tiflashDaemonConfigOld, tiflashMarkCacheSizeOld)
 	}

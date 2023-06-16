@@ -51,6 +51,7 @@ type TiFlashInstance struct {
 	instance
 	Role            TiFlashRole
 	DisaggOpts      DisaggOptions
+	TCPPort         int
 	ServicePort     int
 	ProxyPort       int
 	ProxyStatusPort int
@@ -81,6 +82,7 @@ func NewTiFlashInstance(role TiFlashRole, disaggOptions DisaggOptions, binPath, 
 		},
 		Role:            role,
 		DisaggOpts:      disaggOptions,
+		TCPPort:         utils.MustGetFreePort(host, 9100), // 9000 for default object store port
 		ServicePort:     utils.MustGetFreePort(host, 3930),
 		ProxyPort:       utils.MustGetFreePort(host, 20170),
 		ProxyStatusPort: utils.MustGetFreePort(host, 20292),
