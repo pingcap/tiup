@@ -35,8 +35,8 @@ const tiflashConfigOld = `
 default_profile = "default"
 display_name = "TiFlash"
 http_port = %[2]d
-tcp_port = %[3]d
 listen_host = "0.0.0.0"
+tcp_port = %[3]d
 path = "%[5]s"
 tmp_path = "%[6]s"
 %[14]s
