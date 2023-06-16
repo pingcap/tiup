@@ -486,6 +486,11 @@ func (i *TiFlashInstance) initTiFlashConfig(ctx context.Context, clusterVersion 
 			httpPort = fmt.Sprintf(`http_port: %d`, spec.HTTPPort)
 		}
 	}
+	tcpPort := "#"
+	// Config tcp_port is only required for TiFlash version < 7.1.0, and is recommended to not specify for TiFlash version >= 7.1.0.
+	if tidbver.TiFlashRequiresTCPPortConfig(clusterVersion) {
+		tcpPort = fmt.Sprintf(`tcp_port: %d`, spec.TCPPort)
+	}
 
 	// set TLS configs
 	spec.Config, err = i.setTLSConfig(ctx, enableTLS, spec.Config, paths)
@@ -511,7 +516,7 @@ server_configs:
     listen_host: "%[7]s"
     tmp_path: "%[11]s"
     %[1]s
-    tcp_port: %[3]d
+    %[3]s
     %[4]s
     flash.tidb_status_addr: "%[5]s"
     flash.service_addr: "%[6]s"
@@ -535,7 +540,7 @@ server_configs:
 `,
 		pathConfig,
 		paths.Log,
-		spec.TCPPort,
+		tcpPort,
 		httpPort,
 		strings.Join(tidbStatusAddrs, ","),
 		utils.JoinHostPort(spec.Host, spec.FlashServicePort),
