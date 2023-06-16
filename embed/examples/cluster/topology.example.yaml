@@ -224,6 +224,7 @@ tiflash_servers:
     # # SSH port of the server.
     # ssh_port: 22
     # # TiFlash TCP Service port.
+    # # Since 7.1.0, it is not actually listened, and only being used as part of the instance identity.
     tcp_port: 9000
     # # TiFlash raft service and coprocessor service listening address.
     flash_service_port: 3930
