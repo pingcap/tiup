@@ -49,7 +49,7 @@ func GetServiceStatus(ctx context.Context, e ctxt.Executor, name string) (active
 		if len(words) >= 2 {
 			switch words[0] {
 			case "Active:":
-				active = words[1]
+				active = strings.Join(words[1:], " ")
 			case "Memory:":
 				memory = words[1]
 			}
