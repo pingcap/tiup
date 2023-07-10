@@ -430,7 +430,11 @@ func (p *Playground) sanitizeComponentConfig(cid string, cfg *instance.Config) e
 
 func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) error {
 	boundVersion := p.bindVersion(inst.Component(), p.bootOptions.Version)
-	version, err := environment.GlobalEnv().V1Repository().ResolveComponentVersion(inst.Component(), boundVersion)
+	component := inst.Component()
+	if component == string(instance.PDRoleAPI) || component == string(instance.PDRoleTSO) || component == string(instance.PDRoleResourceManager) {
+		component = string(instance.PDRoleNormal)
+	}
+	version, err := environment.GlobalEnv().V1Repository().ResolveComponentVersion(component, boundVersion)
 	if err != nil {
 		return err
 	}
@@ -469,7 +473,7 @@ func (p *Playground) handleScaleOut(w io.Writer, cmd *Command) error {
 		return err
 	}
 	// TODO: Support scale-out in disaggregated mode
-	inst, err := p.addInstance(cmd.ComponentID, instance.TiFlashRoleNormal, cmd.Config)
+	inst, err := p.addInstance(cmd.ComponentID, instance.PDRoleNormal, instance.TiFlashRoleNormal, cmd.Config)
 	if err != nil {
 		return err
 	}
@@ -633,7 +637,7 @@ func (p *Playground) enableBinlog() bool {
 	return p.bootOptions.Pump.Num > 0
 }
 
-func (p *Playground) addInstance(componentID string, tiflashRole instance.TiFlashRole, cfg instance.Config) (ins instance.Instance, err error) {
+func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tiflashRole instance.TiFlashRole, cfg instance.Config) (ins instance.Instance, err error) {
 	if cfg.BinPath != "" {
 		cfg.BinPath, err = getAbsolutePath(cfg.BinPath)
 		if err != nil {
@@ -651,7 +655,7 @@ func (p *Playground) addInstance(componentID string, tiflashRole instance.TiFlas
 	dataDir := p.dataDir
 
 	id := p.allocID(componentID)
-	dir := filepath.Join(dataDir, fmt.Sprintf("%s-%d", componentID, id))
+	dir := filepath.Join(dataDir, fmt.Sprintf("%s-%d", pdRole, id))
 	if err = utils.MkdirAll(dir, 0755); err != nil {
 		return nil, err
 	}
@@ -663,16 +667,20 @@ func (p *Playground) addInstance(componentID string, tiflashRole instance.TiFlas
 
 	switch componentID {
 	case spec.ComponentPD:
-		inst := instance.NewPDInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port)
+		inst := instance.NewPDInstance(pdRole, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, cfg.Port)
 		ins = inst
-		if p.booted {
-			inst.Join(p.pds)
-			p.pds = append(p.pds, inst)
+		if pdRole == instance.PDRoleNormal || pdRole == instance.PDRoleAPI {
+			if p.booted {
+				inst.Join(p.pds)
+				p.pds = append(p.pds, inst)
+			} else {
+				p.pds = append(p.pds, inst)
+				for _, pd := range p.pds {
+					pd.InitCluster(p.pds)
+				}
+			}
 		} else {
 			p.pds = append(p.pds, inst)
-			for _, pd := range p.pds {
-				pd.InitCluster(p.pds)
-			}
 		}
 	case spec.ComponentTiDB:
 		inst := instance.NewTiDBInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, p.enableBinlog(), p.bootOptions.Mode == "tidb-disagg")
@@ -801,6 +809,9 @@ func (p *Playground) bindVersion(comp string, version string) (bindVersion strin
 func (p *Playground) bootCluster(ctx context.Context, env *environment.Environment, options *BootOptions) error {
 	for _, cfg := range []*instance.Config{
 		&options.PD,
+		&options.API,
+		&options.TSO,
+		&options.RM,
 		&options.TiDB,
 		&options.TiKV,
 		&options.TiFlash,
@@ -820,7 +831,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 	p.bootOptions = options
 
 	// All others components depend on the pd, we just ensure the pd count must be great than 0
-	if options.PD.Num < 1 {
+	if options.Mode != "pd-ms" && options.PD.Num < 1 {
 		return fmt.Errorf("all components count must be great than 0 (pd=%v)", options.PD.Num)
 	}
 
@@ -837,24 +848,26 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 	type InstancePair struct {
 		comp        string
+		pdRole      instance.PDRole
 		tiflashRole instance.TiFlashRole
 		instance.Config
 	}
 
 	instances := []InstancePair{
-		{spec.ComponentPD, "", options.PD},
-		{spec.ComponentTiKV, "", options.TiKV},
-		{spec.ComponentPump, "", options.Pump},
-		{spec.ComponentTiDB, "", options.TiDB},
-		{spec.ComponentCDC, "", options.TiCDC},
-		{spec.ComponentTiKVCDC, "", options.TiKVCDC},
-		{spec.ComponentDrainer, "", options.Drainer},
+		{spec.ComponentTiKV, "", "", options.TiKV},
+		{spec.ComponentPump, "", "", options.Pump},
+		{spec.ComponentTiDB, "", "", options.TiDB},
+		{spec.ComponentCDC, "", "", options.TiCDC},
+		{spec.ComponentTiKVCDC, "", "", options.TiKVCDC},
+		{spec.ComponentDrainer, "", "", options.Drainer},
 	}
 
 	if options.Mode == "tidb" {
-		instances = append(
-			instances,
-			InstancePair{spec.ComponentTiFlash, instance.TiFlashRoleNormal, options.TiFlash},
+		instances = append([]InstancePair{{spec.ComponentPD, instance.PDRoleNormal, instance.TiFlashRoleNormal, options.PD}},
+			instances...,
+		)
+		instances = append(instances,
+			InstancePair{spec.ComponentTiFlash, instance.PDRoleNormal, instance.TiFlashRoleNormal, options.TiFlash},
 		)
 	} else if options.Mode == "tidb-disagg" {
 		if !tidbver.TiDBSupportDisagg(options.Version) {
@@ -889,17 +902,36 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 				return fmt.Errorf("Disaggregate mode preflight check failed: Bucket %s doesn't exist", options.DisaggOpts.Bucket)
 			}
 		}
-
+		instances = append([]InstancePair{{spec.ComponentPD, instance.PDRoleNormal, instance.TiFlashRoleNormal, options.PD}},
+			instances...,
+		)
 		instances = append(
 			instances,
-			InstancePair{spec.ComponentTiFlash, instance.TiFlashRoleDisaggWrite, options.TiFlashWrite},
-			InstancePair{spec.ComponentTiFlash, instance.TiFlashRoleDisaggCompute, options.TiFlashCompute},
+			InstancePair{spec.ComponentTiFlash, instance.PDRoleNormal, instance.TiFlashRoleDisaggWrite, options.TiFlashWrite},
+			InstancePair{spec.ComponentTiFlash, instance.PDRoleNormal, instance.TiFlashRoleDisaggCompute, options.TiFlashCompute},
+		)
+	} else if options.Mode == "pd-ms" {
+		if !tidbver.PDSupportMicroServices(options.Version) {
+			return fmt.Errorf("PD cluster doesn't support microservices mode in version %s", options.Version)
+		}
+		instances = append([]InstancePair{
+			{spec.ComponentPD, instance.PDRoleAPI, instance.TiFlashRoleNormal, options.API},
+			{spec.ComponentPD, instance.PDRoleTSO, instance.TiFlashRoleNormal, options.TSO},
+			{spec.ComponentPD, instance.PDRoleResourceManager, instance.TiFlashRoleNormal, options.RM}},
+			instances...,
+		)
+		instances = append(instances,
+			InstancePair{spec.ComponentTiFlash, instance.PDRoleNormal, instance.TiFlashRoleNormal, options.TiFlash},
+		)
+	} else {
+		instances = append([]InstancePair{{spec.ComponentPD, instance.PDRoleNormal, instance.TiFlashRoleNormal, options.PD}},
+			instances...,
 		)
 	}
 
 	for _, inst := range instances {
 		for i := 0; i < inst.Num; i++ {
-			_, err := p.addInstance(inst.comp, inst.tiflashRole, inst.Config)
+			_, err := p.addInstance(inst.comp, inst.pdRole, inst.tiflashRole, inst.Config)
 			if err != nil {
 				return err
 			}

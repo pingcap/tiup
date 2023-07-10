@@ -56,7 +56,10 @@ import (
 type BootOptions struct {
 	Mode           string                 `yaml:"mode"`
 	Version        string                 `yaml:"version"`
-	PD             instance.Config        `yaml:"pd"`
+	PD             instance.Config        `yaml:"pd"`  // ignored when mode == pd-ms
+	API            instance.Config        `yaml:"api"` // Only available when mode == pd-ms
+	TSO            instance.Config        `yaml:"tso"` // Only available when mode == pd-ms
+	RM             instance.Config        `yaml:"rm"`  // Only available when mode == pd-ms
 	TiDB           instance.Config        `yaml:"tidb"`
 	TiKV           instance.Config        `yaml:"tikv"`
 	TiFlash        instance.Config        `yaml:"tiflash"`         // ignored when mode == tidb-disagg
@@ -266,7 +269,7 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 		},
 	}
 
-	rootCmd.Flags().StringVar(&options.Mode, "mode", "tidb", "TiUP playground mode: 'tidb', 'tidb-disagg', 'tikv-slim'")
+	rootCmd.Flags().StringVar(&options.Mode, "mode", "tidb", "TiUP playground mode: 'tidb', 'tidb-disagg', 'tikv-slim', 'pd-ms'")
 	rootCmd.PersistentFlags().StringVarP(&tag, "tag", "T", "", "Specify a tag for playground") // Use `PersistentFlags()` to make it available to subcommands.
 	rootCmd.Flags().Bool("without-monitor", false, "Don't start prometheus and grafana component")
 	rootCmd.Flags().BoolVar(&options.Monitor, "monitor", true, "Start prometheus and grafana component")
@@ -284,6 +287,10 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 	rootCmd.Flags().IntVar(&options.TiKVCDC.Num, "kvcdc", 0, "TiKV-CDC instance number")
 	rootCmd.Flags().IntVar(&options.Pump.Num, "pump", 0, "Pump instance number")
 	rootCmd.Flags().IntVar(&options.Drainer.Num, "drainer", 0, "Drainer instance number")
+
+	rootCmd.Flags().IntVar(&options.API.Num, "api", 0, "API instance number")
+	rootCmd.Flags().IntVar(&options.TSO.Num, "tso", 0, "TSO instance number")
+	rootCmd.Flags().IntVar(&options.RM.Num, "rm", 0, "Resource manager instance number")
 
 	rootCmd.Flags().IntVar(&options.TiDB.UpTimeout, "db.timeout", 60, "TiDB max wait time in seconds for starting, 0 means no limit")
 	rootCmd.Flags().IntVar(&options.TiFlash.UpTimeout, "tiflash.timeout", 120, "TiFlash max wait time in seconds for starting, 0 means no limit")
@@ -309,6 +316,10 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 	rootCmd.Flags().StringVar(&options.TiCDC.ConfigPath, "ticdc.config", "", "TiCDC instance configuration file")
 	rootCmd.Flags().StringVar(&options.TiKVCDC.ConfigPath, "kvcdc.config", "", "TiKV-CDC instance configuration file")
 
+	rootCmd.Flags().StringVar(&options.API.ConfigPath, "api.config", "", "API instance configuration file")
+	rootCmd.Flags().StringVar(&options.TSO.ConfigPath, "tso.config", "", "TSO instance configuration file")
+	rootCmd.Flags().StringVar(&options.RM.ConfigPath, "rm.config", "", "Resource manager instance configuration file")
+
 	rootCmd.Flags().StringVar(&options.TiDB.BinPath, "db.binpath", "", "TiDB instance binary path")
 	rootCmd.Flags().StringVar(&options.TiKV.BinPath, "kv.binpath", "", "TiKV instance binary path")
 	rootCmd.Flags().StringVar(&options.PD.BinPath, "pd.binpath", "", "PD instance binary path")
@@ -319,6 +330,10 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 	rootCmd.Flags().StringVar(&options.TiKVCDC.BinPath, "kvcdc.binpath", "", "TiKV-CDC instance binary path")
 	rootCmd.Flags().StringVar(&options.Pump.BinPath, "pump.binpath", "", "Pump instance binary path")
 	rootCmd.Flags().StringVar(&options.Drainer.BinPath, "drainer.binpath", "", "Drainer instance binary path")
+
+	rootCmd.Flags().StringVar(&options.API.BinPath, "api.binpath", "", "API instance binary path")
+	rootCmd.Flags().StringVar(&options.TSO.BinPath, "tso.binpath", "", "TSO instance binary path")
+	rootCmd.Flags().StringVar(&options.RM.BinPath, "rm.binpath", "", "Resource manager instance binary path")
 
 	rootCmd.Flags().StringVar(&options.TiKVCDC.Version, "kvcdc.version", "", "TiKV-CDC instance version")
 
@@ -374,6 +389,19 @@ func populateDefaultOpt(flagSet *pflag.FlagSet) error {
 		defaultStr(&options.TiFlashCompute.BinPath, "tiflash.compute.binpath", options.TiFlash.BinPath)
 		defaultStr(&options.TiFlashCompute.ConfigPath, "tiflash.compute.config", options.TiFlash.ConfigPath)
 		options.TiFlashCompute.UpTimeout = options.TiFlash.UpTimeout
+	case "pd-ms":
+		defaultInt(&options.TiDB.Num, "db", 1)
+		defaultInt(&options.TiKV.Num, "kv", 1)
+		defaultInt(&options.API.Num, "api", 1)
+		defaultStr(&options.API.BinPath, "api.binpath", options.API.BinPath)
+		defaultStr(&options.API.ConfigPath, "api.config", options.API.ConfigPath)
+		defaultInt(&options.TSO.Num, "tso", 1)
+		defaultStr(&options.TSO.BinPath, "tso.binpath", options.TSO.BinPath)
+		defaultStr(&options.TSO.ConfigPath, "tso.config", options.TSO.ConfigPath)
+		defaultInt(&options.RM.Num, "rm", 1)
+		defaultStr(&options.RM.BinPath, "rm.binpath", options.RM.BinPath)
+		defaultStr(&options.RM.ConfigPath, "rm.config", options.RM.ConfigPath)
+		defaultInt(&options.TiFlash.Num, "tiflash", 1)
 	default:
 		return errors.Errorf("Unknown --mode %s", options.Mode)
 	}

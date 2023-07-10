@@ -109,6 +109,9 @@ func logIfErr(err error) {
 func pdEndpoints(pds []*PDInstance, isHTTP bool) []string {
 	var endpoints []string
 	for _, pd := range pds {
+		if pd.Role == PDRoleTSO {
+			continue
+		}
 		if isHTTP {
 			endpoints = append(endpoints, "http://"+utils.JoinHostPort(AdvertiseHost(pd.Host), pd.StatusPort))
 		} else {
