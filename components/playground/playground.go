@@ -431,7 +431,7 @@ func (p *Playground) sanitizeComponentConfig(cid string, cfg *instance.Config) e
 func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) error {
 	boundVersion := p.bindVersion(inst.Component(), p.bootOptions.Version)
 	component := inst.Component()
-	if component == string(instance.PDRoleAPI) || component == string(instance.PDRoleTSO) || component == string(instance.PDRoleResourceManager) {
+	if strings.HasPrefix(component, "pd") {
 		component = string(instance.PDRoleNormal)
 	}
 	version, err := environment.GlobalEnv().V1Repository().ResolveComponentVersion(component, boundVersion)
@@ -809,9 +809,9 @@ func (p *Playground) bindVersion(comp string, version string) (bindVersion strin
 func (p *Playground) bootCluster(ctx context.Context, env *environment.Environment, options *BootOptions) error {
 	for _, cfg := range []*instance.Config{
 		&options.PD,
-		&options.API,
-		&options.TSO,
-		&options.RM,
+		&options.PDAPI,
+		&options.PDTSO,
+		&options.PDRM,
 		&options.TiDB,
 		&options.TiKV,
 		&options.TiFlash,
@@ -831,7 +831,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 	p.bootOptions = options
 
 	// All others components depend on the pd, we just ensure the pd count must be great than 0
-	if options.Mode != "pd-ms" && options.PD.Num < 1 {
+	if options.Mode != "tidb-ms" && options.PD.Num < 1 {
 		return fmt.Errorf("all components count must be great than 0 (pd=%v)", options.PD.Num)
 	}
 
@@ -910,14 +910,14 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			InstancePair{spec.ComponentTiFlash, instance.PDRoleNormal, instance.TiFlashRoleDisaggWrite, options.TiFlashWrite},
 			InstancePair{spec.ComponentTiFlash, instance.PDRoleNormal, instance.TiFlashRoleDisaggCompute, options.TiFlashCompute},
 		)
-	} else if options.Mode == "pd-ms" {
+	} else if options.Mode == "tidb-ms" {
 		if !tidbver.PDSupportMicroServices(options.Version) {
 			return fmt.Errorf("PD cluster doesn't support microservices mode in version %s", options.Version)
 		}
 		instances = append([]InstancePair{
-			{spec.ComponentPD, instance.PDRoleAPI, instance.TiFlashRoleNormal, options.API},
-			{spec.ComponentPD, instance.PDRoleTSO, instance.TiFlashRoleNormal, options.TSO},
-			{spec.ComponentPD, instance.PDRoleResourceManager, instance.TiFlashRoleNormal, options.RM}},
+			{spec.ComponentPD, instance.PDRoleAPI, instance.TiFlashRoleNormal, options.PDAPI},
+			{spec.ComponentPD, instance.PDRoleTSO, instance.TiFlashRoleNormal, options.PDTSO},
+			{spec.ComponentPD, instance.PDRoleResourceManager, instance.TiFlashRoleNormal, options.PDRM}},
 			instances...,
 		)
 		instances = append(instances,

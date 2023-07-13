@@ -163,7 +163,10 @@ func (inst *PDInstance) Start(ctx context.Context, version utils.Version) error 
 
 // Component return the component name.
 func (inst *PDInstance) Component() string {
-	return string(inst.Role)
+	if inst.Role == PDRoleNormal {
+		return "pd"
+	}
+	return fmt.Sprintf("pd %s", inst.Role)
 }
 
 // LogFile return the log file.
