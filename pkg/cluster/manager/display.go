@@ -42,7 +42,6 @@ import (
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
-	"go.uber.org/zap"
 )
 
 // DisplayOption represents option of display command
@@ -610,8 +609,9 @@ func (m *Manager) GetClusterTopology(dopt DisplayOption, opt operator.Options) (
 			e, found := ctxt.GetInner(ctx).GetExecutor(ins.GetManageHost())
 			if found {
 				var active string
+				var systemdSince time.Duration
 				nctx := checkpoint.NewContext(ctx)
-				active, memory, _ = operator.GetServiceStatus(nctx, e, ins.ServiceName())
+				active, memory, systemdSince, _ = operator.GetServiceStatus(nctx, e, ins.ServiceName())
 				if status == "-" {
 					if active == "active" {
 						status = "Up"
@@ -620,7 +620,7 @@ func (m *Manager) GetClusterTopology(dopt DisplayOption, opt operator.Options) (
 					}
 				}
 				if dopt.ShowUptime && since == "-" {
-					since = formatInstanceSince(parseSystemctlSince(active))
+					since = formatInstanceSince(systemdSince)
 				}
 			}
 		}
@@ -731,37 +731,6 @@ func formatInstanceSince(uptime time.Duration) string {
 	}
 
 	return strings.Join(parts, "")
-}
-
-// `systemctl status xxx.service` returns as below
-// Active: active (running) since Sat 2021-03-27 10:51:11 CST; 41min ago
-func parseSystemctlSince(str string) (dur time.Duration) {
-	// if service is not found or other error, don't need to parse it
-	if str == "" {
-		return 0
-	}
-	defer func() {
-		if dur == 0 {
-			zap.L().Warn("failed to parse systemctl since", zap.String("value", str))
-		}
-	}()
-	parts := strings.Split(str, ";")
-	if len(parts) != 2 {
-		return
-	}
-	parts = strings.Split(parts[0], " ")
-	if len(parts) < 3 {
-		return
-	}
-
-	dateStr := strings.Join(parts[len(parts)-3:], " ")
-
-	tm, err := time.Parse("2006-01-02 15:04:05 MST", dateStr)
-	if err != nil {
-		return
-	}
-
-	return time.Since(tm)
 }
 
 // SetSSHKeySet set ssh key set.
