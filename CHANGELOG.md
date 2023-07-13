@@ -1,5 +1,15 @@
 TiUP Changelog
 
+## [1.12.4] 2023-7-13
+
+### Fix
+
+- Fix cannot show tiflash uptime in `tiup-cluster` (#2227, @nexustar)
+
+### Improvement
+
+- Remove tcp_port for tiflash in `tiup-cluster` and `tiup-playground` (#2220, @zanmato1984)
+
 ## [1.12.3] 2023-6-14
 
 ### Fixes
