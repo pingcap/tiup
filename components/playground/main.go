@@ -55,11 +55,12 @@ import (
 // BootOptions is the topology and options used to start a playground cluster
 type BootOptions struct {
 	Mode           string                 `yaml:"mode"`
+	PDMode         string                 `yaml:"pd_mode"`
 	Version        string                 `yaml:"version"`
-	PD             instance.Config        `yaml:"pd"`     // ignored when mode == tidb-ms
-	PDAPI          instance.Config        `yaml:"pd_api"` // Only available when mode == tidb-ms
-	PDTSO          instance.Config        `yaml:"pd_tso"` // Only available when mode == tidb-ms
-	PDRM           instance.Config        `yaml:"pd_rm"`  // Only available when mode == tidb-ms
+	PD             instance.Config        `yaml:"pd"`     // ignored when pd_mode == ms
+	PDAPI          instance.Config        `yaml:"pd_api"` // Only available when pd_mode == ms
+	PDTSO          instance.Config        `yaml:"pd_tso"` // Only available when pd_mode == ms
+	PDRM           instance.Config        `yaml:"pd_rm"`  // Only available when pd_mode == ms
 	TiDB           instance.Config        `yaml:"tidb"`
 	TiKV           instance.Config        `yaml:"tikv"`
 	TiFlash        instance.Config        `yaml:"tiflash"`         // ignored when mode == tidb-disagg
@@ -269,7 +270,8 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 		},
 	}
 
-	rootCmd.Flags().StringVar(&options.Mode, "mode", "tidb", "TiUP playground mode: 'tidb', 'tidb-disagg', 'tikv-slim', 'tidb-ms'")
+	rootCmd.Flags().StringVar(&options.Mode, "mode", "tidb", "TiUP playground mode: 'tidb', 'tidb-disagg', 'tikv-slim'")
+	rootCmd.Flags().StringVar(&options.PDMode, "pd.mode", "pd", "PD mode: 'pd', 'ms'")
 	rootCmd.PersistentFlags().StringVarP(&tag, "tag", "T", "", "Specify a tag for playground") // Use `PersistentFlags()` to make it available to subcommands.
 	rootCmd.Flags().Bool("without-monitor", false, "Don't start prometheus and grafana component")
 	rootCmd.Flags().BoolVar(&options.Monitor, "monitor", true, "Start prometheus and grafana component")
@@ -371,15 +373,12 @@ func populateDefaultOpt(flagSet *pflag.FlagSet) error {
 	case "tidb":
 		defaultInt(&options.TiDB.Num, "db", 1)
 		defaultInt(&options.TiKV.Num, "kv", 1)
-		defaultInt(&options.PD.Num, "pd", 1)
 		defaultInt(&options.TiFlash.Num, "tiflash", 1)
 	case "tikv-slim":
 		defaultInt(&options.TiKV.Num, "kv", 1)
-		defaultInt(&options.PD.Num, "pd", 1)
 	case "tidb-disagg":
 		defaultInt(&options.TiDB.Num, "db", 1)
 		defaultInt(&options.TiKV.Num, "kv", 1)
-		defaultInt(&options.PD.Num, "pd", 1)
 		defaultInt(&options.TiFlash.Num, "tiflash", 1)
 		defaultInt(&options.TiFlashWrite.Num, "tiflash.write", options.TiFlash.Num)
 		defaultStr(&options.TiFlashWrite.BinPath, "tiflash.write.binpath", options.TiFlash.BinPath)
@@ -389,9 +388,14 @@ func populateDefaultOpt(flagSet *pflag.FlagSet) error {
 		defaultStr(&options.TiFlashCompute.BinPath, "tiflash.compute.binpath", options.TiFlash.BinPath)
 		defaultStr(&options.TiFlashCompute.ConfigPath, "tiflash.compute.config", options.TiFlash.ConfigPath)
 		options.TiFlashCompute.UpTimeout = options.TiFlash.UpTimeout
-	case "tidb-ms":
-		defaultInt(&options.TiDB.Num, "db", 1)
-		defaultInt(&options.TiKV.Num, "kv", 1)
+	default:
+		return errors.Errorf("Unknown --mode %s", options.Mode)
+	}
+
+	switch options.PDMode {
+	case "pd":
+		defaultInt(&options.PD.Num, "pd", 1)
+	case "ms":
 		defaultInt(&options.PDAPI.Num, "pd.api", 1)
 		defaultStr(&options.PDAPI.BinPath, "pd.api.binpath", options.PDAPI.BinPath)
 		defaultStr(&options.PDAPI.ConfigPath, "pd.api.config", options.PDAPI.ConfigPath)
@@ -401,9 +405,8 @@ func populateDefaultOpt(flagSet *pflag.FlagSet) error {
 		defaultInt(&options.PDRM.Num, "pd.rm", 1)
 		defaultStr(&options.PDRM.BinPath, "pd.rm.binpath", options.PDRM.BinPath)
 		defaultStr(&options.PDRM.ConfigPath, "pd.rm.config", options.PDRM.ConfigPath)
-		defaultInt(&options.TiFlash.Num, "tiflash", 1)
 	default:
-		return errors.Errorf("Unknown --mode %s", options.Mode)
+		return errors.Errorf("Unknown --pd.mode %s", options.PDMode)
 	}
 
 	return nil
