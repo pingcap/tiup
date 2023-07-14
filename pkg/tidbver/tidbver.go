@@ -93,6 +93,11 @@ func TiDBSupportDisagg(version string) bool {
 	return semver.Compare(version, "v7.0.0") >= 0 || strings.Contains(version, "nightly")
 }
 
+// PDSupportMicroServices returns true if the given version of PD supports micro services.
+func PDSupportMicroServices(version string) bool {
+	return semver.Compare(version, "v7.3.0") >= 0 || strings.Contains(version, "nightly")
+}
+
 // TiCDCSupportConfigFile return if given version of TiCDC support config file
 func TiCDCSupportConfigFile(version string) bool {
 	// config support since v4.0.13, ignore v5.0.0-rc
