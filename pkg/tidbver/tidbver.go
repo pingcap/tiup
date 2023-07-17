@@ -72,7 +72,7 @@ func TiFlashNotNeedHTTPPortConfig(version string) bool {
 // and we must make sure the port is being configured as specified in the topology file,
 // otherwise multiple TiFlash instances will conflict.
 func TiFlashRequiresTCPPortConfig(version string) bool {
-	return semver.Compare(version, "v7.1.0") < 0
+	return semver.Compare(version, "v7.1.0") < 0 && !strings.Contains(version, "nightly")
 }
 
 // TiFlashNotNeedSomeConfig return if given version of TiFlash do not need some config like runAsDaemon
