@@ -1,5 +1,11 @@
 TiUP Changelog
 
+## [1.12.5] 2023-7-17
+
+### Fix
+
+- Fix cannot start tiflash above v7.1.0 in `tiup-cluster` (#2230, @zanmato1984)
+
 ## [1.12.4] 2023-7-13
 
 ### Fix
