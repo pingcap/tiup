@@ -881,7 +881,7 @@ func (i *TiFlashInstance) PrepareStart(ctx context.Context, tlsCfg *tls.Config) 
 func (i *TiFlashInstance) Ready(ctx context.Context, e ctxt.Executor, timeout uint64, tlsCfg *tls.Config) error {
 	// FIXME: the timeout is applied twice in the whole `Ready()` process, in the worst
 	// case it might wait double time as other components
-	if err := PortStarted(ctx, e, i.Port, timeout); err != nil {
+	if err := PortStarted(ctx, e, i.GetServicePort(), timeout); err != nil {
 		return err
 	}
 
