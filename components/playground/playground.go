@@ -437,7 +437,7 @@ func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) 
 	if strings.HasPrefix(component, "pd") {
 		component = string(instance.PDRoleNormal)
 	}
-	version, err := environment.GlobalEnv().V1Repository().ResolveComponentVersion(component, boundVersion)
+	version, err = environment.GlobalEnv().V1Repository().ResolveComponentVersion(component, boundVersion)
 	if err != nil {
 		return err
 	}
@@ -905,7 +905,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 	}
 
 	instances := []InstancePair{
-		{spec.ComponentTiProxy, "", options.TiProxy},
+		{spec.ComponentTiProxy, "", "", options.TiProxy},
 		{spec.ComponentTiKV, "", "", options.TiKV},
 		{spec.ComponentPump, "", "", options.Pump},
 		{spec.ComponentTiDB, "", "", options.TiDB},
