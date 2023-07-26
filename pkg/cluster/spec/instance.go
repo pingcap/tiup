@@ -89,6 +89,7 @@ type Instance interface {
 	ScaleConfig(ctx context.Context, e ctxt.Executor, topo Topology, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error
 	PrepareStart(ctx context.Context, tlsCfg *tls.Config) error
 	ComponentName() string
+	ComponentSource() string
 	InstanceName() string
 	ServiceName() string
 	ResourceControl() meta.ResourceControl
@@ -142,6 +143,7 @@ type BaseInstance struct {
 	ListenHost string
 	Port       int
 	SSHP       int
+	Source     string
 
 	Ports    []int
 	Dirs     []string
@@ -300,6 +302,11 @@ func (i *BaseInstance) ID() string {
 // ComponentName implements Instance interface
 func (i *BaseInstance) ComponentName() string {
 	return i.Name
+}
+
+// ComponentSource implements Instance interface
+func (i *BaseInstance) ComponentSource() string {
+	return i.Source
 }
 
 // InstanceName implements Instance interface

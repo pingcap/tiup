@@ -47,6 +47,7 @@ type CDCSpec struct {
 	GCTTL           int64                `yaml:"gc-ttl,omitempty" validate:"gc-ttl:editable"`
 	TZ              string               `yaml:"tz,omitempty" validate:"tz:editable"`
 	TiCDCClusterID  string               `yaml:"ticdc_cluster_id"`
+	Source          string               `yaml:"source,omitempty" validate:"source:editable"`
 	NumaNode        string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
 	Config          map[string]any       `yaml:"config,omitempty" validate:"config:ignore"`
 	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
@@ -91,6 +92,15 @@ func (s *CDCSpec) IgnoreMonitorAgent() bool {
 	return s.IgnoreExporter
 }
 
+// GetSource returns source to download the component
+func (s *CDCSpec) GetSource() string {
+	if s.Source != "" {
+		return s.Source
+	} else {
+		return ComponentCDC
+	}
+}
+
 // CDCComponent represents CDC component.
 type CDCComponent struct{ Topology *Specification }
 
@@ -116,6 +126,7 @@ func (c *CDCComponent) Instances() []Instance {
 			ManageHost:   s.ManageHost,
 			Port:         s.Port,
 			SSHP:         s.SSHPort,
+			Source:       s.GetSource(),
 
 			Ports: []int{
 				s.Port,

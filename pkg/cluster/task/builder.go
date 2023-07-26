@@ -253,7 +253,7 @@ func (b *Builder) InitConfig(clusterName, clusterVersion string, specManager *sp
 	if err := specManager.Metadata(clusterName, meta); err == nil {
 		// get nightly version
 		if clusterVersion == utils.NightlyVersionAlias {
-			componentVersion, _, err = environment.GlobalEnv().V1Repository().LatestNightlyVersion(inst.ComponentName())
+			componentVersion, _, err = environment.GlobalEnv().V1Repository().LatestNightlyVersion(inst.ComponentSource())
 			if err != nil {
 				componentVersion = utils.Version(clusterVersion)
 			}
