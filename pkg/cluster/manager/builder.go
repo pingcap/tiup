@@ -210,7 +210,7 @@ func buildScaleOutTask(
 				tb = tb.DeploySpark(inst, sparkVer.String(), srcPath, deployDir)
 			default:
 				tb.CopyComponent(
-					inst.ComponentName(),
+					inst.ComponentSource(),
 					inst.OS(),
 					inst.Arch(),
 					version,
