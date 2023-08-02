@@ -134,6 +134,7 @@ type MasterSpec struct {
 	DeployDir       string          `yaml:"deploy_dir,omitempty"`
 	DataDir         string          `yaml:"data_dir,omitempty"`
 	LogDir          string          `yaml:"log_dir,omitempty"`
+	Source          string          `yaml:"source,omitempty" validate:"source:editable"`
 	NumaNode        string          `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
 	Config          map[string]any  `yaml:"config,omitempty" validate:"config:ignore"`
 	ResourceControl ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
@@ -202,6 +203,15 @@ func (s *MasterSpec) GetAdvertisePeerURL(enableTLS bool) string {
 	return fmt.Sprintf("%s://%s", scheme, utils.JoinHostPort(s.Host, s.PeerPort))
 }
 
+// GetSource returns source to download the component
+func (s *MasterSpec) GetSource() string {
+	if s.Source != "" {
+		return s.Source
+	} else {
+		return ComponentDMMaster
+	}
+}
+
 // WorkerSpec represents the Master topology specification in topology.yaml
 type WorkerSpec struct {
 	Host           string `yaml:"host"`
@@ -216,6 +226,7 @@ type WorkerSpec struct {
 	DeployDir       string          `yaml:"deploy_dir,omitempty"`
 	DataDir         string          `yaml:"data_dir,omitempty"`
 	LogDir          string          `yaml:"log_dir,omitempty"`
+	Source          string          `yaml:"source,omitempty" validate:"source:editable"`
 	NumaNode        string          `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
 	Config          map[string]any  `yaml:"config,omitempty" validate:"config:ignore"`
 	ResourceControl ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
@@ -270,6 +281,15 @@ func (s *WorkerSpec) IsImported() bool {
 // IgnoreMonitorAgent returns if the node does not have monitor agents available
 func (s *WorkerSpec) IgnoreMonitorAgent() bool {
 	return s.IgnoreExporter
+}
+
+// GetSource returns source to download the component
+func (s *WorkerSpec) GetSource() string {
+	if s.Source != "" {
+		return s.Source
+	} else {
+		return ComponentDMWorker
+	}
 }
 
 // UnmarshalYAML sets default values when unmarshaling the topology file
