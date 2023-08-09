@@ -43,6 +43,7 @@ type TiDBSpec struct {
 	StatusPort      int                  `yaml:"status_port" default:"10080"`
 	DeployDir       string               `yaml:"deploy_dir,omitempty"`
 	LogDir          string               `yaml:"log_dir,omitempty"`
+	Source          string               `yaml:"source,omitempty" validate:"source:editable"`
 	NumaNode        string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
 	NumaCores       string               `yaml:"numa_cores,omitempty" validate:"numa_cores:editable"`
 	Config          map[string]any       `yaml:"config,omitempty" validate:"config:ignore"`
@@ -88,6 +89,14 @@ func (s *TiDBSpec) IgnoreMonitorAgent() bool {
 	return s.IgnoreExporter
 }
 
+// GetSource returns source to download the component
+func (s *TiDBSpec) GetSource() string {
+	if s.Source == "" {
+		return ComponentTiDB
+	}
+	return s.Source
+}
+
 // TiDBComponent represents TiDB component.
 type TiDBComponent struct{ Topology *Specification }
 
@@ -114,6 +123,7 @@ func (c *TiDBComponent) Instances() []Instance {
 			ListenHost:   s.ListenHost,
 			Port:         s.Port,
 			SSHP:         s.SSHPort,
+			Source:       s.Source,
 
 			Ports: []int{
 				s.Port,
@@ -222,7 +232,7 @@ func (i *TiDBInstance) InitConfig(
 		return err
 	}
 
-	return checkConfig(ctx, e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths, nil)
+	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths, nil)
 }
 
 // setTLSConfig set TLS Config to support enable/disable TLS
