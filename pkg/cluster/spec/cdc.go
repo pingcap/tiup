@@ -94,11 +94,10 @@ func (s *CDCSpec) IgnoreMonitorAgent() bool {
 
 // GetSource returns source to download the component
 func (s *CDCSpec) GetSource() string {
-	if s.Source != "" {
-		return s.Source
-	} else {
+	if s.Source == "" {
 		return ComponentCDC
 	}
+	return s.Source
 }
 
 // CDCComponent represents CDC component.

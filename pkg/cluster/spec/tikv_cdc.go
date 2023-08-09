@@ -107,11 +107,10 @@ func (c *TiKVCDCComponent) Role() string {
 
 // GetSource returns source to download the component
 func (s *TiKVCDCSpec) GetSource() string {
-	if s.Source != "" {
-		return s.Source
-	} else {
+	if s.Source == "" {
 		return ComponentTiKVCDC
 	}
+	return s.Source
 }
 
 // Instances implements Component interface.

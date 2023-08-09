@@ -205,11 +205,10 @@ func (s *MasterSpec) GetAdvertisePeerURL(enableTLS bool) string {
 
 // GetSource returns source to download the component
 func (s *MasterSpec) GetSource() string {
-	if s.Source != "" {
-		return s.Source
-	} else {
+	if s.Source == "" {
 		return ComponentDMMaster
 	}
+	return s.Source
 }
 
 // WorkerSpec represents the Master topology specification in topology.yaml
@@ -285,11 +284,10 @@ func (s *WorkerSpec) IgnoreMonitorAgent() bool {
 
 // GetSource returns source to download the component
 func (s *WorkerSpec) GetSource() string {
-	if s.Source != "" {
-		return s.Source
-	} else {
+	if s.Source == "" {
 		return ComponentDMWorker
 	}
+	return s.Source
 }
 
 // UnmarshalYAML sets default values when unmarshaling the topology file

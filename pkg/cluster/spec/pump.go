@@ -114,11 +114,10 @@ func (s *PumpSpec) IgnoreMonitorAgent() bool {
 
 // GetSource returns source to download the component
 func (s *PumpSpec) GetSource() string {
-	if s.Source != "" {
-		return s.Source
-	} else {
-		return ComponentCDC
+	if s.Source == "" {
+		return ComponentPump
 	}
+	return s.Source
 }
 
 // PumpComponent represents Pump component.

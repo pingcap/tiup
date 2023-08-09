@@ -166,11 +166,10 @@ func (s *TiKVSpec) Labels() (map[string]string, error) {
 
 // GetSource returns source to download the component
 func (s *TiKVSpec) GetSource() string {
-	if s.Source != "" {
-		return s.Source
-	} else {
+	if s.Source == "" {
 		return ComponentTiKV
 	}
+	return s.Source
 }
 
 // TiKVComponent represents TiKV component.

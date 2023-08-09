@@ -306,11 +306,10 @@ func (i *BaseInstance) ComponentName() string {
 
 // ComponentSource implements Instance interface
 func (i *BaseInstance) ComponentSource() string {
-	if i.Source != "" {
-		return i.Source
-	} else {
+	if i.Source == "" {
 		return i.Name
 	}
+	return i.Source
 }
 
 // InstanceName implements Instance interface

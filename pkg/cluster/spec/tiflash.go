@@ -164,11 +164,10 @@ func (s *TiFlashSpec) IgnoreMonitorAgent() bool {
 
 // GetSource returns source to download the component
 func (s *TiFlashSpec) GetSource() string {
-	if s.Source != "" {
-		return s.Source
-	} else {
+	if s.Source == "" {
 		return ComponentTiFlash
 	}
+	return s.Source
 }
 
 // key names for storage config

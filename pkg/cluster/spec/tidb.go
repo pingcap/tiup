@@ -91,11 +91,10 @@ func (s *TiDBSpec) IgnoreMonitorAgent() bool {
 
 // GetSource returns source to download the component
 func (s *TiDBSpec) GetSource() string {
-	if s.Source != "" {
-		return s.Source
-	} else {
+	if s.Source == "" {
 		return ComponentTiDB
 	}
+	return s.Source
 }
 
 // TiDBComponent represents TiDB component.

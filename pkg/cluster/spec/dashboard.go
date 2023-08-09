@@ -97,11 +97,10 @@ func (s *DashboardSpec) IgnoreMonitorAgent() bool {
 
 // GetSource returns source to download the component
 func (s *DashboardSpec) GetSource() string {
-	if s.Source != "" {
-		return s.Source
-	} else {
+	if s.Source == "" {
 		return ComponentDashboard
 	}
+	return s.Source
 }
 
 // DashboardComponent represents Drainer component.

@@ -140,11 +140,10 @@ func (s *PDSpec) GetAdvertisePeerURL(enableTLS bool) string {
 
 // GetSource returns source to download the component
 func (s *PDSpec) GetSource() string {
-	if s.Source != "" {
-		return s.Source
-	} else {
+	if s.Source == "" {
 		return ComponentPD
 	}
+	return s.Source
 }
 
 // PDComponent represents PD component.

@@ -115,11 +115,10 @@ func (s *DrainerSpec) IgnoreMonitorAgent() bool {
 
 // GetSource returns source to download the component
 func (s *DrainerSpec) GetSource() string {
-	if s.Source != "" {
-		return s.Source
-	} else {
+	if s.Source == "" {
 		return ComponentDrainer
 	}
+	return s.Source
 }
 
 // DrainerComponent represents Drainer component.
