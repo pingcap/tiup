@@ -79,7 +79,7 @@ func Upgrade(
 				pdEndpoints = strings.Split(forcePDEndpoints, ",")
 				logger.Warnf("%s is set, using %s as PD endpoints", EnvNamePDEndpointOverwrite, pdEndpoints)
 			} else {
-				pdEndpoints = topo.(*spec.Specification).GetPDList()
+				pdEndpoints = topo.(*spec.Specification).GetPDListWithManageHost()
 			}
 			pdClient := api.NewPDClient(ctx, pdEndpoints, 10*time.Second, tlsCfg)
 			origLeaderScheduleLimit, origRegionScheduleLimit, err = increaseScheduleLimit(ctx, pdClient)
@@ -143,7 +143,7 @@ func Upgrade(
 
 				// during the upgrade process, endpoint addresses should not change, so only new the client once.
 				if cdcOpenAPIClient == nil {
-					cdcOpenAPIClient = api.NewCDCOpenAPIClient(ctx, topo.(*spec.Specification).GetCDCList(), 5*time.Second, tlsCfg)
+					cdcOpenAPIClient = api.NewCDCOpenAPIClient(ctx, topo.(*spec.Specification).GetCDCListWithManageHost(), 5*time.Second, tlsCfg)
 				}
 
 				capture, err := cdcOpenAPIClient.GetCaptureByAddr(address)

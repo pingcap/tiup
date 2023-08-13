@@ -25,9 +25,32 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
+// TiFlashRole is the role of TiFlash.
+type TiFlashRole string
+
+const (
+	// TiFlashRoleNormal is used when TiFlash is not in disaggregated mode.
+	TiFlashRoleNormal TiFlashRole = "normal"
+
+	// TiFlashRoleDisaggWrite is used when TiFlash is in disaggregated mode and is the write node.
+	TiFlashRoleDisaggWrite TiFlashRole = "write"
+	// TiFlashRoleDisaggCompute is used when TiFlash is in disaggregated mode and is the compute node.
+	TiFlashRoleDisaggCompute TiFlashRole = "compute"
+)
+
+// DisaggOptions contains configs to run TiFlash in disaggregated mode.
+type DisaggOptions struct {
+	S3Endpoint string `yaml:"s3_endpoint"`
+	Bucket     string `yaml:"bucket"`
+	AccessKey  string `yaml:"access_key"`
+	SecretKey  string `yaml:"secret_key"`
+}
+
 // TiFlashInstance represent a running TiFlash
 type TiFlashInstance struct {
 	instance
+	Role            TiFlashRole
+	DisaggOpts      DisaggOptions
 	TCPPort         int
 	ServicePort     int
 	ProxyPort       int
@@ -38,7 +61,11 @@ type TiFlashInstance struct {
 }
 
 // NewTiFlashInstance return a TiFlashInstance
-func NewTiFlashInstance(binPath, dir, host, configPath string, id int, pds []*PDInstance, dbs []*TiDBInstance, version string) *TiFlashInstance {
+func NewTiFlashInstance(role TiFlashRole, disaggOptions DisaggOptions, binPath, dir, host, configPath string, id int, pds []*PDInstance, dbs []*TiDBInstance, version string) *TiFlashInstance {
+	if role != TiFlashRoleNormal && role != TiFlashRoleDisaggWrite && role != TiFlashRoleDisaggCompute {
+		panic(fmt.Sprintf("Unknown TiFlash role %s", role))
+	}
+
 	httpPort := 8123
 	if !tidbver.TiFlashNotNeedHTTPPortConfig(version) {
 		httpPort = utils.MustGetFreePort(host, httpPort)
@@ -53,7 +80,9 @@ func NewTiFlashInstance(binPath, dir, host, configPath string, id int, pds []*PD
 			StatusPort: utils.MustGetFreePort(host, 8234),
 			ConfigPath: configPath,
 		},
-		TCPPort:         utils.MustGetFreePort(host, 9000),
+		Role:            role,
+		DisaggOpts:      disaggOptions,
+		TCPPort:         utils.MustGetFreePort(host, 9100), // 9000 for default object store port
 		ServicePort:     utils.MustGetFreePort(host, 3930),
 		ProxyPort:       utils.MustGetFreePort(host, 20170),
 		ProxyStatusPort: utils.MustGetFreePort(host, 20292),
@@ -80,20 +109,35 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version utils.Version) e
 		return inst.startOld(ctx, version)
 	}
 
+	proxyConfigPath := filepath.Join(inst.Dir, "tiflash_proxy.toml")
+	if err := prepareConfig(
+		proxyConfigPath,
+		"",
+		inst.getProxyConfig(),
+	); err != nil {
+		return err
+	}
+
+	configPath := filepath.Join(inst.Dir, "tiflash.toml")
+	if err := prepareConfig(
+		configPath,
+		inst.ConfigPath,
+		inst.getConfig(),
+	); err != nil {
+		return err
+	}
+
 	endpoints := pdEndpoints(inst.pds, false)
 
 	args := []string{
 		"server",
 	}
-	if inst.ConfigPath != "" {
-		args = append(args, fmt.Sprintf("--config-file=%s", inst.ConfigPath))
-	}
 	args = append(args,
+		fmt.Sprintf("--config-file=%s", configPath),
 		"--",
 		fmt.Sprintf("--tmp_path=%s", filepath.Join(inst.Dir, "tmp")),
 		fmt.Sprintf("--path=%s", filepath.Join(inst.Dir, "data")),
 		fmt.Sprintf("--listen_host=%s", inst.Host),
-		fmt.Sprintf("--tcp_port=%d", inst.TCPPort),
 		fmt.Sprintf("--logger.log=%s", inst.LogFile()),
 		fmt.Sprintf("--logger.errorlog=%s", filepath.Join(inst.Dir, "tiflash_error.log")),
 		fmt.Sprintf("--status.metrics_port=%d", inst.StatusPort),

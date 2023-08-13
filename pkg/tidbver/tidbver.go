@@ -66,6 +66,15 @@ func TiFlashNotNeedHTTPPortConfig(version string) bool {
 	return semver.Compare(version, "v7.1.0") >= 0 || strings.Contains(version, "nightly")
 }
 
+// TiFlashRequiresTCPPortConfig return if given version of TiFlash requires tcp_port config.
+// TiFlash 7.1.0 and later versions won't listen to tpc_port if the config is not given, which is recommended.
+// However this config is required for pre-7.1.0 versions because TiFlash will listen to it anyway,
+// and we must make sure the port is being configured as specified in the topology file,
+// otherwise multiple TiFlash instances will conflict.
+func TiFlashRequiresTCPPortConfig(version string) bool {
+	return semver.Compare(version, "v7.1.0") < 0 && !strings.Contains(version, "nightly")
+}
+
 // TiFlashNotNeedSomeConfig return if given version of TiFlash do not need some config like runAsDaemon
 func TiFlashNotNeedSomeConfig(version string) bool {
 	// https://github.com/pingcap/tiup/pull/1673
@@ -73,9 +82,20 @@ func TiFlashNotNeedSomeConfig(version string) bool {
 }
 
 // TiFlashPlaygroundNewStartMode return true if the given version of TiFlash could be started
-// using the new implementation in TiUP playground
+// with the new implementation in TiUP playground.
 func TiFlashPlaygroundNewStartMode(version string) bool {
 	return semver.Compare(version, "v7.1.0") >= 0 || strings.Contains(version, "nightly")
+}
+
+// TiDBSupportDisagg returns true if the given version of TiDB and TiFlash supports
+// disaggregated mode.
+func TiDBSupportDisagg(version string) bool {
+	return semver.Compare(version, "v7.0.0") >= 0 || strings.Contains(version, "nightly")
+}
+
+// PDSupportMicroServices returns true if the given version of PD supports micro services.
+func PDSupportMicroServices(version string) bool {
+	return semver.Compare(version, "v7.3.0") >= 0 || strings.Contains(version, "nightly")
 }
 
 // TiCDCSupportConfigFile return if given version of TiCDC support config file

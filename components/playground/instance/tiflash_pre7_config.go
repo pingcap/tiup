@@ -34,10 +34,10 @@ const tiflashMarkCacheSizeOld = `mark_cache_size = 5368709120`
 const tiflashConfigOld = `
 default_profile = "default"
 display_name = "TiFlash"
-%[2]s
+http_port = %[2]d
 listen_host = "0.0.0.0"
-path = "%[5]s"
 tcp_port = %[3]d
+path = "%[5]s"
 tmp_path = "%[6]s"
 %[14]s
 %[13]s
@@ -109,11 +109,11 @@ func writeTiFlashConfigOld(w io.Writer, version utils.Version, tcpPort, httpPort
 	var conf string
 
 	if tidbver.TiFlashNotNeedSomeConfig(version.String()) {
-		conf = fmt.Sprintf(tiflashConfigOld, pdAddrs, fmt.Sprintf(`http_port = %d`, httpPort), tcpPort,
+		conf = fmt.Sprintf(tiflashConfigOld, pdAddrs, httpPort, tcpPort,
 			deployDir, dataDir, tmpDir, logDir, servicePort, metricsPort,
 			ip, strings.Join(tidbStatusAddrs, ","), clusterManagerPath, "", "")
 	} else {
-		conf = fmt.Sprintf(tiflashConfigOld, pdAddrs, fmt.Sprintf(`http_port = %d`, httpPort), tcpPort,
+		conf = fmt.Sprintf(tiflashConfigOld, pdAddrs, httpPort, tcpPort,
 			deployDir, dataDir, tmpDir, logDir, servicePort, metricsPort,
 			ip, strings.Join(tidbStatusAddrs, ","), clusterManagerPath, tiflashDaemonConfigOld, tiflashMarkCacheSizeOld)
 	}

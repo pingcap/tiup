@@ -96,6 +96,7 @@ type DisplayProps struct {
 	Prefix string `json:"prefix,omitempty"`
 	Suffix string `json:"suffix,omitempty"` // If `Mode == Done / Error`, Suffix is not printed
 	Mode   Mode   `json:"mode,omitempty"`
+	Detail string `json:"detail,omitempty"`
 }
 
 // String implements string

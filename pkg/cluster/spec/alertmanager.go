@@ -30,7 +30,7 @@ import (
 // AlertmanagerSpec represents the AlertManager topology specification in topology.yaml
 type AlertmanagerSpec struct {
 	Host            string               `yaml:"host"`
-	ManageHost      string               `yaml:"manage_host,omitempty"`
+	ManageHost      string               `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
 	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported        bool                 `yaml:"imported,omitempty"`
 	Patched         bool                 `yaml:"patched,omitempty"`
@@ -65,6 +65,14 @@ func (s *AlertmanagerSpec) SSH() (string, int) {
 // GetMainPort returns the main port of the instance
 func (s *AlertmanagerSpec) GetMainPort() int {
 	return s.WebPort
+}
+
+// GetManageHost returns the manage host of the instance
+func (s *AlertmanagerSpec) GetManageHost() string {
+	if s.ManageHost != "" {
+		return s.ManageHost
+	}
+	return s.Host
 }
 
 // IsImported returns if the node is imported from TiDB-Ansible
@@ -117,10 +125,10 @@ func (c *AlertManagerComponent) Instances() []Instance {
 					s.DataDir,
 				},
 				StatusFn: func(_ context.Context, timeout time.Duration, _ *tls.Config, _ ...string) string {
-					return statusByHost(s.Host, s.WebPort, "/-/ready", timeout, nil)
+					return statusByHost(s.GetManageHost(), s.WebPort, "/-/ready", timeout, nil)
 				},
 				UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
-					return UptimeByHost(s.Host, s.WebPort, timeout, tlsCfg)
+					return UptimeByHost(s.GetManageHost(), s.WebPort, timeout, tlsCfg)
 				},
 			},
 			topo: c.Topology,
@@ -157,10 +165,11 @@ func (i *AlertManagerInstance) InitConfig(
 		peers = append(peers, utils.JoinHostPort(amspec.Host, amspec.ClusterPort))
 	}
 	cfg := &scripts.AlertManagerScript{
-		WebListenAddr:     utils.JoinHostPort(i.GetListenHost(), spec.WebPort),
-		WebExternalURL:    fmt.Sprintf("http://%s", utils.JoinHostPort(spec.Host, spec.WebPort)),
-		ClusterPeers:      peers,
-		ClusterListenAddr: utils.JoinHostPort(i.GetListenHost(), spec.ClusterPort),
+		WebListenAddr:  utils.JoinHostPort(i.GetListenHost(), spec.WebPort),
+		WebExternalURL: fmt.Sprintf("http://%s", utils.JoinHostPort(spec.Host, spec.WebPort)),
+		ClusterPeers:   peers,
+		// ClusterListenAddr cannot use i.GetListenHost due to https://github.com/prometheus/alertmanager/issues/2284 and https://github.com/prometheus/alertmanager/issues/1271
+		ClusterListenAddr: utils.JoinHostPort(i.GetHost(), spec.ClusterPort),
 
 		DeployDir: paths.Deploy,
 		LogDir:    paths.Log,
@@ -199,7 +208,7 @@ func (i *AlertManagerInstance) InitConfig(
 	if err := i.TransferLocalConfigFile(ctx, e, configPath, dst); err != nil {
 		return err
 	}
-	return checkConfig(ctx, e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".yml", paths, nil)
+	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".yml", paths, nil)
 }
 
 // ScaleConfig deploy temporary config on scaling

@@ -452,7 +452,7 @@ func scaleInCDC(
 	deferInstances := make([]spec.Instance, 0, 1)
 	for _, instance := range instances {
 		address := instance.(*spec.CDCInstance).GetAddr()
-		client := api.NewCDCOpenAPIClient(ctx, []string{address}, 5*time.Second, tlsCfg)
+		client := api.NewCDCOpenAPIClient(ctx, []string{utils.JoinHostPort(instance.GetManageHost(), instance.GetPort())}, 5*time.Second, tlsCfg)
 
 		capture, err := client.GetCaptureByAddr(address)
 		if err != nil {

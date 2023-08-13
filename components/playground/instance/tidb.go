@@ -16,7 +16,6 @@ package instance
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -31,24 +30,13 @@ type TiDBInstance struct {
 	pds []*PDInstance
 	Process
 	enableBinlog bool
-	TempConfig   string
+	isDisaggMode bool
 }
 
 // NewTiDBInstance return a TiDBInstance
-func NewTiDBInstance(binPath string, dir, host, configPath string, id, port int, pds []*PDInstance, enableBinlog bool) *TiDBInstance {
-	var tempName string
+func NewTiDBInstance(binPath string, dir, host, configPath string, id, port int, pds []*PDInstance, enableBinlog bool, isDisaggMode bool) *TiDBInstance {
 	if port <= 0 {
 		port = 4000
-	}
-	if configPath == "" {
-		tempFile, err := os.CreateTemp("", "tidb-playground-config")
-		if err == nil {
-			_, err2 := tempFile.WriteString("[security]\nauto-tls=true\n")
-			if err2 == nil {
-				configPath = tempFile.Name()
-				tempName = configPath
-			}
-		}
 	}
 	return &TiDBInstance{
 		instance: instance{
@@ -62,12 +50,21 @@ func NewTiDBInstance(binPath string, dir, host, configPath string, id, port int,
 		},
 		pds:          pds,
 		enableBinlog: enableBinlog,
-		TempConfig:   tempName,
+		isDisaggMode: isDisaggMode,
 	}
 }
 
 // Start calls set inst.cmd and Start
 func (inst *TiDBInstance) Start(ctx context.Context, version utils.Version) error {
+	configPath := filepath.Join(inst.Dir, "tidb.toml")
+	if err := prepareConfig(
+		configPath,
+		inst.ConfigPath,
+		inst.getConfig(),
+	); err != nil {
+		return err
+	}
+
 	endpoints := pdEndpoints(inst.pds, false)
 
 	args := []string{
@@ -77,9 +74,7 @@ func (inst *TiDBInstance) Start(ctx context.Context, version utils.Version) erro
 		fmt.Sprintf("--status=%d", inst.StatusPort),
 		fmt.Sprintf("--path=%s", strings.Join(endpoints, ",")),
 		fmt.Sprintf("--log-file=%s", filepath.Join(inst.Dir, "tidb.log")),
-	}
-	if inst.ConfigPath != "" {
-		args = append(args, fmt.Sprintf("--config=%s", inst.ConfigPath))
+		fmt.Sprintf("--config=%s", configPath),
 	}
 	if inst.enableBinlog {
 		args = append(args, "--enable-binlog=true")
