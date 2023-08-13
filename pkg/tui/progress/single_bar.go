@@ -31,7 +31,7 @@ type singleBarCore struct {
 
 func (b *singleBarCore) renderDoneOrError(w io.Writer, dp *DisplayProps) {
 	width := int(termSizeWidth.Load())
-	var tail string
+	var tail, detail string
 	var tailColor *color.Color
 	switch dp.Mode {
 	case ModeDone:
@@ -51,7 +51,10 @@ func (b *singleBarCore) renderDoneOrError(w io.Writer, dp *DisplayProps) {
 	} else {
 		displayPrefix = runewidth.Truncate(dp.Prefix, width-prefixWidth, "")
 	}
-	_, _ = fmt.Fprintf(w, "%s ... %s", displayPrefix, tailColor.Sprint(tail))
+	if len(dp.Detail) > 0 {
+		detail = ": " + dp.Detail
+	}
+	_, _ = fmt.Fprintf(w, "%s ... %s%s", displayPrefix, tailColor.Sprint(tail), detail)
 }
 
 func (b *singleBarCore) renderSpinner(w io.Writer, dp *DisplayProps) {

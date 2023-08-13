@@ -695,7 +695,7 @@ func (m *Manager) checkRegionsInfo(clusterName string, topo *spec.Specification,
 	}
 	pdClient := api.NewPDClient(
 		context.WithValue(context.TODO(), logprinter.ContextKeyLogger, m.logger),
-		topo.GetPDList(),
+		topo.GetPDListWithManageHost(),
 		time.Second*time.Duration(gOpt.APITimeout),
 		tlsConfig,
 	)

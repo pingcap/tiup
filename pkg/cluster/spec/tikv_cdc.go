@@ -34,7 +34,7 @@ import (
 // TiKVCDCSpec represents the TiKVCDC topology specification in topology.yaml
 type TiKVCDCSpec struct {
 	Host            string               `yaml:"host"`
-	ManageHost      string               `yaml:"manage_host,omitempty"`
+	ManageHost      string               `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
 	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported        bool                 `yaml:"imported,omitempty"`
 	Patched         bool                 `yaml:"patched,omitempty"`
@@ -46,6 +46,7 @@ type TiKVCDCSpec struct {
 	Offline         bool                 `yaml:"offline,omitempty"`
 	GCTTL           int64                `yaml:"gc-ttl,omitempty" validate:"gc-ttl:editable"`
 	TZ              string               `yaml:"tz,omitempty" validate:"tz:editable"`
+	Source          string               `yaml:"source,omitempty" validate:"source:editable"`
 	NumaNode        string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
 	Config          map[string]any       `yaml:"config,omitempty" validate:"config:ignore"`
 	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
@@ -72,6 +73,14 @@ func (s *TiKVCDCSpec) GetMainPort() int {
 	return s.Port
 }
 
+// GetManageHost returns the manage host of the instance
+func (s *TiKVCDCSpec) GetManageHost() string {
+	if s.ManageHost != "" {
+		return s.ManageHost
+	}
+	return s.Host
+}
+
 // IsImported returns if the node is imported from TiDB-Ansible
 func (s *TiKVCDCSpec) IsImported() bool {
 	// TiDB-Ansible do not support TiKV-CDC
@@ -96,6 +105,14 @@ func (c *TiKVCDCComponent) Role() string {
 	return ComponentTiKVCDC
 }
 
+// GetSource returns source to download the component
+func (s *TiKVCDCSpec) GetSource() string {
+	if s.Source == "" {
+		return ComponentTiKVCDC
+	}
+	return s.Source
+}
+
 // Instances implements Component interface.
 func (c *TiKVCDCComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.TiKVCDCServers))
@@ -108,6 +125,7 @@ func (c *TiKVCDCComponent) Instances() []Instance {
 			ManageHost:   s.ManageHost,
 			Port:         s.Port,
 			SSHP:         s.SSHPort,
+			Source:       s.GetSource(),
 
 			Ports: []int{
 				s.Port,
@@ -116,10 +134,10 @@ func (c *TiKVCDCComponent) Instances() []Instance {
 				s.DeployDir,
 			},
 			StatusFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config, _ ...string) string {
-				return statusByHost(s.Host, s.Port, "/status", timeout, tlsCfg)
+				return statusByHost(s.GetManageHost(), s.Port, "/status", timeout, tlsCfg)
 			},
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
-				return UptimeByHost(s.Host, s.Port, timeout, tlsCfg)
+				return UptimeByHost(s.GetManageHost(), s.Port, timeout, tlsCfg)
 			},
 		}, c.Topology}
 		if s.DataDir != "" {

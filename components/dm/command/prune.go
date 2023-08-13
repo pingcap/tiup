@@ -76,7 +76,7 @@ func clearOutDatedEtcdInfo(clusterName string, metadata *spec.Metadata, opt oper
 	if err != nil {
 		return err
 	}
-	dmMasterClient := api.NewDMMasterClient(topo.GetMasterList(), 10*time.Second, tlsCfg)
+	dmMasterClient := api.NewDMMasterClient(topo.GetMasterListWithManageHost(), 10*time.Second, tlsCfg)
 	registeredMasters, registeredWorkers, err := dmMasterClient.GetRegisteredMembers()
 	if err != nil {
 		return err

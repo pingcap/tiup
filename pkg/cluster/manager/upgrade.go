@@ -100,14 +100,14 @@ Do you want to continue? [y/N]:`,
 				}
 			}
 
-			version := m.bindVersion(inst.ComponentName(), clusterVersion)
+			version := m.bindVersion(inst.ComponentSource(), clusterVersion)
 
 			// Download component from repository
 			key := fmt.Sprintf("%s-%s-%s-%s", compName, version, inst.OS(), inst.Arch())
 			if _, found := uniqueComps[key]; !found {
 				uniqueComps[key] = struct{}{}
 				t := task.NewBuilder(m.logger).
-					Download(inst.ComponentName(), inst.OS(), inst.Arch(), version).
+					Download(inst.ComponentSource(), inst.OS(), inst.Arch(), version).
 					Build()
 				downloadCompTasks = append(downloadCompTasks, t)
 			}
@@ -129,7 +129,7 @@ Do you want to continue? [y/N]:`,
 				switch inst.ComponentName() {
 				case spec.ComponentPrometheus, spec.ComponentGrafana, spec.ComponentAlertmanager:
 					tb.CopyComponent(
-						inst.ComponentName(),
+						inst.ComponentSource(),
 						inst.OS(),
 						inst.Arch(),
 						version,
@@ -142,7 +142,7 @@ Do you want to continue? [y/N]:`,
 			}
 
 			// backup files of the old version
-			tb = tb.BackupComponent(inst.ComponentName(), base.Version, inst.GetManageHost(), deployDir)
+			tb = tb.BackupComponent(inst.ComponentSource(), base.Version, inst.GetManageHost(), deployDir)
 
 			if deployerInstance, ok := inst.(DeployerInstance); ok {
 				deployerInstance.Deploy(tb, "", deployDir, version, name, clusterVersion)
@@ -161,7 +161,7 @@ Do you want to continue? [y/N]:`,
 					tb = tb.DeploySpark(inst, sparkVer.String(), "" /* default srcPath */, deployDir)
 				default:
 					tb = tb.CopyComponent(
-						inst.ComponentName(),
+						inst.ComponentSource(),
 						inst.OS(),
 						inst.Arch(),
 						version,
