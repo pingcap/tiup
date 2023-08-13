@@ -42,9 +42,9 @@ monitored:
 
 # # Server configs are used to specify the runtime configuration of TiDB components.
 # # All configuration items can be found in TiDB docs:
-# # - TiDB: https://pingcap.com/docs/stable/reference/configuration/tidb-server/configuration-file/
-# # - TiKV: https://pingcap.com/docs/stable/reference/configuration/tikv-server/configuration-file/
-# # - PD: https://pingcap.com/docs/stable/reference/configuration/pd-server/configuration-file/
+# # - TiDB: https://docs.pingcap.com/tidb/stable/tidb-configuration-file
+# # - TiKV: https://docs.pingcap.com/tidb/stable/tikv-configuration-file
+# # - PD: https://docs.pingcap.com/tidb/stable/pd-configuration-file
 # # - TiFlash: https://docs.pingcap.com/tidb/stable/tiflash-configuration
 # #
 # # All configuration items use points to represent the hierarchy, e.g:
@@ -224,6 +224,7 @@ tiflash_servers:
     # # SSH port of the server.
     # ssh_port: 22
     # # TiFlash TCP Service port.
+    # # Since 7.1.0, it is not actually listened, and only being used as part of the instance identity.
     tcp_port: 9000
     # # TiFlash raft service and coprocessor service listening address.
     flash_service_port: 3930

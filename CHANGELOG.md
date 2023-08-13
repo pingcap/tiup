@@ -1,5 +1,57 @@
 TiUP Changelog
 
+## [1.12.5] 2023-7-17
+
+### Fix
+
+- Fix cannot start tiflash above v7.1.0 in `tiup-cluster` (#2230, @zanmato1984)
+
+## [1.12.4] 2023-7-13
+
+### Fix
+
+- Fix cannot show tiflash uptime in `tiup-cluster` (#2227, @nexustar)
+
+### Improvement
+
+- Remove tcp_port for tiflash in `tiup-cluster` and `tiup-playground` (#2220, @zanmato1984)
+
+## [1.12.3] 2023-6-14
+
+### Fixes
+
+- Fix cannot edit manage_host on an exist cluster in `tiup-cluster` (#2210, @nexustar)
+- Fix still use host instead of manage_host in `tiup-cluster` (#2206 #2207, @nexustar)
+
+### Improvement
+
+- Check if the compnoent exists when uninstall in `tiup` (#2209, @srstack)
+
+## [1.12.2] 2023-5-19
+
+### Notes
+
+- Chore: migrate to new prow reviewing (#2160, @wuhuizuo)
+- Publish nightly tiup packages based on master branch (#2192, @nexustar)
+
+### Fixes
+
+- Fix cannot start alertmanager in `tiup-cluster` (#2200, @nexustar)
+- Fix TiFlash config not working in `tiup-playground` (#2190, @breezewish)
+- Fix --tiflash 0 not working in `tiup-playground` (#2189, @breezewish)
+- Fix port conflict when cluster version >= 5.4 and < 7.1 in `tiup-playground` (#2188, @Lloyd-Pottiger)
+- Fix cannot prune/scale-in tikv when use ipv6 in `tiup-cluster` (#2180, @nexustar)
+- Fix exec error when use ipv6 in `tiup-cluster` (#2193, @nexustar)
+
+### Improvements
+
+- Output PD endpoints in tikv-slim mode in `tiup-playground` (#2196, @breezewish)
+- Add --mode=tidb-disagg in `tiup-playground` (#2194, @breezewish)
+- Add option to specify TiKV port in `tiup-playground` (#2183, @dveeden)
+- include '--comments' in mysql command line arguments in `tiup-playground` (#2187, @mjonss)
+- Code refine for TiFlash in `tiup-playground` (#2177, @breezewish)
+- Code refine for args in `tiup-playground` (#2178, @breezewish)
+
 ## [1.12.1] 2023-4-13
 
 ### Fix

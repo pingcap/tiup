@@ -51,7 +51,7 @@ which is used to uninstall tiup.
 			teleCommand = cmd.CommandPath()
 			env := environment.GlobalEnv()
 			if self {
-				deletable := []string{"bin", "manifest", "manifests", "components", "storage/cluster/packages"}
+				deletable := []string{"storage/cluster/packages", "components", "manifests", "manifest", "bin"}
 				for _, dir := range deletable {
 					if err := os.RemoveAll(env.Profile().Path(dir)); err != nil {
 						return errors.Trace(err)
@@ -86,6 +86,9 @@ func removeComponents(env *environment.Environment, specs []string, all bool) er
 		if strings.Contains(spec, ":") {
 			parts := strings.SplitN(spec, ":", 2)
 			// after this version is deleted, component will have no version left. delete the whole component dir directly
+			if !utils.IsExist(env.LocalPath(localdata.ComponentParentDir, parts[0])) {
+				return errors.Trace(fmt.Errorf("component `%s` is not installed, please use `tiup list %s` to check", parts[0], parts[0]))
+			}
 			dir, err := os.ReadDir(env.LocalPath(localdata.ComponentParentDir, parts[0]))
 			if err != nil {
 				return errors.Trace(err)
@@ -99,6 +102,7 @@ func removeComponents(env *environment.Environment, specs []string, all bool) er
 			} else {
 				paths = append(paths, env.LocalPath(localdata.ComponentParentDir, parts[0], parts[1]))
 			}
+			// if no more version left, delete the whole component dir
 			if len(dir)-len(paths) < 1 {
 				paths = append(paths, env.LocalPath(localdata.ComponentParentDir, parts[0]))
 			}
@@ -110,6 +114,10 @@ func removeComponents(env *environment.Environment, specs []string, all bool) er
 			paths = append(paths, env.LocalPath(localdata.ComponentParentDir, spec))
 		}
 		for _, path := range paths {
+			if !utils.IsExist(path) {
+				return errors.Trace(fmt.Errorf("component `%s` is not installed, please check", spec))
+			}
+			fmt.Println(path)
 			if err := os.RemoveAll(path); err != nil {
 				return errors.Trace(err)
 			}

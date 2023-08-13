@@ -34,7 +34,7 @@ import (
 // CDCSpec represents the CDC topology specification in topology.yaml
 type CDCSpec struct {
 	Host            string               `yaml:"host"`
-	ManageHost      string               `yaml:"manage_host,omitempty"`
+	ManageHost      string               `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
 	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported        bool                 `yaml:"imported,omitempty"`
 	Patched         bool                 `yaml:"patched,omitempty"`
@@ -47,6 +47,7 @@ type CDCSpec struct {
 	GCTTL           int64                `yaml:"gc-ttl,omitempty" validate:"gc-ttl:editable"`
 	TZ              string               `yaml:"tz,omitempty" validate:"tz:editable"`
 	TiCDCClusterID  string               `yaml:"ticdc_cluster_id"`
+	Source          string               `yaml:"source,omitempty" validate:"source:editable"`
 	NumaNode        string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
 	Config          map[string]any       `yaml:"config,omitempty" validate:"config:ignore"`
 	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
@@ -73,6 +74,14 @@ func (s *CDCSpec) GetMainPort() int {
 	return s.Port
 }
 
+// GetManageHost returns the manage host of the instance
+func (s *CDCSpec) GetManageHost() string {
+	if s.ManageHost != "" {
+		return s.ManageHost
+	}
+	return s.Host
+}
+
 // IsImported returns if the node is imported from TiDB-Ansible
 func (s *CDCSpec) IsImported() bool {
 	return s.Imported
@@ -81,6 +90,14 @@ func (s *CDCSpec) IsImported() bool {
 // IgnoreMonitorAgent returns if the node does not have monitor agents available
 func (s *CDCSpec) IgnoreMonitorAgent() bool {
 	return s.IgnoreExporter
+}
+
+// GetSource returns source to download the component
+func (s *CDCSpec) GetSource() string {
+	if s.Source == "" {
+		return ComponentCDC
+	}
+	return s.Source
 }
 
 // CDCComponent represents CDC component.
@@ -108,6 +125,7 @@ func (c *CDCComponent) Instances() []Instance {
 			ManageHost:   s.ManageHost,
 			Port:         s.Port,
 			SSHP:         s.SSHPort,
+			Source:       s.GetSource(),
 
 			Ports: []int{
 				s.Port,
@@ -116,10 +134,10 @@ func (c *CDCComponent) Instances() []Instance {
 				s.DeployDir,
 			},
 			StatusFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config, _ ...string) string {
-				return statusByHost(s.Host, s.Port, "/status", timeout, tlsCfg)
+				return statusByHost(s.GetManageHost(), s.Port, "/status", timeout, tlsCfg)
 			},
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
-				return UptimeByHost(s.Host, s.Port, timeout, tlsCfg)
+				return UptimeByHost(s.GetManageHost(), s.Port, timeout, tlsCfg)
 			},
 		}, c.Topology}
 		if s.DataDir != "" {
@@ -190,7 +208,7 @@ func (i *CDCInstance) InitConfig(
 	}
 	cfg := &scripts.CDCScript{
 		Addr:              utils.JoinHostPort(i.GetListenHost(), spec.Port),
-		AdvertiseAddr:     i.GetAddr(),
+		AdvertiseAddr:     utils.JoinHostPort(i.GetHost(), i.GetPort()),
 		PD:                strings.Join(pds, ","),
 		GCTTL:             spec.GCTTL,
 		TZ:                spec.TZ,
@@ -261,7 +279,7 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 	}
 
 	start := time.Now()
-	client := api.NewCDCOpenAPIClient(ctx, topo.(*Specification).GetCDCList(), 5*time.Second, tlsCfg)
+	client := api.NewCDCOpenAPIClient(ctx, topo.(*Specification).GetCDCListWithManageHost(), 5*time.Second, tlsCfg)
 	if err := client.Healthy(); err != nil {
 		logger.Debugf("cdc pre-restart skipped, the cluster unhealthy, trigger hard restart, "+
 			"addr: %s, err: %+v, elapsed: %+v", address, err, time.Since(start))
@@ -328,7 +346,7 @@ func (i *CDCInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tl
 	start := time.Now()
 	address := i.GetAddr()
 
-	client := api.NewCDCOpenAPIClient(ctx, []string{address}, 5*time.Second, tlsCfg)
+	client := api.NewCDCOpenAPIClient(ctx, []string{utils.JoinHostPort(i.GetManageHost(), i.GetPort())}, 5*time.Second, tlsCfg)
 	err := client.IsCaptureAlive()
 	if err != nil {
 		logger.Debugf("cdc post-restart finished, get capture status failed, addr: %s, err: %+v, elapsed: %+v", address, err, time.Since(start))

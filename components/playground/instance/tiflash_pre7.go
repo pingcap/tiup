@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"path"
 	"path/filepath"
 	"time"
@@ -179,19 +178,6 @@ func (inst *TiFlashInstance) checkConfigOld(deployDir, clusterManagerPath string
 	// Always use the tiflash proxy config file in the instance directory
 	setTiFlashProxyConfigPathOld(cfg, proxyCfgPath)
 	return errors.Trace(overwriteBuf(flashBuf, cfg))
-}
-
-func unmarshalConfig(path string) (map[string]any, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	c := make(map[string]any)
-	err = toml.Unmarshal(data, &c)
-	if err != nil {
-		return nil, err
-	}
-	return c, nil
 }
 
 func overwriteBuf(buf *bytes.Buffer, overwrite map[string]any) (err error) {
