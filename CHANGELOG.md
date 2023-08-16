@@ -1,5 +1,32 @@
 TiUP Changelog
 
+## [1.12.5] 2023-7-17
+
+### Fix
+
+- Fix cannot start tiflash above v7.1.0 in `tiup-cluster` (#2230, @zanmato1984)
+
+## [1.12.4] 2023-7-13
+
+### Fix
+
+- Fix cannot show tiflash uptime in `tiup-cluster` (#2227, @nexustar)
+
+### Improvement
+
+- Remove tcp_port for tiflash in `tiup-cluster` and `tiup-playground` (#2220, @zanmato1984)
+
+## [1.12.3] 2023-6-14
+
+### Fixes
+
+- Fix cannot edit manage_host on an exist cluster in `tiup-cluster` (#2210, @nexustar)
+- Fix still use host instead of manage_host in `tiup-cluster` (#2206 #2207, @nexustar)
+
+### Improvement
+
+- Check if the compnoent exists when uninstall in `tiup` (#2209, @srstack)
+
 ## [1.12.2] 2023-5-19
 
 ### Notes

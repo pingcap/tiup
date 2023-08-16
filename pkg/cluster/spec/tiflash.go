@@ -57,6 +57,7 @@ type TiFlashSpec struct {
 	LogDir               string               `yaml:"log_dir,omitempty"`
 	TmpDir               string               `yaml:"tmp_path,omitempty"`
 	Offline              bool                 `yaml:"offline,omitempty"`
+	Source               string               `yaml:"source,omitempty" validate:"source:editable"`
 	NumaNode             string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
 	NumaCores            string               `yaml:"numa_cores,omitempty" validate:"numa_cores:editable"`
 	Config               map[string]any       `yaml:"config,omitempty" validate:"config:ignore"`
@@ -159,6 +160,14 @@ func (s *TiFlashSpec) IsImported() bool {
 // IgnoreMonitorAgent returns if the node does not have monitor agents available
 func (s *TiFlashSpec) IgnoreMonitorAgent() bool {
 	return s.IgnoreExporter
+}
+
+// GetSource returns source to download the component
+func (s *TiFlashSpec) GetSource() string {
+	if s.Source == "" {
+		return ComponentTiFlash
+	}
+	return s.Source
 }
 
 // key names for storage config
@@ -284,6 +293,7 @@ func (c *TiFlashComponent) Instances() []Instance {
 			ManageHost:   s.ManageHost,
 			Port:         s.GetMainPort(),
 			SSHP:         s.SSHPort,
+			Source:       s.GetSource(),
 
 			Ports: []int{
 				s.TCPPort,
@@ -486,6 +496,11 @@ func (i *TiFlashInstance) initTiFlashConfig(ctx context.Context, clusterVersion 
 			httpPort = fmt.Sprintf(`http_port: %d`, spec.HTTPPort)
 		}
 	}
+	tcpPort := "#"
+	// Config tcp_port is only required for TiFlash version < 7.1.0, and is recommended to not specify for TiFlash version >= 7.1.0.
+	if tidbver.TiFlashRequiresTCPPortConfig(clusterVersion) {
+		tcpPort = fmt.Sprintf(`tcp_port: %d`, spec.TCPPort)
+	}
 
 	// set TLS configs
 	spec.Config, err = i.setTLSConfig(ctx, enableTLS, spec.Config, paths)
@@ -511,7 +526,7 @@ server_configs:
     listen_host: "%[7]s"
     tmp_path: "%[11]s"
     %[1]s
-    tcp_port: %[3]d
+    %[3]s
     %[4]s
     flash.tidb_status_addr: "%[5]s"
     flash.service_addr: "%[6]s"
@@ -535,7 +550,7 @@ server_configs:
 `,
 		pathConfig,
 		paths.Log,
-		spec.TCPPort,
+		tcpPort,
 		httpPort,
 		strings.Join(tidbStatusAddrs, ","),
 		utils.JoinHostPort(spec.Host, spec.FlashServicePort),
@@ -876,7 +891,7 @@ func (i *TiFlashInstance) PrepareStart(ctx context.Context, tlsCfg *tls.Config) 
 func (i *TiFlashInstance) Ready(ctx context.Context, e ctxt.Executor, timeout uint64, tlsCfg *tls.Config) error {
 	// FIXME: the timeout is applied twice in the whole `Ready()` process, in the worst
 	// case it might wait double time as other components
-	if err := PortStarted(ctx, e, i.Port, timeout); err != nil {
+	if err := PortStarted(ctx, e, i.GetServicePort(), timeout); err != nil {
 		return err
 	}
 

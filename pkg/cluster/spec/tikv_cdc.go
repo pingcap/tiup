@@ -46,6 +46,7 @@ type TiKVCDCSpec struct {
 	Offline         bool                 `yaml:"offline,omitempty"`
 	GCTTL           int64                `yaml:"gc-ttl,omitempty" validate:"gc-ttl:editable"`
 	TZ              string               `yaml:"tz,omitempty" validate:"tz:editable"`
+	Source          string               `yaml:"source,omitempty" validate:"source:editable"`
 	NumaNode        string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
 	Config          map[string]any       `yaml:"config,omitempty" validate:"config:ignore"`
 	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
@@ -104,6 +105,14 @@ func (c *TiKVCDCComponent) Role() string {
 	return ComponentTiKVCDC
 }
 
+// GetSource returns source to download the component
+func (s *TiKVCDCSpec) GetSource() string {
+	if s.Source == "" {
+		return ComponentTiKVCDC
+	}
+	return s.Source
+}
+
 // Instances implements Component interface.
 func (c *TiKVCDCComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.TiKVCDCServers))
@@ -116,6 +125,7 @@ func (c *TiKVCDCComponent) Instances() []Instance {
 			ManageHost:   s.ManageHost,
 			Port:         s.Port,
 			SSHP:         s.SSHPort,
+			Source:       s.GetSource(),
 
 			Ports: []int{
 				s.Port,

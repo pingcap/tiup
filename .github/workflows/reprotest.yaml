@@ -35,14 +35,14 @@ jobs:
     strategy:
       matrix:
         go:
-          - 1.19.x
+          - 1.21.x
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       - uses: actions/checkout@v3
 
       - name: Set up Go ${{ matrix.go }}
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v4
         with:
           go-version: ${{ matrix.go }}
 
