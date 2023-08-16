@@ -497,7 +497,7 @@ func DestroyClusterTombstone(
 		pdEndpoints = strings.Split(forcePDEndpoints, ",")
 		logger.Warnf("%s is set, using %s as PD endpoints", EnvNamePDEndpointOverwrite, pdEndpoints)
 	} else {
-		pdEndpoints = cluster.GetPDList()
+		pdEndpoints = cluster.GetPDListWithManageHost()
 	}
 
 	var pdClient = api.NewPDClient(ctx, pdEndpoints, 10*time.Second, tlsCfg)

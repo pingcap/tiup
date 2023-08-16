@@ -33,7 +33,7 @@ import (
 // PDSpec represents the PD topology specification in topology.yaml
 type PDSpec struct {
 	Host                string `yaml:"host"`
-	ManageHost          string `yaml:"manage_host,omitempty"`
+	ManageHost          string `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
 	ListenHost          string `yaml:"listen_host,omitempty"`
 	AdvertiseClientAddr string `yaml:"advertise_client_addr,omitempty"`
 	AdvertisePeerAddr   string `yaml:"advertise_peer_addr,omitempty"`
@@ -48,6 +48,7 @@ type PDSpec struct {
 	DeployDir       string               `yaml:"deploy_dir,omitempty"`
 	DataDir         string               `yaml:"data_dir,omitempty"`
 	LogDir          string               `yaml:"log_dir,omitempty"`
+	Source          string               `yaml:"source,omitempty" validate:"source:editable"`
 	NumaNode        string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
 	Config          map[string]any       `yaml:"config,omitempty" validate:"config:ignore"`
 	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
@@ -137,6 +138,14 @@ func (s *PDSpec) GetAdvertisePeerURL(enableTLS bool) string {
 	return fmt.Sprintf("%s://%s", scheme, utils.JoinHostPort(s.Host, s.PeerPort))
 }
 
+// GetSource returns source to download the component
+func (s *PDSpec) GetSource() string {
+	if s.Source == "" {
+		return ComponentPD
+	}
+	return s.Source
+}
+
 // PDComponent represents PD component.
 type PDComponent struct{ Topology *Specification }
 
@@ -165,6 +174,7 @@ func (c *PDComponent) Instances() []Instance {
 				ListenHost:   s.ListenHost,
 				Port:         s.ClientPort,
 				SSHP:         s.SSHPort,
+				Source:       s.GetSource(),
 
 				Ports: []int{
 					s.ClientPort,
@@ -176,7 +186,7 @@ func (c *PDComponent) Instances() []Instance {
 				},
 				StatusFn: s.Status,
 				UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
-					return UptimeByHost(s.Host, s.ClientPort, timeout, tlsCfg)
+					return UptimeByHost(s.GetManageHost(), s.ClientPort, timeout, tlsCfg)
 				},
 			},
 			topo: c.Topology,
@@ -273,7 +283,7 @@ func (i *PDInstance) InitConfig(
 		return err
 	}
 
-	return checkConfig(ctx, e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths, nil)
+	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths, nil)
 }
 
 // setTLSConfig set TLS Config to support enable/disable TLS

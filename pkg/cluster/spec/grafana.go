@@ -35,7 +35,7 @@ import (
 // GrafanaSpec represents the Grafana topology specification in topology.yaml
 type GrafanaSpec struct {
 	Host            string               `yaml:"host"`
-	ManageHost      string               `yaml:"manage_host,omitempty"`
+	ManageHost      string               `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
 	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported        bool                 `yaml:"imported,omitempty"`
 	Patched         bool                 `yaml:"patched,omitempty"`
@@ -74,6 +74,14 @@ func (s *GrafanaSpec) SSH() (string, int) {
 // GetMainPort returns the main port of the instance
 func (s *GrafanaSpec) GetMainPort() int {
 	return s.Port
+}
+
+// GetManageHost returns the manage host of the instance
+func (s *GrafanaSpec) GetManageHost() string {
+	if s.ManageHost != "" {
+		return s.ManageHost
+	}
+	return s.Host
 }
 
 // IsImported returns if the node is imported from TiDB-Ansible
@@ -122,10 +130,10 @@ func (c *GrafanaComponent) Instances() []Instance {
 					s.DeployDir,
 				},
 				StatusFn: func(_ context.Context, timeout time.Duration, _ *tls.Config, _ ...string) string {
-					return statusByHost(s.Host, s.Port, "/login", timeout, nil)
+					return statusByHost(s.GetManageHost(), s.Port, "/login", timeout, nil)
 				},
 				UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
-					return UptimeByHost(s.Host, s.Port, timeout, tlsCfg)
+					return UptimeByHost(s.GetManageHost(), s.Port, timeout, tlsCfg)
 				},
 			},
 			topo: c.Topology,
