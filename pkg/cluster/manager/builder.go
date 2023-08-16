@@ -210,7 +210,7 @@ func buildScaleOutTask(
 				tb = tb.DeploySpark(inst, sparkVer.String(), srcPath, deployDir)
 			default:
 				tb.CopyComponent(
-					inst.ComponentName(),
+					inst.ComponentSource(),
 					inst.OS(),
 					inst.Arch(),
 					version,
@@ -688,7 +688,7 @@ func buildDownloadCompTasks(
 	var tasks []*task.StepDisplay
 	uniqueTaskList := set.NewStringSet()
 	topo.IterInstance(func(inst spec.Instance) {
-		key := fmt.Sprintf("%s-%s-%s", inst.ComponentName(), inst.OS(), inst.Arch())
+		key := fmt.Sprintf("%s-%s-%s", inst.ComponentSource(), inst.OS(), inst.Arch())
 		if found := uniqueTaskList.Exist(key); !found {
 			uniqueTaskList.Insert(key)
 
@@ -698,13 +698,13 @@ func buildDownloadCompTasks(
 				// download spark as dependency of tispark
 				tasks = append(tasks, buildDownloadSparkTask(inst, logger, gOpt))
 			} else {
-				version = bindVersion(inst.ComponentName(), clusterVersion)
+				version = bindVersion(inst.ComponentSource(), clusterVersion)
 			}
 
 			t := task.NewBuilder(logger).
-				Download(inst.ComponentName(), inst.OS(), inst.Arch(), version).
+				Download(inst.ComponentSource(), inst.OS(), inst.Arch(), version).
 				BuildAsStep(fmt.Sprintf("  - Download %s:%s (%s/%s)",
-					inst.ComponentName(), version, inst.OS(), inst.Arch()))
+					inst.ComponentSource(), version, inst.OS(), inst.Arch()))
 			tasks = append(tasks, t)
 		}
 	})

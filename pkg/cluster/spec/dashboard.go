@@ -38,6 +38,7 @@ type DashboardSpec struct {
 	DeployDir       string               `yaml:"deploy_dir,omitempty"`
 	DataDir         string               `yaml:"data_dir,omitempty"`
 	LogDir          string               `yaml:"log_dir,omitempty"`
+	Source          string               `yaml:"source,omitempty" validate:"source:editable"`
 	NumaNode        string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
 	Config          map[string]any       `yaml:"config,omitempty" validate:"config:ignore"`
 	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
@@ -94,6 +95,14 @@ func (s *DashboardSpec) IgnoreMonitorAgent() bool {
 	return s.IgnoreExporter
 }
 
+// GetSource returns source to download the component
+func (s *DashboardSpec) GetSource() string {
+	if s.Source == "" {
+		return ComponentDashboard
+	}
+	return s.Source
+}
+
 // DashboardComponent represents Drainer component.
 type DashboardComponent struct{ Topology *Specification }
 
@@ -119,6 +128,7 @@ func (c *DashboardComponent) Instances() []Instance {
 			ManageHost:   s.ManageHost,
 			Port:         s.Port,
 			SSHP:         s.SSHPort,
+			Source:       s.Source,
 
 			Ports: []int{
 				s.Port,
@@ -214,7 +224,7 @@ func (i *DashboardInstance) InitConfig(
 		return err
 	}
 
-	return checkConfig(ctx, e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths, nil)
+	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths, nil)
 }
 
 // setTLSConfig set TLS Config to support enable/disable TLS

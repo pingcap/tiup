@@ -57,6 +57,7 @@ type TiFlashSpec struct {
 	LogDir               string               `yaml:"log_dir,omitempty"`
 	TmpDir               string               `yaml:"tmp_path,omitempty"`
 	Offline              bool                 `yaml:"offline,omitempty"`
+	Source               string               `yaml:"source,omitempty" validate:"source:editable"`
 	NumaNode             string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
 	NumaCores            string               `yaml:"numa_cores,omitempty" validate:"numa_cores:editable"`
 	Config               map[string]any       `yaml:"config,omitempty" validate:"config:ignore"`
@@ -159,6 +160,14 @@ func (s *TiFlashSpec) IsImported() bool {
 // IgnoreMonitorAgent returns if the node does not have monitor agents available
 func (s *TiFlashSpec) IgnoreMonitorAgent() bool {
 	return s.IgnoreExporter
+}
+
+// GetSource returns source to download the component
+func (s *TiFlashSpec) GetSource() string {
+	if s.Source == "" {
+		return ComponentTiFlash
+	}
+	return s.Source
 }
 
 // key names for storage config
@@ -284,6 +293,7 @@ func (c *TiFlashComponent) Instances() []Instance {
 			ManageHost:   s.ManageHost,
 			Port:         s.GetMainPort(),
 			SSHP:         s.SSHPort,
+			Source:       s.GetSource(),
 
 			Ports: []int{
 				s.TCPPort,

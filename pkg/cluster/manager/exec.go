@@ -60,7 +60,7 @@ func (m *Manager) Exec(name string, opt ExecOptions, gOpt operator.Options) erro
 				return
 			}
 
-			if len(gOpt.Nodes) > 0 && (!filterNodes.Exist(inst.GetHost()) || !filterNodes.Exist(inst.GetManageHost())) {
+			if len(gOpt.Nodes) > 0 && (!filterNodes.Exist(inst.GetHost()) && !filterNodes.Exist(inst.GetManageHost())) {
 				return
 			}
 

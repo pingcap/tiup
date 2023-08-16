@@ -42,6 +42,7 @@ type PumpSpec struct {
 	DataDir         string               `yaml:"data_dir,omitempty"`
 	LogDir          string               `yaml:"log_dir,omitempty"`
 	Offline         bool                 `yaml:"offline,omitempty"`
+	Source          string               `yaml:"source,omitempty" validate:"source:editable"`
 	NumaNode        string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
 	Config          map[string]any       `yaml:"config,omitempty" validate:"config:ignore"`
 	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
@@ -111,6 +112,14 @@ func (s *PumpSpec) IgnoreMonitorAgent() bool {
 	return s.IgnoreExporter
 }
 
+// GetSource returns source to download the component
+func (s *PumpSpec) GetSource() string {
+	if s.Source == "" {
+		return ComponentPump
+	}
+	return s.Source
+}
+
 // PumpComponent represents Pump component.
 type PumpComponent struct{ Topology *Specification }
 
@@ -136,6 +145,7 @@ func (c *PumpComponent) Instances() []Instance {
 			ManageHost:   s.ManageHost,
 			Port:         s.Port,
 			SSHP:         s.SSHPort,
+			Source:       s.GetSource(),
 
 			Ports: []int{
 				s.Port,
