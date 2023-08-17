@@ -161,7 +161,7 @@ type Topology interface {
 	// Instances() []Instance
 	ComponentsByStartOrder() []Component
 	ComponentsByStopOrder() []Component
-	ComponentsByUpdateOrder() []Component
+	ComponentsByUpdateOrder(curVer string) []Component
 	IterInstance(fn func(instance Instance), concurrency ...int)
 	GetMonitoredOptions() *MonitoredOptions
 	// count how many time a path is used by instances in cluster
@@ -728,7 +728,7 @@ func (s *Specification) ComponentsByStartOrder() (comps []Component) {
 }
 
 // ComponentsByUpdateOrder return component in the order need to be updated.
-func (s *Specification) ComponentsByUpdateOrder() (comps []Component) {
+func (s *Specification) ComponentsByUpdateOrder(curVer string) (comps []Component) {
 	// "tiflash", "pd", "dashboard", "tikv", "pump", "tidb", "drainer", "cdc", "prometheus", "grafana", "alertmanager"
 	comps = append(comps, &TiFlashComponent{s})
 	comps = append(comps, &PDComponent{s})

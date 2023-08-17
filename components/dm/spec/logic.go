@@ -460,7 +460,7 @@ func (topo *Specification) ComponentsByStartOrder() (comps []Component) {
 }
 
 // ComponentsByUpdateOrder return component in the order need to be updated.
-func (topo *Specification) ComponentsByUpdateOrder() (comps []Component) {
+func (topo *Specification) ComponentsByUpdateOrder(curVer string) (comps []Component) {
 	// "dm-master", "dm-worker"
 	comps = append(comps, &DMMasterComponent{topo})
 	comps = append(comps, &DMWorkerComponent{topo})
