@@ -130,6 +130,7 @@ func TiCDCSupportRollingUpgrade(version string) bool {
 	return semver.Compare(version, "v6.3.0") >= 0 || strings.Contains(version, "nightly")
 }
 
+// TiCDCUpgradeBeforePDTiKV return if the given version of TiCDC should upgrade TiCDC before PD and TiKV
 func TiCDCUpgradeBeforePDTiKV(version string) bool {
 	return semver.Compare(version, "v5.1.0") >= 0 || strings.Contains(version, "nightly")
 }
