@@ -730,11 +730,11 @@ func (s *Specification) ComponentsByStartOrder() (comps []Component) {
 // ComponentsByUpdateOrder return component in the order need to be updated.
 func (s *Specification) ComponentsByUpdateOrder(curVer string) (comps []Component) {
 	// Ref: https://github.com/pingcap/tiup/issues/2166
-	cdcUpgradeBeforePDTiKV := tidbver.TiCDCUpgradeBeforePDTiKV(curVer)
+	cdcUpgradeBeforePDTiKVTiDB := tidbver.TiCDCUpgradeBeforePDTiKVTiDB(curVer)
 
 	// "tiflash", <"cdc">, "pd", "dashboard", "tikv", "pump", "tidb", "drainer", <"cdc>", "prometheus", "grafana", "alertmanager"
 	comps = append(comps, &TiFlashComponent{s})
-	if cdcUpgradeBeforePDTiKV {
+	if cdcUpgradeBeforePDTiKVTiDB {
 		comps = append(comps, &CDCComponent{s})
 	}
 	comps = append(comps, &PDComponent{s})
@@ -743,7 +743,7 @@ func (s *Specification) ComponentsByUpdateOrder(curVer string) (comps []Componen
 	comps = append(comps, &PumpComponent{s})
 	comps = append(comps, &TiDBComponent{s})
 	comps = append(comps, &DrainerComponent{s})
-	if !cdcUpgradeBeforePDTiKV {
+	if !cdcUpgradeBeforePDTiKVTiDB {
 		comps = append(comps, &CDCComponent{s})
 	}
 	comps = append(comps, &MonitorComponent{s})
