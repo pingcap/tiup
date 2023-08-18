@@ -19,6 +19,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/fatih/color"
@@ -204,7 +205,13 @@ func overwritePatch(specManager *spec.SpecManager, name, comp, packagePath strin
 	if utils.IsSymExist(symlink) {
 		os.Remove(symlink)
 	}
-	return os.Symlink(tg, symlink)
+
+	tgRelPath, err := filepath.Rel(filepath.Dir(symlink), tg)
+	if err != nil {
+		return err
+	}
+
+	return os.Symlink(tgRelPath, symlink)
 }
 
 func instancesToPatch(topo spec.Topology, options operator.Options) ([]spec.Instance, error) {
