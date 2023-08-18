@@ -107,10 +107,8 @@ func Tar(writer io.Writer, from string) error {
 			return err
 		}
 
-		fm := info.Mode()
-
 		link := ""
-		if fm&fs.ModeSymlink != 0 {
+		if info.Mode()&fs.ModeSymlink != 0 {
 			link, err = os.Readlink(path)
 			if err != nil {
 				return err
