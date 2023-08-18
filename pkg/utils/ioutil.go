@@ -101,11 +101,21 @@ func Tar(writer io.Writer, from string) error {
 	tarW := tar.NewWriter(compressW)
 	defer tarW.Close()
 
+	// NOTE: filepath.Walk does not follow the symbolic link.
 	return filepath.Walk(from, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		header, _ := tar.FileInfoHeader(info, "")
+
+		link := ""
+		if info.Mode()&fs.ModeSymlink != 0 {
+			link, err = os.Readlink(path)
+			if err != nil {
+				return err
+			}
+		}
+
+		header, _ := tar.FileInfoHeader(info, link)
 		header.Name, _ = filepath.Rel(from, path)
 		// skip "."
 		if header.Name == "." {
@@ -116,7 +126,7 @@ func Tar(writer io.Writer, from string) error {
 		if err != nil {
 			return err
 		}
-		if !info.IsDir() {
+		if info.Mode().IsRegular() {
 			fd, err := os.Open(path)
 			if err != nil {
 				return err
