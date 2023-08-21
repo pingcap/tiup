@@ -190,7 +190,7 @@ func checkSystemInfo(
 
 	roleFilter := set.NewStringSet(gOpt.Roles...)
 	nodeFilter := set.NewStringSet(gOpt.Nodes...)
-	components := topo.ComponentsByUpdateOrder()
+	components := topo.ComponentsByStartOrder()
 	components = operator.FilterComponent(components, roleFilter)
 
 	for _, comp := range components {
