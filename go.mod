@@ -1,6 +1,6 @@
 module github.com/pingcap/tiup
 
-go 1.18
+go 1.21
 
 replace gopkg.in/yaml.v2 => github.com/july2993/yaml v0.0.0-20200423062752-adcfa5abe2ed
 
