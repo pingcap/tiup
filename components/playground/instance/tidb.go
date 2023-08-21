@@ -34,13 +34,9 @@ type TiDBInstance struct {
 }
 
 // NewTiDBInstance return a TiDBInstance
-func NewTiDBInstance(binPath string, dir, host, configPath string, id, port int, pds []*PDInstance, enableBinlog bool, isDisaggMode bool, tiproxys []*TiProxy) *TiDBInstance {
+func NewTiDBInstance(binPath string, dir, host, configPath string, id, port int, pds []*PDInstance, enableBinlog bool, isDisaggMode bool) *TiDBInstance {
 	if port <= 0 {
-		if len(tiproxys) > 0 {
-			port = 6000
-		} else {
-			port = 4000
-		}
+		port = 4000
 	}
 	return &TiDBInstance{
 		instance: instance{

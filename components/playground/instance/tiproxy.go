@@ -37,7 +37,7 @@ var _ Instance = &TiProxy{}
 // NewTiProxy create a TiProxy instance.
 func NewTiProxy(binPath string, dir, host, configPath string, id int, port int, pds []*PDInstance) *TiProxy {
 	if port <= 0 {
-		port = 4000
+		port = 6000
 	}
 	tiproxy := &TiProxy{
 		instance: instance{
