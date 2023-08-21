@@ -18,5 +18,6 @@ Allow users to only use TiUP during installation and upgrade, without needing to
 3. Add `--link` flag to `tiup install` and `tiup update` command to link while install/update
 
 4. Mark these command and flag as experimental feature and we keep the old behavior as the default usage method.
+Warn: Users may need to manually set environment variables for certain components, such as ctl.
 
 5. There is an additional benefit that user could use `tiup update tiup v1.13.0` to update tiup itself to specified version.And it makes TiUP unnecessary to handle special upgrades for itself.
