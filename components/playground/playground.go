@@ -502,7 +502,7 @@ func (p *Playground) handleScaleOut(w io.Writer, cmd *Command) error {
 		addr := p.tiproxys[len(p.tidbs)-1].Addr()
 		if checkDB(addr, cmd.UpTimeout) {
 			ss := strings.Split(addr, ":")
-			connectMsg := "To connect new added TiProxy: mysql --comments --host %s --port %s -u root -p (no password)"
+			connectMsg := "To connect to the newly added TiProxy: mysql --comments --host %s --port %s -u root -p (no password)"
 			fmt.Println(color.GreenString(connectMsg, ss[0], ss[1]))
 			fmt.Fprintln(w, color.GreenString(connectMsg, ss[0], ss[1]))
 		}
