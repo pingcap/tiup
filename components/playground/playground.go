@@ -746,7 +746,12 @@ func (p *Playground) waitAllDBUp() ([]string, []string) {
 	if len(p.tidbs) > 0 {
 		var wg sync.WaitGroup
 		var tidbMu, tiproxyMu sync.Mutex
-		bars := progress.NewMultiBar(color.YellowString("Waiting for tidb and tiproxy instances ready"))
+		var bars *progress.MultiBar
+		if len(p.tiproxys) > 0 {
+			bars = progress.NewMultiBar(color.YellowString("Waiting for tidb and tiproxy instances ready"))
+		} else {
+			bars = progress.NewMultiBar(color.YellowString("Waiting for tidb instances ready"))
+		}
 		for _, db := range p.tidbs {
 			wg.Add(1)
 			prefix := color.YellowString(db.Addr())
