@@ -36,6 +36,7 @@ type TiKVCDCSpec struct {
 	Host            string               `yaml:"host"`
 	ManageHost      string               `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
 	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
+	Version         string               `yaml:"version,omitempty"`
 	Imported        bool                 `yaml:"imported,omitempty"`
 	Patched         bool                 `yaml:"patched,omitempty"`
 	IgnoreExporter  bool                 `yaml:"ignore_exporter,omitempty"`
@@ -327,4 +328,9 @@ func (i *TiKVCDCInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg
 
 	logger.Debugf("tikv-cdc post-restart success, addr: %s, elapsed: %+v", address, time.Since(start))
 	return nil
+}
+
+func (i *TiKVCDCInstance) CalculateVersion(_ string) string {
+	// always not follow global version, use ""(latest) by default
+	return i.InstanceSpec.(*TiKVCDCSpec).Version
 }

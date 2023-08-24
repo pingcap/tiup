@@ -25,6 +25,7 @@ import (
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
@@ -37,7 +38,19 @@ import (
 )
 
 // Upgrade the cluster.
-func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Options, skipConfirm, offline bool) error {
+func (m *Manager) Upgrade(name string, clusterVersion string, componentVersions map[string]string, opt operator.Options, skipConfirm, offline bool) error {
+	if !skipConfirm && strings.ToLower(opt.DisplayMode) != "json" {
+		for _, v := range componentVersions {
+			if v != "" {
+				m.logger.Warnf(color.YellowString("tiup-cluster does not provide compatibility guarantees or version checks for different component versions. Please be aware of the risks or use it with the assistance of PingCAP support."))
+				err := tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: ")
+				if err != nil {
+					return err
+				}
+				break
+			}
+		}
+	}
 	if err := clusterutil.ValidateClusterNameOrError(name); err != nil {
 		return err
 	}
@@ -91,16 +104,12 @@ Do you want to continue? [y/N]:`,
 		for _, inst := range comp.Instances() {
 			compName := inst.ComponentName()
 
-			// ignore monitor agents for instances marked as ignore_exporter
-			switch compName {
-			case spec.ComponentNodeExporter,
-				spec.ComponentBlackboxExporter:
-				if inst.IgnoreMonitorAgent() {
-					continue
-				}
+			// if component version is not specified, use the cluster version or latest("")
+			version := componentVersions[compName]
+			if version == "" {
+				version = m.bindVersion(compName, clusterVersion)
 			}
-
-			version := m.bindVersion(inst.ComponentSource(), clusterVersion)
+			inst.SetVersion(version)
 
 			// Download component from repository
 			key := fmt.Sprintf("%s-%s-%s-%s", compName, version, inst.OS(), inst.Arch())
@@ -144,6 +153,7 @@ Do you want to continue? [y/N]:`,
 			// backup files of the old version
 			tb = tb.BackupComponent(inst.ComponentSource(), base.Version, inst.GetManageHost(), deployDir)
 
+			// this interface is not used
 			if deployerInstance, ok := inst.(DeployerInstance); ok {
 				deployerInstance.Deploy(tb, "", deployDir, version, name, clusterVersion)
 			} else {
@@ -174,7 +184,7 @@ Do you want to continue? [y/N]:`,
 
 			tb.InitConfig(
 				name,
-				clusterVersion,
+				version,
 				m.specManager,
 				inst,
 				base.User,
@@ -189,6 +199,52 @@ Do you want to continue? [y/N]:`,
 			copyCompTasks = append(copyCompTasks, tb.Build())
 		}
 	}
+
+	var sshProxyProps *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
+	if opt.SSHType != executor.SSHTypeNone {
+		var err error
+		if len(opt.SSHProxyHost) != 0 {
+			if sshProxyProps, err = tui.ReadIdentityFileOrPassword(opt.SSHProxyIdentity, opt.SSHProxyUsePassword); err != nil {
+				return err
+			}
+		}
+	}
+
+	monitoredOptions := topo.GetMonitoredOptions()
+	if componentVersions[spec.ComponentBlackboxExporter] != "" {
+		monitoredOptions.BlackboxExporterVersion = componentVersions[spec.ComponentBlackboxExporter]
+	}
+	if componentVersions[spec.ComponentNodeExporter] != "" {
+		monitoredOptions.NodeExporterVersion = componentVersions[spec.ComponentNodeExporter]
+	}
+	uniqueHosts, noAgentHosts := getMonitorHosts(topo)
+	// Deploy monitor relevant components to remote
+	dlTasks, dpTasks, err := buildMonitoredDeployTask(
+		m,
+		uniqueHosts,
+		noAgentHosts,
+		topo.BaseTopo().GlobalOptions,
+		monitoredOptions,
+		opt,
+		sshProxyProps,
+	)
+	if err != nil {
+		return err
+	}
+
+	monitorConfigTasks := buildInitMonitoredConfigTasks(
+		m.specManager,
+		name,
+		uniqueHosts,
+		noAgentHosts,
+		*topo.BaseTopo().GlobalOptions,
+		monitoredOptions,
+		m.logger,
+		opt.SSHTimeout,
+		opt.OptTimeout,
+		opt,
+		sshProxyProps,
+	)
 
 	// handle dir scheme changes
 	if hasImported {
@@ -229,7 +285,10 @@ Do you want to continue? [y/N]:`,
 	}
 	t := b.
 		Parallel(false, downloadCompTasks...).
+		ParallelStep("download monitored", false, dlTasks...).
 		Parallel(opt.Force, copyCompTasks...).
+		ParallelStep("deploy monitored", false, dpTasks...).
+		ParallelStep("refresh monitored config", false, monitorConfigTasks...).
 		Func("UpgradeCluster", func(ctx context.Context) error {
 			if offline {
 				return nil
@@ -274,10 +333,10 @@ func versionCompare(curVersion, newVersion string) error {
 	}
 
 	switch semver.Compare(curVersion, newVersion) {
-	case -1:
+	case -1, 0:
 		return nil
-	case 0, 1:
-		return perrs.Errorf("please specify a higher version than %s", curVersion)
+	case 1:
+		return perrs.Errorf("please specify a higher or equle version than %s", curVersion)
 	default:
 		return perrs.Errorf("unreachable")
 	}

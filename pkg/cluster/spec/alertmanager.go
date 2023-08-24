@@ -32,6 +32,7 @@ type AlertmanagerSpec struct {
 	Host            string               `yaml:"host"`
 	ManageHost      string               `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
 	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
+	Version         string               `yaml:"version,omitempty"`
 	Imported        bool                 `yaml:"imported,omitempty"`
 	Patched         bool                 `yaml:"patched,omitempty"`
 	IgnoreExporter  bool                 `yaml:"ignore_exporter,omitempty"`
@@ -208,7 +209,8 @@ func (i *AlertManagerInstance) InitConfig(
 	if err := i.TransferLocalConfigFile(ctx, e, configPath, dst); err != nil {
 		return err
 	}
-	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".yml", paths, nil)
+	// version is not used for alertmanager
+	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), "", i.OS(), i.Arch(), i.ComponentName()+".yml", paths)
 }
 
 // ScaleConfig deploy temporary config on scaling
@@ -230,4 +232,9 @@ func (i *AlertManagerInstance) ScaleConfig(
 // setTLSConfig set TLS Config to support enable/disable TLS
 func (i *AlertManagerInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error) {
 	return nil, nil
+}
+
+func (i *AlertManagerInstance) CalculateVersion(_ string) string {
+	// always not follow global version, use ""(latest) by default
+	return i.InstanceSpec.(*AlertmanagerSpec).Version
 }

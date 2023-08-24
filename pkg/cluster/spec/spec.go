@@ -93,13 +93,15 @@ type (
 
 	// MonitoredOptions represents the monitored node configuration
 	MonitoredOptions struct {
-		NodeExporterPort     int                  `yaml:"node_exporter_port,omitempty" default:"9100"`
-		BlackboxExporterPort int                  `yaml:"blackbox_exporter_port,omitempty" default:"9115"`
-		DeployDir            string               `yaml:"deploy_dir,omitempty"`
-		DataDir              string               `yaml:"data_dir,omitempty"`
-		LogDir               string               `yaml:"log_dir,omitempty"`
-		NumaNode             string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
-		ResourceControl      meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
+		NodeExporterPort        int                  `yaml:"node_exporter_port,omitempty" default:"9100"`
+		BlackboxExporterPort    int                  `yaml:"blackbox_exporter_port,omitempty" default:"9115"`
+		NodeExporterVersion     string               `yaml:"node_exporter_version,omitempty"`
+		BlackboxExporterVersion string               `yaml:"blackbox_exporter_version,omitempty"`
+		DeployDir               string               `yaml:"deploy_dir,omitempty"`
+		DataDir                 string               `yaml:"data_dir,omitempty"`
+		LogDir                  string               `yaml:"log_dir,omitempty"`
+		NumaNode                string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
+		ResourceControl         meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
 	}
 
 	// ServerConfigs represents the server runtime configuration

@@ -14,12 +14,14 @@
 package command
 
 import (
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
 func newUpgradeCmd() *cobra.Command {
 	offlineMode := false
+	var tidbVer, tikvVer, pdVer, tiflashVer, kvcdcVer, dashboardVer, cdcVer, alertmanagerVer, nodeExporterVer, blackboxExporterVer string
 
 	cmd := &cobra.Command{
 		Use:   "upgrade <cluster-name> <version>",
@@ -38,7 +40,20 @@ func newUpgradeCmd() *cobra.Command {
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 			teleCommand = append(teleCommand, version)
 
-			return cm.Upgrade(clusterName, version, gOpt, skipConfirm, offlineMode)
+			componentVersions := map[string]string{
+				spec.ComponentDashboard:        dashboardVer,
+				spec.ComponentAlertmanager:     alertmanagerVer,
+				spec.ComponentTiDB:             tidbVer,
+				spec.ComponentTiKV:             tikvVer,
+				spec.ComponentPD:               pdVer,
+				spec.ComponentTiFlash:          tiflashVer,
+				spec.ComponentTiKVCDC:          kvcdcVer,
+				spec.ComponentCDC:              cdcVer,
+				spec.ComponentBlackboxExporter: blackboxExporterVer,
+				spec.ComponentNodeExporter:     nodeExporterVer,
+			}
+
+			return cm.Upgrade(clusterName, version, componentVersions, gOpt, skipConfirm, offlineMode)
 		},
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 			switch len(args) {
@@ -56,5 +71,15 @@ func newUpgradeCmd() *cobra.Command {
 	cmd.Flags().StringVar(&gOpt.SSHCustomScripts.BeforeRestartInstance.Raw, "pre-upgrade-script", "", "(EXPERIMENTAL) Custom script to be executed on each server before the server is upgraded")
 	cmd.Flags().StringVar(&gOpt.SSHCustomScripts.AfterRestartInstance.Raw, "post-upgrade-script", "", "(EXPERIMENTAL) Custom script to be executed on each server after the server is upgraded")
 
+	cmd.Flags().StringVar(&tidbVer, "tidb-version", "", "Specify the version of tidb to upgrade to")
+	cmd.Flags().StringVar(&tikvVer, "tikv-version", "", "Specify the version of tikv to upgrade to")
+	cmd.Flags().StringVar(&pdVer, "pd-version", "", "Specify the version of pd to upgrade to")
+	cmd.Flags().StringVar(&tiflashVer, "tiflash-version", "", "Specify the version of tiflash to upgrade to")
+	cmd.Flags().StringVar(&dashboardVer, "tidb-dashboard-version", "", "Specify the version of tidb-dashboard to upgrade to")
+	cmd.Flags().StringVar(&cdcVer, "cdc-version", "", "Specify the version of cdc to upgrade to")
+	cmd.Flags().StringVar(&kvcdcVer, "tikv-cdc-version", "", "Specify the cersion of tikc-cdc to upgrade to")
+	cmd.Flags().StringVar(&alertmanagerVer, "alertmanager-version", "", "Specify the version of alertmanager to upgrade to")
+	cmd.Flags().StringVar(&nodeExporterVer, "node-exporter-version", "", "Specify the version of node-exporter to upgrade to")
+	cmd.Flags().StringVar(&blackboxExporterVer, "blackbox-exporter-version", "", "Specify the version of blackbox-exporter to upgrade to")
 	return cmd
 }

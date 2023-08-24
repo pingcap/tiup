@@ -224,7 +224,7 @@ func (i *DashboardInstance) InitConfig(
 		return err
 	}
 
-	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths, nil)
+	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), i.CalculateVersion(clusterVersion), i.OS(), i.Arch(), i.ComponentName()+".toml", paths)
 }
 
 // setTLSConfig set TLS Config to support enable/disable TLS

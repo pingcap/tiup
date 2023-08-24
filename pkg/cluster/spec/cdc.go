@@ -36,6 +36,7 @@ type CDCSpec struct {
 	Host            string               `yaml:"host"`
 	ManageHost      string               `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
 	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
+	Version         string               `yaml:"version,omitempty"`
 	Imported        bool                 `yaml:"imported,omitempty"`
 	Patched         bool                 `yaml:"patched,omitempty"`
 	IgnoreExporter  bool                 `yaml:"ignore_exporter,omitempty"`
@@ -191,14 +192,15 @@ func (i *CDCInstance) InitConfig(
 	spec := i.InstanceSpec.(*CDCSpec)
 	globalConfig := topo.ServerConfigs.CDC
 	instanceConfig := spec.Config
+	version := i.CalculateVersion(clusterVersion)
 
-	if !tidbver.TiCDCSupportConfigFile(clusterVersion) {
+	if !tidbver.TiCDCSupportConfigFile(version) {
 		if len(globalConfig)+len(instanceConfig) > 0 {
 			return errors.New("server_config is only supported with TiCDC version v4.0.13 or later")
 		}
 	}
 
-	if !tidbver.TiCDCSupportClusterID(clusterVersion) && spec.TiCDCClusterID != "" {
+	if !tidbver.TiCDCSupportClusterID(version) && spec.TiCDCClusterID != "" {
 		return errors.New("ticdc_cluster_id is only supported with TiCDC version v6.2.0 or later")
 	}
 
@@ -213,13 +215,13 @@ func (i *CDCInstance) InitConfig(
 		GCTTL:             spec.GCTTL,
 		TZ:                spec.TZ,
 		ClusterID:         spec.TiCDCClusterID,
-		DataDirEnabled:    tidbver.TiCDCSupportDataDir(clusterVersion),
-		ConfigFileEnabled: tidbver.TiCDCSupportConfigFile(clusterVersion),
+		DataDirEnabled:    tidbver.TiCDCSupportDataDir(version),
+		ConfigFileEnabled: tidbver.TiCDCSupportConfigFile(version),
 		TLSEnabled:        enableTLS,
 
 		DeployDir: paths.Deploy,
 		LogDir:    paths.Log,
-		DataDir:   utils.Ternary(tidbver.TiCDCSupportSortOrDataDir(clusterVersion), spec.DataDir, "").(string),
+		DataDir:   utils.Ternary(tidbver.TiCDCSupportSortOrDataDir(version), spec.DataDir, "").(string),
 
 		NumaNode: spec.NumaNode,
 	}

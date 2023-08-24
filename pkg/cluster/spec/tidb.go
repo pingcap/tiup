@@ -35,6 +35,7 @@ type TiDBSpec struct {
 	ManageHost      string               `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
 	ListenHost      string               `yaml:"listen_host,omitempty"`
 	AdvertiseAddr   string               `yaml:"advertise_address,omitempty"`
+	Version         string               `yaml:"version,omitempty"`
 	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported        bool                 `yaml:"imported,omitempty"`
 	Patched         bool                 `yaml:"patched,omitempty"`
@@ -165,6 +166,7 @@ func (i *TiDBInstance) InitConfig(
 
 	enableTLS := topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(*TiDBSpec)
+	version := i.CalculateVersion(clusterVersion)
 
 	pds := []string{}
 	for _, pdspec := range topo.PDServers {
@@ -176,7 +178,7 @@ func (i *TiDBInstance) InitConfig(
 		ListenHost:     i.GetListenHost(),
 		AdvertiseAddr:  utils.Ternary(spec.AdvertiseAddr != "", spec.AdvertiseAddr, spec.Host).(string),
 		PD:             strings.Join(pds, ","),
-		SupportSecboot: tidbver.TiDBSupportSecureBoot(clusterVersion),
+		SupportSecboot: tidbver.TiDBSupportSecureBoot(version),
 
 		DeployDir: paths.Deploy,
 		LogDir:    paths.Log,
@@ -232,7 +234,7 @@ func (i *TiDBInstance) InitConfig(
 		return err
 	}
 
-	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths, nil)
+	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), version, i.OS(), i.Arch(), i.ComponentName()+".toml", paths)
 }
 
 // setTLSConfig set TLS Config to support enable/disable TLS

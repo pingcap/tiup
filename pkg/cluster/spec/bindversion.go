@@ -25,7 +25,6 @@ func TiDBComponentVersion(comp, version string) string {
 	case ComponentAlertmanager,
 		ComponentBlackboxExporter,
 		ComponentNodeExporter,
-		ComponentPushwaygate,
 		ComponentCheckCollector,
 		ComponentSpark,
 		ComponentTiSpark,

@@ -33,6 +33,7 @@ import (
 type DrainerSpec struct {
 	Host            string               `yaml:"host"`
 	ManageHost      string               `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
+	Version         string               `yaml:"version,omitempty"`
 	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported        bool                 `yaml:"imported,omitempty"`
 	Patched         bool                 `yaml:"patched,omitempty"`
@@ -274,7 +275,7 @@ func (i *DrainerInstance) InitConfig(
 		return err
 	}
 
-	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths, nil)
+	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths)
 }
 
 // setTLSConfig set TLS Config to support enable/disable TLS

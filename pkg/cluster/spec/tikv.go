@@ -51,6 +51,7 @@ type TiKVSpec struct {
 	ListenHost          string               `yaml:"listen_host,omitempty"`
 	AdvertiseAddr       string               `yaml:"advertise_addr,omitempty"`
 	SSHPort             int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
+	Version             string               `yaml:"version,omitempty"`
 	Imported            bool                 `yaml:"imported,omitempty"`
 	Patched             bool                 `yaml:"patched,omitempty"`
 	IgnoreExporter      bool                 `yaml:"ignore_exporter,omitempty"`
@@ -309,7 +310,7 @@ func (i *TiKVInstance) InitConfig(
 		return err
 	}
 
-	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths, nil)
+	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths)
 }
 
 // setTLSConfig set TLS Config to support enable/disable TLS

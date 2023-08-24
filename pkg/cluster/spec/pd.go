@@ -37,6 +37,7 @@ type PDSpec struct {
 	ListenHost          string `yaml:"listen_host,omitempty"`
 	AdvertiseClientAddr string `yaml:"advertise_client_addr,omitempty"`
 	AdvertisePeerAddr   string `yaml:"advertise_peer_addr,omitempty"`
+	Version             string `yaml:"version,omitempty"`
 	SSHPort             int    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported            bool   `yaml:"imported,omitempty"`
 	Patched             bool   `yaml:"patched,omitempty"`
@@ -219,6 +220,7 @@ func (i *PDInstance) InitConfig(
 	enableTLS := topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(*PDSpec)
 	scheme := utils.Ternary(enableTLS, "https", "http").(string)
+	version := i.CalculateVersion(clusterVersion)
 
 	initialCluster := []string{}
 	for _, pdspec := range topo.PDServers {
@@ -283,7 +285,7 @@ func (i *PDInstance) InitConfig(
 		return err
 	}
 
-	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths, nil)
+	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), version, i.OS(), i.Arch(), i.ComponentName()+".toml", paths)
 }
 
 // setTLSConfig set TLS Config to support enable/disable TLS

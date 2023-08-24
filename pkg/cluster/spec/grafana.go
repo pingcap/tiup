@@ -37,6 +37,7 @@ type GrafanaSpec struct {
 	Host            string               `yaml:"host"`
 	ManageHost      string               `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
 	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
+	Version         string               `yaml:"version,omitempty"`
 	Imported        bool                 `yaml:"imported,omitempty"`
 	Patched         bool                 `yaml:"patched,omitempty"`
 	IgnoreExporter  bool                 `yaml:"ignore_exporter,omitempty"`

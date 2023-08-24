@@ -54,7 +54,6 @@ const (
 	ComponentDMMaster         = "dm-master"
 	ComponentDMWorker         = "dm-worker"
 	ComponentPrometheus       = "prometheus"
-	ComponentPushwaygate      = "pushgateway"
 	ComponentBlackboxExporter = "blackbox_exporter"
 	ComponentNodeExporter     = "node_exporter"
 	ComponentCheckCollector   = "insight"
@@ -109,6 +108,8 @@ type Instance interface {
 	Arch() string
 	IsPatched() bool
 	SetPatched(bool)
+	CalculateVersion(string) string
+	SetVersion(string)
 	setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error)
 }
 
@@ -443,6 +444,27 @@ func (i *BaseInstance) SetPatched(p bool) {
 		return
 	}
 	v.SetBool(p)
+}
+
+// CalculateVersion implements the Instance interface
+func (i *BaseInstance) CalculateVersion(globalVersion string) string {
+	v := reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("Version")
+	if !v.IsValid() {
+		return globalVersion
+	}
+	if v.String() == "" {
+		return globalVersion
+	}
+	return v.String()
+}
+
+// SetVersion implements the Instance interface
+func (i *BaseInstance) SetVersion(version string) {
+	v := reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("Version")
+	if !v.CanSet() {
+		return
+	}
+	v.SetString(version)
 }
 
 // PrepareStart checks instance requirements before starting

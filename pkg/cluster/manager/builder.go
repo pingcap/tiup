@@ -213,7 +213,7 @@ func buildScaleOutTask(
 					inst.ComponentSource(),
 					inst.OS(),
 					inst.Arch(),
-					version,
+					inst.CalculateVersion(version),
 					srcPath,
 					inst.GetManageHost(),
 					deployDir,
@@ -272,7 +272,6 @@ func buildScaleOutTask(
 		noAgentHosts,
 		topo.BaseTopo().GlobalOptions,
 		topo.BaseTopo().MonitoredOptions,
-		base.Version,
 		gOpt,
 		p,
 	)
@@ -429,7 +428,6 @@ func buildMonitoredDeployTask(
 	noAgentHosts set.StringSet, // hosts that do not deploy monitor agents
 	globalOptions *spec.GlobalOptions,
 	monitoredOptions *spec.MonitoredOptions,
-	version string,
 	gOpt operator.Options,
 	p *tui.SSHConnectionProps,
 ) (downloadCompTasks []*task.StepDisplay, deployCompTasks []*task.StepDisplay, err error) {
@@ -440,7 +438,10 @@ func buildMonitoredDeployTask(
 	uniqueCompOSArch := set.NewStringSet()
 	// monitoring agents
 	for _, comp := range []string{spec.ComponentNodeExporter, spec.ComponentBlackboxExporter} {
-		version := m.bindVersion(comp, version)
+		version := monitoredOptions.NodeExporterVersion
+		if comp == spec.ComponentBlackboxExporter {
+			version = monitoredOptions.BlackboxExporterVersion
+		}
 		for host, info := range uniqueHosts {
 			// skip deploying monitoring agents if the instance is marked so
 			if noAgentHosts.Exist(host) {
@@ -698,7 +699,7 @@ func buildDownloadCompTasks(
 				// download spark as dependency of tispark
 				tasks = append(tasks, buildDownloadSparkTask(inst, logger, gOpt))
 			} else {
-				version = bindVersion(inst.ComponentSource(), clusterVersion)
+				version = bindVersion(inst.ComponentSource(), inst.CalculateVersion(clusterVersion))
 			}
 
 			t := task.NewBuilder(logger).
