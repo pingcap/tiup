@@ -234,6 +234,7 @@ func (i *AlertManagerInstance) setTLSConfig(ctx context.Context, enableTLS bool,
 	return nil, nil
 }
 
+// CalculateVersion implements the Instance interface
 func (i *AlertManagerInstance) CalculateVersion(_ string) string {
 	// always not follow global version, use ""(latest) by default
 	return i.InstanceSpec.(*AlertmanagerSpec).Version

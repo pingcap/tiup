@@ -330,6 +330,7 @@ func (i *TiKVCDCInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg
 	return nil
 }
 
+// CalculateVersion implements the Instance interface
 func (i *TiKVCDCInstance) CalculateVersion(_ string) string {
 	// always not follow global version, use ""(latest) by default
 	return i.InstanceSpec.(*TiKVCDCSpec).Version
