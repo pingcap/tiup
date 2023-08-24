@@ -143,9 +143,6 @@ func (env *Environment) UpdateComponents(specs []string, nightly, force bool) er
 	var v1specs []repository.ComponentSpec
 	for _, spec := range specs {
 		component, v := ParseCompVersion(spec)
-		if component == tiupName {
-			continue
-		}
 		if v == "" && nightly {
 			v = utils.NightlyVersionAlias
 		}
