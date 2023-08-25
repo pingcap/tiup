@@ -1,5 +1,26 @@
 TiUP Changelog
 
+## [1.13.0] 2023-08-26
+
+### New Features
+
+- Support run components without tiup in `tiup` (#2265, @nexustar)
+- Support tiproxy in `tiup-playground` (#2202, @xhebox)
+- Show warning and continue if cannot delete data dir when destroy/scale-in instead of error and exit in `tiup-cluster` (#2256, @nexustar)
+- Support specifying package name of components in `tiup-cluster` (#2236, @nexustar)
+- playground: support microservices mode in `tiup-playground` (#2226, @rleungx)
+
+### Fixes
+
+- Fix the issue meta backup is failed when symbolic links exist in meta dir in `tiup-cluster`  (#2255, @@KanShiori)
+- Fix node filter on exec in `tiup-cluster` (#2251, @nexustar)
+
+### Improvements
+
+- Move to Go 1.21 (#2249, @dveeden)
+- Upgrade TiCDC before TiKV and PD when cluster is equal or greater than v5.1.0 in `tiup-cluster` (#2253, @KanShiori)
+- progress: Add option to add error detail (#2203, @dveeden)
+
 ## [1.12.5] 2023-7-17
 
 ### Fix
