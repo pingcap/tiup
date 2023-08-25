@@ -18,23 +18,34 @@ import (
 	"path/filepath"
 
 	"github.com/pingcap/tiup/pkg/environment"
+	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/spf13/cobra"
 )
 
 func newUnlinkCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "unlink <component>",
-		Short: "Unlink component binary to $PATH",
-		Long: `[experimental feature]
-Unlink component binary in $PATH`,
+		Short: "Unlink component binary to $TIUP_HOME/bin/",
+		Long:  `[experimental] Unlink component binary in $TIUP_HOME/bin/`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			teleCommand = cmd.CommandPath()
 			env := environment.GlobalEnv()
 			if len(args) != 1 {
 				return cmd.Help()
 			}
-			component, _ := environment.ParseCompVersion(args[0])
-			target := filepath.Join(env.LocalPath("bin"), component)
+			component, version := environment.ParseCompVersion(args[0])
+			version, err := env.SelectInstalledVersion(component, version)
+			if err != nil {
+				return err
+			}
+			binPath, err := env.BinaryPath(component, version)
+			if err != nil {
+				return err
+			}
+			target := env.LocalPath("bin", filepath.Base(binPath))
+			if err := tui.PromptForConfirmOrAbortError("%s will be removed.\n Do you want to continue? [y/N]:", target); err != nil {
+				return err
+			}
 			return os.Remove(target)
 		},
 	}

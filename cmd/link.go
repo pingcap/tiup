@@ -14,10 +14,6 @@
 package cmd
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
-
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/spf13/cobra"
 )
@@ -25,9 +21,8 @@ import (
 func newLinkCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "link <component>[:version]",
-		Short: "Link component binary to $PATH",
-		Long: `[experimental feature]
-Link component binary to $PATH`,
+		Short: "Link component binary to $TIUP_HOME/bin/",
+		Long:  `[experimental] Link component binary to $TIUP_HOME/bin/`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			teleCommand = cmd.CommandPath()
 			env := environment.GlobalEnv()
@@ -35,18 +30,7 @@ Link component binary to $PATH`,
 				return cmd.Help()
 			}
 			component, version := environment.ParseCompVersion(args[0])
-			if version == "" {
-				var err error
-				version, err = env.SelectInstalledVersion(component, version)
-				if err != nil {
-					return err
-				}
-			}
-			binPath, _ := env.BinaryPath(component, version)
-			target := filepath.Join(env.LocalPath("bin"), filepath.Base(binPath))
-			fmt.Printf("package %s provides these executables: %s\n", component, filepath.Base(binPath))
-			_ = os.Remove(target)
-			return os.Symlink(binPath, target)
+			return env.Link(component, version)
 		},
 	}
 	return cmd
