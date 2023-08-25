@@ -184,7 +184,7 @@ Do you want to continue? [y/N]:`,
 
 			tb.InitConfig(
 				name,
-				version,
+				clusterVersion,
 				m.specManager,
 				inst,
 				base.User,

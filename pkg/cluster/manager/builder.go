@@ -172,7 +172,7 @@ func buildScaleOutTask(
 	var iterErr error
 	// Deploy the new topology and refresh the configuration
 	newPart.IterInstance(func(inst spec.Instance) {
-		version := m.bindVersion(inst.ComponentName(), base.Version)
+		version := inst.CalculateVersion(m.bindVersion(inst.ComponentName(), base.Version))
 		deployDir := spec.Abs(base.User, inst.DeployDir())
 		// data dir would be empty for components which don't need it
 		dataDirs := spec.MultiDirAbs(base.User, inst.DataDir())
@@ -699,7 +699,7 @@ func buildDownloadCompTasks(
 				// download spark as dependency of tispark
 				tasks = append(tasks, buildDownloadSparkTask(inst, logger, gOpt))
 			} else {
-				version = bindVersion(inst.ComponentSource(), inst.CalculateVersion(clusterVersion))
+				version = inst.CalculateVersion(bindVersion(inst.ComponentName(), clusterVersion))
 			}
 
 			t := task.NewBuilder(logger).
