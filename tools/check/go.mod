@@ -1,26 +1,20 @@
 module github.com/pingcap/tidb/_tools
 
-require (
-	github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc // indirect
-	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf // indirect
-	github.com/chzchzchz/goword v0.0.0-20170907005317-a9744cb52b03
-	github.com/client9/misspell v0.3.4
-	github.com/dnephin/govet v0.0.0-20171012192244-4a96d43e39d3
-	github.com/google/shlex v0.0.0-20181106134648-c34317bd91bf // indirect
-	github.com/gordonklaus/ineffassign v0.0.0-20180909121442-1003c8bd00dc
-	github.com/kisielk/errcheck v1.2.0
-	github.com/mgechev/revive v1.2.4
-	github.com/nicksnyder/go-i18n v1.10.0 // indirect
-	github.com/pelletier/go-toml v1.2.0 // indirect
-	github.com/securego/gosec v0.0.0-20181211171558-12400f9a1ca7
-	golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898 // indirect
-	gopkg.in/alecthomas/gometalinter.v2 v2.0.12 // indirect
-	gopkg.in/alecthomas/gometalinter.v3 v3.0.0 // indirect
-	gopkg.in/alecthomas/kingpin.v2 v2.2.6 // indirect
-	gopkg.in/alecthomas/kingpin.v3-unstable v3.0.0-20170321130658-9670b87a702e // indirect
-	gopkg.in/yaml.v2 v2.2.2 // indirect
-	honnef.co/go/tools v0.0.0-20180920025451-e3ad64cb4ed3
-	k8s.io/klog v1.0.0 // indirect
-)
+go 1.21
 
-go 1.18
+require (
+	github.com/BurntSushi/toml v1.2.1 // indirect
+	github.com/chavacava/garif v0.0.0-20230227094218-b8c73b2037b8 // indirect
+	github.com/fatih/color v1.15.0 // indirect
+	github.com/fatih/structtag v1.2.0 // indirect
+	github.com/mattn/go-colorable v0.1.13 // indirect
+	github.com/mattn/go-isatty v0.0.17 // indirect
+	github.com/mattn/go-runewidth v0.0.9 // indirect
+	github.com/mgechev/dots v0.0.0-20210922191527-e955255bf517 // indirect
+	github.com/mgechev/revive v1.3.2 // indirect
+	github.com/mitchellh/go-homedir v1.1.0 // indirect
+	github.com/olekukonko/tablewriter v0.0.5 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
+	golang.org/x/sys v0.8.0 // indirect
+	golang.org/x/tools v0.9.1 // indirect
+)

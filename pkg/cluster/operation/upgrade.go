@@ -49,7 +49,7 @@ func Upgrade(
 ) error {
 	roleFilter := set.NewStringSet(options.Roles...)
 	nodeFilter := set.NewStringSet(options.Nodes...)
-	components := topo.ComponentsByUpdateOrder()
+	components := topo.ComponentsByUpdateOrder(currentVersion)
 	components = FilterComponent(components, roleFilter)
 	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 

@@ -87,7 +87,7 @@ Do you want to continue? [y/N]:`,
 	}
 
 	hasImported := false
-	for _, comp := range topo.ComponentsByUpdateOrder() {
+	for _, comp := range topo.ComponentsByUpdateOrder(base.Version) {
 		for _, inst := range comp.Instances() {
 			compName := inst.ComponentName()
 

@@ -319,7 +319,7 @@ func (i *GrafanaInstance) installDashboards(ctx context.Context, e ctxt.Executor
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}
 
-	srcPath := PackagePath(ComponentDMMaster, clusterVersion, i.OS(), i.Arch())
+	srcPath := PackagePath(GetDMMasterPackageName(i.topo), clusterVersion, i.OS(), i.Arch())
 	dstPath := filepath.Join(tmp, filepath.Base(srcPath))
 	err = e.Transfer(ctx, srcPath, dstPath, false, 0, false)
 	if err != nil {

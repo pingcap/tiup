@@ -130,6 +130,11 @@ func TiCDCSupportRollingUpgrade(version string) bool {
 	return semver.Compare(version, "v6.3.0") >= 0 || strings.Contains(version, "nightly")
 }
 
+// TiCDCUpgradeBeforePDTiKVTiDB return if the given version of TiCDC should upgrade TiCDC before PD and TiKV
+func TiCDCUpgradeBeforePDTiKVTiDB(version string) bool {
+	return semver.Compare(version, "v5.1.0") >= 0 || strings.Contains(version, "nightly")
+}
+
 // NgMonitorDeployByDefault return if given version of TiDB cluster should contain ng-monitoring
 func NgMonitorDeployByDefault(version string) bool {
 	return semver.Compare(version, "v5.4.0") >= 0 || strings.Contains(version, "nightly")
