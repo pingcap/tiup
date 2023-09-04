@@ -435,7 +435,7 @@ func (l *httpMirror) Publish(manifest *v1manifest.Manifest, info model.Component
 	}
 	manifestAddr := fmt.Sprintf("%s/api/v1/component/%s/%s%s", l.Source(), sid, manifest.Signed.(*v1manifest.Component).ID, qstr)
 
-	client := http.Client{Timeout: time.Minute}
+	client := http.Client{Timeout: 5 * time.Minute}
 	resp, err := client.Post(manifestAddr, "text/json", bodyBuf)
 	if err != nil {
 		return err
