@@ -135,6 +135,7 @@ server_configs:
 tidb_servers: []
 tikv_servers: []
 tiflash_servers: []
+tiproxy_servers: []
 pd_servers: []
 monitoring_servers: []
 `)
