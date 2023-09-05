@@ -126,6 +126,7 @@ server_configs:
     pd: {}
     tidb_dashboard: {}
     tiflash: {}
+    tiproxy: {}
     tiflash-learner: {}
     pump: {}
     drainer: {}
