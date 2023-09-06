@@ -866,6 +866,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		&options.PD,
 		&options.PDAPI,
 		&options.PDTSO,
+		&options.PDScheduling,
 		&options.PDRM,
 		&options.TiProxy,
 		&options.TiDB,
@@ -975,6 +976,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		instances = append([]InstancePair{
 			{spec.ComponentPD, instance.PDRoleAPI, instance.TiFlashRoleNormal, options.PDAPI},
 			{spec.ComponentPD, instance.PDRoleTSO, instance.TiFlashRoleNormal, options.PDTSO},
+			{spec.ComponentPD, instance.PDRoleScheduling, instance.TiFlashRoleNormal, options.PDScheduling},
 			{spec.ComponentPD, instance.PDRoleResourceManager, instance.TiFlashRoleNormal, options.PDRM}},
 			instances...,
 		)
@@ -1080,9 +1082,10 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 	if p.bootOptions.Mode == "tikv-slim" {
 		if p.bootOptions.PDMode == "ms" {
 			var (
-				tsoAddr []string
-				apiAddr []string
-				rmAddr  []string
+				tsoAddr        []string
+				apiAddr        []string
+				rmAddr         []string
+				schedulingAddr []string
 			)
 			for _, pd := range p.pds {
 				switch pd.Role {
@@ -1090,6 +1093,8 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 					tsoAddr = append(tsoAddr, pd.Addr())
 				case instance.PDRoleAPI:
 					apiAddr = append(apiAddr, pd.Addr())
+				case instance.PDRoleScheduling:
+					schedulingAddr = append(schedulingAddr, pd.Addr())
 				case instance.PDRoleResourceManager:
 					rmAddr = append(rmAddr, pd.Addr())
 				}
@@ -1098,7 +1103,9 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			colorCmd.Printf("%s\n", strings.Join(tsoAddr, ","))
 			fmt.Printf("PD API Endpoints:   ")
 			colorCmd.Printf("%s\n", strings.Join(apiAddr, ","))
-			fmt.Printf("PD Resource Ranager Endpoints:   ")
+			fmt.Printf("PD Scheduling Endpoints:   ")
+			colorCmd.Printf("%s\n", strings.Join(schedulingAddr, ","))
+			fmt.Printf("PD Resource Manager Endpoints:   ")
 			colorCmd.Printf("%s\n", strings.Join(rmAddr, ","))
 		} else {
 			var pdAddrs []string
