@@ -249,8 +249,7 @@ func (m *Manager) Deploy(
 
 	// Deploy components to remote
 	topo.IterInstance(func(inst spec.Instance) {
-		version := inst.CalculateVersion(m.bindVersion(inst.ComponentName(), clusterVersion))
-		inst.SetVersion(version)
+		version := inst.CalculateVersion(clusterVersion)
 		deployDir := spec.Abs(globalOptions.User, inst.DeployDir())
 		// data dir would be empty for components which don't need it
 		dataDirs := spec.MultiDirAbs(globalOptions.User, inst.DataDir())

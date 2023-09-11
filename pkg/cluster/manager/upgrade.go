@@ -106,10 +106,10 @@ Do you want to continue? [y/N]:`,
 
 			// if component version is not specified, use the cluster version or latest("")
 			version := componentVersions[compName]
-			if version == "" {
-				version = m.bindVersion(compName, clusterVersion)
+			if version != "" {
+				inst.SetVersion(version)
 			}
-			inst.SetVersion(version)
+			version = inst.CalculateVersion(clusterVersion)
 
 			// Download component from repository
 			key := fmt.Sprintf("%s-%s-%s-%s", compName, version, inst.OS(), inst.Arch())

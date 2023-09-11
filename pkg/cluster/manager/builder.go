@@ -172,7 +172,7 @@ func buildScaleOutTask(
 	var iterErr error
 	// Deploy the new topology and refresh the configuration
 	newPart.IterInstance(func(inst spec.Instance) {
-		version := inst.CalculateVersion(m.bindVersion(inst.ComponentName(), base.Version))
+		version := inst.CalculateVersion(base.Version)
 		deployDir := spec.Abs(base.User, inst.DeployDir())
 		// data dir would be empty for components which don't need it
 		dataDirs := spec.MultiDirAbs(base.User, inst.DataDir())
@@ -235,9 +235,9 @@ func buildScaleOutTask(
 			// data dir would be empty for components which don't need it
 			// Download and copy the latest component to remote if the cluster is imported from Ansible
 			tb := task.NewBuilder(m.logger)
+			version := inst.CalculateVersion(base.Version)
 			switch compName := inst.ComponentName(); compName {
 			case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertmanager:
-				version := m.bindVersion(compName, base.Version)
 				tb.Download(compName, inst.OS(), inst.Arch(), version).
 					CopyComponent(compName, inst.OS(), inst.Arch(), version, "", inst.GetManageHost(), deployDir)
 			}
@@ -639,9 +639,9 @@ func buildInitConfigTasks(
 		// Download and copy the latest component to remote if the cluster is imported from Ansible
 		tb := task.NewBuilder(m.logger)
 		if instance.IsImported() {
+			version := instance.CalculateVersion(base.Version)
 			switch compName {
 			case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertmanager:
-				version := m.bindVersion(compName, base.Version)
 				tb.Download(compName, instance.OS(), instance.Arch(), version).
 					CopyComponent(
 						compName,
@@ -699,7 +699,7 @@ func buildDownloadCompTasks(
 				// download spark as dependency of tispark
 				tasks = append(tasks, buildDownloadSparkTask(inst, logger, gOpt))
 			} else {
-				version = inst.CalculateVersion(bindVersion(inst.ComponentName(), clusterVersion))
+				version = inst.CalculateVersion(clusterVersion)
 			}
 
 			t := task.NewBuilder(logger).

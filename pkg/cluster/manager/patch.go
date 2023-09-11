@@ -145,7 +145,7 @@ func checkPackage(bindVersion spec.BindVersion, specManager *spec.SpecManager, n
 		return err
 	}
 
-	ver := inst.CalculateVersion(bindVersion(inst.ComponentName(), metadata.GetBaseMeta().Version))
+	ver := inst.CalculateVersion(metadata.GetBaseMeta().Version)
 	repo, err := clusterutil.NewRepository(nodeOS, arch)
 	if err != nil {
 		return err
