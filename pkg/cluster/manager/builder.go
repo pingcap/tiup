@@ -164,7 +164,6 @@ func buildScaleOutTask(
 		newPart,
 		m.logger,
 		gOpt,
-		m.bindVersion,
 	)
 
 	sshType := topo.BaseTopo().GlobalOptions.SSHType
@@ -684,7 +683,6 @@ func buildDownloadCompTasks(
 	topo spec.Topology,
 	logger *logprinter.Logger,
 	gOpt operator.Options,
-	bindVersion spec.BindVersion,
 ) []*task.StepDisplay {
 	var tasks []*task.StepDisplay
 	uniqueTaskList := set.NewStringSet()

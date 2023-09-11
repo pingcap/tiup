@@ -260,9 +260,6 @@ func mergeImported(importConfig []byte, specConfigs ...map[string]any) (map[stri
 	return lhs, nil
 }
 
-// BindVersion map the cluster version to the third components binding version.
-type BindVersion func(comp string, version string) (bindVersion string)
-
 func checkConfig(ctx context.Context, e ctxt.Executor, componentName, componentSource, version, nodeOS, arch, config string, paths meta.DirPaths) error {
 	var cmd string
 	configPath := path.Join(paths.Deploy, "conf", config)

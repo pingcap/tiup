@@ -78,7 +78,7 @@ func (m *Manager) Patch(name string, packagePath string, opt operator.Options, o
 	if err != nil {
 		return err
 	}
-	if err := checkPackage(m.bindVersion, m.specManager, name, insts[0], insts[0].OS(), insts[0].Arch(), packagePath); err != nil {
+	if err := checkPackage(m.specManager, name, insts[0], insts[0].OS(), insts[0].Arch(), packagePath); err != nil {
 		return err
 	}
 
@@ -139,7 +139,7 @@ func (m *Manager) Patch(name string, packagePath string, opt operator.Options, o
 	return m.specManager.SaveMeta(name, metadata)
 }
 
-func checkPackage(bindVersion spec.BindVersion, specManager *spec.SpecManager, name string, inst spec.Instance, nodeOS, arch, packagePath string) error {
+func checkPackage(specManager *spec.SpecManager, name string, inst spec.Instance, nodeOS, arch, packagePath string) error {
 	metadata := specManager.NewMetadata()
 	if err := specManager.Metadata(name, metadata); err != nil {
 		return err
