@@ -51,7 +51,6 @@ type TiKVSpec struct {
 	ListenHost          string               `yaml:"listen_host,omitempty"`
 	AdvertiseAddr       string               `yaml:"advertise_addr,omitempty"`
 	SSHPort             int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Version             string               `yaml:"version,omitempty"`
 	Imported            bool                 `yaml:"imported,omitempty"`
 	Patched             bool                 `yaml:"patched,omitempty"`
 	IgnoreExporter      bool                 `yaml:"ignore_exporter,omitempty"`
@@ -186,6 +185,20 @@ func (c *TiKVComponent) Role() string {
 	return ComponentTiKV
 }
 
+// CalculateVersion implements the Component interface
+func (c *TiKVComponent) CalculateVersion(clusterVersion string) string {
+	version := c.Topology.ComponentVersions.TiKV
+	if version == "" {
+		version = clusterVersion
+	}
+	return version
+}
+
+// SetVersion implements Component interface.
+func (c *TiKVComponent) SetVersion(version string) {
+	c.Topology.ComponentVersions.TiKV = version
+}
+
 // Instances implements Component interface.
 func (c *TiKVComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.TiKVServers))
@@ -213,6 +226,7 @@ func (c *TiKVComponent) Instances() []Instance {
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 				return UptimeByHost(s.GetManageHost(), s.StatusPort, timeout, tlsCfg)
 			},
+			Component: c,
 		}, c.Topology, 0})
 	}
 	return ins

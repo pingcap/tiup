@@ -119,25 +119,44 @@ type (
 		Grafana        map[string]string `yaml:"grafana"`
 	}
 
+	// ComponentVersions represents the versions of components
+	ComponentVersions struct {
+		TiDB             string `yaml:"tidb"`
+		TiKV             string `yaml:"tikv"`
+		TiFlash          string `yaml:"tiflash"`
+		PD               string `yaml:"pd"`
+		Dashboard        string `yaml:"tidb_dashboard"`
+		Pump             string `yaml:"pump"`
+		Drainer          string `yaml:"drainer"`
+		CDC              string `yaml:"cdc"`
+		TiKVCDC          string `yaml:"kvcdc"`
+		Prometheus       string `yaml:"prometheus"`
+		Grafana          string `yaml:"grafana"`
+		AlertManager     string `yaml:"alertmanager"`
+		NodeExporter     string `yaml:"node_exporter"`
+		BlackboxExporter string `yaml:"blackbox_exporter"`
+	}
+
 	// Specification represents the specification of topology.yaml
 	Specification struct {
-		GlobalOptions    GlobalOptions        `yaml:"global,omitempty" validate:"global:editable"`
-		MonitoredOptions MonitoredOptions     `yaml:"monitored,omitempty" validate:"monitored:editable"`
-		ServerConfigs    ServerConfigs        `yaml:"server_configs,omitempty" validate:"server_configs:ignore"`
-		TiDBServers      []*TiDBSpec          `yaml:"tidb_servers"`
-		TiKVServers      []*TiKVSpec          `yaml:"tikv_servers"`
-		TiFlashServers   []*TiFlashSpec       `yaml:"tiflash_servers"`
-		PDServers        []*PDSpec            `yaml:"pd_servers"`
-		DashboardServers []*DashboardSpec     `yaml:"tidb_dashboard_servers,omitempty"`
-		PumpServers      []*PumpSpec          `yaml:"pump_servers,omitempty"`
-		Drainers         []*DrainerSpec       `yaml:"drainer_servers,omitempty"`
-		CDCServers       []*CDCSpec           `yaml:"cdc_servers,omitempty"`
-		TiKVCDCServers   []*TiKVCDCSpec       `yaml:"kvcdc_servers,omitempty"`
-		TiSparkMasters   []*TiSparkMasterSpec `yaml:"tispark_masters,omitempty"`
-		TiSparkWorkers   []*TiSparkWorkerSpec `yaml:"tispark_workers,omitempty"`
-		Monitors         []*PrometheusSpec    `yaml:"monitoring_servers"`
-		Grafanas         []*GrafanaSpec       `yaml:"grafana_servers,omitempty"`
-		Alertmanagers    []*AlertmanagerSpec  `yaml:"alertmanager_servers,omitempty"`
+		GlobalOptions     GlobalOptions        `yaml:"global,omitempty" validate:"global:editable"`
+		MonitoredOptions  MonitoredOptions     `yaml:"monitored,omitempty" validate:"monitored:editable"`
+		ComponentVersions ComponentVersions    `yaml:"component_versions,omitempty" validate:"component_versions:editable"`
+		ServerConfigs     ServerConfigs        `yaml:"server_configs,omitempty" validate:"server_configs:ignore"`
+		TiDBServers       []*TiDBSpec          `yaml:"tidb_servers"`
+		TiKVServers       []*TiKVSpec          `yaml:"tikv_servers"`
+		TiFlashServers    []*TiFlashSpec       `yaml:"tiflash_servers"`
+		PDServers         []*PDSpec            `yaml:"pd_servers"`
+		DashboardServers  []*DashboardSpec     `yaml:"tidb_dashboard_servers,omitempty"`
+		PumpServers       []*PumpSpec          `yaml:"pump_servers,omitempty"`
+		Drainers          []*DrainerSpec       `yaml:"drainer_servers,omitempty"`
+		CDCServers        []*CDCSpec           `yaml:"cdc_servers,omitempty"`
+		TiKVCDCServers    []*TiKVCDCSpec       `yaml:"kvcdc_servers,omitempty"`
+		TiSparkMasters    []*TiSparkMasterSpec `yaml:"tispark_masters,omitempty"`
+		TiSparkWorkers    []*TiSparkWorkerSpec `yaml:"tispark_workers,omitempty"`
+		Monitors          []*PrometheusSpec    `yaml:"monitoring_servers"`
+		Grafanas          []*GrafanaSpec       `yaml:"grafana_servers,omitempty"`
+		Alertmanagers     []*AlertmanagerSpec  `yaml:"alertmanager_servers,omitempty"`
 	}
 )
 
@@ -147,9 +166,12 @@ type BaseTopo struct {
 	MonitoredOptions *MonitoredOptions
 	MasterList       []string
 
-	Monitors      []*PrometheusSpec
-	Grafanas      []*GrafanaSpec
-	Alertmanagers []*AlertmanagerSpec
+	PrometheusVersion   *string
+	GrafanaVersion      *string
+	AlertManagerVersion *string
+	Monitors            []*PrometheusSpec
+	Grafanas            []*GrafanaSpec
+	Alertmanagers       []*AlertmanagerSpec
 }
 
 // Topology represents specification of the cluster.
@@ -254,12 +276,15 @@ func (s *Specification) Type() string {
 // BaseTopo implements Topology interface.
 func (s *Specification) BaseTopo() *BaseTopo {
 	return &BaseTopo{
-		GlobalOptions:    &s.GlobalOptions,
-		MonitoredOptions: s.GetMonitoredOptions(),
-		MasterList:       s.GetPDListWithManageHost(),
-		Monitors:         s.Monitors,
-		Grafanas:         s.Grafanas,
-		Alertmanagers:    s.Alertmanagers,
+		GlobalOptions:       &s.GlobalOptions,
+		MonitoredOptions:    s.GetMonitoredOptions(),
+		MasterList:          s.GetPDListWithManageHost(),
+		PrometheusVersion:   &s.ComponentVersions.Prometheus,
+		GrafanaVersion:      &s.ComponentVersions.Grafana,
+		AlertManagerVersion: &s.ComponentVersions.AlertManager,
+		Monitors:            s.Monitors,
+		Grafanas:            s.Grafanas,
+		Alertmanagers:       s.Alertmanagers,
 	}
 }
 
@@ -532,15 +557,16 @@ func fillCustomDefaults(globalOptions *GlobalOptions, data any) error {
 }
 
 var (
-	globalOptionTypeName  = reflect.TypeOf(GlobalOptions{}).Name()
-	monitorOptionTypeName = reflect.TypeOf(MonitoredOptions{}).Name()
-	serverConfigsTypeName = reflect.TypeOf(ServerConfigs{}).Name()
+	globalOptionTypeName      = reflect.TypeOf(GlobalOptions{}).Name()
+	monitorOptionTypeName     = reflect.TypeOf(MonitoredOptions{}).Name()
+	serverConfigsTypeName     = reflect.TypeOf(ServerConfigs{}).Name()
+	componentVersionsTypeName = reflect.TypeOf(ComponentVersions{}).Name()
 )
 
 // Skip global/monitored options
 func isSkipField(field reflect.Value) bool {
 	tp := field.Type().Name()
-	return tp == globalOptionTypeName || tp == monitorOptionTypeName || tp == serverConfigsTypeName
+	return tp == globalOptionTypeName || tp == monitorOptionTypeName || tp == serverConfigsTypeName || tp == componentVersionsTypeName
 }
 
 func setDefaultDir(parent, role, port string, field reflect.Value) {

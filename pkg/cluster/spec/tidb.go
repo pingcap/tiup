@@ -35,7 +35,6 @@ type TiDBSpec struct {
 	ManageHost      string               `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
 	ListenHost      string               `yaml:"listen_host,omitempty"`
 	AdvertiseAddr   string               `yaml:"advertise_address,omitempty"`
-	Version         string               `yaml:"version,omitempty"`
 	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported        bool                 `yaml:"imported,omitempty"`
 	Patched         bool                 `yaml:"patched,omitempty"`
@@ -111,6 +110,20 @@ func (c *TiDBComponent) Role() string {
 	return ComponentTiDB
 }
 
+// CalculateVersion implements the Component interface
+func (c *TiDBComponent) CalculateVersion(clusterVersion string) string {
+	version := c.Topology.ComponentVersions.TiDB
+	if version == "" {
+		version = clusterVersion
+	}
+	return version
+}
+
+// SetVersion implements Component interface.
+func (c *TiDBComponent) SetVersion(version string) {
+	c.Topology.ComponentVersions.TiDB = version
+}
+
 // Instances implements Component interface.
 func (c *TiDBComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.TiDBServers))
@@ -139,6 +152,7 @@ func (c *TiDBComponent) Instances() []Instance {
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 				return UptimeByHost(s.GetManageHost(), s.StatusPort, timeout, tlsCfg)
 			},
+			Component: c,
 		}, c.Topology})
 	}
 	return ins

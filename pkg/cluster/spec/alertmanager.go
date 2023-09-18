@@ -32,7 +32,6 @@ type AlertmanagerSpec struct {
 	Host            string               `yaml:"host"`
 	ManageHost      string               `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
 	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Version         string               `yaml:"version,omitempty"`
 	Imported        bool                 `yaml:"imported,omitempty"`
 	Patched         bool                 `yaml:"patched,omitempty"`
 	IgnoreExporter  bool                 `yaml:"ignore_exporter,omitempty"`
@@ -99,6 +98,21 @@ func (c *AlertManagerComponent) Role() string {
 	return RoleMonitor
 }
 
+// CalculateVersion implements the Component interface
+func (c *AlertManagerComponent) CalculateVersion(_ string) string {
+	// always not follow cluster version, use ""(latest) by default
+	version := c.Topology.BaseTopo().AlertManagerVersion
+	if version != nil {
+		return *version
+	}
+	return ""
+}
+
+// SetVersion implements Component interface.
+func (c *AlertManagerComponent) SetVersion(version string) {
+	*c.Topology.BaseTopo().AlertManagerVersion = version
+}
+
 // Instances implements Component interface.
 func (c *AlertManagerComponent) Instances() []Instance {
 	alertmanagers := c.Topology.BaseTopo().Alertmanagers
@@ -131,6 +145,7 @@ func (c *AlertManagerComponent) Instances() []Instance {
 				UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 					return UptimeByHost(s.GetManageHost(), s.WebPort, timeout, tlsCfg)
 				},
+				Component: c,
 			},
 			topo: c.Topology,
 		})
@@ -232,10 +247,4 @@ func (i *AlertManagerInstance) ScaleConfig(
 // setTLSConfig set TLS Config to support enable/disable TLS
 func (i *AlertManagerInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error) {
 	return nil, nil
-}
-
-// CalculateVersion implements the Instance interface
-func (i *AlertManagerInstance) CalculateVersion(_ string) string {
-	// always not follow global version, use ""(latest) by default
-	return i.InstanceSpec.(*AlertmanagerSpec).Version
 }

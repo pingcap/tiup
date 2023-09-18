@@ -43,7 +43,6 @@ type TiFlashSpec struct {
 	Host                 string               `yaml:"host"`
 	ManageHost           string               `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
 	SSHPort              int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Version              string               `yaml:"version,omitempty"`
 	Imported             bool                 `yaml:"imported,omitempty"`
 	Patched              bool                 `yaml:"patched,omitempty"`
 	IgnoreExporter       bool                 `yaml:"ignore_exporter,omitempty"`
@@ -283,6 +282,20 @@ func (c *TiFlashComponent) Role() string {
 	return ComponentTiFlash
 }
 
+// CalculateVersion implements the Component interface
+func (c *TiFlashComponent) CalculateVersion(clusterVersion string) string {
+	version := c.Topology.ComponentVersions.TiFlash
+	if version == "" {
+		version = clusterVersion
+	}
+	return version
+}
+
+// SetVersion implements Component interface.
+func (c *TiFlashComponent) SetVersion(version string) {
+	c.Topology.ComponentVersions.TiFlash = version
+}
+
 // Instances implements Component interface.
 func (c *TiFlashComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.TiFlashServers))
@@ -312,6 +325,7 @@ func (c *TiFlashComponent) Instances() []Instance {
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 				return UptimeByHost(s.GetManageHost(), s.StatusPort, timeout, tlsCfg)
 			},
+			Component: c,
 		}, c.Topology})
 	}
 	return ins

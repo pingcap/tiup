@@ -68,6 +68,16 @@ func (c *DMMasterComponent) Role() string {
 	return ComponentDMMaster
 }
 
+// CalculateVersion implements the Component interface
+func (c *DMMasterComponent) CalculateVersion(clusterVersion string) string {
+	return clusterVersion
+}
+
+// SetVersion implements Component interface.
+func (c *DMMasterComponent) SetVersion(version string) {
+	// not supported now
+}
+
 // Instances implements Component interface.
 func (c *DMMasterComponent) Instances() []Instance {
 	ins := make([]Instance, 0)
@@ -96,6 +106,7 @@ func (c *DMMasterComponent) Instances() []Instance {
 				UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 					return spec.UptimeByHost(s.Host, s.Port, timeout, tlsCfg)
 				},
+				Component: c,
 			},
 			topo: c.Topology,
 		})
@@ -271,6 +282,16 @@ func (c *DMWorkerComponent) Role() string {
 	return ComponentDMWorker
 }
 
+// CalculateVersion implements the Component interface
+func (c *DMWorkerComponent) CalculateVersion(clusterVersion string) string {
+	return clusterVersion
+}
+
+// SetVersion implements Component interface.
+func (c *DMWorkerComponent) SetVersion(version string) {
+	// not supported now
+}
+
 // Instances implements Component interface.
 func (c *DMWorkerComponent) Instances() []Instance {
 	ins := make([]Instance, 0)
@@ -298,6 +319,7 @@ func (c *DMWorkerComponent) Instances() []Instance {
 				UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 					return spec.UptimeByHost(s.Host, s.Port, timeout, tlsCfg)
 				},
+				Component: c,
 			},
 			topo: c.Topology,
 		})

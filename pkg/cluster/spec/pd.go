@@ -37,7 +37,6 @@ type PDSpec struct {
 	ListenHost          string `yaml:"listen_host,omitempty"`
 	AdvertiseClientAddr string `yaml:"advertise_client_addr,omitempty"`
 	AdvertisePeerAddr   string `yaml:"advertise_peer_addr,omitempty"`
-	Version             string `yaml:"version,omitempty"`
 	SSHPort             int    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported            bool   `yaml:"imported,omitempty"`
 	Patched             bool   `yaml:"patched,omitempty"`
@@ -160,6 +159,20 @@ func (c *PDComponent) Role() string {
 	return ComponentPD
 }
 
+// CalculateVersion implements the Component interface
+func (c *PDComponent) CalculateVersion(clusterVersion string) string {
+	version := c.Topology.ComponentVersions.PD
+	if version == "" {
+		version = clusterVersion
+	}
+	return version
+}
+
+// SetVersion implements Component interface.
+func (c *PDComponent) SetVersion(version string) {
+	c.Topology.ComponentVersions.PD = version
+}
+
 // Instances implements Component interface.
 func (c *PDComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.PDServers))
@@ -189,6 +202,7 @@ func (c *PDComponent) Instances() []Instance {
 				UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 					return UptimeByHost(s.GetManageHost(), s.ClientPort, timeout, tlsCfg)
 				},
+				Component: c,
 			},
 			topo: c.Topology,
 		})

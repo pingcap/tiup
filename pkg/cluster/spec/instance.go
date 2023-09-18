@@ -71,6 +71,8 @@ type Component interface {
 	Name() string
 	Role() string
 	Instances() []Instance
+	CalculateVersion(string) string
+	SetVersion(string)
 }
 
 // RollingUpdateInstance represent a instance need to transfer state when restart.
@@ -109,7 +111,7 @@ type Instance interface {
 	IsPatched() bool
 	SetPatched(bool)
 	CalculateVersion(string) string
-	SetVersion(string)
+	// SetVersion(string)
 	setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error)
 }
 
@@ -151,6 +153,8 @@ type BaseInstance struct {
 	Dirs     []string
 	StatusFn func(ctx context.Context, timeout time.Duration, tlsCfg *tls.Config, pdHosts ...string) string
 	UptimeFn func(ctx context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration
+
+	Component Component
 }
 
 // Ready implements Instance interface
@@ -448,23 +452,7 @@ func (i *BaseInstance) SetPatched(p bool) {
 
 // CalculateVersion implements the Instance interface
 func (i *BaseInstance) CalculateVersion(globalVersion string) string {
-	v := reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("Version")
-	if !v.IsValid() {
-		return globalVersion
-	}
-	if v.String() == "" {
-		return globalVersion
-	}
-	return v.String()
-}
-
-// SetVersion implements the Instance interface
-func (i *BaseInstance) SetVersion(version string) {
-	v := reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("Version")
-	if !v.CanSet() {
-		return
-	}
-	v.SetString(version)
+	return i.Component.CalculateVersion(globalVersion)
 }
 
 // PrepareStart checks instance requirements before starting

@@ -36,7 +36,6 @@ type CDCSpec struct {
 	Host            string               `yaml:"host"`
 	ManageHost      string               `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
 	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Version         string               `yaml:"version,omitempty"`
 	Imported        bool                 `yaml:"imported,omitempty"`
 	Patched         bool                 `yaml:"patched,omitempty"`
 	IgnoreExporter  bool                 `yaml:"ignore_exporter,omitempty"`
@@ -114,6 +113,20 @@ func (c *CDCComponent) Role() string {
 	return ComponentCDC
 }
 
+// CalculateVersion implements the Component interface
+func (c *CDCComponent) CalculateVersion(clusterVersion string) string {
+	version := c.Topology.ComponentVersions.CDC
+	if version == "" {
+		version = clusterVersion
+	}
+	return version
+}
+
+// SetVersion implements Component interface.
+func (c *CDCComponent) SetVersion(version string) {
+	c.Topology.ComponentVersions.CDC = version
+}
+
 // Instances implements Component interface.
 func (c *CDCComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.CDCServers))
@@ -140,6 +153,7 @@ func (c *CDCComponent) Instances() []Instance {
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 				return UptimeByHost(s.GetManageHost(), s.Port, timeout, tlsCfg)
 			},
+			Component: c,
 		}, c.Topology}
 		if s.DataDir != "" {
 			instance.Dirs = append(instance.Dirs, s.DataDir)

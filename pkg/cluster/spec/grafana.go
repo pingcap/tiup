@@ -37,7 +37,6 @@ type GrafanaSpec struct {
 	Host            string               `yaml:"host"`
 	ManageHost      string               `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
 	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Version         string               `yaml:"version,omitempty"`
 	Imported        bool                 `yaml:"imported,omitempty"`
 	Patched         bool                 `yaml:"patched,omitempty"`
 	IgnoreExporter  bool                 `yaml:"ignore_exporter,omitempty"`
@@ -108,6 +107,21 @@ func (c *GrafanaComponent) Role() string {
 	return RoleMonitor
 }
 
+// CalculateVersion implements the Component interface
+func (c *GrafanaComponent) CalculateVersion(clusterVersion string) string {
+	// always not follow cluster version, use ""(latest) by default
+	version := c.Topology.BaseTopo().GrafanaVersion
+	if version != nil && *version != "" {
+		return *version
+	}
+	return clusterVersion
+}
+
+// SetVersion implements Component interface.
+func (c *GrafanaComponent) SetVersion(version string) {
+	*c.Topology.BaseTopo().GrafanaVersion = version
+}
+
 // Instances implements Component interface.
 func (c *GrafanaComponent) Instances() []Instance {
 	servers := c.BaseTopo().Grafanas
@@ -136,6 +150,7 @@ func (c *GrafanaComponent) Instances() []Instance {
 				UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 					return UptimeByHost(s.GetManageHost(), s.Port, timeout, tlsCfg)
 				},
+				Component: c,
 			},
 			topo: c.Topology,
 		})

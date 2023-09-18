@@ -36,7 +36,6 @@ type TiKVCDCSpec struct {
 	Host            string               `yaml:"host"`
 	ManageHost      string               `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
 	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Version         string               `yaml:"version,omitempty"`
 	Imported        bool                 `yaml:"imported,omitempty"`
 	Patched         bool                 `yaml:"patched,omitempty"`
 	IgnoreExporter  bool                 `yaml:"ignore_exporter,omitempty"`
@@ -106,6 +105,18 @@ func (c *TiKVCDCComponent) Role() string {
 	return ComponentTiKVCDC
 }
 
+// CalculateVersion implements the Component interface
+func (c *TiKVCDCComponent) CalculateVersion(clusterVersion string) string {
+	// always not follow global version, use ""(latest) by default
+	version := c.Topology.ComponentVersions.TiKVCDC
+	return version
+}
+
+// SetVersion implements Component interface.
+func (c *TiKVCDCComponent) SetVersion(version string) {
+	c.Topology.ComponentVersions.TiKVCDC = version
+}
+
 // GetSource returns source to download the component
 func (s *TiKVCDCSpec) GetSource() string {
 	if s.Source == "" {
@@ -140,6 +151,7 @@ func (c *TiKVCDCComponent) Instances() []Instance {
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 				return UptimeByHost(s.GetManageHost(), s.Port, timeout, tlsCfg)
 			},
+			Component: c,
 		}, c.Topology}
 		if s.DataDir != "" {
 			instance.Dirs = append(instance.Dirs, s.DataDir)
@@ -328,10 +340,4 @@ func (i *TiKVCDCInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg
 
 	logger.Debugf("tikv-cdc post-restart success, addr: %s, elapsed: %+v", address, time.Since(start))
 	return nil
-}
-
-// CalculateVersion implements the Instance interface
-func (i *TiKVCDCInstance) CalculateVersion(_ string) string {
-	// always not follow global version, use ""(latest) by default
-	return i.InstanceSpec.(*TiKVCDCSpec).Version
 }

@@ -101,16 +101,16 @@ Do you want to continue? [y/N]:`,
 
 	hasImported := false
 	for _, comp := range topo.ComponentsByUpdateOrder(base.Version) {
+		compName := comp.Name()
+
+		// if component version is not specified, use the cluster version or latest("")
+		version := componentVersions[compName]
+		if version != "" {
+			comp.SetVersion(version)
+		}
+		version = comp.CalculateVersion(clusterVersion)
+
 		for _, inst := range comp.Instances() {
-			compName := inst.ComponentName()
-
-			// if component version is not specified, use the cluster version or latest("")
-			version := componentVersions[compName]
-			if version != "" {
-				inst.SetVersion(version)
-			}
-			version = inst.CalculateVersion(clusterVersion)
-
 			// Download component from repository
 			key := fmt.Sprintf("%s-%s-%s-%s", compName, version, inst.OS(), inst.Arch())
 			if _, found := uniqueComps[key]; !found {
