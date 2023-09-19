@@ -61,6 +61,9 @@ type Playground struct {
 	port        int
 
 	pds              []*instance.PDInstance
+	tsos             []*instance.PDInstance
+	schedulings      []*instance.PDInstance
+	rms              []*instance.PDInstance
 	tikvs            []*instance.TiKVInstance
 	tidbs            []*instance.TiDBInstance
 	tiflashs         []*instance.TiFlashInstance
@@ -276,6 +279,7 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 
 	switch cid {
 	case spec.ComponentPD:
+		// microservice not support scale in temporarily
 		for i := 0; i < len(p.pds); i++ {
 			if p.pds[i].Pid() == pid {
 				inst := p.pds[i]
@@ -593,6 +597,24 @@ func (p *Playground) WalkInstances(fn func(componentID string, ins instance.Inst
 			return err
 		}
 	}
+	for _, ins := range p.tsos {
+		err := fn(spec.ComponentPD, ins)
+		if err != nil {
+			return err
+		}
+	}
+	for _, ins := range p.schedulings {
+		err := fn(spec.ComponentPD, ins)
+		if err != nil {
+			return err
+		}
+	}
+	for _, ins := range p.rms {
+		err := fn(spec.ComponentPD, ins)
+		if err != nil {
+			return err
+		}
+	}
 	for _, ins := range p.tikvs {
 		err := fn(spec.ComponentTiKV, ins)
 		if err != nil {
@@ -698,8 +720,12 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 					pd.InitCluster(p.pds)
 				}
 			}
-		} else {
-			p.pds = append(p.pds, inst)
+		} else if pdRole == instance.PDRoleTSO {
+			p.tsos = append(p.tsos, inst)
+		} else if pdRole == instance.PDRoleScheduling {
+			p.schedulings = append(p.schedulings, inst)
+		} else if pdRole == instance.PDRoleResourceManager {
+			p.rms = append(p.rms, inst)
 		}
 	case spec.ComponentTiDB:
 		inst := instance.NewTiDBInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, p.enableBinlog(), p.bootOptions.Mode == "tidb-disagg")
@@ -1087,22 +1113,23 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 				rmAddr         []string
 				schedulingAddr []string
 			)
-			for _, pd := range p.pds {
-				switch pd.Role {
-				case instance.PDRoleTSO:
-					tsoAddr = append(tsoAddr, pd.Addr())
-				case instance.PDRoleAPI:
-					apiAddr = append(apiAddr, pd.Addr())
-				case instance.PDRoleScheduling:
-					schedulingAddr = append(schedulingAddr, pd.Addr())
-				case instance.PDRoleResourceManager:
-					rmAddr = append(rmAddr, pd.Addr())
-				}
+			for _, api := range p.pds {
+				apiAddr = append(apiAddr, api.Addr())
 			}
-			fmt.Printf("PD TSO Endpoints:   ")
-			colorCmd.Printf("%s\n", strings.Join(tsoAddr, ","))
+			for _, tso := range p.tsos {
+				tsoAddr = append(tsoAddr, tso.Addr())
+			}
+			for _, scheduling := range p.schedulings {
+				schedulingAddr = append(schedulingAddr, scheduling.Addr())
+			}
+			for _, rm := range p.rms {
+				rmAddr = append(rmAddr, rm.Addr())
+			}
+
 			fmt.Printf("PD API Endpoints:   ")
 			colorCmd.Printf("%s\n", strings.Join(apiAddr, ","))
+			fmt.Printf("PD TSO Endpoints:   ")
+			colorCmd.Printf("%s\n", strings.Join(tsoAddr, ","))
 			fmt.Printf("PD Scheduling Endpoints:   ")
 			colorCmd.Printf("%s\n", strings.Join(schedulingAddr, ","))
 			fmt.Printf("PD Resource Manager Endpoints:   ")
@@ -1235,6 +1262,21 @@ func (p *Playground) terminate(sig syscall.Signal) {
 		}
 	}
 	for _, inst := range p.pds {
+		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
+			kill(inst.Component(), inst.Pid(), inst.Wait)
+		}
+	}
+	for _, inst := range p.tsos {
+		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
+			kill(inst.Component(), inst.Pid(), inst.Wait)
+		}
+	}
+	for _, inst := range p.schedulings {
+		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
+			kill(inst.Component(), inst.Pid(), inst.Wait)
+		}
+	}
+	for _, inst := range p.rms {
 		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
 			kill(inst.Component(), inst.Pid(), inst.Wait)
 		}

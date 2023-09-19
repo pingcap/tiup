@@ -130,8 +130,8 @@ func (inst *PDInstance) Start(ctx context.Context, version utils.Version) error 
 		args = []string{
 			"services",
 			"tso",
-			fmt.Sprintf("--listen-addr=http://%s", utils.JoinHostPort(inst.Host, inst.Port)),
-			fmt.Sprintf("--advertise-listen-addr=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.Port)),
+			fmt.Sprintf("--listen-addr=http://%s", utils.JoinHostPort(inst.Host, inst.StatusPort)),
+			fmt.Sprintf("--advertise-listen-addr=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.StatusPort)),
 			fmt.Sprintf("--backend-endpoints=%s", strings.Join(endpoints, ",")),
 			fmt.Sprintf("--log-file=%s", inst.LogFile()),
 		}
@@ -143,8 +143,8 @@ func (inst *PDInstance) Start(ctx context.Context, version utils.Version) error 
 		args = []string{
 			"services",
 			"scheduling",
-			fmt.Sprintf("--listen-addr=http://%s", utils.JoinHostPort(inst.Host, inst.Port)),
-			fmt.Sprintf("--advertise-listen-addr=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.Port)),
+			fmt.Sprintf("--listen-addr=http://%s", utils.JoinHostPort(inst.Host, inst.StatusPort)),
+			fmt.Sprintf("--advertise-listen-addr=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.StatusPort)),
 			fmt.Sprintf("--backend-endpoints=%s", strings.Join(endpoints, ",")),
 			fmt.Sprintf("--log-file=%s", inst.LogFile()),
 		}
@@ -156,8 +156,8 @@ func (inst *PDInstance) Start(ctx context.Context, version utils.Version) error 
 		args = []string{
 			"services",
 			"resource-manager",
-			fmt.Sprintf("--listen-addr=http://%s", utils.JoinHostPort(inst.Host, inst.Port)),
-			fmt.Sprintf("--advertise-listen-addr=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.Port)),
+			fmt.Sprintf("--listen-addr=http://%s", utils.JoinHostPort(inst.Host, inst.StatusPort)),
+			fmt.Sprintf("--advertise-listen-addr=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.StatusPort)),
 			fmt.Sprintf("--backend-endpoints=%s", strings.Join(endpoints, ",")),
 			fmt.Sprintf("--log-file=%s", inst.LogFile()),
 		}
