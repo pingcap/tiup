@@ -20,6 +20,7 @@ import (
 
 func newUpgradeCmd() *cobra.Command {
 	offlineMode := false
+	ignoreVersionCheck := false
 
 	cmd := &cobra.Command{
 		Use:   "upgrade <cluster-name> <version>",
@@ -38,7 +39,7 @@ func newUpgradeCmd() *cobra.Command {
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 			teleCommand = append(teleCommand, version)
 
-			return cm.Upgrade(clusterName, version, gOpt, skipConfirm, offlineMode)
+			return cm.Upgrade(clusterName, version, gOpt, skipConfirm, offlineMode, ignoreVersionCheck)
 		},
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 			switch len(args) {
@@ -53,6 +54,7 @@ func newUpgradeCmd() *cobra.Command {
 	cmd.Flags().Uint64Var(&gOpt.APITimeout, "transfer-timeout", 600, "Timeout in seconds when transferring PD and TiKV store leaders, also for TiCDC drain one capture")
 	cmd.Flags().BoolVarP(&gOpt.IgnoreConfigCheck, "ignore-config-check", "", false, "Ignore the config check result")
 	cmd.Flags().BoolVarP(&offlineMode, "offline", "", false, "Upgrade a stopped cluster")
+	cmd.Flags().BoolVarP(&ignoreVersionCheck, "ignore-version-check", "", false, "Ignore checking if target version is bigger than current version")
 	cmd.Flags().StringVar(&gOpt.SSHCustomScripts.BeforeRestartInstance.Raw, "pre-upgrade-script", "", "(EXPERIMENTAL) Custom script to be executed on each server before the server is upgraded")
 	cmd.Flags().StringVar(&gOpt.SSHCustomScripts.AfterRestartInstance.Raw, "post-upgrade-script", "", "(EXPERIMENTAL) Custom script to be executed on each server after the server is upgraded")
 

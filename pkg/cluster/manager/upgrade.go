@@ -37,7 +37,7 @@ import (
 )
 
 // Upgrade the cluster.
-func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Options, skipConfirm, offline bool) error {
+func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Options, skipConfirm, offline, ignoreVersionCheck bool) error {
 	if err := clusterutil.ValidateClusterNameOrError(name); err != nil {
 		return err
 	}
@@ -68,7 +68,10 @@ func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Optio
 	)
 
 	if err := versionCompare(base.Version, clusterVersion); err != nil {
-		return err
+		if !ignoreVersionCheck {
+			return err
+		}
+		m.logger.Warnf(color.RedString("There is no guarantee that the cluster can be downgraded. Be careful before you continue."))
 	}
 
 	if !skipConfirm {
