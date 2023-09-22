@@ -15,6 +15,7 @@ package repository
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	stderrors "errors"
 	"fmt"
@@ -293,6 +294,15 @@ func (l *httpMirror) downloadFile(url string, to string, maxSize int64) (io.Read
 	}(time.Now())
 
 	client := grab.NewClient()
+
+	// workaround to resolve cdn error "tls: protocol version not supported"
+	client.HTTPClient.(*http.Client).Transport = &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		TLSClientConfig: &tls.Config{
+			MaxVersion: tls.VersionTLS12,
+		},
+	}
+
 	client.UserAgent = fmt.Sprintf("tiup/%s", version.NewTiUPVersion().SemVer())
 	req, err := grab.NewRequest(to, url)
 	if err != nil {
