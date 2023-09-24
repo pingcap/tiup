@@ -298,9 +298,8 @@ func (l *httpMirror) downloadFile(url string, to string, maxSize int64) (io.Read
 	// workaround to resolve cdn error "tls: protocol version not supported"
 	client.HTTPClient.(*http.Client).Transport = &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
-		TLSClientConfig: &tls.Config{
-			MaxVersion: tls.VersionTLS12,
-		},
+		// avoid using http/2 by setting non-nil TLSClientConfig
+		TLSClientConfig: &tls.Config{},
 	}
 
 	client.UserAgent = fmt.Sprintf("tiup/%s", version.NewTiUPVersion().SemVer())
