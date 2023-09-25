@@ -335,6 +335,7 @@ L:
 			}
 			progress.SetCurrent(resp.BytesComplete())
 		case <-resp.Done:
+			progress.SetCurrent(resp.BytesComplete())
 			progress.Finish()
 			break L
 		}
