@@ -1,5 +1,19 @@
 TiUP Changelog
 
+## [1.13.1] 2023-09-25
+
+### Fixes
+
+- Increase timeout when publish package in `tiup`  (#2269, @nexustar)
+- Fix pd microservice component id in `tiup-playground` (#2272, @iosmanthus)
+- Fix grafana for multiple instances using same host in `tiup-cluster` and `tiup-dm` (#2277, @lastincisor)
+- Add cdn workaround (#2285, @nexustar)
+- Mirror: fix progress bar is not accurate (#2284, @nexustar)
+
+### Improvement
+
+- Support ignore version check when upgrade in `tiup-cluster` and `tiup-dm` (#2282, @nexustar)
+
 ## [1.13.0] 2023-08-26
 
 ### New Features
