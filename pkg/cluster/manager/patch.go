@@ -104,7 +104,8 @@ func (m *Manager) Patch(name string, packagePath string, opt operator.Options, o
 			if offline {
 				return nil
 			}
-			return operator.Upgrade(ctx, topo, opt, tlsCfg, base.Version)
+			// TBD: should patch be treated as an upgrade?
+			return operator.Upgrade(ctx, topo, opt, tlsCfg, base.Version, false)
 		}).
 		Build()
 
