@@ -237,7 +237,7 @@ Do you want to continue? [y/N]:`,
 			if offline {
 				return nil
 			}
-			return operator.Upgrade(ctx, topo, opt, tlsCfg, base.Version, true)
+			return operator.Upgrade(ctx, topo, opt, tlsCfg, base.Version, clusterVersion)
 		}).
 		Build()
 
