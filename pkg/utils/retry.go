@@ -77,8 +77,9 @@ func Retry(doFunc func() error, opts ...RetryOption) error {
 
 	// call the function
 	var attemptCount int64
+	var err error
 	for attemptCount = 0; attemptCount < cfg.Attempts; attemptCount++ {
-		if err := doFunc(); err == nil {
+		if err = doFunc(); err == nil {
 			return nil
 		}
 
@@ -91,7 +92,7 @@ func Retry(doFunc func() error, opts ...RetryOption) error {
 		}
 	}
 
-	return fmt.Errorf("operation exceeds the max retry attempts of %d", cfg.Attempts)
+	return fmt.Errorf("operation exceeds the max retry attempts of %d. error of last attempt: %s", cfg.Attempts, err)
 }
 
 // IsTimeoutOrMaxRetry return true if it's timeout or reach max retry.
