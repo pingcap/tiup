@@ -28,7 +28,9 @@ func TiDBSupportSecureBoot(version string) bool {
 
 // TiDBSupportUpgradeAPI return if given version of TiDB support upgrade API
 func TiDBSupportUpgradeAPI(version string) bool {
-	return semver.Compare(version, "v7.4.0") >= 0 || strings.Contains(version, "nightly")
+	return semver.Compare(version, "v7.4.0") >= 0 ||
+		(semver.MajorMinor(version) == "v7.1" && semver.Compare(version, "v7.1.2") >= 0) ||
+		strings.Contains(version, "nightly")
 }
 
 // TiKVSupportAdvertiseStatusAddr return if given version of TiKV support --advertise-status-addr

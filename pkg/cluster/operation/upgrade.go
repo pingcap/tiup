@@ -46,7 +46,7 @@ func Upgrade(
 	options Options,
 	tlsCfg *tls.Config,
 	currentVersion string,
-	isUpgrade bool,
+	targetVersion string,
 ) error {
 	roleFilter := set.NewStringSet(options.Roles...)
 	nodeFilter := set.NewStringSet(options.Nodes...)
@@ -109,7 +109,7 @@ func Upgrade(
 				endpoints = append(endpoints, utils.JoinHostPort(db.GetManageHost(), db.StatusPort))
 			}
 
-			if isUpgrade && tidbver.TiDBSupportUpgradeAPI(currentVersion) {
+			if currentVersion != targetVersion && tidbver.TiDBSupportUpgradeAPI(currentVersion) && tidbver.TiDBSupportUpgradeAPI(targetVersion) {
 				tidbClient = api.NewTiDBClient(ctx, endpoints, 10*time.Second, tlsCfg)
 				err = tidbClient.StartUpgrade()
 				if err != nil {
@@ -198,7 +198,7 @@ func Upgrade(
 
 		switch component.Name() {
 		case spec.ComponentTiDB:
-			if isUpgrade && tidbver.TiDBSupportUpgradeAPI(currentVersion) {
+			if currentVersion != targetVersion && tidbver.TiDBSupportUpgradeAPI(currentVersion) && tidbver.TiDBSupportUpgradeAPI(targetVersion) {
 				err = tidbClient.FinishUpgrade()
 				if err != nil {
 					return err
