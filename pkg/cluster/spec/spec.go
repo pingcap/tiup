@@ -109,6 +109,7 @@ type (
 		PD             map[string]any    `yaml:"pd"`
 		Dashboard      map[string]any    `yaml:"tidb_dashboard"`
 		TiFlash        map[string]any    `yaml:"tiflash"`
+		TiProxy        map[string]any    `yaml:"tiproxy"`
 		TiFlashLearner map[string]any    `yaml:"tiflash-learner"`
 		Pump           map[string]any    `yaml:"pump"`
 		Drainer        map[string]any    `yaml:"drainer"`
@@ -125,6 +126,7 @@ type (
 		TiDBServers      []*TiDBSpec          `yaml:"tidb_servers"`
 		TiKVServers      []*TiKVSpec          `yaml:"tikv_servers"`
 		TiFlashServers   []*TiFlashSpec       `yaml:"tiflash_servers"`
+		TiProxyServers   []*TiProxySpec       `yaml:"tiproxy_servers"`
 		PDServers        []*PDSpec            `yaml:"pd_servers"`
 		DashboardServers []*DashboardSpec     `yaml:"tidb_dashboard_servers,omitempty"`
 		PumpServers      []*PumpSpec          `yaml:"pump_servers,omitempty"`
@@ -502,6 +504,7 @@ func (s *Specification) Merge(that Topology) Topology {
 		PDServers:        append(s.PDServers, spec.PDServers...),
 		DashboardServers: append(s.DashboardServers, spec.DashboardServers...),
 		TiFlashServers:   append(s.TiFlashServers, spec.TiFlashServers...),
+		TiProxyServers:   append(s.TiProxyServers, spec.TiProxyServers...),
 		PumpServers:      append(s.PumpServers, spec.PumpServers...),
 		Drainers:         append(s.Drainers, spec.Drainers...),
 		CDCServers:       append(s.CDCServers, spec.CDCServers...),
@@ -712,6 +715,7 @@ func (s *Specification) ComponentsByStartOrder() (comps []Component) {
 	// "pd", "dashboard", "tikv", "pump", "tidb", "tiflash", "drainer", "cdc", "tikv-cdc", "prometheus", "grafana", "alertmanager"
 	comps = append(comps, &PDComponent{s})
 	comps = append(comps, &DashboardComponent{s})
+	comps = append(comps, &TiProxyComponent{s})
 	comps = append(comps, &TiKVComponent{s})
 	comps = append(comps, &PumpComponent{s})
 	comps = append(comps, &TiDBComponent{s})
@@ -739,6 +743,7 @@ func (s *Specification) ComponentsByUpdateOrder(curVer string) (comps []Componen
 	}
 	comps = append(comps, &PDComponent{s})
 	comps = append(comps, &DashboardComponent{s})
+	comps = append(comps, &TiProxyComponent{s})
 	comps = append(comps, &TiKVComponent{s})
 	comps = append(comps, &PumpComponent{s})
 	comps = append(comps, &TiDBComponent{s})

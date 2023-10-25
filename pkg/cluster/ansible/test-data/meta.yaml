@@ -21,6 +21,7 @@ topology:
     pd: {}
     tidb_dashboard: {}
     tiflash: {}
+    tiproxy: {}
     tiflash-learner: {}
     pump: {}
     drainer: {}
@@ -193,3 +194,4 @@ topology:
       data_dir: data/alertmanager-9093
       arch: amd64
       os: linux
+  tiproxy_servers: []
