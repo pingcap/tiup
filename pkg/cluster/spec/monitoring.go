@@ -247,6 +247,13 @@ func (i *MonitorInstance) InitConfig(
 			cfig.AddTiDB(db.Host, uint64(db.StatusPort))
 		}
 	}
+	if servers, found := topoHasField("TiProxyServers"); found {
+		for i := 0; i < servers.Len(); i++ {
+			db := servers.Index(i).Interface().(*TiProxySpec)
+			uniqueHosts.Insert(db.Host)
+			cfig.AddTiProxy(db.Host, uint64(db.StatusPort))
+		}
+	}
 	if servers, found := topoHasField("TiFlashServers"); found {
 		for i := 0; i < servers.Len(); i++ {
 			flash := servers.Index(i).Interface().(*TiFlashSpec)
