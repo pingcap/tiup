@@ -31,6 +31,8 @@ func TiDBComponentVersion(comp, version string) string {
 		ComponentTiSpark,
 		ComponentTiKVCDC: // TiKV-CDC use individual version.
 		return ""
+	case ComponentTiProxy:
+		return "nightly"
 	default:
 		return version
 	}
