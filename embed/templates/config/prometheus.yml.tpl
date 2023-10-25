@@ -110,6 +110,22 @@ scrape_configs:
 {{- range .TiDBStatusAddrs}}
       - '{{.}}'
 {{- end}}
+  - job_name: "tiproxy"
+    honor_labels: true # don't overwrite job & instance labels
+    metrics_path: /api/metrics
+{{- if .TLSEnabled}}
+    scheme: https
+    tls_config:
+      insecure_skip_verify: false
+      ca_file: ../tls/ca.crt
+      cert_file: ../tls/prometheus.crt
+      key_file: ../tls/prometheus.pem
+{{- end}}
+    static_configs:
+    - targets:
+{{- range .TiProxyStatusAddrs}}
+      - '{{.}}'
+{{- end}}
   - job_name: "tikv"
     honor_labels: true # don't overwrite job & instance labels
 {{- if .TLSEnabled}}
