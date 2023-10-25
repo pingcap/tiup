@@ -98,6 +98,14 @@ func (s *TiProxySpec) GetMainPort() int {
 	return s.Port
 }
 
+// GetManageHost returns the manage host of the instance
+func (s *TiProxySpec) GetManageHost() string {
+	if s.ManageHost != "" {
+		return s.ManageHost
+	}
+	return s.Host
+}
+
 // IsImported returns if the node is imported from TiDB-Ansible
 func (s *TiProxySpec) IsImported() bool {
 	return false
