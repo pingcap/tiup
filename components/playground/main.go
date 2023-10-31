@@ -15,9 +15,9 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -419,28 +419,20 @@ func populateDefaultOpt(flagSet *pflag.FlagSet) error {
 	return nil
 }
 
-func tryConnect(dsn string) error {
-	cli, err := sql.Open("mysql", dsn)
-	if err != nil {
-		return err
-	}
-	defer cli.Close()
-
-	conn, err := cli.Conn(context.Background())
+func tryConnect(addr string, timeoutSec int) error {
+	conn, err := net.DialTimeout("tcp", addr, time.Duration(timeoutSec)*time.Second)
 	if err != nil {
 		return err
 	}
 	defer conn.Close()
-
 	return nil
 }
 
 // checkDB check if the addr is connectable by getting a connection from sql.DB. timeout <=0 means no timeout
 func checkDB(dbAddr string, timeout int) bool {
-	dsn := fmt.Sprintf("root:@tcp(%s)/", dbAddr)
 	if timeout > 0 {
 		for i := 0; i < timeout; i++ {
-			if tryConnect(dsn) == nil {
+			if tryConnect(dbAddr, timeout) == nil {
 				return true
 			}
 			time.Sleep(time.Second)
@@ -448,7 +440,7 @@ func checkDB(dbAddr string, timeout int) bool {
 		return false
 	}
 	for {
-		if err := tryConnect(dsn); err == nil {
+		if err := tryConnect(dbAddr, timeout); err == nil {
 			return true
 		}
 		time.Sleep(time.Second)
