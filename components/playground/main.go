@@ -57,10 +57,11 @@ type BootOptions struct {
 	Mode           string                 `yaml:"mode"`
 	PDMode         string                 `yaml:"pd_mode"`
 	Version        string                 `yaml:"version"`
-	PD             instance.Config        `yaml:"pd"`     // ignored when pd_mode == ms
-	PDAPI          instance.Config        `yaml:"pd_api"` // Only available when pd_mode == ms
-	PDTSO          instance.Config        `yaml:"pd_tso"` // Only available when pd_mode == ms
-	PDRM           instance.Config        `yaml:"pd_rm"`  // Only available when pd_mode == ms
+	PD             instance.Config        `yaml:"pd"`            // ignored when pd_mode == ms
+	PDAPI          instance.Config        `yaml:"pd_api"`        // Only available when pd_mode == ms
+	PDTSO          instance.Config        `yaml:"pd_tso"`        // Only available when pd_mode == ms
+	PDScheduling   instance.Config        `yaml:"pd_scheduling"` // Only available when pd_mode == ms
+	PDRM           instance.Config        `yaml:"pd_rm"`         // Only available when pd_mode == ms
 	TiProxy        instance.Config        `yaml:"tiproxy"`
 	TiDB           instance.Config        `yaml:"tidb"`
 	TiKV           instance.Config        `yaml:"tikv"`
@@ -294,6 +295,7 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 
 	rootCmd.Flags().IntVar(&options.PDAPI.Num, "pd.api", 0, "PD API instance number")
 	rootCmd.Flags().IntVar(&options.PDTSO.Num, "pd.tso", 0, "PD TSO instance number")
+	rootCmd.Flags().IntVar(&options.PDScheduling.Num, "pd.scheduling", 0, "PD scheduling instance number")
 	rootCmd.Flags().IntVar(&options.PDRM.Num, "pd.rm", 0, "PD resource manager instance number")
 
 	rootCmd.Flags().IntVar(&options.TiDB.UpTimeout, "db.timeout", 60, "TiDB max wait time in seconds for starting, 0 means no limit")
@@ -326,6 +328,7 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 
 	rootCmd.Flags().StringVar(&options.PDAPI.ConfigPath, "pd.api.config", "", "PD API instance configuration file")
 	rootCmd.Flags().StringVar(&options.PDTSO.ConfigPath, "pd.tso.config", "", "PD TSO instance configuration file")
+	rootCmd.Flags().StringVar(&options.PDScheduling.ConfigPath, "pd.scheduling.config", "", "PD scheduling instance configuration file")
 	rootCmd.Flags().StringVar(&options.PDRM.ConfigPath, "pd.rm.config", "", "PD resource manager instance configuration file")
 
 	rootCmd.Flags().StringVar(&options.TiDB.BinPath, "db.binpath", "", "TiDB instance binary path")
@@ -342,6 +345,7 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 
 	rootCmd.Flags().StringVar(&options.PDAPI.BinPath, "pd.api.binpath", "", "PD API instance binary path")
 	rootCmd.Flags().StringVar(&options.PDTSO.BinPath, "pd.tso.binpath", "", "PD TSO instance binary path")
+	rootCmd.Flags().StringVar(&options.PDScheduling.BinPath, "pd.scheduling.binpath", "", "PD scheduling instance binary path")
 	rootCmd.Flags().StringVar(&options.PDRM.BinPath, "pd.rm.binpath", "", "PD resource manager instance binary path")
 
 	rootCmd.Flags().StringVar(&options.TiKVCDC.Version, "kvcdc.version", "", "TiKV-CDC instance version")
@@ -409,6 +413,9 @@ func populateDefaultOpt(flagSet *pflag.FlagSet) error {
 		defaultInt(&options.PDTSO.Num, "pd.tso", 1)
 		defaultStr(&options.PDTSO.BinPath, "pd.tso.binpath", options.PDTSO.BinPath)
 		defaultStr(&options.PDTSO.ConfigPath, "pd.tso.config", options.PDTSO.ConfigPath)
+		defaultInt(&options.PDScheduling.Num, "pd.scheduling", 1)
+		defaultStr(&options.PDScheduling.BinPath, "pd.scheduling.binpath", options.PDScheduling.BinPath)
+		defaultStr(&options.PDScheduling.ConfigPath, "pd.scheduling.config", options.PDScheduling.ConfigPath)
 		defaultInt(&options.PDRM.Num, "pd.rm", 1)
 		defaultStr(&options.PDRM.BinPath, "pd.rm.binpath", options.PDRM.BinPath)
 		defaultStr(&options.PDRM.ConfigPath, "pd.rm.config", options.PDRM.ConfigPath)
