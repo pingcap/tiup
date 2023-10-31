@@ -147,6 +147,8 @@ func (c *DrainerComponent) Instances() []Instance {
 			Port:         s.Port,
 			SSHP:         s.SSHPort,
 			Source:       s.GetSource(),
+			NumaNode:     s.NumaNode,
+			NumaCores:    "",
 
 			Ports: []int{
 				s.Port,
