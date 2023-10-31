@@ -154,6 +154,8 @@ func (c *TiSparkMasterComponent) Instances() []Instance {
 				Host:         s.Host,
 				Port:         s.Port,
 				SSHP:         s.SSHPort,
+				NumaNode:     "",
+				NumaCores:    "",
 
 				Ports: []int{
 					s.Port,
@@ -333,6 +335,8 @@ func (c *TiSparkWorkerComponent) Instances() []Instance {
 				Host:         s.Host,
 				Port:         s.Port,
 				SSHP:         s.SSHPort,
+				NumaNode:     "",
+				NumaCores:    "",
 
 				Ports: []int{
 					s.Port,
