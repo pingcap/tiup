@@ -370,10 +370,12 @@ func (i *BaseInstance) GetSSHPort() int {
 	return i.SSHP
 }
 
+// GetNumaNode implements Instance interface
 func (i *BaseInstance) GetNumaNode() string {
 	return i.NumaNode
 }
 
+// GetNumaCores implements Instance interface
 func (i *BaseInstance) GetNumaCores() string {
 	return i.NumaCores
 }
