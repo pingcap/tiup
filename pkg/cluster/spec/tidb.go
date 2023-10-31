@@ -124,6 +124,8 @@ func (c *TiDBComponent) Instances() []Instance {
 			Port:         s.Port,
 			SSHP:         s.SSHPort,
 			Source:       s.Source,
+			NumaNode:     s.NumaNode,
+			NumaCores:    s.NumaCores,
 
 			Ports: []int{
 				s.Port,
