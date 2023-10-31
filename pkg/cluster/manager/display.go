@@ -665,8 +665,8 @@ func (m *Manager) GetClusterTopology(dopt DisplayOption, opt operator.Options) (
 			ComponentName: ins.ComponentName(),
 			Port:          ins.GetPort(),
 			Since:         since,
-			NumaNode:      ins.GetNumaNode(),
-			NumaCores:     ins.GetNumaCores(),
+			NumaNode:      utils.Ternary(ins.GetNumaNode() == "", "-", ins.GetNumaNode()).(string),
+			NumaCores:     utils.Ternary(ins.GetNumaCores() == "", "-", ins.GetNumaCores()).(string),
 		})
 		mu.Unlock()
 	}, opt.Concurrency)
