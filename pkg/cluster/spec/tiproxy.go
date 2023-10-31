@@ -142,6 +142,8 @@ func (c *TiProxyComponent) Instances() []Instance {
 			Port:         s.Port,
 			SSHP:         s.SSHPort,
 			Source:       ComponentTiProxy,
+			NumaNode:     s.NumaNode,
+			NumaCores:    "",
 			Ports: []int{
 				s.Port,
 				s.StatusPort,
