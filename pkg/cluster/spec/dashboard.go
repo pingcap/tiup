@@ -129,6 +129,8 @@ func (c *DashboardComponent) Instances() []Instance {
 			Port:         s.Port,
 			SSHP:         s.SSHPort,
 			Source:       s.Source,
+			NumaNode:     s.NumaNode,
+			NumaCores:    "",
 
 			Ports: []int{
 				s.Port,

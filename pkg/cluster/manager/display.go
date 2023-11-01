@@ -50,6 +50,7 @@ type DisplayOption struct {
 	ShowUptime     bool
 	ShowProcess    bool
 	ShowManageHost bool
+	ShowNuma       bool
 }
 
 // InstInfo represents an instance info
@@ -67,6 +68,8 @@ type InstInfo struct {
 	Since       string `json:"since"`
 	DataDir     string `json:"data_dir"`
 	DeployDir   string `json:"deploy_dir"`
+	NumaNode    string `json:"numa_node"`
+	NumaCores   string `json:"numa_cores"`
 
 	ComponentName string
 	Port          int
@@ -199,6 +202,10 @@ func (m *Manager) Display(dopt DisplayOption, opt operator.Options) error {
 	if dopt.ShowUptime {
 		rowHead = append(rowHead, "Since")
 	}
+	if dopt.ShowNuma {
+		rowHead = append(rowHead, "Numa Node", "Numd Cores")
+	}
+
 	rowHead = append(rowHead, "Data Dir", "Deploy Dir")
 	clusterTable = append(clusterTable, rowHead)
 
@@ -225,6 +232,10 @@ func (m *Manager) Display(dopt DisplayOption, opt operator.Options) error {
 		if dopt.ShowUptime {
 			row = append(row, v.Since)
 		}
+		if dopt.ShowNuma {
+			row = append(row, v.NumaNode, v.NumaCores)
+		}
+
 		row = append(row, v.DataDir, v.DeployDir)
 		clusterTable = append(clusterTable, row)
 
@@ -654,6 +665,8 @@ func (m *Manager) GetClusterTopology(dopt DisplayOption, opt operator.Options) (
 			ComponentName: ins.ComponentName(),
 			Port:          ins.GetPort(),
 			Since:         since,
+			NumaNode:      utils.Ternary(ins.GetNumaNode() == "", "-", ins.GetNumaNode()).(string),
+			NumaCores:     utils.Ternary(ins.GetNumaCores() == "", "-", ins.GetNumaCores()).(string),
 		})
 		mu.Unlock()
 	}, opt.Concurrency)

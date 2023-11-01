@@ -109,7 +109,7 @@ func logIfErr(err error) {
 func pdEndpoints(pds []*PDInstance, isHTTP bool) []string {
 	var endpoints []string
 	for _, pd := range pds {
-		if pd.Role == PDRoleTSO || pd.Role == PDRoleResourceManager {
+		if pd.Role == PDRoleTSO || pd.Role == PDRoleScheduling || pd.Role == PDRoleResourceManager {
 			continue
 		}
 		if isHTTP {
