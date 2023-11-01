@@ -118,6 +118,19 @@ func New(etype SSHType, sudo bool, c SSHConfig) (ctxt.Executor, error) {
 	return &CheckPointExecutor{executor, &c}, nil
 }
 
+// UnwarpCheckPointExecutor unwarp the CheckPointExecutor and return the real executor
+//
+// Sometimes we just want to get the output of a command, and the CheckPointExecutor will
+// always cache the output, it will be a problem when we want to get the real output.
+func UnwarpCheckPointExecutor(e ctxt.Executor) ctxt.Executor {
+	switch e := e.(type) {
+	case *CheckPointExecutor:
+		return e.Executor
+	default:
+		return e
+	}
+}
+
 func checkLocalIP(ip string) error {
 	ifaces, err := net.Interfaces()
 	if err != nil {
