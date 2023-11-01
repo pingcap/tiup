@@ -75,4 +75,3 @@ func (c *TiDBClient) FinishUpgrade() error {
 
 	return err
 }
-
