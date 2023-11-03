@@ -47,7 +47,7 @@ type instance struct {
 	BinPath    string
 }
 
-	// MetricAddr will be used by prometheus scrape_configs.
+// MetricAddr will be used by prometheus scrape_configs.
 type MetricAddr struct {
 	Targets []string          `json:"targets"`
 	Labels  map[string]string `json:"labels"`
