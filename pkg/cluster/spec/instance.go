@@ -99,6 +99,8 @@ type Instance interface {
 	GetManageHost() string
 	GetPort() int
 	GetSSHPort() int
+	GetNumaNode() string
+	GetNumaCores() string
 	DeployDir() string
 	UsedPorts() []int
 	UsedDirs() []string
@@ -148,6 +150,8 @@ type BaseInstance struct {
 	Port       int
 	SSHP       int
 	Source     string
+	NumaNode   string
+	NumaCores  string
 
 	Ports    []int
 	Dirs     []string
@@ -369,6 +373,16 @@ func (i *BaseInstance) GetListenHost() string {
 // GetSSHPort implements Instance interface
 func (i *BaseInstance) GetSSHPort() int {
 	return i.SSHP
+}
+
+// GetNumaNode implements Instance interface
+func (i *BaseInstance) GetNumaNode() string {
+	return i.NumaNode
+}
+
+// GetNumaCores implements Instance interface
+func (i *BaseInstance) GetNumaCores() string {
+	return i.NumaCores
 }
 
 // DeployDir implements Instance interface

@@ -189,6 +189,8 @@ func (c *PDComponent) Instances() []Instance {
 				Port:         s.ClientPort,
 				SSHP:         s.SSHPort,
 				Source:       s.GetSource(),
+				NumaNode:     s.NumaNode,
+				NumaCores:    "",
 
 				Ports: []int{
 					s.ClientPort,

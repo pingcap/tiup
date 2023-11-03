@@ -308,6 +308,8 @@ func (c *TiFlashComponent) Instances() []Instance {
 			Port:         s.GetMainPort(),
 			SSHP:         s.SSHPort,
 			Source:       s.GetSource(),
+			NumaNode:     s.NumaNode,
+			NumaCores:    s.NumaCores,
 
 			Ports: []int{
 				s.TCPPort,

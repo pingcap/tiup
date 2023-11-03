@@ -61,6 +61,9 @@ type Playground struct {
 	port        int
 
 	pds              []*instance.PDInstance
+	tsos             []*instance.PDInstance
+	schedulings      []*instance.PDInstance
+	rms              []*instance.PDInstance
 	tikvs            []*instance.TiKVInstance
 	tidbs            []*instance.TiDBInstance
 	tiflashs         []*instance.TiFlashInstance
@@ -276,6 +279,7 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 
 	switch cid {
 	case spec.ComponentPD:
+		// microservice not support scale in temporarily
 		for i := 0; i < len(p.pds); i++ {
 			if p.pds[i].Pid() == pid {
 				inst := p.pds[i]
@@ -593,6 +597,24 @@ func (p *Playground) WalkInstances(fn func(componentID string, ins instance.Inst
 			return err
 		}
 	}
+	for _, ins := range p.tsos {
+		err := fn(spec.ComponentPD, ins)
+		if err != nil {
+			return err
+		}
+	}
+	for _, ins := range p.schedulings {
+		err := fn(spec.ComponentPD, ins)
+		if err != nil {
+			return err
+		}
+	}
+	for _, ins := range p.rms {
+		err := fn(spec.ComponentPD, ins)
+		if err != nil {
+			return err
+		}
+	}
 	for _, ins := range p.tikvs {
 		err := fn(spec.ComponentTiKV, ins)
 		if err != nil {
@@ -698,8 +720,12 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 					pd.InitCluster(p.pds)
 				}
 			}
-		} else {
-			p.pds = append(p.pds, inst)
+		} else if pdRole == instance.PDRoleTSO {
+			p.tsos = append(p.tsos, inst)
+		} else if pdRole == instance.PDRoleScheduling {
+			p.schedulings = append(p.schedulings, inst)
+		} else if pdRole == instance.PDRoleResourceManager {
+			p.rms = append(p.rms, inst)
 		}
 	case spec.ComponentTiDB:
 		inst := instance.NewTiDBInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, p.enableBinlog(), p.bootOptions.Mode == "tidb-disagg")
@@ -866,6 +892,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		&options.PD,
 		&options.PDAPI,
 		&options.PDTSO,
+		&options.PDScheduling,
 		&options.PDRM,
 		&options.TiProxy,
 		&options.TiDB,
@@ -975,6 +1002,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		instances = append([]InstancePair{
 			{spec.ComponentPD, instance.PDRoleAPI, instance.TiFlashRoleNormal, options.PDAPI},
 			{spec.ComponentPD, instance.PDRoleTSO, instance.TiFlashRoleNormal, options.PDTSO},
+			{spec.ComponentPD, instance.PDRoleScheduling, instance.TiFlashRoleNormal, options.PDScheduling},
 			{spec.ComponentPD, instance.PDRoleResourceManager, instance.TiFlashRoleNormal, options.PDRM}},
 			instances...,
 		)
@@ -1080,25 +1108,31 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 	if p.bootOptions.Mode == "tikv-slim" {
 		if p.bootOptions.PDMode == "ms" {
 			var (
-				tsoAddr []string
-				apiAddr []string
-				rmAddr  []string
+				tsoAddr        []string
+				apiAddr        []string
+				rmAddr         []string
+				schedulingAddr []string
 			)
-			for _, pd := range p.pds {
-				switch pd.Role {
-				case instance.PDRoleTSO:
-					tsoAddr = append(tsoAddr, pd.Addr())
-				case instance.PDRoleAPI:
-					apiAddr = append(apiAddr, pd.Addr())
-				case instance.PDRoleResourceManager:
-					rmAddr = append(rmAddr, pd.Addr())
-				}
+			for _, api := range p.pds {
+				apiAddr = append(apiAddr, api.Addr())
 			}
-			fmt.Printf("PD TSO Endpoints:   ")
-			colorCmd.Printf("%s\n", strings.Join(tsoAddr, ","))
+			for _, tso := range p.tsos {
+				tsoAddr = append(tsoAddr, tso.Addr())
+			}
+			for _, scheduling := range p.schedulings {
+				schedulingAddr = append(schedulingAddr, scheduling.Addr())
+			}
+			for _, rm := range p.rms {
+				rmAddr = append(rmAddr, rm.Addr())
+			}
+
 			fmt.Printf("PD API Endpoints:   ")
 			colorCmd.Printf("%s\n", strings.Join(apiAddr, ","))
-			fmt.Printf("PD Resource Ranager Endpoints:   ")
+			fmt.Printf("PD TSO Endpoints:   ")
+			colorCmd.Printf("%s\n", strings.Join(tsoAddr, ","))
+			fmt.Printf("PD Scheduling Endpoints:   ")
+			colorCmd.Printf("%s\n", strings.Join(schedulingAddr, ","))
+			fmt.Printf("PD Resource Manager Endpoints:   ")
 			colorCmd.Printf("%s\n", strings.Join(rmAddr, ","))
 		} else {
 			var pdAddrs []string
@@ -1232,6 +1266,21 @@ func (p *Playground) terminate(sig syscall.Signal) {
 			kill(inst.Component(), inst.Pid(), inst.Wait)
 		}
 	}
+	for _, inst := range p.tsos {
+		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
+			kill(inst.Component(), inst.Pid(), inst.Wait)
+		}
+	}
+	for _, inst := range p.schedulings {
+		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
+			kill(inst.Component(), inst.Pid(), inst.Wait)
+		}
+	}
+	for _, inst := range p.rms {
+		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
+			kill(inst.Component(), inst.Pid(), inst.Wait)
+		}
+	}
 }
 
 func (p *Playground) renderSDFile() error {
@@ -1240,12 +1289,10 @@ func (p *Playground) renderSDFile() error {
 		return nil
 	}
 
-	cid2targets := make(map[string][]string)
+	cid2targets := make(map[string]instance.MetricAddr)
 
 	_ = p.WalkInstances(func(cid string, inst instance.Instance) error {
-		targets := cid2targets[cid]
-		targets = append(targets, inst.StatusAddrs()...)
-		cid2targets[cid] = targets
+		cid2targets[cid] = inst.MetricAddr()
 		return nil
 	})
 

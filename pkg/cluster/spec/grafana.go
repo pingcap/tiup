@@ -137,6 +137,8 @@ func (c *GrafanaComponent) Instances() []Instance {
 				ManageHost:   s.ManageHost,
 				Port:         s.Port,
 				SSHP:         s.SSHPort,
+				NumaNode:     "",
+				NumaCores:    "",
 
 				Ports: []int{
 					s.Port,
@@ -197,7 +199,7 @@ func (i *GrafanaInstance) InitConfig(
 
 	// transfer config
 	spec := i.InstanceSpec.(*GrafanaSpec)
-	fp = filepath.Join(paths.Cache, fmt.Sprintf("grafana_%s.ini", i.GetHost()))
+	fp = filepath.Join(paths.Cache, fmt.Sprintf("grafana_%s_%d.ini", i.GetHost(), i.GetPort()))
 	if err := config.NewGrafanaConfig(i.GetHost(), paths.Deploy).
 		WithPort(uint64(i.GetPort())).
 		WithUsername(spec.Username).

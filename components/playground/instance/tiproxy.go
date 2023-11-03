@@ -54,6 +54,15 @@ func NewTiProxy(binPath string, dir, host, configPath string, id int, port int, 
 	return tiproxy
 }
 
+// MetricAddr implements Instance interface.
+func (c *TiProxy) MetricAddr() (r MetricAddr) {
+	r.Targets = append(r.Targets, utils.JoinHostPort(c.Host, c.StatusPort))
+	r.Labels = map[string]string{
+		"__metrics_path__": "/api/metrics",
+	}
+	return
+}
+
 // Start implements Instance interface.
 func (c *TiProxy) Start(ctx context.Context, version utils.Version) error {
 	endpoints := pdEndpoints(c.pds, true)

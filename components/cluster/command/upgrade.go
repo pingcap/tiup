@@ -21,7 +21,8 @@ import (
 
 func newUpgradeCmd() *cobra.Command {
 	offlineMode := false
-	var tidbVer, tikvVer, pdVer, tiflashVer, kvcdcVer, dashboardVer, cdcVer, alertmanagerVer, nodeExporterVer, blackboxExporterVer string
+	ignoreVersionCheck := false
+	var tidbVer, tikvVer, pdVer, tiflashVer, kvcdcVer, dashboardVer, cdcVer, alertmanagerVer, nodeExporterVer, blackboxExporterVer, tiproxyVer string
 
 	cmd := &cobra.Command{
 		Use:   "upgrade <cluster-name> <version>",
@@ -49,11 +50,12 @@ func newUpgradeCmd() *cobra.Command {
 				spec.ComponentTiFlash:          tiflashVer,
 				spec.ComponentTiKVCDC:          kvcdcVer,
 				spec.ComponentCDC:              cdcVer,
+				spec.ComponentTiProxy:          tiproxyVer,
 				spec.ComponentBlackboxExporter: blackboxExporterVer,
 				spec.ComponentNodeExporter:     nodeExporterVer,
 			}
 
-			return cm.Upgrade(clusterName, version, componentVersions, gOpt, skipConfirm, offlineMode)
+			return cm.Upgrade(clusterName, version, componentVersions, gOpt, skipConfirm, offlineMode, ignoreVersionCheck)
 		},
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 			switch len(args) {
@@ -68,6 +70,7 @@ func newUpgradeCmd() *cobra.Command {
 	cmd.Flags().Uint64Var(&gOpt.APITimeout, "transfer-timeout", 600, "Timeout in seconds when transferring PD and TiKV store leaders, also for TiCDC drain one capture")
 	cmd.Flags().BoolVarP(&gOpt.IgnoreConfigCheck, "ignore-config-check", "", false, "Ignore the config check result")
 	cmd.Flags().BoolVarP(&offlineMode, "offline", "", false, "Upgrade a stopped cluster")
+	cmd.Flags().BoolVarP(&ignoreVersionCheck, "ignore-version-check", "", false, "Ignore checking if target version is bigger than current version")
 	cmd.Flags().StringVar(&gOpt.SSHCustomScripts.BeforeRestartInstance.Raw, "pre-upgrade-script", "", "(EXPERIMENTAL) Custom script to be executed on each server before the server is upgraded")
 	cmd.Flags().StringVar(&gOpt.SSHCustomScripts.AfterRestartInstance.Raw, "post-upgrade-script", "", "(EXPERIMENTAL) Custom script to be executed on each server after the server is upgraded")
 
@@ -81,5 +84,6 @@ func newUpgradeCmd() *cobra.Command {
 	cmd.Flags().StringVar(&alertmanagerVer, "alertmanager-version", "", "Specify the version of alertmanager to upgrade to")
 	cmd.Flags().StringVar(&nodeExporterVer, "node-exporter-version", "", "Specify the version of node-exporter to upgrade to")
 	cmd.Flags().StringVar(&blackboxExporterVer, "blackbox-exporter-version", "", "Specify the version of blackbox-exporter to upgrade to")
+	cmd.Flags().StringVar(&tiproxyVer, "tiproxy-version", "", "Specify the version of tiproxy to upgrade to")
 	return cmd
 }

@@ -38,7 +38,7 @@ import (
 )
 
 // Upgrade the cluster.
-func (m *Manager) Upgrade(name string, clusterVersion string, componentVersions map[string]string, opt operator.Options, skipConfirm, offline bool) error {
+func (m *Manager) Upgrade(name string, clusterVersion string, componentVersions map[string]string, opt operator.Options, skipConfirm, offline, ignoreVersionCheck bool) error {
 	if !skipConfirm && strings.ToLower(opt.DisplayMode) != "json" {
 		for _, v := range componentVersions {
 			if v != "" {
@@ -81,7 +81,10 @@ func (m *Manager) Upgrade(name string, clusterVersion string, componentVersions 
 	)
 
 	if err := versionCompare(base.Version, clusterVersion); err != nil {
-		return err
+		if !ignoreVersionCheck {
+			return err
+		}
+		m.logger.Warnf(color.RedString("There is no guarantee that the cluster can be downgraded. Be careful before you continue."))
 	}
 
 	if !skipConfirm {
@@ -293,7 +296,7 @@ Do you want to continue? [y/N]:`,
 			if offline {
 				return nil
 			}
-			return operator.Upgrade(ctx, topo, opt, tlsCfg, base.Version)
+			return operator.Upgrade(ctx, topo, opt, tlsCfg, base.Version, clusterVersion)
 		}).
 		Build()
 

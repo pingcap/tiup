@@ -52,6 +52,5 @@ func (p *ProgressBar) SetCurrent(size int64) {
 
 // Finish implement the DownloadProgress interface
 func (p *ProgressBar) Finish() {
-	p.bar.SetCurrent(p.size)
 	p.bar.Finish()
 }

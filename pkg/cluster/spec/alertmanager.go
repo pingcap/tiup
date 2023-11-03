@@ -130,6 +130,8 @@ func (c *AlertManagerComponent) Instances() []Instance {
 				ListenHost:   s.ListenHost,
 				Port:         s.WebPort,
 				SSHP:         s.SSHPort,
+				NumaNode:     s.NumaNode,
+				NumaCores:    "",
 
 				Ports: []int{
 					s.WebPort,

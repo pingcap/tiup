@@ -153,6 +153,8 @@ func (c *MonitorComponent) Instances() []Instance {
 			ManageHost:   s.ManageHost,
 			Port:         s.Port,
 			SSHP:         s.SSHPort,
+			NumaNode:     s.NumaNode,
+			NumaCores:    "",
 
 			Ports: []int{
 				s.Port,
@@ -261,6 +263,13 @@ func (i *MonitorInstance) InitConfig(
 			db := servers.Index(i).Interface().(*TiDBSpec)
 			uniqueHosts.Insert(db.Host)
 			cfig.AddTiDB(db.Host, uint64(db.StatusPort))
+		}
+	}
+	if servers, found := topoHasField("TiProxyServers"); found {
+		for i := 0; i < servers.Len(); i++ {
+			db := servers.Index(i).Interface().(*TiProxySpec)
+			uniqueHosts.Insert(db.Host)
+			cfig.AddTiProxy(db.Host, uint64(db.StatusPort))
 		}
 	}
 	if servers, found := topoHasField("TiFlashServers"); found {
