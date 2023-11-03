@@ -47,6 +47,12 @@ type instance struct {
 	BinPath    string
 }
 
+// MetricAddr will be used by prometheus scrape_configs.
+type MetricAddr struct {
+	Targets []string          `json:"targets"`
+	Labels  map[string]string `json:"labels"`
+}
+
 // Instance represent running component
 type Instance interface {
 	Pid() int
@@ -59,16 +65,16 @@ type Instance interface {
 	LogFile() string
 	// Uptime show uptime.
 	Uptime() string
-	// StatusAddrs return the address to pull metrics.
-	StatusAddrs() []string
+	// MetricAddr return the address to pull metrics.
+	MetricAddr() MetricAddr
 	// Wait Should only call this if the instance is started successfully.
 	// The implementation should be safe to call Wait multi times.
 	Wait() error
 }
 
-func (inst *instance) StatusAddrs() (addrs []string) {
+func (inst *instance) MetricAddr() (r MetricAddr) {
 	if inst.Host != "" && inst.StatusPort != 0 {
-		addrs = append(addrs, utils.JoinHostPort(inst.Host, inst.StatusPort))
+		r.Targets = append(r.Targets, utils.JoinHostPort(inst.Host, inst.StatusPort))
 	}
 	return
 }
