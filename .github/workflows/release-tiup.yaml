@@ -164,11 +164,6 @@ jobs:
 
           echo ${{ secrets.TIUP_COMP_KEY_PINGCAP }} | base64 -d > $TIUP_HOME/keys/private.json
 
-          # build the latest tiup to use for publish, this is a workaround and should
-          # be removed after this PR is merged and released
-          GOOS=linux GOARCH=amd64 make tiup
-          cp bin/tiup ${TIUP_BIN}
-
           # add a random delay before actually publishing, this can help reduce manifest conflict
           # when there are multiple jobs running in parallel
           sleep $[ ( $RANDOM % 10 ) ]s
