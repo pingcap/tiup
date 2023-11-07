@@ -209,7 +209,7 @@ func (c *TiKVComponent) Instances() []Instance {
 			Name:         c.Name(),
 			Host:         s.Host,
 			ManageHost:   s.ManageHost,
-			ListenHost:   s.ListenHost,
+			ListenHost:   utils.Ternary(s.ListenHost != "", s.ListenHost, c.Topology.BaseTopo().GlobalOptions.ListenHost).(string),
 			Port:         s.Port,
 			SSHP:         s.SSHPort,
 			Source:       s.Source,
