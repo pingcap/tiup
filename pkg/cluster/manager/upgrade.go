@@ -87,16 +87,38 @@ func (m *Manager) Upgrade(name string, clusterVersion string, componentVersions 
 		m.logger.Warnf(color.RedString("There is no guarantee that the cluster can be downgraded. Be careful before you continue."))
 	}
 
+	monitoredOptions := topo.GetMonitoredOptions()
+	if componentVersions[spec.ComponentBlackboxExporter] != "" {
+		monitoredOptions.BlackboxExporterVersion = componentVersions[spec.ComponentBlackboxExporter]
+	}
+	if componentVersions[spec.ComponentNodeExporter] != "" {
+		monitoredOptions.NodeExporterVersion = componentVersions[spec.ComponentNodeExporter]
+	}
+
+	compVersionMsg := ""
+	for _, comp := range topo.ComponentsByUpdateOrder(base.Version) {
+		// if component version is not specified, use the cluster version or latest("")
+		version := componentVersions[comp.Name()]
+		if version != "" {
+			comp.SetVersion(version)
+		}
+		if len(comp.Instances()) > 0 {
+			compVersionMsg += fmt.Sprintf("\nwill upgrade component %19s to \"%s\",", "\""+comp.Name()+"\"", comp.CalculateVersion(clusterVersion))
+		}
+	}
+	compVersionMsg += fmt.Sprintf("\nwill upgrade component %19s to \"%s\",", "\"node-exporter\"", monitoredOptions.NodeExporterVersion)
+	compVersionMsg += fmt.Sprintf("\nwill upgrade component %19s to \"%s\".", "\"blackbox-exporter\"", monitoredOptions.BlackboxExporterVersion)
+
+	m.logger.Warnf(`%s
+This operation will upgrade %s %s cluster %s to %s:%s`,
+		color.YellowString("Before the upgrade, it is recommended to read the upgrade guide at https://docs.pingcap.com/tidb/stable/upgrade-tidb-using-tiup and finish the preparation steps."),
+		m.sysName,
+		color.HiYellowString(base.Version),
+		color.HiYellowString(name),
+		color.HiYellowString(clusterVersion),
+		compVersionMsg)
 	if !skipConfirm {
-		if err := tui.PromptForConfirmOrAbortError(
-			`%s
-This operation will upgrade %s %s cluster %s to %s.
-Do you want to continue? [y/N]:`,
-			color.YellowString("Before the upgrade, it is recommended to read the upgrade guide at https://docs.pingcap.com/tidb/stable/upgrade-tidb-using-tiup and finish the preparation steps."),
-			m.sysName,
-			color.HiYellowString(base.Version),
-			color.HiYellowString(name),
-			color.HiYellowString(clusterVersion)); err != nil {
+		if err := tui.PromptForConfirmOrAbortError(`Do you want to continue? [y/N]:`); err != nil {
 			return err
 		}
 		m.logger.Infof("Upgrading cluster...")
@@ -105,13 +127,7 @@ Do you want to continue? [y/N]:`,
 	hasImported := false
 	for _, comp := range topo.ComponentsByUpdateOrder(base.Version) {
 		compName := comp.Name()
-
-		// if component version is not specified, use the cluster version or latest("")
-		version := componentVersions[compName]
-		if version != "" {
-			comp.SetVersion(version)
-		}
-		version = comp.CalculateVersion(clusterVersion)
+		version := comp.CalculateVersion(clusterVersion)
 
 		for _, inst := range comp.Instances() {
 			// Download component from repository
@@ -213,13 +229,6 @@ Do you want to continue? [y/N]:`,
 		}
 	}
 
-	monitoredOptions := topo.GetMonitoredOptions()
-	if componentVersions[spec.ComponentBlackboxExporter] != "" {
-		monitoredOptions.BlackboxExporterVersion = componentVersions[spec.ComponentBlackboxExporter]
-	}
-	if componentVersions[spec.ComponentNodeExporter] != "" {
-		monitoredOptions.NodeExporterVersion = componentVersions[spec.ComponentNodeExporter]
-	}
 	uniqueHosts, noAgentHosts := getMonitorHosts(topo)
 	// Deploy monitor relevant components to remote
 	dlTasks, dpTasks, err := buildMonitoredDeployTask(
