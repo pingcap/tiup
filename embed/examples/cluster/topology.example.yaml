@@ -11,6 +11,8 @@ global:
   deploy_dir: "/tidb-deploy"
   # # TiDB Cluster data storage directory
   data_dir: "/tidb-data"
+  # # default listen_host for all components
+  listen_host: 0.0.0.0
   # # Supported values: "amd64", "arm64" (default: "amd64")
   arch: "amd64"
   # # Resource Control is used to limit the resource of an instance.
