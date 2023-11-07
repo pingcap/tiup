@@ -87,14 +87,6 @@ func (m *Manager) Upgrade(name string, clusterVersion string, componentVersions 
 		m.logger.Warnf(color.RedString("There is no guarantee that the cluster can be downgraded. Be careful before you continue."))
 	}
 
-	monitoredOptions := topo.GetMonitoredOptions()
-	if componentVersions[spec.ComponentBlackboxExporter] != "" {
-		monitoredOptions.BlackboxExporterVersion = componentVersions[spec.ComponentBlackboxExporter]
-	}
-	if componentVersions[spec.ComponentNodeExporter] != "" {
-		monitoredOptions.NodeExporterVersion = componentVersions[spec.ComponentNodeExporter]
-	}
-
 	compVersionMsg := ""
 	for _, comp := range topo.ComponentsByUpdateOrder(base.Version) {
 		// if component version is not specified, use the cluster version or latest("")
@@ -106,8 +98,17 @@ func (m *Manager) Upgrade(name string, clusterVersion string, componentVersions 
 			compVersionMsg += fmt.Sprintf("\nwill upgrade component %19s to \"%s\",", "\""+comp.Name()+"\"", comp.CalculateVersion(clusterVersion))
 		}
 	}
-	compVersionMsg += fmt.Sprintf("\nwill upgrade component %19s to \"%s\",", "\"node-exporter\"", monitoredOptions.NodeExporterVersion)
-	compVersionMsg += fmt.Sprintf("\nwill upgrade component %19s to \"%s\".", "\"blackbox-exporter\"", monitoredOptions.BlackboxExporterVersion)
+	monitoredOptions := topo.GetMonitoredOptions()
+	if monitoredOptions != nil {
+		if componentVersions[spec.ComponentBlackboxExporter] != "" {
+			monitoredOptions.BlackboxExporterVersion = componentVersions[spec.ComponentBlackboxExporter]
+		}
+		if componentVersions[spec.ComponentNodeExporter] != "" {
+			monitoredOptions.NodeExporterVersion = componentVersions[spec.ComponentNodeExporter]
+		}
+		compVersionMsg += fmt.Sprintf("\nwill upgrade component %19s to \"%s\",", "\"node-exporter\"", monitoredOptions.NodeExporterVersion)
+		compVersionMsg += fmt.Sprintf("\nwill upgrade component %19s to \"%s\".", "\"blackbox-exporter\"", monitoredOptions.BlackboxExporterVersion)
+	}
 
 	m.logger.Warnf(`%s
 This operation will upgrade %s %s cluster %s to %s:%s`,

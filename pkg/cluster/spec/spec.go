@@ -122,21 +122,22 @@ type (
 
 	// ComponentVersions represents the versions of components
 	ComponentVersions struct {
-		TiDB             string `yaml:"tidb,omitempty"`
-		TiKV             string `yaml:"tikv,omitempty"`
-		TiFlash          string `yaml:"tiflash,omitempty"`
-		PD               string `yaml:"pd,omitempty"`
-		Dashboard        string `yaml:"tidb_dashboard,omitempty"`
-		Pump             string `yaml:"pump,omitempty"`
-		Drainer          string `yaml:"drainer,omitempty"`
-		CDC              string `yaml:"cdc,omitempty"`
-		TiKVCDC          string `yaml:"kvcdc,omitempty"`
-		TiProxy          string `yaml:"tiproxy,omitempty"`
-		Prometheus       string `yaml:"prometheus,omitempty"`
-		Grafana          string `yaml:"grafana,omitempty"`
-		AlertManager     string `yaml:"alertmanager,omitempty"`
-		NodeExporter     string `yaml:"node_exporter,omitempty"`
-		BlackboxExporter string `yaml:"blackbox_exporter,omitempty"`
+		TiDB         string `yaml:"tidb,omitempty"`
+		TiKV         string `yaml:"tikv,omitempty"`
+		TiFlash      string `yaml:"tiflash,omitempty"`
+		PD           string `yaml:"pd,omitempty"`
+		Dashboard    string `yaml:"tidb_dashboard,omitempty"`
+		Pump         string `yaml:"pump,omitempty"`
+		Drainer      string `yaml:"drainer,omitempty"`
+		CDC          string `yaml:"cdc,omitempty"`
+		TiKVCDC      string `yaml:"kvcdc,omitempty"`
+		TiProxy      string `yaml:"tiproxy,omitempty"`
+		Prometheus   string `yaml:"prometheus,omitempty"`
+		Grafana      string `yaml:"grafana,omitempty"`
+		AlertManager string `yaml:"alertmanager,omitempty"`
+		// The versions of exporters are placed within the monitored section because they are not explicitly treated as separate components.
+		// NodeExporter     string `yaml:"node_exporter,omitempty"`
+		// BlackboxExporter string `yaml:"blackbox_exporter,omitempty"`
 	}
 
 	// Specification represents the specification of topology.yaml
