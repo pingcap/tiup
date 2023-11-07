@@ -159,6 +159,20 @@ func (c *PDComponent) Role() string {
 	return ComponentPD
 }
 
+// CalculateVersion implements the Component interface
+func (c *PDComponent) CalculateVersion(clusterVersion string) string {
+	version := c.Topology.ComponentVersions.PD
+	if version == "" {
+		version = clusterVersion
+	}
+	return version
+}
+
+// SetVersion implements Component interface.
+func (c *PDComponent) SetVersion(version string) {
+	c.Topology.ComponentVersions.PD = version
+}
+
 // Instances implements Component interface.
 func (c *PDComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.PDServers))
@@ -190,6 +204,7 @@ func (c *PDComponent) Instances() []Instance {
 				UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 					return UptimeByHost(s.GetManageHost(), s.ClientPort, timeout, tlsCfg)
 				},
+				Component: c,
 			},
 			topo: c.Topology,
 		})
@@ -221,6 +236,7 @@ func (i *PDInstance) InitConfig(
 	enableTLS := topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(*PDSpec)
 	scheme := utils.Ternary(enableTLS, "https", "http").(string)
+	version := i.CalculateVersion(clusterVersion)
 
 	initialCluster := []string{}
 	for _, pdspec := range topo.PDServers {
@@ -285,7 +301,7 @@ func (i *PDInstance) InitConfig(
 		return err
 	}
 
-	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths, nil)
+	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), version, i.OS(), i.Arch(), i.ComponentName()+".toml", paths)
 }
 
 // setTLSConfig set TLS Config to support enable/disable TLS

@@ -110,7 +110,7 @@ func init() {
 			}
 
 			tidbSpec = spec.GetSpecManager()
-			cm = manager.NewManager("tidb", tidbSpec, spec.TiDBComponentVersion, log)
+			cm = manager.NewManager("tidb", tidbSpec, log)
 			if cmd.Name() != "__complete" {
 				logger.EnableAuditLog(spec.AuditDir())
 			}

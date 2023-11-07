@@ -124,6 +124,21 @@ func (c *MonitorComponent) Role() string {
 	return RoleMonitor
 }
 
+// CalculateVersion implements the Component interface
+func (c *MonitorComponent) CalculateVersion(clusterVersion string) string {
+	// always not follow cluster version, use ""(latest) by default
+	version := c.Topology.BaseTopo().PrometheusVersion
+	if version != nil && *version != "" {
+		return *version
+	}
+	return clusterVersion
+}
+
+// SetVersion implements Component interface.
+func (c *MonitorComponent) SetVersion(version string) {
+	*c.Topology.BaseTopo().PrometheusVersion = version
+}
+
 // Instances implements Component interface.
 func (c *MonitorComponent) Instances() []Instance {
 	servers := c.BaseTopo().Monitors
@@ -154,6 +169,7 @@ func (c *MonitorComponent) Instances() []Instance {
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 				return UptimeByHost(s.GetManageHost(), s.Port, timeout, tlsCfg)
 			},
+			Component: c,
 		}, c.Topology}
 		if s.NgPort > 0 {
 			mi.BaseInstance.Ports = append(mi.BaseInstance.Ports, s.NgPort)
@@ -424,7 +440,7 @@ func (i *MonitorInstance) InitConfig(
 		return err
 	}
 
-	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".yml", paths, nil)
+	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".yml", paths)
 }
 
 // setTLSConfig set TLS Config to support enable/disable TLS

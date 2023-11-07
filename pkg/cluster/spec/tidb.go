@@ -110,6 +110,20 @@ func (c *TiDBComponent) Role() string {
 	return ComponentTiDB
 }
 
+// CalculateVersion implements the Component interface
+func (c *TiDBComponent) CalculateVersion(clusterVersion string) string {
+	version := c.Topology.ComponentVersions.TiDB
+	if version == "" {
+		version = clusterVersion
+	}
+	return version
+}
+
+// SetVersion implements Component interface.
+func (c *TiDBComponent) SetVersion(version string) {
+	c.Topology.ComponentVersions.TiDB = version
+}
+
 // Instances implements Component interface.
 func (c *TiDBComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.TiDBServers))
@@ -140,6 +154,7 @@ func (c *TiDBComponent) Instances() []Instance {
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 				return UptimeByHost(s.GetManageHost(), s.StatusPort, timeout, tlsCfg)
 			},
+			Component: c,
 		}, c.Topology})
 	}
 	return ins
@@ -167,6 +182,7 @@ func (i *TiDBInstance) InitConfig(
 
 	enableTLS := topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(*TiDBSpec)
+	version := i.CalculateVersion(clusterVersion)
 
 	pds := []string{}
 	for _, pdspec := range topo.PDServers {
@@ -178,7 +194,7 @@ func (i *TiDBInstance) InitConfig(
 		ListenHost:     i.GetListenHost(),
 		AdvertiseAddr:  utils.Ternary(spec.AdvertiseAddr != "", spec.AdvertiseAddr, spec.Host).(string),
 		PD:             strings.Join(pds, ","),
-		SupportSecboot: tidbver.TiDBSupportSecureBoot(clusterVersion),
+		SupportSecboot: tidbver.TiDBSupportSecureBoot(version),
 
 		DeployDir: paths.Deploy,
 		LogDir:    paths.Log,
@@ -234,7 +250,7 @@ func (i *TiDBInstance) InitConfig(
 		return err
 	}
 
-	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths, nil)
+	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), version, i.OS(), i.Arch(), i.ComponentName()+".toml", paths)
 }
 
 // setTLSConfig set TLS Config to support enable/disable TLS

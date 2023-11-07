@@ -54,7 +54,6 @@ const (
 	ComponentDMMaster         = "dm-master"
 	ComponentDMWorker         = "dm-worker"
 	ComponentPrometheus       = "prometheus"
-	ComponentPushwaygate      = "pushgateway"
 	ComponentBlackboxExporter = "blackbox_exporter"
 	ComponentNodeExporter     = "node_exporter"
 	ComponentCheckCollector   = "insight"
@@ -72,6 +71,8 @@ type Component interface {
 	Name() string
 	Role() string
 	Instances() []Instance
+	CalculateVersion(string) string
+	SetVersion(string)
 }
 
 // RollingUpdateInstance represent a instance need to transfer state when restart.
@@ -111,6 +112,8 @@ type Instance interface {
 	Arch() string
 	IsPatched() bool
 	SetPatched(bool)
+	CalculateVersion(string) string
+	// SetVersion(string)
 	setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error)
 }
 
@@ -154,6 +157,8 @@ type BaseInstance struct {
 	Dirs     []string
 	StatusFn func(ctx context.Context, timeout time.Duration, tlsCfg *tls.Config, pdHosts ...string) string
 	UptimeFn func(ctx context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration
+
+	Component Component
 }
 
 // Ready implements Instance interface
@@ -457,6 +462,11 @@ func (i *BaseInstance) SetPatched(p bool) {
 		return
 	}
 	v.SetBool(p)
+}
+
+// CalculateVersion implements the Instance interface
+func (i *BaseInstance) CalculateVersion(globalVersion string) string {
+	return i.Component.CalculateVersion(globalVersion)
 }
 
 // PrepareStart checks instance requirements before starting

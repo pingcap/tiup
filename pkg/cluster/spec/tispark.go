@@ -141,6 +141,16 @@ func (c *TiSparkMasterComponent) Role() string {
 	return RoleTiSparkMaster
 }
 
+// CalculateVersion implements the Component interface
+func (c *TiSparkMasterComponent) CalculateVersion(clusterVersion string) string {
+	return ""
+}
+
+// SetVersion implements Component interface.
+func (c *TiSparkMasterComponent) SetVersion(version string) {
+	// should never be calles
+}
+
 // Instances implements Component interface.
 func (c *TiSparkMasterComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.TiSparkMasters))
@@ -170,6 +180,7 @@ func (c *TiSparkMasterComponent) Instances() []Instance {
 				UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 					return 0
 				},
+				Component: c,
 			},
 			topo: c.Topology,
 		})
@@ -323,6 +334,16 @@ func (c *TiSparkWorkerComponent) Role() string {
 	return RoleTiSparkWorker
 }
 
+// CalculateVersion implements the Component interface
+func (c *TiSparkWorkerComponent) CalculateVersion(clusterVersion string) string {
+	return ""
+}
+
+// SetVersion implements Component interface.
+func (c *TiSparkWorkerComponent) SetVersion(version string) {
+	// should never be called
+}
+
 // Instances implements Component interface.
 func (c *TiSparkWorkerComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.TiSparkWorkers))
@@ -351,6 +372,7 @@ func (c *TiSparkWorkerComponent) Instances() []Instance {
 				UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 					return 0
 				},
+				Component: c,
 			},
 			topo: c.Topology,
 		})

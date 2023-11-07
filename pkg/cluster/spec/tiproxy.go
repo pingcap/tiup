@@ -129,6 +129,21 @@ func (c *TiProxyComponent) Role() string {
 	return ComponentTiProxy
 }
 
+// CalculateVersion implements the Component interface
+func (c *TiProxyComponent) CalculateVersion(clusterVersion string) string {
+	// always not follow global version, use ""(latest) by default
+	version := c.Topology.ComponentVersions.TiProxy
+	if version != "" {
+		return version
+	}
+	return "nightly"
+}
+
+// SetVersion implements Component interface.
+func (c *TiProxyComponent) SetVersion(version string) {
+	c.Topology.ComponentVersions.TiProxy = version
+}
+
 // Instances implements Component interface.
 func (c *TiProxyComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.TiProxyServers))

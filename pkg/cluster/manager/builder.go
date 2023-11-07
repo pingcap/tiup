@@ -164,7 +164,6 @@ func buildScaleOutTask(
 		newPart,
 		m.logger,
 		gOpt,
-		m.bindVersion,
 	)
 
 	sshType := topo.BaseTopo().GlobalOptions.SSHType
@@ -172,7 +171,7 @@ func buildScaleOutTask(
 	var iterErr error
 	// Deploy the new topology and refresh the configuration
 	newPart.IterInstance(func(inst spec.Instance) {
-		version := m.bindVersion(inst.ComponentName(), base.Version)
+		version := inst.CalculateVersion(base.Version)
 		deployDir := spec.Abs(base.User, inst.DeployDir())
 		// data dir would be empty for components which don't need it
 		dataDirs := spec.MultiDirAbs(base.User, inst.DataDir())
@@ -213,7 +212,7 @@ func buildScaleOutTask(
 					inst.ComponentSource(),
 					inst.OS(),
 					inst.Arch(),
-					version,
+					inst.CalculateVersion(version),
 					srcPath,
 					inst.GetManageHost(),
 					deployDir,
@@ -235,9 +234,9 @@ func buildScaleOutTask(
 			// data dir would be empty for components which don't need it
 			// Download and copy the latest component to remote if the cluster is imported from Ansible
 			tb := task.NewBuilder(m.logger)
+			version := inst.CalculateVersion(base.Version)
 			switch compName := inst.ComponentName(); compName {
 			case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertmanager:
-				version := m.bindVersion(compName, base.Version)
 				tb.Download(compName, inst.OS(), inst.Arch(), version).
 					CopyComponent(compName, inst.OS(), inst.Arch(), version, "", inst.GetManageHost(), deployDir)
 			}
@@ -272,7 +271,6 @@ func buildScaleOutTask(
 		noAgentHosts,
 		topo.BaseTopo().GlobalOptions,
 		topo.BaseTopo().MonitoredOptions,
-		base.Version,
 		gOpt,
 		p,
 	)
@@ -429,7 +427,6 @@ func buildMonitoredDeployTask(
 	noAgentHosts set.StringSet, // hosts that do not deploy monitor agents
 	globalOptions *spec.GlobalOptions,
 	monitoredOptions *spec.MonitoredOptions,
-	version string,
 	gOpt operator.Options,
 	p *tui.SSHConnectionProps,
 ) (downloadCompTasks []*task.StepDisplay, deployCompTasks []*task.StepDisplay, err error) {
@@ -440,7 +437,10 @@ func buildMonitoredDeployTask(
 	uniqueCompOSArch := set.NewStringSet()
 	// monitoring agents
 	for _, comp := range []string{spec.ComponentNodeExporter, spec.ComponentBlackboxExporter} {
-		version := m.bindVersion(comp, version)
+		version := monitoredOptions.NodeExporterVersion
+		if comp == spec.ComponentBlackboxExporter {
+			version = monitoredOptions.BlackboxExporterVersion
+		}
 		for host, info := range uniqueHosts {
 			// skip deploying monitoring agents if the instance is marked so
 			if noAgentHosts.Exist(host) {
@@ -638,9 +638,9 @@ func buildInitConfigTasks(
 		// Download and copy the latest component to remote if the cluster is imported from Ansible
 		tb := task.NewBuilder(m.logger)
 		if instance.IsImported() {
+			version := instance.CalculateVersion(base.Version)
 			switch compName {
 			case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertmanager:
-				version := m.bindVersion(compName, base.Version)
 				tb.Download(compName, instance.OS(), instance.Arch(), version).
 					CopyComponent(
 						compName,
@@ -683,7 +683,6 @@ func buildDownloadCompTasks(
 	topo spec.Topology,
 	logger *logprinter.Logger,
 	gOpt operator.Options,
-	bindVersion spec.BindVersion,
 ) []*task.StepDisplay {
 	var tasks []*task.StepDisplay
 	uniqueTaskList := set.NewStringSet()
@@ -698,7 +697,7 @@ func buildDownloadCompTasks(
 				// download spark as dependency of tispark
 				tasks = append(tasks, buildDownloadSparkTask(inst, logger, gOpt))
 			} else {
-				version = bindVersion(inst.ComponentSource(), clusterVersion)
+				version = inst.CalculateVersion(clusterVersion)
 			}
 
 			t := task.NewBuilder(logger).
