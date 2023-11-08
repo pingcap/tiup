@@ -526,24 +526,44 @@ func (s *Specification) GetEtcdProxyClient(tlsCfg *tls.Config, tcpProxy *proxy.T
 func (s *Specification) Merge(that Topology) Topology {
 	spec := that.(*Specification)
 	return &Specification{
-		GlobalOptions:    s.GlobalOptions,
-		MonitoredOptions: s.MonitoredOptions,
-		ServerConfigs:    s.ServerConfigs,
-		TiDBServers:      append(s.TiDBServers, spec.TiDBServers...),
-		TiKVServers:      append(s.TiKVServers, spec.TiKVServers...),
-		PDServers:        append(s.PDServers, spec.PDServers...),
-		DashboardServers: append(s.DashboardServers, spec.DashboardServers...),
-		TiFlashServers:   append(s.TiFlashServers, spec.TiFlashServers...),
-		TiProxyServers:   append(s.TiProxyServers, spec.TiProxyServers...),
-		PumpServers:      append(s.PumpServers, spec.PumpServers...),
-		Drainers:         append(s.Drainers, spec.Drainers...),
-		CDCServers:       append(s.CDCServers, spec.CDCServers...),
-		TiKVCDCServers:   append(s.TiKVCDCServers, spec.TiKVCDCServers...),
-		TiSparkMasters:   append(s.TiSparkMasters, spec.TiSparkMasters...),
-		TiSparkWorkers:   append(s.TiSparkWorkers, spec.TiSparkWorkers...),
-		Monitors:         append(s.Monitors, spec.Monitors...),
-		Grafanas:         append(s.Grafanas, spec.Grafanas...),
-		Alertmanagers:    append(s.Alertmanagers, spec.Alertmanagers...),
+		GlobalOptions:     s.GlobalOptions,
+		MonitoredOptions:  s.MonitoredOptions,
+		ServerConfigs:     s.ServerConfigs,
+		ComponentVersions: s.ComponentVersions.Merge(spec.ComponentVersions),
+		TiDBServers:       append(s.TiDBServers, spec.TiDBServers...),
+		TiKVServers:       append(s.TiKVServers, spec.TiKVServers...),
+		PDServers:         append(s.PDServers, spec.PDServers...),
+		DashboardServers:  append(s.DashboardServers, spec.DashboardServers...),
+		TiFlashServers:    append(s.TiFlashServers, spec.TiFlashServers...),
+		TiProxyServers:    append(s.TiProxyServers, spec.TiProxyServers...),
+		PumpServers:       append(s.PumpServers, spec.PumpServers...),
+		Drainers:          append(s.Drainers, spec.Drainers...),
+		CDCServers:        append(s.CDCServers, spec.CDCServers...),
+		TiKVCDCServers:    append(s.TiKVCDCServers, spec.TiKVCDCServers...),
+		TiSparkMasters:    append(s.TiSparkMasters, spec.TiSparkMasters...),
+		TiSparkWorkers:    append(s.TiSparkWorkers, spec.TiSparkWorkers...),
+		Monitors:          append(s.Monitors, spec.Monitors...),
+		Grafanas:          append(s.Grafanas, spec.Grafanas...),
+		Alertmanagers:     append(s.Alertmanagers, spec.Alertmanagers...),
+	}
+}
+
+// Merge returns a new ComponentVersions which sum old ones
+func (v *ComponentVersions) Merge(that ComponentVersions) ComponentVersions {
+	return ComponentVersions{
+		TiDB:         utils.Ternary(that.TiDB != "", that.TiDB, v.TiDB).(string),
+		TiKV:         utils.Ternary(that.TiKV != "", that.TiKV, v.TiKV).(string),
+		PD:           utils.Ternary(that.PD != "", that.PD, v.PD).(string),
+		Dashboard:    utils.Ternary(that.Dashboard != "", that.Dashboard, v.Dashboard).(string),
+		TiFlash:      utils.Ternary(that.TiFlash != "", that.TiFlash, v.TiFlash).(string),
+		TiProxy:      utils.Ternary(that.TiProxy != "", that.TiProxy, v.TiProxy).(string),
+		Pump:         utils.Ternary(that.Pump != "", that.Pump, v.Pump).(string),
+		Drainer:      utils.Ternary(that.Drainer != "", that.Drainer, v.Drainer).(string),
+		CDC:          utils.Ternary(that.CDC != "", that.CDC, v.CDC).(string),
+		TiKVCDC:      utils.Ternary(that.TiKVCDC != "", that.TiKVCDC, v.TiKVCDC).(string),
+		Grafana:      utils.Ternary(that.Grafana != "", that.Grafana, v.Grafana).(string),
+		Prometheus:   utils.Ternary(that.Prometheus != "", that.Prometheus, v.Prometheus).(string),
+		AlertManager: utils.Ternary(that.AlertManager != "", that.AlertManager, v.AlertManager).(string),
 	}
 }
 
