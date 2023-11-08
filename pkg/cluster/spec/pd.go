@@ -185,7 +185,7 @@ func (c *PDComponent) Instances() []Instance {
 				Name:         c.Name(),
 				Host:         s.Host,
 				ManageHost:   s.ManageHost,
-				ListenHost:   s.ListenHost,
+				ListenHost:   utils.Ternary(s.ListenHost != "", s.ListenHost, c.Topology.BaseTopo().GlobalOptions.ListenHost).(string),
 				Port:         s.ClientPort,
 				SSHP:         s.SSHPort,
 				Source:       s.GetSource(),

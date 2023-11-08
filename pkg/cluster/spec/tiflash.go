@@ -305,6 +305,7 @@ func (c *TiFlashComponent) Instances() []Instance {
 			Name:         c.Name(),
 			Host:         s.Host,
 			ManageHost:   s.ManageHost,
+			ListenHost:   c.Topology.BaseTopo().GlobalOptions.ListenHost,
 			Port:         s.GetMainPort(),
 			SSHP:         s.SSHPort,
 			Source:       s.GetSource(),
