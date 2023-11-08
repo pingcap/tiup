@@ -209,8 +209,9 @@ func (i *DashboardInstance) InitConfig(
 		pds = append(pds, pdspec.GetAdvertiseClientURL(enableTLS))
 	}
 	cfg := &scripts.DashboardScript{
+		// -h, --host string              listen host of the Dashboard Server
+		Host:        i.GetListenHost(),
 		TidbVersion: clusterVersion,
-		IP:          i.GetHost(),
 		DeployDir:   paths.Deploy,
 		DataDir:     paths.Data[0],
 		LogDir:      paths.Log,
