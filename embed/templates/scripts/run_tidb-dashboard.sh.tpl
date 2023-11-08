@@ -13,7 +13,7 @@ exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/tidb-dashbo
 exec bin/tidb-dashboard \
 {{- end}}
     --feature-version="{{.TidbVersion}}" \
-    --host="{{.IP}}" \
+    --host="{{.Host}}" \
     --port="{{.Port}}" \
     --pd="{{.PD}}" \
     --data-dir="{{.DataDir}}" \

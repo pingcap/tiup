@@ -25,7 +25,7 @@ import (
 // DashboardScript represent the data to generate cdc config
 type DashboardScript struct {
 	TidbVersion string
-	IP          string
+	Host        string
 	Port        int
 	DeployDir   string
 	LogDir      string
