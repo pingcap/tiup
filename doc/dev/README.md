@@ -6,7 +6,7 @@ You can build TiUP on any platform that supports Go.
 
 Prerequisites:
 
-* Go (minimum version: 1.18; [installation instructions](https://golang.org/doc/install))
+* Go (minimum version: 1.21; [installation instructions](https://golang.org/doc/install))
 * golint (`go get -u golang.org/x/lint/golint`)
 * make
 

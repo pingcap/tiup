@@ -19,6 +19,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/fatih/color"
@@ -77,7 +78,7 @@ func (m *Manager) Patch(name string, packagePath string, opt operator.Options, o
 	if err != nil {
 		return err
 	}
-	if err := checkPackage(m.bindVersion, m.specManager, name, insts[0].ComponentName(), insts[0].OS(), insts[0].Arch(), packagePath); err != nil {
+	if err := checkPackage(m.specManager, name, insts[0], insts[0].OS(), insts[0].Arch(), packagePath); err != nil {
 		return err
 	}
 
@@ -103,7 +104,8 @@ func (m *Manager) Patch(name string, packagePath string, opt operator.Options, o
 			if offline {
 				return nil
 			}
-			return operator.Upgrade(ctx, topo, opt, tlsCfg, base.Version)
+			// TBD: should patch be treated as an upgrade?
+			return operator.Upgrade(ctx, topo, opt, tlsCfg, base.Version, base.Version)
 		}).
 		Build()
 
@@ -138,18 +140,18 @@ func (m *Manager) Patch(name string, packagePath string, opt operator.Options, o
 	return m.specManager.SaveMeta(name, metadata)
 }
 
-func checkPackage(bindVersion spec.BindVersion, specManager *spec.SpecManager, name, comp, nodeOS, arch, packagePath string) error {
+func checkPackage(specManager *spec.SpecManager, name string, inst spec.Instance, nodeOS, arch, packagePath string) error {
 	metadata := specManager.NewMetadata()
 	if err := specManager.Metadata(name, metadata); err != nil {
 		return err
 	}
 
-	ver := bindVersion(comp, metadata.GetBaseMeta().Version)
+	ver := inst.CalculateVersion(metadata.GetBaseMeta().Version)
 	repo, err := clusterutil.NewRepository(nodeOS, arch)
 	if err != nil {
 		return err
 	}
-	entry, err := repo.ComponentBinEntry(comp, ver)
+	entry, err := repo.ComponentBinEntry(inst.ComponentSource(), ver)
 	if err != nil {
 		return err
 	}
@@ -158,7 +160,7 @@ func checkPackage(bindVersion spec.BindVersion, specManager *spec.SpecManager, n
 	if err != nil {
 		return err
 	}
-	cacheDir := specManager.Path(name, "cache", comp+"-"+checksum[:7])
+	cacheDir := specManager.Path(name, "cache", inst.ComponentSource()+"-"+checksum[:7])
 	if err := utils.MkdirAll(cacheDir, 0755); err != nil {
 		return perrs.Annotatef(err, "create cache directory %s", cacheDir)
 	}
@@ -204,7 +206,13 @@ func overwritePatch(specManager *spec.SpecManager, name, comp, packagePath strin
 	if utils.IsSymExist(symlink) {
 		os.Remove(symlink)
 	}
-	return os.Symlink(tg, symlink)
+
+	tgRelPath, err := filepath.Rel(filepath.Dir(symlink), tg)
+	if err != nil {
+		return err
+	}
+
+	return os.Symlink(tgRelPath, symlink)
 }
 
 func instancesToPatch(topo spec.Topology, options operator.Options) ([]spec.Instance, error) {

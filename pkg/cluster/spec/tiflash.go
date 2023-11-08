@@ -282,6 +282,20 @@ func (c *TiFlashComponent) Role() string {
 	return ComponentTiFlash
 }
 
+// CalculateVersion implements the Component interface
+func (c *TiFlashComponent) CalculateVersion(clusterVersion string) string {
+	version := c.Topology.ComponentVersions.TiFlash
+	if version == "" {
+		version = clusterVersion
+	}
+	return version
+}
+
+// SetVersion implements Component interface.
+func (c *TiFlashComponent) SetVersion(version string) {
+	c.Topology.ComponentVersions.TiFlash = version
+}
+
 // Instances implements Component interface.
 func (c *TiFlashComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.TiFlashServers))
@@ -291,9 +305,12 @@ func (c *TiFlashComponent) Instances() []Instance {
 			Name:         c.Name(),
 			Host:         s.Host,
 			ManageHost:   s.ManageHost,
+			ListenHost:   c.Topology.BaseTopo().GlobalOptions.ListenHost,
 			Port:         s.GetMainPort(),
 			SSHP:         s.SSHPort,
 			Source:       s.GetSource(),
+			NumaNode:     s.NumaNode,
+			NumaCores:    s.NumaCores,
 
 			Ports: []int{
 				s.TCPPort,
@@ -311,6 +328,7 @@ func (c *TiFlashComponent) Instances() []Instance {
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 				return UptimeByHost(s.GetManageHost(), s.StatusPort, timeout, tlsCfg)
 			},
+			Component: c,
 		}, c.Topology})
 	}
 	return ins
@@ -435,7 +453,7 @@ func checkTiFlashStorageConfigWithVersion(clusterVersion string, config map[stri
 }
 
 // InitTiFlashConfig initializes TiFlash config file with the configurations in server_configs
-func (i *TiFlashInstance) initTiFlashConfig(ctx context.Context, clusterVersion string, src map[string]any, paths meta.DirPaths) (map[string]any, error) {
+func (i *TiFlashInstance) initTiFlashConfig(ctx context.Context, version string, src map[string]any, paths meta.DirPaths) (map[string]any, error) {
 	var (
 		pathConfig            string
 		isStorageDirsDefined  bool
@@ -444,7 +462,7 @@ func (i *TiFlashInstance) initTiFlashConfig(ctx context.Context, clusterVersion 
 		markCacheSize         string
 		err                   error
 	)
-	if isStorageDirsDefined, err = checkTiFlashStorageConfigWithVersion(clusterVersion, src); err != nil {
+	if isStorageDirsDefined, err = checkTiFlashStorageConfigWithVersion(version, src); err != nil {
 		return nil, err
 	}
 	// For backward compatibility, we need to rollback to set 'path'
@@ -454,7 +472,7 @@ func (i *TiFlashInstance) initTiFlashConfig(ctx context.Context, clusterVersion 
 		pathConfig = fmt.Sprintf(`path: "%s"`, strings.Join(paths.Data, ","))
 	}
 
-	if tidbver.TiFlashDeprecatedUsersConfig(clusterVersion) {
+	if tidbver.TiFlashDeprecatedUsersConfig(version) {
 		// For v4.0.12 or later, 5.0.0 or later, TiFlash can ignore these `user.*`, `quotas.*` settings
 		deprecatedUsersConfig = "#"
 	} else {
@@ -489,7 +507,7 @@ func (i *TiFlashInstance) initTiFlashConfig(ctx context.Context, clusterVersion 
 	enableTLS := i.topo.(*Specification).GlobalOptions.TLSEnabled
 	httpPort := "#"
 	// For 7.1.0 or later, TiFlash HTTP service is removed, so we don't need to set http_port
-	if !tidbver.TiFlashNotNeedHTTPPortConfig(clusterVersion) {
+	if !tidbver.TiFlashNotNeedHTTPPortConfig(version) {
 		if enableTLS {
 			httpPort = fmt.Sprintf(`https_port: %d`, spec.HTTPPort)
 		} else {
@@ -498,7 +516,7 @@ func (i *TiFlashInstance) initTiFlashConfig(ctx context.Context, clusterVersion 
 	}
 	tcpPort := "#"
 	// Config tcp_port is only required for TiFlash version < 7.1.0, and is recommended to not specify for TiFlash version >= 7.1.0.
-	if tidbver.TiFlashRequiresTCPPortConfig(clusterVersion) {
+	if tidbver.TiFlashRequiresTCPPortConfig(version) {
 		tcpPort = fmt.Sprintf(`tcp_port: %d`, spec.TCPPort)
 	}
 
@@ -510,7 +528,7 @@ func (i *TiFlashInstance) initTiFlashConfig(ctx context.Context, clusterVersion 
 
 	topo := Specification{}
 
-	if tidbver.TiFlashNotNeedSomeConfig(clusterVersion) {
+	if tidbver.TiFlashNotNeedSomeConfig(version) {
 		// For 5.4.0 or later, TiFlash can ignore application.runAsDaemon and mark_cache_size setting
 		daemonConfig = "#"
 		markCacheSize = "#"
@@ -742,9 +760,10 @@ func (i *TiFlashInstance) InitConfig(
 		return err
 	}
 	spec := i.InstanceSpec.(*TiFlashSpec)
+	version := i.CalculateVersion(clusterVersion)
 
 	cfg := &scripts.TiFlashScript{
-		RequiredCPUFlags: getTiFlashRequiredCPUFlagsWithVersion(clusterVersion, spec.Arch),
+		RequiredCPUFlags: getTiFlashRequiredCPUFlagsWithVersion(version, spec.Arch),
 
 		DeployDir: paths.Deploy,
 		LogDir:    paths.Log,
@@ -767,7 +786,7 @@ func (i *TiFlashInstance) InitConfig(
 		return err
 	}
 
-	conf, err := i.InitTiFlashLearnerConfig(ctx, clusterVersion, topo.ServerConfigs.TiFlashLearner, paths)
+	conf, err := i.InitTiFlashLearnerConfig(ctx, version, topo.ServerConfigs.TiFlashLearner, paths)
 	if err != nil {
 		return err
 	}
@@ -800,7 +819,7 @@ func (i *TiFlashInstance) InitConfig(
 	}
 
 	// Init the configuration using cfg and server_configs
-	if conf, err = i.initTiFlashConfig(ctx, clusterVersion, topo.ServerConfigs.TiFlash, paths); err != nil {
+	if conf, err = i.initTiFlashConfig(ctx, version, topo.ServerConfigs.TiFlash, paths); err != nil {
 		return err
 	}
 
@@ -831,7 +850,7 @@ func (i *TiFlashInstance) InitConfig(
 	}
 
 	// Check the configuration of instance level
-	if conf, err = i.mergeTiFlashInstanceConfig(clusterVersion, conf, spec.Config); err != nil {
+	if conf, err = i.mergeTiFlashInstanceConfig(version, conf, spec.Config); err != nil {
 		return err
 	}
 

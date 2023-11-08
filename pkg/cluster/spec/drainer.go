@@ -134,6 +134,20 @@ func (c *DrainerComponent) Role() string {
 	return ComponentDrainer
 }
 
+// CalculateVersion implements the Component interface
+func (c *DrainerComponent) CalculateVersion(clusterVersion string) string {
+	version := c.Topology.ComponentVersions.Drainer
+	if version == "" {
+		version = clusterVersion
+	}
+	return version
+}
+
+// SetVersion implements Component interface.
+func (c *DrainerComponent) SetVersion(version string) {
+	c.Topology.ComponentVersions.Drainer = version
+}
+
 // Instances implements Component interface.
 func (c *DrainerComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.Drainers))
@@ -144,9 +158,12 @@ func (c *DrainerComponent) Instances() []Instance {
 			Name:         c.Name(),
 			Host:         s.Host,
 			ManageHost:   s.ManageHost,
+			ListenHost:   c.Topology.BaseTopo().GlobalOptions.ListenHost,
 			Port:         s.Port,
 			SSHP:         s.SSHPort,
 			Source:       s.GetSource(),
+			NumaNode:     s.NumaNode,
+			NumaCores:    "",
 
 			Ports: []int{
 				s.Port,
@@ -159,6 +176,7 @@ func (c *DrainerComponent) Instances() []Instance {
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 				return UptimeByHost(s.GetManageHost(), s.Port, timeout, tlsCfg)
 			},
+			Component: c,
 		}, c.Topology})
 	}
 	return ins
@@ -274,7 +292,7 @@ func (i *DrainerInstance) InitConfig(
 		return err
 	}
 
-	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths, nil)
+	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths)
 }
 
 // setTLSConfig set TLS Config to support enable/disable TLS

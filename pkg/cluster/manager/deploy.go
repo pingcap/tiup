@@ -245,11 +245,11 @@ func (m *Manager) Deploy(
 	}
 
 	// Download missing component
-	downloadCompTasks = buildDownloadCompTasks(clusterVersion, topo, m.logger, gOpt, m.bindVersion)
+	downloadCompTasks = buildDownloadCompTasks(clusterVersion, topo, m.logger, gOpt)
 
 	// Deploy components to remote
 	topo.IterInstance(func(inst spec.Instance) {
-		version := m.bindVersion(inst.ComponentSource(), clusterVersion)
+		version := inst.CalculateVersion(clusterVersion)
 		deployDir := spec.Abs(globalOptions.User, inst.DeployDir())
 		// data dir would be empty for components which don't need it
 		dataDirs := spec.MultiDirAbs(globalOptions.User, inst.DataDir())
@@ -320,7 +320,6 @@ func (m *Manager) Deploy(
 		noAgentHosts,
 		globalOptions,
 		topo.GetMonitoredOptions(),
-		clusterVersion,
 		gOpt,
 		sshProxyProps,
 	)

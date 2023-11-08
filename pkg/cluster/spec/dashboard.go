@@ -31,7 +31,6 @@ type DashboardSpec struct {
 	Host            string               `yaml:"host"`
 	ManageHost      string               `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
 	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Version         string               `yaml:"version,omitempty"`
 	Patched         bool                 `yaml:"patched,omitempty"`
 	IgnoreExporter  bool                 `yaml:"ignore_exporter,omitempty"`
 	Port            int                  `yaml:"port" default:"12333"`
@@ -116,6 +115,20 @@ func (c *DashboardComponent) Role() string {
 	return ComponentDashboard
 }
 
+// CalculateVersion implements the Component interface
+func (c *DashboardComponent) CalculateVersion(clusterVersion string) string {
+	version := c.Topology.ComponentVersions.Dashboard
+	if version == "" {
+		version = clusterVersion
+	}
+	return version
+}
+
+// SetVersion implements Component interface.
+func (c *DashboardComponent) SetVersion(version string) {
+	c.Topology.ComponentVersions.Dashboard = version
+}
+
 // Instances implements Component interface.
 func (c *DashboardComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.Drainers))
@@ -126,9 +139,12 @@ func (c *DashboardComponent) Instances() []Instance {
 			Name:         c.Name(),
 			Host:         s.Host,
 			ManageHost:   s.ManageHost,
+			ListenHost:   c.Topology.BaseTopo().GlobalOptions.ListenHost,
 			Port:         s.Port,
 			SSHP:         s.SSHPort,
 			Source:       s.Source,
+			NumaNode:     s.NumaNode,
+			NumaCores:    "",
 
 			Ports: []int{
 				s.Port,
@@ -141,6 +157,7 @@ func (c *DashboardComponent) Instances() []Instance {
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 				return UptimeByHost(s.GetManageHost(), s.Port, timeout, tlsCfg)
 			},
+			Component: c,
 		}, c.Topology})
 	}
 	return ins
@@ -224,7 +241,7 @@ func (i *DashboardInstance) InitConfig(
 		return err
 	}
 
-	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths, nil)
+	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), i.CalculateVersion(clusterVersion), i.OS(), i.Arch(), i.ComponentName()+".toml", paths)
 }
 
 // setTLSConfig set TLS Config to support enable/disable TLS

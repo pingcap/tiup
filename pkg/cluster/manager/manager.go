@@ -45,7 +45,6 @@ var (
 type Manager struct {
 	sysName     string
 	specManager *spec.SpecManager
-	bindVersion spec.BindVersion
 	logger      *logprinter.Logger
 }
 
@@ -53,13 +52,11 @@ type Manager struct {
 func NewManager(
 	sysName string,
 	specManager *spec.SpecManager,
-	bindVersion spec.BindVersion,
 	logger *logprinter.Logger,
 ) *Manager {
 	return &Manager{
 		sysName:     sysName,
 		specManager: specManager,
-		bindVersion: bindVersion,
 		logger:      logger,
 	}
 }

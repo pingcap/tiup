@@ -182,7 +182,7 @@ func checkSystemInfo(
 		downloadTasks      []*task.StepDisplay
 	)
 	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
-	insightVer := spec.TiDBComponentVersion(spec.ComponentCheckCollector, "")
+	insightVer := ""
 
 	uniqueHosts := map[string]int{}             // host -> ssh-port
 	uniqueArchList := make(map[string]struct{}) // map["os-arch"]{}
@@ -190,7 +190,7 @@ func checkSystemInfo(
 
 	roleFilter := set.NewStringSet(gOpt.Roles...)
 	nodeFilter := set.NewStringSet(gOpt.Nodes...)
-	components := topo.ComponentsByUpdateOrder()
+	components := topo.ComponentsByStartOrder()
 	components = operator.FilterComponent(components, roleFilter)
 
 	for _, comp := range components {

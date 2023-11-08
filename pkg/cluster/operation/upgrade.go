@@ -39,17 +39,18 @@ var (
 	increaseLimitPoint = checkpoint.Register()
 )
 
-// Upgrade the cluster.
+// Upgrade the cluster. (actually, it's rolling restart)
 func Upgrade(
 	ctx context.Context,
 	topo spec.Topology,
 	options Options,
 	tlsCfg *tls.Config,
 	currentVersion string,
+	targetVersion string,
 ) error {
 	roleFilter := set.NewStringSet(options.Roles...)
 	nodeFilter := set.NewStringSet(options.Nodes...)
-	components := topo.ComponentsByUpdateOrder()
+	components := topo.ComponentsByUpdateOrder(currentVersion)
 	components = FilterComponent(components, roleFilter)
 	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 
@@ -70,6 +71,7 @@ func Upgrade(
 		var origRegionScheduleLimit int
 		var err error
 
+		var tidbClient *api.TiDBClient
 		var pdEndpoints []string
 		forcePDEndpoints := os.Getenv(EnvNamePDEndpointOverwrite) // custom set PD endpoint list
 
@@ -100,6 +102,21 @@ func Upgrade(
 					}
 				}()
 			}
+		case spec.ComponentTiDB:
+			dbs := topo.(*spec.Specification).TiDBServers
+			endpoints := []string{}
+			for _, db := range dbs {
+				endpoints = append(endpoints, utils.JoinHostPort(db.GetManageHost(), db.StatusPort))
+			}
+
+			if currentVersion != targetVersion && tidbver.TiDBSupportUpgradeAPI(currentVersion) && tidbver.TiDBSupportUpgradeAPI(targetVersion) {
+				tidbClient = api.NewTiDBClient(ctx, endpoints, 10*time.Second, tlsCfg)
+				err = tidbClient.StartUpgrade()
+				if err != nil {
+					return err
+				}
+			}
+
 		default:
 			// do nothing, kept for future usage with other components
 		}
@@ -177,6 +194,19 @@ func Upgrade(
 			if err := upgradeInstance(ctx, topo, instance, options, tlsCfg); err != nil {
 				return err
 			}
+		}
+
+		switch component.Name() {
+		case spec.ComponentTiDB:
+			if currentVersion != targetVersion && tidbver.TiDBSupportUpgradeAPI(currentVersion) && tidbver.TiDBSupportUpgradeAPI(targetVersion) {
+				err = tidbClient.FinishUpgrade()
+				if err != nil {
+					return err
+				}
+			}
+
+		default:
+			// do nothing, kept for future usage with other components
 		}
 	}
 

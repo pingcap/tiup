@@ -124,6 +124,21 @@ func (c *MonitorComponent) Role() string {
 	return RoleMonitor
 }
 
+// CalculateVersion implements the Component interface
+func (c *MonitorComponent) CalculateVersion(clusterVersion string) string {
+	// always not follow cluster version, use ""(latest) by default
+	version := c.Topology.BaseTopo().PrometheusVersion
+	if version != nil && *version != "" {
+		return *version
+	}
+	return clusterVersion
+}
+
+// SetVersion implements Component interface.
+func (c *MonitorComponent) SetVersion(version string) {
+	*c.Topology.BaseTopo().PrometheusVersion = version
+}
+
 // Instances implements Component interface.
 func (c *MonitorComponent) Instances() []Instance {
 	servers := c.BaseTopo().Monitors
@@ -136,8 +151,11 @@ func (c *MonitorComponent) Instances() []Instance {
 			Name:         c.Name(),
 			Host:         s.Host,
 			ManageHost:   s.ManageHost,
+			ListenHost:   c.Topology.BaseTopo().GlobalOptions.ListenHost,
 			Port:         s.Port,
 			SSHP:         s.SSHPort,
+			NumaNode:     s.NumaNode,
+			NumaCores:    "",
 
 			Ports: []int{
 				s.Port,
@@ -152,6 +170,7 @@ func (c *MonitorComponent) Instances() []Instance {
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 				return UptimeByHost(s.GetManageHost(), s.Port, timeout, tlsCfg)
 			},
+			Component: c,
 		}, c.Topology}
 		if s.NgPort > 0 {
 			mi.BaseInstance.Ports = append(mi.BaseInstance.Ports, s.NgPort)
@@ -245,6 +264,13 @@ func (i *MonitorInstance) InitConfig(
 			db := servers.Index(i).Interface().(*TiDBSpec)
 			uniqueHosts.Insert(db.Host)
 			cfig.AddTiDB(db.Host, uint64(db.StatusPort))
+		}
+	}
+	if servers, found := topoHasField("TiProxyServers"); found {
+		for i := 0; i < servers.Len(); i++ {
+			db := servers.Index(i).Interface().(*TiProxySpec)
+			uniqueHosts.Insert(db.Host)
+			cfig.AddTiProxy(db.Host, uint64(db.StatusPort))
 		}
 	}
 	if servers, found := topoHasField("TiFlashServers"); found {
@@ -415,7 +441,7 @@ func (i *MonitorInstance) InitConfig(
 		return err
 	}
 
-	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".yml", paths, nil)
+	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".yml", paths)
 }
 
 // setTLSConfig set TLS Config to support enable/disable TLS
@@ -439,7 +465,7 @@ func (i *MonitorInstance) installRules(ctx context.Context, e ctxt.Executor, dep
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}
 
-	srcPath := PackagePath(ComponentDMMaster, clusterVersion, i.OS(), i.Arch())
+	srcPath := PackagePath(GetDMMasterPackageName(i.topo), clusterVersion, i.OS(), i.Arch())
 	dstPath := filepath.Join(tmp, filepath.Base(srcPath))
 
 	err = e.Transfer(ctx, srcPath, dstPath, false, 0, false)

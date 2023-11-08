@@ -41,10 +41,10 @@ jobs:
     env:
       working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
     steps:
-      - name: Set up Go 1.19
-        uses: actions/setup-go@v2
+      - name: Set up Go 1.21
+        uses: actions/setup-go@v4
         with:
-          go-version: 1.19.x
+          go-version: 1.21.x
         id: go
 
       - name: Check out code into the Go module directory
@@ -163,11 +163,6 @@ jobs:
           ${TIUP_BIN} mirror set ${TIUP_MIRRORS}
 
           echo ${{ secrets.TIUP_COMP_KEY_PINGCAP }} | base64 -d > $TIUP_HOME/keys/private.json
-
-          # build the latest tiup to use for publish, this is a workaround and should
-          # be removed after this PR is merged and released
-          GOOS=linux GOARCH=amd64 make tiup
-          cp bin/tiup ${TIUP_BIN}
 
           # add a random delay before actually publishing, this can help reduce manifest conflict
           # when there are multiple jobs running in parallel

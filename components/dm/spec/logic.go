@@ -68,6 +68,16 @@ func (c *DMMasterComponent) Role() string {
 	return ComponentDMMaster
 }
 
+// CalculateVersion implements the Component interface
+func (c *DMMasterComponent) CalculateVersion(clusterVersion string) string {
+	return clusterVersion
+}
+
+// SetVersion implements Component interface.
+func (c *DMMasterComponent) SetVersion(version string) {
+	// not supported now
+}
+
 // Instances implements Component interface.
 func (c *DMMasterComponent) Instances() []Instance {
 	ins := make([]Instance, 0)
@@ -80,6 +90,7 @@ func (c *DMMasterComponent) Instances() []Instance {
 				Name:         c.Name(),
 				Host:         s.Host,
 				ManageHost:   s.ManageHost,
+				ListenHost:   c.Topology.BaseTopo().GlobalOptions.ListenHost,
 				Port:         s.Port,
 				SSHP:         s.SSHPort,
 				Source:       s.GetSource(),
@@ -96,6 +107,7 @@ func (c *DMMasterComponent) Instances() []Instance {
 				UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 					return spec.UptimeByHost(s.Host, s.Port, timeout, tlsCfg)
 				},
+				Component: c,
 			},
 			topo: c.Topology,
 		})
@@ -271,6 +283,16 @@ func (c *DMWorkerComponent) Role() string {
 	return ComponentDMWorker
 }
 
+// CalculateVersion implements the Component interface
+func (c *DMWorkerComponent) CalculateVersion(clusterVersion string) string {
+	return clusterVersion
+}
+
+// SetVersion implements Component interface.
+func (c *DMWorkerComponent) SetVersion(version string) {
+	// not supported now
+}
+
 // Instances implements Component interface.
 func (c *DMWorkerComponent) Instances() []Instance {
 	ins := make([]Instance, 0)
@@ -283,6 +305,7 @@ func (c *DMWorkerComponent) Instances() []Instance {
 				Name:         c.Name(),
 				Host:         s.Host,
 				ManageHost:   s.ManageHost,
+				ListenHost:   c.Topology.BaseTopo().GlobalOptions.ListenHost,
 				Port:         s.Port,
 				SSHP:         s.SSHPort,
 				Source:       s.GetSource(),
@@ -298,6 +321,7 @@ func (c *DMWorkerComponent) Instances() []Instance {
 				UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 					return spec.UptimeByHost(s.Host, s.Port, timeout, tlsCfg)
 				},
+				Component: c,
 			},
 			topo: c.Topology,
 		})
@@ -460,7 +484,7 @@ func (topo *Specification) ComponentsByStartOrder() (comps []Component) {
 }
 
 // ComponentsByUpdateOrder return component in the order need to be updated.
-func (topo *Specification) ComponentsByUpdateOrder() (comps []Component) {
+func (topo *Specification) ComponentsByUpdateOrder(curVer string) (comps []Component) {
 	// "dm-master", "dm-worker"
 	comps = append(comps, &DMMasterComponent{topo})
 	comps = append(comps, &DMWorkerComponent{topo})

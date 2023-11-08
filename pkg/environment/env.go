@@ -30,11 +30,6 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-// Name of components
-const (
-	tiupName = "tiup"
-)
-
 var (
 	// ErrInstallFirst indicates that a component/version is not installed
 	ErrInstallFirst = errors.New("component not installed")
@@ -143,9 +138,6 @@ func (env *Environment) UpdateComponents(specs []string, nightly, force bool) er
 	var v1specs []repository.ComponentSpec
 	for _, spec := range specs {
 		component, v := ParseCompVersion(spec)
-		if component == tiupName {
-			continue
-		}
 		if v == "" && nightly {
 			v = utils.NightlyVersionAlias
 		}
@@ -212,6 +204,9 @@ func (env *Environment) SelectInstalledVersion(component string, ver utils.Versi
 	})
 
 	errInstallFirst := errors.Annotatef(ErrInstallFirst, "use `tiup install %s` to install component `%s` first", component, component)
+	if !ver.IsEmpty() {
+		errInstallFirst = errors.Annotatef(ErrInstallFirst, "use `tiup install %s:%s` to install specified version", component, ver.String())
+	}
 
 	if ver.IsEmpty() || string(ver) == utils.NightlyVersionAlias {
 		var selected utils.Version
@@ -288,6 +283,45 @@ func (env *Environment) BinaryPath(component string, ver utils.Version) (string,
 	}
 
 	return env.v1Repo.BinaryPath(installPath, component, ver.String())
+}
+
+// Link add soft link to $TIUP_HOME/bin/
+func (env *Environment) Link(component string, version utils.Version) error {
+	version, err := env.SelectInstalledVersion(component, version)
+	if err != nil {
+		return err
+	}
+	binPath, err := env.BinaryPath(component, version)
+	if err != nil {
+		return err
+	}
+
+	target := env.LocalPath("bin", filepath.Base(binPath))
+	backup := target + ".old"
+	exist := true
+	_, err = os.Stat(target)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return err
+		}
+		exist = false
+	}
+	if exist {
+		if err := os.Rename(target, backup); err != nil {
+			fmt.Printf("Backup of `%s` to `%s` failed.\n", target, backup)
+			return err
+		}
+	}
+
+	fmt.Printf("package %s provides these executables: %s\n", component, filepath.Base(binPath))
+
+	err = os.Symlink(binPath, target)
+	if err != nil {
+		defer func() { _ = os.Rename(backup, target) }()
+	} else {
+		defer func() { _ = os.Remove(backup) }()
+	}
+	return err
 }
 
 // ParseCompVersion parses component part from <component>[:version] specification
