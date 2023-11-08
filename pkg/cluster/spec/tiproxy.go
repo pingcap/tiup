@@ -133,10 +133,7 @@ func (c *TiProxyComponent) Role() string {
 func (c *TiProxyComponent) CalculateVersion(clusterVersion string) string {
 	// always not follow global version, use ""(latest) by default
 	version := c.Topology.ComponentVersions.TiProxy
-	if version != "" {
-		return version
-	}
-	return "nightly"
+	return version
 }
 
 // SetVersion implements Component interface.
@@ -173,6 +170,7 @@ func (c *TiProxyComponent) Instances() []Instance {
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 				return proxyUptimeByHost(s.Host, s.StatusPort, timeout, tlsCfg)
 			},
+			Component: c,
 		}, c.Topology}
 
 		ins = append(ins, instance)

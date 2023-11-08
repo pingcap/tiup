@@ -881,7 +881,7 @@ func (p *Playground) bindVersion(comp string, version string) (bindVersion strin
 	case spec.ComponentTiKVCDC:
 		return p.bootOptions.TiKVCDC.Version
 	case spec.ComponentTiProxy:
-		return "nightly"
+		return p.bootOptions.TiProxy.Version
 	default:
 		return version
 	}
