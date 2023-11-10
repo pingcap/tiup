@@ -263,7 +263,10 @@ func cloneComponents(repo *V1Repository,
 			return nil, errors.Annotatef(err, "fetch component '%s' manifest failed", name)
 		}
 
-		vs := combineVersions(options.Components[name], manifest, options.OSs, options.Archs, selectedVersions)
+		vs, err := combineVersions(options.Components[name], manifest, options.OSs, options.Archs, selectedVersions)
+		if err != nil {
+			return nil, err
+		}
 
 		var newManifest *v1manifest.Component
 		if options.Full {
@@ -315,8 +318,8 @@ func cloneComponents(repo *V1Repository,
 					continue
 				}
 				name, versionItem := name, versionItem
+				tickets <- struct{}{}
 				errG.Go(func() error {
-					tickets <- struct{}{}
 					defer func() { <-tickets }()
 
 					err := download(targetDir, tmpDir, repo, &versionItem)
@@ -417,26 +420,19 @@ func checkVersion(options CloneOptions, versions set.StringSet, version string) 
 	return false
 }
 
-func combineVersions(versions *[]string,
+func combineVersions(componentVersions *[]string,
 	manifest *v1manifest.Component, oss, archs,
-	selectedVersions []string) set.StringSet {
-	if (versions == nil || len(*versions) < 1) && len(selectedVersions) < 1 {
-		return nil
+	globalVersions []string) (set.StringSet, error) {
+	if (componentVersions == nil || len(*componentVersions) < 1) && len(globalVersions) < 1 {
+		return nil, errors.New("no version specified")
 	}
 
 	result := set.NewStringSet()
-	if versions != nil && len(*versions) > 0 {
-		result = set.NewStringSet(*versions...)
-	}
-
-	// Some components version binding to TiDB
-	coreSuites := set.NewStringSet("tidb", "tikv", "pd", "tiflash", "prometheus", "grafana", "ctl", "cdc")
-
 	for _, os := range oss {
 		for _, arch := range archs {
 			platform := PlatformString(os, arch)
-			versions := manifest.VersionList(platform)
-			if versions == nil {
+			versionList := manifest.VersionList(platform)
+			if versionList == nil {
 				continue
 			}
 
@@ -448,41 +444,66 @@ func combineVersions(versions *[]string,
 				}
 			}
 
-			for _, selectedVersion := range selectedVersions {
-				if selectedVersion == utils.NightlyVersionAlias {
-					selectedVersion = manifest.Nightly
-				}
-
-				if selectedVersion == utils.LatestVersionAlias {
-					latest := manifest.LatestVersion(platform)
-					if latest == "" {
-						continue
+			if componentVersions != nil && len(*componentVersions) > 0 {
+				for _, selectedVersion := range *componentVersions {
+					fmt.Printf("%s %s/%s selected version is %s\n", manifest.ID, os, arch, selectedVersion)
+					if selectedVersion == utils.NightlyVersionAlias {
+						selectedVersion = manifest.Nightly
 					}
 
-					fmt.Printf("%s %s/%s found the lastest version %s\n", manifest.ID, os, arch, latest)
-					// set latest version
-					selectedVersion = latest
-				}
+					if selectedVersion == utils.LatestVersionAlias {
+						latest := manifest.LatestVersion(platform)
+						if latest == "" {
+							continue
+						}
 
-				_, found := versions[selectedVersion]
-				// Some TiUP components won't be bound version with TiDB, if cannot find
-				// selected version we download the latest version to as a alternative
-				if !found && !coreSuites.Exist(manifest.ID) {
-					// Use the latest stable versionS if the selected version doesn't exist in specific platform
-					latest := manifest.LatestVersion(platform)
-					if latest == "" {
-						continue
+						fmt.Printf("%s %s/%s found the lastest version %s\n", manifest.ID, os, arch, latest)
+						// set latest version
+						selectedVersion = latest
 					}
-					if selectedVersion != utils.LatestVersionAlias {
-						fmt.Printf("%s %s/%s %s not found, using %s instead.\n", manifest.ID, os, arch, selectedVersion, latest)
+
+					_, found := versionList[selectedVersion]
+					fmt.Println(found)
+					if !found {
+						return nil, errors.Errorf("version %s not found in %s %s/%s", selectedVersion, manifest.ID, os, arch)
 					}
-					selectedVersion = latest
+					result.Insert(selectedVersion)
 				}
-				if !result.Exist(selectedVersion) {
+			} else {
+				for _, selectedVersion := range globalVersions {
+					if selectedVersion == utils.NightlyVersionAlias {
+						selectedVersion = manifest.Nightly
+					}
+
+					if selectedVersion == utils.LatestVersionAlias {
+						latest := manifest.LatestVersion(platform)
+						if latest == "" {
+							continue
+						}
+
+						fmt.Printf("%s %s/%s found the lastest version %s\n", manifest.ID, os, arch, latest)
+						// set latest version
+						selectedVersion = latest
+					}
+
+					_, found := versionList[selectedVersion]
+					// Some TiUP components won't be bound version with TiDB, if cannot find
+					// selected version we download the latest version to as a alternative
+					if !found {
+						// Use the latest stable versionS if the selected version doesn't exist in specific platform
+						latest := manifest.LatestVersion(platform)
+						if latest == "" {
+							continue
+						}
+						if selectedVersion != utils.LatestVersionAlias {
+							fmt.Printf("%s %s/%s %s not found, using %s instead.\n", manifest.ID, os, arch, selectedVersion, latest)
+						}
+						selectedVersion = latest
+					}
 					result.Insert(selectedVersion)
 				}
 			}
 		}
 	}
-	return result
+	return result, nil
 }
