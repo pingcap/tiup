@@ -697,6 +697,10 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 
 	id := p.allocID(componentID)
 	dir := filepath.Join(dataDir, fmt.Sprintf("%s-%d", componentID, id))
+	if componentID == string(instance.PDRoleNormal) && pdRole != instance.PDRoleNormal {
+		id = p.allocID(fmt.Sprintf("%s-%s", componentID, pdRole))
+		dir = filepath.Join(dataDir, fmt.Sprintf("%s-%s-%d", componentID, pdRole, id))
+	}
 	if err = utils.MkdirAll(dir, 0755); err != nil {
 		return nil, err
 	}

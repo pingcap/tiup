@@ -37,7 +37,7 @@ const (
 	// PDRoleScheduling is the role of PD scheduling
 	PDRoleScheduling PDRole = "scheduling"
 	// PDRoleResourceManager is the role of PD resource manager
-	PDRoleResourceManager PDRole = "resource manager"
+	PDRoleResourceManager PDRole = "resource_manager"
 )
 
 // PDInstance represent a running pd-server
