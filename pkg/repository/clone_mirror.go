@@ -432,9 +432,6 @@ func combineVersions(componentVersions *[]string,
 		for _, arch := range archs {
 			platform := PlatformString(os, arch)
 			versionList := manifest.VersionList(platform)
-			if versionList == nil {
-				continue
-			}
 
 			// set specified version with latest tag
 			if result.Exist(utils.LatestVersionAlias) {
@@ -453,17 +450,14 @@ func combineVersions(componentVersions *[]string,
 
 					if selectedVersion == utils.LatestVersionAlias {
 						latest := manifest.LatestVersion(platform)
-						if latest == "" {
-							continue
+						if latest != "" {
+							fmt.Printf("%s %s/%s found the lastest version %s\n", manifest.ID, os, arch, latest)
+							// set latest version
+							selectedVersion = latest
 						}
-
-						fmt.Printf("%s %s/%s found the lastest version %s\n", manifest.ID, os, arch, latest)
-						// set latest version
-						selectedVersion = latest
 					}
 
 					_, found := versionList[selectedVersion]
-					fmt.Println(found)
 					if !found {
 						return nil, errors.Errorf("version %s not found in %s %s/%s", selectedVersion, manifest.ID, os, arch)
 					}
