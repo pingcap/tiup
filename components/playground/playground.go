@@ -1166,7 +1166,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 	if g := p.grafana; g != nil {
 		p.updateMonitorTopology(spec.ComponentGrafana, MonitorInfo{g.host, g.port, g.cmd.Path})
-		fmt.Printf("Grafana:        ")
+		fmt.Printf("Grafana:         ")
 		colorCmd.Printf("http://%s\n", utils.JoinHostPort(g.host, g.port))
 	}
 
