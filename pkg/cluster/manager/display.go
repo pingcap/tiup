@@ -205,7 +205,7 @@ func (m *Manager) Display(dopt DisplayOption, opt operator.Options) error {
 		rowHead = append(rowHead, "Since")
 	}
 	if dopt.ShowNuma {
-		rowHead = append(rowHead, "Numa Node", "Numd Cores")
+		rowHead = append(rowHead, "Numa Node", "Numa Cores")
 	}
 	if dopt.ShowVersions {
 		rowHead = append(rowHead, "Version")
