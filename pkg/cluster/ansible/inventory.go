@@ -133,6 +133,7 @@ func ParseAndImportInventory(ctx context.Context, dir, ansCfgFile string, clsMet
 	return defaults.Set(clsMeta)
 }
 
+//revive:disable
 func parseGroupVars(ctx context.Context, dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini.InventoryData) error {
 	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 

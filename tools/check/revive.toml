@@ -45,8 +45,8 @@ warningCode = 0
 [rule.use-any]
 
 [rule.cognitive-complexity]
-  severity = "warning"
-  arguments =[48]
+  severity = "error"
+  arguments =[100]
 #[rule.cyclomatic]
 #  severity = "warning"
 #  arguments = [48]

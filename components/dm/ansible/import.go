@@ -273,6 +273,8 @@ func instancDeployDir(comp string, port int, hostDir string, globalDir string) s
 }
 
 // ImportFromAnsibleDir generate the metadata from ansible deployed cluster.
+//
+//revive:disable
 func (im *Importer) ImportFromAnsibleDir(ctx context.Context) (clusterName string, meta *spec.Metadata, err error) {
 	dir := im.dir
 	inventoryFileName := im.inventoryFileName
