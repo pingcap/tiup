@@ -1,0 +1,22 @@
+name: lint
+
+on:
+  pull_request:
+
+jobs:
+  install:
+    name: Lint
+    runs-on: ubuntu-latest
+    env:
+      working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
+    steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: go/src/github.com/${{ github.repository }}
+
+      - name: Lint
+        working-directory: ${{ env.working-directory }}
+        run: make lint
+
