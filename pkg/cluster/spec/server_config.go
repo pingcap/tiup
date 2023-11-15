@@ -260,10 +260,7 @@ func mergeImported(importConfig []byte, specConfigs ...map[string]any) (map[stri
 	return lhs, nil
 }
 
-// BindVersion map the cluster version to the third components binding version.
-type BindVersion func(comp string, version string) (bindVersion string)
-
-func checkConfig(ctx context.Context, e ctxt.Executor, componentName, clusterVersion, nodeOS, arch, config string, paths meta.DirPaths, bindVersion BindVersion) error {
+func checkConfig(ctx context.Context, e ctxt.Executor, componentName, componentSource, version, nodeOS, arch, config string, paths meta.DirPaths) error {
 	var cmd string
 	configPath := path.Join(paths.Deploy, "conf", config)
 	switch componentName {
@@ -277,17 +274,11 @@ func checkConfig(ctx context.Context, e ctxt.Executor, componentName, clusterVer
 			return perrs.Annotate(ErrorCheckConfig, err.Error())
 		}
 
-		clsVer := utils.Version(clusterVersion)
-		ver := clusterVersion
-		if clsVer.IsNightly() {
-			ver = utils.NightlyVersionAlias
-		}
-		// FIXME: workaround for nightly versions, need refactor
-		if bindVersion != nil {
-			ver = bindVersion(componentName, ver)
+		if utils.Version(version).IsNightly() {
+			version = utils.NightlyVersionAlias
 		}
 
-		entry, err := repo.ComponentBinEntry(componentName, ver)
+		entry, err := repo.ComponentBinEntry(componentSource, version)
 		if err != nil {
 			return perrs.Annotate(ErrorCheckConfig, err.Error())
 		}

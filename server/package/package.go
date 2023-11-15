@@ -19,6 +19,7 @@ import (
 	"os/exec"
 	"runtime"
 
+	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -76,7 +77,7 @@ func execute() error {
 }
 
 func pack(targets []string, options packageOptions) error {
-	if err := os.MkdirAll("package", 0755); err != nil {
+	if err := utils.MkdirAll("package", 0755); err != nil {
 		return err
 	}
 

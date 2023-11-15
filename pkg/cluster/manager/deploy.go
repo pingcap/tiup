@@ -17,7 +17,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -159,7 +158,7 @@ func (m *Manager) Deploy(
 		}
 	}
 
-	if err := os.MkdirAll(m.specManager.Path(name), 0755); err != nil {
+	if err := utils.MkdirAll(m.specManager.Path(name), 0755); err != nil {
 		return errorx.InitializationFailed.
 			Wrap(err, "Failed to create cluster metadata directory '%s'", m.specManager.Path(name)).
 			WithProperty(tui.SuggestionFromString("Please check file system permissions and try again."))
@@ -246,11 +245,11 @@ func (m *Manager) Deploy(
 	}
 
 	// Download missing component
-	downloadCompTasks = buildDownloadCompTasks(clusterVersion, topo, m.logger, gOpt, m.bindVersion)
+	downloadCompTasks = buildDownloadCompTasks(clusterVersion, topo, m.logger, gOpt)
 
 	// Deploy components to remote
 	topo.IterInstance(func(inst spec.Instance) {
-		version := m.bindVersion(inst.ComponentName(), clusterVersion)
+		version := inst.CalculateVersion(clusterVersion)
 		deployDir := spec.Abs(globalOptions.User, inst.DeployDir())
 		// data dir would be empty for components which don't need it
 		dataDirs := spec.MultiDirAbs(globalOptions.User, inst.DataDir())
@@ -265,9 +264,9 @@ func (m *Manager) Deploy(
 			filepath.Join(deployDir, "scripts"),
 		}
 
-		t := task.NewSimpleUerSSH(m.logger, inst.GetHost(), inst.GetSSHPort(), globalOptions.User, gOpt, sshProxyProps, globalOptions.SSHType).
-			Mkdir(globalOptions.User, inst.GetHost(), deployDirs...).
-			Mkdir(globalOptions.User, inst.GetHost(), dataDirs...)
+		t := task.NewSimpleUerSSH(m.logger, inst.GetManageHost(), inst.GetSSHPort(), globalOptions.User, gOpt, sshProxyProps, globalOptions.SSHType).
+			Mkdir(globalOptions.User, inst.GetManageHost(), deployDirs...).
+			Mkdir(globalOptions.User, inst.GetManageHost(), dataDirs...)
 
 		if deployerInstance, ok := inst.(DeployerInstance); ok {
 			deployerInstance.Deploy(t, "", deployDir, version, name, clusterVersion)
@@ -286,19 +285,19 @@ func (m *Manager) Deploy(
 				t = t.DeploySpark(inst, sparkVer.String(), "" /* default srcPath */, deployDir)
 			default:
 				t = t.CopyComponent(
-					inst.ComponentName(),
+					inst.ComponentSource(),
 					inst.OS(),
 					inst.Arch(),
 					version,
 					"", // use default srcPath
-					inst.GetHost(),
+					inst.GetManageHost(),
 					deployDir,
 				)
 			}
 		}
 
 		deployCompTasks = append(deployCompTasks,
-			t.BuildAsStep(fmt.Sprintf("  - Copy %s -> %s", inst.ComponentName(), inst.GetHost())),
+			t.BuildAsStep(fmt.Sprintf("  - Copy %s -> %s", inst.ComponentName(), inst.GetManageHost())),
 		)
 	})
 
@@ -321,7 +320,6 @@ func (m *Manager) Deploy(
 		noAgentHosts,
 		globalOptions,
 		topo.GetMonitoredOptions(),
-		clusterVersion,
 		gOpt,
 		sshProxyProps,
 	)

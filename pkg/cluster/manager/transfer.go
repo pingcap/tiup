@@ -63,13 +63,13 @@ func (m *Manager) Transfer(name string, opt TransferOptions, gOpt operator.Optio
 
 	uniqueHosts := map[string]set.StringSet{} // host-sshPort -> {remote-path}
 	topo.IterInstance(func(inst spec.Instance) {
-		key := fmt.Sprintf("%d-%s", inst.GetSSHPort(), inst.GetHost())
+		key := fmt.Sprintf("%d-%s", inst.GetSSHPort(), inst.GetManageHost())
 		if _, found := uniqueHosts[key]; !found {
 			if len(gOpt.Roles) > 0 && !filterRoles.Exist(inst.Role()) {
 				return
 			}
 
-			if len(gOpt.Nodes) > 0 && !filterNodes.Exist(inst.GetHost()) {
+			if len(gOpt.Nodes) > 0 && (!filterNodes.Exist(inst.GetHost()) || !filterNodes.Exist(inst.GetManageHost())) {
 				return
 			}
 

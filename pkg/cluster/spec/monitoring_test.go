@@ -25,6 +25,7 @@ import (
 	"github.com/pingcap/tiup/pkg/checkpoint"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v3"
 )
@@ -33,7 +34,7 @@ func TestLocalRuleDirs(t *testing.T) {
 	deployDir, err := os.MkdirTemp("", "tiup-*")
 	assert.Nil(t, err)
 	defer os.RemoveAll(deployDir)
-	err = os.MkdirAll(path.Join(deployDir, "bin/prometheus"), 0755)
+	err = utils.MkdirAll(path.Join(deployDir, "bin/prometheus"), 0755)
 	assert.Nil(t, err)
 	localDir, err := filepath.Abs("./testdata/rules")
 	assert.Nil(t, err)
@@ -75,7 +76,7 @@ func TestNoLocalRuleDirs(t *testing.T) {
 	deployDir, err := os.MkdirTemp("", "tiup-*")
 	assert.Nil(t, err)
 	defer os.RemoveAll(deployDir)
-	err = os.MkdirAll(path.Join(deployDir, "bin/prometheus"), 0755)
+	err = utils.MkdirAll(path.Join(deployDir, "bin/prometheus"), 0755)
 	assert.Nil(t, err)
 	localDir, err := filepath.Abs("./testdata/rules")
 	assert.Nil(t, err)

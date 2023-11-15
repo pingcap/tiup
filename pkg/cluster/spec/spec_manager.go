@@ -98,7 +98,7 @@ func (s *SpecManager) SaveMeta(clusterName string, meta Metadata) error {
 		return wrapError(err)
 	}
 
-	if err := os.MkdirAll(backupDir, 0755); err != nil {
+	if err := utils.MkdirAll(backupDir, 0755); err != nil {
 		return wrapError(err)
 	}
 
@@ -199,7 +199,7 @@ func (s *SpecManager) GetAllClusters() (map[string]Metadata, error) {
 
 // ensureDir ensures that the cluster directory exists.
 func (s *SpecManager) ensureDir(clusterName string) error {
-	if err := utils.CreateDir(s.Path(clusterName)); err != nil {
+	if err := utils.MkdirAll(s.Path(clusterName), 0755); err != nil {
 		return ErrCreateDirFailed.
 			Wrap(err, "Failed to create cluster metadata directory '%s'", s.Path(clusterName)).
 			WithProperty(tui.SuggestionFromString("Please check file system permissions and try again."))
@@ -271,7 +271,7 @@ func (s *SpecManager) NewScaleOutLock(clusterName string, topo Topology) error {
 		return wrapError(err)
 	}
 
-	err = os.WriteFile(lockFile, data, 0644)
+	err = utils.WriteFile(lockFile, data, 0644)
 	if err != nil {
 		return wrapError(err)
 	}

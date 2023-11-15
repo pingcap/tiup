@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -33,6 +32,7 @@ import (
 // DrainerSpec represents the Drainer topology specification in topology.yaml
 type DrainerSpec struct {
 	Host            string               `yaml:"host"`
+	ManageHost      string               `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
 	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported        bool                 `yaml:"imported,omitempty"`
 	Patched         bool                 `yaml:"patched,omitempty"`
@@ -43,6 +43,7 @@ type DrainerSpec struct {
 	LogDir          string               `yaml:"log_dir,omitempty"`
 	CommitTS        *int64               `yaml:"commit_ts,omitempty" validate:"commit_ts:editable"` // do not use it anymore, exist for compatibility
 	Offline         bool                 `yaml:"offline,omitempty"`
+	Source          string               `yaml:"source,omitempty" validate:"source:editable"`
 	NumaNode        string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
 	Config          map[string]any       `yaml:"config,omitempty" validate:"config:ignore"`
 	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
@@ -56,14 +57,14 @@ func (s *DrainerSpec) Status(ctx context.Context, timeout time.Duration, tlsCfg 
 		timeout = statusQueryTimeout
 	}
 
-	state := statusByHost(s.Host, s.Port, "/status", timeout, tlsCfg)
+	state := statusByHost(s.GetManageHost(), s.Port, "/status", timeout, tlsCfg)
 
 	if s.Offline {
 		binlogClient, err := api.NewBinlogClient(pdList, timeout, tlsCfg)
 		if err != nil {
 			return state
 		}
-		id := s.Host + ":" + strconv.Itoa(s.Port)
+		id := utils.JoinHostPort(s.Host, s.Port)
 		tombstone, _ := binlogClient.IsDrainerTombstone(ctx, id)
 
 		if tombstone {
@@ -82,12 +83,24 @@ func (s *DrainerSpec) Role() string {
 
 // SSH returns the host and SSH port of the instance
 func (s *DrainerSpec) SSH() (string, int) {
-	return s.Host, s.SSHPort
+	host := s.Host
+	if s.ManageHost != "" {
+		host = s.ManageHost
+	}
+	return host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
 func (s *DrainerSpec) GetMainPort() int {
 	return s.Port
+}
+
+// GetManageHost returns the manage host of the instance
+func (s *DrainerSpec) GetManageHost() string {
+	if s.ManageHost != "" {
+		return s.ManageHost
+	}
+	return s.Host
 }
 
 // IsImported returns if the node is imported from TiDB-Ansible
@@ -98,6 +111,14 @@ func (s *DrainerSpec) IsImported() bool {
 // IgnoreMonitorAgent returns if the node does not have monitor agents available
 func (s *DrainerSpec) IgnoreMonitorAgent() bool {
 	return s.IgnoreExporter
+}
+
+// GetSource returns source to download the component
+func (s *DrainerSpec) GetSource() string {
+	if s.Source == "" {
+		return ComponentDrainer
+	}
+	return s.Source
 }
 
 // DrainerComponent represents Drainer component.
@@ -113,6 +134,20 @@ func (c *DrainerComponent) Role() string {
 	return ComponentDrainer
 }
 
+// CalculateVersion implements the Component interface
+func (c *DrainerComponent) CalculateVersion(clusterVersion string) string {
+	version := c.Topology.ComponentVersions.Drainer
+	if version == "" {
+		version = clusterVersion
+	}
+	return version
+}
+
+// SetVersion implements Component interface.
+func (c *DrainerComponent) SetVersion(version string) {
+	c.Topology.ComponentVersions.Drainer = version
+}
+
 // Instances implements Component interface.
 func (c *DrainerComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.Drainers))
@@ -122,8 +157,13 @@ func (c *DrainerComponent) Instances() []Instance {
 			InstanceSpec: s,
 			Name:         c.Name(),
 			Host:         s.Host,
+			ManageHost:   s.ManageHost,
+			ListenHost:   c.Topology.BaseTopo().GlobalOptions.ListenHost,
 			Port:         s.Port,
 			SSHP:         s.SSHPort,
+			Source:       s.GetSource(),
+			NumaNode:     s.NumaNode,
+			NumaCores:    "",
 
 			Ports: []int{
 				s.Port,
@@ -134,8 +174,9 @@ func (c *DrainerComponent) Instances() []Instance {
 			},
 			StatusFn: s.Status,
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
-				return UptimeByHost(s.Host, s.Port, timeout, tlsCfg)
+				return UptimeByHost(s.GetManageHost(), s.Port, timeout, tlsCfg)
 			},
+			Component: c,
 		}, c.Topology})
 	}
 	return ins
@@ -181,7 +222,7 @@ func (i *DrainerInstance) InitConfig(
 	}
 	enableTLS := topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(*DrainerSpec)
-	nodeID := i.GetHost() + ":" + strconv.Itoa(i.GetPort())
+	nodeID := utils.JoinHostPort(i.GetHost(), i.GetPort())
 	// keep origin node id if is imported
 	if i.IsImported() {
 		nodeID = ""
@@ -251,7 +292,7 @@ func (i *DrainerInstance) InitConfig(
 		return err
 	}
 
-	return checkConfig(ctx, e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths, nil)
+	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths)
 }
 
 // setTLSConfig set TLS Config to support enable/disable TLS

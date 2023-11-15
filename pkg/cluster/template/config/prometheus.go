@@ -15,7 +15,6 @@ package config
 
 import (
 	"bytes"
-	"os"
 	"path"
 	"text/template"
 
@@ -32,6 +31,7 @@ type PrometheusConfig struct {
 	TLSEnabled                bool
 	NodeExporterAddrs         []string
 	TiDBStatusAddrs           []string
+	TiProxyStatusAddrs        []string
 	TiKVStatusAddrs           []string
 	PDAddrs                   []string
 	TiFlashStatusAddrs        []string
@@ -45,7 +45,7 @@ type PrometheusConfig struct {
 	MonitoredServers          []string
 	AlertmanagerAddrs         []string
 	NGMonitoringAddrs         []string
-	PushgatewayAddr           string
+	PushgatewayAddrs          []string
 	BlackboxAddr              string
 	GrafanaAddr               string
 	HasTiKVAccelerateRules    bool
@@ -77,6 +77,12 @@ func (c *PrometheusConfig) AddNodeExpoertor(ip string, port uint64) *PrometheusC
 // AddTiDB add a TiDB address
 func (c *PrometheusConfig) AddTiDB(ip string, port uint64) *PrometheusConfig {
 	c.TiDBStatusAddrs = append(c.TiDBStatusAddrs, utils.JoinHostPort(ip, int(port)))
+	return c
+}
+
+// AddTiProxy add a TiProxy address
+func (c *PrometheusConfig) AddTiProxy(ip string, port uint64) *PrometheusConfig {
+	c.TiProxyStatusAddrs = append(c.TiProxyStatusAddrs, utils.JoinHostPort(ip, int(port)))
 	return c
 }
 
@@ -153,8 +159,8 @@ func (c *PrometheusConfig) AddAlertmanager(ip string, port uint64) *PrometheusCo
 }
 
 // AddPushgateway add an pushgateway address
-func (c *PrometheusConfig) AddPushgateway(ip string, port uint64) *PrometheusConfig {
-	c.PushgatewayAddr = utils.JoinHostPort(ip, int(port))
+func (c *PrometheusConfig) AddPushgateway(addresses []string) *PrometheusConfig {
+	c.PushgatewayAddrs = addresses
 	return c
 }
 
@@ -231,5 +237,5 @@ func (c *PrometheusConfig) ConfigToFile(file string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(file, config, 0755)
+	return utils.WriteFile(file, config, 0755)
 }

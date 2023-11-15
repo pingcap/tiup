@@ -26,6 +26,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/otiai10/copy"
@@ -100,11 +101,21 @@ func Tar(writer io.Writer, from string) error {
 	tarW := tar.NewWriter(compressW)
 	defer tarW.Close()
 
+	// NOTE: filepath.Walk does not follow the symbolic link.
 	return filepath.Walk(from, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		header, _ := tar.FileInfoHeader(info, "")
+
+		link := ""
+		if info.Mode()&fs.ModeSymlink != 0 {
+			link, err = os.Readlink(path)
+			if err != nil {
+				return err
+			}
+		}
+
+		header, _ := tar.FileInfoHeader(info, link)
 		header.Name, _ = filepath.Rel(from, path)
 		// skip "."
 		if header.Name == "." {
@@ -115,7 +126,7 @@ func Tar(writer io.Writer, from string) error {
 		if err != nil {
 			return err
 		}
-		if !info.IsDir() {
+		if info.Mode().IsRegular() {
 			fd, err := os.Open(path)
 			if err != nil {
 				return err
@@ -140,7 +151,7 @@ func Untar(reader io.Reader, to string) error {
 
 	decFile := func(hdr *tar.Header) error {
 		file := path.Join(to, hdr.Name)
-		err := os.MkdirAll(filepath.Dir(file), 0755)
+		err := MkdirAll(filepath.Dir(file), 0755)
 		if err != nil {
 			return err
 		}
@@ -164,7 +175,7 @@ func Untar(reader io.Reader, to string) error {
 		}
 		switch hdr.Typeflag {
 		case tar.TypeDir:
-			if err := os.MkdirAll(path.Join(to, hdr.Name), hdr.FileInfo().Mode()); err != nil {
+			if err := MkdirAll(path.Join(to, hdr.Name), hdr.FileInfo().Mode()); err != nil {
 				return errors.Trace(err)
 			}
 		case tar.TypeSymlink:
@@ -240,17 +251,6 @@ func Move(src, dst string) error {
 		return errors.Trace(err)
 	}
 	return errors.Trace(os.RemoveAll(src))
-}
-
-// CreateDir creates the directory if it not exists.
-func CreateDir(path string) error {
-	if _, err := os.Stat(path); err != nil {
-		if os.IsNotExist(err) {
-			return os.MkdirAll(path, 0755)
-		}
-		return err
-	}
-	return nil
 }
 
 // Checksum returns the sha1 sum of target file
@@ -371,4 +371,63 @@ func SaveFileWithBackup(path string, data []byte, backupDir string) error {
 	}
 
 	return nil
+}
+
+// MkdirAll basically copied from os.MkdirAll, but use max(parent permission,minPerm)
+func MkdirAll(path string, minPerm os.FileMode) error {
+	// Fast path: if we can tell whether path is a directory or file, stop with success or error.
+	dir, err := os.Stat(path)
+	if err == nil {
+		if dir.IsDir() {
+			return nil
+		}
+		return &os.PathError{Op: "mkdir", Path: path, Err: syscall.ENOTDIR}
+	}
+
+	// Slow path: make sure parent exists and then call Mkdir for path.
+	i := len(path)
+	for i > 0 && os.IsPathSeparator(path[i-1]) { // Skip trailing path separator.
+		i--
+	}
+
+	j := i
+	for j > 0 && !os.IsPathSeparator(path[j-1]) { // Scan backward over element.
+		j--
+	}
+
+	if j > 1 {
+		// Create parent.
+		err = MkdirAll(path[:j-1], minPerm)
+		if err != nil {
+			return err
+		}
+	}
+
+	perm := minPerm
+	fi, err := os.Stat(filepath.Dir(path))
+	if err == nil {
+		perm |= fi.Mode().Perm()
+	}
+
+	// Parent now exists; invoke Mkdir and use its result; inheritance parent perm.
+	err = os.Mkdir(path, perm)
+	if err != nil {
+		// Handle arguments like "foo/." by
+		// double-checking that directory doesn't exist.
+		dir, err1 := os.Lstat(path)
+		if err1 == nil && dir.IsDir() {
+			return nil
+		}
+		return err
+	}
+	return nil
+}
+
+// WriteFile call os.WriteFile, but use max(parent permission,minPerm)
+func WriteFile(name string, data []byte, perm os.FileMode) error {
+	fi, err := os.Stat(filepath.Dir(name))
+	if err == nil {
+		perm |= (fi.Mode().Perm() & 0666)
+	}
+	return os.WriteFile(name, data, perm)
 }

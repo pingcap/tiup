@@ -3,7 +3,7 @@ datasources:
   - name: {{.ClusterName}}
     type: prometheus
     access: proxy
-    url: http://{{.IP}}:{{.Port}}
+    url: {{.URL}}
     withCredentials: false
     isDefault: false
     tlsAuth: false

@@ -20,10 +20,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
+	"github.com/fatih/color"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
@@ -33,6 +33,7 @@ import (
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/proxy"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // Destroy the cluster.
@@ -45,7 +46,7 @@ func Destroy(
 
 	instCount := map[string]int{}
 	cluster.IterInstance(func(inst spec.Instance) {
-		instCount[inst.GetHost()]++
+		instCount[inst.GetManageHost()]++
 	})
 
 	for _, com := range coms {
@@ -55,8 +56,8 @@ func Destroy(
 			return perrs.Annotatef(err, "failed to destroy %s", com.Name())
 		}
 		for _, inst := range insts {
-			instCount[inst.GetHost()]--
-			if instCount[inst.GetHost()] == 0 {
+			instCount[inst.GetManageHost()]--
+			if instCount[inst.GetManageHost()] == 0 {
 				if cluster.GetMonitoredOptions() != nil {
 					if err := DestroyMonitored(ctx, inst, cluster.GetMonitoredOptions(), options.OptTimeout); err != nil && !options.Force {
 						return err
@@ -104,7 +105,7 @@ func StopAndDestroyInstance(
 
 	cluster.IterInstance(func(inst spec.Instance) {
 		if inst.IgnoreMonitorAgent() {
-			noAgentHosts.Insert(inst.GetHost())
+			noAgentHosts.Insert(inst.GetManageHost())
 		}
 	})
 
@@ -136,7 +137,7 @@ func StopAndDestroyInstance(
 		monitoredOptions := cluster.GetMonitoredOptions()
 
 		if monitoredOptions != nil && !instance.IgnoreMonitorAgent() {
-			if err := StopMonitored(ctx, []string{instance.GetHost()}, noAgentHosts, monitoredOptions, options.OptTimeout); err != nil {
+			if err := StopMonitored(ctx, []string{instance.GetManageHost()}, noAgentHosts, monitoredOptions, options.OptTimeout); err != nil {
 				if !ignoreErr {
 					return perrs.Annotatef(err, "failed to stop monitor")
 				}
@@ -150,7 +151,7 @@ func StopAndDestroyInstance(
 			}
 		}
 
-		if err := DeletePublicKey(ctx, instance.GetHost()); err != nil {
+		if err := DeletePublicKey(ctx, instance.GetManageHost()); err != nil {
 			if !ignoreErr {
 				return perrs.Annotatef(err, "failed to delete public key")
 			}
@@ -241,11 +242,11 @@ func DeletePublicKey(ctx context.Context, host string) error {
 
 // DestroyMonitored destroy the monitored service.
 func DestroyMonitored(ctx context.Context, inst spec.Instance, options *spec.MonitoredOptions, timeout uint64) error {
-	e := ctxt.GetInner(ctx).Get(inst.GetHost())
+	e := ctxt.GetInner(ctx).Get(inst.GetManageHost())
 	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 
-	logger.Infof("Destroying monitored %s", inst.GetHost())
-	logger.Infof("\tDestroying instance %s", inst.GetHost())
+	logger.Infof("Destroying monitored %s", inst.GetManageHost())
+	logger.Infof("\tDestroying instance %s", inst.GetManageHost())
 
 	// Stop by systemd.
 	delPaths := make([]string, 0)
@@ -282,21 +283,21 @@ func DestroyMonitored(ctx context.Context, inst spec.Instance, options *spec.Mon
 	}
 
 	if err != nil {
-		return perrs.Annotatef(err, "failed to destroy monitored: %s", inst.GetHost())
+		return perrs.Annotatef(err, "failed to destroy monitored: %s", inst.GetManageHost())
 	}
 
 	if err := spec.PortStopped(ctx, e, options.NodeExporterPort, timeout); err != nil {
-		str := fmt.Sprintf("%s failed to destroy node exportoer: %s", inst.GetHost(), err)
+		str := fmt.Sprintf("%s failed to destroy node exportoer: %s", inst.GetManageHost(), err)
 		logger.Errorf(str)
 		return perrs.Annotatef(err, str)
 	}
 	if err := spec.PortStopped(ctx, e, options.BlackboxExporterPort, timeout); err != nil {
-		str := fmt.Sprintf("%s failed to destroy blackbox exportoer: %s", inst.GetHost(), err)
+		str := fmt.Sprintf("%s failed to destroy blackbox exportoer: %s", inst.GetManageHost(), err)
 		logger.Errorf(str)
 		return perrs.Annotatef(err, str)
 	}
 
-	logger.Infof("Destroy monitored on %s success", inst.GetHost())
+	logger.Infof("Destroy monitored on %s success", inst.GetManageHost())
 
 	return nil
 }
@@ -350,10 +351,10 @@ func DestroyComponent(ctx context.Context, instances []spec.Instance, cls spec.T
 	for _, ins := range instances {
 		// Some data of instances will be retained
 		dataRetained := retainDataRoles.Exist(ins.ComponentName()) ||
-			retainDataNodes.Exist(ins.ID()) || retainDataNodes.Exist(ins.GetHost())
+			retainDataNodes.Exist(ins.ID()) || retainDataNodes.Exist(ins.GetHost()) || retainDataRoles.Exist(ins.GetManageHost())
 
-		e := ctxt.GetInner(ctx).Get(ins.GetHost())
-		logger.Infof("\tDestroying instance %s", ins.GetHost())
+		e := ctxt.GetInner(ctx).Get(ins.GetManageHost())
+		logger.Infof("\tDestroying instance %s", ins.GetManageHost())
 
 		var dataDirs []string
 		if len(ins.DataDir()) > 0 {
@@ -370,9 +371,18 @@ func DestroyComponent(ctx context.Context, instances []spec.Instance, cls spec.T
 		for _, dataDir := range dataDirs {
 			// Don't delete the parent directory if any sub-directory retained
 			keepDeployDir = (dataRetained && strings.HasPrefix(dataDir, deployDir)) || keepDeployDir
-			if !dataRetained && cls.CountDir(ins.GetHost(), dataDir) == 1 {
+			if !dataRetained && cls.CountDir(ins.GetManageHost(), dataDir) == 1 {
 				// only delete path if it is not used by any other instance in the cluster
 				delPaths.Insert(dataDir)
+			}
+		}
+
+		// For TiFlash, we need to delete storage.remote.cache.dir
+		if ins.ComponentName() == spec.ComponentTiFlash {
+			tiflashInstance := ins.(*spec.TiFlashInstance)
+			tiflashSpec := tiflashInstance.InstanceSpec.(*spec.TiFlashSpec)
+			if remoteCacheDir, ok := tiflashSpec.Config[spec.TiFlashRemoteCacheDir]; ok {
+				delPaths.Insert(remoteCacheDir.(string))
 			}
 		}
 
@@ -382,7 +392,7 @@ func DestroyComponent(ctx context.Context, instances []spec.Instance, cls spec.T
 		// host, so not deleting it.
 		if ins.IsImported() {
 			// not deleting files for imported clusters
-			if !strings.HasPrefix(logDir, ins.DeployDir()) && cls.CountDir(ins.GetHost(), logDir) == 1 {
+			if !strings.HasPrefix(logDir, ins.DeployDir()) && cls.CountDir(ins.GetManageHost(), logDir) == 1 {
 				delPaths.Insert(logDir)
 			}
 			logger.Warnf("Deploy dir %s not deleted for TiDB-Ansible imported instance %s.",
@@ -396,15 +406,15 @@ func DestroyComponent(ctx context.Context, instances []spec.Instance, cls spec.T
 					delPaths.Insert(filepath.Join(deployDir, spec.TLSCertKeyDir))
 				}
 				// only delete path if it is not used by any other instance in the cluster
-				if strings.HasPrefix(logDir, deployDir) && cls.CountDir(ins.GetHost(), logDir) == 1 {
+				if strings.HasPrefix(logDir, deployDir) && cls.CountDir(ins.GetManageHost(), logDir) == 1 {
 					delPaths.Insert(logDir)
 				}
 			} else {
 				// only delete path if it is not used by any other instance in the cluster
-				if cls.CountDir(ins.GetHost(), logDir) == 1 {
+				if cls.CountDir(ins.GetManageHost(), logDir) == 1 {
 					delPaths.Insert(logDir)
 				}
-				if cls.CountDir(ins.GetHost(), ins.DeployDir()) == 1 {
+				if cls.CountDir(ins.GetManageHost(), ins.DeployDir()) == 1 {
 					delPaths.Insert(ins.DeployDir())
 				}
 			}
@@ -417,35 +427,31 @@ func DestroyComponent(ctx context.Context, instances []spec.Instance, cls spec.T
 				dpCnt++
 			}
 		}
-		if !ins.IsImported() && cls.CountDir(ins.GetHost(), deployDir)-dpCnt == 1 {
+		if !ins.IsImported() && cls.CountDir(ins.GetManageHost(), deployDir)-dpCnt == 1 {
 			delPaths.Insert(deployDir)
 		}
 
 		if svc := ins.ServiceName(); svc != "" {
 			delPaths.Insert(fmt.Sprintf("/etc/systemd/system/%s", svc))
 		}
-		logger.Debugf("Deleting paths on %s: %s", ins.GetHost(), strings.Join(delPaths.Slice(), " "))
-		c := module.ShellModuleConfig{
-			Command:  fmt.Sprintf("rm -rf %s;", strings.Join(delPaths.Slice(), " ")),
-			Sudo:     true, // the .service files are in a directory owned by root
-			Chdir:    "",
-			UseShell: false,
-		}
-		shell := module.NewShellModule(c)
-		stdout, stderr, err := shell.Execute(ctx, e)
+		logger.Debugf("Deleting paths on %s: %s", ins.GetManageHost(), strings.Join(delPaths.Slice(), " "))
+		for _, delPath := range delPaths.Slice() {
+			c := module.ShellModuleConfig{
+				Command:  fmt.Sprintf("rm -rf %s;", delPath),
+				Sudo:     true, // the .service files are in a directory owned by root
+				Chdir:    "",
+				UseShell: false,
+			}
+			shell := module.NewShellModule(c)
+			_, _, err := shell.Execute(ctx, e)
 
-		if len(stdout) > 0 {
-			fmt.Println(string(stdout))
-		}
-		if len(stderr) > 0 {
-			logger.Errorf(string(stderr))
-		}
-
-		if err != nil {
-			return perrs.Annotatef(err, "failed to destroy: %s", ins.GetHost())
+			if err != nil {
+				// Ignore error and continue.For example, deleting a mount point will result in a "Device or resource busy" error.
+				logger.Warnf(color.YellowString("Warn: failed to delete path \"%s\" on %s.Please check this error message and manually delete if necessary.\nerrmsg: %s", delPath, ins.GetManageHost(), err))
+			}
 		}
 
-		logger.Infof("Destroy %s success", ins.GetHost())
+		logger.Infof("Destroy %s finished", ins.GetManageHost())
 		logger.Infof("- Destroy %s paths: %v", ins.ComponentName(), delPaths.Slice())
 	}
 
@@ -477,7 +483,7 @@ func DestroyClusterTombstone(
 	instCount := map[string]int{}
 	for _, component := range cluster.ComponentsByStartOrder() {
 		for _, instance := range component.Instances() {
-			instCount[instance.GetHost()]++
+			instCount[instance.GetManageHost()]++
 		}
 	}
 
@@ -488,7 +494,7 @@ func DestroyClusterTombstone(
 		pdEndpoints = strings.Split(forcePDEndpoints, ",")
 		logger.Warnf("%s is set, using %s as PD endpoints", EnvNamePDEndpointOverwrite, pdEndpoints)
 	} else {
-		pdEndpoints = cluster.GetPDList()
+		pdEndpoints = cluster.GetPDListWithManageHost()
 	}
 
 	var pdClient = api.NewPDClient(ctx, pdEndpoints, 10*time.Second, tlsCfg)
@@ -517,8 +523,8 @@ func DestroyClusterTombstone(
 		instances = filterID(instances, id)
 
 		for _, instance := range instances {
-			instCount[instance.GetHost()]--
-			err := StopAndDestroyInstance(ctx, cluster, instance, options, true, instCount[instance.GetHost()] == 0, tlsCfg)
+			instCount[instance.GetManageHost()]--
+			err := StopAndDestroyInstance(ctx, cluster, instance, options, true, instCount[instance.GetManageHost()] == 0, tlsCfg)
 			if err != nil {
 				if !options.Force {
 					return err
@@ -537,7 +543,7 @@ func DestroyClusterTombstone(
 			continue
 		}
 
-		id := s.Host + ":" + strconv.Itoa(s.Port)
+		id := utils.JoinHostPort(s.Host, s.Port)
 
 		tombstone, err := pdClient.IsTombStone(id)
 		if err != nil {
@@ -567,7 +573,7 @@ func DestroyClusterTombstone(
 			continue
 		}
 
-		id := s.Host + ":" + strconv.Itoa(s.FlashServicePort)
+		id := utils.JoinHostPort(s.Host, s.FlashServicePort)
 
 		tombstone, err := pdClient.IsTombStone(id)
 		if err != nil {
@@ -585,7 +591,7 @@ func DestroyClusterTombstone(
 		}
 
 		instances := (&spec.TiFlashComponent{Topology: cluster}).Instances()
-		id = s.Host + ":" + strconv.Itoa(s.GetMainPort())
+		id = utils.JoinHostPort(s.Host, s.GetMainPort())
 		if err := maybeDestroyMonitor(instances, id); err != nil {
 			return nil, err
 		}
@@ -598,7 +604,7 @@ func DestroyClusterTombstone(
 			continue
 		}
 
-		id := s.Host + ":" + strconv.Itoa(s.Port)
+		id := utils.JoinHostPort(s.Host, s.Port)
 
 		tombstone, err := binlogClient.IsPumpTombstone(ctx, id)
 		if err != nil {
@@ -628,7 +634,7 @@ func DestroyClusterTombstone(
 			continue
 		}
 
-		id := s.Host + ":" + strconv.Itoa(s.Port)
+		id := utils.JoinHostPort(s.Host, s.Port)
 
 		tombstone, err := binlogClient.IsDrainerTombstone(ctx, id)
 		if err != nil {

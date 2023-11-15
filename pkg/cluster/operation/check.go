@@ -168,13 +168,10 @@ func checkOSInfo(opt *CheckOptions, osInfo *sysinfo.OS) *CheckResult {
 	// check OS vendor
 	switch osInfo.Vendor {
 	case "kylin":
-		msg := "kylin support is not fully tested, be careful"
-		result.Err = fmt.Errorf("%s (%s)", result.Msg, msg)
-		result.Warn = true
 		// VERSION_ID="V10"
 		if ver, _ := strconv.ParseFloat(strings.Trim(osInfo.Version, "V"), 64); ver < 10 {
-			result.Err = fmt.Errorf("%s %s not supported, use version V10 or higher(%s)",
-				osInfo.Name, osInfo.Release, msg)
+			result.Err = fmt.Errorf("%s %s not supported, use version V10 or higher",
+				osInfo.Name, osInfo.Release)
 			return result
 		}
 	case "amzn":
@@ -187,8 +184,6 @@ func checkOSInfo(opt *CheckOptions, osInfo *sysinfo.OS) *CheckResult {
 		}
 	case "centos", "redhat", "rhel", "ol":
 		// check version
-		// CentOS 8 is known to be not working, and we don't have plan to support it
-		// as of now, we may add support for RHEL 8 based systems in the future.
 		if ver, _ := strconv.ParseFloat(osInfo.Version, 64); ver < 7 {
 			result.Err = fmt.Errorf("%s %s not supported, use version 8 please",
 				osInfo.Name, osInfo.Release)
@@ -216,6 +211,8 @@ func checkOSInfo(opt *CheckOptions, osInfo *sysinfo.OS) *CheckResult {
 			result.Warn = false
 			return result
 		}
+	case "openEuler":
+		return result
 	default:
 		result.Err = fmt.Errorf("os vendor %s not supported", osInfo.Vendor)
 		return result
@@ -523,7 +520,7 @@ func CheckServices(ctx context.Context, e ctxt.Executor, host, service string, d
 		return result
 	}
 
-	active, _, err := GetServiceStatus(ctx, e, service+".service")
+	active, _, _, err := GetServiceStatus(ctx, e, service+".service")
 	if err != nil {
 		result.Err = err
 	}
@@ -581,7 +578,7 @@ func CheckListeningPort(opt *CheckOptions, host string, topo *spec.Specification
 	ports := make(map[int]struct{})
 
 	topo.IterInstance(func(inst spec.Instance) {
-		if inst.GetHost() != host {
+		if inst.GetManageHost() != host {
 			return
 		}
 		for _, up := range inst.UsedPorts() {
@@ -633,7 +630,7 @@ func CheckPartitions(opt *CheckOptions, host string, topo *spec.Specification, r
 	uniqueStores := make(map[string][]storePartitionInfo) // host+partition -> info
 
 	topo.IterInstance(func(inst spec.Instance) {
-		if inst.GetHost() != host {
+		if inst.GetManageHost() != host {
 			return
 		}
 		for _, dataDir := range spec.MultiDirAbs(topo.GlobalOptions.User, inst.DataDir()) {

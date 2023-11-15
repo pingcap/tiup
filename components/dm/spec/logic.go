@@ -26,6 +26,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // Components names supported by TiUP
@@ -67,6 +68,16 @@ func (c *DMMasterComponent) Role() string {
 	return ComponentDMMaster
 }
 
+// CalculateVersion implements the Component interface
+func (c *DMMasterComponent) CalculateVersion(clusterVersion string) string {
+	return clusterVersion
+}
+
+// SetVersion implements Component interface.
+func (c *DMMasterComponent) SetVersion(version string) {
+	// not supported now
+}
+
 // Instances implements Component interface.
 func (c *DMMasterComponent) Instances() []Instance {
 	ins := make([]Instance, 0)
@@ -78,8 +89,11 @@ func (c *DMMasterComponent) Instances() []Instance {
 				InstanceSpec: s,
 				Name:         c.Name(),
 				Host:         s.Host,
+				ManageHost:   s.ManageHost,
+				ListenHost:   c.Topology.BaseTopo().GlobalOptions.ListenHost,
 				Port:         s.Port,
 				SSHP:         s.SSHPort,
+				Source:       s.GetSource(),
 
 				Ports: []int{
 					s.Port,
@@ -93,6 +107,7 @@ func (c *DMMasterComponent) Instances() []Instance {
 				UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 					return spec.UptimeByHost(s.Host, s.Port, timeout, tlsCfg)
 				},
+				Component: c,
 			},
 			topo: c.Topology,
 		})
@@ -122,14 +137,25 @@ func (i *MasterInstance) InitConfig(
 
 	enableTLS := i.topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(*MasterSpec)
-	cfg := scripts.NewDMMasterScript(
-		spec.Name,
-		i.GetHost(),
-		paths.Deploy,
-		paths.Data[0],
-		paths.Log,
-		enableTLS,
-	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).WithPeerPort(spec.PeerPort).AppendEndpoints(i.topo.Endpoints(deployUser)...).WithV1SourcePath(spec.V1SourcePath)
+	scheme := utils.Ternary(enableTLS, "https", "http").(string)
+
+	initialCluster := []string{}
+	for _, masterspec := range i.topo.Masters {
+		initialCluster = append(initialCluster, fmt.Sprintf("%s=%s", masterspec.Name, masterspec.GetAdvertisePeerURL(enableTLS)))
+	}
+	cfg := &scripts.DMMasterScript{
+		Name:             spec.Name,
+		V1SourcePath:     spec.V1SourcePath,
+		MasterAddr:       utils.JoinHostPort(i.GetListenHost(), spec.Port),
+		AdvertiseAddr:    utils.JoinHostPort(spec.Host, spec.Port),
+		PeerURL:          fmt.Sprintf("%s://%s", scheme, utils.JoinHostPort(i.GetListenHost(), spec.PeerPort)),
+		AdvertisePeerURL: spec.GetAdvertisePeerURL(enableTLS),
+		InitialCluster:   strings.Join(initialCluster, ","),
+		DeployDir:        paths.Deploy,
+		DataDir:          paths.Data[0],
+		LogDir:           paths.Log,
+		NumaNode:         spec.NumaNode,
+	}
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_dm-master_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
@@ -206,16 +232,27 @@ func (i *MasterInstance) ScaleConfig(
 	}
 
 	enableTLS := i.topo.GlobalOptions.TLSEnabled
-	c := topo.(*Specification)
 	spec := i.InstanceSpec.(*MasterSpec)
-	cfg := scripts.NewDMMasterScaleScript(
-		spec.Name,
-		i.GetHost(),
-		paths.Deploy,
-		paths.Data[0],
-		paths.Log,
-		enableTLS,
-	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).WithPeerPort(spec.PeerPort).AppendEndpoints(c.Endpoints(deployUser)...)
+	scheme := utils.Ternary(enableTLS, "https", "http").(string)
+
+	masters := []string{}
+	// master list from exist topo file
+	for _, masterspec := range topo.(*Specification).Masters {
+		masters = append(masters, utils.JoinHostPort(masterspec.Host, masterspec.Port))
+	}
+	cfg := &scripts.DMMasterScaleScript{
+		Name:             spec.Name,
+		V1SourcePath:     spec.V1SourcePath,
+		MasterAddr:       utils.JoinHostPort(i.GetListenHost(), spec.Port),
+		AdvertiseAddr:    utils.JoinHostPort(spec.Host, spec.Port),
+		PeerURL:          fmt.Sprintf("%s://%s", scheme, utils.JoinHostPort(i.GetListenHost(), spec.PeerPort)),
+		AdvertisePeerURL: spec.GetAdvertisePeerURL(enableTLS),
+		Join:             strings.Join(masters, ","),
+		DeployDir:        paths.Deploy,
+		DataDir:          paths.Data[0],
+		LogDir:           paths.Log,
+		NumaNode:         spec.NumaNode,
+	}
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_dm-master_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
@@ -246,6 +283,16 @@ func (c *DMWorkerComponent) Role() string {
 	return ComponentDMWorker
 }
 
+// CalculateVersion implements the Component interface
+func (c *DMWorkerComponent) CalculateVersion(clusterVersion string) string {
+	return clusterVersion
+}
+
+// SetVersion implements Component interface.
+func (c *DMWorkerComponent) SetVersion(version string) {
+	// not supported now
+}
+
 // Instances implements Component interface.
 func (c *DMWorkerComponent) Instances() []Instance {
 	ins := make([]Instance, 0)
@@ -257,8 +304,11 @@ func (c *DMWorkerComponent) Instances() []Instance {
 				InstanceSpec: s,
 				Name:         c.Name(),
 				Host:         s.Host,
+				ManageHost:   s.ManageHost,
+				ListenHost:   c.Topology.BaseTopo().GlobalOptions.ListenHost,
 				Port:         s.Port,
 				SSHP:         s.SSHPort,
+				Source:       s.GetSource(),
 
 				Ports: []int{
 					s.Port,
@@ -271,6 +321,7 @@ func (c *DMWorkerComponent) Instances() []Instance {
 				UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 					return spec.UptimeByHost(s.Host, s.Port, timeout, tlsCfg)
 				},
+				Component: c,
 			},
 			topo: c.Topology,
 		})
@@ -301,12 +352,22 @@ func (i *WorkerInstance) InitConfig(
 
 	enableTLS := i.topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(*WorkerSpec)
-	cfg := scripts.NewDMWorkerScript(
-		i.Name,
-		i.GetHost(),
-		paths.Deploy,
-		paths.Log,
-	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).AppendEndpoints(i.topo.Endpoints(deployUser)...)
+
+	masters := []string{}
+	for _, masterspec := range i.topo.Masters {
+		masters = append(masters, utils.JoinHostPort(masterspec.Host, masterspec.Port))
+	}
+	cfg := &scripts.DMWorkerScript{
+		Name:          i.Name,
+		WorkerAddr:    utils.JoinHostPort(i.GetListenHost(), spec.Port),
+		AdvertiseAddr: utils.JoinHostPort(spec.Host, spec.Port),
+		Join:          strings.Join(masters, ","),
+
+		DeployDir: paths.Deploy,
+		LogDir:    paths.Log,
+		NumaNode:  spec.NumaNode,
+	}
+
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_dm-worker_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
@@ -423,7 +484,7 @@ func (topo *Specification) ComponentsByStartOrder() (comps []Component) {
 }
 
 // ComponentsByUpdateOrder return component in the order need to be updated.
-func (topo *Specification) ComponentsByUpdateOrder() (comps []Component) {
+func (topo *Specification) ComponentsByUpdateOrder(curVer string) (comps []Component) {
 	// "dm-master", "dm-worker"
 	comps = append(comps, &DMMasterComponent{topo})
 	comps = append(comps, &DMWorkerComponent{topo})
@@ -478,32 +539,4 @@ func (topo *Specification) IterHost(fn func(instance Instance)) {
 			}
 		}
 	}
-}
-
-// Endpoints returns the PD endpoints configurations
-func (topo *Specification) Endpoints(user string) []*scripts.DMMasterScript {
-	var ends []*scripts.DMMasterScript
-	for _, s := range topo.Masters {
-		deployDir := spec.Abs(user, s.DeployDir)
-		// data dir would be empty for components which don't need it
-		dataDir := s.DataDir
-		// the default data_dir is relative to deploy_dir
-		if dataDir != "" && !strings.HasPrefix(dataDir, "/") {
-			dataDir = filepath.Join(deployDir, dataDir)
-		}
-		// log dir will always be with values, but might not used by the component
-		logDir := spec.Abs(user, s.LogDir)
-
-		script := scripts.NewDMMasterScript(
-			s.Name,
-			s.Host,
-			deployDir,
-			dataDir,
-			logDir,
-			topo.GlobalOptions.TLSEnabled).
-			WithPort(s.Port).
-			WithPeerPort(s.PeerPort)
-		ends = append(ends, script)
-	}
-	return ends
 }

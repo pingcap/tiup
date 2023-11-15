@@ -30,10 +30,10 @@ import (
 // ImportConfig copies config files from cluster which deployed through tidb-ansible
 func ImportConfig(ctx context.Context, name string, clsMeta *spec.ClusterMeta, gOpt operator.Options) error {
 	// there may be already cluster dir, skip create
-	// if err := os.MkdirAll(meta.ClusterPath(name), 0755); err != nil {
+	// if err := utils.MkdirAll(meta.ClusterPath(name), 0755); err != nil {
 	// 	 return err
 	// }
-	// if err := os.WriteFile(meta.ClusterPath(name, "topology.yaml"), yamlFile, 0664); err != nil {
+	// if err := utils.WriteFile(meta.ClusterPath(name, "topology.yaml"), yamlFile, 0664); err != nil {
 	// 	 return err
 	// }
 
@@ -56,7 +56,7 @@ func ImportConfig(ctx context.Context, name string, clsMeta *spec.ClusterMeta, g
 						spec.ClusterPath(name, "ssh", "id_rsa"),
 						spec.ClusterPath(name, "ssh", "id_rsa.pub")).
 					UserSSH(
-						inst.GetHost(),
+						inst.GetManageHost(),
 						inst.GetSSHPort(),
 						clsMeta.User,
 						gOpt.SSHTimeout,
@@ -78,7 +78,7 @@ func ImportConfig(ctx context.Context, name string, clsMeta *spec.ClusterMeta, g
 								inst.ComponentName(),
 								inst.GetHost(),
 								inst.GetPort())),
-						inst.GetHost(),
+						inst.GetManageHost(),
 						true,
 						0,
 						false).
@@ -90,7 +90,7 @@ func ImportConfig(ctx context.Context, name string, clsMeta *spec.ClusterMeta, g
 						spec.ClusterPath(name, "ssh", "id_rsa"),
 						spec.ClusterPath(name, "ssh", "id_rsa.pub")).
 					UserSSH(
-						inst.GetHost(),
+						inst.GetManageHost(),
 						inst.GetSSHPort(),
 						clsMeta.User,
 						gOpt.SSHTimeout,
@@ -112,7 +112,7 @@ func ImportConfig(ctx context.Context, name string, clsMeta *spec.ClusterMeta, g
 								inst.ComponentName(),
 								inst.GetHost(),
 								inst.GetPort())),
-						inst.GetHost(),
+						inst.GetManageHost(),
 						true,
 						0,
 						false).
@@ -123,7 +123,7 @@ func ImportConfig(ctx context.Context, name string, clsMeta *spec.ClusterMeta, g
 								inst.ComponentName(),
 								inst.GetHost(),
 								inst.GetPort())),
-						inst.GetHost(),
+						inst.GetManageHost(),
 						true,
 						0,
 						false).

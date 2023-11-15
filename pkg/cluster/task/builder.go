@@ -142,7 +142,7 @@ func (b *Builder) ClusterSSH(
 	var tasks []Task
 	topo.IterInstance(func(inst spec.Instance) {
 		tasks = append(tasks, &UserSSH{
-			host:            inst.GetHost(),
+			host:            inst.GetManageHost(),
 			port:            inst.GetSSHPort(),
 			deployUser:      deployUser,
 			timeout:         sshTimeout,
@@ -243,25 +243,25 @@ func (b *Builder) BackupComponent(component, fromVer string, host, deployDir str
 }
 
 // InitConfig appends a CopyComponent task to the current task collection
-func (b *Builder) InitConfig(clusterName, clusterVersion string, specManager *spec.SpecManager, inst spec.Instance, deployUser string, ignoreCheck bool, paths meta.DirPaths) *Builder {
+func (b *Builder) InitConfig(clusterName, version string, specManager *spec.SpecManager, inst spec.Instance, deployUser string, ignoreCheck bool, paths meta.DirPaths) *Builder {
 	// get nightly version
 	var componentVersion utils.Version
 	meta := specManager.NewMetadata()
 
 	//  full version
-	componentVersion = utils.Version(clusterVersion)
+	componentVersion = utils.Version(version)
 	if err := specManager.Metadata(clusterName, meta); err == nil {
 		// get nightly version
-		if clusterVersion == utils.NightlyVersionAlias {
-			componentVersion, _, err = environment.GlobalEnv().V1Repository().LatestNightlyVersion(inst.ComponentName())
+		if version == utils.NightlyVersionAlias {
+			componentVersion, _, err = environment.GlobalEnv().V1Repository().LatestNightlyVersion(inst.ComponentSource())
 			if err != nil {
-				componentVersion = utils.Version(clusterVersion)
+				componentVersion = utils.Version(version)
 			}
 		}
 
 		// dm cluster does not require a full nightly version
 		if meta.GetTopology().Type() == spec.TopoTypeDM {
-			componentVersion = utils.Version(clusterVersion)
+			componentVersion = utils.Version(version)
 		}
 	}
 
@@ -330,6 +330,16 @@ func (b *Builder) EnvInit(host, deployUser string, userGroup string, skipCreateU
 		deployUser:     deployUser,
 		userGroup:      userGroup,
 		skipCreateUser: skipCreateUser,
+	})
+	return b
+}
+
+// RotateSSH appends a RotateSSH task to the current task collection
+func (b *Builder) RotateSSH(host, deployUser, newPublicKeyPath string) *Builder {
+	b.tasks = append(b.tasks, &RotateSSH{
+		host:             host,
+		deployUser:       deployUser,
+		newPublicKeyPath: newPublicKeyPath,
 	})
 	return b
 }
@@ -437,10 +447,10 @@ func (b *Builder) DeploySpark(inst spec.Instance, sparkVersion, srcPath, deployD
 		inst.Arch(),
 		sparkVersion,
 		srcPath,
-		inst.GetHost(),
+		inst.GetManageHost(),
 		deployDir,
 	).Shell( // spark is under a subdir, move it to deploy dir
-		inst.GetHost(),
+		inst.GetManageHost(),
 		fmt.Sprintf(
 			"cp -rf %[1]s %[2]s/ && cp -rf %[3]s/* %[2]s/ && rm -rf %[1]s %[3]s",
 			filepath.Join(deployDir, "bin", sparkSubPath),
@@ -455,10 +465,10 @@ func (b *Builder) DeploySpark(inst spec.Instance, sparkVersion, srcPath, deployD
 		inst.Arch(),
 		"", // use the latest stable version
 		srcPath,
-		inst.GetHost(),
+		inst.GetManageHost(),
 		deployDir,
 	).Shell( // move tispark jar to correct path
-		inst.GetHost(),
+		inst.GetManageHost(),
 		fmt.Sprintf(
 			"cp -f %[1]s/*.jar %[2]s/jars/ && rm -f %[1]s/*.jar",
 			filepath.Join(deployDir, "bin"),

@@ -38,6 +38,7 @@ import (
 // PrometheusSpec represents the Prometheus Server topology specification in topology.yaml
 type PrometheusSpec struct {
 	Host                  string                 `yaml:"host"`
+	ManageHost            string                 `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
 	SSHPort               int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported              bool                   `yaml:"imported,omitempty"`
 	Patched               bool                   `yaml:"patched,omitempty"`
@@ -50,6 +51,7 @@ type PrometheusSpec struct {
 	NumaNode              string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
 	RemoteConfig          Remote                 `yaml:"remote_config,omitempty" validate:"remote_config:ignore"`
 	ExternalAlertmanagers []ExternalAlertmanager `yaml:"external_alertmanagers" validate:"external_alertmanagers:ignore"`
+	PushgatewayAddrs      []string               `yaml:"pushgateway_addrs,omitempty" validate:"pushgateway_addrs:ignore"`
 	Retention             string                 `yaml:"storage_retention,omitempty" validate:"storage_retention:editable"`
 	ResourceControl       meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
 	Arch                  string                 `yaml:"arch,omitempty"`
@@ -79,12 +81,24 @@ func (s *PrometheusSpec) Role() string {
 
 // SSH returns the host and SSH port of the instance
 func (s *PrometheusSpec) SSH() (string, int) {
-	return s.Host, s.SSHPort
+	host := s.Host
+	if s.ManageHost != "" {
+		host = s.ManageHost
+	}
+	return host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
 func (s *PrometheusSpec) GetMainPort() int {
 	return s.Port
+}
+
+// GetManageHost returns the manage host of the instance
+func (s *PrometheusSpec) GetManageHost() string {
+	if s.ManageHost != "" {
+		return s.ManageHost
+	}
+	return s.Host
 }
 
 // IsImported returns if the node is imported from TiDB-Ansible
@@ -110,6 +124,21 @@ func (c *MonitorComponent) Role() string {
 	return RoleMonitor
 }
 
+// CalculateVersion implements the Component interface
+func (c *MonitorComponent) CalculateVersion(clusterVersion string) string {
+	// always not follow cluster version, use ""(latest) by default
+	version := c.Topology.BaseTopo().PrometheusVersion
+	if version != nil && *version != "" {
+		return *version
+	}
+	return clusterVersion
+}
+
+// SetVersion implements Component interface.
+func (c *MonitorComponent) SetVersion(version string) {
+	*c.Topology.BaseTopo().PrometheusVersion = version
+}
+
 // Instances implements Component interface.
 func (c *MonitorComponent) Instances() []Instance {
 	servers := c.BaseTopo().Monitors
@@ -121,8 +150,12 @@ func (c *MonitorComponent) Instances() []Instance {
 			InstanceSpec: s,
 			Name:         c.Name(),
 			Host:         s.Host,
+			ManageHost:   s.ManageHost,
+			ListenHost:   c.Topology.BaseTopo().GlobalOptions.ListenHost,
 			Port:         s.Port,
 			SSHP:         s.SSHPort,
+			NumaNode:     s.NumaNode,
+			NumaCores:    "",
 
 			Ports: []int{
 				s.Port,
@@ -132,11 +165,12 @@ func (c *MonitorComponent) Instances() []Instance {
 				s.DataDir,
 			},
 			StatusFn: func(_ context.Context, timeout time.Duration, _ *tls.Config, _ ...string) string {
-				return statusByHost(s.Host, s.Port, "/-/ready", timeout, nil)
+				return statusByHost(s.GetManageHost(), s.Port, "/-/ready", timeout, nil)
 			},
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
-				return UptimeByHost(s.Host, s.Port, timeout, tlsCfg)
+				return UptimeByHost(s.GetManageHost(), s.Port, timeout, tlsCfg)
 			},
+			Component: c,
 		}, c.Topology}
 		if s.NgPort > 0 {
 			mi.BaseInstance.Ports = append(mi.BaseInstance.Ports, s.NgPort)
@@ -230,6 +264,13 @@ func (i *MonitorInstance) InitConfig(
 			db := servers.Index(i).Interface().(*TiDBSpec)
 			uniqueHosts.Insert(db.Host)
 			cfig.AddTiDB(db.Host, uint64(db.StatusPort))
+		}
+	}
+	if servers, found := topoHasField("TiProxyServers"); found {
+		for i := 0; i < servers.Len(); i++ {
+			db := servers.Index(i).Interface().(*TiProxySpec)
+			uniqueHosts.Insert(db.Host)
+			cfig.AddTiProxy(db.Host, uint64(db.StatusPort))
 		}
 	}
 	if servers, found := topoHasField("TiFlashServers"); found {
@@ -328,6 +369,7 @@ func (i *MonitorInstance) InitConfig(
 	for _, alertmanager := range spec.ExternalAlertmanagers {
 		cfig.AddAlertmanager(alertmanager.Host, uint64(alertmanager.WebPort))
 	}
+	cfig.AddPushgateway(spec.PushgatewayAddrs)
 
 	if spec.RuleDir != "" {
 		filter := func(name string) bool { return strings.HasSuffix(name, ".rules.yml") }
@@ -349,18 +391,24 @@ func (i *MonitorInstance) InitConfig(
 	}
 
 	if spec.NgPort > 0 {
-		ngcfg := config.NewNgMonitoringConfig(clusterName, clusterVersion, enableTLS)
+		pds := []string{}
 		if servers, found := topoHasField("PDServers"); found {
 			for i := 0; i < servers.Len(); i++ {
 				pd := servers.Index(i).Interface().(*PDSpec)
-				ngcfg.AddPD(pd.Host, uint64(pd.ClientPort))
+				pds = append(pds, fmt.Sprintf("\"%s\"", utils.JoinHostPort(pd.Host, pd.ClientPort)))
 			}
 		}
-		ngcfg.AddIP(i.GetHost()).
-			AddPort(spec.NgPort).
-			AddDeployDir(paths.Deploy).
-			AddDataDir(paths.Data[0]).
-			AddLog(paths.Log)
+		ngcfg := &config.NgMonitoringConfig{
+			ClusterName:      clusterName,
+			Address:          utils.JoinHostPort(i.GetListenHost(), spec.NgPort),
+			AdvertiseAddress: utils.JoinHostPort(i.GetHost(), spec.NgPort),
+			PDAddrs:          strings.Join(pds, ","),
+			TLSEnabled:       enableTLS,
+
+			DeployDir: paths.Deploy,
+			DataDir:   paths.Data[0],
+			LogDir:    paths.Log,
+		}
 
 		if servers, found := topoHasField("Monitors"); found {
 			for i := 0; i < servers.Len(); i++ {
@@ -393,7 +441,7 @@ func (i *MonitorInstance) InitConfig(
 		return err
 	}
 
-	return checkConfig(ctx, e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".yml", paths, nil)
+	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".yml", paths)
 }
 
 // setTLSConfig set TLS Config to support enable/disable TLS
@@ -417,7 +465,7 @@ func (i *MonitorInstance) installRules(ctx context.Context, e ctxt.Executor, dep
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}
 
-	srcPath := PackagePath(ComponentDMMaster, clusterVersion, i.OS(), i.Arch())
+	srcPath := PackagePath(GetDMMasterPackageName(i.topo), clusterVersion, i.OS(), i.Arch())
 	dstPath := filepath.Join(tmp, filepath.Base(srcPath))
 
 	err = e.Transfer(ctx, srcPath, dstPath, false, 0, false)
@@ -520,7 +568,7 @@ func mergeAdditionalScrapeConf(source string, addition map[string]any) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(source, bytes, 0644)
+	return utils.WriteFile(source, bytes, 0644)
 }
 
 func getRetention(retention string) string {

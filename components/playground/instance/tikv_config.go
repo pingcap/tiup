@@ -13,22 +13,11 @@
 
 package instance
 
-import (
-	"io"
-)
-
-const tikvConfig = `
-[rocksdb]
-max-open-files = 256
-
-[raftdb]
-max-open-files = 256
-
-[storage]
-reserve-space = 0
-`
-
-func writeTiKVConfig(w io.Writer) error {
-	_, err := w.Write([]byte(tikvConfig))
-	return err
+func (inst *TiKVInstance) getConfig() map[string]any {
+	config := make(map[string]any)
+	config["rocksdb.max-open-files"] = 256
+	config["raftdb.max-open-files"] = 256
+	config["storage.reserve-space"] = 0
+	config["storage.reserve-raft-space"] = 0
+	return config
 }

@@ -28,7 +28,6 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
-	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/proxy"
 	"github.com/pingcap/tiup/pkg/tidbver"
@@ -83,6 +82,7 @@ type (
 		SSHPort         int                  `yaml:"ssh_port,omitempty" default:"22" validate:"ssh_port:editable"`
 		SSHType         executor.SSHType     `yaml:"ssh_type,omitempty" default:"builtin"`
 		TLSEnabled      bool                 `yaml:"enable_tls,omitempty"`
+		ListenHost      string               `yaml:"listen_host,omitempty" validate:"listen_host:editable"`
 		DeployDir       string               `yaml:"deploy_dir,omitempty" default:"deploy"`
 		DataDir         string               `yaml:"data_dir,omitempty" default:"data"`
 		LogDir          string               `yaml:"log_dir,omitempty"`
@@ -94,13 +94,15 @@ type (
 
 	// MonitoredOptions represents the monitored node configuration
 	MonitoredOptions struct {
-		NodeExporterPort     int                  `yaml:"node_exporter_port,omitempty" default:"9100"`
-		BlackboxExporterPort int                  `yaml:"blackbox_exporter_port,omitempty" default:"9115"`
-		DeployDir            string               `yaml:"deploy_dir,omitempty"`
-		DataDir              string               `yaml:"data_dir,omitempty"`
-		LogDir               string               `yaml:"log_dir,omitempty"`
-		NumaNode             string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
-		ResourceControl      meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
+		NodeExporterPort        int                  `yaml:"node_exporter_port,omitempty" default:"9100"`
+		BlackboxExporterPort    int                  `yaml:"blackbox_exporter_port,omitempty" default:"9115"`
+		NodeExporterVersion     string               `yaml:"node_exporter_version,omitempty"`
+		BlackboxExporterVersion string               `yaml:"blackbox_exporter_version,omitempty"`
+		DeployDir               string               `yaml:"deploy_dir,omitempty"`
+		DataDir                 string               `yaml:"data_dir,omitempty"`
+		LogDir                  string               `yaml:"log_dir,omitempty"`
+		NumaNode                string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
+		ResourceControl         meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
 	}
 
 	// ServerConfigs represents the server runtime configuration
@@ -110,6 +112,7 @@ type (
 		PD             map[string]any    `yaml:"pd"`
 		Dashboard      map[string]any    `yaml:"tidb_dashboard"`
 		TiFlash        map[string]any    `yaml:"tiflash"`
+		TiProxy        map[string]any    `yaml:"tiproxy"`
 		TiFlashLearner map[string]any    `yaml:"tiflash-learner"`
 		Pump           map[string]any    `yaml:"pump"`
 		Drainer        map[string]any    `yaml:"drainer"`
@@ -118,25 +121,47 @@ type (
 		Grafana        map[string]string `yaml:"grafana"`
 	}
 
+	// ComponentVersions represents the versions of components
+	ComponentVersions struct {
+		TiDB         string `yaml:"tidb,omitempty"`
+		TiKV         string `yaml:"tikv,omitempty"`
+		TiFlash      string `yaml:"tiflash,omitempty"`
+		PD           string `yaml:"pd,omitempty"`
+		Dashboard    string `yaml:"tidb_dashboard,omitempty"`
+		Pump         string `yaml:"pump,omitempty"`
+		Drainer      string `yaml:"drainer,omitempty"`
+		CDC          string `yaml:"cdc,omitempty"`
+		TiKVCDC      string `yaml:"kvcdc,omitempty"`
+		TiProxy      string `yaml:"tiproxy,omitempty"`
+		Prometheus   string `yaml:"prometheus,omitempty"`
+		Grafana      string `yaml:"grafana,omitempty"`
+		AlertManager string `yaml:"alertmanager,omitempty"`
+		// The versions of exporters are placed within the monitored section because they are not explicitly treated as separate components.
+		// NodeExporter     string `yaml:"node_exporter,omitempty"`
+		// BlackboxExporter string `yaml:"blackbox_exporter,omitempty"`
+	}
+
 	// Specification represents the specification of topology.yaml
 	Specification struct {
-		GlobalOptions    GlobalOptions        `yaml:"global,omitempty" validate:"global:editable"`
-		MonitoredOptions MonitoredOptions     `yaml:"monitored,omitempty" validate:"monitored:editable"`
-		ServerConfigs    ServerConfigs        `yaml:"server_configs,omitempty" validate:"server_configs:ignore"`
-		TiDBServers      []*TiDBSpec          `yaml:"tidb_servers"`
-		TiKVServers      []*TiKVSpec          `yaml:"tikv_servers"`
-		TiFlashServers   []*TiFlashSpec       `yaml:"tiflash_servers"`
-		PDServers        []*PDSpec            `yaml:"pd_servers"`
-		DashboardServers []*DashboardSpec     `yaml:"tidb_dashboard_servers,omitempty"`
-		PumpServers      []*PumpSpec          `yaml:"pump_servers,omitempty"`
-		Drainers         []*DrainerSpec       `yaml:"drainer_servers,omitempty"`
-		CDCServers       []*CDCSpec           `yaml:"cdc_servers,omitempty"`
-		TiKVCDCServers   []*TiKVCDCSpec       `yaml:"kvcdc_servers,omitempty"`
-		TiSparkMasters   []*TiSparkMasterSpec `yaml:"tispark_masters,omitempty"`
-		TiSparkWorkers   []*TiSparkWorkerSpec `yaml:"tispark_workers,omitempty"`
-		Monitors         []*PrometheusSpec    `yaml:"monitoring_servers"`
-		Grafanas         []*GrafanaSpec       `yaml:"grafana_servers,omitempty"`
-		Alertmanagers    []*AlertmanagerSpec  `yaml:"alertmanager_servers,omitempty"`
+		GlobalOptions     GlobalOptions        `yaml:"global,omitempty" validate:"global:editable"`
+		MonitoredOptions  MonitoredOptions     `yaml:"monitored,omitempty" validate:"monitored:editable"`
+		ComponentVersions ComponentVersions    `yaml:"component_versions,omitempty" validate:"component_versions:editable"`
+		ServerConfigs     ServerConfigs        `yaml:"server_configs,omitempty" validate:"server_configs:ignore"`
+		TiDBServers       []*TiDBSpec          `yaml:"tidb_servers"`
+		TiKVServers       []*TiKVSpec          `yaml:"tikv_servers"`
+		TiFlashServers    []*TiFlashSpec       `yaml:"tiflash_servers"`
+		TiProxyServers    []*TiProxySpec       `yaml:"tiproxy_servers"`
+		PDServers         []*PDSpec            `yaml:"pd_servers"`
+		DashboardServers  []*DashboardSpec     `yaml:"tidb_dashboard_servers,omitempty"`
+		PumpServers       []*PumpSpec          `yaml:"pump_servers,omitempty"`
+		Drainers          []*DrainerSpec       `yaml:"drainer_servers,omitempty"`
+		CDCServers        []*CDCSpec           `yaml:"cdc_servers,omitempty"`
+		TiKVCDCServers    []*TiKVCDCSpec       `yaml:"kvcdc_servers,omitempty"`
+		TiSparkMasters    []*TiSparkMasterSpec `yaml:"tispark_masters,omitempty"`
+		TiSparkWorkers    []*TiSparkWorkerSpec `yaml:"tispark_workers,omitempty"`
+		Monitors          []*PrometheusSpec    `yaml:"monitoring_servers"`
+		Grafanas          []*GrafanaSpec       `yaml:"grafana_servers,omitempty"`
+		Alertmanagers     []*AlertmanagerSpec  `yaml:"alertmanager_servers,omitempty"`
 	}
 )
 
@@ -146,9 +171,12 @@ type BaseTopo struct {
 	MonitoredOptions *MonitoredOptions
 	MasterList       []string
 
-	Monitors      []*PrometheusSpec
-	Grafanas      []*GrafanaSpec
-	Alertmanagers []*AlertmanagerSpec
+	PrometheusVersion   *string
+	GrafanaVersion      *string
+	AlertManagerVersion *string
+	Monitors            []*PrometheusSpec
+	Grafanas            []*GrafanaSpec
+	Alertmanagers       []*AlertmanagerSpec
 }
 
 // Topology represents specification of the cluster.
@@ -162,7 +190,7 @@ type Topology interface {
 	// Instances() []Instance
 	ComponentsByStartOrder() []Component
 	ComponentsByStopOrder() []Component
-	ComponentsByUpdateOrder() []Component
+	ComponentsByUpdateOrder(curVer string) []Component
 	IterInstance(fn func(instance Instance), concurrency ...int)
 	GetMonitoredOptions() *MonitoredOptions
 	// count how many time a path is used by instances in cluster
@@ -253,12 +281,15 @@ func (s *Specification) Type() string {
 // BaseTopo implements Topology interface.
 func (s *Specification) BaseTopo() *BaseTopo {
 	return &BaseTopo{
-		GlobalOptions:    &s.GlobalOptions,
-		MonitoredOptions: s.GetMonitoredOptions(),
-		MasterList:       s.GetPDList(),
-		Monitors:         s.Monitors,
-		Grafanas:         s.Grafanas,
-		Alertmanagers:    s.Alertmanagers,
+		GlobalOptions:       &s.GlobalOptions,
+		MonitoredOptions:    s.GetMonitoredOptions(),
+		MasterList:          s.GetPDListWithManageHost(),
+		PrometheusVersion:   &s.ComponentVersions.Prometheus,
+		GrafanaVersion:      &s.ComponentVersions.Grafana,
+		AlertManagerVersion: &s.ComponentVersions.AlertManager,
+		Monitors:            s.Monitors,
+		Grafanas:            s.Grafanas,
+		Alertmanagers:       s.Alertmanagers,
 	}
 }
 
@@ -414,11 +445,26 @@ func (s *Specification) GetPDList() []string {
 	return pdList
 }
 
-// GetCDCList returns a list of CDC API hosts of the current cluster
-func (s *Specification) GetCDCList() []string {
+// GetPDListWithManageHost returns a list of PD API hosts of the current cluster
+func (s *Specification) GetPDListWithManageHost() []string {
+	var pdList []string
+
+	for _, pd := range s.PDServers {
+		pdList = append(pdList, utils.JoinHostPort(pd.GetManageHost(), pd.ClientPort))
+	}
+
+	return pdList
+}
+
+// GetCDCListWithManageHost returns a list of CDC API hosts of the current cluster
+func (s *Specification) GetCDCListWithManageHost() []string {
 	var result []string
 	for _, server := range s.CDCServers {
-		result = append(result, utils.JoinHostPort(server.Host, server.Port))
+		host := server.Host
+		if server.ManageHost != "" {
+			host = server.ManageHost
+		}
+		result = append(result, utils.JoinHostPort(host, server.Port))
 	}
 	return result
 }
@@ -461,14 +507,14 @@ func (s *Specification) GetDashboardAddress(ctx context.Context, tlsCfg *tls.Con
 // GetEtcdClient loads EtcdClient of current cluster
 func (s *Specification) GetEtcdClient(tlsCfg *tls.Config) (*clientv3.Client, error) {
 	return clientv3.New(clientv3.Config{
-		Endpoints: s.GetPDList(),
+		Endpoints: s.GetPDListWithManageHost(),
 		TLS:       tlsCfg,
 	})
 }
 
 // GetEtcdProxyClient loads EtcdClient of current cluster with TCP proxy
 func (s *Specification) GetEtcdProxyClient(tlsCfg *tls.Config, tcpProxy *proxy.TCPProxy) (*clientv3.Client, chan struct{}, error) {
-	closeC := tcpProxy.Run(s.GetPDList())
+	closeC := tcpProxy.Run(s.GetPDListWithManageHost())
 	cli, err := clientv3.New(clientv3.Config{
 		Endpoints: tcpProxy.GetEndpoints(),
 		TLS:       tlsCfg,
@@ -480,23 +526,44 @@ func (s *Specification) GetEtcdProxyClient(tlsCfg *tls.Config, tcpProxy *proxy.T
 func (s *Specification) Merge(that Topology) Topology {
 	spec := that.(*Specification)
 	return &Specification{
-		GlobalOptions:    s.GlobalOptions,
-		MonitoredOptions: s.MonitoredOptions,
-		ServerConfigs:    s.ServerConfigs,
-		TiDBServers:      append(s.TiDBServers, spec.TiDBServers...),
-		TiKVServers:      append(s.TiKVServers, spec.TiKVServers...),
-		PDServers:        append(s.PDServers, spec.PDServers...),
-		DashboardServers: append(s.DashboardServers, spec.DashboardServers...),
-		TiFlashServers:   append(s.TiFlashServers, spec.TiFlashServers...),
-		PumpServers:      append(s.PumpServers, spec.PumpServers...),
-		Drainers:         append(s.Drainers, spec.Drainers...),
-		CDCServers:       append(s.CDCServers, spec.CDCServers...),
-		TiKVCDCServers:   append(s.TiKVCDCServers, spec.TiKVCDCServers...),
-		TiSparkMasters:   append(s.TiSparkMasters, spec.TiSparkMasters...),
-		TiSparkWorkers:   append(s.TiSparkWorkers, spec.TiSparkWorkers...),
-		Monitors:         append(s.Monitors, spec.Monitors...),
-		Grafanas:         append(s.Grafanas, spec.Grafanas...),
-		Alertmanagers:    append(s.Alertmanagers, spec.Alertmanagers...),
+		GlobalOptions:     s.GlobalOptions,
+		MonitoredOptions:  s.MonitoredOptions,
+		ServerConfigs:     s.ServerConfigs,
+		ComponentVersions: s.ComponentVersions.Merge(spec.ComponentVersions),
+		TiDBServers:       append(s.TiDBServers, spec.TiDBServers...),
+		TiKVServers:       append(s.TiKVServers, spec.TiKVServers...),
+		PDServers:         append(s.PDServers, spec.PDServers...),
+		DashboardServers:  append(s.DashboardServers, spec.DashboardServers...),
+		TiFlashServers:    append(s.TiFlashServers, spec.TiFlashServers...),
+		TiProxyServers:    append(s.TiProxyServers, spec.TiProxyServers...),
+		PumpServers:       append(s.PumpServers, spec.PumpServers...),
+		Drainers:          append(s.Drainers, spec.Drainers...),
+		CDCServers:        append(s.CDCServers, spec.CDCServers...),
+		TiKVCDCServers:    append(s.TiKVCDCServers, spec.TiKVCDCServers...),
+		TiSparkMasters:    append(s.TiSparkMasters, spec.TiSparkMasters...),
+		TiSparkWorkers:    append(s.TiSparkWorkers, spec.TiSparkWorkers...),
+		Monitors:          append(s.Monitors, spec.Monitors...),
+		Grafanas:          append(s.Grafanas, spec.Grafanas...),
+		Alertmanagers:     append(s.Alertmanagers, spec.Alertmanagers...),
+	}
+}
+
+// Merge returns a new ComponentVersions which sum old ones
+func (v *ComponentVersions) Merge(that ComponentVersions) ComponentVersions {
+	return ComponentVersions{
+		TiDB:         utils.Ternary(that.TiDB != "", that.TiDB, v.TiDB).(string),
+		TiKV:         utils.Ternary(that.TiKV != "", that.TiKV, v.TiKV).(string),
+		PD:           utils.Ternary(that.PD != "", that.PD, v.PD).(string),
+		Dashboard:    utils.Ternary(that.Dashboard != "", that.Dashboard, v.Dashboard).(string),
+		TiFlash:      utils.Ternary(that.TiFlash != "", that.TiFlash, v.TiFlash).(string),
+		TiProxy:      utils.Ternary(that.TiProxy != "", that.TiProxy, v.TiProxy).(string),
+		Pump:         utils.Ternary(that.Pump != "", that.Pump, v.Pump).(string),
+		Drainer:      utils.Ternary(that.Drainer != "", that.Drainer, v.Drainer).(string),
+		CDC:          utils.Ternary(that.CDC != "", that.CDC, v.CDC).(string),
+		TiKVCDC:      utils.Ternary(that.TiKVCDC != "", that.TiKVCDC, v.TiKVCDC).(string),
+		Grafana:      utils.Ternary(that.Grafana != "", that.Grafana, v.Grafana).(string),
+		Prometheus:   utils.Ternary(that.Prometheus != "", that.Prometheus, v.Prometheus).(string),
+		AlertManager: utils.Ternary(that.AlertManager != "", that.AlertManager, v.AlertManager).(string),
 	}
 }
 
@@ -516,15 +583,16 @@ func fillCustomDefaults(globalOptions *GlobalOptions, data any) error {
 }
 
 var (
-	globalOptionTypeName  = reflect.TypeOf(GlobalOptions{}).Name()
-	monitorOptionTypeName = reflect.TypeOf(MonitoredOptions{}).Name()
-	serverConfigsTypeName = reflect.TypeOf(ServerConfigs{}).Name()
+	globalOptionTypeName      = reflect.TypeOf(GlobalOptions{}).Name()
+	monitorOptionTypeName     = reflect.TypeOf(MonitoredOptions{}).Name()
+	serverConfigsTypeName     = reflect.TypeOf(ServerConfigs{}).Name()
+	componentVersionsTypeName = reflect.TypeOf(ComponentVersions{}).Name()
 )
 
 // Skip global/monitored options
 func isSkipField(field reflect.Value) bool {
 	tp := field.Type().Name()
-	return tp == globalOptionTypeName || tp == monitorOptionTypeName || tp == serverConfigsTypeName
+	return tp == globalOptionTypeName || tp == monitorOptionTypeName || tp == serverConfigsTypeName || tp == componentVersionsTypeName
 }
 
 func setDefaultDir(parent, role, port string, field reflect.Value) {
@@ -695,9 +763,10 @@ func (s *Specification) ComponentsByStopOrder() (comps []Component) {
 
 // ComponentsByStartOrder return component in the order need to start.
 func (s *Specification) ComponentsByStartOrder() (comps []Component) {
-	// "pd", "dashboard", "tikv", "pump", "tidb", "tiflash", "drainer", "cdc", "tikv-cdc", "prometheus", "grafana", "alertmanager"
+	// "pd", "dashboard", "tiproxy", "tikv", "pump", "tidb", "tiflash", "drainer", "cdc", "tikv-cdc", "prometheus", "grafana", "alertmanager"
 	comps = append(comps, &PDComponent{s})
 	comps = append(comps, &DashboardComponent{s})
+	comps = append(comps, &TiProxyComponent{s})
 	comps = append(comps, &TiKVComponent{s})
 	comps = append(comps, &PumpComponent{s})
 	comps = append(comps, &TiDBComponent{s})
@@ -714,16 +783,25 @@ func (s *Specification) ComponentsByStartOrder() (comps []Component) {
 }
 
 // ComponentsByUpdateOrder return component in the order need to be updated.
-func (s *Specification) ComponentsByUpdateOrder() (comps []Component) {
-	// "tiflash", "pd", "dashboard", "tikv", "pump", "tidb", "drainer", "cdc", "prometheus", "grafana", "alertmanager"
+func (s *Specification) ComponentsByUpdateOrder(curVer string) (comps []Component) {
+	// Ref: https://github.com/pingcap/tiup/issues/2166
+	cdcUpgradeBeforePDTiKVTiDB := tidbver.TiCDCUpgradeBeforePDTiKVTiDB(curVer)
+
+	// "tiflash", <"cdc">, "pd", "dashboard", "tiproxy", "tikv", "pump", "tidb", "drainer", <"cdc>", "prometheus", "grafana", "alertmanager"
 	comps = append(comps, &TiFlashComponent{s})
+	if cdcUpgradeBeforePDTiKVTiDB {
+		comps = append(comps, &CDCComponent{s})
+	}
 	comps = append(comps, &PDComponent{s})
 	comps = append(comps, &DashboardComponent{s})
+	comps = append(comps, &TiProxyComponent{s})
 	comps = append(comps, &TiKVComponent{s})
 	comps = append(comps, &PumpComponent{s})
 	comps = append(comps, &TiDBComponent{s})
 	comps = append(comps, &DrainerComponent{s})
-	comps = append(comps, &CDCComponent{s})
+	if !cdcUpgradeBeforePDTiKVTiDB {
+		comps = append(comps, &CDCComponent{s})
+	}
 	comps = append(comps, &MonitorComponent{s})
 	comps = append(comps, &GrafanaComponent{s})
 	comps = append(comps, &AlertManagerComponent{s})
@@ -789,37 +867,6 @@ func IterHost(topo Topology, fn func(instance Instance)) {
 	}
 }
 
-// Endpoints returns the PD endpoints configurations
-func (s *Specification) Endpoints(user string) []*scripts.PDScript {
-	var ends []*scripts.PDScript
-	for _, spec := range s.PDServers {
-		deployDir := Abs(user, spec.DeployDir)
-		// data dir would be empty for components which don't need it
-		dataDir := spec.DataDir
-		// the default data_dir is relative to deploy_dir
-		if dataDir != "" && !strings.HasPrefix(dataDir, "/") {
-			dataDir = filepath.Join(deployDir, dataDir)
-		}
-		// log dir will always be with values, but might not used by the component
-		logDir := Abs(user, spec.LogDir)
-
-		script := &scripts.PDScript{
-			Name:       spec.Name,
-			IP:         spec.Host,
-			ListenHost: spec.ListenHost,
-			DeployDir:  deployDir,
-			DataDir:    dataDir,
-			LogDir:     logDir,
-			NumaNode:   spec.NumaNode,
-			TLSEnabled: s.GlobalOptions.TLSEnabled,
-			ClientPort: spec.ClientPort,
-			PeerPort:   spec.PeerPort,
-		}
-		ends = append(ends, script)
-	}
-	return ends
-}
-
 // FillHostArchOrOS fills the topology with the given host->arch
 func (s *Specification) FillHostArchOrOS(hostArch map[string]string, fullType FullHostType) error {
 	if err := FillHostArchOrOS(s, hostArch, fullType); err != nil {
@@ -873,6 +920,10 @@ func setHostArchOrOS(field reflect.Value, hostArchOrOS map[string]string, fullTy
 	}
 
 	host := field.FieldByName("Host")
+	if field.FieldByName("ManageHost").String() != "" {
+		host = field.FieldByName("ManageHost")
+	}
+
 	arch := field.FieldByName("Arch")
 	os := field.FieldByName("OS")
 

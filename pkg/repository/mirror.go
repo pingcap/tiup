@@ -15,6 +15,7 @@ package repository
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	stderrors "errors"
 	"fmt"
@@ -220,7 +221,7 @@ func (l *localFilesystem) Download(resource, targetDir string) error {
 	}
 	defer reader.Close()
 
-	if err := os.MkdirAll(targetDir, 0755); err != nil {
+	if err := utils.MkdirAll(targetDir, 0755); err != nil {
 		return errors.Trace(err)
 	}
 	outPath := filepath.Join(targetDir, resource)
@@ -293,6 +294,14 @@ func (l *httpMirror) downloadFile(url string, to string, maxSize int64) (io.Read
 	}(time.Now())
 
 	client := grab.NewClient()
+
+	// workaround to resolve cdn error "tls: protocol version not supported"
+	client.HTTPClient.(*http.Client).Transport = &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		// avoid using http/2 by setting non-nil TLSClientConfig
+		TLSClientConfig: &tls.Config{},
+	}
+
 	client.UserAgent = fmt.Sprintf("tiup/%s", version.NewTiUPVersion().SemVer())
 	req, err := grab.NewRequest(to, url)
 	if err != nil {
@@ -326,6 +335,7 @@ L:
 			}
 			progress.SetCurrent(resp.BytesComplete())
 		case <-resp.Done:
+			progress.SetCurrent(resp.BytesComplete())
 			progress.Finish()
 			break L
 		}
@@ -435,7 +445,7 @@ func (l *httpMirror) Publish(manifest *v1manifest.Manifest, info model.Component
 	}
 	manifestAddr := fmt.Sprintf("%s/api/v1/component/%s/%s%s", l.Source(), sid, manifest.Signed.(*v1manifest.Component).ID, qstr)
 
-	client := http.Client{Timeout: time.Minute}
+	client := http.Client{Timeout: 5 * time.Minute}
 	resp, err := client.Post(manifestAddr, "text/json", bodyBuf)
 	if err != nil {
 		return err
@@ -504,7 +514,7 @@ func (l *httpMirror) Download(resource, targetDir string) error {
 		return err
 	}
 
-	if err := os.MkdirAll(targetDir, 0755); err != nil {
+	if err := utils.MkdirAll(targetDir, 0755); err != nil {
 		return errors.Trace(err)
 	}
 	return utils.Move(tmpFilePath, dstFilePath)
@@ -546,7 +556,7 @@ func (l *MockMirror) Download(resource, targetDir string) error {
 		return errors.Annotatef(ErrNotFound, "resource %s", resource)
 	}
 
-	if err := os.MkdirAll(targetDir, 0755); err != nil {
+	if err := utils.MkdirAll(targetDir, 0755); err != nil {
 		return err
 	}
 	target := filepath.Join(targetDir, resource)

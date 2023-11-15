@@ -899,6 +899,7 @@ func (pc *PDClient) GetTiKVLabels() (map[string]map[string]string, []map[string]
 	for _, s := range r.Stores {
 		if s.Store.State == metapb.StoreState_Up {
 			lbs := s.Store.GetLabels()
+			host, port := utils.ParseHostPort(s.Store.GetAddress())
 			labelsMap := map[string]string{}
 
 			var labelsArr []string
@@ -915,9 +916,9 @@ func (pc *PDClient) GetTiKVLabels() (map[string]map[string]string, []map[string]
 
 			label := fmt.Sprintf("%s%s%s", "{", strings.Join(labelsArr, ","), "}")
 			storeInfo = append(storeInfo, map[string]LabelInfo{
-				strings.Split(s.Store.GetAddress(), ":")[0]: {
-					Machine:   strings.Split(s.Store.GetAddress(), ":")[0],
-					Port:      strings.Split(s.Store.GetAddress(), ":")[1],
+				host: {
+					Machine:   host,
+					Port:      port,
 					Store:     s.Store.GetId(),
 					Status:    s.Store.State.String(),
 					Leaders:   s.Status.LeaderCount,

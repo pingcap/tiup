@@ -72,6 +72,15 @@ func (u *UpdateMeta) Execute(ctx context.Context) error {
 	}
 	newMeta.Topology.PDServers = pdServers
 
+	tiproxyServers := make([]*spec.TiProxySpec, 0)
+	for i, instance := range (&spec.TiProxyComponent{Topology: topo}).Instances() {
+		if deleted.Exist(instance.ID()) {
+			continue
+		}
+		tiproxyServers = append(tiproxyServers, topo.TiProxyServers[i])
+	}
+	newMeta.Topology.TiProxyServers = tiproxyServers
+
 	dashboardServers := make([]*spec.DashboardSpec, 0)
 	for i, instance := range (&spec.DashboardComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
@@ -79,7 +88,7 @@ func (u *UpdateMeta) Execute(ctx context.Context) error {
 		}
 		dashboardServers = append(dashboardServers, topo.DashboardServers[i])
 	}
-	topo.DashboardServers = dashboardServers
+	newMeta.Topology.DashboardServers = dashboardServers
 
 	tiflashServers := make([]*spec.TiFlashSpec, 0)
 	for i, instance := range (&spec.TiFlashComponent{Topology: topo}).Instances() {

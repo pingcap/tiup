@@ -103,7 +103,7 @@ func (c *HTTPClient) Download(ctx context.Context, url, filePath string) error {
 		return fmt.Errorf("target file %s already exists", filePath)
 	}
 
-	if err := CreateDir(filepath.Dir(filePath)); err != nil {
+	if err := MkdirAll(filepath.Dir(filePath), 0755); err != nil {
 		return err
 	}
 

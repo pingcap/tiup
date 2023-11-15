@@ -28,12 +28,14 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/template/config"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/utils"
 	"gopkg.in/ini.v1"
 )
 
 // GrafanaSpec represents the Grafana topology specification in topology.yaml
 type GrafanaSpec struct {
 	Host            string               `yaml:"host"`
+	ManageHost      string               `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
 	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported        bool                 `yaml:"imported,omitempty"`
 	Patched         bool                 `yaml:"patched,omitempty"`
@@ -62,12 +64,24 @@ func (s *GrafanaSpec) Role() string {
 
 // SSH returns the host and SSH port of the instance
 func (s *GrafanaSpec) SSH() (string, int) {
-	return s.Host, s.SSHPort
+	host := s.Host
+	if s.ManageHost != "" {
+		host = s.ManageHost
+	}
+	return host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
 func (s *GrafanaSpec) GetMainPort() int {
 	return s.Port
+}
+
+// GetManageHost returns the manage host of the instance
+func (s *GrafanaSpec) GetManageHost() string {
+	if s.ManageHost != "" {
+		return s.ManageHost
+	}
+	return s.Host
 }
 
 // IsImported returns if the node is imported from TiDB-Ansible
@@ -93,6 +107,21 @@ func (c *GrafanaComponent) Role() string {
 	return RoleMonitor
 }
 
+// CalculateVersion implements the Component interface
+func (c *GrafanaComponent) CalculateVersion(clusterVersion string) string {
+	// always not follow cluster version, use ""(latest) by default
+	version := c.Topology.BaseTopo().GrafanaVersion
+	if version != nil && *version != "" {
+		return *version
+	}
+	return clusterVersion
+}
+
+// SetVersion implements Component interface.
+func (c *GrafanaComponent) SetVersion(version string) {
+	*c.Topology.BaseTopo().GrafanaVersion = version
+}
+
 // Instances implements Component interface.
 func (c *GrafanaComponent) Instances() []Instance {
 	servers := c.BaseTopo().Grafanas
@@ -105,8 +134,12 @@ func (c *GrafanaComponent) Instances() []Instance {
 				InstanceSpec: s,
 				Name:         c.Name(),
 				Host:         s.Host,
+				ManageHost:   s.ManageHost,
+				ListenHost:   c.Topology.BaseTopo().GlobalOptions.ListenHost,
 				Port:         s.Port,
 				SSHP:         s.SSHPort,
+				NumaNode:     "",
+				NumaCores:    "",
 
 				Ports: []int{
 					s.Port,
@@ -115,11 +148,12 @@ func (c *GrafanaComponent) Instances() []Instance {
 					s.DeployDir,
 				},
 				StatusFn: func(_ context.Context, timeout time.Duration, _ *tls.Config, _ ...string) string {
-					return statusByHost(s.Host, s.Port, "", timeout, nil)
+					return statusByHost(s.GetManageHost(), s.Port, "/login", timeout, nil)
 				},
 				UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
-					return UptimeByHost(s.Host, s.Port, timeout, tlsCfg)
+					return UptimeByHost(s.GetManageHost(), s.Port, timeout, tlsCfg)
 				},
+				Component: c,
 			},
 			topo: c.Topology,
 		})
@@ -166,7 +200,7 @@ func (i *GrafanaInstance) InitConfig(
 
 	// transfer config
 	spec := i.InstanceSpec.(*GrafanaSpec)
-	fp = filepath.Join(paths.Cache, fmt.Sprintf("grafana_%s.ini", i.GetHost()))
+	fp = filepath.Join(paths.Cache, fmt.Sprintf("grafana_%s_%d.ini", i.GetHost(), i.GetPort()))
 	if err := config.NewGrafanaConfig(i.GetHost(), paths.Deploy).
 		WithPort(uint64(i.GetPort())).
 		WithUsername(spec.Username).
@@ -235,9 +269,11 @@ func (i *GrafanaInstance) InitConfig(
 		return errors.New("no prometheus found in topology")
 	}
 	fp = filepath.Join(paths.Cache, fmt.Sprintf("datasource_%s.yml", i.GetHost()))
-	if err := config.NewDatasourceConfig(clusterName, monitors[0].Host).
-		WithPort(uint64(monitors[0].Port)).
-		ConfigToFile(fp); err != nil {
+	datasourceCfg := &config.DatasourceConfig{
+		ClusterName: clusterName,
+		URL:         fmt.Sprintf("http://%s", utils.JoinHostPort(monitors[0].Host, monitors[0].Port)),
+	}
+	if err := datasourceCfg.ConfigToFile(fp); err != nil {
 		return err
 	}
 	dst = filepath.Join(paths.Deploy, "provisioning", "datasources", "datasource.yml")
@@ -302,7 +338,7 @@ func (i *GrafanaInstance) installDashboards(ctx context.Context, e ctxt.Executor
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}
 
-	srcPath := PackagePath(ComponentDMMaster, clusterVersion, i.OS(), i.Arch())
+	srcPath := PackagePath(GetDMMasterPackageName(i.topo), clusterVersion, i.OS(), i.Arch())
 	dstPath := filepath.Join(tmp, filepath.Base(srcPath))
 	err = e.Transfer(ctx, srcPath, dstPath, false, 0, false)
 	if err != nil {

@@ -15,6 +15,7 @@ package command
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -36,7 +37,7 @@ func newMetaCmd() *cobra.Command {
 				return fmt.Errorf("please input cluster-name")
 			}
 			if filePath == "" {
-				filePath = "tiup-cluster_" + args[0] + "_metabackup_" + time.Now().Format(time.RFC3339) + ".tar.gz"
+				filePath = "tiup-cluster_" + args[0] + "_metabackup_" + strings.ReplaceAll(time.Now().Format(time.RFC3339), ":", "-") + ".tar.gz"
 			}
 			err := cm.BackupClusterMeta(args[0], filePath)
 			if err == nil {

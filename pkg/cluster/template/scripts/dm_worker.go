@@ -15,83 +15,46 @@ package scripts
 
 import (
 	"bytes"
-	"os"
 	"path"
 	"text/template"
 
 	"github.com/pingcap/tiup/embed"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // DMWorkerScript represent the data to generate TiDB config
 type DMWorkerScript struct {
-	Name      string
-	IP        string
-	Port      int
+	Name          string
+	WorkerAddr    string
+	AdvertiseAddr string
+	Join          string
+
 	DeployDir string
 	LogDir    string
-	NumaNode  string
+
+	NumaNode string
+
 	Endpoints []*DMMasterScript
-}
-
-// NewDMWorkerScript returns a DMWorkerScript with given arguments
-func NewDMWorkerScript(name, ip, deployDir, logDir string) *DMWorkerScript {
-	return &DMWorkerScript{
-		Name:      name,
-		IP:        ip,
-		Port:      8262,
-		DeployDir: deployDir,
-		LogDir:    logDir,
-	}
-}
-
-// WithPort set Port field of DMWorkerScript
-func (c *DMWorkerScript) WithPort(port int) *DMWorkerScript {
-	c.Port = port
-	return c
-}
-
-// WithNumaNode set NumaNode field of DMWorkerScript
-func (c *DMWorkerScript) WithNumaNode(numa string) *DMWorkerScript {
-	c.NumaNode = numa
-	return c
-}
-
-// AppendEndpoints add new PDScript to Endpoints field
-func (c *DMWorkerScript) AppendEndpoints(ends ...*DMMasterScript) *DMWorkerScript {
-	c.Endpoints = append(c.Endpoints, ends...)
-	return c
-}
-
-// Config generate the config file data.
-func (c *DMWorkerScript) Config() ([]byte, error) {
-	fp := path.Join("templates", "scripts", "run_dm-worker.sh.tpl")
-	tpl, err := embed.ReadTemplate(fp)
-	if err != nil {
-		return nil, err
-	}
-	return c.ConfigWithTemplate(string(tpl))
+	IP        string
+	Port      int
 }
 
 // ConfigToFile write config content to specific path
 func (c *DMWorkerScript) ConfigToFile(file string) error {
-	config, err := c.Config()
+	fp := path.Join("templates", "scripts", "run_dm-worker.sh.tpl")
+	tpl, err := embed.ReadTemplate(fp)
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(file, config, 0755)
-}
-
-// ConfigWithTemplate generate the DM worker config content by tpl
-func (c *DMWorkerScript) ConfigWithTemplate(tpl string) ([]byte, error) {
-	tmpl, err := template.New("dm-worker").Parse(tpl)
+	tmpl, err := template.New("dm-worker").Parse(string(tpl))
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	content := bytes.NewBufferString("")
 	if err := tmpl.Execute(content, c); err != nil {
-		return nil, err
+		return err
 	}
 
-	return content.Bytes(), nil
+	return utils.WriteFile(file, content.Bytes(), 0755)
 }

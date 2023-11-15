@@ -33,6 +33,7 @@ import (
 // PDSpec represents the PD topology specification in topology.yaml
 type PDSpec struct {
 	Host                string `yaml:"host"`
+	ManageHost          string `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
 	ListenHost          string `yaml:"listen_host,omitempty"`
 	AdvertiseClientAddr string `yaml:"advertise_client_addr,omitempty"`
 	AdvertisePeerAddr   string `yaml:"advertise_peer_addr,omitempty"`
@@ -47,6 +48,7 @@ type PDSpec struct {
 	DeployDir       string               `yaml:"deploy_dir,omitempty"`
 	DataDir         string               `yaml:"data_dir,omitempty"`
 	LogDir          string               `yaml:"log_dir,omitempty"`
+	Source          string               `yaml:"source,omitempty" validate:"source:editable"`
 	NumaNode        string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
 	Config          map[string]any       `yaml:"config,omitempty" validate:"config:ignore"`
 	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
@@ -60,7 +62,7 @@ func (s *PDSpec) Status(ctx context.Context, timeout time.Duration, tlsCfg *tls.
 		timeout = statusQueryTimeout
 	}
 
-	addr := utils.JoinHostPort(s.Host, s.ClientPort)
+	addr := utils.JoinHostPort(s.GetManageHost(), s.ClientPort)
 	pc := api.NewPDClient(ctx, []string{addr}, timeout, tlsCfg)
 
 	// check health
@@ -88,12 +90,24 @@ func (s *PDSpec) Role() string {
 
 // SSH returns the host and SSH port of the instance
 func (s *PDSpec) SSH() (string, int) {
-	return s.Host, s.SSHPort
+	host := s.Host
+	if s.ManageHost != "" {
+		host = s.ManageHost
+	}
+	return host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
 func (s *PDSpec) GetMainPort() int {
 	return s.ClientPort
+}
+
+// GetManageHost returns the manage host of the instance
+func (s *PDSpec) GetManageHost() string {
+	if s.ManageHost != "" {
+		return s.ManageHost
+	}
+	return s.Host
 }
 
 // IsImported returns if the node is imported from TiDB-Ansible
@@ -124,6 +138,14 @@ func (s *PDSpec) GetAdvertisePeerURL(enableTLS bool) string {
 	return fmt.Sprintf("%s://%s", scheme, utils.JoinHostPort(s.Host, s.PeerPort))
 }
 
+// GetSource returns source to download the component
+func (s *PDSpec) GetSource() string {
+	if s.Source == "" {
+		return ComponentPD
+	}
+	return s.Source
+}
+
 // PDComponent represents PD component.
 type PDComponent struct{ Topology *Specification }
 
@@ -137,6 +159,20 @@ func (c *PDComponent) Role() string {
 	return ComponentPD
 }
 
+// CalculateVersion implements the Component interface
+func (c *PDComponent) CalculateVersion(clusterVersion string) string {
+	version := c.Topology.ComponentVersions.PD
+	if version == "" {
+		version = clusterVersion
+	}
+	return version
+}
+
+// SetVersion implements Component interface.
+func (c *PDComponent) SetVersion(version string) {
+	c.Topology.ComponentVersions.PD = version
+}
+
 // Instances implements Component interface.
 func (c *PDComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.PDServers))
@@ -148,9 +184,13 @@ func (c *PDComponent) Instances() []Instance {
 				InstanceSpec: s,
 				Name:         c.Name(),
 				Host:         s.Host,
-				ListenHost:   s.ListenHost,
+				ManageHost:   s.ManageHost,
+				ListenHost:   utils.Ternary(s.ListenHost != "", s.ListenHost, c.Topology.BaseTopo().GlobalOptions.ListenHost).(string),
 				Port:         s.ClientPort,
 				SSHP:         s.SSHPort,
+				Source:       s.GetSource(),
+				NumaNode:     s.NumaNode,
+				NumaCores:    "",
 
 				Ports: []int{
 					s.ClientPort,
@@ -162,8 +202,9 @@ func (c *PDComponent) Instances() []Instance {
 				},
 				StatusFn: s.Status,
 				UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
-					return UptimeByHost(s.Host, s.ClientPort, timeout, tlsCfg)
+					return UptimeByHost(s.GetManageHost(), s.ClientPort, timeout, tlsCfg)
 				},
+				Component: c,
 			},
 			topo: c.Topology,
 		})
@@ -195,6 +236,7 @@ func (i *PDInstance) InitConfig(
 	enableTLS := topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(*PDSpec)
 	scheme := utils.Ternary(enableTLS, "https", "http").(string)
+	version := i.CalculateVersion(clusterVersion)
 
 	initialCluster := []string{}
 	for _, pdspec := range topo.PDServers {
@@ -259,7 +301,7 @@ func (i *PDInstance) InitConfig(
 		return err
 	}
 
-	return checkConfig(ctx, e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths, nil)
+	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), version, i.OS(), i.Arch(), i.ComponentName()+".toml", paths)
 }
 
 // setTLSConfig set TLS Config to support enable/disable TLS
@@ -366,7 +408,7 @@ func (i *PDInstance) IsLeader(ctx context.Context, topo Topology, apiTimeoutSeco
 	if !ok {
 		panic("topo should be type of tidb topology")
 	}
-	pdClient := api.NewPDClient(ctx, tidbTopo.GetPDList(), time.Second*5, tlsCfg)
+	pdClient := api.NewPDClient(ctx, tidbTopo.GetPDListWithManageHost(), time.Second*5, tlsCfg)
 
 	return i.checkLeader(pdClient)
 }
@@ -391,7 +433,7 @@ func (i *PDInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutSe
 	if !ok {
 		panic("topo should be type of tidb topology")
 	}
-	pdClient := api.NewPDClient(ctx, tidbTopo.GetPDList(), time.Second*5, tlsCfg)
+	pdClient := api.NewPDClient(ctx, tidbTopo.GetPDListWithManageHost(), time.Second*5, tlsCfg)
 
 	isLeader, err := i.checkLeader(pdClient)
 	if err != nil {
@@ -416,7 +458,7 @@ func (i *PDInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tls
 		Delay:    time.Second,
 		Timeout:  120 * time.Second,
 	}
-	currentPDAddrs := []string{utils.JoinHostPort(i.Host, i.Port)}
+	currentPDAddrs := []string{utils.JoinHostPort(i.GetManageHost(), i.Port)}
 	pdClient := api.NewPDClient(ctx, currentPDAddrs, 5*time.Second, tlsCfg)
 
 	if err := utils.Retry(pdClient.CheckHealth, timeoutOpt); err != nil {

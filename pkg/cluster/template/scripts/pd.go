@@ -16,11 +16,11 @@ package scripts
 import (
 	"bytes"
 	"errors"
-	"os"
 	"path"
 	"text/template"
 
 	"github.com/pingcap/tiup/embed"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // PDScript represent the data to generate pd config
@@ -30,18 +30,13 @@ type PDScript struct {
 	AdvertiseClientURL string
 	PeerURL            string
 	AdvertisePeerURL   string
-	DeployDir          string
-	DataDir            string
-	LogDir             string
 	InitialCluster     string
 
-	IP         string
-	ListenHost string
-	ClientPort int
-	PeerPort   int
-	TLSEnabled bool
-	NumaNode   string
-	Endpoints  []*PDScript
+	DeployDir string
+	DataDir   string
+	LogDir    string
+
+	NumaNode string
 }
 
 // ConfigToFile write config content to specific path
@@ -66,7 +61,7 @@ func (c *PDScript) ConfigToFile(file string) error {
 		return err
 	}
 
-	return os.WriteFile(file, content.Bytes(), 0755)
+	return utils.WriteFile(file, content.Bytes(), 0755)
 }
 
 // PDScaleScript represent the data to generate pd config on scaling
@@ -77,7 +72,7 @@ type PDScaleScript struct {
 
 // NewPDScaleScript return a new PDScaleScript
 func NewPDScaleScript(pdScript *PDScript, join string) *PDScaleScript {
-	return &PDScaleScript{PDScript:*pdScript, Join: join}
+	return &PDScaleScript{PDScript: *pdScript, Join: join}
 }
 
 // ConfigToFile write config content to specific path
@@ -102,5 +97,5 @@ func (c *PDScaleScript) ConfigToFile(file string) error {
 		return err
 	}
 
-	return os.WriteFile(file, content.Bytes(), 0755)
+	return utils.WriteFile(file, content.Bytes(), 0755)
 }

@@ -6,6 +6,7 @@ on:
     branches:
       - ci/gh-*
       - release-*
+      - master
     paths-ignore:
       - '**.html'
       - '**.md'
@@ -24,7 +25,7 @@ on:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     timeout-minutes: 30
     outputs:
       REL_VER: ${{ steps.build_tiup.outputs.REL_VER }}
@@ -40,10 +41,10 @@ jobs:
     env:
       working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
     steps:
-      - name: Set up Go 1.19
-        uses: actions/setup-go@v2
+      - name: Set up Go 1.21
+        uses: actions/setup-go@v4
         with:
-          go-version: 1.19.x
+          go-version: 1.21.x
         id: go
 
       - name: Check out code into the Go module directory
@@ -58,7 +59,7 @@ jobs:
         working-directory: ${{ env.working-directory }}
         if: github.event_name != 'release'
         run: |
-          STAGING_VER=`git describe --tags | sed -r "s/([^-]*-g)/r\1/"`
+          STAGING_VER=`git describe --tags | sed 's/-[^-]*$//' | sed -r 's/(-[^-]*$)/-nightly\1/'`
           echo ::set-output name=STAGING::$STAGING_VER
 
       - name: Get git ref and commit
@@ -90,7 +91,7 @@ jobs:
 
           if [ ! -z ${{ steps.check_staging.outputs.STAGING }} ]; then
             export EXTRA_LDFLAGS="-X \"github.com/${{ github.repository }}/pkg/version.TiUPVerName=${{ steps.check_staging.outputs.STAGING }}\""
-            export REL_VER=${{ steps.check_staging.outputs.STAGING }}+staging
+            export REL_VER=${{ steps.check_staging.outputs.STAGING }}
           else
             export REL_VER=`git describe --tags --always`
           fi
@@ -147,7 +148,7 @@ jobs:
       - name: Publish packages
         working-directory: ${{ env.working-directory }}
         env:
-          TIUP_MIRRORS: ${{ secrets.TIUP_SERVER_STAGING }}
+          TIUP_MIRRORS: ${{ secrets.TIUP_SERVER_PROD }}
           TIUP_HOME: ${{ steps.packaging.outputs.TIUP_HOME }}
           TIUP_BIN: ${{ steps.packaging.outputs.TIUP_BIN }}
           REL_VER: ${{ steps.build_tiup.outputs.REL_VER }}
@@ -159,19 +160,9 @@ jobs:
           client_desc: "Client to connect playground"
           server_desc: "TiUP publish/cache server"
         run: |
-          if [ ! -z ${{ steps.check_staging.outputs.STAGING }} ]; then
-            TIUP_MIRRORS=${{ secrets.TIUP_SERVER_STAGING }}
-          else
-            TIUP_MIRRORS=${{ secrets.TIUP_SERVER_PROD }}
-          fi
           ${TIUP_BIN} mirror set ${TIUP_MIRRORS}
 
           echo ${{ secrets.TIUP_COMP_KEY_PINGCAP }} | base64 -d > $TIUP_HOME/keys/private.json
-
-          # build the latest tiup to use for publish, this is a workaround and should
-          # be removed after this PR is merged and released
-          GOOS=linux GOARCH=amd64 make tiup
-          cp bin/tiup ${TIUP_BIN}
 
           # add a random delay before actually publishing, this can help reduce manifest conflict
           # when there are multiple jobs running in parallel

@@ -34,6 +34,7 @@ import (
 // CDCSpec represents the CDC topology specification in topology.yaml
 type CDCSpec struct {
 	Host            string               `yaml:"host"`
+	ManageHost      string               `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
 	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported        bool                 `yaml:"imported,omitempty"`
 	Patched         bool                 `yaml:"patched,omitempty"`
@@ -46,6 +47,7 @@ type CDCSpec struct {
 	GCTTL           int64                `yaml:"gc-ttl,omitempty" validate:"gc-ttl:editable"`
 	TZ              string               `yaml:"tz,omitempty" validate:"tz:editable"`
 	TiCDCClusterID  string               `yaml:"ticdc_cluster_id"`
+	Source          string               `yaml:"source,omitempty" validate:"source:editable"`
 	NumaNode        string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
 	Config          map[string]any       `yaml:"config,omitempty" validate:"config:ignore"`
 	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
@@ -60,12 +62,24 @@ func (s *CDCSpec) Role() string {
 
 // SSH returns the host and SSH port of the instance
 func (s *CDCSpec) SSH() (string, int) {
-	return s.Host, s.SSHPort
+	host := s.Host
+	if s.ManageHost != "" {
+		host = s.ManageHost
+	}
+	return host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
 func (s *CDCSpec) GetMainPort() int {
 	return s.Port
+}
+
+// GetManageHost returns the manage host of the instance
+func (s *CDCSpec) GetManageHost() string {
+	if s.ManageHost != "" {
+		return s.ManageHost
+	}
+	return s.Host
 }
 
 // IsImported returns if the node is imported from TiDB-Ansible
@@ -76,6 +90,14 @@ func (s *CDCSpec) IsImported() bool {
 // IgnoreMonitorAgent returns if the node does not have monitor agents available
 func (s *CDCSpec) IgnoreMonitorAgent() bool {
 	return s.IgnoreExporter
+}
+
+// GetSource returns source to download the component
+func (s *CDCSpec) GetSource() string {
+	if s.Source == "" {
+		return ComponentCDC
+	}
+	return s.Source
 }
 
 // CDCComponent represents CDC component.
@@ -91,6 +113,20 @@ func (c *CDCComponent) Role() string {
 	return ComponentCDC
 }
 
+// CalculateVersion implements the Component interface
+func (c *CDCComponent) CalculateVersion(clusterVersion string) string {
+	version := c.Topology.ComponentVersions.CDC
+	if version == "" {
+		version = clusterVersion
+	}
+	return version
+}
+
+// SetVersion implements Component interface.
+func (c *CDCComponent) SetVersion(version string) {
+	c.Topology.ComponentVersions.CDC = version
+}
+
 // Instances implements Component interface.
 func (c *CDCComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.CDCServers))
@@ -100,8 +136,13 @@ func (c *CDCComponent) Instances() []Instance {
 			InstanceSpec: s,
 			Name:         c.Name(),
 			Host:         s.Host,
+			ManageHost:   s.ManageHost,
+			ListenHost:   c.Topology.BaseTopo().GlobalOptions.ListenHost,
 			Port:         s.Port,
 			SSHP:         s.SSHPort,
+			Source:       s.GetSource(),
+			NumaNode:     s.NumaNode,
+			NumaCores:    "",
 
 			Ports: []int{
 				s.Port,
@@ -110,11 +151,12 @@ func (c *CDCComponent) Instances() []Instance {
 				s.DeployDir,
 			},
 			StatusFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config, _ ...string) string {
-				return statusByHost(s.Host, s.Port, "/status", timeout, tlsCfg)
+				return statusByHost(s.GetManageHost(), s.Port, "/status", timeout, tlsCfg)
 			},
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
-				return UptimeByHost(s.Host, s.Port, timeout, tlsCfg)
+				return UptimeByHost(s.GetManageHost(), s.Port, timeout, tlsCfg)
 			},
+			Component: c,
 		}, c.Topology}
 		if s.DataDir != "" {
 			instance.Dirs = append(instance.Dirs, s.DataDir)
@@ -167,14 +209,15 @@ func (i *CDCInstance) InitConfig(
 	spec := i.InstanceSpec.(*CDCSpec)
 	globalConfig := topo.ServerConfigs.CDC
 	instanceConfig := spec.Config
+	version := i.CalculateVersion(clusterVersion)
 
-	if !tidbver.TiCDCSupportConfigFile(clusterVersion) {
+	if !tidbver.TiCDCSupportConfigFile(version) {
 		if len(globalConfig)+len(instanceConfig) > 0 {
 			return errors.New("server_config is only supported with TiCDC version v4.0.13 or later")
 		}
 	}
 
-	if !tidbver.TiCDCSupportClusterID(clusterVersion) && spec.TiCDCClusterID != "" {
+	if !tidbver.TiCDCSupportClusterID(version) && spec.TiCDCClusterID != "" {
 		return errors.New("ticdc_cluster_id is only supported with TiCDC version v6.2.0 or later")
 	}
 
@@ -184,18 +227,18 @@ func (i *CDCInstance) InitConfig(
 	}
 	cfg := &scripts.CDCScript{
 		Addr:              utils.JoinHostPort(i.GetListenHost(), spec.Port),
-		AdvertiseAddr:     i.GetAddr(),
+		AdvertiseAddr:     utils.JoinHostPort(i.GetHost(), i.GetPort()),
 		PD:                strings.Join(pds, ","),
 		GCTTL:             spec.GCTTL,
 		TZ:                spec.TZ,
 		ClusterID:         spec.TiCDCClusterID,
-		DataDirEnabled:    tidbver.TiCDCSupportDataDir(clusterVersion),
-		ConfigFileEnabled: tidbver.TiCDCSupportConfigFile(clusterVersion),
+		DataDirEnabled:    tidbver.TiCDCSupportDataDir(version),
+		ConfigFileEnabled: tidbver.TiCDCSupportConfigFile(version),
 		TLSEnabled:        enableTLS,
 
 		DeployDir: paths.Deploy,
 		LogDir:    paths.Log,
-		DataDir:   utils.Ternary(tidbver.TiCDCSupportSortOrDataDir(clusterVersion), spec.DataDir, "").(string),
+		DataDir:   utils.Ternary(tidbver.TiCDCSupportSortOrDataDir(version), spec.DataDir, "").(string),
 
 		NumaNode: spec.NumaNode,
 	}
@@ -255,7 +298,7 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 	}
 
 	start := time.Now()
-	client := api.NewCDCOpenAPIClient(ctx, topo.(*Specification).GetCDCList(), 5*time.Second, tlsCfg)
+	client := api.NewCDCOpenAPIClient(ctx, topo.(*Specification).GetCDCListWithManageHost(), 5*time.Second, tlsCfg)
 	if err := client.Healthy(); err != nil {
 		logger.Debugf("cdc pre-restart skipped, the cluster unhealthy, trigger hard restart, "+
 			"addr: %s, err: %+v, elapsed: %+v", address, err, time.Since(start))
@@ -322,7 +365,7 @@ func (i *CDCInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tl
 	start := time.Now()
 	address := i.GetAddr()
 
-	client := api.NewCDCOpenAPIClient(ctx, []string{address}, 5*time.Second, tlsCfg)
+	client := api.NewCDCOpenAPIClient(ctx, []string{utils.JoinHostPort(i.GetManageHost(), i.GetPort())}, 5*time.Second, tlsCfg)
 	err := client.IsCaptureAlive()
 	if err != nil {
 		logger.Debugf("cdc post-restart finished, get capture status failed, addr: %s, err: %+v, elapsed: %+v", address, err, time.Since(start))

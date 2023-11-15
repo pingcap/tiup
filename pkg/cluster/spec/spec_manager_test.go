@@ -97,7 +97,7 @@ func (t *TestTopology) ComponentsByStopOrder() []Component {
 	return nil
 }
 
-func (t *TestTopology) ComponentsByUpdateOrder() []Component {
+func (t *TestTopology) ComponentsByUpdateOrder(curVer string) []Component {
 	return nil
 }
 

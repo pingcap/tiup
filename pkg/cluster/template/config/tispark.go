@@ -15,11 +15,11 @@ package config
 
 import (
 	"bytes"
-	"os"
 	"path/filepath"
 	"text/template"
 
 	"github.com/pingcap/tiup/embed"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // TiSparkConfig represent the data to generate TiSpark configs
@@ -62,7 +62,7 @@ func (c *TiSparkConfig) ConfigToFile(file string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(file, config, 0755)
+	return utils.WriteFile(file, config, 0755)
 }
 
 // ConfigWithTemplate parses the template file
