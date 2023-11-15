@@ -129,6 +129,11 @@ func (c *TiProxyComponent) Role() string {
 	return ComponentTiProxy
 }
 
+// Source implements Component interface.
+func (c *TiProxyComponent) Source() string {
+	return ComponentTiProxy
+}
+
 // CalculateVersion implements the Component interface
 func (c *TiProxyComponent) CalculateVersion(clusterVersion string) string {
 	// always not follow global version, use ""(latest) by default
@@ -154,7 +159,6 @@ func (c *TiProxyComponent) Instances() []Instance {
 			ListenHost:   c.Topology.BaseTopo().GlobalOptions.ListenHost,
 			Port:         s.Port,
 			SSHP:         s.SSHPort,
-			Source:       ComponentTiProxy,
 			NumaNode:     s.NumaNode,
 			NumaCores:    "",
 			Ports: []int{

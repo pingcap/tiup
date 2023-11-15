@@ -141,11 +141,25 @@ type (
 		// BlackboxExporter string `yaml:"blackbox_exporter,omitempty"`
 	}
 
+	// ComponentSources represents the source of components
+	ComponentSources struct {
+		TiDB      string `yaml:"tidb,omitempty" validate:"tidb:editable"`
+		TiKV      string `yaml:"tikv,omitempty" validate:"tikv:editable"`
+		TiFlash   string `yaml:"tiflash,omitempty" validate:"tiflash:editable"`
+		PD        string `yaml:"pd,omitempty" validate:"pd:editable"`
+		Dashboard string `yaml:"tidb_dashboard,omitempty" validate:"tidb_dashboard:editable"`
+		Pump      string `yaml:"pump,omitempty" validate:"pump:editable"`
+		Drainer   string `yaml:"drainer,omitempty" validate:"drainer:editable"`
+		CDC       string `yaml:"cdc,omitempty" validate:"cdc:editable"`
+		TiKVCDC   string `yaml:"kvcdc,omitempty" validate:"kvcdc:editable"`
+	}
+
 	// Specification represents the specification of topology.yaml
 	Specification struct {
 		GlobalOptions     GlobalOptions        `yaml:"global,omitempty" validate:"global:editable"`
 		MonitoredOptions  MonitoredOptions     `yaml:"monitored,omitempty" validate:"monitored:editable"`
 		ComponentVersions ComponentVersions    `yaml:"component_versions,omitempty" validate:"component_versions:editable"`
+		ComponentSources  ComponentSources     `yaml:"component_sources,omitempty" validate:"component_versions:editable"`
 		ServerConfigs     ServerConfigs        `yaml:"server_configs,omitempty" validate:"server_configs:ignore"`
 		TiDBServers       []*TiDBSpec          `yaml:"tidb_servers"`
 		TiKVServers       []*TiKVSpec          `yaml:"tikv_servers"`
@@ -587,12 +601,13 @@ var (
 	monitorOptionTypeName     = reflect.TypeOf(MonitoredOptions{}).Name()
 	serverConfigsTypeName     = reflect.TypeOf(ServerConfigs{}).Name()
 	componentVersionsTypeName = reflect.TypeOf(ComponentVersions{}).Name()
+	componentSourcesTypeName  = reflect.TypeOf(ComponentSources{}).Name()
 )
 
 // Skip global/monitored options
 func isSkipField(field reflect.Value) bool {
 	tp := field.Type().Name()
-	return tp == globalOptionTypeName || tp == monitorOptionTypeName || tp == serverConfigsTypeName || tp == componentVersionsTypeName
+	return tp == globalOptionTypeName || tp == monitorOptionTypeName || tp == serverConfigsTypeName || tp == componentVersionsTypeName || tp == componentSourcesTypeName
 }
 
 func setDefaultDir(parent, role, port string, field reflect.Value) {
