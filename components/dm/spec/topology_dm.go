@@ -36,9 +36,10 @@ const (
 )
 
 var (
-	globalOptionTypeName  = reflect.TypeOf(GlobalOptions{}).Name()
-	monitorOptionTypeName = reflect.TypeOf(MonitoredOptions{}).Name()
-	serverConfigsTypeName = reflect.TypeOf(DMServerConfigs{}).Name()
+	globalOptionTypeName     = reflect.TypeOf(GlobalOptions{}).Name()
+	monitorOptionTypeName    = reflect.TypeOf(MonitoredOptions{}).Name()
+	serverConfigsTypeName    = reflect.TypeOf(DMServerConfigs{}).Name()
+	componentSourcesTypeName = reflect.TypeOf(ComponentSources{}).Name()
 )
 
 func setDefaultDir(parent, role, port string, field reflect.Value) {
@@ -69,7 +70,7 @@ func isSkipField(field reflect.Value) bool {
 		field = field.Elem()
 	}
 	tp := field.Type().Name()
-	return tp == globalOptionTypeName || tp == monitorOptionTypeName || tp == serverConfigsTypeName
+	return tp == globalOptionTypeName || tp == monitorOptionTypeName || tp == serverConfigsTypeName || tp == componentSourcesTypeName
 }
 
 type (
@@ -95,10 +96,17 @@ type (
 		Grafana map[string]string `yaml:"grafana"`
 	}
 
+	// ComponentSources represents the source of components
+	ComponentSources struct {
+		Master string `yaml:"master,omitempty"`
+		Worker string `yaml:"worker,omitempty"`
+	}
+
 	// Specification represents the specification of topology.yaml
 	Specification struct {
 		GlobalOptions    GlobalOptions            `yaml:"global,omitempty" validate:"global:editable"`
 		MonitoredOptions *MonitoredOptions        `yaml:"monitored,omitempty" validate:"monitored:editable"`
+		ComponentSources ComponentSources         `yaml:"component_sources,omitempty" validate:"component_sources:editable"`
 		ServerConfigs    DMServerConfigs          `yaml:"server_configs,omitempty" validate:"server_configs:ignore"`
 		Masters          []*MasterSpec            `yaml:"master_servers"`
 		Workers          []*WorkerSpec            `yaml:"worker_servers"`
@@ -203,14 +211,6 @@ func (s *MasterSpec) GetAdvertisePeerURL(enableTLS bool) string {
 	return fmt.Sprintf("%s://%s", scheme, utils.JoinHostPort(s.Host, s.PeerPort))
 }
 
-// GetSource returns source to download the component
-func (s *MasterSpec) GetSource() string {
-	if s.Source == "" {
-		return ComponentDMMaster
-	}
-	return s.Source
-}
-
 // WorkerSpec represents the Master topology specification in topology.yaml
 type WorkerSpec struct {
 	Host           string `yaml:"host"`
@@ -280,14 +280,6 @@ func (s *WorkerSpec) IsImported() bool {
 // IgnoreMonitorAgent returns if the node does not have monitor agents available
 func (s *WorkerSpec) IgnoreMonitorAgent() bool {
 	return s.IgnoreExporter
-}
-
-// GetSource returns source to download the component
-func (s *WorkerSpec) GetSource() string {
-	if s.Source == "" {
-		return ComponentDMWorker
-	}
-	return s.Source
 }
 
 // UnmarshalYAML sets default values when unmarshaling the topology file

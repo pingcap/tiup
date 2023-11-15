@@ -141,6 +141,11 @@ func (c *TiSparkMasterComponent) Role() string {
 	return RoleTiSparkMaster
 }
 
+// Source implements Component interface.
+func (c *TiSparkMasterComponent) Source() string {
+	return ComponentTiSpark
+}
+
 // CalculateVersion implements the Component interface
 func (c *TiSparkMasterComponent) CalculateVersion(clusterVersion string) string {
 	return ""
@@ -332,6 +337,11 @@ func (c *TiSparkWorkerComponent) Name() string {
 // Role implements Component interface.
 func (c *TiSparkWorkerComponent) Role() string {
 	return RoleTiSparkWorker
+}
+
+// Source implements Component interface.
+func (c *TiSparkWorkerComponent) Source() string {
+	return ComponentTiSpark
 }
 
 // CalculateVersion implements the Component interface

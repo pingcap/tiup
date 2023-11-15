@@ -162,14 +162,6 @@ func (s *TiFlashSpec) IgnoreMonitorAgent() bool {
 	return s.IgnoreExporter
 }
 
-// GetSource returns source to download the component
-func (s *TiFlashSpec) GetSource() string {
-	if s.Source == "" {
-		return ComponentTiFlash
-	}
-	return s.Source
-}
-
 // key names for storage config
 const (
 	TiFlashStorageKeyMainDirs   string = "storage.main.dir"
@@ -282,6 +274,15 @@ func (c *TiFlashComponent) Role() string {
 	return ComponentTiFlash
 }
 
+// Source implements Component interface.
+func (c *TiFlashComponent) Source() string {
+	source := c.Topology.ComponentSources.TiFlash
+	if source != "" {
+		return source
+	}
+	return ComponentTiFlash
+}
+
 // CalculateVersion implements the Component interface
 func (c *TiFlashComponent) CalculateVersion(clusterVersion string) string {
 	version := c.Topology.ComponentVersions.TiFlash
@@ -308,7 +309,7 @@ func (c *TiFlashComponent) Instances() []Instance {
 			ListenHost:   c.Topology.BaseTopo().GlobalOptions.ListenHost,
 			Port:         s.GetMainPort(),
 			SSHP:         s.SSHPort,
-			Source:       s.GetSource(),
+			Source:       s.Source,
 			NumaNode:     s.NumaNode,
 			NumaCores:    s.NumaCores,
 

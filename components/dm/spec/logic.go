@@ -68,6 +68,15 @@ func (c *DMMasterComponent) Role() string {
 	return ComponentDMMaster
 }
 
+// Source implements Component interface.
+func (c *DMMasterComponent) Source() string {
+	source := c.Topology.ComponentSources.Master
+	if source != "" {
+		return source
+	}
+	return ComponentDMMaster
+}
+
 // CalculateVersion implements the Component interface
 func (c *DMMasterComponent) CalculateVersion(clusterVersion string) string {
 	return clusterVersion
@@ -93,7 +102,7 @@ func (c *DMMasterComponent) Instances() []Instance {
 				ListenHost:   c.Topology.BaseTopo().GlobalOptions.ListenHost,
 				Port:         s.Port,
 				SSHP:         s.SSHPort,
-				Source:       s.GetSource(),
+				Source:       s.Source,
 
 				Ports: []int{
 					s.Port,
@@ -283,6 +292,15 @@ func (c *DMWorkerComponent) Role() string {
 	return ComponentDMWorker
 }
 
+// Source implements Component interface.
+func (c *DMWorkerComponent) Source() string {
+	source := c.Topology.ComponentSources.Worker
+	if source != "" {
+		return source
+	}
+	return ComponentDMWorker
+}
+
 // CalculateVersion implements the Component interface
 func (c *DMWorkerComponent) CalculateVersion(clusterVersion string) string {
 	return clusterVersion
@@ -308,7 +326,7 @@ func (c *DMWorkerComponent) Instances() []Instance {
 				ListenHost:   c.Topology.BaseTopo().GlobalOptions.ListenHost,
 				Port:         s.Port,
 				SSHP:         s.SSHPort,
-				Source:       s.GetSource(),
+				Source:       s.Source,
 
 				Ports: []int{
 					s.Port,
