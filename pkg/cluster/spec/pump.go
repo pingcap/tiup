@@ -112,14 +112,6 @@ func (s *PumpSpec) IgnoreMonitorAgent() bool {
 	return s.IgnoreExporter
 }
 
-// GetSource returns source to download the component
-func (s *PumpSpec) GetSource() string {
-	if s.Source == "" {
-		return ComponentPump
-	}
-	return s.Source
-}
-
 // PumpComponent represents Pump component.
 type PumpComponent struct{ Topology *Specification }
 
@@ -130,6 +122,15 @@ func (c *PumpComponent) Name() string {
 
 // Role implements Component interface.
 func (c *PumpComponent) Role() string {
+	return ComponentPump
+}
+
+// Source implements Component interface.
+func (c *PumpComponent) Source() string {
+	source := c.Topology.ComponentSources.Pump
+	if source != "" {
+		return source
+	}
 	return ComponentPump
 }
 
@@ -160,7 +161,7 @@ func (c *PumpComponent) Instances() []Instance {
 			ListenHost:   c.Topology.BaseTopo().GlobalOptions.ListenHost,
 			Port:         s.Port,
 			SSHP:         s.SSHPort,
-			Source:       s.GetSource(),
+			Source:       s.Source,
 			NumaNode:     s.NumaNode,
 			NumaCores:    "",
 

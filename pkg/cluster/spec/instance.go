@@ -70,6 +70,7 @@ var (
 type Component interface {
 	Name() string
 	Role() string
+	Source() string
 	Instances() []Instance
 	CalculateVersion(string) string
 	SetVersion(string)
@@ -316,10 +317,12 @@ func (i *BaseInstance) ComponentName() string {
 
 // ComponentSource implements Instance interface
 func (i *BaseInstance) ComponentSource() string {
-	if i.Source == "" {
-		return i.Name
+	if i.Source != "" {
+		return i.Source
+	} else if i.Component.Source() != "" {
+		return i.Component.Source()
 	}
-	return i.Source
+	return i.ComponentName()
 }
 
 // InstanceName implements Instance interface
