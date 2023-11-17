@@ -159,7 +159,7 @@ type (
 		GlobalOptions     GlobalOptions        `yaml:"global,omitempty" validate:"global:editable"`
 		MonitoredOptions  MonitoredOptions     `yaml:"monitored,omitempty" validate:"monitored:editable"`
 		ComponentVersions ComponentVersions    `yaml:"component_versions,omitempty" validate:"component_versions:editable"`
-		ComponentSources  ComponentSources     `yaml:"component_sources,omitempty" validate:"component_versions:editable"`
+		ComponentSources  ComponentSources     `yaml:"component_sources,omitempty" validate:"component_sources:editable"`
 		ServerConfigs     ServerConfigs        `yaml:"server_configs,omitempty" validate:"server_configs:ignore"`
 		TiDBServers       []*TiDBSpec          `yaml:"tidb_servers"`
 		TiKVServers       []*TiKVSpec          `yaml:"tikv_servers"`

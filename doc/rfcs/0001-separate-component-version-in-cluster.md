@@ -12,15 +12,26 @@ Add a version field to each component on topology file. Allow user to upgrade si
 
 ## Detailed design
 
-1. add "latest" alias to tiup download function.It cloud be used to download latest release package of component.
+1. ~~add "latest" alias to tiup download function.It cloud be used to download latest release package of component.~~ just use "" as latest alias
 
-2. add version field to DashboardSpec struct.
+2. add ComponentVersions struct to topology
 
 ```
-type DashboardSpec struct {
-	...
-	Version    string    `yaml:"version,omitempty" default:"latest"`
-	...
+// ComponentVersions represents the versions of components
+ComponentVersions struct {
+	TiDB         string `yaml:"tidb,omitempty"`
+	TiKV         string `yaml:"tikv,omitempty"`
+	TiFlash      string `yaml:"tiflash,omitempty"`
+	PD           string `yaml:"pd,omitempty"`
+	Dashboard    string `yaml:"tidb_dashboard,omitempty"`
+	Pump         string `yaml:"pump,omitempty"`
+	Drainer      string `yaml:"drainer,omitempty"`
+	CDC          string `yaml:"cdc,omitempty"`
+	TiKVCDC      string `yaml:"kvcdc,omitempty"`
+	TiProxy      string `yaml:"tiproxy,omitempty"`
+	Prometheus   string `yaml:"prometheus,omitempty"`
+	Grafana      string `yaml:"grafana,omitempty"`
+	AlertManager string `yaml:"alertmanager,omitempty"`
 }
 ```
 
@@ -35,10 +46,10 @@ MonitoredOptions struct {
 	}
 ```
 
-4. if user not specify version, those version has default value latest which means use newest stable version in tiup repo.
+4. Add CalculateVersion for each component struct. It returns cluster version if component version is not set for components like pd, tikv. It returns "" by default for components like alertmanager
 
-5. maybe add version field to all other component, deafult value is empty which means use global cluster version
+5. Add flags to specify component versions
 
-6. apply those version to deploy,scale-out and upgrade command
+6. Merge ComponentVersion struct when scale-out
 
-7. how user upgrade single exist component? add a new subcommand or just edit-config and reload? I don't know yet
+7. apply those version to deploy,scale-out and upgrade command
