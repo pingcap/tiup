@@ -17,7 +17,6 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -31,12 +30,14 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	system "github.com/pingcap/tiup/pkg/cluster/template/systemd"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/utils"
 	"go.uber.org/zap"
 )
 
 // TiSparkMasterSpec is the topology specification for TiSpark master node
 type TiSparkMasterSpec struct {
 	Host           string            `yaml:"host"`
+	ManageHost     string            `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
 	ListenHost     string            `yaml:"listen_host,omitempty"`
 	SSHPort        int               `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported       bool              `yaml:"imported,omitempty"`
@@ -59,7 +60,11 @@ func (s *TiSparkMasterSpec) Role() string {
 
 // SSH returns the host and SSH port of the instance
 func (s *TiSparkMasterSpec) SSH() (string, int) {
-	return s.Host, s.SSHPort
+	host := s.Host
+	if s.ManageHost != "" {
+		host = s.ManageHost
+	}
+	return host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
@@ -80,6 +85,7 @@ func (s *TiSparkMasterSpec) IgnoreMonitorAgent() bool {
 // TiSparkWorkerSpec is the topology specification for TiSpark slave nodes
 type TiSparkWorkerSpec struct {
 	Host           string `yaml:"host"`
+	ManageHost     string `yaml:"manage_host,omitempty"`
 	ListenHost     string `yaml:"listen_host,omitempty"`
 	SSHPort        int    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported       bool   `yaml:"imported,omitempty"`
@@ -100,7 +106,11 @@ func (s *TiSparkWorkerSpec) Role() string {
 
 // SSH returns the host and SSH port of the instance
 func (s *TiSparkWorkerSpec) SSH() (string, int) {
-	return s.Host, s.SSHPort
+	host := s.Host
+	if s.ManageHost != "" {
+		host = s.ManageHost
+	}
+	return host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
@@ -131,6 +141,21 @@ func (c *TiSparkMasterComponent) Role() string {
 	return RoleTiSparkMaster
 }
 
+// Source implements Component interface.
+func (c *TiSparkMasterComponent) Source() string {
+	return ComponentTiSpark
+}
+
+// CalculateVersion implements the Component interface
+func (c *TiSparkMasterComponent) CalculateVersion(clusterVersion string) string {
+	return ""
+}
+
+// SetVersion implements Component interface.
+func (c *TiSparkMasterComponent) SetVersion(version string) {
+	// should never be calles
+}
+
 // Instances implements Component interface.
 func (c *TiSparkMasterComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.TiSparkMasters))
@@ -140,9 +165,12 @@ func (c *TiSparkMasterComponent) Instances() []Instance {
 			BaseInstance: BaseInstance{
 				InstanceSpec: s,
 				Name:         c.Name(),
+				ManageHost:   s.ManageHost,
 				Host:         s.Host,
 				Port:         s.Port,
 				SSHP:         s.SSHPort,
+				NumaNode:     "",
+				NumaCores:    "",
 
 				Ports: []int{
 					s.Port,
@@ -157,6 +185,7 @@ func (c *TiSparkMasterComponent) Instances() []Instance {
 				UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 					return 0
 				},
+				Component: c,
 			},
 			topo: c.Topology,
 		})
@@ -233,13 +262,10 @@ func (i *TiSparkMasterInstance) InitConfig(
 	}
 
 	// transfer default config
-	pdList := make([]string, 0)
-	for _, pd := range topo.Endpoints(deployUser) {
-		pdList = append(pdList, fmt.Sprintf("%s:%d", pd.IP, pd.ClientPort))
-	}
+	pdList := topo.GetPDList()
 	masterList := make([]string, 0)
 	for _, master := range topo.TiSparkMasters {
-		masterList = append(masterList, fmt.Sprintf("%s:%d", master.Host, master.Port))
+		masterList = append(masterList, utils.JoinHostPort(master.Host, master.Port))
 	}
 
 	cfg := config.NewTiSparkConfig(pdList).WithMasters(strings.Join(masterList, ",")).
@@ -276,7 +302,7 @@ func (i *TiSparkMasterInstance) InitConfig(
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(fp, log4jFile, 0644); err != nil {
+	if err := utils.WriteFile(fp, log4jFile, 0644); err != nil {
 		return err
 	}
 	dst = filepath.Join(paths.Deploy, "conf", "log4j.properties")
@@ -313,6 +339,21 @@ func (c *TiSparkWorkerComponent) Role() string {
 	return RoleTiSparkWorker
 }
 
+// Source implements Component interface.
+func (c *TiSparkWorkerComponent) Source() string {
+	return ComponentTiSpark
+}
+
+// CalculateVersion implements the Component interface
+func (c *TiSparkWorkerComponent) CalculateVersion(clusterVersion string) string {
+	return ""
+}
+
+// SetVersion implements Component interface.
+func (c *TiSparkWorkerComponent) SetVersion(version string) {
+	// should never be called
+}
+
 // Instances implements Component interface.
 func (c *TiSparkWorkerComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.TiSparkWorkers))
@@ -321,9 +362,12 @@ func (c *TiSparkWorkerComponent) Instances() []Instance {
 			BaseInstance: BaseInstance{
 				InstanceSpec: s,
 				Name:         c.Name(),
+				ManageHost:   s.ManageHost,
 				Host:         s.Host,
 				Port:         s.Port,
 				SSHP:         s.SSHPort,
+				NumaNode:     "",
+				NumaCores:    "",
 
 				Ports: []int{
 					s.Port,
@@ -338,6 +382,7 @@ func (c *TiSparkWorkerComponent) Instances() []Instance {
 				UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 					return 0
 				},
+				Component: c,
 			},
 			topo: c.Topology,
 		})
@@ -396,13 +441,10 @@ func (i *TiSparkWorkerInstance) InitConfig(
 	}
 
 	// transfer default config
-	pdList := make([]string, 0)
-	for _, pd := range topo.Endpoints(deployUser) {
-		pdList = append(pdList, fmt.Sprintf("%s:%d", pd.IP, pd.ClientPort))
-	}
+	pdList := topo.GetPDList()
 	masterList := make([]string, 0)
 	for _, master := range topo.TiSparkMasters {
-		masterList = append(masterList, fmt.Sprintf("%s:%d", master.Host, master.Port))
+		masterList = append(masterList, utils.JoinHostPort(master.Host, master.Port))
 	}
 
 	cfg := config.NewTiSparkConfig(pdList).WithMasters(strings.Join(masterList, ",")).
@@ -446,7 +488,7 @@ func (i *TiSparkWorkerInstance) InitConfig(
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(fp, slaveSh, 0755); err != nil {
+	if err := utils.WriteFile(fp, slaveSh, 0755); err != nil {
 		return err
 	}
 	dst = filepath.Join(paths.Deploy, "sbin", "start-slave.sh")
@@ -460,7 +502,7 @@ func (i *TiSparkWorkerInstance) InitConfig(
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(fp, log4jFile, 0644); err != nil {
+	if err := utils.WriteFile(fp, log4jFile, 0644); err != nil {
 		return err
 	}
 	dst = filepath.Join(paths.Deploy, "conf", "log4j.properties")

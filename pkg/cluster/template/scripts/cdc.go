@@ -15,132 +15,48 @@ package scripts
 
 import (
 	"bytes"
-	"os"
 	"path"
 	"text/template"
 
 	"github.com/pingcap/tiup/embed"
-	"github.com/pingcap/tiup/pkg/tidbver"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // CDCScript represent the data to generate cdc config
 type CDCScript struct {
-	IP                string
-	Port              int
-	DeployDir         string
-	LogDir            string
-	DataDir           string
-	NumaNode          string
+	Addr              string
+	AdvertiseAddr     string
+	PD                string
 	GCTTL             int64
 	TZ                string
 	ClusterID         string
-	TLSEnabled        bool
-	Endpoints         []*PDScript
-	ConfigFileEnabled bool
 	DataDirEnabled    bool
-}
+	ConfigFileEnabled bool
+	TLSEnabled        bool
 
-// NewCDCScript returns a CDCScript with given arguments
-func NewCDCScript(ip, deployDir, logDir string, enableTLS bool, gcTTL int64, tz string) *CDCScript {
-	return &CDCScript{
-		IP:         ip,
-		Port:       8300,
-		DeployDir:  deployDir,
-		LogDir:     logDir,
-		TLSEnabled: enableTLS,
-		GCTTL:      gcTTL,
-		TZ:         tz,
-	}
-}
+	DeployDir string
+	LogDir    string
+	DataDir   string
 
-// WithPort set Port field of TiCDCScript
-func (c *CDCScript) WithPort(port int) *CDCScript {
-	c.Port = port
-	return c
-}
-
-// WithNumaNode set NumaNode field of TiCDCScript
-func (c *CDCScript) WithNumaNode(numa string) *CDCScript {
-	c.NumaNode = numa
-	return c
-}
-
-// WithConfigFileEnabled enables config file
-func (c *CDCScript) WithConfigFileEnabled() *CDCScript {
-	c.ConfigFileEnabled = true
-	return c
-}
-
-// WithDataDir set DataDir field of TiCDCScript
-func (c *CDCScript) WithDataDir(dataDir string) *CDCScript {
-	c.DataDir = dataDir
-	return c
-}
-
-// WithDataDirEnabled enables CDC data-dir
-func (c *CDCScript) WithDataDirEnabled() *CDCScript {
-	c.DataDirEnabled = true
-	return c
-}
-
-// WithCDCClusterID set CDC cluster-id
-func (c *CDCScript) WithCDCClusterID(clusterID string) *CDCScript {
-	c.ClusterID = clusterID
-	return c
-}
-
-// Config generate the config file data.
-func (c *CDCScript) Config() ([]byte, error) {
-	fp := path.Join("templates", "scripts", "run_cdc.sh.tpl")
-	tpl, err := embed.ReadTemplate(fp)
-	if err != nil {
-		return nil, err
-	}
-	return c.ConfigWithTemplate(string(tpl))
+	NumaNode string
 }
 
 // ConfigToFile write config content to specific file.
 func (c *CDCScript) ConfigToFile(file string) error {
-	config, err := c.Config()
+	fp := path.Join("templates", "scripts", "run_cdc.sh.tpl")
+	tpl, err := embed.ReadTemplate(fp)
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(file, config, 0755)
-}
-
-// ConfigWithTemplate generate the CDC config content by tpl
-func (c *CDCScript) ConfigWithTemplate(tpl string) ([]byte, error) {
-	tmpl, err := template.New("CDC").Parse(tpl)
+	tmpl, err := template.New("CDC").Parse(string(tpl))
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	content := bytes.NewBufferString("")
 	if err := tmpl.Execute(content, c); err != nil {
-		return nil, err
+		return err
 	}
 
-	return content.Bytes(), nil
-}
-
-// AppendEndpoints add new PDScript to Endpoints field
-func (c *CDCScript) AppendEndpoints(ends ...*PDScript) *CDCScript {
-	c.Endpoints = append(c.Endpoints, ends...)
-	return c
-}
-
-// PatchByVersion update fields by cluster version
-func (c *CDCScript) PatchByVersion(clusterVersion, dataDir string) *CDCScript {
-	// config support since v4.0.13, ignore v5.0.0-rc
-	// the same to data-dir, but we treat it as --sort-dir
-	if tidbver.TiCDCSupportConfigFile(clusterVersion) {
-		c = c.WithConfigFileEnabled().WithDataDir(dataDir)
-	}
-
-	// cdc support --data-dir since v4.0.14 and v5.0.3
-	if tidbver.TiCDCSupportDataDir(clusterVersion) {
-		c = c.WithDataDirEnabled()
-	}
-
-	return c
+	return utils.WriteFile(file, content.Bytes(), 0755)
 }

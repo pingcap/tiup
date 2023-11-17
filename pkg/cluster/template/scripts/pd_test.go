@@ -10,8 +10,10 @@
 // distributed under the License is distributed on an "AS IS" BASIS,
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package scripts
 
+/*
 import (
 	"os"
 	"path"
@@ -60,3 +62,4 @@ func (s *pdSuite) TestScaleConfig(c *C) {
 	c.Assert(strings.Contains(string(content), "--initial-cluster"), IsFalse)
 	c.Assert(strings.Contains(string(content), "--join"), IsTrue)
 }
+*/

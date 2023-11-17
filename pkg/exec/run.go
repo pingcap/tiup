@@ -124,12 +124,12 @@ func PrepareCommand(p *PrepareCommandParams) (*exec.Cmd, error) {
 	binPath := p.BinPath
 	installPath := filepath.Dir(binPath)
 
-	if err := os.MkdirAll(p.InstanceDir, 0755); err != nil {
+	if err := utils.MkdirAll(p.InstanceDir, 0755); err != nil {
 		return nil, err
 	}
 
 	sd := env.LocalPath(localdata.StorageParentDir, p.Component)
-	if err := os.MkdirAll(sd, 0755); err != nil {
+	if err := utils.MkdirAll(sd, 0755); err != nil {
 		return nil, err
 	}
 
@@ -176,7 +176,7 @@ func cmdCheckUpdate(component string, version utils.Version, timeoutSec int) {
 	// timeout for check update
 	go func() {
 		time.Sleep(time.Duration(timeoutSec) * time.Second)
-		updateC <- color.RedString("timeout!")
+		updateC <- color.YellowString("timeout(%ds)!", timeoutSec)
 	}()
 
 	go func() {

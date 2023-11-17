@@ -45,7 +45,6 @@ var (
 type Manager struct {
 	sysName     string
 	specManager *spec.SpecManager
-	bindVersion spec.BindVersion
 	logger      *logprinter.Logger
 }
 
@@ -53,13 +52,11 @@ type Manager struct {
 func NewManager(
 	sysName string,
 	specManager *spec.SpecManager,
-	bindVersion spec.BindVersion,
 	logger *logprinter.Logger,
 ) *Manager {
 	return &Manager{
 		sysName:     sysName,
 		specManager: specManager,
-		bindVersion: bindVersion,
 		logger:      logger,
 	}
 }
@@ -94,23 +91,39 @@ func (m *Manager) confirmTopology(name, version string, topo spec.Topology, patc
 		fmt.Printf("TLS encryption:  %s\n", cyan.Sprint("enabled"))
 	}
 
+	// check if managehost is set
+	manageHost := false
+	topo.IterInstance(func(inst spec.Instance) {
+		if inst.GetHost() != inst.GetManageHost() {
+			manageHost = true
+			return
+		}
+	})
+
 	clusterTable := [][]string{
 		// Header
-		{"Role", "Host", "Ports", "OS/Arch", "Directories"},
+		{"Role", "Host"},
 	}
+	if manageHost {
+		clusterTable[0] = append(clusterTable[0], "Manage Host")
+	}
+	clusterTable[0] = append(clusterTable[0], "Ports", "OS/Arch", "Directories")
 
 	topo.IterInstance(func(instance spec.Instance) {
 		comp := instance.ComponentName()
 		if patchedRoles.Exist(comp) || instance.IsPatched() {
 			comp += " (patched)"
 		}
-		clusterTable = append(clusterTable, []string{
-			comp,
-			instance.GetHost(),
+		instInfo := []string{comp, instance.GetHost()}
+		if manageHost {
+			instInfo = append(instInfo, instance.GetManageHost())
+		}
+		instInfo = append(instInfo,
 			utils.JoinInt(instance.UsedPorts(), "/"),
 			tui.OsArch(instance.OS(), instance.Arch()),
-			strings.Join(instance.UsedDirs(), ","),
-		})
+			strings.Join(instance.UsedDirs(), ","))
+
+		clusterTable = append(clusterTable, instInfo)
 	})
 
 	tui.PrintTable(clusterTable, true)
@@ -190,14 +203,14 @@ func (m *Manager) fillHostArchOrOS(s, p *tui.SSHConnectionProps, topo spec.Topol
 			return
 		}
 
-		if _, ok := hostArchOrOS[inst.GetHost()]; ok {
+		if _, ok := hostArchOrOS[inst.GetManageHost()]; ok {
 			return
 		}
-		hostArchOrOS[inst.GetHost()] = ""
+		hostArchOrOS[inst.GetManageHost()] = ""
 
 		tf := task.NewBuilder(m.logger).
 			RootSSH(
-				inst.GetHost(),
+				inst.GetManageHost(),
 				inst.GetSSHPort(),
 				user,
 				s.Password,
@@ -218,11 +231,11 @@ func (m *Manager) fillHostArchOrOS(s, p *tui.SSHConnectionProps, topo spec.Topol
 
 		switch fullType {
 		case spec.FullOSType:
-			tf = tf.Shell(inst.GetHost(), "uname -s", "", false)
+			tf = tf.Shell(inst.GetManageHost(), "uname -s", "", false)
 		default:
-			tf = tf.Shell(inst.GetHost(), "uname -m", "", false)
+			tf = tf.Shell(inst.GetManageHost(), "uname -m", "", false)
 		}
-		detectTasks = append(detectTasks, tf.BuildAsStep(fmt.Sprintf("  - Detecting node %s %s info", inst.GetHost(), string(fullType))))
+		detectTasks = append(detectTasks, tf.BuildAsStep(fmt.Sprintf("  - Detecting node %s %s info", inst.GetManageHost(), string(fullType))))
 	})
 	if len(detectTasks) == 0 {
 		return nil

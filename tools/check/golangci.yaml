@@ -5,6 +5,9 @@ linters-settings:
   errcheck:
     exclude-functions:
       - (*mime/multipart.Form).RemoveAll
+  gocritic:
+    disabled-checks:
+      - ifElseChain
 
 linters:
   disable-all: true
@@ -16,7 +19,7 @@ linters:
     - gosimple
     - govet
     - ineffassign
-    - interfacer
+    # - interfacer
     - misspell
     - rowserrcheck
     - staticcheck

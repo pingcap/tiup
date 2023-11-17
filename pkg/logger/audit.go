@@ -50,7 +50,7 @@ func OutputAuditLogToFileIfEnabled(dir, fileSuffix string) error {
 		return nil
 	}
 
-	if err := utils.CreateDir(dir); err != nil {
+	if err := utils.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
 

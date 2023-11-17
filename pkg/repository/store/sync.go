@@ -57,7 +57,7 @@ func (s *fsSyncer) Sync(srcDir string) error {
 	unix := time.Now().UnixNano()
 	dstDir := path.Join(s.root, fmt.Sprintf("commit-%d", unix))
 
-	if err := os.MkdirAll(dstDir, 0755); err != nil {
+	if err := utils.MkdirAll(dstDir, 0755); err != nil {
 		return err
 	}
 

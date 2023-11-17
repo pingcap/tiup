@@ -11,6 +11,8 @@ global:
   deploy_dir: "/tidb-deploy"
   # # TiDB Cluster data storage directory
   data_dir: "/tidb-data"
+  # # default listen_host for all components
+  listen_host: 0.0.0.0
   # # Supported values: "amd64", "arm64" (default: "amd64")
   arch: "amd64"
   # # Resource Control is used to limit the resource of an instance.
@@ -42,9 +44,9 @@ monitored:
 
 # # Server configs are used to specify the runtime configuration of TiDB components.
 # # All configuration items can be found in TiDB docs:
-# # - TiDB: https://pingcap.com/docs/stable/reference/configuration/tidb-server/configuration-file/
-# # - TiKV: https://pingcap.com/docs/stable/reference/configuration/tikv-server/configuration-file/
-# # - PD: https://pingcap.com/docs/stable/reference/configuration/pd-server/configuration-file/
+# # - TiDB: https://docs.pingcap.com/tidb/stable/tidb-configuration-file
+# # - TiKV: https://docs.pingcap.com/tidb/stable/tikv-configuration-file
+# # - PD: https://docs.pingcap.com/tidb/stable/pd-configuration-file
 # # - TiFlash: https://docs.pingcap.com/tidb/stable/tiflash-configuration
 # #
 # # All configuration items use points to represent the hierarchy, e.g:
@@ -182,9 +184,8 @@ tiflash_servers:
     # # SSH port of the server.
     # ssh_port: 22
     # # TiFlash TCP Service port.
+    # # Since 7.1.0, it is not actually listened, and only being used as part of the instance identity.
     # tcp_port: 9000
-    # # TiFlash HTTP Service port.
-    # http_port: 8123
     # # TiFlash raft service and coprocessor service listening address.
     # flash_service_port: 3930
     # # TiFlash Proxy service port.
@@ -207,7 +208,6 @@ tiflash_servers:
   - host: 10.0.1.21
     # ssh_port: 22
     # tcp_port: 9000
-    # http_port: 8123
     # flash_service_port: 3930
     # flash_proxy_port: 20170
     # flash_proxy_status_port: 20292

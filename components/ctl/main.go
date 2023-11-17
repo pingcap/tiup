@@ -101,6 +101,7 @@ func binaryPath(home, cmd string) (string, error) {
 }
 
 func run(name string, args ...string) error {
+	os.Setenv("ETCDCTL_API", "3")
 	// Handle `cdc cli`
 	if strings.Contains(name, " ") {
 		xs := strings.Split(name, " ")

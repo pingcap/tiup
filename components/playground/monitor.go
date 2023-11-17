@@ -29,24 +29,20 @@ import (
 )
 
 // ref: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#file_sd_config
-func (m *monitor) renderSDFile(cid2targets map[string][]string) error {
-	type Item struct {
-		Targets []string          `json:"targets"`
-		Labels  map[string]string `json:"labels"`
-	}
+func (m *monitor) renderSDFile(cid2targets map[string]instance.MetricAddr) error {
+	cid2targets["prometheus"] = instance.MetricAddr{Targets: []string{utils.JoinHostPort(m.host, m.port)}}
 
-	cid2targets["prometheus"] = []string{fmt.Sprintf("%s:%d", m.host, m.port)}
+	var items []instance.MetricAddr
 
-	var items []Item
-
-	for id, targets := range cid2targets {
-		item := Item{
-			Targets: targets,
-			Labels: map[string]string{
-				"job": id,
-			},
+	for id, t := range cid2targets {
+		it := instance.MetricAddr{
+			Targets: t.Targets,
+			Labels:  map[string]string{"job": id},
 		}
-		items = append(items, item)
+		for k, v := range t.Labels {
+			it.Labels[k] = v
+		}
+		items = append(items, it)
 	}
 
 	data, err := json.MarshalIndent(&items, "", "\t")
@@ -54,7 +50,7 @@ func (m *monitor) renderSDFile(cid2targets map[string][]string) error {
 		return errors.AddStack(err)
 	}
 
-	err = os.WriteFile(m.sdFname, data, 0644)
+	err = utils.WriteFile(m.sdFname, data, 0644)
 	if err != nil {
 		return errors.AddStack(err)
 	}
@@ -83,7 +79,7 @@ func (m *monitor) wait() error {
 
 // the cmd is not started after return
 func newMonitor(ctx context.Context, version string, host, dir string) (*monitor, error) {
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := utils.MkdirAll(dir, 0755); err != nil {
 		return nil, errors.AddStack(err)
 	}
 
@@ -91,7 +87,7 @@ func newMonitor(ctx context.Context, version string, host, dir string) (*monitor
 	if err != nil {
 		return nil, err
 	}
-	addr := fmt.Sprintf("%s:%d", host, port)
+	addr := utils.JoinHostPort(host, port)
 
 	tmpl := `
 global:
@@ -124,14 +120,14 @@ scrape_configs:
 	m := new(monitor)
 	m.sdFname = filepath.Join(dir, "targets.json")
 
-	if err := os.WriteFile(filepath.Join(dir, "prometheus.yml"), []byte(tmpl), os.ModePerm); err != nil {
+	if err := utils.WriteFile(filepath.Join(dir, "prometheus.yml"), []byte(tmpl), os.ModePerm); err != nil {
 		return nil, errors.AddStack(err)
 	}
 
 	args := []string{
 		fmt.Sprintf("--config.file=%s", filepath.Join(dir, "prometheus.yml")),
 		fmt.Sprintf("--web.external-url=http://%s", addr),
-		fmt.Sprintf("--web.listen-address=%s:%d", host, port),
+		fmt.Sprintf("--web.listen-address=%s", utils.JoinHostPort(host, port)),
 		fmt.Sprintf("--storage.tsdb.path=%s", filepath.Join(dir, "data")),
 	}
 

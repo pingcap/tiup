@@ -108,7 +108,7 @@ func (m *Manager) genAndSaveCertificate(clusterName string, globalOptions *spec.
 	if globalOptions.TLSEnabled {
 		// generate CA
 		tlsPath := m.specManager.Path(clusterName, spec.TLSCertKeyDir)
-		if err := utils.CreateDir(tlsPath); err != nil {
+		if err := utils.MkdirAll(tlsPath, 0755); err != nil {
 			return nil, err
 		}
 		ca, err := genAndSaveClusterCA(clusterName, tlsPath)

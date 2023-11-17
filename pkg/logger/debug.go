@@ -22,6 +22,7 @@ import (
 
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/tui"
+	"github.com/pingcap/tiup/pkg/utils"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -41,7 +42,7 @@ func OutputDebugLog(prefix string) {
 		profile := localdata.InitProfile()
 		logDir = profile.Path("logs")
 	}
-	if err := os.MkdirAll(logDir, 0755); err != nil {
+	if err := utils.MkdirAll(logDir, 0755); err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "\nCreate debug logs(%s) directory failed %v.\n", logDir, err)
 		return
 	}
@@ -50,7 +51,7 @@ func OutputDebugLog(prefix string) {
 	fileName := time.Now().Format(fmt.Sprintf("%s-debug-2006-01-02-15-04-05.log", prefix))
 	filePath := filepath.Join(logDir, fileName)
 
-	err := os.WriteFile(filePath, debugBuffer.Bytes(), 0644)
+	err := utils.WriteFile(filePath, debugBuffer.Bytes(), 0644)
 	if err != nil {
 		_, _ = tui.ColorWarningMsg.Fprint(os.Stderr, "\nWarn: Failed to write error debug log.\n")
 	} else {

@@ -110,7 +110,7 @@ func (l *Local) Execute(ctx context.Context, cmd string, sudo bool, timeout ...t
 // Transfer implements Executer interface.
 func (l *Local) Transfer(ctx context.Context, src, dst string, download bool, limit int, _ bool) error {
 	targetPath := filepath.Dir(dst)
-	if err := utils.CreateDir(targetPath); err != nil {
+	if err := utils.MkdirAll(targetPath, 0755); err != nil {
 		return err
 	}
 

@@ -18,6 +18,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/pingcap/errors"
@@ -27,11 +28,13 @@ import (
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/tidbver"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // CDCSpec represents the CDC topology specification in topology.yaml
 type CDCSpec struct {
 	Host            string               `yaml:"host"`
+	ManageHost      string               `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
 	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported        bool                 `yaml:"imported,omitempty"`
 	Patched         bool                 `yaml:"patched,omitempty"`
@@ -44,6 +47,7 @@ type CDCSpec struct {
 	GCTTL           int64                `yaml:"gc-ttl,omitempty" validate:"gc-ttl:editable"`
 	TZ              string               `yaml:"tz,omitempty" validate:"tz:editable"`
 	TiCDCClusterID  string               `yaml:"ticdc_cluster_id"`
+	Source          string               `yaml:"source,omitempty" validate:"source:editable"`
 	NumaNode        string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
 	Config          map[string]any       `yaml:"config,omitempty" validate:"config:ignore"`
 	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
@@ -58,12 +62,24 @@ func (s *CDCSpec) Role() string {
 
 // SSH returns the host and SSH port of the instance
 func (s *CDCSpec) SSH() (string, int) {
-	return s.Host, s.SSHPort
+	host := s.Host
+	if s.ManageHost != "" {
+		host = s.ManageHost
+	}
+	return host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
 func (s *CDCSpec) GetMainPort() int {
 	return s.Port
+}
+
+// GetManageHost returns the manage host of the instance
+func (s *CDCSpec) GetManageHost() string {
+	if s.ManageHost != "" {
+		return s.ManageHost
+	}
+	return s.Host
 }
 
 // IsImported returns if the node is imported from TiDB-Ansible
@@ -89,6 +105,29 @@ func (c *CDCComponent) Role() string {
 	return ComponentCDC
 }
 
+// Source implements Component interface.
+func (c *CDCComponent) Source() string {
+	source := c.Topology.ComponentSources.CDC
+	if source != "" {
+		return source
+	}
+	return ComponentCDC
+}
+
+// CalculateVersion implements the Component interface
+func (c *CDCComponent) CalculateVersion(clusterVersion string) string {
+	version := c.Topology.ComponentVersions.CDC
+	if version == "" {
+		version = clusterVersion
+	}
+	return version
+}
+
+// SetVersion implements Component interface.
+func (c *CDCComponent) SetVersion(version string) {
+	c.Topology.ComponentVersions.CDC = version
+}
+
 // Instances implements Component interface.
 func (c *CDCComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.CDCServers))
@@ -98,8 +137,13 @@ func (c *CDCComponent) Instances() []Instance {
 			InstanceSpec: s,
 			Name:         c.Name(),
 			Host:         s.Host,
+			ManageHost:   s.ManageHost,
+			ListenHost:   c.Topology.BaseTopo().GlobalOptions.ListenHost,
 			Port:         s.Port,
 			SSHP:         s.SSHPort,
+			Source:       s.Source,
+			NumaNode:     s.NumaNode,
+			NumaCores:    "",
 
 			Ports: []int{
 				s.Port,
@@ -108,11 +152,12 @@ func (c *CDCComponent) Instances() []Instance {
 				s.DeployDir,
 			},
 			StatusFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config, _ ...string) string {
-				return statusByHost(s.Host, s.Port, "/status", timeout, tlsCfg)
+				return statusByHost(s.GetManageHost(), s.Port, "/status", timeout, tlsCfg)
 			},
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
-				return UptimeByHost(s.Host, s.Port, timeout, tlsCfg)
+				return UptimeByHost(s.GetManageHost(), s.Port, timeout, tlsCfg)
 			},
+			Component: c,
 		}, c.Topology}
 		if s.DataDir != "" {
 			instance.Dirs = append(instance.Dirs, s.DataDir)
@@ -165,32 +210,43 @@ func (i *CDCInstance) InitConfig(
 	spec := i.InstanceSpec.(*CDCSpec)
 	globalConfig := topo.ServerConfigs.CDC
 	instanceConfig := spec.Config
+	version := i.CalculateVersion(clusterVersion)
 
-	if !tidbver.TiCDCSupportConfigFile(clusterVersion) {
+	if !tidbver.TiCDCSupportConfigFile(version) {
 		if len(globalConfig)+len(instanceConfig) > 0 {
 			return errors.New("server_config is only supported with TiCDC version v4.0.13 or later")
 		}
 	}
 
-	if !tidbver.TiCDCSupportClusterID(clusterVersion) && spec.TiCDCClusterID != "" {
+	if !tidbver.TiCDCSupportClusterID(version) && spec.TiCDCClusterID != "" {
 		return errors.New("ticdc_cluster_id is only supported with TiCDC version v6.2.0 or later")
 	}
 
-	cfg := scripts.NewCDCScript(
-		i.GetHost(),
-		paths.Deploy,
-		paths.Log,
-		enableTLS,
-		spec.GCTTL,
-		spec.TZ,
-	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).AppendEndpoints(topo.Endpoints(deployUser)...).WithCDCClusterID(spec.TiCDCClusterID)
+	pds := []string{}
+	for _, pdspec := range topo.PDServers {
+		pds = append(pds, pdspec.GetAdvertiseClientURL(enableTLS))
+	}
+	cfg := &scripts.CDCScript{
+		Addr:              utils.JoinHostPort(i.GetListenHost(), spec.Port),
+		AdvertiseAddr:     utils.JoinHostPort(i.GetHost(), i.GetPort()),
+		PD:                strings.Join(pds, ","),
+		GCTTL:             spec.GCTTL,
+		TZ:                spec.TZ,
+		ClusterID:         spec.TiCDCClusterID,
+		DataDirEnabled:    tidbver.TiCDCSupportDataDir(version),
+		ConfigFileEnabled: tidbver.TiCDCSupportConfigFile(version),
+		TLSEnabled:        enableTLS,
+
+		DeployDir: paths.Deploy,
+		LogDir:    paths.Log,
+		DataDir:   utils.Ternary(tidbver.TiCDCSupportSortOrDataDir(version), spec.DataDir, "").(string),
+
+		NumaNode: spec.NumaNode,
+	}
 
 	// doesn't work
 	if _, err := i.setTLSConfig(ctx, false, nil, paths); err != nil {
 		return err
-	}
-	if len(paths.Data) != 0 {
-		cfg = cfg.PatchByVersion(clusterVersion, paths.Data[0])
 	}
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_cdc_%s_%d.sh", i.GetHost(), i.GetPort()))
@@ -219,7 +275,7 @@ var _ RollingUpdateInstance = &CDCInstance{}
 
 // GetAddr return the address of this TiCDC instance
 func (i *CDCInstance) GetAddr() string {
-	return fmt.Sprintf("%s:%d", i.GetHost(), i.GetPort())
+	return utils.JoinHostPort(i.GetHost(), i.GetPort())
 }
 
 // PreRestart implements RollingUpdateInstance interface.
@@ -243,7 +299,7 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 	}
 
 	start := time.Now()
-	client := api.NewCDCOpenAPIClient(ctx, topo.(*Specification).GetCDCList(), 5*time.Second, tlsCfg)
+	client := api.NewCDCOpenAPIClient(ctx, topo.(*Specification).GetCDCListWithManageHost(), 5*time.Second, tlsCfg)
 	if err := client.Healthy(); err != nil {
 		logger.Debugf("cdc pre-restart skipped, the cluster unhealthy, trigger hard restart, "+
 			"addr: %s, err: %+v, elapsed: %+v", address, err, time.Since(start))
@@ -289,9 +345,10 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 		}
 	}
 
-	if err := client.DrainCapture(captureID, apiTimeoutSeconds); err != nil {
+	if err := client.DrainCapture(address, captureID, apiTimeoutSeconds); err != nil {
 		logger.Debugf("cdc pre-restart finished, drain the capture failed, "+
 			"addr: %s, captureID: %s, err: %+v, elapsed: %+v", address, captureID, err, time.Since(start))
+		// if we drain any one capture failed, no need to drain other captures, just trigger hard restart
 		return nil
 	}
 
@@ -309,7 +366,7 @@ func (i *CDCInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tl
 	start := time.Now()
 	address := i.GetAddr()
 
-	client := api.NewCDCOpenAPIClient(ctx, []string{address}, 5*time.Second, tlsCfg)
+	client := api.NewCDCOpenAPIClient(ctx, []string{utils.JoinHostPort(i.GetManageHost(), i.GetPort())}, 5*time.Second, tlsCfg)
 	err := client.IsCaptureAlive()
 	if err != nil {
 		logger.Debugf("cdc post-restart finished, get capture status failed, addr: %s, err: %+v, elapsed: %+v", address, err, time.Since(start))

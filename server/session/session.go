@@ -23,6 +23,7 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/localdata"
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // Max alive time of a session
@@ -66,7 +67,7 @@ func (s *sessionManager) Write(id, name string, reader io.Reader) error {
 	}
 
 	pkgDir := path.Join(dataDir, "packages")
-	if err := os.MkdirAll(pkgDir, 0755); err != nil {
+	if err := utils.MkdirAll(pkgDir, 0755); err != nil {
 		return errors.Annotate(err, "create package dir")
 	}
 
@@ -98,7 +99,7 @@ func (s *sessionManager) Read(id string) (string, io.ReadCloser, error) {
 	}
 
 	pkgDir := path.Join(dataDir, "packages")
-	if err := os.MkdirAll(pkgDir, 0755); err != nil {
+	if err := utils.MkdirAll(pkgDir, 0755); err != nil {
 		return "", nil, errors.Annotate(err, "create package dir")
 	}
 

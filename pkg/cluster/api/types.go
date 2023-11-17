@@ -71,6 +71,7 @@ type StoreStatus struct {
 	RegionWeight       float64            `json:"region_weight"`
 	RegionScore        float64            `json:"region_score"`
 	RegionSize         int64              `json:"region_size"`
+	SlowScore          uint64             `json:"slow_score,omitempty"` // added omitempty
 	SendingSnapCount   uint32             `json:"sending_snap_count,omitempty"`
 	ReceivingSnapCount uint32             `json:"receiving_snap_count,omitempty"`
 	ApplyingSnapCount  uint32             `json:"applying_snap_count,omitempty"`
@@ -98,23 +99,43 @@ type ReplicationStatus struct {
 	StateID uint64 `json:"state_id"`
 }
 
+// MetaPeer is api compatible with *metapb.Peer.
+type MetaPeer struct {
+	*metapb.Peer
+	// RoleName is `Role.String()`.
+	// Since Role is serialized as int by json by default,
+	// introducing it will make the output of pd-ctl easier to identify Role.
+	RoleName string `json:"role_name"`
+	// IsLearner is `Role == "Learner"`.
+	// Since IsLearner was changed to Role in kvproto in 5.0, this field was introduced to ensure api compatibility.
+	IsLearner bool `json:"is_learner,omitempty"`
+}
+
+// PDPeerStats is api compatible with *pdpb.PeerStats.
+// NOTE: This type is exported by HTTP API. Please pay more attention when modifying it.
+type PDPeerStats struct {
+	*pdpb.PeerStats
+	Peer MetaPeer `json:"peer"`
+}
+
 // RegionInfo records detail region info for api usage.
 type RegionInfo struct {
 	ID          uint64              `json:"id"`
 	StartKey    string              `json:"start_key"`
 	EndKey      string              `json:"end_key"`
 	RegionEpoch *metapb.RegionEpoch `json:"epoch,omitempty"`
-	Peers       []*metapb.Peer      `json:"peers,omitempty"`
+	Peers       []MetaPeer          `json:"peers,omitempty"`
 
-	Leader          *metapb.Peer      `json:"leader,omitempty"`
-	DownPeers       []*pdpb.PeerStats `json:"down_peers,omitempty"`
-	PendingPeers    []*metapb.Peer    `json:"pending_peers,omitempty"`
-	WrittenBytes    uint64            `json:"written_bytes"`
-	ReadBytes       uint64            `json:"read_bytes"`
-	WrittenKeys     uint64            `json:"written_keys"`
-	ReadKeys        uint64            `json:"read_keys"`
-	ApproximateSize int64             `json:"approximate_size"`
-	ApproximateKeys int64             `json:"approximate_keys"`
+	Leader          MetaPeer      `json:"leader,omitempty"`
+	DownPeers       []PDPeerStats `json:"down_peers,omitempty"`
+	PendingPeers    []MetaPeer    `json:"pending_peers,omitempty"`
+	WrittenBytes    uint64        `json:"written_bytes"`
+	ReadBytes       uint64        `json:"read_bytes"`
+	WrittenKeys     uint64        `json:"written_keys"`
+	ReadKeys        uint64        `json:"read_keys"`
+	ApproximateSize int64         `json:"approximate_size"`
+	ApproximateKeys int64         `json:"approximate_keys"`
+	Buckets         []string      `json:"buckets,omitempty"`
 
 	ReplicationStatus *ReplicationStatus `json:"replication_status,omitempty"`
 }

@@ -16,10 +16,12 @@ package operator
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/module"
+	"go.uber.org/zap"
 )
 
 // GetServiceStatus return the Acitive line of status.
@@ -34,7 +36,7 @@ import (
 
 Mar 09 13:56:19 ip-172-16-5-70 systemd[1]: Started drainer-8249 service.
 */
-func GetServiceStatus(ctx context.Context, e ctxt.Executor, name string) (active, memory string, err error) {
+func GetServiceStatus(ctx context.Context, e ctxt.Executor, name string) (active, memory string, since time.Duration, err error) {
 	c := module.SystemdModuleConfig{
 		Unit:   name,
 		Action: "status",
@@ -50,6 +52,7 @@ func GetServiceStatus(ctx context.Context, e ctxt.Executor, name string) (active
 			switch words[0] {
 			case "Active:":
 				active = words[1]
+				since = parseSystemctlSince(line)
 			case "Memory:":
 				memory = words[1]
 			}
@@ -59,4 +62,35 @@ func GetServiceStatus(ctx context.Context, e ctxt.Executor, name string) (active
 		err = errors.Errorf("unexpected output: %s", string(stdout))
 	}
 	return
+}
+
+// `systemctl status xxx.service` returns as below
+// Active: active (running) since Sat 2021-03-27 10:51:11 CST; 41min ago
+func parseSystemctlSince(str string) (dur time.Duration) {
+	// if service is not found or other error, don't need to parse it
+	if str == "" {
+		return 0
+	}
+	defer func() {
+		if dur == 0 {
+			zap.L().Warn("failed to parse systemctl since", zap.String("value", str))
+		}
+	}()
+	parts := strings.Split(str, ";")
+	if len(parts) != 2 {
+		return
+	}
+	parts = strings.Split(parts[0], " ")
+	if len(parts) < 3 {
+		return
+	}
+
+	dateStr := strings.Join(parts[len(parts)-3:], " ")
+
+	tm, err := time.Parse("2006-01-02 15:04:05 MST", dateStr)
+	if err != nil {
+		return
+	}
+
+	return time.Since(tm)
 }

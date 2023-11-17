@@ -7,25 +7,15 @@ DEPLOY_DIR={{.DeployDir}}
 
 cd "${DEPLOY_DIR}" || exit 1
 
-{{- define "PDList"}}
-  {{- range $idx, $pd := .}}
-    {{- if eq $idx 0}}
-      {{- $pd.Scheme}}://{{$pd.IP}}:{{$pd.ClientPort}}
-    {{- else -}}
-      ,{{- $pd.Scheme}}://{{$pd.IP}}:{{$pd.ClientPort}}
-    {{- end}}
-  {{- end}}
-{{- end}}
-
 {{- if .NumaNode}}
 exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/tidb-dashboard \
 {{- else}}
 exec bin/tidb-dashboard \
 {{- end}}
     --feature-version="{{.TidbVersion}}" \
-    --host="{{.IP}}" \
+    --host="{{.Host}}" \
     --port="{{.Port}}" \
-    --pd="{{template "PDList" .Endpoints}}" \
+    --pd="{{.PD}}" \
     --data-dir="{{.DataDir}}" \
 {{- if .TLSEnabled}}
     --tidb-ca tls/ca.crt \

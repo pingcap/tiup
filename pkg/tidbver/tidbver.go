@@ -26,6 +26,13 @@ func TiDBSupportSecureBoot(version string) bool {
 	return semver.Compare(version, "v5.3.0") >= 0 || strings.Contains(version, "nightly")
 }
 
+// TiDBSupportUpgradeAPI return if given version of TiDB support upgrade API
+func TiDBSupportUpgradeAPI(version string) bool {
+	return semver.Compare(version, "v7.4.0") >= 0 ||
+		(semver.MajorMinor(version) == "v7.1" && semver.Compare(version, "v7.1.2") >= 0) ||
+		strings.Contains(version, "nightly")
+}
+
 // TiKVSupportAdvertiseStatusAddr return if given version of TiKV support --advertise-status-addr
 func TiKVSupportAdvertiseStatusAddr(version string) bool {
 	// TiKV support --advertise-status-addr since v4.0.1
@@ -61,14 +68,51 @@ func TiFlashDeprecatedUsersConfig(version string) bool {
 	return semver.Compare(version, "v4.0.12") >= 0 && version != "v5.0.0-rc" || strings.Contains(version, "nightly")
 }
 
+// TiFlashNotNeedHTTPPortConfig return if given version of TiFlash do not need http_port config
+func TiFlashNotNeedHTTPPortConfig(version string) bool {
+	return semver.Compare(version, "v7.1.0") >= 0 || strings.Contains(version, "nightly")
+}
+
+// TiFlashRequiresTCPPortConfig return if given version of TiFlash requires tcp_port config.
+// TiFlash 7.1.0 and later versions won't listen to tpc_port if the config is not given, which is recommended.
+// However this config is required for pre-7.1.0 versions because TiFlash will listen to it anyway,
+// and we must make sure the port is being configured as specified in the topology file,
+// otherwise multiple TiFlash instances will conflict.
+func TiFlashRequiresTCPPortConfig(version string) bool {
+	return semver.Compare(version, "v7.1.0") < 0 && !strings.Contains(version, "nightly")
+}
+
 // TiFlashNotNeedSomeConfig return if given version of TiFlash do not need some config like runAsDaemon
 func TiFlashNotNeedSomeConfig(version string) bool {
 	// https://github.com/pingcap/tiup/pull/1673
 	return semver.Compare(version, "v5.4.0") >= 0 || strings.Contains(version, "nightly")
 }
 
+// TiFlashPlaygroundNewStartMode return true if the given version of TiFlash could be started
+// with the new implementation in TiUP playground.
+func TiFlashPlaygroundNewStartMode(version string) bool {
+	return semver.Compare(version, "v7.1.0") >= 0 || strings.Contains(version, "nightly")
+}
+
+// TiDBSupportDisagg returns true if the given version of TiDB and TiFlash supports
+// disaggregated mode.
+func TiDBSupportDisagg(version string) bool {
+	return semver.Compare(version, "v7.0.0") >= 0 || strings.Contains(version, "nightly")
+}
+
+// PDSupportMicroServices returns true if the given version of PD supports micro services.
+func PDSupportMicroServices(version string) bool {
+	return semver.Compare(version, "v7.3.0") >= 0 || strings.Contains(version, "nightly")
+}
+
 // TiCDCSupportConfigFile return if given version of TiCDC support config file
 func TiCDCSupportConfigFile(version string) bool {
+	// config support since v4.0.13, ignore v5.0.0-rc
+	return semver.Compare(version, "v4.0.13") >= 0 && version != "v5.0.0-rc" || strings.Contains(version, "nightly")
+}
+
+// TiCDCSupportSortOrDataDir return if given version of TiCDC support --sort-dir or --data-dir
+func TiCDCSupportSortOrDataDir(version string) bool {
 	// config support since v4.0.13, ignore v5.0.0-rc
 	return semver.Compare(version, "v4.0.13") >= 0 && version != "v5.0.0-rc" || strings.Contains(version, "nightly")
 }
@@ -91,6 +135,11 @@ func TiCDCSupportClusterID(version string) bool {
 // TiCDC support graceful rolling upgrade since v6.3.0
 func TiCDCSupportRollingUpgrade(version string) bool {
 	return semver.Compare(version, "v6.3.0") >= 0 || strings.Contains(version, "nightly")
+}
+
+// TiCDCUpgradeBeforePDTiKVTiDB return if the given version of TiCDC should upgrade TiCDC before PD and TiKV
+func TiCDCUpgradeBeforePDTiKVTiDB(version string) bool {
+	return semver.Compare(version, "v5.1.0") >= 0 || strings.Contains(version, "nightly")
 }
 
 // NgMonitorDeployByDefault return if given version of TiDB cluster should contain ng-monitoring

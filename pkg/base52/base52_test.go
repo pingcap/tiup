@@ -33,4 +33,8 @@ func (s *base52Suite) TestDecode(c *C) {
 	decoded, err := Decode("2TPzw7")
 	c.Assert(decoded, Equals, int64(1000000000))
 	c.Assert(err, IsNil)
+
+	decoded, err = Decode("../../etc/passwd")
+	c.Assert(decoded, Equals, int64(0))
+	c.Assert(err, NotNil)
 }

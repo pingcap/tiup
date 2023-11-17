@@ -15,6 +15,7 @@ package operator
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -45,6 +46,7 @@ type Options struct {
 	SSHProxyIdentity    string           // the ssh proxy identity file
 	SSHProxyUsePassword bool             // use password instead of identity file for ssh proxy connection
 	SSHProxyTimeout     uint64           // timeout in seconds when connecting the proxy host
+	SSHCustomScripts    SSHCustomScripts // custom scripts to be executed during the operation
 
 	// What type of things should we cleanup in clean command
 	CleanupData     bool // should we cleanup data
@@ -57,6 +59,26 @@ type Options struct {
 
 	DisplayMode string // the output format
 	Operation   Operation
+}
+
+// SSHCustomScripts represents the custom ssh script set to be executed during cluster operations
+type SSHCustomScripts struct {
+	BeforeRestartInstance SSHCustomScript
+	AfterRestartInstance  SSHCustomScript
+}
+
+// SSHCustomScript represents a custom ssh script to be executed during cluster operations
+type SSHCustomScript struct {
+	Raw string
+}
+
+// Command returns the ssh command in string format
+func (s SSHCustomScript) Command() string {
+	b, err := os.ReadFile(s.Raw)
+	if err != nil {
+		return s.Raw
+	}
+	return string(b)
 }
 
 // Operation represents the type of cluster operation

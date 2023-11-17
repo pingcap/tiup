@@ -33,18 +33,19 @@ import (
 	"github.com/AstroProfundis/tabby"
 	"github.com/fatih/color"
 	"github.com/juju/ansiterm"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/playground/instance"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/environment"
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
+	"github.com/pingcap/tiup/pkg/tidbver"
 	"github.com/pingcap/tiup/pkg/tui/progress"
 	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 )
 
 // The duration process need to quit gracefully, or we kill the process.
@@ -60,9 +61,13 @@ type Playground struct {
 	port        int
 
 	pds              []*instance.PDInstance
+	tsos             []*instance.PDInstance
+	schedulings      []*instance.PDInstance
+	rms              []*instance.PDInstance
 	tikvs            []*instance.TiKVInstance
 	tidbs            []*instance.TiDBInstance
 	tiflashs         []*instance.TiFlashInstance
+	tiproxys         []*instance.TiProxy
 	ticdcs           []*instance.TiCDC
 	tikvCdcs         []*instance.TiKVCDC
 	pumps            []*instance.Pump
@@ -274,6 +279,7 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 
 	switch cid {
 	case spec.ComponentPD:
+		// microservice not support scale in temporarily
 		for i := 0; i < len(p.pds); i++ {
 			if p.pds[i].Pid() == pid {
 				inst := p.pds[i]
@@ -326,7 +332,7 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 				}
 
 				go p.killTiFlashIfTombstone(inst)
-				fmt.Fprintf(w, "tiflash will be stop when tombstone\n")
+				fmt.Fprintf(w, "TiFlash will be stop when tombstone\n")
 				return nil
 			}
 		}
@@ -428,8 +434,14 @@ func (p *Playground) sanitizeComponentConfig(cid string, cfg *instance.Config) e
 }
 
 func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) error {
+	var version utils.Version
+	var err error
 	boundVersion := p.bindVersion(inst.Component(), p.bootOptions.Version)
-	version, err := environment.GlobalEnv().V1Repository().ResolveComponentVersion(inst.Component(), boundVersion)
+	component := inst.Component()
+	if strings.HasPrefix(component, "pd") {
+		component = string(instance.PDRoleNormal)
+	}
+	version, err = environment.GlobalEnv().V1Repository().ResolveComponentVersion(component, boundVersion)
 	if err != nil {
 		return err
 	}
@@ -467,7 +479,8 @@ func (p *Playground) handleScaleOut(w io.Writer, cmd *Command) error {
 	if err != nil {
 		return err
 	}
-	inst, err := p.addInstance(cmd.ComponentID, cmd.Config)
+	// TODO: Support scale-out in disaggregated mode
+	inst, err := p.addInstance(cmd.ComponentID, instance.PDRoleNormal, instance.TiFlashRoleNormal, cmd.Config)
 	if err != nil {
 		return err
 	}
@@ -485,6 +498,15 @@ func (p *Playground) handleScaleOut(w io.Writer, cmd *Command) error {
 		if checkDB(addr, cmd.UpTimeout) {
 			ss := strings.Split(addr, ":")
 			connectMsg := "To connect new added TiDB: mysql --comments --host %s --port %s -u root -p (no password)"
+			fmt.Println(color.GreenString(connectMsg, ss[0], ss[1]))
+			fmt.Fprintln(w, color.GreenString(connectMsg, ss[0], ss[1]))
+		}
+	}
+	if cmd.ComponentID == "tiproxy" {
+		addr := p.tiproxys[len(p.tidbs)-1].Addr()
+		if checkDB(addr, cmd.UpTimeout) {
+			ss := strings.Split(addr, ":")
+			connectMsg := "To connect to the newly added TiProxy: mysql --comments --host %s --port %s -u root -p (no password)"
 			fmt.Println(color.GreenString(connectMsg, ss[0], ss[1]))
 			fmt.Fprintln(w, color.GreenString(connectMsg, ss[0], ss[1]))
 		}
@@ -536,7 +558,7 @@ func (p *Playground) commandHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Mapping command line component id to internal spec component id.
-	if cmd.ComponentID == ticdc {
+	if cmd.ComponentID == "ticdc" {
 		cmd.ComponentID = spec.ComponentCDC
 	}
 
@@ -575,6 +597,24 @@ func (p *Playground) WalkInstances(fn func(componentID string, ins instance.Inst
 			return err
 		}
 	}
+	for _, ins := range p.tsos {
+		err := fn(spec.ComponentPD, ins)
+		if err != nil {
+			return err
+		}
+	}
+	for _, ins := range p.schedulings {
+		err := fn(spec.ComponentPD, ins)
+		if err != nil {
+			return err
+		}
+	}
+	for _, ins := range p.rms {
+		err := fn(spec.ComponentPD, ins)
+		if err != nil {
+			return err
+		}
+	}
 	for _, ins := range p.tikvs {
 		err := fn(spec.ComponentTiKV, ins)
 		if err != nil {
@@ -591,6 +631,13 @@ func (p *Playground) WalkInstances(fn func(componentID string, ins instance.Inst
 
 	for _, ins := range p.tidbs {
 		err := fn(spec.ComponentTiDB, ins)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, ins := range p.tiproxys {
+		err := fn(spec.ComponentTiProxy, ins)
 		if err != nil {
 			return err
 		}
@@ -623,6 +670,7 @@ func (p *Playground) WalkInstances(fn func(componentID string, ins instance.Inst
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -630,7 +678,7 @@ func (p *Playground) enableBinlog() bool {
 	return p.bootOptions.Pump.Num > 0
 }
 
-func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins instance.Instance, err error) {
+func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tiflashRole instance.TiFlashRole, cfg instance.Config) (ins instance.Instance, err error) {
 	if cfg.BinPath != "" {
 		cfg.BinPath, err = getAbsolutePath(cfg.BinPath)
 		if err != nil {
@@ -649,7 +697,11 @@ func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins i
 
 	id := p.allocID(componentID)
 	dir := filepath.Join(dataDir, fmt.Sprintf("%s-%d", componentID, id))
-	if err = os.MkdirAll(dir, 0755); err != nil {
+	if componentID == string(instance.PDRoleNormal) && pdRole != instance.PDRoleNormal {
+		id = p.allocID(fmt.Sprintf("%s-%s", componentID, pdRole))
+		dir = filepath.Join(dataDir, fmt.Sprintf("%s-%s-%d", componentID, pdRole, id))
+	}
+	if err = utils.MkdirAll(dir, 0755); err != nil {
 		return nil, err
 	}
 	// look more like listen ip?
@@ -660,31 +712,43 @@ func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins i
 
 	switch componentID {
 	case spec.ComponentPD:
-		inst := instance.NewPDInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port)
+		inst := instance.NewPDInstance(pdRole, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, cfg.Port)
 		ins = inst
-		if p.booted {
-			inst.Join(p.pds)
-			p.pds = append(p.pds, inst)
-		} else {
-			p.pds = append(p.pds, inst)
-			for _, pd := range p.pds {
-				pd.InitCluster(p.pds)
+		if pdRole == instance.PDRoleNormal || pdRole == instance.PDRoleAPI {
+			if p.booted {
+				inst.Join(p.pds)
+				p.pds = append(p.pds, inst)
+			} else {
+				p.pds = append(p.pds, inst)
+				for _, pd := range p.pds {
+					pd.InitCluster(p.pds)
+				}
 			}
+		} else if pdRole == instance.PDRoleTSO {
+			p.tsos = append(p.tsos, inst)
+		} else if pdRole == instance.PDRoleScheduling {
+			p.schedulings = append(p.schedulings, inst)
+		} else if pdRole == instance.PDRoleResourceManager {
+			p.rms = append(p.rms, inst)
 		}
 	case spec.ComponentTiDB:
-		inst := instance.NewTiDBInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, p.enableBinlog())
+		inst := instance.NewTiDBInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, p.enableBinlog(), p.bootOptions.Mode == "tidb-disagg")
 		ins = inst
 		p.tidbs = append(p.tidbs, inst)
 	case spec.ComponentTiKV:
-		inst := instance.NewTiKVInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds)
+		inst := instance.NewTiKVInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds)
 		ins = inst
 		p.tikvs = append(p.tikvs, inst)
 	case spec.ComponentTiFlash:
-		inst := instance.NewTiFlashInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, p.tidbs)
+		inst := instance.NewTiFlashInstance(tiflashRole, p.bootOptions.DisaggOpts, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, p.tidbs, cfg.Version)
 		ins = inst
 		p.tiflashs = append(p.tiflashs, inst)
+	case spec.ComponentTiProxy:
+		inst := instance.NewTiProxy(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds)
+		ins = inst
+		p.tiproxys = append(p.tiproxys, inst)
 	case spec.ComponentCDC:
-		inst := instance.NewTiCDC(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds)
+		inst := instance.NewTiCDC(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds)
 		ins = inst
 		p.ticdcs = append(p.ticdcs, inst)
 	case spec.ComponentTiKVCDC:
@@ -706,12 +770,18 @@ func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins i
 	return
 }
 
-func (p *Playground) waitAllTidbUp() []string {
-	var succ []string
+func (p *Playground) waitAllDBUp() ([]string, []string) {
+	var tidbSucc []string
+	var tiproxySucc []string
 	if len(p.tidbs) > 0 {
 		var wg sync.WaitGroup
-		var appendMutex sync.Mutex
-		bars := progress.NewMultiBar(color.YellowString("Waiting for tidb instances ready"))
+		var tidbMu, tiproxyMu sync.Mutex
+		var bars *progress.MultiBar
+		if len(p.tiproxys) > 0 {
+			bars = progress.NewMultiBar(color.YellowString("Waiting for tidb and tiproxy instances ready"))
+		} else {
+			bars = progress.NewMultiBar(color.YellowString("Waiting for tidb instances ready"))
+		}
 		for _, db := range p.tidbs {
 			wg.Add(1)
 			prefix := color.YellowString(db.Addr())
@@ -720,9 +790,33 @@ func (p *Playground) waitAllTidbUp() []string {
 				defer wg.Done()
 				if s := checkDB(dbInst.Addr(), options.TiDB.UpTimeout); s {
 					{
-						appendMutex.Lock()
-						succ = append(succ, dbInst.Addr())
-						appendMutex.Unlock()
+						tidbMu.Lock()
+						tidbSucc = append(tidbSucc, dbInst.Addr())
+						tidbMu.Unlock()
+					}
+					bar.UpdateDisplay(&progress.DisplayProps{
+						Prefix: prefix,
+						Mode:   progress.ModeDone,
+					})
+				} else {
+					bar.UpdateDisplay(&progress.DisplayProps{
+						Prefix: prefix,
+						Mode:   progress.ModeError,
+					})
+				}
+			}(db)
+		}
+		for _, db := range p.tiproxys {
+			wg.Add(1)
+			prefix := color.YellowString(db.Addr())
+			bar := bars.AddBar(prefix)
+			go func(dbInst *instance.TiProxy) {
+				defer wg.Done()
+				if s := checkDB(dbInst.Addr(), options.TiProxy.UpTimeout); s {
+					{
+						tiproxyMu.Lock()
+						tiproxySucc = append(tiproxySucc, dbInst.Addr())
+						tiproxyMu.Unlock()
 					}
 					bar.UpdateDisplay(&progress.DisplayProps{
 						Prefix: prefix,
@@ -740,7 +834,7 @@ func (p *Playground) waitAllTidbUp() []string {
 		wg.Wait()
 		bars.StopRenderLoop()
 	}
-	return succ
+	return tidbSucc, tiproxySucc
 }
 
 func (p *Playground) waitAllTiFlashUp() {
@@ -790,6 +884,8 @@ func (p *Playground) bindVersion(comp string, version string) (bindVersion strin
 	switch comp {
 	case spec.ComponentTiKVCDC:
 		return p.bootOptions.TiKVCDC.Version
+	case spec.ComponentTiProxy:
+		return p.bootOptions.TiProxy.Version
 	default:
 		return version
 	}
@@ -798,9 +894,16 @@ func (p *Playground) bindVersion(comp string, version string) (bindVersion strin
 func (p *Playground) bootCluster(ctx context.Context, env *environment.Environment, options *BootOptions) error {
 	for _, cfg := range []*instance.Config{
 		&options.PD,
+		&options.PDAPI,
+		&options.PDTSO,
+		&options.PDScheduling,
+		&options.PDRM,
+		&options.TiProxy,
 		&options.TiDB,
 		&options.TiKV,
 		&options.TiFlash,
+		&options.TiFlashCompute,
+		&options.TiFlashWrite,
 		&options.Pump,
 		&options.Drainer,
 		&options.TiKVCDC,
@@ -814,8 +917,9 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 	p.bootOptions = options
 
-	if options.PD.Num < 1 || options.TiKV.Num < 1 {
-		return fmt.Errorf("all components count must be great than 0 (tikv=%v, pd=%v)", options.TiKV.Num, options.PD.Num)
+	// All others components depend on the pd, we just ensure the pd count must be great than 0
+	if options.PDMode != "ms" && options.PD.Num < 1 {
+		return fmt.Errorf("all components count must be great than 0 (pd=%v)", options.PD.Num)
 	}
 
 	if !utils.Version(options.Version).IsNightly() {
@@ -829,30 +933,93 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		}
 	}
 
-	instances := []struct {
-		comp string
+	type InstancePair struct {
+		comp        string
+		pdRole      instance.PDRole
+		tiflashRole instance.TiFlashRole
 		instance.Config
-	}{
-		{spec.ComponentPD, options.PD},
-		{spec.ComponentTiKV, options.TiKV},
-		{spec.ComponentPump, options.Pump},
-		{spec.ComponentTiDB, options.TiDB},
-		{spec.ComponentCDC, options.TiCDC},
-		{spec.ComponentTiKVCDC, options.TiKVCDC},
-		{spec.ComponentDrainer, options.Drainer},
-		{spec.ComponentTiFlash, options.TiFlash},
+	}
+
+	instances := []InstancePair{
+		{spec.ComponentTiProxy, "", "", options.TiProxy},
+		{spec.ComponentTiKV, "", "", options.TiKV},
+		{spec.ComponentPump, "", "", options.Pump},
+		{spec.ComponentTiDB, "", "", options.TiDB},
+		{spec.ComponentCDC, "", "", options.TiCDC},
+		{spec.ComponentTiKVCDC, "", "", options.TiKVCDC},
+		{spec.ComponentDrainer, "", "", options.Drainer},
+	}
+
+	if options.Mode == "tidb" {
+		instances = append(instances,
+			InstancePair{spec.ComponentTiFlash, instance.PDRoleNormal, instance.TiFlashRoleNormal, options.TiFlash},
+		)
+	} else if options.Mode == "tidb-disagg" {
+		if !tidbver.TiDBSupportDisagg(options.Version) {
+			return fmt.Errorf("TiDB cluster doesn't support disaggregated mode in version %s", options.Version)
+		}
+		if !tidbver.TiFlashPlaygroundNewStartMode(options.Version) {
+			// For simplicity, currently we only implemented disagg mode when TiFlash can run without config.
+			return fmt.Errorf("TiUP playground only supports disaggregated mode for TiDB cluster >= v7.1.0 (or nightly)")
+		}
+
+		// Preflight check whether specified object storage is available.
+		s3Client, err := minio.New(options.DisaggOpts.S3Endpoint, &minio.Options{
+			Creds:  credentials.NewStaticV4(options.DisaggOpts.AccessKey, options.DisaggOpts.SecretKey, ""),
+			Secure: false,
+		})
+		if err != nil {
+			return errors.Annotate(err, "Disaggregate mode preflight check failed")
+		}
+
+		ctxCheck, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		bucketExists, err := s3Client.BucketExists(ctxCheck, options.DisaggOpts.Bucket)
+		if err != nil {
+			return errors.Annotate(err, "Disaggregate mode preflight check failed")
+		}
+
+		if !bucketExists {
+			// Try to create bucket.
+			err := s3Client.MakeBucket(ctxCheck, options.DisaggOpts.Bucket, minio.MakeBucketOptions{})
+			if err != nil {
+				return fmt.Errorf("Disaggregate mode preflight check failed: Bucket %s doesn't exist", options.DisaggOpts.Bucket)
+			}
+		}
+
+		instances = append(
+			instances,
+			InstancePair{spec.ComponentTiFlash, instance.PDRoleNormal, instance.TiFlashRoleDisaggWrite, options.TiFlashWrite},
+			InstancePair{spec.ComponentTiFlash, instance.PDRoleNormal, instance.TiFlashRoleDisaggCompute, options.TiFlashCompute},
+		)
+	}
+
+	if options.PDMode == "pd" {
+		instances = append([]InstancePair{{spec.ComponentPD, instance.PDRoleNormal, instance.TiFlashRoleNormal, options.PD}},
+			instances...,
+		)
+	} else if options.PDMode == "ms" {
+		if !tidbver.PDSupportMicroServices(options.Version) {
+			return fmt.Errorf("PD cluster doesn't support microservices mode in version %s", options.Version)
+		}
+		instances = append([]InstancePair{
+			{spec.ComponentPD, instance.PDRoleAPI, instance.TiFlashRoleNormal, options.PDAPI},
+			{spec.ComponentPD, instance.PDRoleTSO, instance.TiFlashRoleNormal, options.PDTSO},
+			{spec.ComponentPD, instance.PDRoleScheduling, instance.TiFlashRoleNormal, options.PDScheduling},
+			{spec.ComponentPD, instance.PDRoleResourceManager, instance.TiFlashRoleNormal, options.PDRM}},
+			instances...,
+		)
 	}
 
 	for _, inst := range instances {
 		for i := 0; i < inst.Num; i++ {
-			_, err := p.addInstance(inst.comp, inst.Config)
+			_, err := p.addInstance(inst.comp, inst.pdRole, inst.tiflashRole, inst.Config)
 			if err != nil {
 				return err
 			}
 		}
 	}
-
-	fmt.Println("Playground Bootstrapping...")
 
 	anyPumpReady := false
 	// Start all instance except tiflash.
@@ -885,7 +1052,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 	p.booted = true
 
-	succ := p.waitAllTidbUp()
+	tidbSucc, tiproxySucc := p.waitAllDBUp()
 
 	var monitorInfo *MonitorInfo
 	if options.Monitor {
@@ -907,7 +1074,9 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		}
 	}
 
-	if len(succ) > 0 {
+	colorCmd := color.New(color.FgHiCyan, color.Bold)
+
+	if len(tidbSucc) > 0 {
 		// start TiFlash after at least one TiDB is up.
 		var started []*instance.TiFlashInstance
 		for _, flash := range p.tiflashs {
@@ -920,23 +1089,64 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		p.tiflashs = started
 		p.waitAllTiFlashUp()
 
-		fmt.Println(color.GreenString("CLUSTER START SUCCESSFULLY, Enjoy it ^-^"))
-		for _, dbAddr := range succ {
+		fmt.Println()
+		color.New(color.FgGreen, color.Bold).Println("🎉 TiDB Playground Cluster is started, enjoy!")
+		fmt.Println()
+		for _, dbAddr := range tidbSucc {
 			ss := strings.Split(dbAddr, ":")
-			connectMsg := "To connect TiDB: mysql --comments --host %s --port %s -u root -p (no password)"
-			fmt.Println(color.GreenString(connectMsg, ss[0], ss[1]))
+			fmt.Printf("Connect TiDB:    ")
+			colorCmd.Printf("mysql --comments --host %s --port %s -u root\n", ss[0], ss[1])
+		}
+		for _, dbAddr := range tiproxySucc {
+			ss := strings.Split(dbAddr, ":")
+			fmt.Printf("Connect TiProxy: ")
+			colorCmd.Printf("mysql --comments --host %s --port %s -u root\n", ss[0], ss[1])
 		}
 	}
 
 	if pdAddr := p.pds[0].Addr(); len(p.tidbs) > 0 && hasDashboard(pdAddr) {
-		fmt.Println(color.GreenString("To view the dashboard: http://%s/dashboard", pdAddr))
+		fmt.Printf("TiDB Dashboard:  ")
+		colorCmd.Printf("http://%s/dashboard\n", pdAddr)
 	}
 
-	var pdAddrs []string
-	for _, pd := range p.pds {
-		pdAddrs = append(pdAddrs, pd.Addr())
+	if p.bootOptions.Mode == "tikv-slim" {
+		if p.bootOptions.PDMode == "ms" {
+			var (
+				tsoAddr        []string
+				apiAddr        []string
+				rmAddr         []string
+				schedulingAddr []string
+			)
+			for _, api := range p.pds {
+				apiAddr = append(apiAddr, api.Addr())
+			}
+			for _, tso := range p.tsos {
+				tsoAddr = append(tsoAddr, tso.Addr())
+			}
+			for _, scheduling := range p.schedulings {
+				schedulingAddr = append(schedulingAddr, scheduling.Addr())
+			}
+			for _, rm := range p.rms {
+				rmAddr = append(rmAddr, rm.Addr())
+			}
+
+			fmt.Printf("PD API Endpoints:   ")
+			colorCmd.Printf("%s\n", strings.Join(apiAddr, ","))
+			fmt.Printf("PD TSO Endpoints:   ")
+			colorCmd.Printf("%s\n", strings.Join(tsoAddr, ","))
+			fmt.Printf("PD Scheduling Endpoints:   ")
+			colorCmd.Printf("%s\n", strings.Join(schedulingAddr, ","))
+			fmt.Printf("PD Resource Manager Endpoints:   ")
+			colorCmd.Printf("%s\n", strings.Join(rmAddr, ","))
+		} else {
+			var pdAddrs []string
+			for _, pd := range p.pds {
+				pdAddrs = append(pdAddrs, pd.Addr())
+			}
+			fmt.Printf("PD Endpoints:   ")
+			colorCmd.Printf("%s\n", strings.Join(pdAddrs, ","))
+		}
 	}
-	fmt.Println(color.GreenString("PD client endpoints: %v", pdAddrs))
 
 	if monitorInfo != nil {
 		p.updateMonitorTopology(spec.ComponentPrometheus, *monitorInfo)
@@ -956,6 +1166,8 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 	if g := p.grafana; g != nil {
 		p.updateMonitorTopology(spec.ComponentGrafana, MonitorInfo{g.host, g.port, g.cmd.Path})
+		fmt.Printf("Grafana:         ")
+		colorCmd.Printf("http://%s\n", utils.JoinHostPort(g.host, g.port))
 	}
 
 	return nil
@@ -963,12 +1175,6 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 func (p *Playground) updateMonitorTopology(componentID string, info MonitorInfo) {
 	info.IP = instance.AdvertiseHost(info.IP)
-	fmt.Print(color.GreenString(
-		"To view the %s: http://%s:%d\n",
-		cases.Title(language.English).String(componentID),
-		info.IP,
-		info.Port,
-	))
 	if len(p.pds) == 0 {
 		return
 	}
@@ -1012,55 +1218,75 @@ func (p *Playground) terminate(sig syscall.Signal) {
 		timer.Stop()
 	}
 
-	if p.monitor != nil {
+	if p.monitor != nil && p.monitor.cmd != nil && p.monitor.cmd.Process != nil {
 		go kill("prometheus", p.monitor.cmd.Process.Pid, p.monitor.wait)
 	}
 
-	if p.ngmonitoring != nil {
+	if p.ngmonitoring != nil && p.ngmonitoring.cmd != nil && p.ngmonitoring.cmd.Process != nil {
 		go kill("ng-monitoring", p.ngmonitoring.cmd.Process.Pid, p.ngmonitoring.wait)
 	}
 
-	if p.grafana != nil {
+	if p.grafana != nil && p.grafana.cmd != nil && p.grafana.cmd.Process != nil {
 		go kill("grafana", p.grafana.cmd.Process.Pid, p.grafana.wait)
 	}
 	for _, inst := range p.tiflashs {
-		if inst.Process != nil {
+		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
 			kill(inst.Component(), inst.Pid(), inst.Wait)
 		}
 	}
 	for _, inst := range p.ticdcs {
-		if inst.Process != nil {
+		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
 			kill(inst.Component(), inst.Pid(), inst.Wait)
 		}
 	}
 	for _, inst := range p.tikvCdcs {
-		if inst.Process != nil {
+		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
 			kill(inst.Component(), inst.Pid(), inst.Wait)
 		}
 	}
 	for _, inst := range p.drainers {
-		if inst.Process != nil {
+		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
 			kill(inst.Component(), inst.Pid(), inst.Wait)
 		}
 	}
 	// tidb must exit earlier then pd
 	for _, inst := range p.tidbs {
-		if inst.Process != nil {
+		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
 			kill(inst.Component(), inst.Pid(), inst.Wait)
 		}
 	}
 	for _, inst := range p.pumps {
-		if inst.Process != nil {
+		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
 			kill(inst.Component(), inst.Pid(), inst.Wait)
 		}
 	}
 	for _, inst := range p.tikvs {
-		if inst.Process != nil {
+		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
 			kill(inst.Component(), inst.Pid(), inst.Wait)
 		}
 	}
 	for _, inst := range p.pds {
-		if inst.Process != nil {
+		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
+			kill(inst.Component(), inst.Pid(), inst.Wait)
+		}
+	}
+	for _, inst := range p.tsos {
+		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
+			kill(inst.Component(), inst.Pid(), inst.Wait)
+		}
+	}
+	for _, inst := range p.schedulings {
+		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
+			kill(inst.Component(), inst.Pid(), inst.Wait)
+		}
+	}
+	for _, inst := range p.rms {
+		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
+			kill(inst.Component(), inst.Pid(), inst.Wait)
+		}
+	}
+	for _, inst := range p.tiproxys {
+		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
 			kill(inst.Component(), inst.Pid(), inst.Wait)
 		}
 	}
@@ -1072,12 +1298,10 @@ func (p *Playground) renderSDFile() error {
 		return nil
 	}
 
-	cid2targets := make(map[string][]string)
+	cid2targets := make(map[string]instance.MetricAddr)
 
 	_ = p.WalkInstances(func(cid string, inst instance.Instance) error {
-		targets := cid2targets[cid]
-		targets = append(targets, inst.StatusAddrs()...)
-		cid2targets[cid] = targets
+		cid2targets[cid] = inst.MetricAddr()
 		return nil
 	})
 
@@ -1192,7 +1416,7 @@ func (p *Playground) bootGrafana(ctx context.Context, env *environment.Environme
 	}
 
 	dashboardDir := filepath.Join(grafanaDir, "dashboards")
-	err = os.MkdirAll(dashboardDir, 0755)
+	err = utils.MkdirAll(dashboardDir, 0755)
 	if err != nil {
 		return nil, errors.AddStack(err)
 	}
@@ -1221,7 +1445,7 @@ func (p *Playground) bootGrafana(ctx context.Context, env *environment.Environme
 
 	grafana := newGrafana(options.Version, options.Host)
 	// fmt.Println("Start Grafana instance...")
-	err = grafana.start(ctx, grafanaDir, fmt.Sprintf("http://%s:%d", monitorInfo.IP, monitorInfo.Port))
+	err = grafana.start(ctx, grafanaDir, "http://"+utils.JoinHostPort(monitorInfo.IP, monitorInfo.Port))
 	if err != nil {
 		return nil, err
 	}

@@ -225,6 +225,8 @@ the latest stable version will be downloaded from the repository.`,
 		newTelemetryCmd(),
 		newEnvCmd(),
 		newHistoryCmd(),
+		newLinkCmd(),
+		newUnlinkCmd(),
 	)
 }
 

@@ -19,17 +19,20 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/tidbver"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // TiDBSpec represents the TiDB topology specification in topology.yaml
 type TiDBSpec struct {
 	Host            string               `yaml:"host"`
+	ManageHost      string               `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
 	ListenHost      string               `yaml:"listen_host,omitempty"`
 	AdvertiseAddr   string               `yaml:"advertise_address,omitempty"`
 	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
@@ -40,6 +43,7 @@ type TiDBSpec struct {
 	StatusPort      int                  `yaml:"status_port" default:"10080"`
 	DeployDir       string               `yaml:"deploy_dir,omitempty"`
 	LogDir          string               `yaml:"log_dir,omitempty"`
+	Source          string               `yaml:"source,omitempty" validate:"source:editable"`
 	NumaNode        string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
 	NumaCores       string               `yaml:"numa_cores,omitempty" validate:"numa_cores:editable"`
 	Config          map[string]any       `yaml:"config,omitempty" validate:"config:ignore"`
@@ -55,12 +59,24 @@ func (s *TiDBSpec) Role() string {
 
 // SSH returns the host and SSH port of the instance
 func (s *TiDBSpec) SSH() (string, int) {
-	return s.Host, s.SSHPort
+	host := s.Host
+	if s.ManageHost != "" {
+		host = s.ManageHost
+	}
+	return host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
 func (s *TiDBSpec) GetMainPort() int {
 	return s.Port
+}
+
+// GetManageHost returns the manage host of the instance
+func (s *TiDBSpec) GetManageHost() string {
+	if s.ManageHost != "" {
+		return s.ManageHost
+	}
+	return s.Host
 }
 
 // IsImported returns if the node is imported from TiDB-Ansible
@@ -86,6 +102,29 @@ func (c *TiDBComponent) Role() string {
 	return ComponentTiDB
 }
 
+// Source implements Component interface.
+func (c *TiDBComponent) Source() string {
+	source := c.Topology.ComponentSources.TiDB
+	if source != "" {
+		return source
+	}
+	return ComponentTiDB
+}
+
+// CalculateVersion implements the Component interface
+func (c *TiDBComponent) CalculateVersion(clusterVersion string) string {
+	version := c.Topology.ComponentVersions.TiDB
+	if version == "" {
+		version = clusterVersion
+	}
+	return version
+}
+
+// SetVersion implements Component interface.
+func (c *TiDBComponent) SetVersion(version string) {
+	c.Topology.ComponentVersions.TiDB = version
+}
+
 // Instances implements Component interface.
 func (c *TiDBComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.TiDBServers))
@@ -95,9 +134,13 @@ func (c *TiDBComponent) Instances() []Instance {
 			InstanceSpec: s,
 			Name:         c.Name(),
 			Host:         s.Host,
-			ListenHost:   s.ListenHost,
+			ManageHost:   s.ManageHost,
+			ListenHost:   utils.Ternary(s.ListenHost != "", s.ListenHost, c.Topology.BaseTopo().GlobalOptions.ListenHost).(string),
 			Port:         s.Port,
 			SSHP:         s.SSHPort,
+			Source:       s.Source,
+			NumaNode:     s.NumaNode,
+			NumaCores:    s.NumaCores,
 
 			Ports: []int{
 				s.Port,
@@ -107,11 +150,12 @@ func (c *TiDBComponent) Instances() []Instance {
 				s.DeployDir,
 			},
 			StatusFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config, _ ...string) string {
-				return statusByHost(s.Host, s.StatusPort, "/status", timeout, tlsCfg)
+				return statusByHost(s.GetManageHost(), s.StatusPort, "/status", timeout, tlsCfg)
 			},
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
-				return UptimeByHost(s.Host, s.StatusPort, timeout, tlsCfg)
+				return UptimeByHost(s.GetManageHost(), s.StatusPort, timeout, tlsCfg)
 			},
+			Component: c,
 		}, c.Topology})
 	}
 	return ins
@@ -139,16 +183,27 @@ func (i *TiDBInstance) InitConfig(
 
 	enableTLS := topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(*TiDBSpec)
-	cfg := scripts.
-		NewTiDBScript(i.GetHost(), paths.Deploy, paths.Log).
-		WithPort(spec.Port).
-		WithNumaNode(spec.NumaNode).
-		WithNumaCores(spec.NumaCores).
-		WithStatusPort(spec.StatusPort).
-		AppendEndpoints(topo.Endpoints(deployUser)...).
-		WithListenHost(i.GetListenHost()).
-		WithAdvertiseAddr(spec.Host).
-		SupportSecureBootstrap(tidbver.TiDBSupportSecureBoot(clusterVersion))
+	version := i.CalculateVersion(clusterVersion)
+
+	pds := []string{}
+	for _, pdspec := range topo.PDServers {
+		pds = append(pds, utils.JoinHostPort(pdspec.Host, pdspec.ClientPort))
+	}
+	cfg := &scripts.TiDBScript{
+		Port:           spec.Port,
+		StatusPort:     spec.StatusPort,
+		ListenHost:     i.GetListenHost(),
+		AdvertiseAddr:  utils.Ternary(spec.AdvertiseAddr != "", spec.AdvertiseAddr, spec.Host).(string),
+		PD:             strings.Join(pds, ","),
+		SupportSecboot: tidbver.TiDBSupportSecureBoot(version),
+
+		DeployDir: paths.Deploy,
+		LogDir:    paths.Log,
+
+		NumaNode:  spec.NumaNode,
+		NumaCores: spec.NumaCores,
+	}
+
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tidb_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
@@ -196,7 +251,7 @@ func (i *TiDBInstance) InitConfig(
 		return err
 	}
 
-	return checkConfig(ctx, e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths, nil)
+	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), version, i.OS(), i.Arch(), i.ComponentName()+".toml", paths)
 }
 
 // setTLSConfig set TLS Config to support enable/disable TLS

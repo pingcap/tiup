@@ -169,7 +169,7 @@ func (im *Importer) getExecutor(host string, port int) (e ctxt.Executor, err err
 func (im *Importer) fetchFile(ctx context.Context, host string, port int, fname string) (data []byte, err error) {
 	e, err := im.getExecutor(host, port)
 	if err != nil {
-		return nil, errors.Annotatef(err, "failed to get executor, target: %s:%d", host, port)
+		return nil, errors.Annotatef(err, "failed to get executor, target: %s", utils.JoinHostPort(host, port))
 	}
 
 	tmp, err := os.MkdirTemp("", "tiup")
@@ -182,7 +182,7 @@ func (im *Importer) fetchFile(ctx context.Context, host string, port int, fname 
 
 	err = e.Transfer(ctx, fname, tmp, true /*download*/, 0, false)
 	if err != nil {
-		return nil, errors.Annotatef(err, "transfer %s from %s:%d", fname, host, port)
+		return nil, errors.Annotatef(err, "transfer %s from %s", fname, utils.JoinHostPort(host, port))
 	}
 
 	data, err = os.ReadFile(tmp)
@@ -231,7 +231,7 @@ func (im *Importer) ScpSourceToMaster(ctx context.Context, topo *spec.Specificat
 
 		e, err := im.getExecutor(master.Host, master.SSHPort)
 		if err != nil {
-			return errors.Annotatef(err, "failed to get executor, target: %s:%d", master.Host, master.SSHPort)
+			return errors.Annotatef(err, "failed to get executor, target: %s", utils.JoinHostPort(master.Host, master.SSHPort))
 		}
 		_, stderr, err := e.Execute(ctx, "mkdir -p "+target, false)
 		if err != nil {
@@ -273,6 +273,8 @@ func instancDeployDir(comp string, port int, hostDir string, globalDir string) s
 }
 
 // ImportFromAnsibleDir generate the metadata from ansible deployed cluster.
+//
+//revive:disable
 func (im *Importer) ImportFromAnsibleDir(ctx context.Context) (clusterName string, meta *spec.Metadata, err error) {
 	dir := im.dir
 	inventoryFileName := im.inventoryFileName

@@ -15,85 +15,45 @@ package scripts
 
 import (
 	"bytes"
-	"os"
 	"path"
 	"text/template"
 
 	"github.com/pingcap/tiup/embed"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // DrainerScript represent the data to generate drainer config
 type DrainerScript struct {
-	NodeID    string
-	IP        string
-	Port      int
+	NodeID string
+	Addr   string
+	PD     string
+
 	DeployDir string
 	DataDir   string
 	LogDir    string
+
 	NumaNode  string
+	IP        string
+	Port      int
 	Endpoints []*PDScript
-}
-
-// NewDrainerScript returns a DrainerScript with given arguments
-func NewDrainerScript(nodeID, ip, deployDir, dataDir, logDir string) *DrainerScript {
-	return &DrainerScript{
-		NodeID:    nodeID,
-		IP:        ip,
-		Port:      8249,
-		DeployDir: deployDir,
-		DataDir:   dataDir,
-		LogDir:    logDir,
-	}
-}
-
-// WithPort set Port field of DrainerScript
-func (c *DrainerScript) WithPort(port int) *DrainerScript {
-	c.Port = port
-	return c
-}
-
-// WithNumaNode set NumaNode field of DrainerScript
-func (c *DrainerScript) WithNumaNode(numa string) *DrainerScript {
-	c.NumaNode = numa
-	return c
-}
-
-// AppendEndpoints add new DrainerScript to Endpoints field
-func (c *DrainerScript) AppendEndpoints(ends ...*PDScript) *DrainerScript {
-	c.Endpoints = append(c.Endpoints, ends...)
-	return c
-}
-
-// Config generate the config file data.
-func (c *DrainerScript) Config() ([]byte, error) {
-	fp := path.Join("templates", "scripts", "run_drainer.sh.tpl")
-	tpl, err := embed.ReadTemplate(fp)
-	if err != nil {
-		return nil, err
-	}
-	return c.ConfigWithTemplate(string(tpl))
 }
 
 // ConfigToFile write config content to specific file.
 func (c *DrainerScript) ConfigToFile(file string) error {
-	config, err := c.Config()
+	fp := path.Join("templates", "scripts", "run_drainer.sh.tpl")
+	tpl, err := embed.ReadTemplate(fp)
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(file, config, 0755)
-}
-
-// ConfigWithTemplate generate the Drainer config content by tpl
-func (c *DrainerScript) ConfigWithTemplate(tpl string) ([]byte, error) {
-	tmpl, err := template.New("Drainer").Parse(tpl)
+	tmpl, err := template.New("Drainer").Parse(string(tpl))
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	content := bytes.NewBufferString("")
 	if err := tmpl.Execute(content, c); err != nil {
-		return nil, err
+		return err
 	}
 
-	return content.Bytes(), nil
+	return utils.WriteFile(file, content.Bytes(), 0755)
 }

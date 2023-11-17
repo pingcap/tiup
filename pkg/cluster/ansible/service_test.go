@@ -21,11 +21,8 @@ import (
 var tiflashConfig = `
 default_profile = "default"
 display_name = "TiFlash"
-http_port = 11316
 listen_host = "0.0.0.0"
-mark_cache_size = 5368709120
 path = "/data1/test-cluster/leiysky-ansible-test-deploy/tiflash/data/db"
-tcp_port = 11315
 tmp_path = "/data1/test-cluster/leiysky-ansible-test-deploy/tiflash/data/db/tmp"
 
 [flash]

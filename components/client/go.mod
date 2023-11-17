@@ -1,6 +1,6 @@
 module github.com/tiup/components/client
 
-go 1.18
+go 1.21
 
 require (
 	github.com/gizak/termui/v3 v3.1.0
@@ -13,7 +13,7 @@ require (
 	github.com/alecthomas/chroma v0.9.4 // indirect
 	github.com/dlclark/regexp2 v1.4.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
-	github.com/go-sql-driver/mysql v1.6.0 // indirect
+	github.com/go-sql-driver/mysql v1.7.1 // indirect
 	github.com/gohxs/readline v0.0.0-20171011095936-a780388e6e7c // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect

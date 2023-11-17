@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"os"
 	"reflect"
-	"strconv"
 	"strings"
 	"time"
 
@@ -30,6 +29,7 @@ import (
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tidbver"
+	"github.com/pingcap/tiup/pkg/utils"
 	"go.uber.org/zap"
 )
 
@@ -39,17 +39,18 @@ var (
 	increaseLimitPoint = checkpoint.Register()
 )
 
-// Upgrade the cluster.
+// Upgrade the cluster. (actually, it's rolling restart)
 func Upgrade(
 	ctx context.Context,
 	topo spec.Topology,
 	options Options,
 	tlsCfg *tls.Config,
 	currentVersion string,
+	targetVersion string,
 ) error {
 	roleFilter := set.NewStringSet(options.Roles...)
 	nodeFilter := set.NewStringSet(options.Nodes...)
-	components := topo.ComponentsByUpdateOrder()
+	components := topo.ComponentsByUpdateOrder(currentVersion)
 	components = FilterComponent(components, roleFilter)
 	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 
@@ -70,6 +71,7 @@ func Upgrade(
 		var origRegionScheduleLimit int
 		var err error
 
+		var tidbClient *api.TiDBClient
 		var pdEndpoints []string
 		forcePDEndpoints := os.Getenv(EnvNamePDEndpointOverwrite) // custom set PD endpoint list
 
@@ -79,7 +81,7 @@ func Upgrade(
 				pdEndpoints = strings.Split(forcePDEndpoints, ",")
 				logger.Warnf("%s is set, using %s as PD endpoints", EnvNamePDEndpointOverwrite, pdEndpoints)
 			} else {
-				pdEndpoints = topo.(*spec.Specification).GetPDList()
+				pdEndpoints = topo.(*spec.Specification).GetPDListWithManageHost()
 			}
 			pdClient := api.NewPDClient(ctx, pdEndpoints, 10*time.Second, tlsCfg)
 			origLeaderScheduleLimit, origRegionScheduleLimit, err = increaseScheduleLimit(ctx, pdClient)
@@ -100,6 +102,21 @@ func Upgrade(
 					}
 				}()
 			}
+		case spec.ComponentTiDB:
+			dbs := topo.(*spec.Specification).TiDBServers
+			endpoints := []string{}
+			for _, db := range dbs {
+				endpoints = append(endpoints, utils.JoinHostPort(db.GetManageHost(), db.StatusPort))
+			}
+
+			if currentVersion != targetVersion && tidbver.TiDBSupportUpgradeAPI(currentVersion) && tidbver.TiDBSupportUpgradeAPI(targetVersion) {
+				tidbClient = api.NewTiDBClient(ctx, endpoints, 10*time.Second, tlsCfg)
+				err = tidbClient.StartUpgrade()
+				if err != nil {
+					return err
+				}
+			}
+
 		default:
 			// do nothing, kept for future usage with other components
 		}
@@ -109,9 +126,9 @@ func Upgrade(
 
 		for _, instance := range instances {
 			// monitors
-			uniqueHosts.Insert(instance.GetHost())
+			uniqueHosts.Insert(instance.GetManageHost())
 			if instance.IgnoreMonitorAgent() {
-				noAgentHosts.Insert(instance.GetHost())
+				noAgentHosts.Insert(instance.GetManageHost())
 			}
 			switch component.Name() {
 			case spec.ComponentPD:
@@ -143,7 +160,7 @@ func Upgrade(
 
 				// during the upgrade process, endpoint addresses should not change, so only new the client once.
 				if cdcOpenAPIClient == nil {
-					cdcOpenAPIClient = api.NewCDCOpenAPIClient(ctx, topo.(*spec.Specification).GetCDCList(), 5*time.Second, tlsCfg)
+					cdcOpenAPIClient = api.NewCDCOpenAPIClient(ctx, topo.(*spec.Specification).GetCDCListWithManageHost(), 5*time.Second, tlsCfg)
 				}
 
 				capture, err := cdcOpenAPIClient.GetCaptureByAddr(address)
@@ -178,6 +195,19 @@ func Upgrade(
 				return err
 			}
 		}
+
+		switch component.Name() {
+		case spec.ComponentTiDB:
+			if currentVersion != targetVersion && tidbver.TiDBSupportUpgradeAPI(currentVersion) && tidbver.TiDBSupportUpgradeAPI(targetVersion) {
+				err = tidbClient.FinishUpgrade()
+				if err != nil {
+					return err
+				}
+			}
+
+		default:
+			// do nothing, kept for future usage with other components
+		}
 	}
 
 	if topo.GetMonitoredOptions() == nil {
@@ -211,6 +241,11 @@ func upgradeInstance(
 		rollingInstance, isRollingInstance = instance.(spec.RollingUpdateInstance)
 	}
 
+	err = executeSSHCommand(ctx, "Executing pre-upgrade command", instance.GetManageHost(), options.SSHCustomScripts.BeforeRestartInstance.Command())
+	if err != nil {
+		return err
+	}
+
 	if isRollingInstance {
 		err := rollingInstance.PreRestart(ctx, topo, int(options.APITimeout), tlsCfg)
 		if err != nil && !options.Force {
@@ -229,6 +264,11 @@ func upgradeInstance(
 		}
 	}
 
+	err = executeSSHCommand(ctx, "Executing post-upgrade command", instance.GetManageHost(), options.SSHCustomScripts.AfterRestartInstance.Command())
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -237,7 +277,8 @@ func Addr(ins spec.Instance) string {
 	if ins.GetPort() == 0 || ins.GetPort() == 80 {
 		panic(ins)
 	}
-	return ins.GetHost() + ":" + strconv.Itoa(ins.GetPort())
+
+	return utils.JoinHostPort(ins.GetManageHost(), ins.GetPort())
 }
 
 var (

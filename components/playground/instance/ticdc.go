@@ -34,14 +34,17 @@ type TiCDC struct {
 var _ Instance = &TiCDC{}
 
 // NewTiCDC create a TiCDC instance.
-func NewTiCDC(binPath string, dir, host, configPath string, id int, pds []*PDInstance) *TiCDC {
+func NewTiCDC(binPath string, dir, host, configPath string, id int, port int, pds []*PDInstance) *TiCDC {
+	if port <= 0 {
+		port = 8300
+	}
 	ticdc := &TiCDC{
 		instance: instance{
 			BinPath:    binPath,
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
-			Port:       utils.MustGetFreePort(host, 8300),
+			Port:       utils.MustGetFreePort(host, port),
 			ConfigPath: configPath,
 		},
 		pds: pds,
@@ -56,8 +59,8 @@ func (c *TiCDC) Start(ctx context.Context, version utils.Version) error {
 
 	args := []string{
 		"server",
-		fmt.Sprintf("--addr=%s:%d", c.Host, c.Port),
-		fmt.Sprintf("--advertise-addr=%s:%d", AdvertiseHost(c.Host), c.Port),
+		fmt.Sprintf("--addr=%s", utils.JoinHostPort(c.Host, c.Port)),
+		fmt.Sprintf("--advertise-addr=%s", utils.JoinHostPort(AdvertiseHost(c.Host), c.Port)),
 		fmt.Sprintf("--pd=%s", strings.Join(endpoints, ",")),
 		fmt.Sprintf("--log-file=%s", c.LogFile()),
 	}

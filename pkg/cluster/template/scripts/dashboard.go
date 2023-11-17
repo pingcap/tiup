@@ -15,24 +15,24 @@ package scripts
 
 import (
 	"bytes"
-	"os"
 	"path"
 	"text/template"
 
 	"github.com/pingcap/tiup/embed"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // DashboardScript represent the data to generate cdc config
 type DashboardScript struct {
 	TidbVersion string
-	IP          string
+	Host        string
 	Port        int
 	DeployDir   string
 	LogDir      string
 	DataDir     string
 	NumaNode    string
 	TLSEnabled  bool
-	Endpoints   []*PDScript
+	PD          string
 }
 
 // ConfigToFile write config content to specific file.
@@ -53,11 +53,5 @@ func (s *DashboardScript) ConfigToFile(file string) error {
 		return err
 	}
 
-	return os.WriteFile(file, content.Bytes(), 0755)
-}
-
-// AppendEndpoints add new PDScript to Endpoints field
-func (s *DashboardScript) AppendEndpoints(ends ...*PDScript) *DashboardScript {
-	s.Endpoints = append(s.Endpoints, ends...)
-	return s
+	return utils.WriteFile(file, content.Bytes(), 0755)
 }

@@ -251,10 +251,10 @@ func (c *cleanupFiles) instanceCleanupFiles(topo spec.Topology) {
 				}
 			}
 
-			if c.delFileMap[ins.GetHost()] == nil {
-				c.delFileMap[ins.GetHost()] = set.NewStringSet()
+			if c.delFileMap[ins.GetManageHost()] == nil {
+				c.delFileMap[ins.GetManageHost()] = set.NewStringSet()
 			}
-			c.delFileMap[ins.GetHost()].Join(logPaths).Join(dataPaths).Join(tlsPath)
+			c.delFileMap[ins.GetManageHost()].Join(logPaths).Join(dataPaths).Join(tlsPath)
 		}
 	}
 }

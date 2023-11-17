@@ -42,14 +42,16 @@ import (
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
-	"go.uber.org/zap"
 )
 
 // DisplayOption represents option of display command
 type DisplayOption struct {
-	ClusterName string
-	ShowUptime  bool
-	ShowProcess bool
+	ClusterName    string
+	ShowUptime     bool
+	ShowProcess    bool
+	ShowManageHost bool
+	ShowNuma       bool
+	ShowVersions   bool
 }
 
 // InstInfo represents an instance info
@@ -57,6 +59,7 @@ type InstInfo struct {
 	ID          string `json:"id"`
 	Role        string `json:"role"`
 	Host        string `json:"host"`
+	ManageHost  string `json:"manage_host"`
 	Ports       string `json:"ports"`
 	OsArch      string `json:"os_arch"`
 	Status      string `json:"status"`
@@ -66,6 +69,9 @@ type InstInfo struct {
 	Since       string `json:"since"`
 	DataDir     string `json:"data_dir"`
 	DeployDir   string `json:"deploy_dir"`
+	NumaNode    string `json:"numa_node"`
+	NumaCores   string `json:"numa_cores"`
+	Version     string `json:"version"`
 
 	ComponentName string
 	Port          int
@@ -124,6 +130,16 @@ func (m *Manager) Display(dopt DisplayOption, opt operator.Options) error {
 	base := metadata.GetBaseMeta()
 	cyan := color.New(color.FgCyan, color.Bold)
 
+	// check if managehost is set
+	if !dopt.ShowManageHost {
+		topo.IterInstance(func(inst spec.Instance) {
+			if inst.GetHost() != inst.GetManageHost() {
+				dopt.ShowManageHost = true
+				return
+			}
+		})
+	}
+
 	statusTimeout := time.Duration(opt.APITimeout) * time.Second
 	// display cluster meta
 	var j *JSONOutput
@@ -174,13 +190,27 @@ func (m *Manager) Display(dopt DisplayOption, opt operator.Options) error {
 
 	// display topology
 	var clusterTable [][]string
-	rowHead := []string{"ID", "Role", "Host", "Ports", "OS/Arch", "Status"}
+	rowHead := []string{"ID", "Role", "Host"}
+
+	if dopt.ShowManageHost {
+		rowHead = append(rowHead, "Manage Host")
+	}
+
+	rowHead = append(rowHead, "Ports", "OS/Arch", "Status")
+
 	if dopt.ShowProcess {
 		rowHead = append(rowHead, "Memory", "Memory Limit", "CPU Quota")
 	}
 	if dopt.ShowUptime {
 		rowHead = append(rowHead, "Since")
 	}
+	if dopt.ShowNuma {
+		rowHead = append(rowHead, "Numa Node", "Numa Cores")
+	}
+	if dopt.ShowVersions {
+		rowHead = append(rowHead, "Version")
+	}
+
 	rowHead = append(rowHead, "Data Dir", "Deploy Dir")
 	clusterTable = append(clusterTable, rowHead)
 
@@ -190,16 +220,30 @@ func (m *Manager) Display(dopt DisplayOption, opt operator.Options) error {
 			color.CyanString(v.ID),
 			v.Role,
 			v.Host,
+		}
+
+		if dopt.ShowManageHost {
+			row = append(row, v.ManageHost)
+		}
+
+		row = append(row,
 			v.Ports,
 			v.OsArch,
-			formatInstanceStatus(v.Status),
-		}
+			formatInstanceStatus(v.Status))
+
 		if dopt.ShowProcess {
 			row = append(row, v.Memory, v.MemoryLimit, v.CPUquota)
 		}
 		if dopt.ShowUptime {
 			row = append(row, v.Since)
 		}
+		if dopt.ShowNuma {
+			row = append(row, v.NumaNode, v.NumaCores)
+		}
+		if dopt.ShowVersions {
+			row = append(row, v.Version)
+		}
+
 		row = append(row, v.DataDir, v.DeployDir)
 		clusterTable = append(clusterTable, row)
 
@@ -207,7 +251,7 @@ func (m *Manager) Display(dopt DisplayOption, opt operator.Options) error {
 			continue
 		}
 		if strings.HasPrefix(v.Status, "Up") || strings.HasPrefix(v.Status, "Healthy") {
-			instAddr := fmt.Sprintf("%s:%d", v.Host, v.Port)
+			instAddr := utils.JoinHostPort(v.ManageHost, v.Port)
 			masterActive = append(masterActive, instAddr)
 		}
 	}
@@ -242,7 +286,7 @@ func (m *Manager) Display(dopt DisplayOption, opt operator.Options) error {
 	if m.logger.GetDisplayMode() == logprinter.DisplayModeJSON {
 		grafanaURLs := getGrafanaURL(clusterInstInfos)
 		if len(grafanaURLs) != 0 {
-			j.ClusterMetaInfo.GrafanaURLS = grafanaURLs		
+			j.ClusterMetaInfo.GrafanaURLS = grafanaURLs
 		}
 	} else {
 		urls, exist := getGrafanaURLStr(clusterInstInfos)
@@ -294,7 +338,7 @@ func getGrafanaURL(clusterInstInfos []InstInfo) (result []string) {
 	var grafanaURLs []string
 	for _, instance := range clusterInstInfos {
 		if instance.Role == "grafana" {
-			grafanaURLs = append(grafanaURLs, fmt.Sprintf("http://%s:%d", instance.Host, instance.Port))
+			grafanaURLs = append(grafanaURLs, "http://"+utils.JoinHostPort(instance.Host, instance.Port))
 		}
 	}
 	return grafanaURLs
@@ -401,7 +445,7 @@ func (m *Manager) DisplayTiKVLabels(dopt DisplayOption, opt operator.Options) er
 		if ins.ComponentName() == spec.ComponentPD {
 			status := ins.Status(ctx, statusTimeout, tlsCfg, masterList...)
 			if strings.HasPrefix(status, "Up") || strings.HasPrefix(status, "Healthy") {
-				instAddr := fmt.Sprintf("%s:%d", ins.GetHost(), ins.GetPort())
+				instAddr := utils.JoinHostPort(ins.GetManageHost(), ins.GetPort())
 				mu.Lock()
 				masterActive = append(masterActive, instAddr)
 				mu.Unlock()
@@ -529,7 +573,7 @@ func (m *Manager) GetClusterTopology(dopt DisplayOption, opt operator.Options) (
 		status := ins.Status(ctx, statusTimeout, tlsCfg, masterList...)
 		mu.Lock()
 		if strings.HasPrefix(status, "Up") || strings.HasPrefix(status, "Healthy") {
-			instAddr := fmt.Sprintf("%s:%d", ins.GetHost(), ins.GetPort())
+			instAddr := utils.JoinHostPort(ins.GetManageHost(), ins.GetPort())
 			masterActive = append(masterActive, instAddr)
 		}
 		masterStatus[ins.ID()] = status
@@ -564,7 +608,7 @@ func (m *Manager) GetClusterTopology(dopt DisplayOption, opt operator.Options) (
 		switch ins.ComponentName() {
 		case spec.ComponentPD:
 			status = masterStatus[ins.ID()]
-			instAddr := fmt.Sprintf("%s:%d", ins.GetHost(), ins.GetPort())
+			instAddr := utils.JoinHostPort(ins.GetManageHost(), ins.GetPort())
 			if dashboardAddr == instAddr {
 				status += "|UI"
 			}
@@ -581,11 +625,12 @@ func (m *Manager) GetClusterTopology(dopt DisplayOption, opt operator.Options) (
 
 		// Query the service status and uptime
 		if status == "-" || (dopt.ShowUptime && since == "-") || dopt.ShowProcess {
-			e, found := ctxt.GetInner(ctx).GetExecutor(ins.GetHost())
+			e, found := ctxt.GetInner(ctx).GetExecutor(ins.GetManageHost())
 			if found {
 				var active string
+				var systemdSince time.Duration
 				nctx := checkpoint.NewContext(ctx)
-				active, memory, _ = operator.GetServiceStatus(nctx, e, ins.ServiceName())
+				active, memory, systemdSince, _ = operator.GetServiceStatus(nctx, e, ins.ServiceName())
 				if status == "-" {
 					if active == "active" {
 						status = "Up"
@@ -594,13 +639,19 @@ func (m *Manager) GetClusterTopology(dopt DisplayOption, opt operator.Options) (
 					}
 				}
 				if dopt.ShowUptime && since == "-" {
-					since = formatInstanceSince(parseSystemctlSince(active))
+					since = formatInstanceSince(systemdSince)
 				}
 			}
 		}
 
 		// check if the role is patched
 		roleName := ins.Role()
+		// get extended name for TiFlash to distinguish disaggregated mode.
+		if ins.ComponentName() == spec.ComponentTiFlash {
+			tiflashInstance := ins.(*spec.TiFlashInstance)
+			tiflashSpec := tiflashInstance.InstanceSpec.(*spec.TiFlashSpec)
+			roleName += tiflashSpec.GetExtendedRole(ctx, tlsCfg, masterActive...)
+		}
 		if ins.IsPatched() {
 			roleName += " (patched)"
 		}
@@ -610,6 +661,7 @@ func (m *Manager) GetClusterTopology(dopt DisplayOption, opt operator.Options) (
 			ID:            ins.ID(),
 			Role:          roleName,
 			Host:          ins.GetHost(),
+			ManageHost:    ins.GetManageHost(),
 			Ports:         utils.JoinInt(ins.UsedPorts(), "/"),
 			OsArch:        tui.OsArch(ins.OS(), ins.Arch()),
 			Status:        status,
@@ -621,6 +673,9 @@ func (m *Manager) GetClusterTopology(dopt DisplayOption, opt operator.Options) (
 			ComponentName: ins.ComponentName(),
 			Port:          ins.GetPort(),
 			Since:         since,
+			NumaNode:      utils.Ternary(ins.GetNumaNode() == "", "-", ins.GetNumaNode()).(string),
+			NumaCores:     utils.Ternary(ins.GetNumaCores() == "", "-", ins.GetNumaCores()).(string),
+			Version:       ins.CalculateVersion(base.Version),
 		})
 		mu.Unlock()
 	}, opt.Concurrency)
@@ -700,37 +755,6 @@ func formatInstanceSince(uptime time.Duration) string {
 	return strings.Join(parts, "")
 }
 
-// `systemctl status xxx.service` returns as below
-// Active: active (running) since Sat 2021-03-27 10:51:11 CST; 41min ago
-func parseSystemctlSince(str string) (dur time.Duration) {
-	// if service is not found or other error, don't need to parse it
-	if str == "" {
-		return 0
-	}
-	defer func() {
-		if dur == 0 {
-			zap.L().Warn("failed to parse systemctl since", zap.String("value", str))
-		}
-	}()
-	parts := strings.Split(str, ";")
-	if len(parts) != 2 {
-		return
-	}
-	parts = strings.Split(parts[0], " ")
-	if len(parts) < 3 {
-		return
-	}
-
-	dateStr := strings.Join(parts[len(parts)-3:], " ")
-
-	tm, err := time.Parse("2006-01-02 15:04:05 MST", dateStr)
-	if err != nil {
-		return
-	}
-
-	return time.Since(tm)
-}
-
 // SetSSHKeySet set ssh key set.
 func SetSSHKeySet(ctx context.Context, privateKeyPath string, publicKeyPath string) error {
 	ctxt.GetInner(ctx).PrivateKeyPath = privateKeyPath
@@ -750,7 +774,7 @@ func SetClusterSSH(ctx context.Context, topo spec.Topology, deployUser string, s
 	for _, com := range topo.ComponentsByStartOrder() {
 		for _, in := range com.Instances() {
 			cf := executor.SSHConfig{
-				Host:    in.GetHost(),
+				Host:    in.GetManageHost(),
 				Port:    in.GetSSHPort(),
 				KeyFile: ctxt.GetInner(ctx).PrivateKeyPath,
 				User:    deployUser,
@@ -761,7 +785,7 @@ func SetClusterSSH(ctx context.Context, topo spec.Topology, deployUser string, s
 			if err != nil {
 				return err
 			}
-			ctxt.GetInner(ctx).SetExecutor(in.GetHost(), e)
+			ctxt.GetInner(ctx).SetExecutor(in.GetManageHost(), e)
 		}
 	}
 
@@ -776,13 +800,8 @@ func (m *Manager) DisplayDashboardInfo(clusterName string, timeout time.Duration
 		return err
 	}
 
-	pdEndpoints := make([]string, 0)
-	for _, pd := range metadata.Topology.PDServers {
-		pdEndpoints = append(pdEndpoints, fmt.Sprintf("%s:%d", pd.Host, pd.ClientPort))
-	}
-
 	ctx := context.WithValue(context.Background(), logprinter.ContextKeyLogger, m.logger)
-	pdAPI := api.NewPDClient(ctx, pdEndpoints, timeout, tlsCfg)
+	pdAPI := api.NewPDClient(ctx, metadata.Topology.GetPDListWithManageHost(), timeout, tlsCfg)
 	dashboardAddr, err := pdAPI.GetDashboardAddress()
 	if err != nil {
 		return fmt.Errorf("failed to retrieve TiDB Dashboard instance from PD: %s", err)

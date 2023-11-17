@@ -21,6 +21,7 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/utils"
 	"go.uber.org/zap"
 )
@@ -71,7 +72,7 @@ func (w *WaitFor) Execute(ctx context.Context, e ctxt.Executor) (err error) {
 	}
 	if err := utils.Retry(func() error {
 		// only listing TCP ports
-		stdout, _, err := e.Execute(ctx, "ss -ltn", false)
+		stdout, _, err := executor.UnwarpCheckPointExecutor(e).Execute(ctx, "ss -ltn", false)
 		if err == nil {
 			switch w.c.State {
 			case "started":

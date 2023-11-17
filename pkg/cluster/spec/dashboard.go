@@ -18,6 +18,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
@@ -28,14 +29,15 @@ import (
 // DashboardSpec represents the Dashboard topology specification in topology.yaml
 type DashboardSpec struct {
 	Host            string               `yaml:"host"`
+	ManageHost      string               `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
 	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Version         string               `yaml:"version,omitempty"`
 	Patched         bool                 `yaml:"patched,omitempty"`
 	IgnoreExporter  bool                 `yaml:"ignore_exporter,omitempty"`
 	Port            int                  `yaml:"port" default:"12333"`
 	DeployDir       string               `yaml:"deploy_dir,omitempty"`
 	DataDir         string               `yaml:"data_dir,omitempty"`
 	LogDir          string               `yaml:"log_dir,omitempty"`
+	Source          string               `yaml:"source,omitempty" validate:"source:editable"`
 	NumaNode        string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
 	Config          map[string]any       `yaml:"config,omitempty" validate:"config:ignore"`
 	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
@@ -49,7 +51,7 @@ func (s *DashboardSpec) Status(ctx context.Context, timeout time.Duration, tlsCf
 		timeout = statusQueryTimeout
 	}
 
-	state := statusByHost(s.Host, s.Port, "/status", timeout, tlsCfg)
+	state := statusByHost(s.GetManageHost(), s.Port, "/status", timeout, tlsCfg)
 
 	return state
 }
@@ -61,12 +63,24 @@ func (s *DashboardSpec) Role() string {
 
 // SSH returns the host and SSH port of the instance
 func (s *DashboardSpec) SSH() (string, int) {
-	return s.Host, s.SSHPort
+	host := s.Host
+	if s.ManageHost != "" {
+		host = s.ManageHost
+	}
+	return host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
 func (s *DashboardSpec) GetMainPort() int {
 	return s.Port
+}
+
+// GetManageHost returns the manage host of the instance
+func (s *DashboardSpec) GetManageHost() string {
+	if s.ManageHost != "" {
+		return s.ManageHost
+	}
+	return s.Host
 }
 
 // IsImported returns if the node is imported from TiDB-Ansible
@@ -93,6 +107,29 @@ func (c *DashboardComponent) Role() string {
 	return ComponentDashboard
 }
 
+// Source implements Component interface.
+func (c *DashboardComponent) Source() string {
+	source := c.Topology.ComponentSources.Dashboard
+	if source != "" {
+		return source
+	}
+	return ComponentDashboard
+}
+
+// CalculateVersion implements the Component interface
+func (c *DashboardComponent) CalculateVersion(clusterVersion string) string {
+	version := c.Topology.ComponentVersions.Dashboard
+	if version == "" {
+		version = clusterVersion
+	}
+	return version
+}
+
+// SetVersion implements Component interface.
+func (c *DashboardComponent) SetVersion(version string) {
+	c.Topology.ComponentVersions.Dashboard = version
+}
+
 // Instances implements Component interface.
 func (c *DashboardComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.Drainers))
@@ -102,8 +139,13 @@ func (c *DashboardComponent) Instances() []Instance {
 			InstanceSpec: s,
 			Name:         c.Name(),
 			Host:         s.Host,
+			ManageHost:   s.ManageHost,
+			ListenHost:   c.Topology.BaseTopo().GlobalOptions.ListenHost,
 			Port:         s.Port,
 			SSHP:         s.SSHPort,
+			Source:       s.Source,
+			NumaNode:     s.NumaNode,
+			NumaCores:    "",
 
 			Ports: []int{
 				s.Port,
@@ -114,8 +156,9 @@ func (c *DashboardComponent) Instances() []Instance {
 			},
 			StatusFn: s.Status,
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
-				return UptimeByHost(s.Host, s.Port, timeout, tlsCfg)
+				return UptimeByHost(s.GetManageHost(), s.Port, timeout, tlsCfg)
 			},
+			Component: c,
 		}, c.Topology})
 	}
 	return ins
@@ -162,15 +205,20 @@ func (i *DashboardInstance) InitConfig(
 	enableTLS := topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(*DashboardSpec)
 
+	pds := []string{}
+	for _, pdspec := range topo.PDServers {
+		pds = append(pds, pdspec.GetAdvertiseClientURL(enableTLS))
+	}
 	cfg := &scripts.DashboardScript{
+		// -h, --host string              listen host of the Dashboard Server
+		Host:        i.GetListenHost(),
 		TidbVersion: clusterVersion,
-		IP:          i.GetHost(),
 		DeployDir:   paths.Deploy,
 		DataDir:     paths.Data[0],
 		LogDir:      paths.Log,
 		Port:        spec.Port,
 		NumaNode:    spec.NumaNode,
-		Endpoints:   topo.Endpoints(deployUser),
+		PD:          strings.Join(pds, ","),
 		TLSEnabled:  enableTLS,
 	}
 
@@ -195,7 +243,7 @@ func (i *DashboardInstance) InitConfig(
 		return err
 	}
 
-	return checkConfig(ctx, e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths, nil)
+	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), i.CalculateVersion(clusterVersion), i.OS(), i.Arch(), i.ComponentName()+".toml", paths)
 }
 
 // setTLSConfig set TLS Config to support enable/disable TLS

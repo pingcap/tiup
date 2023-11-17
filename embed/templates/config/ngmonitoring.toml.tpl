@@ -1,8 +1,8 @@
 # NG Monitoring Server Configuration.
 
 # Server address.
-address = "0.0.0.0:{{.Port}}"
-advertise-address = "{{.IP}}:{{.Port}}"
+address = "{{.Address}}"
+advertise-address = "{{.AdvertiseAddress}}"
 
 [log]
 # Log path

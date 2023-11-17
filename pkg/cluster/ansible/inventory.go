@@ -24,6 +24,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
+	"github.com/pingcap/tiup/pkg/tidbver"
 	"github.com/relex/aini"
 	"gopkg.in/ini.v1"
 	"gopkg.in/yaml.v2"
@@ -132,6 +133,7 @@ func ParseAndImportInventory(ctx context.Context, dir, ansCfgFile string, clsMet
 	return defaults.Set(clsMeta)
 }
 
+//revive:disable
 func parseGroupVars(ctx context.Context, dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini.InventoryData) error {
 	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 
@@ -327,8 +329,10 @@ func parseGroupVars(ctx context.Context, dir, ansCfgFile string, clsMeta *spec.C
 			if tcpPort, ok := grpVars["tcp_port"]; ok {
 				tmpIns.TCPPort, _ = strconv.Atoi(tcpPort)
 			}
-			if httpPort, ok := grpVars["http_port"]; ok {
-				tmpIns.HTTPPort, _ = strconv.Atoi(httpPort)
+			if !tidbver.TiFlashNotNeedHTTPPortConfig(clsMeta.Version) {
+				if httpPort, ok := grpVars["http_port"]; ok {
+					tmpIns.HTTPPort, _ = strconv.Atoi(httpPort)
+				}
 			}
 			if flashServicePort, ok := grpVars["flash_service_port"]; ok {
 				tmpIns.FlashServicePort, _ = strconv.Atoi(flashServicePort)
@@ -347,8 +351,10 @@ func parseGroupVars(ctx context.Context, dir, ansCfgFile string, clsMeta *spec.C
 			if tcpPort, ok := srv.Vars["tcp_port"]; ok {
 				tmpIns.TCPPort, _ = strconv.Atoi(tcpPort)
 			}
-			if httpPort, ok := srv.Vars["http_port"]; ok {
-				tmpIns.HTTPPort, _ = strconv.Atoi(httpPort)
+			if !tidbver.TiFlashNotNeedHTTPPortConfig(clsMeta.Version) {
+				if httpPort, ok := srv.Vars["http_port"]; ok {
+					tmpIns.HTTPPort, _ = strconv.Atoi(httpPort)
+				}
 			}
 			if flashServicePort, ok := srv.Vars["flash_service_port"]; ok {
 				tmpIns.FlashServicePort, _ = strconv.Atoi(flashServicePort)

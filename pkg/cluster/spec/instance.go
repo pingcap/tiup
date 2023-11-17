@@ -31,6 +31,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/module"
 	system "github.com/pingcap/tiup/pkg/cluster/template/systemd"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/utils"
 	"go.uber.org/zap"
 )
 
@@ -40,6 +41,7 @@ const (
 	ComponentTiKV             = "tikv"
 	ComponentPD               = "pd"
 	ComponentTiFlash          = "tiflash"
+	ComponentTiProxy          = "tiproxy"
 	ComponentGrafana          = "grafana"
 	ComponentDrainer          = "drainer"
 	ComponentDashboard        = "tidb-dashboard"
@@ -52,7 +54,6 @@ const (
 	ComponentDMMaster         = "dm-master"
 	ComponentDMWorker         = "dm-worker"
 	ComponentPrometheus       = "prometheus"
-	ComponentPushwaygate      = "pushgateway"
 	ComponentBlackboxExporter = "blackbox_exporter"
 	ComponentNodeExporter     = "node_exporter"
 	ComponentCheckCollector   = "insight"
@@ -69,7 +70,10 @@ var (
 type Component interface {
 	Name() string
 	Role() string
+	Source() string
 	Instances() []Instance
+	CalculateVersion(string) string
+	SetVersion(string)
 }
 
 // RollingUpdateInstance represent a instance need to transfer state when restart.
@@ -88,12 +92,16 @@ type Instance interface {
 	ScaleConfig(ctx context.Context, e ctxt.Executor, topo Topology, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error
 	PrepareStart(ctx context.Context, tlsCfg *tls.Config) error
 	ComponentName() string
+	ComponentSource() string
 	InstanceName() string
 	ServiceName() string
 	ResourceControl() meta.ResourceControl
 	GetHost() string
+	GetManageHost() string
 	GetPort() int
 	GetSSHPort() int
+	GetNumaNode() string
+	GetNumaCores() string
 	DeployDir() string
 	UsedPorts() []int
 	UsedDirs() []string
@@ -105,6 +113,8 @@ type Instance interface {
 	Arch() string
 	IsPatched() bool
 	SetPatched(bool)
+	CalculateVersion(string) string
+	// SetVersion(string)
 	setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error)
 }
 
@@ -136,14 +146,20 @@ type BaseInstance struct {
 
 	Name       string
 	Host       string
+	ManageHost string
 	ListenHost string
 	Port       int
 	SSHP       int
+	Source     string
+	NumaNode   string
+	NumaCores  string
 
 	Ports    []int
 	Dirs     []string
 	StatusFn func(ctx context.Context, timeout time.Duration, tlsCfg *tls.Config, pdHosts ...string) string
 	UptimeFn func(ctx context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration
+
+	Component Component
 }
 
 // Ready implements Instance interface
@@ -264,7 +280,7 @@ func (i *BaseInstance) MergeServerConfig(ctx context.Context, e ctxt.Executor, g
 	if err != nil {
 		return err
 	}
-	err = os.WriteFile(fp, conf, os.ModePerm)
+	err = utils.WriteFile(fp, conf, os.ModePerm)
 	if err != nil {
 		return err
 	}
@@ -280,7 +296,7 @@ func (i *BaseInstance) mergeTiFlashLearnerServerConfig(ctx context.Context, e ct
 	if err != nil {
 		return err
 	}
-	err = os.WriteFile(fp, conf, os.ModePerm)
+	err = utils.WriteFile(fp, conf, os.ModePerm)
 	if err != nil {
 		return err
 	}
@@ -291,12 +307,22 @@ func (i *BaseInstance) mergeTiFlashLearnerServerConfig(ctx context.Context, e ct
 
 // ID returns the identifier of this instance, the ID is constructed by host:port
 func (i *BaseInstance) ID() string {
-	return fmt.Sprintf("%s:%d", i.Host, i.Port)
+	return utils.JoinHostPort(i.Host, i.Port)
 }
 
 // ComponentName implements Instance interface
 func (i *BaseInstance) ComponentName() string {
 	return i.Name
+}
+
+// ComponentSource implements Instance interface
+func (i *BaseInstance) ComponentSource() string {
+	if i.Source != "" {
+		return i.Source
+	} else if i.Component.Source() != "" {
+		return i.Component.Source()
+	}
+	return i.ComponentName()
 }
 
 // InstanceName implements Instance interface
@@ -327,9 +353,21 @@ func (i *BaseInstance) GetHost() string {
 	return i.Host
 }
 
+// GetManageHost implements Instance interface
+func (i *BaseInstance) GetManageHost() string {
+	if i.ManageHost != "" {
+		return i.ManageHost
+	}
+	return i.Host
+}
+
 // GetListenHost implements Instance interface
 func (i *BaseInstance) GetListenHost() string {
 	if i.ListenHost == "" {
+		// ipv6 address
+		if strings.Contains(i.Host, ":") {
+			return "::"
+		}
 		return "0.0.0.0"
 	}
 	return i.ListenHost
@@ -338,6 +376,16 @@ func (i *BaseInstance) GetListenHost() string {
 // GetSSHPort implements Instance interface
 func (i *BaseInstance) GetSSHPort() int {
 	return i.SSHP
+}
+
+// GetNumaNode implements Instance interface
+func (i *BaseInstance) GetNumaNode() string {
+	return i.NumaNode
+}
+
+// GetNumaCores implements Instance interface
+func (i *BaseInstance) GetNumaCores() string {
+	return i.NumaCores
 }
 
 // DeployDir implements Instance interface
@@ -417,6 +465,11 @@ func (i *BaseInstance) SetPatched(p bool) {
 		return
 	}
 	v.SetBool(p)
+}
+
+// CalculateVersion implements the Instance interface
+func (i *BaseInstance) CalculateVersion(globalVersion string) string {
+	return i.Component.CalculateVersion(globalVersion)
 }
 
 // PrepareStart checks instance requirements before starting
