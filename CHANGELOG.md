@@ -1,5 +1,35 @@
 TiUP Changelog
 
+## [1.14.0] 2023-11-17
+
+### New Features
+
+- Support use different component versions in `tiup-cluster` (#2010 #2264 #2306, @nexustar)
+- Add global listen_host config in `tiup-cluster` and `tiup-dm` (#2303, @nexustar)
+- Add gloabl component_sources config in `tiup-cluster` and `tiup-dm` (#2320, @nexustar)
+- Support TiDB upgrade API to automatically pause DDL when upgrade in `tiup-cluster`(#2287 #2289, @nexustar)
+- Support TiProxy in `tiup-cluster` (#2271, @xhebox)
+- Support scheduling service in `tiup-playground` (#2273, @rleungx)
+- Support to show numa node when display in `tiup-cluster` and `tiup-dm` (#2295 #2312, @KanShiori)
+
+### Fixes
+
+- Make sure to signal tiproxy to stop in `tiup-playground` (#2318, @dveeden)
+- Fix "clone" operation may be missing packages without throwing an error in `tiup` (#2309 #2311, @nexustar)
+- Not cache the output of ss -tln command when checking wether components are started/stopped in `tiup-cluster` and `tiup-dm` (#2298, @KanShiori)
+- Fix tidb-dashboard listen_host in `tiup-cluster` (#2304, @nexustar)
+- Fix tiproxy metrics addr in `tiup-playground` (#2299, @xhebox)
+
+### Improvements
+
+- Upgrade go-sql-driver/mysql version to v1.7.1 (#2246, @srstack)
+- Use release version of TiProxy instead of nightly (#2305, @nexustar)
+- Use port to probe TiDB in `tiup-playground` (#2296, @KanShiori)
+- Add mcs name for pd log in `tiup-playground` (#2310, @HuSharp)
+- Not overwrite real error in retry function (#2290, @nexustar)
+- Fix alignment of output in `tiup-playground` (#2313, @dveeden)
+- ci improve (#2301 #2308 #2316, @nexustar @dveeden)
+
 ## [1.13.1] 2023-09-25
 
 ### Fixes
