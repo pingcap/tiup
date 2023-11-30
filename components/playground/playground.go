@@ -1489,7 +1489,7 @@ func mysqlCommand() (cmd string) {
 	if err != nil {
 		return
 	}
-	vMaj, vMin, _, err := parseMysqlCommand(string(mysqlVerOutput))
+	vMaj, vMin, _, err := parseMysqlVersion(string(mysqlVerOutput))
 	if err == nil {
 		if vMaj == 8 && vMin >= 1 { // 8.1.0 and newer
 			return "mysql"
@@ -1498,12 +1498,12 @@ func mysqlCommand() (cmd string) {
 	return
 }
 
-// parseMysqlCommand parses the output from `mysql --version` that is in `versionOutput`
+// parseMysqlVersion parses the output from `mysql --version` that is in `versionOutput`
 // and returns the major, minor and patch version.
 //
 // New format example: `mysql  Ver 8.2.0 for Linux on x86_64 (MySQL Community Server - GPL)`
 // Old format example: `mysql  Ver 14.14 Distrib 5.7.36, for linux-glibc2.12 (x86_64) using  EditLine wrapper`
-func parseMysqlCommand(versionOutput string) (vMaj int, vMin int, vPatch int, err error) {
+func parseMysqlVersion(versionOutput string) (vMaj int, vMin int, vPatch int, err error) {
 	mysqlVerRegexp := regexp.MustCompile(`(Ver|Distrib) ([0-9]+)\.([0-9]+)\.([0-9]+)`)
 	mysqlVerMatch := mysqlVerRegexp.FindStringSubmatch(versionOutput)
 	if mysqlVerMatch == nil {

@@ -94,7 +94,7 @@ func TestParseMysqlCommand(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		vMaj, vMin, vPatch, err := parseMysqlCommand(tc.version)
+		vMaj, vMin, vPatch, err := parseMysqlVersion(tc.version)
 		if tc.err {
 			assert.NotNil(t, err)
 		} else {
