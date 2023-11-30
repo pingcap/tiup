@@ -91,6 +91,13 @@ func TestParseMysqlCommand(t *testing.T) {
 			37,
 			false,
 		},
+		{
+			"/bin/mysql from 11.2.2-MariaDB, client 15.2 for linux-systemd (x86_64) using readline 5.1",
+			11,
+			2,
+			2,
+			false,
+		},
 	}
 
 	for _, tc := range cases {

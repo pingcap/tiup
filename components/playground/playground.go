@@ -1503,8 +1503,14 @@ func mysqlCommand() (cmd string) {
 //
 // New format example: `mysql  Ver 8.2.0 for Linux on x86_64 (MySQL Community Server - GPL)`
 // Old format example: `mysql  Ver 14.14 Distrib 5.7.36, for linux-glibc2.12 (x86_64) using  EditLine wrapper`
+// MariaDB 11.2 format: `/usr/bin/mysql from 11.2.2-MariaDB, client 15.2 for linux-systemd (x86_64) using readline 5.1`
+//
+// Note that MariaDB has `bin/mysql` (deprecated) and `bin/mariadb`. This is to parse the version from `bin/mysql`.
+// As TiDB is a MySQL compatible database we recommend `bin/mysql` from MySQL.
+// If we ever want to auto-detect other clients like `bin/mariadb`, `bin/mysqlsh`, `bin/mycli`, etc then
+// each of them needs their own version detection and adjust for the right commandline options.
 func parseMysqlVersion(versionOutput string) (vMaj int, vMin int, vPatch int, err error) {
-	mysqlVerRegexp := regexp.MustCompile(`(Ver|Distrib) ([0-9]+)\.([0-9]+)\.([0-9]+)`)
+	mysqlVerRegexp := regexp.MustCompile(`(Ver|Distrib|from) ([0-9]+)\.([0-9]+)\.([0-9]+)`)
 	mysqlVerMatch := mysqlVerRegexp.FindStringSubmatch(versionOutput)
 	if mysqlVerMatch == nil {
 		return 0, 0, 0, errors.New("No match")
