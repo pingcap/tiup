@@ -124,6 +124,11 @@ func (c *MonitorComponent) Role() string {
 	return RoleMonitor
 }
 
+// Source implements Component interface.
+func (c *MonitorComponent) Source() string {
+	return ComponentPrometheus
+}
+
 // CalculateVersion implements the Component interface
 func (c *MonitorComponent) CalculateVersion(clusterVersion string) string {
 	// always not follow cluster version, use ""(latest) by default

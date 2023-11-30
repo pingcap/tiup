@@ -89,14 +89,6 @@ func (s *TiDBSpec) IgnoreMonitorAgent() bool {
 	return s.IgnoreExporter
 }
 
-// GetSource returns source to download the component
-func (s *TiDBSpec) GetSource() string {
-	if s.Source == "" {
-		return ComponentTiDB
-	}
-	return s.Source
-}
-
 // TiDBComponent represents TiDB component.
 type TiDBComponent struct{ Topology *Specification }
 
@@ -107,6 +99,15 @@ func (c *TiDBComponent) Name() string {
 
 // Role implements Component interface.
 func (c *TiDBComponent) Role() string {
+	return ComponentTiDB
+}
+
+// Source implements Component interface.
+func (c *TiDBComponent) Source() string {
+	source := c.Topology.ComponentSources.TiDB
+	if source != "" {
+		return source
+	}
 	return ComponentTiDB
 }
 

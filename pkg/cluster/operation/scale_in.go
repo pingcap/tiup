@@ -83,6 +83,8 @@ func ScaleIn(
 }
 
 // ScaleInCluster scales in the cluster
+//
+//revive:disable
 func ScaleInCluster(
 	ctx context.Context,
 	cluster *spec.Specification,

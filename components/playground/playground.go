@@ -1304,7 +1304,12 @@ func (p *Playground) renderSDFile() error {
 	cid2targets := make(map[string]instance.MetricAddr)
 
 	_ = p.WalkInstances(func(cid string, inst instance.Instance) error {
-		cid2targets[cid] = inst.MetricAddr()
+		v := inst.MetricAddr()
+		t, ok := cid2targets[cid]
+		if ok {
+			v.Targets = append(v.Targets, t.Targets...)
+		}
+		cid2targets[cid] = v
 		return nil
 	})
 

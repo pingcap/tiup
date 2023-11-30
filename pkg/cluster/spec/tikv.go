@@ -164,14 +164,6 @@ func (s *TiKVSpec) Labels() (map[string]string, error) {
 	return lbs, nil
 }
 
-// GetSource returns source to download the component
-func (s *TiKVSpec) GetSource() string {
-	if s.Source == "" {
-		return ComponentTiKV
-	}
-	return s.Source
-}
-
 // TiKVComponent represents TiKV component.
 type TiKVComponent struct{ Topology *Specification }
 
@@ -182,6 +174,15 @@ func (c *TiKVComponent) Name() string {
 
 // Role implements Component interface.
 func (c *TiKVComponent) Role() string {
+	return ComponentTiKV
+}
+
+// Source implements Component interface.
+func (c *TiKVComponent) Source() string {
+	source := c.Topology.ComponentSources.TiKV
+	if source != "" {
+		return source
+	}
 	return ComponentTiKV
 }
 
