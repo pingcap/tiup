@@ -89,14 +89,6 @@ func (s *TiDBSpec) IgnoreMonitorAgent() bool {
 	return s.IgnoreExporter
 }
 
-// GetSource returns source to download the component
-func (s *TiDBSpec) GetSource() string {
-	if s.Source == "" {
-		return ComponentTiDB
-	}
-	return s.Source
-}
-
 // TiDBComponent represents TiDB component.
 type TiDBComponent struct{ Topology *Specification }
 
@@ -110,6 +102,29 @@ func (c *TiDBComponent) Role() string {
 	return ComponentTiDB
 }
 
+// Source implements Component interface.
+func (c *TiDBComponent) Source() string {
+	source := c.Topology.ComponentSources.TiDB
+	if source != "" {
+		return source
+	}
+	return ComponentTiDB
+}
+
+// CalculateVersion implements the Component interface
+func (c *TiDBComponent) CalculateVersion(clusterVersion string) string {
+	version := c.Topology.ComponentVersions.TiDB
+	if version == "" {
+		version = clusterVersion
+	}
+	return version
+}
+
+// SetVersion implements Component interface.
+func (c *TiDBComponent) SetVersion(version string) {
+	c.Topology.ComponentVersions.TiDB = version
+}
+
 // Instances implements Component interface.
 func (c *TiDBComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.TiDBServers))
@@ -120,10 +135,12 @@ func (c *TiDBComponent) Instances() []Instance {
 			Name:         c.Name(),
 			Host:         s.Host,
 			ManageHost:   s.ManageHost,
-			ListenHost:   s.ListenHost,
+			ListenHost:   utils.Ternary(s.ListenHost != "", s.ListenHost, c.Topology.BaseTopo().GlobalOptions.ListenHost).(string),
 			Port:         s.Port,
 			SSHP:         s.SSHPort,
 			Source:       s.Source,
+			NumaNode:     s.NumaNode,
+			NumaCores:    s.NumaCores,
 
 			Ports: []int{
 				s.Port,
@@ -138,6 +155,7 @@ func (c *TiDBComponent) Instances() []Instance {
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 				return UptimeByHost(s.GetManageHost(), s.StatusPort, timeout, tlsCfg)
 			},
+			Component: c,
 		}, c.Topology})
 	}
 	return ins
@@ -165,6 +183,7 @@ func (i *TiDBInstance) InitConfig(
 
 	enableTLS := topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(*TiDBSpec)
+	version := i.CalculateVersion(clusterVersion)
 
 	pds := []string{}
 	for _, pdspec := range topo.PDServers {
@@ -176,7 +195,7 @@ func (i *TiDBInstance) InitConfig(
 		ListenHost:     i.GetListenHost(),
 		AdvertiseAddr:  utils.Ternary(spec.AdvertiseAddr != "", spec.AdvertiseAddr, spec.Host).(string),
 		PD:             strings.Join(pds, ","),
-		SupportSecboot: tidbver.TiDBSupportSecureBoot(clusterVersion),
+		SupportSecboot: tidbver.TiDBSupportSecureBoot(version),
 
 		DeployDir: paths.Deploy,
 		LogDir:    paths.Log,
@@ -232,7 +251,7 @@ func (i *TiDBInstance) InitConfig(
 		return err
 	}
 
-	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths, nil)
+	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), version, i.OS(), i.Arch(), i.ComponentName()+".toml", paths)
 }
 
 // setTLSConfig set TLS Config to support enable/disable TLS

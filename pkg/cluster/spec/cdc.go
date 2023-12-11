@@ -92,14 +92,6 @@ func (s *CDCSpec) IgnoreMonitorAgent() bool {
 	return s.IgnoreExporter
 }
 
-// GetSource returns source to download the component
-func (s *CDCSpec) GetSource() string {
-	if s.Source == "" {
-		return ComponentCDC
-	}
-	return s.Source
-}
-
 // CDCComponent represents CDC component.
 type CDCComponent struct{ Topology *Specification }
 
@@ -113,6 +105,29 @@ func (c *CDCComponent) Role() string {
 	return ComponentCDC
 }
 
+// Source implements Component interface.
+func (c *CDCComponent) Source() string {
+	source := c.Topology.ComponentSources.CDC
+	if source != "" {
+		return source
+	}
+	return ComponentCDC
+}
+
+// CalculateVersion implements the Component interface
+func (c *CDCComponent) CalculateVersion(clusterVersion string) string {
+	version := c.Topology.ComponentVersions.CDC
+	if version == "" {
+		version = clusterVersion
+	}
+	return version
+}
+
+// SetVersion implements Component interface.
+func (c *CDCComponent) SetVersion(version string) {
+	c.Topology.ComponentVersions.CDC = version
+}
+
 // Instances implements Component interface.
 func (c *CDCComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.CDCServers))
@@ -123,9 +138,12 @@ func (c *CDCComponent) Instances() []Instance {
 			Name:         c.Name(),
 			Host:         s.Host,
 			ManageHost:   s.ManageHost,
+			ListenHost:   c.Topology.BaseTopo().GlobalOptions.ListenHost,
 			Port:         s.Port,
 			SSHP:         s.SSHPort,
-			Source:       s.GetSource(),
+			Source:       s.Source,
+			NumaNode:     s.NumaNode,
+			NumaCores:    "",
 
 			Ports: []int{
 				s.Port,
@@ -139,6 +157,7 @@ func (c *CDCComponent) Instances() []Instance {
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 				return UptimeByHost(s.GetManageHost(), s.Port, timeout, tlsCfg)
 			},
+			Component: c,
 		}, c.Topology}
 		if s.DataDir != "" {
 			instance.Dirs = append(instance.Dirs, s.DataDir)
@@ -191,14 +210,15 @@ func (i *CDCInstance) InitConfig(
 	spec := i.InstanceSpec.(*CDCSpec)
 	globalConfig := topo.ServerConfigs.CDC
 	instanceConfig := spec.Config
+	version := i.CalculateVersion(clusterVersion)
 
-	if !tidbver.TiCDCSupportConfigFile(clusterVersion) {
+	if !tidbver.TiCDCSupportConfigFile(version) {
 		if len(globalConfig)+len(instanceConfig) > 0 {
 			return errors.New("server_config is only supported with TiCDC version v4.0.13 or later")
 		}
 	}
 
-	if !tidbver.TiCDCSupportClusterID(clusterVersion) && spec.TiCDCClusterID != "" {
+	if !tidbver.TiCDCSupportClusterID(version) && spec.TiCDCClusterID != "" {
 		return errors.New("ticdc_cluster_id is only supported with TiCDC version v6.2.0 or later")
 	}
 
@@ -213,13 +233,13 @@ func (i *CDCInstance) InitConfig(
 		GCTTL:             spec.GCTTL,
 		TZ:                spec.TZ,
 		ClusterID:         spec.TiCDCClusterID,
-		DataDirEnabled:    tidbver.TiCDCSupportDataDir(clusterVersion),
-		ConfigFileEnabled: tidbver.TiCDCSupportConfigFile(clusterVersion),
+		DataDirEnabled:    tidbver.TiCDCSupportDataDir(version),
+		ConfigFileEnabled: tidbver.TiCDCSupportConfigFile(version),
 		TLSEnabled:        enableTLS,
 
 		DeployDir: paths.Deploy,
 		LogDir:    paths.Log,
-		DataDir:   utils.Ternary(tidbver.TiCDCSupportSortOrDataDir(clusterVersion), spec.DataDir, "").(string),
+		DataDir:   utils.Ternary(tidbver.TiCDCSupportSortOrDataDir(version), spec.DataDir, "").(string),
 
 		NumaNode: spec.NumaNode,
 	}

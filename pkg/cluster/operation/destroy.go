@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fatih/color"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
@@ -434,27 +435,23 @@ func DestroyComponent(ctx context.Context, instances []spec.Instance, cls spec.T
 			delPaths.Insert(fmt.Sprintf("/etc/systemd/system/%s", svc))
 		}
 		logger.Debugf("Deleting paths on %s: %s", ins.GetManageHost(), strings.Join(delPaths.Slice(), " "))
-		c := module.ShellModuleConfig{
-			Command:  fmt.Sprintf("rm -rf %s;", strings.Join(delPaths.Slice(), " ")),
-			Sudo:     true, // the .service files are in a directory owned by root
-			Chdir:    "",
-			UseShell: false,
-		}
-		shell := module.NewShellModule(c)
-		stdout, stderr, err := shell.Execute(ctx, e)
+		for _, delPath := range delPaths.Slice() {
+			c := module.ShellModuleConfig{
+				Command:  fmt.Sprintf("rm -rf %s;", delPath),
+				Sudo:     true, // the .service files are in a directory owned by root
+				Chdir:    "",
+				UseShell: false,
+			}
+			shell := module.NewShellModule(c)
+			_, _, err := shell.Execute(ctx, e)
 
-		if len(stdout) > 0 {
-			fmt.Println(string(stdout))
-		}
-		if len(stderr) > 0 {
-			logger.Errorf(string(stderr))
-		}
-
-		if err != nil {
-			return perrs.Annotatef(err, "failed to destroy: %s", ins.GetManageHost())
+			if err != nil {
+				// Ignore error and continue.For example, deleting a mount point will result in a "Device or resource busy" error.
+				logger.Warnf(color.YellowString("Warn: failed to delete path \"%s\" on %s.Please check this error message and manually delete if necessary.\nerrmsg: %s", delPath, ins.GetManageHost(), err))
+			}
 		}
 
-		logger.Infof("Destroy %s success", ins.GetManageHost())
+		logger.Infof("Destroy %s finished", ins.GetManageHost())
 		logger.Infof("- Destroy %s paths: %v", ins.ComponentName(), delPaths.Slice())
 	}
 

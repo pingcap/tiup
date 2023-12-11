@@ -105,12 +105,25 @@ func (c *TiKVCDCComponent) Role() string {
 	return ComponentTiKVCDC
 }
 
-// GetSource returns source to download the component
-func (s *TiKVCDCSpec) GetSource() string {
-	if s.Source == "" {
-		return ComponentTiKVCDC
+// Source implements Component interface.
+func (c *TiKVCDCComponent) Source() string {
+	source := c.Topology.ComponentSources.TiKVCDC
+	if source != "" {
+		return source
 	}
-	return s.Source
+	return ComponentTiKVCDC
+}
+
+// CalculateVersion implements the Component interface
+func (c *TiKVCDCComponent) CalculateVersion(clusterVersion string) string {
+	// always not follow global version, use ""(latest) by default
+	version := c.Topology.ComponentVersions.TiKVCDC
+	return version
+}
+
+// SetVersion implements Component interface.
+func (c *TiKVCDCComponent) SetVersion(version string) {
+	c.Topology.ComponentVersions.TiKVCDC = version
 }
 
 // Instances implements Component interface.
@@ -123,9 +136,12 @@ func (c *TiKVCDCComponent) Instances() []Instance {
 			Name:         c.Name(),
 			Host:         s.Host,
 			ManageHost:   s.ManageHost,
+			ListenHost:   c.Topology.BaseTopo().GlobalOptions.ListenHost,
 			Port:         s.Port,
 			SSHP:         s.SSHPort,
-			Source:       s.GetSource(),
+			Source:       s.Source,
+			NumaNode:     s.NumaNode,
+			NumaCores:    "",
 
 			Ports: []int{
 				s.Port,
@@ -139,6 +155,7 @@ func (c *TiKVCDCComponent) Instances() []Instance {
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 				return UptimeByHost(s.GetManageHost(), s.Port, timeout, tlsCfg)
 			},
+			Component: c,
 		}, c.Topology}
 		if s.DataDir != "" {
 			instance.Dirs = append(instance.Dirs, s.DataDir)

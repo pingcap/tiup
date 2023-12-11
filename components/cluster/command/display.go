@@ -97,6 +97,8 @@ func newDisplayCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&showTiKVLabels, "labels", false, "Only display labels of specified TiKV role or nodes")
 	cmd.Flags().BoolVar(&dopt.ShowProcess, "process", false, "display cpu and memory usage of nodes")
 	cmd.Flags().BoolVar(&dopt.ShowManageHost, "manage-host", false, "display manage host of nodes")
+	cmd.Flags().BoolVar(&dopt.ShowNuma, "numa", false, "display numa information of nodes")
+	cmd.Flags().BoolVar(&dopt.ShowVersions, "versions", false, "display component version of instances")
 	cmd.Flags().Uint64Var(&statusTimeout, "status-timeout", 10, "Timeout in seconds when getting node status")
 
 	return cmd

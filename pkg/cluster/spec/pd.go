@@ -138,14 +138,6 @@ func (s *PDSpec) GetAdvertisePeerURL(enableTLS bool) string {
 	return fmt.Sprintf("%s://%s", scheme, utils.JoinHostPort(s.Host, s.PeerPort))
 }
 
-// GetSource returns source to download the component
-func (s *PDSpec) GetSource() string {
-	if s.Source == "" {
-		return ComponentPD
-	}
-	return s.Source
-}
-
 // PDComponent represents PD component.
 type PDComponent struct{ Topology *Specification }
 
@@ -157,6 +149,29 @@ func (c *PDComponent) Name() string {
 // Role implements Component interface.
 func (c *PDComponent) Role() string {
 	return ComponentPD
+}
+
+// Source implements Component interface.
+func (c *PDComponent) Source() string {
+	source := c.Topology.ComponentSources.PD
+	if source != "" {
+		return source
+	}
+	return ComponentPD
+}
+
+// CalculateVersion implements the Component interface
+func (c *PDComponent) CalculateVersion(clusterVersion string) string {
+	version := c.Topology.ComponentVersions.PD
+	if version == "" {
+		version = clusterVersion
+	}
+	return version
+}
+
+// SetVersion implements Component interface.
+func (c *PDComponent) SetVersion(version string) {
+	c.Topology.ComponentVersions.PD = version
 }
 
 // Instances implements Component interface.
@@ -171,10 +186,12 @@ func (c *PDComponent) Instances() []Instance {
 				Name:         c.Name(),
 				Host:         s.Host,
 				ManageHost:   s.ManageHost,
-				ListenHost:   s.ListenHost,
+				ListenHost:   utils.Ternary(s.ListenHost != "", s.ListenHost, c.Topology.BaseTopo().GlobalOptions.ListenHost).(string),
 				Port:         s.ClientPort,
 				SSHP:         s.SSHPort,
-				Source:       s.GetSource(),
+				Source:       s.Source,
+				NumaNode:     s.NumaNode,
+				NumaCores:    "",
 
 				Ports: []int{
 					s.ClientPort,
@@ -188,6 +205,7 @@ func (c *PDComponent) Instances() []Instance {
 				UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 					return UptimeByHost(s.GetManageHost(), s.ClientPort, timeout, tlsCfg)
 				},
+				Component: c,
 			},
 			topo: c.Topology,
 		})
@@ -219,6 +237,7 @@ func (i *PDInstance) InitConfig(
 	enableTLS := topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(*PDSpec)
 	scheme := utils.Ternary(enableTLS, "https", "http").(string)
+	version := i.CalculateVersion(clusterVersion)
 
 	initialCluster := []string{}
 	for _, pdspec := range topo.PDServers {
@@ -283,7 +302,7 @@ func (i *PDInstance) InitConfig(
 		return err
 	}
 
-	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths, nil)
+	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), version, i.OS(), i.Arch(), i.ComponentName()+".toml", paths)
 }
 
 // setTLSConfig set TLS Config to support enable/disable TLS

@@ -34,8 +34,10 @@ const (
 	PDRoleAPI PDRole = "api"
 	// PDRoleTSO is the role of PD TSO
 	PDRoleTSO PDRole = "tso"
+	// PDRoleScheduling is the role of PD scheduling
+	PDRoleScheduling PDRole = "scheduling"
 	// PDRoleResourceManager is the role of PD resource manager
-	PDRoleResourceManager PDRole = "resource manager"
+	PDRoleResourceManager PDRole = "resource_manager"
 )
 
 // PDInstance represent a running pd-server
@@ -128,8 +130,21 @@ func (inst *PDInstance) Start(ctx context.Context, version utils.Version) error 
 		args = []string{
 			"services",
 			"tso",
-			fmt.Sprintf("--listen-addr=http://%s", utils.JoinHostPort(inst.Host, inst.Port)),
-			fmt.Sprintf("--advertise-listen-addr=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.Port)),
+			fmt.Sprintf("--listen-addr=http://%s", utils.JoinHostPort(inst.Host, inst.StatusPort)),
+			fmt.Sprintf("--advertise-listen-addr=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.StatusPort)),
+			fmt.Sprintf("--backend-endpoints=%s", strings.Join(endpoints, ",")),
+			fmt.Sprintf("--log-file=%s", inst.LogFile()),
+		}
+		if inst.ConfigPath != "" {
+			args = append(args, fmt.Sprintf("--config=%s", inst.ConfigPath))
+		}
+	case PDRoleScheduling:
+		endpoints := pdEndpoints(inst.pds, true)
+		args = []string{
+			"services",
+			"scheduling",
+			fmt.Sprintf("--listen-addr=http://%s", utils.JoinHostPort(inst.Host, inst.StatusPort)),
+			fmt.Sprintf("--advertise-listen-addr=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.StatusPort)),
 			fmt.Sprintf("--backend-endpoints=%s", strings.Join(endpoints, ",")),
 			fmt.Sprintf("--log-file=%s", inst.LogFile()),
 		}
@@ -141,8 +156,8 @@ func (inst *PDInstance) Start(ctx context.Context, version utils.Version) error 
 		args = []string{
 			"services",
 			"resource-manager",
-			fmt.Sprintf("--listen-addr=http://%s", utils.JoinHostPort(inst.Host, inst.Port)),
-			fmt.Sprintf("--advertise-listen-addr=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.Port)),
+			fmt.Sprintf("--listen-addr=http://%s", utils.JoinHostPort(inst.Host, inst.StatusPort)),
+			fmt.Sprintf("--advertise-listen-addr=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.StatusPort)),
 			fmt.Sprintf("--backend-endpoints=%s", strings.Join(endpoints, ",")),
 			fmt.Sprintf("--log-file=%s", inst.LogFile()),
 		}

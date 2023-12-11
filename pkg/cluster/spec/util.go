@@ -218,3 +218,16 @@ func PackagePath(comp string, version string, os string, arch string) string {
 	fileName := fmt.Sprintf("%s-%s-%s-%s.tar.gz", comp, version, os, arch)
 	return ProfilePath(TiUPPackageCacheDir, fileName)
 }
+
+// GetDMMasterPackageName return package name of the first DMMaster instance
+func GetDMMasterPackageName(topo Topology) string {
+	for _, c := range topo.ComponentsByStartOrder() {
+		if c.Name() == ComponentDMMaster {
+			instances := c.Instances()
+			if len(instances) > 0 {
+				return instances[0].ComponentSource()
+			}
+		}
+	}
+	return ComponentDMMaster
+}

@@ -98,6 +98,26 @@ func (c *AlertManagerComponent) Role() string {
 	return RoleMonitor
 }
 
+// Source implements Component interface.
+func (c *AlertManagerComponent) Source() string {
+	return ComponentAlertmanager
+}
+
+// CalculateVersion implements the Component interface
+func (c *AlertManagerComponent) CalculateVersion(_ string) string {
+	// always not follow cluster version, use ""(latest) by default
+	version := c.Topology.BaseTopo().AlertManagerVersion
+	if version != nil {
+		return *version
+	}
+	return ""
+}
+
+// SetVersion implements Component interface.
+func (c *AlertManagerComponent) SetVersion(version string) {
+	*c.Topology.BaseTopo().AlertManagerVersion = version
+}
+
 // Instances implements Component interface.
 func (c *AlertManagerComponent) Instances() []Instance {
 	alertmanagers := c.Topology.BaseTopo().Alertmanagers
@@ -112,9 +132,11 @@ func (c *AlertManagerComponent) Instances() []Instance {
 				Name:         c.Name(),
 				Host:         s.Host,
 				ManageHost:   s.ManageHost,
-				ListenHost:   s.ListenHost,
+				ListenHost:   utils.Ternary(s.ListenHost != "", s.ListenHost, c.Topology.BaseTopo().GlobalOptions.ListenHost).(string),
 				Port:         s.WebPort,
 				SSHP:         s.SSHPort,
+				NumaNode:     s.NumaNode,
+				NumaCores:    "",
 
 				Ports: []int{
 					s.WebPort,
@@ -130,6 +152,7 @@ func (c *AlertManagerComponent) Instances() []Instance {
 				UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 					return UptimeByHost(s.GetManageHost(), s.WebPort, timeout, tlsCfg)
 				},
+				Component: c,
 			},
 			topo: c.Topology,
 		})
@@ -208,7 +231,8 @@ func (i *AlertManagerInstance) InitConfig(
 	if err := i.TransferLocalConfigFile(ctx, e, configPath, dst); err != nil {
 		return err
 	}
-	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".yml", paths, nil)
+	// version is not used for alertmanager
+	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), "", i.OS(), i.Arch(), i.ComponentName()+".yml", paths)
 }
 
 // ScaleConfig deploy temporary config on scaling

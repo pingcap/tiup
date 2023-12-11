@@ -165,14 +165,6 @@ func (s *TiKVSpec) Labels() (map[string]string, error) {
 	return lbs, nil
 }
 
-// GetSource returns source to download the component
-func (s *TiKVSpec) GetSource() string {
-	if s.Source == "" {
-		return ComponentTiKV
-	}
-	return s.Source
-}
-
 // TiKVComponent represents TiKV component.
 type TiKVComponent struct{ Topology *Specification }
 
@@ -186,6 +178,29 @@ func (c *TiKVComponent) Role() string {
 	return ComponentTiKV
 }
 
+// Source implements Component interface.
+func (c *TiKVComponent) Source() string {
+	source := c.Topology.ComponentSources.TiKV
+	if source != "" {
+		return source
+	}
+	return ComponentTiKV
+}
+
+// CalculateVersion implements the Component interface
+func (c *TiKVComponent) CalculateVersion(clusterVersion string) string {
+	version := c.Topology.ComponentVersions.TiKV
+	if version == "" {
+		version = clusterVersion
+	}
+	return version
+}
+
+// SetVersion implements Component interface.
+func (c *TiKVComponent) SetVersion(version string) {
+	c.Topology.ComponentVersions.TiKV = version
+}
+
 // Instances implements Component interface.
 func (c *TiKVComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.TiKVServers))
@@ -196,10 +211,12 @@ func (c *TiKVComponent) Instances() []Instance {
 			Name:         c.Name(),
 			Host:         s.Host,
 			ManageHost:   s.ManageHost,
-			ListenHost:   s.ListenHost,
+			ListenHost:   utils.Ternary(s.ListenHost != "", s.ListenHost, c.Topology.BaseTopo().GlobalOptions.ListenHost).(string),
 			Port:         s.Port,
 			SSHP:         s.SSHPort,
 			Source:       s.Source,
+			NumaNode:     s.NumaNode,
+			NumaCores:    s.NumaCores,
 
 			Ports: []int{
 				s.Port,
@@ -213,6 +230,7 @@ func (c *TiKVComponent) Instances() []Instance {
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 				return UptimeByHost(s.GetManageHost(), s.StatusPort, timeout, tlsCfg)
 			},
+			Component: c,
 		}, c.Topology, 0})
 	}
 	return ins
@@ -310,7 +328,7 @@ func (i *TiKVInstance) InitConfig(
 		return err
 	}
 
-	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths, nil)
+	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths)
 }
 
 // setTLSConfig set TLS Config to support enable/disable TLS

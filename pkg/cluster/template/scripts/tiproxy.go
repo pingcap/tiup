@@ -1,4 +1,4 @@
-// Copyright 2020 PingCAP, Inc.
+// Copyright 2023 PingCAP, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,34 +22,26 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
-// DashboardScript represent the data to generate cdc config
-type DashboardScript struct {
-	TidbVersion string
-	Host        string
-	Port        int
-	DeployDir   string
-	LogDir      string
-	DataDir     string
-	NumaNode    string
-	TLSEnabled  bool
-	PD          string
+// TiProxyScript represent the data to generate tiproxy config
+type TiProxyScript struct {
+	DeployDir string
+	NumaNode  string
 }
 
 // ConfigToFile write config content to specific file.
-func (s *DashboardScript) ConfigToFile(file string) error {
-	fp := path.Join("templates", "scripts", "run_tidb-dashboard.sh.tpl")
+func (c *TiProxyScript) ConfigToFile(file string) error {
+	fp := path.Join("templates", "scripts", "run_tiproxy.sh.tpl")
 	tpl, err := embed.ReadTemplate(fp)
 	if err != nil {
 		return err
 	}
-
-	tmpl, err := template.New("tidb-dashboard").Parse(string(tpl))
+	tmpl, err := template.New("TiProxy").Parse(string(tpl))
 	if err != nil {
 		return err
 	}
 
 	content := bytes.NewBufferString("")
-	if err := tmpl.Execute(content, s); err != nil {
+	if err := tmpl.Execute(content, c); err != nil {
 		return err
 	}
 

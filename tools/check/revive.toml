@@ -32,7 +32,6 @@ warningCode = 0
 [rule.empty-block]
 [rule.empty-lines]
 [rule.get-return]
-[rule.early-return]
 [rule.unnecessary-stmt]
 [rule.struct-tag]
 [rule.string-of-int]
@@ -46,8 +45,8 @@ warningCode = 0
 [rule.use-any]
 
 [rule.cognitive-complexity]
-  severity = "warning"
-  arguments =[48]
+  severity = "error"
+  arguments =[100]
 #[rule.cyclomatic]
 #  severity = "warning"
 #  arguments = [48]

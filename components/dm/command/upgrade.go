@@ -19,7 +19,7 @@ import (
 
 func newUpgradeCmd() *cobra.Command {
 	offlineMode := false
-
+	ignoreVersionCheck := false
 	cmd := &cobra.Command{
 		Use:   "upgrade <cluster-name> <version>",
 		Short: "Upgrade a specified DM cluster",
@@ -28,7 +28,7 @@ func newUpgradeCmd() *cobra.Command {
 				return cmd.Help()
 			}
 
-			return cm.Upgrade(args[0], args[1], gOpt, skipConfirm, offlineMode)
+			return cm.Upgrade(args[0], args[1], nil, gOpt, skipConfirm, offlineMode, ignoreVersionCheck)
 		},
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 			switch len(args) {
@@ -41,6 +41,7 @@ func newUpgradeCmd() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVarP(&offlineMode, "offline", "", false, "Upgrade a stopped cluster")
+	cmd.Flags().BoolVarP(&ignoreVersionCheck, "ignore-version-check", "", false, "Ignore checking if target version is higher than current version")
 
 	return cmd
 }

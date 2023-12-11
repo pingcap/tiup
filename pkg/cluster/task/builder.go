@@ -243,25 +243,25 @@ func (b *Builder) BackupComponent(component, fromVer string, host, deployDir str
 }
 
 // InitConfig appends a CopyComponent task to the current task collection
-func (b *Builder) InitConfig(clusterName, clusterVersion string, specManager *spec.SpecManager, inst spec.Instance, deployUser string, ignoreCheck bool, paths meta.DirPaths) *Builder {
+func (b *Builder) InitConfig(clusterName, version string, specManager *spec.SpecManager, inst spec.Instance, deployUser string, ignoreCheck bool, paths meta.DirPaths) *Builder {
 	// get nightly version
 	var componentVersion utils.Version
 	meta := specManager.NewMetadata()
 
 	//  full version
-	componentVersion = utils.Version(clusterVersion)
+	componentVersion = utils.Version(version)
 	if err := specManager.Metadata(clusterName, meta); err == nil {
 		// get nightly version
-		if clusterVersion == utils.NightlyVersionAlias {
+		if version == utils.NightlyVersionAlias {
 			componentVersion, _, err = environment.GlobalEnv().V1Repository().LatestNightlyVersion(inst.ComponentSource())
 			if err != nil {
-				componentVersion = utils.Version(clusterVersion)
+				componentVersion = utils.Version(version)
 			}
 		}
 
 		// dm cluster does not require a full nightly version
 		if meta.GetTopology().Type() == spec.TopoTypeDM {
-			componentVersion = utils.Version(clusterVersion)
+			componentVersion = utils.Version(version)
 		}
 	}
 

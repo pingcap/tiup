@@ -107,6 +107,26 @@ func (c *GrafanaComponent) Role() string {
 	return RoleMonitor
 }
 
+// Source implements Component interface.
+func (c *GrafanaComponent) Source() string {
+	return ComponentGrafana
+}
+
+// CalculateVersion implements the Component interface
+func (c *GrafanaComponent) CalculateVersion(clusterVersion string) string {
+	// always not follow cluster version, use ""(latest) by default
+	version := c.Topology.BaseTopo().GrafanaVersion
+	if version != nil && *version != "" {
+		return *version
+	}
+	return clusterVersion
+}
+
+// SetVersion implements Component interface.
+func (c *GrafanaComponent) SetVersion(version string) {
+	*c.Topology.BaseTopo().GrafanaVersion = version
+}
+
 // Instances implements Component interface.
 func (c *GrafanaComponent) Instances() []Instance {
 	servers := c.BaseTopo().Grafanas
@@ -120,8 +140,11 @@ func (c *GrafanaComponent) Instances() []Instance {
 				Name:         c.Name(),
 				Host:         s.Host,
 				ManageHost:   s.ManageHost,
+				ListenHost:   c.Topology.BaseTopo().GlobalOptions.ListenHost,
 				Port:         s.Port,
 				SSHP:         s.SSHPort,
+				NumaNode:     "",
+				NumaCores:    "",
 
 				Ports: []int{
 					s.Port,
@@ -135,6 +158,7 @@ func (c *GrafanaComponent) Instances() []Instance {
 				UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 					return UptimeByHost(s.GetManageHost(), s.Port, timeout, tlsCfg)
 				},
+				Component: c,
 			},
 			topo: c.Topology,
 		})
@@ -181,7 +205,7 @@ func (i *GrafanaInstance) InitConfig(
 
 	// transfer config
 	spec := i.InstanceSpec.(*GrafanaSpec)
-	fp = filepath.Join(paths.Cache, fmt.Sprintf("grafana_%s.ini", i.GetHost()))
+	fp = filepath.Join(paths.Cache, fmt.Sprintf("grafana_%s_%d.ini", i.GetHost(), i.GetPort()))
 	if err := config.NewGrafanaConfig(i.GetHost(), paths.Deploy).
 		WithPort(uint64(i.GetPort())).
 		WithUsername(spec.Username).
@@ -319,7 +343,7 @@ func (i *GrafanaInstance) installDashboards(ctx context.Context, e ctxt.Executor
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}
 
-	srcPath := PackagePath(ComponentDMMaster, clusterVersion, i.OS(), i.Arch())
+	srcPath := PackagePath(GetDMMasterPackageName(i.topo), clusterVersion, i.OS(), i.Arch())
 	dstPath := filepath.Join(tmp, filepath.Base(srcPath))
 	err = e.Transfer(ctx, srcPath, dstPath, false, 0, false)
 	if err != nil {

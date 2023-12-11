@@ -41,6 +41,7 @@ const (
 	ComponentTiKV             = "tikv"
 	ComponentPD               = "pd"
 	ComponentTiFlash          = "tiflash"
+	ComponentTiProxy          = "tiproxy"
 	ComponentGrafana          = "grafana"
 	ComponentDrainer          = "drainer"
 	ComponentDashboard        = "tidb-dashboard"
@@ -53,7 +54,6 @@ const (
 	ComponentDMMaster         = "dm-master"
 	ComponentDMWorker         = "dm-worker"
 	ComponentPrometheus       = "prometheus"
-	ComponentPushwaygate      = "pushgateway"
 	ComponentBlackboxExporter = "blackbox_exporter"
 	ComponentNodeExporter     = "node_exporter"
 	ComponentCheckCollector   = "insight"
@@ -70,7 +70,10 @@ var (
 type Component interface {
 	Name() string
 	Role() string
+	Source() string
 	Instances() []Instance
+	CalculateVersion(string) string
+	SetVersion(string)
 }
 
 // RollingUpdateInstance represent a instance need to transfer state when restart.
@@ -97,6 +100,8 @@ type Instance interface {
 	GetManageHost() string
 	GetPort() int
 	GetSSHPort() int
+	GetNumaNode() string
+	GetNumaCores() string
 	DeployDir() string
 	ExtraDirs() []string
 	UsedPorts() []int
@@ -109,6 +114,8 @@ type Instance interface {
 	Arch() string
 	IsPatched() bool
 	SetPatched(bool)
+	CalculateVersion(string) string
+	// SetVersion(string)
 	setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error)
 }
 
@@ -145,11 +152,15 @@ type BaseInstance struct {
 	Port       int
 	SSHP       int
 	Source     string
+	NumaNode   string
+	NumaCores  string
 
 	Ports    []int
 	Dirs     []string
 	StatusFn func(ctx context.Context, timeout time.Duration, tlsCfg *tls.Config, pdHosts ...string) string
 	UptimeFn func(ctx context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration
+
+	Component Component
 }
 
 // Ready implements Instance interface
@@ -307,10 +318,12 @@ func (i *BaseInstance) ComponentName() string {
 
 // ComponentSource implements Instance interface
 func (i *BaseInstance) ComponentSource() string {
-	if i.Source == "" {
-		return i.Name
+	if i.Source != "" {
+		return i.Source
+	} else if i.Component.Source() != "" {
+		return i.Component.Source()
 	}
-	return i.Source
+	return i.ComponentName()
 }
 
 // InstanceName implements Instance interface
@@ -364,6 +377,16 @@ func (i *BaseInstance) GetListenHost() string {
 // GetSSHPort implements Instance interface
 func (i *BaseInstance) GetSSHPort() int {
 	return i.SSHP
+}
+
+// GetNumaNode implements Instance interface
+func (i *BaseInstance) GetNumaNode() string {
+	return i.NumaNode
+}
+
+// GetNumaCores implements Instance interface
+func (i *BaseInstance) GetNumaCores() string {
+	return i.NumaCores
 }
 
 // DeployDir implements Instance interface
@@ -447,6 +470,11 @@ func (i *BaseInstance) SetPatched(p bool) {
 		return
 	}
 	v.SetBool(p)
+}
+
+// CalculateVersion implements the Instance interface
+func (i *BaseInstance) CalculateVersion(globalVersion string) string {
+	return i.Component.CalculateVersion(globalVersion)
 }
 
 // PrepareStart checks instance requirements before starting

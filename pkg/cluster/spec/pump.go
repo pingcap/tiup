@@ -112,14 +112,6 @@ func (s *PumpSpec) IgnoreMonitorAgent() bool {
 	return s.IgnoreExporter
 }
 
-// GetSource returns source to download the component
-func (s *PumpSpec) GetSource() string {
-	if s.Source == "" {
-		return ComponentPump
-	}
-	return s.Source
-}
-
 // PumpComponent represents Pump component.
 type PumpComponent struct{ Topology *Specification }
 
@@ -133,6 +125,29 @@ func (c *PumpComponent) Role() string {
 	return ComponentPump
 }
 
+// Source implements Component interface.
+func (c *PumpComponent) Source() string {
+	source := c.Topology.ComponentSources.Pump
+	if source != "" {
+		return source
+	}
+	return ComponentPump
+}
+
+// CalculateVersion implements the Component interface
+func (c *PumpComponent) CalculateVersion(clusterVersion string) string {
+	version := c.Topology.ComponentVersions.Pump
+	if version == "" {
+		version = clusterVersion
+	}
+	return version
+}
+
+// SetVersion implements Component interface.
+func (c *PumpComponent) SetVersion(version string) {
+	c.Topology.ComponentVersions.Pump = version
+}
+
 // Instances implements Component interface.
 func (c *PumpComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.PumpServers))
@@ -143,9 +158,12 @@ func (c *PumpComponent) Instances() []Instance {
 			Name:         c.Name(),
 			Host:         s.Host,
 			ManageHost:   s.ManageHost,
+			ListenHost:   c.Topology.BaseTopo().GlobalOptions.ListenHost,
 			Port:         s.Port,
 			SSHP:         s.SSHPort,
-			Source:       s.GetSource(),
+			Source:       s.Source,
+			NumaNode:     s.NumaNode,
+			NumaCores:    "",
 
 			Ports: []int{
 				s.Port,
@@ -158,6 +176,7 @@ func (c *PumpComponent) Instances() []Instance {
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 				return UptimeByHost(s.GetManageHost(), s.Port, timeout, tlsCfg)
 			},
+			Component: c,
 		}, c.Topology})
 	}
 	return ins
