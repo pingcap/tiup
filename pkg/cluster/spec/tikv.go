@@ -22,7 +22,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -463,8 +462,8 @@ func (i *TiKVInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *t
 }
 
 func (i *TiKVInstance) ExtraDirs() []string {
-	configMap := reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("Config").Interface().(map[string]interface{})
-	raftDir := configMap["raftstore.raftdb-path"]
+	spec := i.InstanceSpec.(*TiKVSpec)
+	raftDir := spec.Config["raftstore.raftdb-path"]
 	if raftDir == nil {
 		return nil
 	}
