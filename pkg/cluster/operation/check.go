@@ -189,6 +189,13 @@ func checkOSInfo(opt *CheckOptions, osInfo *sysinfo.OS) *CheckResult {
 				osInfo.Name, osInfo.Release)
 			return result
 		}
+	case "rocky":
+		// Rocky Linux
+		if ver, _ := strconv.ParseFloat(osInfo.Version, 64); ver < 9.1 {
+			result.Err = fmt.Errorf("%s %s not supported, use version 9.1 or later please",
+				osInfo.Name, osInfo.Release)
+			return result
+		}
 	case "debian":
 		// debian support is not fully tested, but we suppose it should work
 		msg := "debian support is not fully tested, be careful"
