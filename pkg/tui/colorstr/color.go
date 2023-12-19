@@ -39,19 +39,19 @@ type colorTokens struct {
 
 // Printf is a convenience wrapper for fmt.Printf with support for color codes.
 // Only color codes in the format param will be respected.
-func (c colorTokens) Printf(format string, a ...interface{}) (n int, err error) {
+func (c colorTokens) Printf(format string, a ...any) (n int, err error) {
 	return fmt.Printf(c.Color(format), a...)
 }
 
 // Fprintf is a convenience wrapper for fmt.Fprintf with support for color codes.
 // Only color codes in the format param will be respected.
-func (c colorTokens) Fprintf(w io.Writer, format string, a ...interface{}) (n int, err error) {
+func (c colorTokens) Fprintf(w io.Writer, format string, a ...any) (n int, err error) {
 	return fmt.Fprintf(w, c.Color(format), a...)
 }
 
 // Sprintf is a convenience wrapper for fmt.Sprintf with support for color codes.
 // Only color codes in the format param will be respected.
-func (c colorTokens) Sprintf(format string, a ...interface{}) string {
+func (c colorTokens) Sprintf(format string, a ...any) string {
 	return fmt.Sprintf(c.Color(format), a...)
 }
 
@@ -74,18 +74,18 @@ var DefaultTokens = (func() colorTokens {
 
 // Printf is a convenience wrapper for fmt.Printf with support for color codes.
 // Only color codes in the format param will be respected.
-func Printf(format string, a ...interface{}) (n int, err error) {
+func Printf(format string, a ...any) (n int, err error) {
 	return DefaultTokens.Printf(format, a...)
 }
 
 // Fprintf is a convenience wrapper for fmt.Fprintf with support for color codes.
 // Only color codes in the format param will be respected.
-func Fprintf(w io.Writer, format string, a ...interface{}) (n int, err error) {
+func Fprintf(w io.Writer, format string, a ...any) (n int, err error) {
 	return DefaultTokens.Fprintf(w, format, a...)
 }
 
 // Sprintf is a convenience wrapper for fmt.Sprintf with support for color codes.
 // Only color codes in the format param will be respected.
-func Sprintf(format string, a ...interface{}) string {
+func Sprintf(format string, a ...any) string {
 	return DefaultTokens.Sprintf(format, a...)
 }

@@ -182,8 +182,8 @@ func PrepareCommand(p *PrepareCommandParams) (*exec.Cmd, error) {
 
 func cmdCheckUpdate(component string, version utils.Version) {
 	const (
-		slowTimeoutSec   = 1 * time.Second // Timeout to display checking message
-		cancelTimeoutSec = 2 * time.Second // Timeout to cancel the check
+		slowTimeout   = 1 * time.Second // Timeout to display checking message
+		cancelTimeout = 2 * time.Second // Timeout to cancel the check
 	)
 
 	// This mutex is used for protecting flag as well as stdout
@@ -193,7 +193,7 @@ func cmdCheckUpdate(component string, version utils.Version) {
 	result := make(chan string, 1)
 
 	go func() {
-		time.Sleep(slowTimeoutSec)
+		time.Sleep(slowTimeout)
 		mu.Lock()
 		defer mu.Unlock()
 		if !isCheckFinished {
@@ -202,8 +202,8 @@ func cmdCheckUpdate(component string, version utils.Version) {
 	}()
 
 	go func() {
-		time.Sleep(cancelTimeoutSec)
-		result <- colorstr.Sprintf("[yellow]Timedout (after %s)", cancelTimeoutSec)
+		time.Sleep(cancelTimeout)
+		result <- colorstr.Sprintf("[yellow]Timedout (after %s)", cancelTimeout)
 	}()
 
 	go func() {
