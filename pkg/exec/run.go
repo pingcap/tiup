@@ -81,7 +81,7 @@ func RunComponent(env *environment.Environment, tag, spec, binPath string, args 
 		return err
 	}
 
-	if skip, _ := skipStartingMessages[component]; !skip {
+	if skip, ok := skipStartingMessages[component]; !skip || !ok {
 		colorstr.Fprintf(os.Stderr, "Starting component [bold]%s[reset]: %s\n", component, strings.Join(c.Args, " "))
 	}
 
