@@ -53,7 +53,7 @@ func NewTiCDC(binPath string, dir, host, configPath string, id int, port int, pd
 }
 
 // Start implements Instance interface.
-func (c *TiCDC) Start(ctx context.Context, version utils.Version) error {
+func (c *TiCDC) Start(ctx context.Context) error {
 	endpoints := pdEndpoints(c.pds, true)
 
 	args := []string{
@@ -63,7 +63,7 @@ func (c *TiCDC) Start(ctx context.Context, version utils.Version) error {
 		fmt.Sprintf("--pd=%s", strings.Join(endpoints, ",")),
 		fmt.Sprintf("--log-file=%s", c.LogFile()),
 	}
-	clusterVersion := string(version)
+	clusterVersion := string(c.Version)
 	if tidbver.TiCDCSupportConfigFile(clusterVersion) {
 		if c.ConfigPath != "" {
 			args = append(args, fmt.Sprintf("--config=%s", c.ConfigPath))

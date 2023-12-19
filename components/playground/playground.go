@@ -446,13 +446,13 @@ func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) 
 		return err
 	}
 
-	instanceBinPath, err := inst.PrepareBinary(inst.Component(), version)
+	instanceBinPath, err := inst.PrepareBinary(component, version)
 	if err != nil {
 		return err
 	}
 	fmt.Printf("Start %s instance:%s\n", inst.Component(), instanceBinPath)
 
-	err = inst.Start(ctx, version)
+	err = inst.Start(ctx)
 	if err != nil {
 		return err
 	}

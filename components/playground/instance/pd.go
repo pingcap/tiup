@@ -87,7 +87,7 @@ func (inst *PDInstance) Name() string {
 }
 
 // Start calls set inst.cmd and Start
-func (inst *PDInstance) Start(ctx context.Context, version utils.Version) error {
+func (inst *PDInstance) Start(ctx context.Context) error {
 	uid := inst.Name()
 	var args []string
 	switch inst.Role {

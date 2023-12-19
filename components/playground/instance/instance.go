@@ -46,6 +46,7 @@ type instance struct {
 	StatusPort int // client port for PD
 	ConfigPath string
 	BinPath    string
+	Version    utils.Version
 }
 
 // MetricAddr will be used by prometheus scrape_configs.
@@ -59,7 +60,7 @@ type Instance interface {
 	Pid() int
 	// Start the instance process.
 	// Will kill the process once the context is done.
-	Start(ctx context.Context, version utils.Version) error
+	Start(ctx context.Context) error
 	// Component Return the component name.
 	Component() string
 	// LogFile return the log file name
@@ -88,6 +89,7 @@ func (inst *instance) PrepareBinary(componentName string, version utils.Version)
 		return "", err
 	}
 	inst.BinPath = instanceBinPath
+	inst.Version = version
 	return instanceBinPath, nil
 }
 

@@ -49,7 +49,7 @@ func NewTiKVCDC(binPath string, dir, host, configPath string, id int, pds []*PDI
 }
 
 // Start implements Instance interface.
-func (c *TiKVCDC) Start(ctx context.Context, version utils.Version) error {
+func (c *TiKVCDC) Start(ctx context.Context) error {
 	endpoints := pdEndpoints(c.pds, true)
 
 	args := []string{
