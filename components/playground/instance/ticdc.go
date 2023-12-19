@@ -19,7 +19,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/tidbver"
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -76,10 +75,6 @@ func (c *TiCDC) Start(ctx context.Context, version utils.Version) error {
 		}
 	}
 
-	var err error
-	if c.BinPath, err = tiupexec.PrepareBinary("cdc", version, c.BinPath); err != nil {
-		return err
-	}
 	c.Process = &process{cmd: PrepareCommand(ctx, c.BinPath, args, nil, c.Dir)}
 
 	logIfErr(c.Process.SetOutputFile(c.LogFile()))

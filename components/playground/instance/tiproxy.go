@@ -21,7 +21,6 @@ import (
 	"strings"
 
 	"github.com/pelletier/go-toml"
-	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -101,10 +100,6 @@ func (c *TiProxy) Start(ctx context.Context, version utils.Version) error {
 
 	args := []string{
 		fmt.Sprintf("--config=%s", configPath),
-	}
-
-	if c.BinPath, err = tiupexec.PrepareBinary("tiproxy", version, c.BinPath); err != nil {
-		return err
 	}
 
 	c.Process = &process{cmd: PrepareCommand(ctx, c.BinPath, args, nil, c.Dir)}

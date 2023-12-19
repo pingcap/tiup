@@ -19,7 +19,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -84,10 +83,6 @@ func (d *Drainer) Start(ctx context.Context, version utils.Version) error {
 		args = append(args, fmt.Sprintf("--config=%s", d.ConfigPath))
 	}
 
-	var err error
-	if d.BinPath, err = tiupexec.PrepareBinary("drainer", version, d.BinPath); err != nil {
-		return err
-	}
 	d.Process = &process{cmd: PrepareCommand(ctx, d.BinPath, args, nil, d.Dir)}
 
 	logIfErr(d.Process.SetOutputFile(d.LogFile()))

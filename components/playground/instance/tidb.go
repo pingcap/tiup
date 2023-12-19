@@ -20,7 +20,6 @@ import (
 	"strconv"
 	"strings"
 
-	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -80,10 +79,6 @@ func (inst *TiDBInstance) Start(ctx context.Context, version utils.Version) erro
 		args = append(args, "--enable-binlog=true")
 	}
 
-	var err error
-	if inst.BinPath, err = tiupexec.PrepareBinary("tidb", version, inst.BinPath); err != nil {
-		return err
-	}
 	inst.Process = &process{cmd: PrepareCommand(ctx, inst.BinPath, args, nil, inst.Dir)}
 
 	logIfErr(inst.Process.SetOutputFile(inst.LogFile()))

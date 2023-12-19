@@ -19,7 +19,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -77,10 +76,6 @@ func (inst *TiKVInstance) Start(ctx context.Context, version utils.Version) erro
 	}
 
 	envs := []string{"MALLOC_CONF=prof:true,prof_active:false"}
-	var err error
-	if inst.BinPath, err = tiupexec.PrepareBinary("tikv", version, inst.BinPath); err != nil {
-		return err
-	}
 	inst.Process = &process{cmd: PrepareCommand(ctx, inst.BinPath, args, envs, inst.Dir)}
 
 	logIfErr(inst.Process.SetOutputFile(inst.LogFile()))

@@ -445,7 +445,13 @@ func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) 
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Start %s instance:%s\n", inst.Component(), inst.BinPathCheck(version))
+
+	instanceBinPath, err := inst.PrepareBinary(inst.Component(), version)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Start %s instance:%s\n", inst.Component(), instanceBinPath)
+
 	err = inst.Start(ctx, version)
 	if err != nil {
 		return err

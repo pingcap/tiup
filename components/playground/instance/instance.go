@@ -23,6 +23,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
+	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -70,8 +71,8 @@ type Instance interface {
 	// Wait Should only call this if the instance is started successfully.
 	// The implementation should be safe to call Wait multi times.
 	Wait() error
-	// BinPathCheck return the bin path to check component version.
-	BinPathCheck(utils.Version) string
+	// PrepareBinary use given binpath or download from tiup mirrors.
+	PrepareBinary(componentName string, version utils.Version) (string, error)
 }
 
 func (inst *instance) MetricAddr() (r MetricAddr) {
@@ -81,11 +82,13 @@ func (inst *instance) MetricAddr() (r MetricAddr) {
 	return
 }
 
-func (inst *instance) BinPathCheck(version utils.Version) string {
-	if inst.BinPath != "" {
-		return inst.BinPath
+func (inst *instance) PrepareBinary(componentName string, version utils.Version) (string, error) {
+	instanceBinPath, err := tiupexec.PrepareBinary(componentName, version, inst.BinPath)
+	if err != nil {
+		return "", err
 	}
-	return version.String()
+	inst.BinPath = instanceBinPath
+	return instanceBinPath, nil
 }
 
 // CompVersion return the format to run specified version of a component.
