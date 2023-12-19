@@ -445,7 +445,7 @@ func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) 
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Start %s instance:%s\n", inst.Component(), version)
+	fmt.Printf("Start %s instance:%s\n", inst.Component(), inst.BinPathCheck(version))
 	err = inst.Start(ctx, version)
 	if err != nil {
 		return err

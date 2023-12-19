@@ -70,6 +70,8 @@ type Instance interface {
 	// Wait Should only call this if the instance is started successfully.
 	// The implementation should be safe to call Wait multi times.
 	Wait() error
+	// BinPathCheck return the bin path to check component version.
+	BinPathCheck(utils.Version) string
 }
 
 func (inst *instance) MetricAddr() (r MetricAddr) {
@@ -77,6 +79,13 @@ func (inst *instance) MetricAddr() (r MetricAddr) {
 		r.Targets = append(r.Targets, utils.JoinHostPort(inst.Host, inst.StatusPort))
 	}
 	return
+}
+
+func (inst *instance) BinPathCheck(version utils.Version) string {
+	if inst.BinPath != "" {
+		return inst.BinPath
+	}
+	return version.String()
 }
 
 // CompVersion return the format to run specified version of a component.
