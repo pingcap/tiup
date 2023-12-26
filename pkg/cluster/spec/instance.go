@@ -153,7 +153,6 @@ type BaseInstance struct {
 	Source     string
 	NumaNode   string
 	NumaCores  string
-	RunCommand string
 
 	Ports    []int
 	Dirs     []string

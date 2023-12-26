@@ -45,6 +45,8 @@ exec bin/prometheus/prometheus \
     --log.level="info" \
     --storage.tsdb.path="{{.DataDir}}" \
 {{- if .RunCommand}}
-    {{.RunCommand}} \
+{{- range .RunCommand}}
+    {{.}} \
+{{- end}}
 {{- end}}
     --storage.tsdb.retention="{{.Retention}}"
