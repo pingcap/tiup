@@ -60,6 +60,7 @@ type PrometheusSpec struct {
 	AdditionalScrapeConf  map[string]any         `yaml:"additional_scrape_conf,omitempty" validate:"additional_scrape_conf:ignore"`
 	ScrapeInterval        string                 `yaml:"scrape_interval,omitempty" validate:"scrape_interval:editable"`
 	ScrapeTimeout         string                 `yaml:"scrape_timeout,omitempty" validate:"scrape_timeout:editable"`
+	RunCommand            string                 `yaml:"run_command,omitempty" validate:"run_command:editable"`
 }
 
 // Remote prometheus remote config
@@ -161,6 +162,7 @@ func (c *MonitorComponent) Instances() []Instance {
 			SSHP:         s.SSHPort,
 			NumaNode:     s.NumaNode,
 			NumaCores:    "",
+			RunCommand:   s.RunCommand,
 
 			Ports: []int{
 				s.Port,
@@ -214,12 +216,11 @@ func (i *MonitorInstance) InitConfig(
 		WebExternalURL: fmt.Sprintf("http://%s", utils.JoinHostPort(spec.Host, spec.Port)),
 		Retention:      getRetention(spec.Retention),
 		EnableNG:       spec.NgPort > 0,
-
-		DeployDir: paths.Deploy,
-		LogDir:    paths.Log,
-		DataDir:   paths.Data[0],
-
-		NumaNode: spec.NumaNode,
+		DeployDir:      paths.Deploy,
+		DataDir:        paths.Data[0],
+		LogDir:         paths.Log,
+		NumaNode:       spec.NumaNode,
+		RunCommand:     spec.RunCommand,
 	}
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_prometheus_%s_%d.sh", i.GetHost(), i.GetPort()))
