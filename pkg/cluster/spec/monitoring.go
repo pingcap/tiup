@@ -216,11 +216,13 @@ func (i *MonitorInstance) InitConfig(
 		WebExternalURL: fmt.Sprintf("http://%s", utils.JoinHostPort(spec.Host, spec.Port)),
 		Retention:      getRetention(spec.Retention),
 		EnableNG:       spec.NgPort > 0,
-		DeployDir:      paths.Deploy,
-		DataDir:        paths.Data[0],
-		LogDir:         paths.Log,
-		NumaNode:       spec.NumaNode,
-		RunCommand:     spec.RunCommand,
+
+		DeployDir: paths.Deploy,
+		DataDir:   paths.Data[0],
+		LogDir:    paths.Log,
+
+		NumaNode:   spec.NumaNode,
+		RunCommand: spec.RunCommand,
 	}
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_prometheus_%s_%d.sh", i.GetHost(), i.GetPort()))
