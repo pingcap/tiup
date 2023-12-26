@@ -33,7 +33,8 @@ type PrometheusScript struct {
 	DataDir   string
 	LogDir    string
 
-	NumaNode   string
+	NumaNode string
+
 	RunCommand string
 }
 

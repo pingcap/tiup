@@ -218,10 +218,11 @@ func (i *MonitorInstance) InitConfig(
 		EnableNG:       spec.NgPort > 0,
 
 		DeployDir: paths.Deploy,
-		DataDir:   paths.Data[0],
 		LogDir:    paths.Log,
+		DataDir:   paths.Data[0],
 
-		NumaNode:   spec.NumaNode,
+		NumaNode: spec.NumaNode,
+
 		RunCommand: spec.RunCommand,
 	}
 
