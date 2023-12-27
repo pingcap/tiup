@@ -106,6 +106,7 @@ function scale_tools() {
         tiup-cluster $client exec $name -N n3 --command "ls /data/tiflash-data"
         echo "start scale in tiflash"
         tiup-cluster $client --yes scale-in $name -N n3:9000
+        sleep 20
         tiup-cluster $client display $name | grep Tombstone
         echo "start prune tiflash"
         yes | tiup-cluster $client prune $name
