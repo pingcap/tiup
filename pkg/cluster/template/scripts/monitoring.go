@@ -35,7 +35,7 @@ type PrometheusScript struct {
 
 	NumaNode string
 
-	RunCommand []string
+	AdditionalArgs []string
 }
 
 // ConfigToFile write config content to specific path

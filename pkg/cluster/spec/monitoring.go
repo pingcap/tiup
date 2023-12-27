@@ -61,7 +61,7 @@ type PrometheusSpec struct {
 	ScrapeInterval        string                 `yaml:"scrape_interval,omitempty" validate:"scrape_interval:editable"`
 	ScrapeTimeout         string                 `yaml:"scrape_timeout,omitempty" validate:"scrape_timeout:editable"`
 
-	RunCommand []string `yaml:"run_command,omitempty" validate:"run_command:ignore"`
+	AdditionalArgs []string `yaml:"additional_args,omitempty" validate:"additional_args:ignore"`
 }
 
 // Remote prometheus remote config
@@ -223,7 +223,7 @@ func (i *MonitorInstance) InitConfig(
 
 		NumaNode: spec.NumaNode,
 
-		RunCommand: spec.RunCommand,
+		AdditionalArgs: spec.AdditionalArgs,
 	}
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_prometheus_%s_%d.sh", i.GetHost(), i.GetPort()))
