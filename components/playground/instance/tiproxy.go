@@ -90,11 +90,10 @@ func (c *TiProxy) Start(ctx context.Context, version utils.Version) error {
 	enc := toml.NewEncoder(cf)
 	enc.Indent = ""
 	if err := enc.Encode(spec.MergeConfig(userConfig, map[string]any{
-		"proxy.pd-addrs":            strings.Join(endpoints, ","),
-		"proxy.addr":                utils.JoinHostPort(c.Host, c.Port),
-		"proxy.require-backend-tls": false,
-		"api.addr":                  utils.JoinHostPort(c.Host, c.StatusPort),
-		"log.log-file.filename":     c.LogFile(),
+		"proxy.pd-addrs":        strings.Join(endpoints, ","),
+		"proxy.addr":            utils.JoinHostPort(c.Host, c.Port),
+		"api.addr":              utils.JoinHostPort(c.Host, c.StatusPort),
+		"log.log-file.filename": c.LogFile(),
 	})); err != nil {
 		return err
 	}
