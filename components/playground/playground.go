@@ -883,12 +883,15 @@ func (p *Playground) waitAllTiFlashUp() {
 func (p *Playground) bindVersion(comp string, version string) (bindVersion string) {
 	switch comp {
 	case spec.ComponentTiKVCDC:
-		return p.bootOptions.TiKVCDC.Version
+		bindVersion = p.bootOptions.TiKVCDC.Version
 	case spec.ComponentTiProxy:
-		return p.bootOptions.TiProxy.Version
+		bindVersion = p.bootOptions.TiProxy.Version
 	default:
-		return version
 	}
+	if bindVersion == "" {
+		bindVersion = version
+	}
+	return
 }
 
 func (p *Playground) bootCluster(ctx context.Context, env *environment.Environment, options *BootOptions) error {
