@@ -47,8 +47,8 @@ var (
 
 	// ErrSSHExecuteFailed is ErrSSHExecuteFailed
 	ErrSSHExecuteFailed = errNSSSH.NewType("execute_failed")
-	// ErrSSHExecuteTimedout is ErrSSHExecuteTimedout
-	ErrSSHExecuteTimedout = errNSSSH.NewType("execute_timedout")
+	// ErrSSHExecuteTimeout is ErrSSHExecuteTimeout
+	ErrSSHExecuteTimeout = errNSSSH.NewType("execute_timeout")
 )
 
 func init() {
@@ -186,8 +186,8 @@ func (e *EasySSHExecutor) Execute(ctx context.Context, cmd string, sudo bool, ti
 	}
 
 	if !done { // timeout case,
-		return []byte(stdout), []byte(stderr), ErrSSHExecuteTimedout.
-			Wrap(err, "Execute command over SSH timedout for '%s@%s:%s'", e.Config.User, e.Config.Server, e.Config.Port).
+		return []byte(stdout), []byte(stderr), ErrSSHExecuteTimeout.
+			Wrap(err, "Execute command over SSH timeout for '%s@%s:%s'", e.Config.User, e.Config.Server, e.Config.Port).
 			WithProperty(ErrPropSSHCommand, cmd).
 			WithProperty(ErrPropSSHStdout, stdout).
 			WithProperty(ErrPropSSHStderr, stderr)
