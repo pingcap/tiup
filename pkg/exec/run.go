@@ -203,7 +203,7 @@ func cmdCheckUpdate(component string, version utils.Version) {
 
 	go func() {
 		time.Sleep(cancelTimeout)
-		result <- colorstr.Sprintf("[yellow]Timedout (after %s)", cancelTimeout)
+		result <- colorstr.Sprintf("[yellow]Timeout (after %s)", cancelTimeout)
 	}()
 
 	go func() {
