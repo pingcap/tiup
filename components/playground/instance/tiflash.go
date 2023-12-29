@@ -136,7 +136,6 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version utils.Version) e
 		"--",
 	}
 	runtimeConfig := [][]string{
-		{"tmp_path", filepath.Join(inst.Dir, "tmp")},
 		{"path", filepath.Join(inst.Dir, "data")},
 		{"listen_host", inst.Host},
 		{"logger.log", inst.LogFile()},
