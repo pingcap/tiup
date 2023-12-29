@@ -139,7 +139,6 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version utils.Version) e
 		{"path", filepath.Join(inst.Dir, "data")},
 		{"listen_host", inst.Host},
 		{"logger.log", inst.LogFile()},
-		{"logger.level", "debug"},
 		{"logger.errorlog", filepath.Join(inst.Dir, "tiflash_error.log")},
 		{"status.metrics_port", fmt.Sprintf("%d", inst.StatusPort)},
 		{"flash.service_addr", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.ServicePort)},
