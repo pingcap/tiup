@@ -139,6 +139,7 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version utils.Version) e
 		fmt.Sprintf("--path=%s", filepath.Join(inst.Dir, "data")),
 		fmt.Sprintf("--listen_host=%s", inst.Host),
 		fmt.Sprintf("--logger.log=%s", inst.LogFile()),
+		"--logger.level=debug",
 		fmt.Sprintf("--logger.errorlog=%s", filepath.Join(inst.Dir, "tiflash_error.log")),
 		fmt.Sprintf("--status.metrics_port=%d", inst.StatusPort),
 		fmt.Sprintf("--flash.service_addr=%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.ServicePort)),
