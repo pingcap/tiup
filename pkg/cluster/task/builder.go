@@ -122,53 +122,6 @@ func (b *Builder) UserSSH(
 	return b
 }
 
-func (b *Builder) AutoSSH(
-	host string, port int, user, password, keyFile, passphrase string, sshTimeout, exeTimeout uint64,
-	proxyHost string, proxyPort int, proxyUser, proxyPassword, proxyKeyFile, proxyPassphrase string, proxySSHTimeout uint64,
-	sshType, defaultSSHType executor.SSHType, systemdMode spec.SystemdMode, clsName string,
-) *Builder {
-	if systemdMode == spec.UserMode {
-		return b.
-			UserSSH(
-				host,
-				port,
-				user,
-				sshTimeout,
-				exeTimeout,
-				proxyHost,
-				proxyPort,
-				proxyUser,
-				proxyPassword,
-				proxyKeyFile,
-				proxyPassphrase,
-				proxySSHTimeout,
-				sshType,
-				defaultSSHType,
-			)
-	} else {
-		return b.RootSSH(
-			host,
-			port,
-			user,
-			password,
-			keyFile,
-			passphrase,
-			sshTimeout,
-			exeTimeout,
-			proxyHost,
-			proxyPort,
-			proxyUser,
-			proxyPassword,
-			proxyKeyFile,
-			proxyPassphrase,
-			proxySSHTimeout,
-			sshType,
-			defaultSSHType,
-			false,
-		)
-	}
-}
-
 // Func append a func task.
 func (b *Builder) Func(name string, fn func(ctx context.Context) error) *Builder {
 	b.tasks = append(b.tasks, &Func{

@@ -841,8 +841,6 @@ func (pc *PDClient) DelStore(host string, retryOpt *utils.RetryOption) error {
 
 func (pc *PDClient) updateConfig(url string, body io.Reader) error {
 	endpoints := pc.getEndpoints(url)
-	fmt.Println("url", url)
-	fmt.Println("endpoints", endpoints)
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		return pc.httpClient.Post(pc.ctx, endpoint, body)
 	})

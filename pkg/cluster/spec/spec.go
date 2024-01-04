@@ -55,11 +55,14 @@ const (
 	FullOSType FullHostType = "OS"
 )
 
+// SystemdMode is the mode used by systemctl
 type SystemdMode string
 
 const (
+	// SystemMode system mode
 	SystemMode SystemdMode = "system"
-	UserMode   SystemdMode = "user"
+	// UserMode user mode
+	UserMode SystemdMode = "user"
 )
 
 // general role names
