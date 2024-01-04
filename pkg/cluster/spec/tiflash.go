@@ -563,7 +563,6 @@ server_configs:
     logger.size: "1000M"
     %[13]s
     raft.pd_addr: "%[9]s"
-    profiles.default.max_memory_usage: 0
     %[12]s
     %[14]s
 `,
