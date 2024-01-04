@@ -497,7 +497,7 @@ func CheckKernelParameters(opt *CheckOptions, p []byte) []*CheckResult {
 }
 
 // CheckServices checks if a service is running on the host
-func CheckServices(ctx context.Context, e ctxt.Executor, host, service string, disable bool) *CheckResult {
+func CheckServices(ctx context.Context, e ctxt.Executor, host, service string, disable bool, systemdMode spec.SystemdMode) *CheckResult {
 	result := &CheckResult{
 		Name: CheckNameSysService,
 	}
@@ -507,7 +507,7 @@ func CheckServices(ctx context.Context, e ctxt.Executor, host, service string, d
 		ctx,
 		fmt.Sprintf(
 			"systemctl list-unit-files --type service | grep -i %s.service | wc -l", service),
-		true)
+		systemdMode != spec.UserMode)
 	if err != nil {
 		result.Err = err
 		return result
@@ -519,8 +519,8 @@ func CheckServices(ctx context.Context, e ctxt.Executor, host, service string, d
 		result.Msg = fmt.Sprintf("service %s not found, ignore", service)
 		return result
 	}
-
-	active, _, _, err := GetServiceStatus(ctx, e, service+".service")
+	// The service checked here needs to use systemctl in system mode, so the value passed by scope is empty.
+	active, _, _, err := GetServiceStatus(ctx, e, service+".service", "", string(systemdMode))
 	if err != nil {
 		result.Err = err
 	}
@@ -542,14 +542,14 @@ func CheckServices(ctx context.Context, e ctxt.Executor, host, service string, d
 }
 
 // CheckSELinux checks if SELinux is enabled on the host
-func CheckSELinux(ctx context.Context, e ctxt.Executor) *CheckResult {
+func CheckSELinux(ctx context.Context, e ctxt.Executor, sudo bool) *CheckResult {
 	result := &CheckResult{
 		Name: CheckNameSELinux,
 	}
 	m := module.NewShellModule(module.ShellModuleConfig{
 		// ignore grep errors, the file may not exist for some systems
 		Command: "grep -E '^\\s*SELINUX=enforcing' /etc/selinux/config 2>/dev/null | wc -l",
-		Sudo:    true,
+		Sudo:    sudo,
 	})
 	stdout, stderr, err := m.Execute(ctx, e)
 	if err != nil {
@@ -818,14 +818,14 @@ func CheckFIOResult(rr, rw, lat []byte) []*CheckResult {
 }
 
 // CheckTHP checks THP in /sys/kernel/mm/transparent_hugepage/enabled
-func CheckTHP(ctx context.Context, e ctxt.Executor) *CheckResult {
+func CheckTHP(ctx context.Context, e ctxt.Executor, sudo bool) *CheckResult {
 	result := &CheckResult{
 		Name: CheckNameTHP,
 	}
 
 	m := module.NewShellModule(module.ShellModuleConfig{
 		Command: fmt.Sprintf(`if [ -d %[1]s ]; then cat %[1]s/enabled; fi`, "/sys/kernel/mm/transparent_hugepage"),
-		Sudo:    true,
+		Sudo:    sudo,
 	})
 	stdout, stderr, err := m.Execute(ctx, e)
 	if err != nil {

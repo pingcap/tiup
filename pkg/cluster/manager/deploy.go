@@ -148,7 +148,14 @@ func (m *Manager) Deploy(
 		}
 	}
 
-	if err := m.fillHost(sshConnProps, sshProxyProps, topo, &gOpt, opt.User); err != nil {
+	sudo := true
+	if topo.BaseTopo().GlobalOptions.SystemdMode == spec.UserMode {
+		sudo = false
+	} else {
+		sudo = opt.User != "root"
+	}
+
+	if err := m.fillHost(sshConnProps, sshProxyProps, topo, &gOpt, opt.User, sudo); err != nil {
 		return err
 	}
 
@@ -233,9 +240,10 @@ func (m *Manager) Deploy(
 				gOpt.SSHProxyTimeout,
 				gOpt.SSHType,
 				globalOptions.SSHType,
+				sudo,
 			).
-			EnvInit(host, globalOptions.User, globalOptions.Group, opt.SkipCreateUser || globalOptions.User == opt.User).
-			Mkdir(globalOptions.User, host, dirs...).
+			EnvInit(host, globalOptions.User, globalOptions.Group, opt.SkipCreateUser || globalOptions.User == opt.User, sudo).
+			Mkdir(globalOptions.User, host, sudo, dirs...).
 			BuildAsStep(fmt.Sprintf("  - Prepare %s:%d", host, hostInfo.ssh))
 		envInitTasks = append(envInitTasks, t)
 	}
@@ -265,8 +273,8 @@ func (m *Manager) Deploy(
 		}
 
 		t := task.NewSimpleUerSSH(m.logger, inst.GetManageHost(), inst.GetSSHPort(), globalOptions.User, gOpt, sshProxyProps, globalOptions.SSHType).
-			Mkdir(globalOptions.User, inst.GetManageHost(), deployDirs...).
-			Mkdir(globalOptions.User, inst.GetManageHost(), dataDirs...)
+			Mkdir(globalOptions.User, inst.GetManageHost(), sudo, deployDirs...).
+			Mkdir(globalOptions.User, inst.GetManageHost(), sudo, dataDirs...)
 
 		if deployerInstance, ok := inst.(DeployerInstance); ok {
 			deployerInstance.Deploy(t, "", deployDir, version, name, clusterVersion)

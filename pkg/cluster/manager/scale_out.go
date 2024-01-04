@@ -121,7 +121,14 @@ func (m *Manager) ScaleOut(
 		}
 	}
 
-	if err := m.fillHost(sshConnProps, sshProxyProps, newPart, &gOpt, opt.User); err != nil {
+	sudo := true
+	if topo.BaseTopo().GlobalOptions.SystemdMode == spec.UserMode {
+		sudo = false
+	} else {
+		sudo = opt.User != "root"
+	}
+
+	if err := m.fillHost(sshConnProps, sshProxyProps, newPart, &gOpt, opt.User, sudo); err != nil {
 		return err
 	}
 

@@ -55,6 +55,13 @@ const (
 	FullOSType FullHostType = "OS"
 )
 
+type SystemdMode string
+
+const (
+	SystemMode SystemdMode = "system"
+	UserMode   SystemdMode = "user"
+)
+
 // general role names
 var (
 	RoleMonitor       = "monitor"
@@ -90,6 +97,7 @@ type (
 		OS              string               `yaml:"os,omitempty" default:"linux"`
 		Arch            string               `yaml:"arch,omitempty"`
 		Custom          any                  `yaml:"custom,omitempty" validate:"custom:ignore"`
+		SystemdMode     SystemdMode          `yaml:"systemd_mode,omitempty" default:"system"`
 	}
 
 	// MonitoredOptions represents the monitored node configuration

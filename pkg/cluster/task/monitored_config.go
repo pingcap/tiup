@@ -34,14 +34,15 @@ import (
 
 // MonitoredConfig is used to generate the monitor node configuration
 type MonitoredConfig struct {
-	name       string
-	component  string
-	host       string
-	globResCtl meta.ResourceControl
-	options    *spec.MonitoredOptions
-	deployUser string
-	tlsEnabled bool
-	paths      meta.DirPaths
+	name        string
+	component   string
+	host        string
+	globResCtl  meta.ResourceControl
+	options     *spec.MonitoredOptions
+	deployUser  string
+	tlsEnabled  bool
+	paths       meta.DirPaths
+	systemdMode spec.SystemdMode
 }
 
 // Execute implements the Task interface
@@ -60,7 +61,7 @@ func (m *MonitoredConfig) Execute(ctx context.Context) error {
 		return err
 	}
 
-	if err := m.syncMonitoredSystemConfig(ctx, exec, m.component, ports[m.component]); err != nil {
+	if err := m.syncMonitoredSystemConfig(ctx, exec, m.component, ports[m.component], m.systemdMode); err != nil {
 		return err
 	}
 
@@ -85,7 +86,7 @@ func (m *MonitoredConfig) Execute(ctx context.Context) error {
 	return m.syncMonitoredScript(ctx, exec, m.component, cfg)
 }
 
-func (m *MonitoredConfig) syncMonitoredSystemConfig(ctx context.Context, exec ctxt.Executor, comp string, port int) (err error) {
+func (m *MonitoredConfig) syncMonitoredSystemConfig(ctx context.Context, exec ctxt.Executor, comp string, port int, systemdMode spec.SystemdMode) (err error) {
 	sysCfg := filepath.Join(m.paths.Cache, fmt.Sprintf("%s-%s-%d.service", comp, m.host, port))
 
 	// insert checkpoint
@@ -97,12 +98,17 @@ func (m *MonitoredConfig) syncMonitoredSystemConfig(ctx context.Context, exec ct
 		return nil
 	}
 
+	if len(systemdMode) == 0 {
+		systemdMode = spec.SystemMode
+	}
+
 	resource := spec.MergeResourceControl(m.globResCtl, m.options.ResourceControl)
 	systemCfg := system.NewConfig(comp, m.deployUser, m.paths.Deploy).
 		WithMemoryLimit(resource.MemoryLimit).
 		WithCPUQuota(resource.CPUQuota).
 		WithIOReadBandwidthMax(resource.IOReadBandwidthMax).
-		WithIOWriteBandwidthMax(resource.IOWriteBandwidthMax)
+		WithIOWriteBandwidthMax(resource.IOWriteBandwidthMax).
+		WithSystemdMode(string(systemdMode))
 
 	// blackbox_exporter needs cap_net_raw to send ICMP ping packets
 	if comp == spec.ComponentBlackboxExporter {
@@ -116,7 +122,13 @@ func (m *MonitoredConfig) syncMonitoredSystemConfig(ctx context.Context, exec ct
 	if err := exec.Transfer(ctx, sysCfg, tgt, false, 0, false); err != nil {
 		return err
 	}
-	if outp, errp, err := exec.Execute(ctx, fmt.Sprintf("mv %s /etc/systemd/system/%s-%d.service", tgt, comp, port), true); err != nil {
+	systemdDir := "/etc/systemd/system/"
+	sudo := true
+	if systemdMode == spec.UserMode {
+		systemdDir = "~/.config/systemd/user/"
+		sudo = false
+	}
+	if outp, errp, err := exec.Execute(ctx, fmt.Sprintf("mv %s %s%s-%d.service", tgt, systemdDir, comp, port), sudo); err != nil {
 		if len(outp) > 0 {
 			fmt.Println(string(outp))
 		}
