@@ -56,11 +56,6 @@ func TiFlashSupportMultiDisksDeployment(version string) bool {
 	return semver.Compare(version, "v4.0.9") >= 0 || strings.Contains(version, "nightly")
 }
 
-// TiFlashUseInfoLogAsDefault return true if given version of TiFlash need use info log as the default log level
-func TiFlashUseInfoLogAsDefault(version string) bool {
-	return (semver.Compare(version, "v6.5.7") >= 0 && semver.Compare(version, "v6.6.0") < 0) || semver.Compare(version, "v7.1.0") >= 0 || strings.Contains(version, "nightly")
-}
-
 // TiFlashRequireCPUFlagAVX2 return if given version of TiFlash requires AVX2 CPU flags
 func TiFlashRequireCPUFlagAVX2(version string) bool {
 	// https://github.com/pingcap/tiup/pull/2054
