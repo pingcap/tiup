@@ -11,7 +11,7 @@ exec > >(tee -i -a "{{.LogDir}}/alertmanager.log")
 exec 2>&1
 
 {{- if .NumaNode}}
-exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/alertmanager \
+exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/alertmanager/alertmanager \
 {{- else}}
 exec bin/alertmanager/alertmanager \
 {{- end}}

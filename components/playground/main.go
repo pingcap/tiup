@@ -42,6 +42,7 @@ import (
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/telemetry"
+	"github.com/pingcap/tiup/pkg/tui/colorstr"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
@@ -235,19 +236,23 @@ Examples:
 			if !semver.IsValid(options.Version) {
 				version, err := env.V1Repository().ResolveComponentVersion(spec.ComponentTiDB, options.Version)
 				if err != nil {
-					return errors.Annotate(err, fmt.Sprintf("can not expand version %s to a valid semver string", options.Version))
+					return errors.Annotate(err, fmt.Sprintf("Cannot resolve version %s to a valid semver string", options.Version))
 				}
 				// for nightly, may not use the same version for cluster
 				if options.Version == "nightly" {
 					version = "nightly"
 				}
-				fmt.Println(color.YellowString(`Using the version %s for version constraint "%s".
 
-If you'd like to use a TiDB version other than %s, cancel and retry with the following arguments:
-	Specify version manually:   tiup playground <version>
-	Specify version range:      tiup playground ^5
-	The nightly version:        tiup playground nightly
-`, version, options.Version, version))
+				if options.Version != version.String() {
+					colorstr.Fprintf(os.Stderr, `
+Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. If you'd like to use other versions:
+
+    Use exact version:      [tiup_command]tiup playground v7.1.0[reset]
+    Use version range:      [tiup_command]tiup playground ^5[reset]
+    Use nightly:            [tiup_command]tiup playground nightly[reset]
+
+`, options.Version, version.String())
+				}
 
 				options.Version = version.String()
 			}

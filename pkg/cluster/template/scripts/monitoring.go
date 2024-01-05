@@ -34,6 +34,8 @@ type PrometheusScript struct {
 	LogDir    string
 
 	NumaNode string
+
+	AdditionalArgs []string
 }
 
 // ConfigToFile write config content to specific path
