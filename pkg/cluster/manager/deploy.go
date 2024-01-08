@@ -149,10 +149,13 @@ func (m *Manager) Deploy(
 	}
 
 	var sudo bool
+	var sshSudo bool
 	if topo.BaseTopo().GlobalOptions.SystemdMode == spec.UserMode {
 		sudo = false
+		sshSudo = false
 	} else {
-		sudo = opt.User != "root"
+		sudo = true
+		sshSudo = opt.User != "root"
 	}
 
 	if err := m.fillHost(sshConnProps, sshProxyProps, topo, &gOpt, opt.User, sudo); err != nil {
@@ -243,7 +246,7 @@ func (m *Manager) Deploy(
 				gOpt.SSHProxyTimeout,
 				gOpt.SSHType,
 				globalOptions.SSHType,
-				sudo,
+				sshSudo,
 			).
 			EnvInit(host, globalOptions.User, globalOptions.Group, opt.SkipCreateUser || globalOptions.User == opt.User, sudo).
 			Mkdir(globalOptions.User, host, sudo, dirs...).
