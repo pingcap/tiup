@@ -102,6 +102,7 @@ func (b *Builder) UserSSH(
 	if sshType == "" {
 		sshType = defaultSSHType
 	}
+	fmt.Println("sshtype", sshType)
 	b.tasks = append(b.tasks, &UserSSH{
 		host:            host,
 		port:            port,
