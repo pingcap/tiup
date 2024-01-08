@@ -138,6 +138,9 @@ func (c *TiProxyComponent) Source() string {
 func (c *TiProxyComponent) CalculateVersion(clusterVersion string) string {
 	// always not follow global version, use ""(latest) by default
 	version := c.Topology.ComponentVersions.TiProxy
+	if version == "" {
+		version = "nightly"
+	}
 	return version
 }
 
@@ -224,7 +227,6 @@ func (i *TiProxyInstance) checkConfig(
 		pds = append(pds, pdspec.GetAdvertiseClientURL(enableTLS))
 	}
 	cfg["proxy.pd-addrs"] = strings.Join(pds, ",")
-	cfg["proxy.require-backend-tls"] = false
 	cfg["proxy.addr"] = utils.JoinHostPort(i.GetListenHost(), i.GetPort())
 	cfg["api.addr"] = utils.JoinHostPort(i.GetListenHost(), spec.StatusPort)
 	cfg["log.log-file.filename"] = filepath.Join(paths.Log, "tiproxy.log")
@@ -311,7 +313,7 @@ func (i *TiProxyInstance) setTLSConfig(ctx context.Context, enableTLS bool, conf
 		}
 	}
 
-	return nil, nil
+	return configs, nil
 }
 
 var _ RollingUpdateInstance = &TiProxyInstance{}
