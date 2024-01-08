@@ -155,7 +155,7 @@ func (e *EasySSHExecutor) Execute(ctx context.Context, cmd string, sudo bool, ti
 		timeout = append(timeout, executeDefaultTimeout)
 	}
 	fmt.Println("cmd2", cmd)
-	fmt.Println("run command on remote host")
+	fmt.Println("run command on remote host", e.Config.Server)
 	stdout, stderr, done, err := e.Config.Run(cmd, timeout...) //使用easyssh执行cmd
 	fmt.Println("stderr", stderr)
 	if stderr != "" {

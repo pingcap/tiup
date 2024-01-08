@@ -100,7 +100,7 @@ func buildScaleOutTask(
 		return nil, err
 	}
 
-	sudo := true
+	var sudo bool
 	if topo.BaseTopo().GlobalOptions.SystemdMode == spec.UserMode {
 		sudo = false
 	} else {

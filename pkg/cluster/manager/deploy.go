@@ -148,7 +148,7 @@ func (m *Manager) Deploy(
 		}
 	}
 
-	sudo := true
+	var sudo bool
 	if topo.BaseTopo().GlobalOptions.SystemdMode == spec.UserMode {
 		sudo = false
 	} else {

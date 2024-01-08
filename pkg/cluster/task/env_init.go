@@ -78,7 +78,7 @@ func (e *EnvInit) exec(ctx context.Context) error {
 	}
 
 	// Authorize
-	cmd := ``
+	var cmd string
 	if e.sudo {
 		cmd = `su - ` + e.deployUser + ` -c 'mkdir -p ~/.ssh && chmod 700 ~/.ssh'`
 	} else {

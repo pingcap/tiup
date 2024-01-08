@@ -124,7 +124,7 @@ func (m *Manager) CheckCluster(clusterOrTopoName, scaleoutTopo string, opt Check
 		}
 	}
 
-	sudo := true
+	var sudo bool
 	if topo.BaseTopo().GlobalOptions.SystemdMode == spec.UserMode {
 		sudo = false
 	} else {
