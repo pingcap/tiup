@@ -666,13 +666,21 @@ func fixFailedChecks(host string, res *operator.CheckResult, t *task.Builder) (s
 		msg = fmt.Sprintf("will try to %s, reboot might be needed", color.HiBlueString("disable SELinux"))
 	case operator.CheckNameTHP:
 		t.Shell(host,
-			fmt.Sprintf(`if [ -d %[1]s ]; then echo never > %[1]s/enabled; fi`, "/sys/kernel/mm/transparent_hugepage"),
+			fmt.Sprintf(`if [ -d %[1]s ]; then echo never > %[1]s/enabled && echo never > %[1]s/defrag; fi`, "/sys/kernel/mm/transparent_hugepage"),
 			"",
 			true)
 		// msg = fmt.Sprintf("will try to %s, please check again after reboot", color.HiBlueString("disable THP"))
 		// Add Disable THP to /etc/rc.local
 		t.Shell(host,
 			fmt.Sprintf(`if ! grep -q 'echo never > %[1]s' /etc/rc.local; then echo 'echo never > %[1]s' | sudo tee -a /etc/rc.local; fi`, "/sys/kernel/mm/transparent_hugepage/enabled"),
+			"",
+			true)
+		t.Shell(host,
+			fmt.Sprintf(`if ! grep -q 'echo never > %[1]s' /etc/rc.local; then echo 'echo never > %[1]s' | sudo tee -a /etc/rc.local; fi`, "/sys/kernel/mm/transparent_hugepage/defrag"),
+			"",
+			true)
+		t.Shell(host,
+			fmt.Sprintf(`if ! [[ -x "%[1]s" ]]; then sudo chmod +x %[1]s; fi`, "/etc/rc.local"),
 			"",
 			true)
 		msg = fmt.Sprintf("will try to %s, please check again after reboot", color.HiBlueString("disable THP & Add Disable THP to /etc/rc.local"))
