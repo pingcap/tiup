@@ -106,6 +106,10 @@ func buildScaleOutTask(
 	} else {
 		sudo = opt.User != "root"
 	}
+	fmt.Println("systemd mode ", topo.BaseTopo().GlobalOptions.SystemdMode)
+	fmt.Println("user", opt.User)
+	fmt.Println("hhhhh")
+	fmt.Println("hhhh")
 	// Initialize the environments
 	initializedHosts := set.NewStringSet()
 	metadata.GetTopology().IterInstance(func(instance spec.Instance) {
