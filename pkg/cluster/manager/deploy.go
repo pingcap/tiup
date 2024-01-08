@@ -213,7 +213,10 @@ func (m *Manager) Deploy(
 		if strings.HasPrefix(globalOptions.DataDir, "/") {
 			dirs = append(dirs, globalOptions.DataDir)
 		}
-
+		fmt.Println("opt user", opt.User)
+		fmt.Println("globalOptions.User", globalOptions.User)
+		fmt.Println("dddd")
+		fmt.Println("ddd")
 		t := task.NewBuilder(m.logger).
 			RootSSH(
 				host,
