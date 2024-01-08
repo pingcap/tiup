@@ -669,7 +669,13 @@ func fixFailedChecks(host string, res *operator.CheckResult, t *task.Builder) (s
 			fmt.Sprintf(`if [ -d %[1]s ]; then echo never > %[1]s/enabled; fi`, "/sys/kernel/mm/transparent_hugepage"),
 			"",
 			true)
-		msg = fmt.Sprintf("will try to %s, please check again after reboot", color.HiBlueString("disable THP"))
+		// msg = fmt.Sprintf("will try to %s, please check again after reboot", color.HiBlueString("disable THP"))
+		// Add Disable THP to /etc/rc.local
+		t.Shell(host,
+			fmt.Sprintf(`if ! grep -q 'echo never > %[1]s' /etc/rc.local; then echo 'echo never > %[1]s' | sudo tee -a /etc/rc.local; fi`, "/sys/kernel/mm/transparent_hugepage/enabled"),
+			"",
+			true)
+		msg = fmt.Sprintf("will try to %s, please check again after reboot", color.HiBlueString("disable THP & Add Disable THP to /etc/rc.local"))
 	case operator.CheckNameSwap:
 		// not applying swappiness setting here, it should be fixed
 		// in the sysctl check
