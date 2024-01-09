@@ -220,7 +220,6 @@ func (i *TiProxyInstance) checkConfig(
 ) map[string]any {
 	topo := i.topo.(*Specification)
 	spec := i.InstanceSpec.(*TiProxySpec)
-	enableTLS := topo.GlobalOptions.TLSEnabled
 
 	if cfg == nil {
 		cfg = make(map[string]any)
@@ -228,7 +227,7 @@ func (i *TiProxyInstance) checkConfig(
 
 	pds := []string{}
 	for _, pdspec := range topo.PDServers {
-		pds = append(pds, pdspec.GetAdvertiseClientURL(enableTLS))
+		pds = append(pds, utils.JoinHostPort(pdspec.Host, pdspec.ClientPort))
 	}
 	cfg["proxy.pd-addrs"] = strings.Join(pds, ",")
 	cfg["proxy.addr"] = utils.JoinHostPort(i.GetListenHost(), i.GetPort())
