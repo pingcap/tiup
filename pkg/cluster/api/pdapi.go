@@ -285,8 +285,8 @@ func (pc *PDClient) WaitLeader(retryOpt *utils.RetryOption) error {
 		}
 
 		// return error by default, to make the retry work
-		pc.l().Debugf("Still waitting for the PD leader to be elected")
-		return perrs.New("still waitting for the PD leader to be elected")
+		pc.l().Debugf("Still waiting for the PD leader to be elected")
+		return perrs.New("still waiting for the PD leader to be elected")
 	}, *retryOpt); err != nil {
 		return fmt.Errorf("error getting PD leader, %v", err)
 	}
@@ -444,8 +444,8 @@ func (pc *PDClient) EvictPDLeader(retryOpt *utils.RetryOption) error {
 		}
 
 		// return error by default, to make the retry work
-		pc.l().Debugf("Still waitting for the PD leader to transfer")
-		return perrs.New("still waitting for the PD leader to transfer")
+		pc.l().Debugf("Still waiting for the PD leader to transfer")
+		return perrs.New("still waiting for the PD leader to transfer")
 	}, *retryOpt); err != nil {
 		return fmt.Errorf("error evicting PD leader, %v", err)
 	}
@@ -524,7 +524,7 @@ func (pc *PDClient) EvictStoreLeader(host string, retryOpt *utils.RetryOption, c
 			return nil
 		}
 		pc.l().Infof(
-			"\t  Still waitting for %d store leaders to transfer...",
+			"\t  Still waiting for %d store leaders to transfer...",
 			leaderCount,
 		)
 
@@ -732,7 +732,7 @@ func (pc *PDClient) DelPD(name string, retryOpt *utils.RetryOption) error {
 		// check if the deleted member still present
 		for _, member := range currMembers.Members {
 			if member.Name == name {
-				return perrs.New("still waitting for the PD node to be deleted")
+				return perrs.New("still waiting for the PD node to be deleted")
 			}
 		}
 

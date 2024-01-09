@@ -537,6 +537,7 @@ func (i *TiFlashInstance) initTiFlashConfig(ctx context.Context, version string,
 		daemonConfig = `application.runAsDaemon: true`
 		markCacheSize = `mark_cache_size: 5368709120`
 	}
+
 	err = yaml.Unmarshal([]byte(fmt.Sprintf(`
 server_configs:
   tiflash:
@@ -559,11 +560,9 @@ server_configs:
     logger.errorlog: "%[2]s/tiflash_error.log"
     logger.log: "%[2]s/tiflash.log"
     logger.count: 20
-    logger.level: "debug"
     logger.size: "1000M"
     %[13]s
     raft.pd_addr: "%[9]s"
-    profiles.default.max_memory_usage: 0
     %[12]s
     %[14]s
 `,

@@ -42,6 +42,7 @@ import (
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/telemetry"
+	"github.com/pingcap/tiup/pkg/tui/colorstr"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
@@ -235,19 +236,23 @@ Examples:
 			if !semver.IsValid(options.Version) {
 				version, err := env.V1Repository().ResolveComponentVersion(spec.ComponentTiDB, options.Version)
 				if err != nil {
-					return errors.Annotate(err, fmt.Sprintf("can not expand version %s to a valid semver string", options.Version))
+					return errors.Annotate(err, fmt.Sprintf("Cannot resolve version %s to a valid semver string", options.Version))
 				}
 				// for nightly, may not use the same version for cluster
 				if options.Version == "nightly" {
 					version = "nightly"
 				}
-				fmt.Println(color.YellowString(`Using the version %s for version constraint "%s".
 
-If you'd like to use a TiDB version other than %s, cancel and retry with the following arguments:
-	Specify version manually:   tiup playground <version>
-	Specify version range:      tiup playground ^5
-	The nightly version:        tiup playground nightly
-`, version, options.Version, version))
+				if options.Version != version.String() {
+					colorstr.Fprintf(os.Stderr, `
+Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. If you'd like to use other versions:
+
+    Use exact version:      [tiup_command]tiup playground v7.1.0[reset]
+    Use version range:      [tiup_command]tiup playground ^5[reset]
+    Use nightly:            [tiup_command]tiup playground nightly[reset]
+
+`, options.Version, version.String())
+				}
 
 				options.Version = version.String()
 			}
@@ -409,17 +414,17 @@ func populateDefaultOpt(flagSet *pflag.FlagSet) error {
 		defaultInt(&options.PD.Num, "pd", 1)
 	case "ms":
 		defaultInt(&options.PDAPI.Num, "pd.api", 1)
-		defaultStr(&options.PDAPI.BinPath, "pd.api.binpath", options.PDAPI.BinPath)
-		defaultStr(&options.PDAPI.ConfigPath, "pd.api.config", options.PDAPI.ConfigPath)
+		defaultStr(&options.PDAPI.BinPath, "pd.api.binpath", options.PD.BinPath)
+		defaultStr(&options.PDAPI.ConfigPath, "pd.api.config", options.PD.ConfigPath)
 		defaultInt(&options.PDTSO.Num, "pd.tso", 1)
-		defaultStr(&options.PDTSO.BinPath, "pd.tso.binpath", options.PDTSO.BinPath)
-		defaultStr(&options.PDTSO.ConfigPath, "pd.tso.config", options.PDTSO.ConfigPath)
+		defaultStr(&options.PDTSO.BinPath, "pd.tso.binpath", options.PD.BinPath)
+		defaultStr(&options.PDTSO.ConfigPath, "pd.tso.config", options.PD.ConfigPath)
 		defaultInt(&options.PDScheduling.Num, "pd.scheduling", 1)
-		defaultStr(&options.PDScheduling.BinPath, "pd.scheduling.binpath", options.PDScheduling.BinPath)
-		defaultStr(&options.PDScheduling.ConfigPath, "pd.scheduling.config", options.PDScheduling.ConfigPath)
+		defaultStr(&options.PDScheduling.BinPath, "pd.scheduling.binpath", options.PD.BinPath)
+		defaultStr(&options.PDScheduling.ConfigPath, "pd.scheduling.config", options.PD.ConfigPath)
 		defaultInt(&options.PDRM.Num, "pd.rm", 1)
-		defaultStr(&options.PDRM.BinPath, "pd.rm.binpath", options.PDRM.BinPath)
-		defaultStr(&options.PDRM.ConfigPath, "pd.rm.config", options.PDRM.ConfigPath)
+		defaultStr(&options.PDRM.BinPath, "pd.rm.binpath", options.PD.BinPath)
+		defaultStr(&options.PDRM.ConfigPath, "pd.rm.config", options.PD.ConfigPath)
 	default:
 		return errors.Errorf("Unknown --pd.mode %s", options.PDMode)
 	}

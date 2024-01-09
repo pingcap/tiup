@@ -30,8 +30,8 @@ require (
 	github.com/juju/ansiterm v1.0.0
 	github.com/mattn/go-runewidth v0.0.14
 	github.com/minio/minio-go/v7 v7.0.52
+	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db
 	github.com/otiai10/copy v1.9.0
-	github.com/pelletier/go-toml v1.9.5
 	github.com/pingcap/check v0.0.0-20211026125417-57bd13f7b5f0
 	github.com/pingcap/errors v0.11.5-0.20201126102027-b0a155152ca3
 	github.com/pingcap/failpoint v0.0.0-20220801062533-2eaa32854a6c
