@@ -136,10 +136,14 @@ func (c *TiProxyComponent) Source() string {
 
 // CalculateVersion implements the Component interface
 func (c *TiProxyComponent) CalculateVersion(clusterVersion string) string {
-	// always not follow global version, use ""(latest) by default
 	version := c.Topology.ComponentVersions.TiProxy
 	if version == "" {
-		version = "nightly"
+		// always not follow global version
+		// because tiproxy version is different from clusterVersion
+		// but "nightly" is effective
+		if clusterVersion == "nightly" {
+			version = clusterVersion
+		}
 	}
 	return version
 }
