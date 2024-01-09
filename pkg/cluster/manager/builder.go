@@ -101,11 +101,13 @@ func buildScaleOutTask(
 	}
 
 	var sudo bool
-	if topo.BaseTopo().GlobalOptions.SystemdMode == spec.UserMode {
+	systemdMode := topo.BaseTopo().GlobalOptions.SystemdMode
+	if systemdMode == spec.UserMode {
 		sudo = false
 	} else {
-		sudo = opt.User != "root"
+		sudo = true
 	}
+
 	fmt.Println("systemd mode ", topo.BaseTopo().GlobalOptions.SystemdMode)
 	fmt.Println("user", opt.User)
 	fmt.Println("hhhhh")
@@ -162,7 +164,7 @@ func buildScaleOutTask(
 				gOpt.SSHProxyTimeout,
 				gOpt.SSHType,
 				globalOptions.SSHType,
-				sudo,
+				opt.User != "root" && systemdMode != spec.UserMode,
 			).
 			EnvInit(instance.GetManageHost(), base.User, base.Group, opt.SkipCreateUser || globalOptions.User == opt.User, sudo).
 			Mkdir(globalOptions.User, instance.GetManageHost(), sudo, dirs...).
