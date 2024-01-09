@@ -938,6 +938,7 @@ func (s *Specification) validateTLSEnabled() error {
 			ComponentTiDB,
 			ComponentTiKV,
 			ComponentTiFlash,
+			ComponentTiProxy,
 			ComponentPump,
 			ComponentDrainer,
 			ComponentCDC,
