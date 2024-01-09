@@ -201,10 +201,9 @@ func checkSystemInfo(
 	components = operator.FilterComponent(components, roleFilter)
 
 	systemdDir := "/etc/systemd/system/"
-	sudo := true
-	if topo.BaseTopo().GlobalOptions.SystemdMode == spec.UserMode {
+	systemdMode := topo.BaseTopo().GlobalOptions.SystemdMode
+	if systemdMode == spec.UserMode {
 		systemdDir = "~/.config/systemd/user/"
-		sudo = false
 	}
 
 	for _, comp := range components {
@@ -335,9 +334,9 @@ func checkSystemInfo(
 				gOpt.SSHProxyTimeout,
 				gOpt.SSHType,
 				topo.GlobalOptions.SSHType,
-				sudo,
+				opt.User != "root" && systemdMode != spec.UserMode,
 			).
-			Mkdir(opt.User, inst.GetManageHost(), sudo, filepath.Join(task.CheckToolsPathDir, "bin")).
+			Mkdir(opt.User, inst.GetManageHost(), systemdMode != spec.UserMode, filepath.Join(task.CheckToolsPathDir, "bin")).
 			CopyComponent(
 				spec.ComponentCheckCollector,
 				inst.OS(),
@@ -375,7 +374,7 @@ func checkSystemInfo(
 				gOpt.SSHProxyTimeout,
 				gOpt.SSHType,
 				topo.GlobalOptions.SSHType,
-				sudo,
+				opt.User != "root" && systemdMode != spec.UserMode,
 			).
 			Rmdir(inst.GetManageHost(), task.CheckToolsPathDir).
 			BuildAsStep("  - Cleanup check files on " + utils.JoinHostPort(inst.GetManageHost(), inst.GetSSHPort()))
@@ -432,7 +431,7 @@ func checkSystemInfo(
 				host,
 				"sysctl -a",
 				"",
-				sudo,
+				systemdMode != spec.UserMode,
 			).
 			CheckSys(
 				host,
@@ -523,7 +522,7 @@ func checkSystemInfo(
 				gOpt.SSHProxyTimeout,
 				gOpt.SSHType,
 				topo.GlobalOptions.SSHType,
-				sudo,
+				opt.User != "root" && systemdMode != spec.UserMode,
 			)
 		res, err := handleCheckResults(ctx, host, opt, tf, string(topo.BaseTopo().GlobalOptions.SystemdMode))
 		if err != nil {

@@ -108,10 +108,6 @@ func buildScaleOutTask(
 		sudo = true
 	}
 
-	fmt.Println("systemd mode ", topo.BaseTopo().GlobalOptions.SystemdMode)
-	fmt.Println("user", opt.User)
-	fmt.Println("hhhhh")
-	fmt.Println("hhhh")
 	// Initialize the environments
 	initializedHosts := set.NewStringSet()
 	metadata.GetTopology().IterInstance(func(instance spec.Instance) {
@@ -438,7 +434,7 @@ type hostInfo struct {
 func buildMonitoredDeployTask(
 	m *Manager,
 	uniqueHosts map[string]hostInfo, // host -> ssh-port, os, arch
-	noAgentHosts set.StringSet, // hosts that do not deploy monitor agents
+	noAgentHosts set.StringSet,      // hosts that do not deploy monitor agents
 	globalOptions *spec.GlobalOptions,
 	monitoredOptions *spec.MonitoredOptions,
 	gOpt operator.Options,
@@ -512,7 +508,7 @@ func buildMonitoredCertificateTasks(
 	m *Manager,
 	name string,
 	uniqueHosts map[string]hostInfo, // host -> ssh-port, os, arch
-	noAgentHosts set.StringSet, // hosts that do not deploy monitor agents
+	noAgentHosts set.StringSet,      // hosts that do not deploy monitor agents
 	globalOptions *spec.GlobalOptions,
 	monitoredOptions *spec.MonitoredOptions,
 	gOpt operator.Options,

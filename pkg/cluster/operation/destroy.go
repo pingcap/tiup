@@ -273,7 +273,7 @@ func DestroyMonitored(ctx context.Context, inst spec.Instance, options *spec.Mon
 
 	c := module.ShellModuleConfig{
 		Command:  fmt.Sprintf("rm -rf %s;", strings.Join(delPaths, " ")),
-		Sudo:     sudo, // the .service files are in a directory owned by root // 需要root
+		Sudo:     sudo, // the .service files are in a directory owned by root
 		Chdir:    "",
 		UseShell: false,
 	}

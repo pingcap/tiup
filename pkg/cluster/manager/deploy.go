@@ -221,10 +221,7 @@ func (m *Manager) Deploy(
 		if strings.HasPrefix(globalOptions.DataDir, "/") {
 			dirs = append(dirs, globalOptions.DataDir)
 		}
-		fmt.Println("deploy systemd mode ", topo.BaseTopo().GlobalOptions.SystemdMode)
-		fmt.Println("deploy user", opt.User)
-		fmt.Println("dddd")
-		fmt.Println("dddd")
+
 		t := task.NewBuilder(m.logger).
 			RootSSH(
 				host,

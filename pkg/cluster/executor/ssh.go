@@ -144,7 +144,7 @@ func (e *EasySSHExecutor) Execute(ctx context.Context, cmd string, sudo bool, ti
 
 	// set a basic PATH in case it's empty on login
 	cmd = fmt.Sprintf("PATH=$PATH:/bin:/sbin:/usr/bin:/usr/sbin; %s", cmd)
-	fmt.Println("cmd1", cmd)
+	
 	if e.Locale != "" {
 		cmd = fmt.Sprintf("export LANG=%s; %s", e.Locale, cmd)
 	}
@@ -154,14 +154,9 @@ func (e *EasySSHExecutor) Execute(ctx context.Context, cmd string, sudo bool, ti
 	if len(timeout) == 0 {
 		timeout = append(timeout, executeDefaultTimeout)
 	}
-	fmt.Println("cmd2", cmd)
-	fmt.Println("run command on remote host", e.Config.Server)
-	stdout, stderr, done, err := e.Config.Run(cmd, timeout...) //使用easyssh执行cmd
-	fmt.Println("stderr", stderr)
-	if stderr != "" {
-		fmt.Println("stderr cmd is", stderr, cmd)
-	}
-	fmt.Println("err", err)
+
+	stdout, stderr, done, err := e.Config.Run(cmd, timeout...)
+
 	logfn := zap.L().Info
 	if err != nil {
 		logfn = zap.L().Error
@@ -187,7 +182,7 @@ func (e *EasySSHExecutor) Execute(ctx context.Context, cmd string, sudo bool, ti
 					e.Config.Server,
 					color.YellowString(output)))
 		}
-		fmt.Println("return err, cmd: ", cmd)
+
 		return []byte(stdout), []byte(stderr), baseErr
 	}
 
