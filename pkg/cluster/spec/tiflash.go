@@ -541,9 +541,7 @@ func (i *TiFlashInstance) initTiFlashConfig(ctx context.Context, version string,
 	}
 
 	// `cluster_manager` is removed since v6.0.0
-	if tidbver.TiFlashNotNeedClusterManager(version) {
-		clusterManagerConfig = "#"
-	} else {
+	if tidbver.TiFlashNeedClusterManager(version) {
 		clusterManagerConfig = fmt.Sprintf(`
     flash.flash_cluster.cluster_manager_path: "%[2]s/bin/tiflash/flash_cluster_manager"
     flash.flash_cluster.log: "%[1]s/tiflash_cluster_manager.log"
@@ -551,6 +549,8 @@ func (i *TiFlashInstance) initTiFlashConfig(ctx context.Context, version string,
     flash.flash_cluster.refresh_interval: 20
     flash.flash_cluster.update_rule_interval: 5
 		`, paths.Log, paths.Deploy)
+	} else {
+		clusterManagerConfig = "#"
 	}
 
 	topo := Specification{}
