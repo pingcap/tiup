@@ -532,12 +532,12 @@ func (i *TiFlashInstance) initTiFlashConfig(ctx context.Context, version string,
 		extraConfig = "#"
 	} else {
 		extraConfig = fmt.Sprintf(`
-		application.runAsDaemon: true
-		display_name: "TiFlash"
-		default_profile: "default"
-		mark_cache_size: 5368709120
-		tmp_path: "%s/tmp"
-		`, paths.Data[0])
+    application.runAsDaemon: true
+    display_name: "TiFlash"
+    default_profile: "default"
+    mark_cache_size: 5368709120
+    tmp_path: "%s/tmp"
+`, paths.Data[0])
 	}
 
 	// `cluster_manager` is removed since v6.0.0
@@ -548,7 +548,7 @@ func (i *TiFlashInstance) initTiFlashConfig(ctx context.Context, version string,
     flash.flash_cluster.master_ttl: 60
     flash.flash_cluster.refresh_interval: 20
     flash.flash_cluster.update_rule_interval: 5
-		`, paths.Log, paths.Deploy)
+`, paths.Log, paths.Deploy)
 	} else {
 		clusterManagerConfig = "#"
 	}
@@ -572,7 +572,7 @@ server_configs:
     raft.pd_addr: "%[9]s"
     %[11]s
     %[12]s
-	%[13]s
+    %[13]s
 `,
 		pathConfig,
 		paths.Log,
