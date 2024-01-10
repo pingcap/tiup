@@ -459,8 +459,8 @@ func (i *TiFlashInstance) initTiFlashConfig(ctx context.Context, version string,
 		pathConfig            string
 		isStorageDirsDefined  bool
 		deprecatedUsersConfig string
-		daemonConfig          string
-		markCacheSize         string
+		extraConfig           string
+		clusterManagerConfig  string
 		err                   error
 	)
 	if isStorageDirsDefined, err = checkTiFlashStorageConfigWithVersion(version, src); err != nil {
@@ -527,44 +527,52 @@ func (i *TiFlashInstance) initTiFlashConfig(ctx context.Context, version string,
 		return nil, err
 	}
 
-	topo := Specification{}
-
 	if tidbver.TiFlashNotNeedSomeConfig(version) {
-		// For 5.4.0 or later, TiFlash can ignore application.runAsDaemon and mark_cache_size setting
-		daemonConfig = "#"
-		markCacheSize = "#"
+		// For 5.4.0 or later, TiFlash can ignore application.runAsDaemon, display_name, default_profile and mark_cache_size setting
+		extraConfig = "#"
 	} else {
-		daemonConfig = `application.runAsDaemon: true`
-		markCacheSize = `mark_cache_size: 5368709120`
+		extraConfig = fmt.Sprintf(`
+		application.runAsDaemon: true
+		display_name: "TiFlash"
+		default_profile: "default"
+		mark_cache_size: 5368709120
+		tmp_path: "%s/tmp"
+		`, paths.Data[0])
 	}
 
+	// `cluster_manager` is removed since v6.0.0
+	if tidbver.TiFlashNotNeedClusterManager(version) {
+		clusterManagerConfig = "#"
+	} else {
+		clusterManagerConfig = fmt.Sprintf(`
+    flash.flash_cluster.cluster_manager_path: "%[2]s/bin/tiflash/flash_cluster_manager"
+    flash.flash_cluster.log: "%[1]s/tiflash_cluster_manager.log"
+    flash.flash_cluster.master_ttl: 60
+    flash.flash_cluster.refresh_interval: 20
+    flash.flash_cluster.update_rule_interval: 5
+		`, paths.Log, paths.Deploy)
+	}
+
+	topo := Specification{}
 	err = yaml.Unmarshal([]byte(fmt.Sprintf(`
 server_configs:
   tiflash:
-    default_profile: "default"
-    display_name: "TiFlash"
     listen_host: "%[7]s"
-    tmp_path: "%[11]s"
     %[1]s
     %[3]s
     %[4]s
     flash.tidb_status_addr: "%[5]s"
     flash.service_addr: "%[6]s"
-    flash.flash_cluster.cluster_manager_path: "%[10]s/bin/tiflash/flash_cluster_manager"
-    flash.flash_cluster.log: "%[2]s/tiflash_cluster_manager.log"
-    flash.flash_cluster.master_ttl: 60
-    flash.flash_cluster.refresh_interval: 20
-    flash.flash_cluster.update_rule_interval: 5
     flash.proxy.config: "%[10]s/conf/tiflash-learner.toml"
     status.metrics_port: %[8]d
     logger.errorlog: "%[2]s/tiflash_error.log"
     logger.log: "%[2]s/tiflash.log"
     logger.count: 20
     logger.size: "1000M"
-    %[13]s
     raft.pd_addr: "%[9]s"
+    %[11]s
     %[12]s
-    %[14]s
+	%[13]s
 `,
 		pathConfig,
 		paths.Log,
@@ -576,10 +584,9 @@ server_configs:
 		spec.StatusPort,
 		strings.Join(i.topo.(*Specification).GetPDList(), ","),
 		paths.Deploy,
-		fmt.Sprintf("%s/tmp", paths.Data[0]),
 		deprecatedUsersConfig,
-		daemonConfig,
-		markCacheSize,
+		extraConfig,
+		clusterManagerConfig,
 	)), &topo)
 
 	if err != nil {
