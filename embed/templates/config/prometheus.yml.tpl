@@ -376,8 +376,10 @@ scrape_configs:
         target_label: __param_target
       - source_labels: [__param_target]
         target_label: instance
+      {{- if .BlackboxAddr}}
       - target_label: __address__
         replacement: '{{.BlackboxAddr}}'
+      {{- end}}
 {{- range $addr := .BlackboxExporterAddrs}}
   - job_name: "blackbox_exporter_{{$addr}}_icmp"
     scrape_interval: 6s
