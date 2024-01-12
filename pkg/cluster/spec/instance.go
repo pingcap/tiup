@@ -103,6 +103,7 @@ type Instance interface {
 	GetNumaNode() string
 	GetNumaCores() string
 	DeployDir() string
+	ExtraDirs() []string
 	UsedPorts() []int
 	UsedDirs() []string
 	Status(ctx context.Context, timeout time.Duration, tlsCfg *tls.Config, pdList ...string) string
@@ -391,6 +392,10 @@ func (i *BaseInstance) GetNumaCores() string {
 // DeployDir implements Instance interface
 func (i *BaseInstance) DeployDir() string {
 	return reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("DeployDir").String()
+}
+
+func (i *BaseInstance) ExtraDirs() []string {
+	return nil
 }
 
 // TLSDir implements Instance interface

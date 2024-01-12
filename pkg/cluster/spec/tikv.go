@@ -461,6 +461,15 @@ func (i *TiKVInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *t
 	return nil
 }
 
+func (i *TiKVInstance) ExtraDirs() []string {
+	spec := i.InstanceSpec.(*TiKVSpec)
+	raftDir := spec.Config["raftstore.raftdb-path"]
+	if raftDir == nil {
+		return nil
+	}
+	return []string{raftDir.(string)}
+}
+
 func addr(spec *TiKVSpec) string {
 	if spec.AdvertiseAddr != "" {
 		return spec.AdvertiseAddr

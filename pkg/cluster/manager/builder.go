@@ -188,7 +188,8 @@ func buildScaleOutTask(
 		tb := task.NewSimpleUerSSH(m.logger, inst.GetManageHost(), inst.GetSSHPort(), base.User, gOpt, p, sshType).
 			Mkdir(base.User, inst.GetManageHost(), deployDirs...).
 			Mkdir(base.User, inst.GetManageHost(), dataDirs...).
-			Mkdir(base.User, inst.GetManageHost(), logDir)
+			Mkdir(base.User, inst.GetManageHost(), logDir).
+			Mkdir(base.User, inst.GetManageHost(), inst.ExtraDirs()...)
 
 		srcPath := ""
 		if patchedComponents.Exist(inst.ComponentName()) {
