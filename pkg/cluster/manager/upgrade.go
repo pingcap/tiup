@@ -90,12 +90,17 @@ func (m *Manager) Upgrade(name string, clusterVersion string, componentVersions 
 	compVersionMsg := ""
 	for _, comp := range topo.ComponentsByUpdateOrder(base.Version) {
 		// if component version is not specified, use the cluster version or latest("")
+		oldver := comp.CalculateVersion(base.Version)
 		version := componentVersions[comp.Name()]
 		if version != "" {
 			comp.SetVersion(version)
 		}
-		if len(comp.Instances()) > 0 {
-			compVersionMsg += fmt.Sprintf("\nwill upgrade component %19s to \"%s\",", "\""+comp.Name()+"\"", comp.CalculateVersion(clusterVersion))
+		calver := comp.CalculateVersion(clusterVersion)
+		if comp.Role() != spec.ComponentTiProxy || calver != oldver {
+			opt.Roles = append(opt.Roles, comp.Role())
+			if len(comp.Instances()) > 0 {
+				compVersionMsg += fmt.Sprintf("\nwill upgrade and restart component \"%19s\" to \"%s\",", comp.Name(), calver)
+			}
 		}
 	}
 	monitoredOptions := topo.GetMonitoredOptions()
