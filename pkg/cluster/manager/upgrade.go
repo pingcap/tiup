@@ -32,7 +32,6 @@ import (
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/repository"
-	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/mod/semver"
@@ -104,8 +103,6 @@ func (m *Manager) Upgrade(name string, clusterVersion string, componentVersions 
 			}
 		}
 	}
-	nodeFilter := set.NewStringSet(opt.Nodes...)
-
 	monitoredOptions := topo.GetMonitoredOptions()
 	if monitoredOptions != nil {
 		if componentVersions[spec.ComponentBlackboxExporter] != "" {
@@ -137,10 +134,6 @@ This operation will upgrade %s %s cluster %s to %s:%s`,
 	for _, comp := range topo.ComponentsByUpdateOrder(base.Version) {
 		compName := comp.Name()
 		version := comp.CalculateVersion(clusterVersion)
-		instances := operator.FilterInstance(comp.Instances(), nodeFilter)
-		if len(instances) < 1 {
-			continue
-		}
 
 		for _, inst := range comp.Instances() {
 			// Download component from repository
