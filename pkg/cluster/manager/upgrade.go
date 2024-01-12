@@ -89,8 +89,7 @@ func (m *Manager) Upgrade(name string, clusterVersion string, componentVersions 
 	}
 
 	compVersionMsg := ""
-	components := topo.ComponentsByUpdateOrder(base.Version)
-	for _, comp := range components {
+	for _, comp := range topo.ComponentsByUpdateOrder(base.Version) {
 		// if component version is not specified, use the cluster version or latest("")
 		oldver := comp.CalculateVersion(base.Version)
 		version := componentVersions[comp.Name()]
@@ -105,7 +104,7 @@ func (m *Manager) Upgrade(name string, clusterVersion string, componentVersions 
 			}
 		}
 	}
-	components = operator.FilterComponent(components, set.NewStringSet(opt.Roles...))
+	nodeFilter := set.NewStringSet(opt.Nodes...)
 
 	monitoredOptions := topo.GetMonitoredOptions()
 	if monitoredOptions != nil {
@@ -135,9 +134,13 @@ This operation will upgrade %s %s cluster %s to %s:%s`,
 	}
 
 	hasImported := false
-	for _, comp := range components {
+	for _, comp := range topo.ComponentsByUpdateOrder(base.Version) {
 		compName := comp.Name()
 		version := comp.CalculateVersion(clusterVersion)
+		instances := operator.FilterInstance(comp.Instances(), nodeFilter)
+		if len(instances) < 1 {
+			continue
+		}
 
 		for _, inst := range comp.Instances() {
 			// Download component from repository
