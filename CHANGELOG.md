@@ -1,5 +1,25 @@
 TiUP Changelog
 
+## [1.14.1] 2024-01-12
+
+### Fixes
+
+- Fix tiproxy will restart even if version is the same in `tiup-cluster` (#2358, @xhebox)
+- Fix that empty label is not allowed in Prometheus in `tiup-cluster` (#2349, @borissavelev)
+- Fix can not set runtime config in config file & set TiFlash logger level to debug in `tiup-playground` (#2346, @Lloyd-Pottiger)
+- Fix TLS configs for tiproxy in `tiup-cluster` (#2356, @xhebox)
+- Fix cannot clone without global version in `tiup` (#2359, @nexustar)
+- Fix tiproxy config and version in `tiup-cluster` (#2354, @xhebox)
+- TiProxy needs to override usercfg in `tiup-playground` (#2342, @xhebox)
+- Fix the start script for alertmanager when enabling numa in `tiup-cluster` and `tiup-dm` (#2337, @KanShiori)
+- Fix metric targets will be overrided in `tiup-playground` (#2324, @xhebox)
+
+### Improvements
+
+- Change typo waitting to waiting in output messages for pdapi.go in `tiup-cluster` (#2330, @guangleibao)
+- Add check for rocky linux in `tiup-cluster` (#2333, @dveeden)
+- Fallback to default version when componen specific version is empty in `tiup-playground` (#2344, @xhebox)
+
 ## [1.14.0] 2023-11-17
 
 ### New Features
