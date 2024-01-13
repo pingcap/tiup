@@ -58,7 +58,7 @@ func Destroy(
 		for _, inst := range insts {
 			instCount[inst.GetManageHost()]--
 			if instCount[inst.GetManageHost()] == 0 {
-				if cluster.GetMonitoredOptions() != nil {
+				if cluster.GetMonitoredOptions() != nil && !inst.IgnoreMonitorAgent(){
 					if err := DestroyMonitored(ctx, inst, cluster.GetMonitoredOptions(), options.OptTimeout); err != nil && !options.Force {
 						return err
 					}
