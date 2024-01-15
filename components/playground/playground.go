@@ -428,6 +428,8 @@ func (p *Playground) sanitizeComponentConfig(cid string, cfg *instance.Config) e
 		return p.sanitizeConfig(p.bootOptions.Pump, cfg)
 	case spec.ComponentDrainer:
 		return p.sanitizeConfig(p.bootOptions.Drainer, cfg)
+	case spec.ComponentTiProxy:
+		return p.sanitizeConfig(p.bootOptions.TiProxy, cfg)
 	default:
 		return fmt.Errorf("unknown %s in sanitizeConfig", cid)
 	}
