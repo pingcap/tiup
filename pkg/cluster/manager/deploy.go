@@ -152,6 +152,16 @@ func (m *Manager) Deploy(
 	systemdMode := topo.BaseTopo().GlobalOptions.SystemdMode
 	if systemdMode == spec.UserMode {
 		sudo = false
+		hint := fmt.Sprintf("loginctl enable-linger %s", opt.User)
+
+		msg := fmt.Sprintf("The value of systemd_mode is set to `user` in the topology, please note that you'll need to manually execute the following command using root or sudo on the host(s) to enable lingering for the systemd user instance.\n")
+		msg += color.GreenString(hint)
+		msg += fmt.Sprint("\nYou can read the systemd documentation for reference: https://wiki.archlinux.org/title/Systemd/User#Automatic_start-up_of_systemd_user_instances.")
+		m.logger.Warnf(msg)
+		err = tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: ")
+		if err != nil {
+			return err
+		}
 	} else {
 		sudo = true
 	}
