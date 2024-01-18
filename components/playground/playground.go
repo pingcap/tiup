@@ -316,6 +316,12 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 				p.ticdcs = append(p.ticdcs[:i], p.ticdcs[i+1:]...)
 			}
 		}
+	case spec.ComponentTiProxy:
+		for i := 0; i < len(p.tiproxys); i++ {
+			if p.tiproxys[i].Pid() == pid {
+				p.tiproxys = append(p.tiproxys[:i], p.tiproxys[i+1:]...)
+			}
+		}
 	case spec.ComponentTiKVCDC:
 		for i := 0; i < len(p.tikvCdcs); i++ {
 			if p.tikvCdcs[i].Pid() == pid {
