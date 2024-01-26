@@ -28,6 +28,7 @@ func (inst *TiFlashInstance) getConfig() map[string]any {
 	config := make(map[string]any)
 
 	config["flash.proxy.config"] = filepath.Join(inst.Dir, "tiflash_proxy.toml")
+	config["logger.level"] = "debug"
 
 	if inst.Role == TiFlashRoleDisaggWrite {
 		config["storage.s3.endpoint"] = inst.DisaggOpts.S3Endpoint
