@@ -27,7 +27,7 @@ var (
 	errNS = errorx.NewNamespace("task")
 )
 
-// RootSSH is used to establish an SSH connection to the target host with specific key
+// RootSSH is used to establish a SSH connection to the target host with specific key
 type RootSSH struct {
 	host            string           // hostname of the SSH server
 	port            int              // port of the SSH server
