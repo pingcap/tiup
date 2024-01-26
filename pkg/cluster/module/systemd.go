@@ -39,6 +39,7 @@ type SystemdModuleConfig struct {
 	Force        bool          // add the `--force` arg to systemctl command
 	Signal       string        // specify the signal to send to process
 	Timeout      time.Duration // timeout to execute the command
+	SystemdMode  string
 }
 
 // SystemdModule is the module used to control systemd units
@@ -53,7 +54,9 @@ type SystemdModule struct {
 func NewSystemdModule(config SystemdModuleConfig) *SystemdModule {
 	systemctl := "systemctl"
 	sudo := true
-
+	if config.SystemdMode == "user" {
+		sudo = false
+	}
 	if config.Force {
 		systemctl = fmt.Sprintf("%s --force", systemctl)
 	}

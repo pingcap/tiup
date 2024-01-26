@@ -24,7 +24,9 @@ LimitSTACK=10485760
 {{- if .GrantCapNetRaw}}
 AmbientCapabilities=CAP_NET_RAW
 {{- end}}
+{{- if eq .SystemdMode "system"}}
 User={{.User}}
+{{- end}}
 ExecStart=/bin/bash -c '{{.DeployDir}}/scripts/run_{{.ServiceName}}.sh'
 {{- if eq .ServiceName "prometheus"}}
 ExecReload=/bin/bash -c 'kill -HUP $MAINPID $(pidof {{.DeployDir}}/bin/ng-monitoring-server)'

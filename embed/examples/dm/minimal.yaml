@@ -6,6 +6,7 @@
 ---
 global:
   user: "tidb"
+  # systemd_mode: "system"
   ssh_port: 22
   deploy_dir: "/home/tidb/dm/deploy"
   data_dir: "/home/tidb/dm/data"
