@@ -256,8 +256,14 @@ func (i *TiSparkMasterInstance) InitConfig(
 	if err := e.Transfer(ctx, sysCfg, tgt, false, 0, false); err != nil {
 		return errors.Annotatef(err, "transfer from %s to %s failed", sysCfg, tgt)
 	}
-	cmd := fmt.Sprintf("mv %s /etc/systemd/system/%s-%d.service", tgt, comp, port)
-	if _, _, err := e.Execute(ctx, cmd, true); err != nil {
+	systemdDir := "/etc/systemd/system/"
+	sudo := true
+	if i.topo.BaseTopo().GlobalOptions.SystemdMode == UserMode {
+		systemdDir = "~/.config/systemd/user/"
+		sudo = false
+	}
+	cmd := fmt.Sprintf("mv %s %s%s-%d.service", tgt, systemdDir, comp, port)
+	if _, _, err := e.Execute(ctx, cmd, sudo); err != nil {
 		return errors.Annotatef(err, "execute: %s", cmd)
 	}
 
@@ -435,8 +441,14 @@ func (i *TiSparkWorkerInstance) InitConfig(
 	if err := e.Transfer(ctx, sysCfg, tgt, false, 0, false); err != nil {
 		return errors.Annotatef(err, "transfer from %s to %s failed", sysCfg, tgt)
 	}
-	cmd := fmt.Sprintf("mv %s /etc/systemd/system/%s-%d.service", tgt, comp, port)
-	if _, _, err := e.Execute(ctx, cmd, true); err != nil {
+	systemdDir := "/etc/systemd/system/"
+	sudo := true
+	if i.topo.BaseTopo().GlobalOptions.SystemdMode == UserMode {
+		systemdDir = "~/.config/systemd/user/"
+		sudo = false
+	}
+	cmd := fmt.Sprintf("mv %s %s%s-%d.service", tgt, systemdDir, comp, port)
+	if _, _, err := e.Execute(ctx, cmd, sudo); err != nil {
 		return errors.Annotatef(err, "execute: %s", cmd)
 	}
 
