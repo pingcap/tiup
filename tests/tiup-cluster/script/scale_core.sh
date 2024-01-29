@@ -99,6 +99,15 @@ function scale_core() {
     # after all components on the node were scale-ined, the SSH public is automatically deleted
     ! ssh -o "StrictHostKeyChecking=no "-o "PasswordAuthentication=no" -i ~/.tiup/storage/cluster/$name/ssh/id_rsa tidb@n2 "ls"
 
+    echo "start scale out tiproxy"
+    topo=./topo/full_scale_in_tiproxy.yaml
+    tiup-cluster $client --yes scale-out $name $topo
+    wait_instance_num_reach $name $total_sub_one $native_ssh
+
+    echo "start scale in tiproxy"
+    tiup-cluster $client --yes scale-in $name -N n2:6000
+    wait_instance_num_reach $name $total_sub_one $native_ssh
+
     echo "start scale out tidb"
     topo=./topo/full_scale_in_tidb_2nd.yaml
     tiup-cluster $client --yes scale-out $name $topo
