@@ -35,8 +35,12 @@ function scale_core() {
 
     if [ $test_tls = true ]; then
         total_sub_one=19
+        total=20
+        total_add_one=21
     else
-        total_sub_one=24
+        total_sub_one=23
+        total=24
+        total_add_one=25
     fi
 
     echo "start scale in tidb"
@@ -102,11 +106,11 @@ function scale_core() {
     echo "start scale out tiproxy"
     topo=./topo/full_scale_in_tiproxy.yaml
     tiup-cluster $client --yes scale-out $name $topo
-    wait_instance_num_reach $name $total_sub_one $native_ssh
+    wait_instance_num_reach $name $total_add_one $native_ssh
 
     echo "start scale in tiproxy"
-    tiup-cluster $client --yes scale-in $name -N n2:6000
-    wait_instance_num_reach $name $total_sub_one $native_ssh
+    tiup-cluster $client --yes scale-in $name -N n1:6000
+    wait_instance_num_reach $name $total $native_ssh
 
     echo "start scale out tidb"
     topo=./topo/full_scale_in_tidb_2nd.yaml
