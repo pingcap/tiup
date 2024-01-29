@@ -37,6 +37,7 @@ type TiProxy struct {
 
 var _ Instance = &TiProxy{}
 
+// GenTiproxySessionCerts will create a self-signed certs for TiProxy session migration. NOTE that this cert is directly used by TiDB.
 func GenTiProxySessionCerts(dir string) error {
 	if _, err := os.Stat(filepath.Join(dir, "tiproxy.crt")); err == nil {
 		return nil
@@ -61,14 +62,10 @@ func GenTiProxySessionCerts(dir string) error {
 	if err := utils.SaveFileWithBackup(filepath.Join(dir, "tiproxy.key"), privKey.Pem(), ""); err != nil {
 		return err
 	}
-	if err := utils.SaveFileWithBackup(filepath.Join(dir, "tiproxy.crt"), pem.EncodeToMemory(&pem.Block{
+	return utils.SaveFileWithBackup(filepath.Join(dir, "tiproxy.crt"), pem.EncodeToMemory(&pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: cert,
-	}), ""); err != nil {
-		return err
-	}
-
-	return nil
+	}), "")
 }
 
 // NewTiProxy create a TiProxy instance.
