@@ -94,15 +94,6 @@ function scale_core() {
     tiup-cluster $client exec $name -N n1 --command "grep -q n3:2379 /home/tidb/deploy/tidb-4000/scripts/run_tidb.sh"
     tiup-cluster $client exec $name -N n1 --command "grep -q n3:2379 /home/tidb/deploy/prometheus-9090/conf/prometheus.yml"
 
-    echo "start scale in tidb"
-    tiup-cluster $client --yes scale-in $name -N n2:4000
-    wait_instance_num_reach $name $total_sub_one $native_ssh
-    ! tiup-cluster $client exec $name -N n2 --command "ls /home/tidb/deploy/monitor-9100/deploy/monitor-9100"
-    ! tiup-cluster $client exec $name -N n2 --command "ps aux | grep node_exporter | grep -qv grep"
-    ! tiup-cluster $client exec $name -N n2 --command "ps aux | grep blackbox_exporter | grep -qv grep"
-    # after all components on the node were scale-ined, the SSH public is automatically deleted
-    ! ssh -o "StrictHostKeyChecking=no "-o "PasswordAuthentication=no" -i ~/.tiup/storage/cluster/$name/ssh/id_rsa tidb@n2 "ls"
-
     echo "start scale out tiproxy"
     topo=./topo/full_scale_in_tiproxy.yaml
     tiup-cluster $client --yes scale-out $name $topo
@@ -111,6 +102,16 @@ function scale_core() {
     echo "start scale in tiproxy"
     tiup-cluster $client --yes scale-in $name -N n1:6000
     wait_instance_num_reach $name $total $native_ssh
+
+
+    echo "start scale in tidb"
+    tiup-cluster $client --yes scale-in $name -N n2:4000
+    wait_instance_num_reach $name $total_sub_one $native_ssh
+    ! tiup-cluster $client exec $name -N n2 --command "ls /home/tidb/deploy/monitor-9100/deploy/monitor-9100"
+    ! tiup-cluster $client exec $name -N n2 --command "ps aux | grep node_exporter | grep -qv grep"
+    ! tiup-cluster $client exec $name -N n2 --command "ps aux | grep blackbox_exporter | grep -qv grep"
+    # after all components on the node were scale-ined, the SSH public is automatically deleted
+    ! ssh -o "StrictHostKeyChecking=no "-o "PasswordAuthentication=no" -i ~/.tiup/storage/cluster/$name/ssh/id_rsa tidb@n2 "ls"
 
     echo "start scale out tidb"
     topo=./topo/full_scale_in_tidb_2nd.yaml
