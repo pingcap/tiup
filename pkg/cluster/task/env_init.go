@@ -40,6 +40,7 @@ type EnvInit struct {
 	deployUser     string
 	userGroup      string
 	skipCreateUser bool
+	sudo           bool
 }
 
 // Execute implements the Task interface
@@ -77,8 +78,13 @@ func (e *EnvInit) exec(ctx context.Context) error {
 	}
 
 	// Authorize
-	cmd := `su - ` + e.deployUser + ` -c 'mkdir -p ~/.ssh && chmod 700 ~/.ssh'`
-	_, _, err = exec.Execute(ctx, cmd, true)
+	var cmd string
+	if e.sudo {
+		cmd = `su - ` + e.deployUser + ` -c 'mkdir -p ~/.ssh && chmod 700 ~/.ssh'`
+	} else {
+		cmd = `mkdir -p ~/.ssh && chmod 700 ~/.ssh`
+	}
+	_, _, err = exec.Execute(ctx, cmd, e.sudo)
 	if err != nil {
 		return wrapError(errEnvInitSubCommandFailed.
 			Wrap(err, "Failed to create '~/.ssh' directory for user '%s'", e.deployUser))
@@ -86,9 +92,15 @@ func (e *EnvInit) exec(ctx context.Context) error {
 
 	pk := strings.TrimSpace(string(pubKey))
 	sshAuthorizedKeys := executor.FindSSHAuthorizedKeysFile(ctx, exec)
-	cmd = fmt.Sprintf(`su - %[1]s -c 'grep $(echo %[2]s) %[3]s || echo %[2]s >> %[3]s && chmod 600 %[3]s'`,
-		e.deployUser, pk, sshAuthorizedKeys)
-	_, _, err = exec.Execute(ctx, cmd, true)
+	if e.sudo {
+		cmd = fmt.Sprintf(`su - %[1]s -c 'grep $(echo %[2]s) %[3]s || echo %[2]s >> %[3]s && chmod 600 %[3]s'`,
+			e.deployUser, pk, sshAuthorizedKeys)
+	} else {
+		cmd = fmt.Sprintf(`grep $(echo %[1]s) %[2]s || echo %[1]s >> %[2]s && chmod 600 %[2]s`,
+			pk, sshAuthorizedKeys)
+	}
+
+	_, _, err = exec.Execute(ctx, cmd, e.sudo)
 	if err != nil {
 		return wrapError(errEnvInitSubCommandFailed.
 			Wrap(err, "Failed to write public keys to '%s' for user '%s'", sshAuthorizedKeys, e.deployUser))
