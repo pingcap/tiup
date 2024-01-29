@@ -34,9 +34,9 @@ function scale_core() {
     tiup-cluster $client --yes reload $name --skip-restart
 
     if [ $test_tls = true ]; then
-        total_sub_one=18
+        total_sub_one=19
     else
-        total_sub_one=23
+        total_sub_one=24
     fi
 
     echo "start scale in tidb"
