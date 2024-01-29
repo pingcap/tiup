@@ -37,7 +37,7 @@ type TiProxy struct {
 
 var _ Instance = &TiProxy{}
 
-// GenTiproxySessionCerts will create a self-signed certs for TiProxy session migration. NOTE that this cert is directly used by TiDB.
+// GenTiProxySessionCerts will create a self-signed certs for TiProxy session migration. NOTE that this cert is directly used by TiDB.
 func GenTiProxySessionCerts(dir string) error {
 	if _, err := os.Stat(filepath.Join(dir, "tiproxy.crt")); err == nil {
 		return nil
