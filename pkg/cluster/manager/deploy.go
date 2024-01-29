@@ -231,7 +231,9 @@ func (m *Manager) Deploy(
 		if strings.HasPrefix(globalOptions.DataDir, "/") {
 			dirs = append(dirs, globalOptions.DataDir)
 		}
-
+		if systemdMode == spec.UserMode {
+			dirs = append(dirs, spec.Abs(globalOptions.User, ".config/systemd/user"))
+		}
 		t := task.NewBuilder(m.logger).
 			RootSSH(
 				host,
