@@ -732,7 +732,7 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 			p.rms = append(p.rms, inst)
 		}
 	case spec.ComponentTiDB:
-		inst := instance.NewTiDBInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, p.enableBinlog(), p.bootOptions.Mode == "tidb-disagg")
+		inst := instance.NewTiDBInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, dataDir, p.enableBinlog(), p.bootOptions.Mode == "tidb-disagg")
 		ins = inst
 		p.tidbs = append(p.tidbs, inst)
 	case spec.ComponentTiKV:
@@ -744,6 +744,9 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 		ins = inst
 		p.tiflashs = append(p.tiflashs, inst)
 	case spec.ComponentTiProxy:
+		if err := instance.GenTiProxySessionCerts(dataDir); err != nil {
+			return nil, err
+		}
 		inst := instance.NewTiProxy(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds)
 		ins = inst
 		p.tiproxys = append(p.tiproxys, inst)
