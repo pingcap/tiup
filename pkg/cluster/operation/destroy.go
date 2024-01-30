@@ -76,15 +76,6 @@ func Destroy(
 		}
 	}
 
-	// Delete systemd directory when use systemd user mode
-	if gOpts.SystemdMode == spec.UserMode {
-		for host := range instCount {
-			if err := DeleteSystemdDir(ctx, host, gOpts); err != nil {
-				return err
-			}
-		}
-	}
-
 	// after all things done, try to remove SSH public key
 	for host := range instCount {
 		if err := DeletePublicKey(ctx, host); err != nil {
@@ -159,15 +150,6 @@ func StopAndDestroyInstance(
 				logger.Warnf("failed to destroy %s: %v", "monitor", err)
 			}
 		}
-		// Delete systemd directory when use systemd user mode
-		if cluster.BaseTopo().GlobalOptions.SystemdMode == spec.UserMode {
-			if err := DeleteSystemdDir(ctx, instance.GetManageHost(), cluster.BaseTopo().GlobalOptions); err != nil {
-				if !ignoreErr {
-					return perrs.Annotatef(err, "failed to delete systemd directory")
-				}
-				logger.Warnf("failed to delete systemd directory: %v", err)
-			}
-		}
 
 		if err := DeletePublicKey(ctx, instance.GetManageHost()); err != nil {
 			if !ignoreErr {
@@ -217,46 +199,6 @@ func DeleteGlobalDirs(ctx context.Context, host string, options *spec.GlobalOpti
 	}
 
 	logger.Infof("Clean global directories %s success", host)
-	return nil
-}
-
-// DeleteSystemdDir deletes systemd directory of user mode when destroy node
-func DeleteSystemdDir(ctx context.Context, host string, options *spec.GlobalOptions) error {
-	if options == nil {
-		return nil
-	}
-
-	e := ctxt.GetInner(ctx).Get(host)
-	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
-	logger.Infof("Clean systemd directory %s", host)
-	if options.SystemdMode != spec.UserMode {
-		return nil
-	}
-
-	dir := spec.Abs(options.User, ".config/systemd/user")
-
-	logger.Infof("\tClean directory %s on instance %s", dir, host)
-
-	c := module.ShellModuleConfig{
-		Command:  fmt.Sprintf("rmdir %s > /dev/null 2>&1 || true", dir),
-		Chdir:    "",
-		UseShell: false,
-	}
-	shell := module.NewShellModule(c)
-	stdout, stderr, err := shell.Execute(ctx, e)
-
-	if len(stdout) > 0 {
-		fmt.Println(string(stdout))
-	}
-	if len(stderr) > 0 {
-		logger.Errorf(string(stderr))
-	}
-
-	if err != nil {
-		return perrs.Annotatef(err, "failed to clean directory %s on: %s", dir, host)
-	}
-
-	logger.Infof("Clean systemd directory %s success", host)
 	return nil
 }
 
