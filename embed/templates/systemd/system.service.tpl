@@ -21,7 +21,7 @@ LimitCORE={{.LimitCORE}}
 LimitNOFILE=1000000
 LimitSTACK=10485760
 
-{{- if .GrantCapNetRaw}}
+{{- if and .GrantCapNetRaw (eq .SystemdMode "system")}}
 AmbientCapabilities=CAP_NET_RAW
 {{- end}}
 {{- if eq .SystemdMode "system"}}

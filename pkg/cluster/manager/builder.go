@@ -140,7 +140,9 @@ func buildScaleOutTask(
 				dirs = append(dirs, spec.Abs(globalOptions.User, dirname))
 			}
 		}
-
+		if systemdMode == spec.UserMode {
+			dirs = append(dirs, spec.Abs(globalOptions.User, ".config/systemd/user"))
+		}
 		t := task.NewBuilder(m.logger).
 			RootSSH(
 				instance.GetManageHost(),
@@ -434,7 +436,7 @@ type hostInfo struct {
 func buildMonitoredDeployTask(
 	m *Manager,
 	uniqueHosts map[string]hostInfo, // host -> ssh-port, os, arch
-	noAgentHosts set.StringSet,      // hosts that do not deploy monitor agents
+	noAgentHosts set.StringSet, // hosts that do not deploy monitor agents
 	globalOptions *spec.GlobalOptions,
 	monitoredOptions *spec.MonitoredOptions,
 	gOpt operator.Options,
@@ -508,7 +510,7 @@ func buildMonitoredCertificateTasks(
 	m *Manager,
 	name string,
 	uniqueHosts map[string]hostInfo, // host -> ssh-port, os, arch
-	noAgentHosts set.StringSet,      // hosts that do not deploy monitor agents
+	noAgentHosts set.StringSet, // hosts that do not deploy monitor agents
 	globalOptions *spec.GlobalOptions,
 	monitoredOptions *spec.MonitoredOptions,
 	gOpt operator.Options,
