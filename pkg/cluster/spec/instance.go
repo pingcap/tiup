@@ -215,9 +215,6 @@ func (i *BaseInstance) InitConfig(ctx context.Context, e ctxt.Executor, opt Glob
 	sudo := true
 	if opt.SystemdMode == UserMode {
 		systemdDir = "~/.config/systemd/user/"
-		if err := os.MkdirAll(systemdDir, os.ModePerm); err != nil {
-			return err
-		}
 		sudo = false
 	}
 	cmd := fmt.Sprintf("mv %s %s%s-%d.service", tgt, systemdDir, comp, port)
