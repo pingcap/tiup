@@ -184,13 +184,19 @@ func (i *BaseInstance) InitConfig(ctx context.Context, e ctxt.Executor, opt Glob
 		return nil
 	}
 
+	systemdMode := opt.SystemdMode
+	if len(systemdMode) == 0 {
+		systemdMode = SystemMode
+	}
+
 	resource := MergeResourceControl(opt.ResourceControl, i.ResourceControl())
 	systemCfg := system.NewConfig(comp, user, paths.Deploy).
 		WithMemoryLimit(resource.MemoryLimit).
 		WithCPUQuota(resource.CPUQuota).
 		WithLimitCORE(resource.LimitCORE).
 		WithIOReadBandwidthMax(resource.IOReadBandwidthMax).
-		WithIOWriteBandwidthMax(resource.IOWriteBandwidthMax)
+		WithIOWriteBandwidthMax(resource.IOWriteBandwidthMax).
+		WithSystemdMode(string(systemdMode))
 
 	// For not auto start if using binlogctl to offline.
 	// bad design
@@ -205,8 +211,14 @@ func (i *BaseInstance) InitConfig(ctx context.Context, e ctxt.Executor, opt Glob
 	if err := e.Transfer(ctx, sysCfg, tgt, false, 0, false); err != nil {
 		return errors.Annotatef(err, "transfer from %s to %s failed", sysCfg, tgt)
 	}
-	cmd := fmt.Sprintf("mv %s /etc/systemd/system/%s-%d.service", tgt, comp, port)
-	if _, _, err := e.Execute(ctx, cmd, true); err != nil {
+	systemdDir := "/etc/systemd/system/"
+	sudo := true
+	if opt.SystemdMode == UserMode {
+		systemdDir = "~/.config/systemd/user/"
+		sudo = false
+	}
+	cmd := fmt.Sprintf("mv %s %s%s-%d.service", tgt, systemdDir, comp, port)
+	if _, _, err := e.Execute(ctx, cmd, sudo); err != nil {
 		return errors.Annotatef(err, "execute: %s", cmd)
 	}
 

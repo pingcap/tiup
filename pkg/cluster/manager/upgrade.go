@@ -90,12 +90,17 @@ func (m *Manager) Upgrade(name string, clusterVersion string, componentVersions 
 	compVersionMsg := ""
 	for _, comp := range topo.ComponentsByUpdateOrder(base.Version) {
 		// if component version is not specified, use the cluster version or latest("")
+		oldver := comp.CalculateVersion(base.Version)
 		version := componentVersions[comp.Name()]
 		if version != "" {
 			comp.SetVersion(version)
 		}
-		if len(comp.Instances()) > 0 {
-			compVersionMsg += fmt.Sprintf("\nwill upgrade component %19s to \"%s\",", "\""+comp.Name()+"\"", comp.CalculateVersion(clusterVersion))
+		calver := comp.CalculateVersion(clusterVersion)
+		if comp.Role() != spec.ComponentTiProxy || calver != oldver {
+			opt.Roles = append(opt.Roles, comp.Role())
+			if len(comp.Instances()) > 0 {
+				compVersionMsg += fmt.Sprintf("\nwill upgrade and restart component \"%19s\" to \"%s\",", comp.Name(), calver)
+			}
 		}
 	}
 	monitoredOptions := topo.GetMonitoredOptions()
@@ -152,7 +157,7 @@ This operation will upgrade %s %s cluster %s to %s:%s`,
 
 			// for some component, dataDirs might need to be created due to upgrade
 			// eg: TiCDC support DataDir since v4.0.13
-			tb = tb.Mkdir(topo.BaseTopo().GlobalOptions.User, inst.GetManageHost(), dataDirs...)
+			tb = tb.Mkdir(topo.BaseTopo().GlobalOptions.User, inst.GetManageHost(), topo.BaseTopo().GlobalOptions.SystemdMode != spec.UserMode, dataDirs...)
 
 			if inst.IsImported() {
 				switch inst.ComponentName() {

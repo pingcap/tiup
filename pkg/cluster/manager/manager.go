@@ -180,16 +180,16 @@ func (m *Manager) sshTaskBuilder(name string, topo spec.Topology, user string, g
 }
 
 // fillHost full host cpu-arch and kernel-name
-func (m *Manager) fillHost(s, p *tui.SSHConnectionProps, topo spec.Topology, gOpt *operator.Options, user string) error {
-	if err := m.fillHostArchOrOS(s, p, topo, gOpt, user, spec.FullArchType); err != nil {
+func (m *Manager) fillHost(s, p *tui.SSHConnectionProps, topo spec.Topology, gOpt *operator.Options, user string, sudo bool) error {
+	if err := m.fillHostArchOrOS(s, p, topo, gOpt, user, spec.FullArchType, sudo); err != nil {
 		return err
 	}
 
-	return m.fillHostArchOrOS(s, p, topo, gOpt, user, spec.FullOSType)
+	return m.fillHostArchOrOS(s, p, topo, gOpt, user, spec.FullOSType, sudo)
 }
 
 // fillHostArchOrOS full host cpu-arch or kernel-name
-func (m *Manager) fillHostArchOrOS(s, p *tui.SSHConnectionProps, topo spec.Topology, gOpt *operator.Options, user string, fullType spec.FullHostType) error {
+func (m *Manager) fillHostArchOrOS(s, p *tui.SSHConnectionProps, topo spec.Topology, gOpt *operator.Options, user string, fullType spec.FullHostType, sudo bool) error {
 	globalSSHType := topo.BaseTopo().GlobalOptions.SSHType
 	hostArchOrOS := map[string]string{}
 	var detectTasks []*task.StepDisplay
@@ -227,6 +227,7 @@ func (m *Manager) fillHostArchOrOS(s, p *tui.SSHConnectionProps, topo spec.Topol
 				gOpt.SSHProxyTimeout,
 				gOpt.SSHType,
 				globalSSHType,
+				sudo,
 			)
 
 		switch fullType {
