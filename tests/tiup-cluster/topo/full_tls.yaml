@@ -35,6 +35,9 @@ pump_servers:
   - host: n4
   - host: n5
 
+tiproxy_servers:
+  - host: n1
+
 drainer_servers:
   - host: n1
     data_dir: /home/tidb/data/drainer-8249/data
