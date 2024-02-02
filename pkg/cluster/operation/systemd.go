@@ -36,10 +36,12 @@ import (
 
 Mar 09 13:56:19 ip-172-16-5-70 systemd[1]: Started drainer-8249 service.
 */
-func GetServiceStatus(ctx context.Context, e ctxt.Executor, name string) (active, memory string, since time.Duration, err error) {
+func GetServiceStatus(ctx context.Context, e ctxt.Executor, name string, scope string, systemdMode string) (active, memory string, since time.Duration, err error) {
 	c := module.SystemdModuleConfig{
-		Unit:   name,
-		Action: "status",
+		Unit:        name,
+		Action:      "status",
+		Scope:       scope,
+		SystemdMode: systemdMode,
 	}
 	systemd := module.NewSystemdModule(c)
 	// ignore error since stopped service returns exit code 3

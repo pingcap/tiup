@@ -36,7 +36,8 @@ type Config struct {
 	GrantCapNetRaw      bool
 	// Takes one of no, on-success, on-failure, on-abnormal, on-watchdog, on-abort, or always.
 	// The Template set as always if this is not setted.
-	Restart string
+	Restart     string
+	SystemdMode string
 }
 
 // NewConfig returns a Config with given arguments
@@ -75,6 +76,12 @@ func (c *Config) WithIOWriteBandwidthMax(io string) *Config {
 // WithLimitCORE set the LimitCORE field of Config
 func (c *Config) WithLimitCORE(core string) *Config {
 	c.LimitCORE = core
+	return c
+}
+
+// WithSystemdMode set the SystemdMode field of Config
+func (c *Config) WithSystemdMode(mode string) *Config {
+	c.SystemdMode = mode
 	return c
 }
 

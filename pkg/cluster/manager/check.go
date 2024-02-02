@@ -124,7 +124,14 @@ func (m *Manager) CheckCluster(clusterOrTopoName, scaleoutTopo string, opt Check
 		}
 	}
 
-	if err := m.fillHost(sshConnProps, sshProxyProps, &topo, &gOpt, opt.User); err != nil {
+	var sudo bool
+	if topo.BaseTopo().GlobalOptions.SystemdMode == spec.UserMode {
+		sudo = false
+	} else {
+		sudo = opt.User != "root"
+	}
+
+	if err := m.fillHost(sshConnProps, sshProxyProps, &topo, &gOpt, opt.User, sudo); err != nil {
 		return err
 	}
 
@@ -193,6 +200,12 @@ func checkSystemInfo(
 	components := topo.ComponentsByStartOrder()
 	components = operator.FilterComponent(components, roleFilter)
 
+	systemdDir := "/etc/systemd/system/"
+	systemdMode := topo.BaseTopo().GlobalOptions.SystemdMode
+	if systemdMode == spec.UserMode {
+		systemdDir = "~/.config/systemd/user/"
+	}
+
 	for _, comp := range components {
 		instances := operator.FilterInstance(comp.Instances(), nodeFilter)
 		if len(instances) < 1 {
@@ -249,7 +262,7 @@ func checkSystemInfo(
 					).
 					CheckSys(
 						inst.GetManageHost(),
-						fmt.Sprintf("/etc/systemd/system/%s-%d.service", inst.ComponentName(), inst.GetPort()),
+						fmt.Sprintf("%s%s-%d.service", systemdDir, inst.ComponentName(), inst.GetPort()),
 						task.ChecktypeIsExist,
 						topo,
 						opt.Opr,
@@ -321,8 +334,9 @@ func checkSystemInfo(
 				gOpt.SSHProxyTimeout,
 				gOpt.SSHType,
 				topo.GlobalOptions.SSHType,
+				opt.User != "root" && systemdMode != spec.UserMode,
 			).
-			Mkdir(opt.User, inst.GetManageHost(), filepath.Join(task.CheckToolsPathDir, "bin")).
+			Mkdir(opt.User, inst.GetManageHost(), systemdMode != spec.UserMode, filepath.Join(task.CheckToolsPathDir, "bin")).
 			CopyComponent(
 				spec.ComponentCheckCollector,
 				inst.OS(),
@@ -360,6 +374,7 @@ func checkSystemInfo(
 				gOpt.SSHProxyTimeout,
 				gOpt.SSHType,
 				topo.GlobalOptions.SSHType,
+				opt.User != "root" && systemdMode != spec.UserMode,
 			).
 			Rmdir(inst.GetManageHost(), task.CheckToolsPathDir).
 			BuildAsStep("  - Cleanup check files on " + utils.JoinHostPort(inst.GetManageHost(), inst.GetSSHPort()))
@@ -416,7 +431,7 @@ func checkSystemInfo(
 				host,
 				"sysctl -a",
 				"",
-				true,
+				systemdMode != spec.UserMode,
 			).
 			CheckSys(
 				host,
@@ -507,8 +522,9 @@ func checkSystemInfo(
 				gOpt.SSHProxyTimeout,
 				gOpt.SSHType,
 				topo.GlobalOptions.SSHType,
+				opt.User != "root" && systemdMode != spec.UserMode,
 			)
-		res, err := handleCheckResults(ctx, host, opt, tf)
+		res, err := handleCheckResults(ctx, host, opt, tf, string(topo.BaseTopo().GlobalOptions.SystemdMode))
 		if err != nil {
 			continue
 		}
@@ -561,7 +577,7 @@ func checkSystemInfo(
 }
 
 // handleCheckResults parses the result of checks
-func handleCheckResults(ctx context.Context, host string, opt *CheckOptions, t *task.Builder) ([]HostCheckResult, error) {
+func handleCheckResults(ctx context.Context, host string, opt *CheckOptions, t *task.Builder, systemdMode string) ([]HostCheckResult, error) {
 	rr, _ := ctxt.GetInner(ctx).GetCheckResults(host)
 	if len(rr) < 1 {
 		return nil, fmt.Errorf("no check results found for %s", host)
@@ -585,7 +601,7 @@ func handleCheckResults(ctx context.Context, host string, opt *CheckOptions, t *
 				items = append(items, item)
 				continue
 			}
-			msg, err := fixFailedChecks(host, r, t)
+			msg, err := fixFailedChecks(host, r, t, systemdMode)
 			if err != nil {
 				ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger).
 					Debugf("%s: fail to apply fix to %s (%s)", host, r.Name, err)
@@ -627,8 +643,9 @@ func formatHostCheckResults(results []HostCheckResult) [][]string {
 }
 
 // fixFailedChecks tries to automatically apply changes to fix failed checks
-func fixFailedChecks(host string, res *operator.CheckResult, t *task.Builder) (string, error) {
+func fixFailedChecks(host string, res *operator.CheckResult, t *task.Builder, systemdMode string) (string, error) {
 	msg := ""
+	sudo := systemdMode != string(spec.UserMode)
 	switch res.Name {
 	case operator.CheckNameSysService:
 		if strings.Contains(res.Msg, "not found") {
@@ -638,21 +655,21 @@ func fixFailedChecks(host string, res *operator.CheckResult, t *task.Builder) (s
 		if len(fields) < 2 {
 			return "", fmt.Errorf("can not perform action of service, %s", res.Msg)
 		}
-		t.SystemCtl(host, fields[1], fields[0], false, false)
+		t.SystemCtl(host, fields[1], fields[0], false, false, systemdMode)
 		msg = fmt.Sprintf("will try to '%s'", color.HiBlueString(res.Msg))
 	case operator.CheckNameSysctl:
 		fields := strings.Fields(res.Msg)
 		if len(fields) < 3 {
 			return "", fmt.Errorf("can not set kernel parameter, %s", res.Msg)
 		}
-		t.Sysctl(host, fields[0], fields[2])
+		t.Sysctl(host, fields[0], fields[2], sudo)
 		msg = fmt.Sprintf("will try to set '%s'", color.HiBlueString(res.Msg))
 	case operator.CheckNameLimits:
 		fields := strings.Fields(res.Msg)
 		if len(fields) < 4 {
 			return "", fmt.Errorf("can not set limits, %s", res.Msg)
 		}
-		t.Limit(host, fields[0], fields[1], fields[2], fields[3])
+		t.Limit(host, fields[0], fields[1], fields[2], fields[3], sudo)
 		msg = fmt.Sprintf("will try to set '%s'", color.HiBlueString(res.Msg))
 	case operator.CheckNameSELinux:
 		t.Shell(host,
@@ -662,13 +679,13 @@ func fixFailedChecks(host string, res *operator.CheckResult, t *task.Builder) (s
 				"setenforce 0",
 			),
 			"",
-			true)
+			sudo)
 		msg = fmt.Sprintf("will try to %s, reboot might be needed", color.HiBlueString("disable SELinux"))
 	case operator.CheckNameTHP:
 		t.Shell(host,
 			fmt.Sprintf(`if [ -d %[1]s ]; then echo never > %[1]s/enabled; fi`, "/sys/kernel/mm/transparent_hugepage"),
 			"",
-			true)
+			sudo)
 		msg = fmt.Sprintf("will try to %s, please check again after reboot", color.HiBlueString("disable THP"))
 	case operator.CheckNameSwap:
 		// not applying swappiness setting here, it should be fixed
@@ -676,7 +693,7 @@ func fixFailedChecks(host string, res *operator.CheckResult, t *task.Builder) (s
 		// t.Sysctl(host, "vm.swappiness", "0")
 		t.Shell(host,
 			"swapoff -a || exit 0", // ignore failure
-			"", true,
+			"", sudo,
 		)
 		msg = "will try to disable swap, please also check /etc/fstab manually"
 	default:

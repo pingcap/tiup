@@ -52,6 +52,7 @@ func buildReloadPromAndGrafanaTasks(
 	}
 	var tasks []*task.StepDisplay
 	deletedNodes := set.NewStringSet(nodes...)
+	systemdMode := topo.BaseTopo().GlobalOptions.SystemdMode
 	for _, inst := range instances {
 		if deletedNodes.Exist(inst.ID()) {
 			continue
@@ -60,10 +61,10 @@ func buildReloadPromAndGrafanaTasks(
 		t := task.NewBuilder(logger)
 		if inst.ComponentName() == spec.ComponentPrometheus {
 			// reload Prometheus
-			t = t.SystemCtl(inst.GetManageHost(), inst.ServiceName(), "reload", true, true)
+			t = t.SystemCtl(inst.GetManageHost(), inst.ServiceName(), "reload", true, true, string(systemdMode))
 		} else {
 			// restart grafana
-			t = t.SystemCtl(inst.GetManageHost(), inst.ServiceName(), "restart", true, false)
+			t = t.SystemCtl(inst.GetManageHost(), inst.ServiceName(), "restart", true, false, string(systemdMode))
 		}
 
 		tasks = append(tasks, t.BuildAsStep(fmt.Sprintf("  - Reload %s -> %s", inst.ComponentName(), inst.ID())))
@@ -99,6 +100,14 @@ func buildScaleOutTask(
 		return nil, err
 	}
 
+	var sudo bool
+	systemdMode := topo.BaseTopo().GlobalOptions.SystemdMode
+	if systemdMode == spec.UserMode {
+		sudo = false
+	} else {
+		sudo = true
+	}
+
 	// Initialize the environments
 	initializedHosts := set.NewStringSet()
 	metadata.GetTopology().IterInstance(func(instance spec.Instance) {
@@ -131,7 +140,9 @@ func buildScaleOutTask(
 				dirs = append(dirs, spec.Abs(globalOptions.User, dirname))
 			}
 		}
-
+		if systemdMode == spec.UserMode {
+			dirs = append(dirs, spec.Abs(globalOptions.User, ".config/systemd/user"))
+		}
 		t := task.NewBuilder(m.logger).
 			RootSSH(
 				instance.GetManageHost(),
@@ -151,9 +162,10 @@ func buildScaleOutTask(
 				gOpt.SSHProxyTimeout,
 				gOpt.SSHType,
 				globalOptions.SSHType,
+				opt.User != "root" && systemdMode != spec.UserMode,
 			).
-			EnvInit(instance.GetManageHost(), base.User, base.Group, opt.SkipCreateUser || globalOptions.User == opt.User).
-			Mkdir(globalOptions.User, instance.GetManageHost(), dirs...).
+			EnvInit(instance.GetManageHost(), base.User, base.Group, opt.SkipCreateUser || globalOptions.User == opt.User, sudo).
+			Mkdir(globalOptions.User, instance.GetManageHost(), sudo, dirs...).
 			BuildAsStep(fmt.Sprintf("  - Initialized host %s ", host))
 		envInitTasks = append(envInitTasks, t)
 	})
@@ -186,9 +198,9 @@ func buildScaleOutTask(
 		}
 		// Deploy component
 		tb := task.NewSimpleUerSSH(m.logger, inst.GetManageHost(), inst.GetSSHPort(), base.User, gOpt, p, sshType).
-			Mkdir(base.User, inst.GetManageHost(), deployDirs...).
-			Mkdir(base.User, inst.GetManageHost(), dataDirs...).
-			Mkdir(base.User, inst.GetManageHost(), logDir)
+			Mkdir(base.User, inst.GetManageHost(), sudo, deployDirs...).
+			Mkdir(base.User, inst.GetManageHost(), sudo, dataDirs...).
+			Mkdir(base.User, inst.GetManageHost(), sudo, logDir)
 
 		srcPath := ""
 		if patchedComponents.Exist(inst.ComponentName()) {
@@ -477,7 +489,7 @@ func buildMonitoredDeployTask(
 
 			// Deploy component
 			tb := task.NewSimpleUerSSH(m.logger, host, info.ssh, globalOptions.User, gOpt, p, globalOptions.SSHType).
-				Mkdir(globalOptions.User, host, deployDirs...).
+				Mkdir(globalOptions.User, host, globalOptions.SystemdMode != spec.UserMode, deployDirs...).
 				CopyComponent(
 					comp,
 					info.os,
@@ -524,7 +536,7 @@ func buildMonitoredCertificateTasks(
 
 				// Deploy component
 				tb := task.NewSimpleUerSSH(m.logger, host, info.ssh, globalOptions.User, gOpt, p, globalOptions.SSHType).
-					Mkdir(globalOptions.User, host, tlsDir)
+					Mkdir(globalOptions.User, host, globalOptions.SystemdMode != spec.UserMode, tlsDir)
 
 				if comp == spec.ComponentBlackboxExporter {
 					ca, innerr := crypto.ReadCA(
@@ -604,6 +616,7 @@ func buildInitMonitoredConfigTasks(
 						Log:    logDir,
 						Cache:  specManager.Path(name, spec.TempConfigPath),
 					},
+					globalOptions.SystemdMode,
 				).
 				BuildAsStep(fmt.Sprintf("  - Generate config %s -> %s", comp, host))
 			tasks = append(tasks, t)
@@ -802,7 +815,7 @@ func buildTLSTask(
 	// cleanup tls files only in tls disable
 	if !topo.BaseTopo().GlobalOptions.TLSEnabled {
 		builder.Func("Cleanup TLS files", func(ctx context.Context) error {
-			return operator.CleanupComponent(ctx, delFileMap)
+			return operator.CleanupComponent(ctx, delFileMap, topo.BaseTopo().GlobalOptions.SystemdMode != spec.UserMode)
 		})
 	}
 
@@ -842,7 +855,7 @@ func buildCertificateTasks(
 			tlsDir := filepath.Join(deployDir, spec.TLSCertKeyDir)
 
 			tb := task.NewSimpleUerSSH(m.logger, inst.GetManageHost(), inst.GetSSHPort(), base.User, gOpt, p, topo.BaseTopo().GlobalOptions.SSHType).
-				Mkdir(base.User, inst.GetManageHost(), deployDir, tlsDir)
+				Mkdir(base.User, inst.GetManageHost(), topo.BaseTopo().GlobalOptions.SystemdMode != spec.UserMode, deployDir, tlsDir)
 
 			ca, err := crypto.ReadCA(
 				name,

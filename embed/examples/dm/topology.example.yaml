@@ -3,6 +3,7 @@
 # them if the specific deployment value missing.
 global:
   user: "tidb"
+  # systemd_mode: "system"
   ssh_port: 22
   deploy_dir: "/dm-deploy"
   data_dir: "/dm-data"

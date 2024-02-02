@@ -31,6 +31,7 @@ type Sysctl struct {
 	host string
 	key  string
 	val  string
+	sudo bool
 }
 
 // Execute implements the Task interface
@@ -46,8 +47,7 @@ func (s *Sysctl) Execute(ctx context.Context) error {
 		fmt.Sprintf("echo '%s=%s' >> %s", s.key, s.val, sysctlFilePath),
 		fmt.Sprintf("sysctl -p %s", sysctlFilePath),
 	}, " && ")
-
-	stdout, stderr, err := e.Execute(ctx, cmd, true)
+	stdout, stderr, err := e.Execute(ctx, cmd, s.sudo)
 	ctxt.GetInner(ctx).SetOutputs(s.host, stdout, stderr)
 	if err != nil {
 		return errors.Trace(err)

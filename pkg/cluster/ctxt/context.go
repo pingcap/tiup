@@ -37,9 +37,9 @@ const (
 
 type (
 	// Executor is the executor interface for TiUP, all tasks will in the end
-	// be passed to a executor and then be actually performed.
+	// be passed to an executor and then be actually performed.
 	Executor interface {
-		// Execute run the command, then return it's stdout and stderr
+		// Execute run the command, then return its stdout and stderr
 		// NOTE: stdin is not supported as it seems we don't need it (for now). If
 		// at some point in the future we need to pass stdin to a command, we'll
 		// need to refactor this function and its implementations.

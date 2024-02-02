@@ -148,7 +148,25 @@ func (m *Manager) Deploy(
 		}
 	}
 
-	if err := m.fillHost(sshConnProps, sshProxyProps, topo, &gOpt, opt.User); err != nil {
+	var sudo bool
+	systemdMode := topo.BaseTopo().GlobalOptions.SystemdMode
+	if systemdMode == spec.UserMode {
+		sudo = false
+		hint := fmt.Sprintf("loginctl enable-linger %s", opt.User)
+
+		msg := "The value of systemd_mode is set to `user` in the topology, please note that you'll need to manually execute the following command using root or sudo on the host(s) to enable lingering for the systemd user instance.\n"
+		msg += color.GreenString(hint)
+		msg += "\nYou can read the systemd documentation for reference: https://wiki.archlinux.org/title/Systemd/User#Automatic_start-up_of_systemd_user_instances."
+		m.logger.Warnf(msg)
+		err = tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: ")
+		if err != nil {
+			return err
+		}
+	} else {
+		sudo = true
+	}
+
+	if err := m.fillHost(sshConnProps, sshProxyProps, topo, &gOpt, opt.User, opt.User != "root" && systemdMode != spec.UserMode); err != nil {
 		return err
 	}
 
@@ -213,7 +231,9 @@ func (m *Manager) Deploy(
 		if strings.HasPrefix(globalOptions.DataDir, "/") {
 			dirs = append(dirs, globalOptions.DataDir)
 		}
-
+		if systemdMode == spec.UserMode {
+			dirs = append(dirs, spec.Abs(globalOptions.User, ".config/systemd/user"))
+		}
 		t := task.NewBuilder(m.logger).
 			RootSSH(
 				host,
@@ -233,9 +253,10 @@ func (m *Manager) Deploy(
 				gOpt.SSHProxyTimeout,
 				gOpt.SSHType,
 				globalOptions.SSHType,
+				opt.User != "root" && systemdMode != spec.UserMode,
 			).
-			EnvInit(host, globalOptions.User, globalOptions.Group, opt.SkipCreateUser || globalOptions.User == opt.User).
-			Mkdir(globalOptions.User, host, dirs...).
+			EnvInit(host, globalOptions.User, globalOptions.Group, opt.SkipCreateUser || globalOptions.User == opt.User, sudo).
+			Mkdir(globalOptions.User, host, sudo, dirs...).
 			BuildAsStep(fmt.Sprintf("  - Prepare %s:%d", host, hostInfo.ssh))
 		envInitTasks = append(envInitTasks, t)
 	}
@@ -265,8 +286,8 @@ func (m *Manager) Deploy(
 		}
 
 		t := task.NewSimpleUerSSH(m.logger, inst.GetManageHost(), inst.GetSSHPort(), globalOptions.User, gOpt, sshProxyProps, globalOptions.SSHType).
-			Mkdir(globalOptions.User, inst.GetManageHost(), deployDirs...).
-			Mkdir(globalOptions.User, inst.GetManageHost(), dataDirs...)
+			Mkdir(globalOptions.User, inst.GetManageHost(), sudo, deployDirs...).
+			Mkdir(globalOptions.User, inst.GetManageHost(), sudo, dataDirs...)
 
 		if deployerInstance, ok := inst.(DeployerInstance); ok {
 			deployerInstance.Deploy(t, "", deployDir, version, name, clusterVersion)

@@ -33,6 +33,7 @@ type Limit struct {
 	limit  string // limit type
 	item   string
 	value  string
+	sudo   bool
 }
 
 // Execute implements the Task interface
@@ -50,7 +51,7 @@ func (l *Limit) Execute(ctx context.Context) error {
 			l.domain, l.limit, l.item, l.value, limitsFilePath),
 	}, " && ")
 
-	stdout, stderr, err := e.Execute(ctx, cmd, true)
+	stdout, stderr, err := e.Execute(ctx, cmd, l.sudo)
 	ctxt.GetInner(ctx).SetOutputs(l.host, stdout, stderr)
 	if err != nil {
 		return errors.Trace(err)

@@ -586,7 +586,7 @@ func (m *Manager) GetClusterTopology(dopt DisplayOption, opt operator.Options) (
 	}
 
 	clusterInstInfos := []InstInfo{}
-
+	systemdMode := string(topo.BaseTopo().GlobalOptions.SystemdMode)
 	topo.IterInstance(func(ins spec.Instance) {
 		// apply role filter
 		if len(filterRoles) > 0 && !filterRoles.Exist(ins.Role()) {
@@ -630,7 +630,7 @@ func (m *Manager) GetClusterTopology(dopt DisplayOption, opt operator.Options) (
 				var active string
 				var systemdSince time.Duration
 				nctx := checkpoint.NewContext(ctx)
-				active, memory, systemdSince, _ = operator.GetServiceStatus(nctx, e, ins.ServiceName())
+				active, memory, systemdSince, _ = operator.GetServiceStatus(nctx, e, ins.ServiceName(), systemdMode, systemdMode)
 				if status == "-" {
 					if active == "active" {
 						status = "Up"
