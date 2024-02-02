@@ -897,7 +897,9 @@ func (p *Playground) bindVersion(comp string, version string) (bindVersion strin
 	default:
 	}
 	if bindVersion == "" {
-		bindVersion = version
+		if version == "nightly" {
+			bindVersion = version
+		}
 	}
 	return
 }
