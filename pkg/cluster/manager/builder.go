@@ -867,6 +867,16 @@ func genTiProxySessionCerts(dir string) error {
 	}), "")
 }
 
+func delTiProxySessionCerts(dir string) error {
+	if err := os.Remove(filepath.Join(dir, "tiproxy-session.crt")); err == nil {
+		return err
+	}
+	if err := os.Remove(filepath.Join(dir, "tiproxy-session.key")); err == nil {
+		return err
+	}
+	return nil
+}
+
 // buildCertificateTasks generates certificate for instance and transfers it to the server
 func buildCertificateTasks(
 	m *Manager,
@@ -936,5 +946,13 @@ func buildCertificateTasks(
 			certificateTasks = append(certificateTasks, t)
 		}
 	})
+
+	if hasTiProxy {
+		// delete it, so tiup will generate a new cert next time to renew
+		if err := delTiProxySessionCerts(m.specManager.Path(name, spec.TempConfigPath)); err != nil {
+			return certificateTasks, err
+		}
+	}
+
 	return certificateTasks, iterErr
 }
