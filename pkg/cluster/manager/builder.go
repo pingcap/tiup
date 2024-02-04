@@ -838,10 +838,6 @@ func buildTLSTask(
 }
 
 func genTiProxySessionCerts(dir string) error {
-	if _, err := os.Stat(filepath.Join(dir, "tiproxy-session.crt")); err == nil {
-		return nil
-	}
-
 	ca, err := crypto.NewCA("tiproxy")
 	if err != nil {
 		return err
@@ -946,13 +942,6 @@ func buildCertificateTasks(
 			certificateTasks = append(certificateTasks, t)
 		}
 	})
-
-	if hasTiProxy {
-		// delete it, so tiup will generate a new cert next time to renew
-		if err := delTiProxySessionCerts(m.specManager.Path(name, spec.TempConfigPath)); err != nil {
-			return certificateTasks, err
-		}
-	}
 
 	return certificateTasks, iterErr
 }
