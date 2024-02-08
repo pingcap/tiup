@@ -50,6 +50,7 @@ type PDSpec struct {
 	LogDir          string               `yaml:"log_dir,omitempty"`
 	Source          string               `yaml:"source,omitempty" validate:"source:editable"`
 	NumaNode        string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
+	MSMode          bool                 `yaml:"ms_mode,omitempty"`
 	Config          map[string]any       `yaml:"config,omitempty" validate:"config:ignore"`
 	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
 	Arch            string               `yaml:"arch,omitempty"`
@@ -254,6 +255,7 @@ func (i *PDInstance) InitConfig(
 		LogDir:             paths.Log,
 		InitialCluster:     strings.Join(initialCluster, ","),
 		NumaNode:           spec.NumaNode,
+		MSMode:             spec.MSMode,
 	}
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pd_%s_%d.sh", i.GetHost(), i.GetPort()))
@@ -378,6 +380,7 @@ func (i *PDInstance) ScaleConfig(
 		LogDir:             paths.Log,
 		InitialCluster:     strings.Join(initialCluster, ","),
 		NumaNode:           spec.NumaNode,
+		MSMode:             spec.MSMode,
 	}
 
 	join := []string{}

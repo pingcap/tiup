@@ -84,6 +84,9 @@ func (r *repositoryT) VerifyComponent(comp, version, target string) error {
 }
 
 func (r *repositoryT) ComponentBinEntry(comp, version string) (string, error) {
+	if comp == "tso" {
+		comp = "pd"
+	}
 	versionItem, err := r.repo.ComponentVersion(comp, version, true)
 	if err != nil {
 		return "", err
