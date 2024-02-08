@@ -19,6 +19,7 @@ topology:
       binlog.enable: true
     tikv: {}
     pd: {}
+    tso: {}
     tidb_dashboard: {}
     tiflash: {}
     tiproxy: {}
@@ -195,3 +196,4 @@ topology:
       arch: amd64
       os: linux
   tiproxy_servers: []
+  tso_servers: []

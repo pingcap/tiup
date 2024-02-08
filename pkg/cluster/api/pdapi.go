@@ -139,6 +139,7 @@ var (
 	pdStoresURI          = "pd/api/v1/stores"
 	pdStoresLimitURI     = "pd/api/v1/stores/limit"
 	pdRegionsCheckURI    = "pd/api/v1/regions/check"
+	pdServicePrimaryURI  = "pd/api/v2/ms/primary"
 	tsoHealthPrefix      = "tso/api/v1/health"
 )
 
@@ -1005,4 +1006,119 @@ func (pc *PDClient) SetAllStoreLimits(value int) error {
 	}
 	pc.l().Debugf("setting store limit: %d", value)
 	return pc.updateConfig(pdStoresLimitURI, bytes.NewBuffer(body))
+}
+
+// GetServicePrimary queries for the primary of a service
+func (pc *PDClient) GetServicePrimary(service string) (string, error) {
+	endpoints := pc.getEndpoints(fmt.Sprintf("%s/%s", pdServicePrimaryURI, service))
+
+	var primary string
+	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
+		body, err := pc.httpClient.Get(pc.ctx, endpoint)
+		if err != nil {
+			return body, err
+		}
+
+		return body, json.Unmarshal(body, &primary)
+	})
+	return primary, err
+}
+
+const (
+	tsoStatusURI = "status"
+)
+
+// TSOClient is an HTTP client of the TSO server
+type TSOClient struct {
+	version    string
+	addrs      []string
+	tlsEnabled bool
+	httpClient *utils.HTTPClient
+	ctx        context.Context
+}
+
+// NewTSOClient returns a new TSOClient, the context must have
+// a *logprinter.Logger as value of "logger"
+func NewTSOClient(
+	ctx context.Context,
+	addrs []string,
+	timeout time.Duration,
+	tlsConfig *tls.Config,
+) *TSOClient {
+	enableTLS := false
+	if tlsConfig != nil {
+		enableTLS = true
+	}
+
+	if _, ok := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger); !ok {
+		panic("the context must have logger inside")
+	}
+
+	cli := &TSOClient{
+		addrs:      addrs,
+		tlsEnabled: enableTLS,
+		httpClient: utils.NewHTTPClient(timeout, tlsConfig),
+		ctx:        ctx,
+	}
+
+	cli.tryIdentifyVersion()
+	return cli
+}
+
+// func (tc *TSOClient) l() *logprinter.Logger {
+// 	return tc.ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
+// }
+
+func (tc *TSOClient) tryIdentifyVersion() {
+	endpoints := tc.getEndpoints(tsoStatusURI)
+	response := map[string]string{}
+	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
+		body, err := tc.httpClient.Get(tc.ctx, endpoint)
+		if err != nil {
+			return body, err
+		}
+
+		return body, json.Unmarshal(body, &response)
+	})
+	if err == nil {
+		tc.version = response["version"]
+	}
+}
+
+// GetURL builds the client URL of PDClient
+func (tc *TSOClient) GetURL(addr string) string {
+	httpPrefix := "http"
+	if tc.tlsEnabled {
+		httpPrefix = "https"
+	}
+	return fmt.Sprintf("%s://%s", httpPrefix, addr)
+}
+
+func (tc *TSOClient) getEndpoints(uri string) (endpoints []string) {
+	for _, addr := range tc.addrs {
+		endpoint := fmt.Sprintf("%s/%s", tc.GetURL(addr), uri)
+		endpoints = append(endpoints, endpoint)
+	}
+
+	return
+}
+
+// CheckHealth checks the health of TSO node.
+func (tc *TSOClient) CheckHealth() error {
+	endpoints := tc.getEndpoints(tsoStatusURI)
+
+	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
+		body, err := tc.httpClient.Get(tc.ctx, endpoint)
+		if err != nil {
+			return body, err
+		}
+
+		return body, nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

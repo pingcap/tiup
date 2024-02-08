@@ -40,6 +40,7 @@ const (
 	ComponentTiDB             = "tidb"
 	ComponentTiKV             = "tikv"
 	ComponentPD               = "pd"
+	ComponentTSO              = "tso"
 	ComponentTiFlash          = "tiflash"
 	ComponentTiProxy          = "tiproxy"
 	ComponentGrafana          = "grafana"
