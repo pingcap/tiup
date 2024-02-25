@@ -838,6 +838,9 @@ func buildTLSTask(
 }
 
 func genTiProxySessionCerts(dir string) error {
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
 	ca, err := crypto.NewCA("tiproxy")
 	if err != nil {
 		return err
