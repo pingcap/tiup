@@ -241,7 +241,7 @@ func (i *TiDBInstance) InitConfig(
 		}
 	}
 
-	spec.Config, err = i.setTiProxyConfig(ctx, topo, spec.Config, paths)
+	spec.Config, err = i.setTiProxyConfig(ctx, topo, version, spec.Config, paths)
 	if err != nil {
 		return err
 	}
@@ -260,15 +260,14 @@ func (i *TiDBInstance) InitConfig(
 }
 
 // setTiProxyConfig sets tiproxy session certs
-func (i *TiDBInstance) setTiProxyConfig(ctx context.Context, topo *Specification, configs map[string]any, paths meta.DirPaths) (map[string]any, error) {
+func (i *TiDBInstance) setTiProxyConfig(ctx context.Context, topo *Specification, version string, configs map[string]any, paths meta.DirPaths) (map[string]any, error) {
 	hasTiProxy := false
 	topo.IterInstance(func(instance Instance) {
 		if instance.ComponentName() == ComponentTiProxy {
 			hasTiProxy = true
 		}
 	})
-
-	if hasTiProxy {
+	if hasTiProxy && tidbver.TiDBSupportTiproxy(version) {
 		if configs == nil {
 			configs = make(map[string]any)
 		}
