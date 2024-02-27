@@ -77,7 +77,7 @@ func NewSystemdModule(config SystemdModuleConfig) *SystemdModule {
 		systemctl, strings.ToLower(config.Action), config.Unit)
 
 	if config.CheckActive {
-		cmd = fmt.Sprintf("if [[ $(%s is-active %s) == \"active\" ]]; then %s; fi",
+		cmd = fmt.Sprintf("if %s is-active %s &>/dev/null; then %s; fi",
 			systemctl, config.Unit, cmd)
 	}
 
