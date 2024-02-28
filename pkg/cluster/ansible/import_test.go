@@ -125,6 +125,7 @@ server_configs:
     tikv: {}
     pd: {}
     tso: {}
+    scheduling: {}
     tidb_dashboard: {}
     tiflash: {}
     tiproxy: {}
@@ -140,6 +141,7 @@ tiflash_servers: []
 tiproxy_servers: []
 pd_servers: []
 tso_servers: []
+scheduling_servers: []
 monitoring_servers: []
 `)
 
