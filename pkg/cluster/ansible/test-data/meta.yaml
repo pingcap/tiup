@@ -197,5 +197,3 @@ topology:
       arch: amd64
       os: linux
   tiproxy_servers: []
-  tso_servers: []
-  scheduling_servers: []
