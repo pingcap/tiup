@@ -140,8 +140,6 @@ tikv_servers: []
 tiflash_servers: []
 tiproxy_servers: []
 pd_servers: []
-tso_servers: []
-scheduling_servers: []
 monitoring_servers: []
 `)
 
