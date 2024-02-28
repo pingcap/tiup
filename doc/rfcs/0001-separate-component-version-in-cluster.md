@@ -23,7 +23,6 @@ ComponentVersions struct {
 	TiKV         string `yaml:"tikv,omitempty"`
 	TiFlash      string `yaml:"tiflash,omitempty"`
 	PD           string `yaml:"pd,omitempty"`
-	TSO          string `yaml:"tso,omitempty"`
 	Dashboard    string `yaml:"tidb_dashboard,omitempty"`
 	Pump         string `yaml:"pump,omitempty"`
 	Drainer      string `yaml:"drainer,omitempty"`

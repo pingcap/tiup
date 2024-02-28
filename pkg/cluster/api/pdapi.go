@@ -1025,7 +1025,8 @@ func (pc *PDClient) GetServicePrimary(service string) (string, error) {
 }
 
 const (
-	tsoStatusURI = "status"
+	tsoStatusURI        = "status"
+	schedulingStatusURI = "status"
 )
 
 // TSOClient is an HTTP client of the TSO server
@@ -1106,6 +1107,101 @@ func (tc *TSOClient) getEndpoints(uri string) (endpoints []string) {
 // CheckHealth checks the health of TSO node.
 func (tc *TSOClient) CheckHealth() error {
 	endpoints := tc.getEndpoints(tsoStatusURI)
+
+	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
+		body, err := tc.httpClient.Get(tc.ctx, endpoint)
+		if err != nil {
+			return body, err
+		}
+
+		return body, nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// SchedulingClient is an HTTP client of the scheduling server
+type SchedulingClient struct {
+	version    string
+	addrs      []string
+	tlsEnabled bool
+	httpClient *utils.HTTPClient
+	ctx        context.Context
+}
+
+// NewSchedulingClient returns a new SchedulingClient, the context must have
+// a *logprinter.Logger as value of "logger"
+func NewSchedulingClient(
+	ctx context.Context,
+	addrs []string,
+	timeout time.Duration,
+	tlsConfig *tls.Config,
+) *SchedulingClient {
+	enableTLS := false
+	if tlsConfig != nil {
+		enableTLS = true
+	}
+
+	if _, ok := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger); !ok {
+		panic("the context must have logger inside")
+	}
+
+	cli := &SchedulingClient{
+		addrs:      addrs,
+		tlsEnabled: enableTLS,
+		httpClient: utils.NewHTTPClient(timeout, tlsConfig),
+		ctx:        ctx,
+	}
+
+	cli.tryIdentifyVersion()
+	return cli
+}
+
+// func (tc *SchedulingClient) l() *logprinter.Logger {
+// 	return tc.ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
+// }
+
+func (tc *SchedulingClient) tryIdentifyVersion() {
+	endpoints := tc.getEndpoints(schedulingStatusURI)
+	response := map[string]string{}
+	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
+		body, err := tc.httpClient.Get(tc.ctx, endpoint)
+		if err != nil {
+			return body, err
+		}
+
+		return body, json.Unmarshal(body, &response)
+	})
+	if err == nil {
+		tc.version = response["version"]
+	}
+}
+
+// GetURL builds the client URL of PDClient
+func (tc *SchedulingClient) GetURL(addr string) string {
+	httpPrefix := "http"
+	if tc.tlsEnabled {
+		httpPrefix = "https"
+	}
+	return fmt.Sprintf("%s://%s", httpPrefix, addr)
+}
+
+func (tc *SchedulingClient) getEndpoints(uri string) (endpoints []string) {
+	for _, addr := range tc.addrs {
+		endpoint := fmt.Sprintf("%s/%s", tc.GetURL(addr), uri)
+		endpoints = append(endpoints, endpoint)
+	}
+
+	return
+}
+
+// CheckHealth checks the health of scheduling node.
+func (tc *SchedulingClient) CheckHealth() error {
+	endpoints := tc.getEndpoints(schedulingStatusURI)
 
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		body, err := tc.httpClient.Get(tc.ctx, endpoint)

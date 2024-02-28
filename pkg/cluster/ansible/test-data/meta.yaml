@@ -20,6 +20,7 @@ topology:
     tikv: {}
     pd: {}
     tso: {}
+    scheduling: {}
     tidb_dashboard: {}
     tiflash: {}
     tiproxy: {}
@@ -197,3 +198,4 @@ topology:
       os: linux
   tiproxy_servers: []
   tso_servers: []
+  scheduling_servers: []

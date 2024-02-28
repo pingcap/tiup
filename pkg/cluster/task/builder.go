@@ -201,7 +201,7 @@ func (b *Builder) CopyFile(src, dst, server string, download bool, limit int, co
 
 // Download appends a Downloader task to the current task collection
 func (b *Builder) Download(component, os, arch string, version string) *Builder {
-	if component == "tso" {
+	if component == "tso" || component == "scheduling" {
 		component = "pd"
 	}
 	b.tasks = append(b.tasks, NewDownloader(component, os, arch, version))
@@ -213,7 +213,7 @@ func (b *Builder) CopyComponent(component, os, arch string,
 	version string,
 	srcPath, dstHost, dstDir string,
 ) *Builder {
-	if component == "tso" {
+	if component == "tso" || component == "scheduling" {
 		component = "pd"
 	}
 	b.tasks = append(b.tasks, &CopyComponent{
@@ -240,7 +240,7 @@ func (b *Builder) InstallPackage(srcPath, dstHost, dstDir string) *Builder {
 
 // BackupComponent appends a BackupComponent task to the current task collection
 func (b *Builder) BackupComponent(component, fromVer string, host, deployDir string) *Builder {
-	if component == "tso" {
+	if component == "tso" || component == "scheduling" {
 		component = "pd"
 	}
 	b.tasks = append(b.tasks, &BackupComponent{

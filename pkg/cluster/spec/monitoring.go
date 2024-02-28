@@ -268,6 +268,13 @@ func (i *MonitorInstance) InitConfig(
 			cfig.AddTSO(tso.Host, uint64(tso.Port))
 		}
 	}
+	if servers, found := topoHasField("SchedulingServers"); found {
+		for i := 0; i < servers.Len(); i++ {
+			scheduling := servers.Index(i).Interface().(*SchedulingSpec)
+			uniqueHosts.Insert(scheduling.Host)
+			cfig.AddScheduling(scheduling.Host, uint64(scheduling.Port))
+		}
+	}
 	if servers, found := topoHasField("TiKVServers"); found {
 		for i := 0; i < servers.Len(); i++ {
 			kv := servers.Index(i).Interface().(*TiKVSpec)
