@@ -162,7 +162,7 @@ This operation will upgrade %s %s cluster %s to %s:%s`,
 
 			// for some component, dataDirs might need to be created due to upgrade
 			// eg: TiCDC support DataDir since v4.0.13
-			tb = tb.Mkdir(topo.BaseTopo().GlobalOptions.User, inst.GetManageHost(), dataDirs...)
+			tb = tb.Mkdir(topo.BaseTopo().GlobalOptions.User, inst.GetManageHost(), topo.BaseTopo().GlobalOptions.SystemdMode != spec.UserMode, dataDirs...)
 
 			if inst.IsImported() {
 				switch inst.ComponentName() {

@@ -41,6 +41,9 @@ drainer_servers:
     config:
       syncer.db-type: "file"
 
+tiproxy_servers:
+  - host: n1
+
 cdc_servers:
   - host: n3
   - host: n4

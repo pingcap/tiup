@@ -53,6 +53,7 @@ func Upgrade(
 	components := topo.ComponentsByUpdateOrder(currentVersion)
 	components = FilterComponent(components, roleFilter)
 	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
+	systemdMode := string(topo.BaseTopo().GlobalOptions.SystemdMode)
 
 	noAgentHosts := set.NewStringSet()
 	uniqueHosts := set.NewStringSet()
@@ -214,7 +215,7 @@ func Upgrade(
 		return nil
 	}
 
-	return RestartMonitored(ctx, uniqueHosts.Slice(), noAgentHosts, topo.GetMonitoredOptions(), options.OptTimeout)
+	return RestartMonitored(ctx, uniqueHosts.Slice(), noAgentHosts, topo.GetMonitoredOptions(), options.OptTimeout, systemdMode)
 }
 
 func upgradeInstance(
@@ -252,8 +253,8 @@ func upgradeInstance(
 			return err
 		}
 	}
-
-	if err := restartInstance(ctx, instance, options.OptTimeout, tlsCfg); err != nil && !options.Force {
+	systemdMode := string(topo.BaseTopo().GlobalOptions.SystemdMode)
+	if err := restartInstance(ctx, instance, options.OptTimeout, tlsCfg, systemdMode); err != nil && !options.Force {
 		return err
 	}
 

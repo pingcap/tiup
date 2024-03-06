@@ -34,9 +34,13 @@ function scale_core() {
     tiup-cluster $client --yes reload $name --skip-restart
 
     if [ $test_tls = true ]; then
-        total_sub_one=18
+        total_sub_one=19
+        total=20
+        total_add_one=21
     else
-        total_sub_one=23
+        total_sub_one=24
+        total=25
+        total_add_one=26
     fi
 
     echo "start scale in tidb"
@@ -89,6 +93,16 @@ function scale_core() {
     # after scale-out, ensure this instance come back
     tiup-cluster $client exec $name -N n1 --command "grep -q n3:2379 /home/tidb/deploy/tidb-4000/scripts/run_tidb.sh"
     tiup-cluster $client exec $name -N n1 --command "grep -q n3:2379 /home/tidb/deploy/prometheus-9090/conf/prometheus.yml"
+
+    echo "start scale out tiproxy"
+    topo=./topo/full_scale_in_tiproxy.yaml
+    tiup-cluster $client --yes scale-out $name $topo
+    wait_instance_num_reach $name $total_add_one $native_ssh
+
+    echo "start scale in tiproxy"
+    tiup-cluster $client --yes scale-in $name -N n1:6000
+    wait_instance_num_reach $name $total $native_ssh
+
 
     echo "start scale in tidb"
     tiup-cluster $client --yes scale-in $name -N n2:4000

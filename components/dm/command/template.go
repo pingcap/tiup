@@ -33,6 +33,7 @@ type TemplateOptions struct {
 type LocalTemplate struct {
 	GlobalUser          string   // global.user in yaml template
 	GlobalGroup         string   // global.group in yaml template
+	GlobalSystemdMode   string   // global.systemd_mode in yaml template
 	GlobalSSHPort       int      // global.ssh_port in yaml template
 	GlobalDeployDir     string   // global.deploy_dir in yaml template
 	GlobalDataDir       string   // global.data_dir in yaml template
@@ -113,6 +114,7 @@ func newTemplateCmd() *cobra.Command {
 	// template values for rendering
 	cmd.Flags().StringVar(&localOpt.GlobalUser, "user", "tidb", "The user who runs the tidb cluster.")
 	cmd.Flags().StringVar(&localOpt.GlobalGroup, "group", "", "group is used to specify the group name the user belong to if it's not the same as user.")
+	cmd.Flags().StringVar(&localOpt.GlobalSystemdMode, "systemd_mode", "system", "systemd_mode is used to select whether to use sudo permissions.")
 	cmd.Flags().IntVar(&localOpt.GlobalSSHPort, "ssh-port", 22, "SSH port of servers in the managed cluster.")
 	cmd.Flags().StringVar(&localOpt.GlobalDeployDir, "deploy-dir", "/tidb-deploy", "Storage directory for cluster deployment files, startup scripts, and configuration files.")
 	cmd.Flags().StringVar(&localOpt.GlobalDataDir, "data-dir", "/tidb-data", "TiDB Cluster data storage directory.")
