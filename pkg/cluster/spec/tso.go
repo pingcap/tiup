@@ -140,11 +140,11 @@ func (c *TSOComponent) Role() string {
 
 // Source implements Component interface.
 func (c *TSOComponent) Source() string {
-	source := c.Topology.ComponentSources.TSO
+	source := c.Topology.ComponentSources.PD
 	if source != "" {
 		return source
 	}
-	return ComponentTSO
+	return ComponentPD
 }
 
 // CalculateVersion implements the Component interface

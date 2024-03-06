@@ -159,17 +159,15 @@ type (
 
 	// ComponentSources represents the source of components
 	ComponentSources struct {
-		TiDB       string `yaml:"tidb,omitempty" validate:"tidb:editable"`
-		TiKV       string `yaml:"tikv,omitempty" validate:"tikv:editable"`
-		TiFlash    string `yaml:"tiflash,omitempty" validate:"tiflash:editable"`
-		PD         string `yaml:"pd,omitempty" validate:"pd:editable"`
-		TSO        string `yaml:"tso,omitempty" validate:"tso:editable"`
-		Scheduling string `yaml:"scheduling,omitempty" validate:"schedulng:editable"`
-		Dashboard  string `yaml:"tidb_dashboard,omitempty" validate:"tidb_dashboard:editable"`
-		Pump       string `yaml:"pump,omitempty" validate:"pump:editable"`
-		Drainer    string `yaml:"drainer,omitempty" validate:"drainer:editable"`
-		CDC        string `yaml:"cdc,omitempty" validate:"cdc:editable"`
-		TiKVCDC    string `yaml:"kvcdc,omitempty" validate:"kvcdc:editable"`
+		TiDB      string `yaml:"tidb,omitempty" validate:"tidb:editable"`
+		TiKV      string `yaml:"tikv,omitempty" validate:"tikv:editable"`
+		TiFlash   string `yaml:"tiflash,omitempty" validate:"tiflash:editable"`
+		PD        string `yaml:"pd,omitempty" validate:"pd:editable"`
+		Dashboard string `yaml:"tidb_dashboard,omitempty" validate:"tidb_dashboard:editable"`
+		Pump      string `yaml:"pump,omitempty" validate:"pump:editable"`
+		Drainer   string `yaml:"drainer,omitempty" validate:"drainer:editable"`
+		CDC       string `yaml:"cdc,omitempty" validate:"cdc:editable"`
+		TiKVCDC   string `yaml:"kvcdc,omitempty" validate:"kvcdc:editable"`
 	}
 
 	// Specification represents the specification of topology.yaml
