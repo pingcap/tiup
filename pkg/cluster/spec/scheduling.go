@@ -140,11 +140,11 @@ func (c *SchedulingComponent) Role() string {
 
 // Source implements Component interface.
 func (c *SchedulingComponent) Source() string {
-	source := c.Topology.ComponentSources.Scheduling
+	source := c.Topology.ComponentSources.PD
 	if source != "" {
 		return source
 	}
-	return ComponentScheduling
+	return ComponentPD
 }
 
 // CalculateVersion implements the Component interface
