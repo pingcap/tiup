@@ -32,6 +32,7 @@ import (
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/repository"
+	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/mod/semver"
@@ -88,7 +89,9 @@ func (m *Manager) Upgrade(name string, clusterVersion string, componentVersions 
 	}
 
 	compVersionMsg := ""
-	for _, comp := range topo.ComponentsByUpdateOrder(base.Version) {
+	restartComponents := []string{}
+	components := topo.ComponentsByUpdateOrder(base.Version)
+	for _, comp := range components {
 		// if component version is not specified, use the cluster version or latest("")
 		oldver := comp.CalculateVersion(base.Version)
 		version := componentVersions[comp.Name()]
@@ -96,13 +99,15 @@ func (m *Manager) Upgrade(name string, clusterVersion string, componentVersions 
 			comp.SetVersion(version)
 		}
 		calver := comp.CalculateVersion(clusterVersion)
-		if comp.Role() != spec.ComponentTiProxy || calver != oldver {
-			opt.Roles = append(opt.Roles, comp.Role())
+		if comp.Name() != spec.ComponentTiProxy || calver != oldver {
+			restartComponents = append(restartComponents, comp.Name(), comp.Role())
 			if len(comp.Instances()) > 0 {
 				compVersionMsg += fmt.Sprintf("\nwill upgrade and restart component \"%19s\" to \"%s\",", comp.Name(), calver)
 			}
 		}
 	}
+	components = operator.FilterComponent(components, set.NewStringSet(restartComponents...))
+
 	monitoredOptions := topo.GetMonitoredOptions()
 	if monitoredOptions != nil {
 		if componentVersions[spec.ComponentBlackboxExporter] != "" {
@@ -131,7 +136,7 @@ This operation will upgrade %s %s cluster %s to %s:%s`,
 	}
 
 	hasImported := false
-	for _, comp := range topo.ComponentsByUpdateOrder(base.Version) {
+	for _, comp := range components {
 		compName := comp.Name()
 		version := comp.CalculateVersion(clusterVersion)
 
@@ -311,7 +316,9 @@ This operation will upgrade %s %s cluster %s to %s:%s`,
 			if offline {
 				return nil
 			}
-			return operator.Upgrade(ctx, topo, opt, tlsCfg, base.Version, clusterVersion)
+			nopt := opt
+			nopt.Roles = restartComponents
+			return operator.Upgrade(ctx, topo, nopt, tlsCfg, base.Version, clusterVersion)
 		}).
 		Build()
 
