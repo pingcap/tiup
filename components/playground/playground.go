@@ -1315,11 +1315,11 @@ func (p *Playground) renderSDFile() error {
 
 	_ = p.WalkInstances(func(cid string, inst instance.Instance) error {
 		v := inst.MetricAddr()
-		t, ok := cid2targets[cid]
+		t, ok := cid2targets[inst.Component()]
 		if ok {
 			v.Targets = append(v.Targets, t.Targets...)
 		}
-		cid2targets[cid] = v
+		cid2targets[inst.Component()] = v
 		return nil
 	})
 
