@@ -153,7 +153,6 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version utils.Version) e
 	if err != nil {
 		return errors.Trace(err)
 	}
-	fmt.Println("userConfig", userConfig)
 	for _, arg := range runtimeConfig {
 		// if user has set the config, skip it
 		if !isKeyPresentInMap(userConfig, arg[0]) {
