@@ -63,7 +63,6 @@ type Playground struct {
 	pds              []*instance.PDInstance
 	tsos             []*instance.PDInstance
 	schedulings      []*instance.PDInstance
-	rms              []*instance.PDInstance
 	tikvs            []*instance.TiKVInstance
 	tidbs            []*instance.TiDBInstance
 	tiflashs         []*instance.TiFlashInstance
@@ -446,7 +445,7 @@ func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) 
 	var err error
 	boundVersion := p.bindVersion(inst.Component(), p.bootOptions.Version)
 	component := inst.Component()
-	if strings.HasPrefix(component, "pd") {
+	if component == "tso" || component == "scheduling" {
 		component = string(instance.PDRoleNormal)
 	}
 	version, err = environment.GlobalEnv().V1Repository().ResolveComponentVersion(component, boundVersion)
@@ -617,12 +616,6 @@ func (p *Playground) WalkInstances(fn func(componentID string, ins instance.Inst
 			return err
 		}
 	}
-	for _, ins := range p.rms {
-		err := fn(spec.ComponentPD, ins)
-		if err != nil {
-			return err
-		}
-	}
 	for _, ins := range p.tikvs {
 		err := fn(spec.ComponentTiKV, ins)
 		if err != nil {
@@ -705,9 +698,9 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 
 	id := p.allocID(componentID)
 	dir := filepath.Join(dataDir, fmt.Sprintf("%s-%d", componentID, id))
-	if componentID == string(instance.PDRoleNormal) && pdRole != instance.PDRoleNormal {
-		id = p.allocID(fmt.Sprintf("%s-%s", componentID, pdRole))
-		dir = filepath.Join(dataDir, fmt.Sprintf("%s-%s-%d", componentID, pdRole, id))
+	if componentID == string(instance.PDRoleNormal) && (pdRole != instance.PDRoleNormal && pdRole != instance.PDRoleAPI) {
+		id = p.allocID(string(pdRole))
+		dir = filepath.Join(dataDir, fmt.Sprintf("%s-%d", pdRole, id))
 	}
 	if err = utils.MkdirAll(dir, 0755); err != nil {
 		return nil, err
@@ -736,8 +729,6 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 			p.tsos = append(p.tsos, inst)
 		} else if pdRole == instance.PDRoleScheduling {
 			p.schedulings = append(p.schedulings, inst)
-		} else if pdRole == instance.PDRoleResourceManager {
-			p.rms = append(p.rms, inst)
 		}
 	case spec.ComponentTiDB:
 		inst := instance.NewTiDBInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, p.enableBinlog(), p.bootOptions.Mode == "tidb-disagg")
@@ -907,10 +898,8 @@ func (p *Playground) bindVersion(comp string, version string) (bindVersion strin
 func (p *Playground) bootCluster(ctx context.Context, env *environment.Environment, options *BootOptions) error {
 	for _, cfg := range []*instance.Config{
 		&options.PD,
-		&options.PDAPI,
-		&options.PDTSO,
-		&options.PDScheduling,
-		&options.PDRM,
+		&options.TSO,
+		&options.Scheduling,
 		&options.TiProxy,
 		&options.TiDB,
 		&options.TiKV,
@@ -1017,10 +1006,9 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			return fmt.Errorf("PD cluster doesn't support microservices mode in version %s", options.Version)
 		}
 		instances = append([]InstancePair{
-			{spec.ComponentPD, instance.PDRoleAPI, instance.TiFlashRoleNormal, options.PDAPI},
-			{spec.ComponentPD, instance.PDRoleTSO, instance.TiFlashRoleNormal, options.PDTSO},
-			{spec.ComponentPD, instance.PDRoleScheduling, instance.TiFlashRoleNormal, options.PDScheduling},
-			{spec.ComponentPD, instance.PDRoleResourceManager, instance.TiFlashRoleNormal, options.PDRM}},
+			{spec.ComponentPD, instance.PDRoleAPI, instance.TiFlashRoleNormal, options.PD},
+			{spec.ComponentPD, instance.PDRoleTSO, instance.TiFlashRoleNormal, options.TSO},
+			{spec.ComponentPD, instance.PDRoleScheduling, instance.TiFlashRoleNormal, options.Scheduling}},
 			instances...,
 		)
 	}
@@ -1127,7 +1115,6 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			var (
 				tsoAddr        []string
 				apiAddr        []string
-				rmAddr         []string
 				schedulingAddr []string
 			)
 			for _, api := range p.pds {
@@ -1139,9 +1126,6 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			for _, scheduling := range p.schedulings {
 				schedulingAddr = append(schedulingAddr, scheduling.Addr())
 			}
-			for _, rm := range p.rms {
-				rmAddr = append(rmAddr, rm.Addr())
-			}
 
 			fmt.Printf("PD API Endpoints:   ")
 			colorCmd.Printf("%s\n", strings.Join(apiAddr, ","))
@@ -1149,8 +1133,6 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			colorCmd.Printf("%s\n", strings.Join(tsoAddr, ","))
 			fmt.Printf("PD Scheduling Endpoints:   ")
 			colorCmd.Printf("%s\n", strings.Join(schedulingAddr, ","))
-			fmt.Printf("PD Resource Manager Endpoints:   ")
-			colorCmd.Printf("%s\n", strings.Join(rmAddr, ","))
 		} else {
 			var pdAddrs []string
 			for _, pd := range p.pds {
@@ -1289,11 +1271,6 @@ func (p *Playground) terminate(sig syscall.Signal) {
 		}
 	}
 	for _, inst := range p.schedulings {
-		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
-			kill(inst.Component(), inst.Pid(), inst.Wait)
-		}
-	}
-	for _, inst := range p.rms {
 		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
 			kill(inst.Component(), inst.Pid(), inst.Wait)
 		}

@@ -36,8 +36,6 @@ const (
 	PDRoleTSO PDRole = "tso"
 	// PDRoleScheduling is the role of PD scheduling
 	PDRoleScheduling PDRole = "scheduling"
-	// PDRoleResourceManager is the role of PD resource manager
-	PDRoleResourceManager PDRole = "resource_manager"
 )
 
 // PDInstance represent a running pd-server
@@ -159,19 +157,6 @@ func (inst *PDInstance) Start(ctx context.Context, version utils.Version) error 
 		if inst.ConfigPath != "" {
 			args = append(args, fmt.Sprintf("--config=%s", inst.ConfigPath))
 		}
-	case PDRoleResourceManager:
-		endpoints := pdEndpoints(inst.pds, true)
-		args = []string{
-			"services",
-			"resource-manager",
-			fmt.Sprintf("--listen-addr=http://%s", utils.JoinHostPort(inst.Host, inst.StatusPort)),
-			fmt.Sprintf("--advertise-listen-addr=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.StatusPort)),
-			fmt.Sprintf("--backend-endpoints=%s", strings.Join(endpoints, ",")),
-			fmt.Sprintf("--log-file=%s", inst.LogFile()),
-		}
-		if inst.ConfigPath != "" {
-			args = append(args, fmt.Sprintf("--config=%s", inst.ConfigPath))
-		}
 	}
 
 	var err error
@@ -186,14 +171,17 @@ func (inst *PDInstance) Start(ctx context.Context, version utils.Version) error 
 
 // Component return the component name.
 func (inst *PDInstance) Component() string {
-	if inst.Role == PDRoleNormal {
+	if inst.Role == PDRoleNormal || inst.Role == PDRoleAPI {
 		return "pd"
 	}
-	return fmt.Sprintf("pd %s", inst.Role)
+	return string(inst.Role)
 }
 
 // LogFile return the log file.
 func (inst *PDInstance) LogFile() string {
+	if inst.Role == PDRoleNormal || inst.Role == PDRoleAPI {
+		return filepath.Join(inst.Dir, "pd.log")
+	}
 	return filepath.Join(inst.Dir, fmt.Sprintf("%s.log", string(inst.Role)))
 }
 
