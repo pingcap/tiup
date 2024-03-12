@@ -222,6 +222,8 @@ func cmdCheckUpdate(component string, version utils.Version) {
     To update all components:   [tiup_command]tiup update --all[reset]
 `,
 				component, selectVer.String(), latestV.String())
+		} else {
+			result <- ""
 		}
 	}()
 

@@ -423,10 +423,6 @@ func checkVersion(options CloneOptions, versions set.StringSet, version string) 
 func combineVersions(componentVersions *[]string,
 	manifest *v1manifest.Component, oss, archs,
 	globalVersions []string) (set.StringSet, error) {
-	if (componentVersions == nil || len(*componentVersions) < 1) && len(globalVersions) < 1 {
-		return nil, errors.New("no version specified")
-	}
-
 	result := set.NewStringSet()
 	for _, os := range oss {
 		for _, arch := range archs {

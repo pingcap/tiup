@@ -136,8 +136,15 @@ func (c *TiProxyComponent) Source() string {
 
 // CalculateVersion implements the Component interface
 func (c *TiProxyComponent) CalculateVersion(clusterVersion string) string {
-	// always not follow global version, use ""(latest) by default
 	version := c.Topology.ComponentVersions.TiProxy
+	if version == "" {
+		// always not follow global version
+		// because tiproxy version is different from clusterVersion
+		// but "nightly" is effective
+		if clusterVersion == "nightly" {
+			version = clusterVersion
+		}
+	}
 	return version
 }
 
@@ -213,7 +220,6 @@ func (i *TiProxyInstance) checkConfig(
 ) map[string]any {
 	topo := i.topo.(*Specification)
 	spec := i.InstanceSpec.(*TiProxySpec)
-	enableTLS := topo.GlobalOptions.TLSEnabled
 
 	if cfg == nil {
 		cfg = make(map[string]any)
@@ -221,10 +227,9 @@ func (i *TiProxyInstance) checkConfig(
 
 	pds := []string{}
 	for _, pdspec := range topo.PDServers {
-		pds = append(pds, pdspec.GetAdvertiseClientURL(enableTLS))
+		pds = append(pds, utils.JoinHostPort(pdspec.Host, pdspec.ClientPort))
 	}
 	cfg["proxy.pd-addrs"] = strings.Join(pds, ",")
-	cfg["proxy.require-backend-tls"] = false
 	cfg["proxy.addr"] = utils.JoinHostPort(i.GetListenHost(), i.GetPort())
 	cfg["api.addr"] = utils.JoinHostPort(i.GetListenHost(), spec.StatusPort)
 	cfg["log.log-file.filename"] = filepath.Join(paths.Log, "tiproxy.log")
@@ -269,7 +274,7 @@ func (i *TiProxyInstance) InitConfig(
 	}
 
 	var err error
-	instanceConfig, err = i.setTLSConfig(ctx, false, instanceConfig, paths)
+	instanceConfig, err = i.setTLSConfig(ctx, topo.GlobalOptions.TLSEnabled, instanceConfig, paths)
 	if err != nil {
 		return err
 	}
@@ -287,12 +292,14 @@ func (i *TiProxyInstance) setTLSConfig(ctx context.Context, enableTLS bool, conf
 		configs["security.cluster-tls.cert"] = fmt.Sprintf("%s/tls/%s.crt", paths.Deploy, i.Role())
 		configs["security.cluster-tls.key"] = fmt.Sprintf("%s/tls/%s.pem", paths.Deploy, i.Role())
 
-		configs["security.server-tls.ca"] = fmt.Sprintf("%s/tls/%s", paths.Deploy, TLSCACert)
-		configs["security.server-tls.cert"] = fmt.Sprintf("%s/tls/%s.crt", paths.Deploy, i.Role())
-		configs["security.server-tls.key"] = fmt.Sprintf("%s/tls/%s.pem", paths.Deploy, i.Role())
-		configs["security.server-tls.skip-ca"] = true
+		configs["security.server-http-tls.ca"] = fmt.Sprintf("%s/tls/%s", paths.Deploy, TLSCACert)
+		configs["security.server-http-tls.cert"] = fmt.Sprintf("%s/tls/%s.crt", paths.Deploy, i.Role())
+		configs["security.server-http-tls.key"] = fmt.Sprintf("%s/tls/%s.pem", paths.Deploy, i.Role())
+		configs["security.server-http-tls.skip-ca"] = true
 
 		configs["security.sql-tls.ca"] = fmt.Sprintf("%s/tls/%s", paths.Deploy, TLSCACert)
+		configs["security.sql-tls.cert"] = fmt.Sprintf("%s/tls/%s.crt", paths.Deploy, i.Role())
+		configs["security.sql-tls.key"] = fmt.Sprintf("%s/tls/%s.pem", paths.Deploy, i.Role())
 	} else {
 		// drainer tls config list
 		tlsConfigs := []string{
@@ -303,7 +310,13 @@ func (i *TiProxyInstance) setTLSConfig(ctx context.Context, enableTLS bool, conf
 			"security.server-tls.cert",
 			"security.server-tls.key",
 			"security.server-tls.skip-ca",
+			"security.server-http-tls.ca",
+			"security.server-http-tls.cert",
+			"security.server-http-tls.key",
+			"security.server-http-tls.skip-ca",
 			"security.sql-tls.ca",
+			"security.sql-tls.cert",
+			"security.sql-tls.key",
 		}
 		// delete TLS configs
 		for _, config := range tlsConfigs {
@@ -311,7 +324,7 @@ func (i *TiProxyInstance) setTLSConfig(ctx context.Context, enableTLS bool, conf
 		}
 	}
 
-	return nil, nil
+	return configs, nil
 }
 
 var _ RollingUpdateInstance = &TiProxyInstance{}

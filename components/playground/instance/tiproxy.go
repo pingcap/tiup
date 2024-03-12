@@ -65,7 +65,7 @@ func (c *TiProxy) MetricAddr() (r MetricAddr) {
 
 // Start implements Instance interface.
 func (c *TiProxy) Start(ctx context.Context) error {
-	endpoints := pdEndpoints(c.pds, true)
+	endpoints := pdEndpoints(c.pds, false)
 
 	configPath := filepath.Join(c.Dir, "config", "proxy.toml")
 	dir := filepath.Dir(configPath)
@@ -99,6 +99,10 @@ func (c *TiProxy) Start(ctx context.Context) error {
 
 	args := []string{
 		fmt.Sprintf("--config=%s", configPath),
+	}
+
+	if c.BinPath, err = tiupexec.PrepareBinary("tiproxy", version, c.BinPath); err != nil {
+		return err
 	}
 
 	c.Process = &process{cmd: PrepareCommand(ctx, c.BinPath, args, nil, c.Dir)}

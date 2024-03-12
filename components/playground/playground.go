@@ -316,6 +316,12 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 				p.ticdcs = append(p.ticdcs[:i], p.ticdcs[i+1:]...)
 			}
 		}
+	case spec.ComponentTiProxy:
+		for i := 0; i < len(p.tiproxys); i++ {
+			if p.tiproxys[i].Pid() == pid {
+				p.tiproxys = append(p.tiproxys[:i], p.tiproxys[i+1:]...)
+			}
+		}
 	case spec.ComponentTiKVCDC:
 		for i := 0; i < len(p.tikvCdcs); i++ {
 			if p.tikvCdcs[i].Pid() == pid {
@@ -428,6 +434,8 @@ func (p *Playground) sanitizeComponentConfig(cid string, cfg *instance.Config) e
 		return p.sanitizeConfig(p.bootOptions.Pump, cfg)
 	case spec.ComponentDrainer:
 		return p.sanitizeConfig(p.bootOptions.Drainer, cfg)
+	case spec.ComponentTiProxy:
+		return p.sanitizeConfig(p.bootOptions.TiProxy, cfg)
 	default:
 		return fmt.Errorf("unknown %s in sanitizeConfig", cid)
 	}
@@ -895,7 +903,9 @@ func (p *Playground) bindVersion(comp string, version string) (bindVersion strin
 	default:
 	}
 	if bindVersion == "" {
-		bindVersion = version
+		if version == "nightly" {
+			bindVersion = version
+		}
 	}
 	return
 }

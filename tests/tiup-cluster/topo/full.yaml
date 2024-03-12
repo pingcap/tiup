@@ -36,6 +36,9 @@ tiflash_servers:
     data_dir: "data1,/data/tiflash-data"
 #   - host: n4
 #   - host: n5
+#
+tiproxy_servers:
+  - host: n1
 
 pump_servers:
   - host: n3

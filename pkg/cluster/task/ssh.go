@@ -45,6 +45,7 @@ type RootSSH struct {
 	proxyPassphrase string           // passphrase of the private key file
 	proxyTimeout    uint64           // timeout in seconds when connecting via SSH
 	sshType         executor.SSHType // the type of SSH chanel
+	sudo            bool
 }
 
 // Execute implements the Task interface
@@ -70,7 +71,7 @@ func (s *RootSSH) Execute(ctx context.Context) error {
 			Timeout:    time.Second * time.Duration(s.proxyTimeout),
 		}
 	}
-	e, err := executor.New(s.sshType, s.user != "root", sc)
+	e, err := executor.New(s.sshType, s.sudo, sc)
 	if err != nil {
 		return err
 	}
@@ -93,7 +94,7 @@ func (s RootSSH) String() string {
 	return fmt.Sprintf("RootSSH: user=%s, host=%s, port=%d", s.user, s.host, s.port)
 }
 
-// UserSSH is used to establish a SSH connection to the target host with generated key
+// UserSSH is used to establish an SSH connection to the target host with generated key
 type UserSSH struct {
 	host            string
 	port            int
