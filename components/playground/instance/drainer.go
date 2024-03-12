@@ -19,7 +19,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -70,7 +69,7 @@ func (d *Drainer) NodeID() string {
 }
 
 // Start implements Instance interface.
-func (d *Drainer) Start(ctx context.Context, version utils.Version) error {
+func (d *Drainer) Start(ctx context.Context) error {
 	endpoints := pdEndpoints(d.pds, true)
 
 	args := []string{
@@ -84,10 +83,6 @@ func (d *Drainer) Start(ctx context.Context, version utils.Version) error {
 		args = append(args, fmt.Sprintf("--config=%s", d.ConfigPath))
 	}
 
-	var err error
-	if d.BinPath, err = tiupexec.PrepareBinary("drainer", version, d.BinPath); err != nil {
-		return err
-	}
 	d.Process = &process{cmd: PrepareCommand(ctx, d.BinPath, args, nil, d.Dir)}
 
 	logIfErr(d.Process.SetOutputFile(d.LogFile()))

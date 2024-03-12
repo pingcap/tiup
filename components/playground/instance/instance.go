@@ -23,6 +23,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
+	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -45,6 +46,7 @@ type instance struct {
 	StatusPort int // client port for PD
 	ConfigPath string
 	BinPath    string
+	Version    utils.Version
 }
 
 // MetricAddr will be used by prometheus scrape_configs.
@@ -58,7 +60,7 @@ type Instance interface {
 	Pid() int
 	// Start the instance process.
 	// Will kill the process once the context is done.
-	Start(ctx context.Context, version utils.Version) error
+	Start(ctx context.Context) error
 	// Component Return the component name.
 	Component() string
 	// LogFile return the log file name
@@ -70,6 +72,8 @@ type Instance interface {
 	// Wait Should only call this if the instance is started successfully.
 	// The implementation should be safe to call Wait multi times.
 	Wait() error
+	// PrepareBinary use given binpath or download from tiup mirrors.
+	PrepareBinary(componentName string, version utils.Version) (string, error)
 }
 
 func (inst *instance) MetricAddr() (r MetricAddr) {
@@ -77,6 +81,16 @@ func (inst *instance) MetricAddr() (r MetricAddr) {
 		r.Targets = append(r.Targets, utils.JoinHostPort(inst.Host, inst.StatusPort))
 	}
 	return
+}
+
+func (inst *instance) PrepareBinary(componentName string, version utils.Version) (string, error) {
+	instanceBinPath, err := tiupexec.PrepareBinary(componentName, version, inst.BinPath)
+	if err != nil {
+		return "", err
+	}
+	inst.BinPath = instanceBinPath
+	inst.Version = version
+	return instanceBinPath, nil
 }
 
 // CompVersion return the format to run specified version of a component.

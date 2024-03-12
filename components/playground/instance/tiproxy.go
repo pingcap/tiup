@@ -22,7 +22,6 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -65,7 +64,7 @@ func (c *TiProxy) MetricAddr() (r MetricAddr) {
 }
 
 // Start implements Instance interface.
-func (c *TiProxy) Start(ctx context.Context, version utils.Version) error {
+func (c *TiProxy) Start(ctx context.Context) error {
 	endpoints := pdEndpoints(c.pds, false)
 
 	configPath := filepath.Join(c.Dir, "config", "proxy.toml")
