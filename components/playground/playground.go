@@ -904,6 +904,8 @@ func (p *Playground) bindVersion(comp string, version string) (bindVersion strin
 	return
 }
 
+//revive:disable:cognitive-complexity
+//revive:disable:error-strings
 func (p *Playground) bootCluster(ctx context.Context, env *environment.Environment, options *BootOptions) error {
 	for _, cfg := range []*instance.Config{
 		&options.PD,

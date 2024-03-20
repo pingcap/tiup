@@ -28,15 +28,15 @@ func (inst *TiDBInstance) getConfig() map[string]any {
 		config["ratelimit.low-speed-watermark"] = 1048576000000
 		config["ratelimit.block-write-watermark"] = 1048576000000
 		config["security.enable-sem"] = false
-		config["tiflash-replicas.constraints"] = []interface{}{
-			map[string]interface{}{
+		config["tiflash-replicas.constraints"] = []any{
+			map[string]any{
 				"key": "engine",
 				"op":  "in",
 				"values": []string{
 					"tiflash",
 				},
 			},
-			map[string]interface{}{
+			map[string]any{
 				"key": "engine_role",
 				"op":  "in",
 				"values": []string{
