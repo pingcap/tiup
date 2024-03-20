@@ -37,6 +37,14 @@ type Config struct {
 	Version    string `yaml:"version"`
 }
 
+// CSEOptions contains configs to run TiDB cluster in CSE mode.
+type CSEOptions struct {
+	S3Endpoint string `yaml:"s3_endpoint"`
+	Bucket     string `yaml:"bucket"`
+	AccessKey  string `yaml:"access_key"`
+	SecretKey  string `yaml:"secret_key"`
+}
+
 type instance struct {
 	ID         int
 	Dir        string

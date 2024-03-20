@@ -487,7 +487,7 @@ func (p *Playground) handleScaleOut(w io.Writer, cmd *Command) error {
 	if err != nil {
 		return err
 	}
-	// TODO: Support scale-out in disaggregated mode
+	// TODO: Support scale-out in CSE mode
 	inst, err := p.addInstance(cmd.ComponentID, instance.PDRoleNormal, instance.TiFlashRoleNormal, cmd.Config)
 	if err != nil {
 		return err
@@ -720,7 +720,7 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 
 	switch componentID {
 	case spec.ComponentPD:
-		inst := instance.NewPDInstance(pdRole, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, cfg.Port)
+		inst := instance.NewPDInstance(pdRole, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, cfg.Port, p.bootOptions.Mode == "tidb-cse")
 		ins = inst
 		if pdRole == instance.PDRoleNormal || pdRole == instance.PDRoleAPI {
 			if p.booted {
@@ -740,15 +740,15 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 			p.rms = append(p.rms, inst)
 		}
 	case spec.ComponentTiDB:
-		inst := instance.NewTiDBInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, p.enableBinlog(), p.bootOptions.Mode == "tidb-disagg")
+		inst := instance.NewTiDBInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, p.enableBinlog(), p.bootOptions.Mode == "tidb-cse")
 		ins = inst
 		p.tidbs = append(p.tidbs, inst)
 	case spec.ComponentTiKV:
-		inst := instance.NewTiKVInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds)
+		inst := instance.NewTiKVInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, p.bootOptions.Mode == "tidb-cse", p.bootOptions.CSEOpts)
 		ins = inst
 		p.tikvs = append(p.tikvs, inst)
 	case spec.ComponentTiFlash:
-		inst := instance.NewTiFlashInstance(tiflashRole, p.bootOptions.DisaggOpts, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, p.tidbs, cfg.Version)
+		inst := instance.NewTiFlashInstance(tiflashRole, p.bootOptions.CSEOpts, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, p.tidbs, cfg.Version)
 		ins = inst
 		p.tiflashs = append(p.tiflashs, inst)
 	case spec.ComponentTiProxy:
@@ -967,37 +967,47 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		instances = append(instances,
 			InstancePair{spec.ComponentTiFlash, instance.PDRoleNormal, instance.TiFlashRoleNormal, options.TiFlash},
 		)
-	} else if options.Mode == "tidb-disagg" {
-		if !tidbver.TiDBSupportDisagg(options.Version) {
-			return fmt.Errorf("TiDB cluster doesn't support disaggregated mode in version %s", options.Version)
-		}
+	} else if options.Mode == "tidb-cse" {
 		if !tidbver.TiFlashPlaygroundNewStartMode(options.Version) {
 			// For simplicity, currently we only implemented disagg mode when TiFlash can run without config.
-			return fmt.Errorf("TiUP playground only supports disaggregated mode for TiDB cluster >= v7.1.0 (or nightly)")
+			return fmt.Errorf("TiUP playground only supports CSE mode for TiDB cluster >= v7.1.0 (or nightly)")
+		}
+
+		if !strings.HasPrefix(options.CSEOpts.S3Endpoint, "https://") && !strings.HasPrefix(options.CSEOpts.S3Endpoint, "http://") {
+			return fmt.Errorf("CSE mode requires S3 endpoint to start with http:// or https://")
+		}
+
+		isSecure := strings.HasPrefix(options.CSEOpts.S3Endpoint, "https://")
+		rawEndpoint := strings.TrimPrefix(options.CSEOpts.S3Endpoint, "https://")
+		rawEndpoint = strings.TrimPrefix(rawEndpoint, "http://")
+
+		// Currently we always assign region=local. Other regions are not supported.
+		if strings.Contains(rawEndpoint, "amazonaws.com") {
+			return fmt.Errorf("Currently TiUP playground CSE mode only supports local S3 (like minio). S3 on AWS Regions are not supported. Contributions are welcome!")
 		}
 
 		// Preflight check whether specified object storage is available.
-		s3Client, err := minio.New(options.DisaggOpts.S3Endpoint, &minio.Options{
-			Creds:  credentials.NewStaticV4(options.DisaggOpts.AccessKey, options.DisaggOpts.SecretKey, ""),
-			Secure: false,
+		s3Client, err := minio.New(rawEndpoint, &minio.Options{
+			Creds:  credentials.NewStaticV4(options.CSEOpts.AccessKey, options.CSEOpts.SecretKey, ""),
+			Secure: isSecure,
 		})
 		if err != nil {
-			return errors.Annotate(err, "Disaggregate mode preflight check failed")
+			return errors.Annotate(err, "CSE mode preflight check failed")
 		}
 
 		ctxCheck, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
-		bucketExists, err := s3Client.BucketExists(ctxCheck, options.DisaggOpts.Bucket)
+		bucketExists, err := s3Client.BucketExists(ctxCheck, options.CSEOpts.Bucket)
 		if err != nil {
-			return errors.Annotate(err, "Disaggregate mode preflight check failed")
+			return errors.Annotate(err, "CSE mode preflight check failed")
 		}
 
 		if !bucketExists {
 			// Try to create bucket.
-			err := s3Client.MakeBucket(ctxCheck, options.DisaggOpts.Bucket, minio.MakeBucketOptions{})
+			err := s3Client.MakeBucket(ctxCheck, options.CSEOpts.Bucket, minio.MakeBucketOptions{})
 			if err != nil {
-				return fmt.Errorf("Disaggregate mode preflight check failed: Bucket %s doesn't exist", options.DisaggOpts.Bucket)
+				return fmt.Errorf("CSE mode preflight check failed: Bucket %s doesn't exist", options.CSEOpts.Bucket)
 			}
 		}
 

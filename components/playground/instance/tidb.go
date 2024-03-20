@@ -30,11 +30,11 @@ type TiDBInstance struct {
 	pds []*PDInstance
 	Process
 	enableBinlog bool
-	isDisaggMode bool
+	isCSEMode    bool
 }
 
 // NewTiDBInstance return a TiDBInstance
-func NewTiDBInstance(binPath string, dir, host, configPath string, id, port int, pds []*PDInstance, enableBinlog bool, isDisaggMode bool) *TiDBInstance {
+func NewTiDBInstance(binPath string, dir, host, configPath string, id, port int, pds []*PDInstance, enableBinlog bool, isCSEMode bool) *TiDBInstance {
 	if port <= 0 {
 		port = 4000
 	}
@@ -50,7 +50,7 @@ func NewTiDBInstance(binPath string, dir, host, configPath string, id, port int,
 		},
 		pds:          pds,
 		enableBinlog: enableBinlog,
-		isDisaggMode: isDisaggMode,
+		isCSEMode:    isCSEMode,
 	}
 }
 

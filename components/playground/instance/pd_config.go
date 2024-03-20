@@ -16,5 +16,15 @@ package instance
 func (inst *PDInstance) getConfig() map[string]any {
 	config := make(map[string]any)
 	config["schedule.patrol-region-interval"] = "100ms"
+
+	if inst.isCSEMode {
+		config["keyspace.pre-alloc"] = []string{"mykeyspace"}
+		config["replication.enable-placement-rules"] = true
+		config["replication.max-replica"] = 1
+		config["schedule.merge-schedule-limit"] = 0
+		config["schedule.low-space-ration"] = 1.0
+		config["schedule.replica-schedule-limit"] = 500
+	}
+
 	return config
 }

@@ -28,10 +28,12 @@ type TiKVInstance struct {
 	instance
 	pds []*PDInstance
 	Process
+	isCSEMode bool
+	cseOpts   CSEOptions
 }
 
 // NewTiKVInstance return a TiKVInstance
-func NewTiKVInstance(binPath string, dir, host, configPath string, id int, port int, pds []*PDInstance) *TiKVInstance {
+func NewTiKVInstance(binPath string, dir, host, configPath string, id int, port int, pds []*PDInstance, isCSEMode bool, cseOptions CSEOptions) *TiKVInstance {
 	if port <= 0 {
 		port = 20160
 	}
@@ -45,7 +47,9 @@ func NewTiKVInstance(binPath string, dir, host, configPath string, id int, port 
 			StatusPort: utils.MustGetFreePort(host, 20180),
 			ConfigPath: configPath,
 		},
-		pds: pds,
+		pds:       pds,
+		isCSEMode: isCSEMode,
+		cseOpts:   cseOptions,
 	}
 }
 

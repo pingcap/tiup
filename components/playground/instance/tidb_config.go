@@ -17,9 +17,36 @@ func (inst *TiDBInstance) getConfig() map[string]any {
 	config := make(map[string]any)
 	config["security.auto-tls"] = true
 
-	if inst.isDisaggMode {
+	if inst.isCSEMode {
+		config["keyspace-name"] = "mykeyspace"
+		config["enable-safe-point-v2"] = true
+		config["force-enable-vector-type"] = true
 		config["use-autoscaler"] = false
 		config["disaggregated-tiflash"] = true
+		config["ratelimit.full-speed"] = 1048576000
+		config["ratelimit.full-speed-capacity"] = 1048576000
+		config["ratelimit.low-speed-watermark"] = 1048576000000
+		config["ratelimit.block-write-watermark"] = 1048576000000
+		config["security.enable-sem"] = false
+		config["tiflash-replicas.constraints"] = []interface{}{
+			map[string]interface{}{
+				"key": "engine",
+				"op":  "in",
+				"values": []string{
+					"tiflash",
+				},
+			},
+			map[string]interface{}{
+				"key": "engine_role",
+				"op":  "in",
+				"values": []string{
+					"write",
+				},
+			},
+		}
+		config["tiflash-replicas.group-id"] = "enable_s3_wn_region"
+		config["tiflash-replicas.extra-s3-rule"] = false
+		config["tiflash-replicas.min-count"] = 1
 	}
 
 	return config
