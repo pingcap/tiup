@@ -13,6 +13,11 @@
 
 package instance
 
+import (
+	"os"
+	"path/filepath"
+)
+
 func (inst *TiDBInstance) getConfig() map[string]any {
 	config := make(map[string]any)
 	config["security.auto-tls"] = true
@@ -20,6 +25,15 @@ func (inst *TiDBInstance) getConfig() map[string]any {
 	if inst.isDisaggMode {
 		config["use-autoscaler"] = false
 		config["disaggregated-tiflash"] = true
+	}
+
+	tiproxyCrtPath := filepath.Join(inst.tiproxyCertDir, "tiproxy.crt")
+	tiproxyKeyPath := filepath.Join(inst.tiproxyCertDir, "tiproxy.key")
+	_, err1 := os.Stat(tiproxyCrtPath)
+	_, err2 := os.Stat(tiproxyKeyPath)
+	if err1 == nil && err2 == nil {
+		config["security.session-token-signing-cert"] = tiproxyCrtPath
+		config["security.session-token-signing-key"] = tiproxyKeyPath
 	}
 
 	return config
