@@ -40,3 +40,75 @@ func TestPlaygroundAbsDir(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, filepath.Join(u.HomeDir, "c/d/e"), c)
 }
+
+func TestParseMysqlCommand(t *testing.T) {
+	cases := []struct {
+		version string
+		vMaj    int
+		vMin    int
+		vPatch  int
+		err     bool
+	}{
+		{
+			"mysql  Ver 8.2.0 for Linux on x86_64 (MySQL Community Server - GPL)",
+			8,
+			2,
+			0,
+			false,
+		},
+		{
+			"mysql  Ver 8.0.34 for Linux on x86_64 (MySQL Community Server - GPL)",
+			8,
+			0,
+			34,
+			false,
+		},
+		{
+			"mysql  Ver 8.0.34-foobar for Linux on x86_64 (MySQL Community Server - GPL)",
+			8,
+			0,
+			34,
+			false,
+		},
+		{
+			"foobar",
+			0,
+			0,
+			0,
+			true,
+		},
+		{
+			"mysql  Ver 14.14 Distrib 5.7.36, for linux-glibc2.12 (x86_64) using  EditLine wrapper",
+			5,
+			7,
+			36,
+			false,
+		},
+		{
+			"mysql  Ver 15.1 Distrib 10.3.37-MariaDB, for Linux (x86_64) using readline 5.1",
+			10,
+			3,
+			37,
+			false,
+		},
+		{
+			"/bin/mysql from 11.2.2-MariaDB, client 15.2 for linux-systemd (x86_64) using readline 5.1",
+			11,
+			2,
+			2,
+			false,
+		},
+	}
+
+	for _, tc := range cases {
+		vMaj, vMin, vPatch, err := parseMysqlVersion(tc.version)
+		if tc.err {
+			assert.NotNil(t, err)
+		} else {
+			assert.Nil(t, err)
+		}
+		assert.Equal(t, vMaj, tc.vMaj)
+		assert.Equal(t, vMin, tc.vMin)
+		assert.Equal(t, vPatch, tc.vPatch)
+	}
+}
