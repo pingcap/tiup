@@ -138,6 +138,7 @@ var (
 	pdStoreURI           = "pd/api/v1/store"
 	pdStoresURI          = "pd/api/v1/stores"
 	pdStoresLimitURI     = "pd/api/v1/stores/limit"
+	pdRemoveTombstone    = "pd/api/v1/stores/remove-tombstone"
 	pdRegionsCheckURI    = "pd/api/v1/regions/check"
 )
 
@@ -837,6 +838,15 @@ func (pc *PDClient) DelStore(host string, retryOpt *utils.RetryOption) error {
 		return fmt.Errorf("error deleting store, %v", err)
 	}
 	return nil
+}
+
+func (pc *PDClient) RemoveTombstone() error {
+	endpoints := pc.getEndpoints(pdRemoveTombstone)
+	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
+		_, _, err := pc.httpClient.Delete(pc.ctx, endpoint, nil)
+		return nil, err
+	})
+	return err
 }
 
 func (pc *PDClient) updateConfig(url string, body io.Reader) error {
