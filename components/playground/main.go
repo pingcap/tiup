@@ -58,11 +58,9 @@ type BootOptions struct {
 	Mode           string              `yaml:"mode"`
 	PDMode         string              `yaml:"pd_mode"`
 	Version        string              `yaml:"version"`
-	PD             instance.Config     `yaml:"pd"`            // ignored when pd_mode == ms
-	PDAPI          instance.Config     `yaml:"pd_api"`        // Only available when pd_mode == ms
-	PDTSO          instance.Config     `yaml:"pd_tso"`        // Only available when pd_mode == ms
-	PDScheduling   instance.Config     `yaml:"pd_scheduling"` // Only available when pd_mode == ms
-	PDRM           instance.Config     `yaml:"pd_rm"`         // Only available when pd_mode == ms
+	PD             instance.Config     `yaml:"pd"`         // will change to api when pd_mode == ms
+	TSO            instance.Config     `yaml:"tso"`        // Only available when pd_mode == ms
+	Scheduling     instance.Config     `yaml:"scheduling"` // Only available when pd_mode == ms
 	TiProxy        instance.Config     `yaml:"tiproxy"`
 	TiDB           instance.Config     `yaml:"tidb"`
 	TiKV           instance.Config     `yaml:"tikv"`
@@ -289,6 +287,8 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 	rootCmd.Flags().IntVar(&options.TiDB.Num, "db", 0, "TiDB instance number")
 	rootCmd.Flags().IntVar(&options.TiKV.Num, "kv", 0, "TiKV instance number")
 	rootCmd.Flags().IntVar(&options.PD.Num, "pd", 0, "PD instance number")
+	rootCmd.Flags().IntVar(&options.TSO.Num, "tso", 0, "TSO instance number")
+	rootCmd.Flags().IntVar(&options.Scheduling.Num, "scheduling", 0, "Scheduling instance number")
 	rootCmd.Flags().IntVar(&options.TiProxy.Num, "tiproxy", 0, "TiProxy instance number")
 	rootCmd.Flags().IntVar(&options.TiFlash.Num, "tiflash", 0, "TiFlash instance number, when --mode=tidb-cse this will set instance number for both Write Node and Compute Node")
 	rootCmd.Flags().IntVar(&options.TiFlashWrite.Num, "tiflash.write", 0, "TiFlash Write instance number, available when --mode=tidb-cse, take precedence over --tiflash")
@@ -297,11 +297,6 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 	rootCmd.Flags().IntVar(&options.TiKVCDC.Num, "kvcdc", 0, "TiKV-CDC instance number")
 	rootCmd.Flags().IntVar(&options.Pump.Num, "pump", 0, "Pump instance number")
 	rootCmd.Flags().IntVar(&options.Drainer.Num, "drainer", 0, "Drainer instance number")
-
-	rootCmd.Flags().IntVar(&options.PDAPI.Num, "pd.api", 0, "PD API instance number")
-	rootCmd.Flags().IntVar(&options.PDTSO.Num, "pd.tso", 0, "PD TSO instance number")
-	rootCmd.Flags().IntVar(&options.PDScheduling.Num, "pd.scheduling", 0, "PD scheduling instance number")
-	rootCmd.Flags().IntVar(&options.PDRM.Num, "pd.rm", 0, "PD resource manager instance number")
 
 	rootCmd.Flags().IntVar(&options.TiDB.UpTimeout, "db.timeout", 60, "TiDB max wait time in seconds for starting, 0 means no limit")
 	rootCmd.Flags().IntVar(&options.TiFlash.UpTimeout, "tiflash.timeout", 120, "TiFlash max wait time in seconds for starting, 0 means no limit")
@@ -322,6 +317,8 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 	rootCmd.Flags().StringVar(&options.TiDB.ConfigPath, "db.config", "", "TiDB instance configuration file")
 	rootCmd.Flags().StringVar(&options.TiKV.ConfigPath, "kv.config", "", "TiKV instance configuration file")
 	rootCmd.Flags().StringVar(&options.PD.ConfigPath, "pd.config", "", "PD instance configuration file")
+	rootCmd.Flags().StringVar(&options.TSO.ConfigPath, "tso.config", "", "TSO instance configuration file")
+	rootCmd.Flags().StringVar(&options.Scheduling.ConfigPath, "scheduling.config", "", "Scheduling instance configuration file")
 	rootCmd.Flags().StringVar(&options.TiProxy.ConfigPath, "tiproxy.config", "", "TiProxy instance configuration file")
 	rootCmd.Flags().StringVar(&options.TiFlash.ConfigPath, "tiflash.config", "", "TiFlash instance configuration file, when --mode=tidb-cse this will set config file for both Write Node and Compute Node")
 	rootCmd.Flags().StringVar(&options.TiFlashWrite.ConfigPath, "tiflash.write.config", "", "TiFlash Write instance configuration file, available when --mode=tidb-cse, take precedence over --tiflash.config")
@@ -331,14 +328,11 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 	rootCmd.Flags().StringVar(&options.TiCDC.ConfigPath, "ticdc.config", "", "TiCDC instance configuration file")
 	rootCmd.Flags().StringVar(&options.TiKVCDC.ConfigPath, "kvcdc.config", "", "TiKV-CDC instance configuration file")
 
-	rootCmd.Flags().StringVar(&options.PDAPI.ConfigPath, "pd.api.config", "", "PD API instance configuration file")
-	rootCmd.Flags().StringVar(&options.PDTSO.ConfigPath, "pd.tso.config", "", "PD TSO instance configuration file")
-	rootCmd.Flags().StringVar(&options.PDScheduling.ConfigPath, "pd.scheduling.config", "", "PD scheduling instance configuration file")
-	rootCmd.Flags().StringVar(&options.PDRM.ConfigPath, "pd.rm.config", "", "PD resource manager instance configuration file")
-
 	rootCmd.Flags().StringVar(&options.TiDB.BinPath, "db.binpath", "", "TiDB instance binary path")
 	rootCmd.Flags().StringVar(&options.TiKV.BinPath, "kv.binpath", "", "TiKV instance binary path")
 	rootCmd.Flags().StringVar(&options.PD.BinPath, "pd.binpath", "", "PD instance binary path")
+	rootCmd.Flags().StringVar(&options.TSO.BinPath, "tso.binpath", "", "TSO instance binary path")
+	rootCmd.Flags().StringVar(&options.Scheduling.BinPath, "scheduling.binpath", "", "Scheduling instance binary path")
 	rootCmd.Flags().StringVar(&options.TiProxy.BinPath, "tiproxy.binpath", "", "TiProxy instance binary path")
 	rootCmd.Flags().StringVar(&options.TiProxy.Version, "tiproxy.version", "", "TiProxy instance version")
 	rootCmd.Flags().StringVar(&options.TiFlash.BinPath, "tiflash.binpath", "", "TiFlash instance binary path, when --mode=tidb-cse this will set binary path for both Write Node and Compute Node")
@@ -348,11 +342,6 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 	rootCmd.Flags().StringVar(&options.TiKVCDC.BinPath, "kvcdc.binpath", "", "TiKV-CDC instance binary path")
 	rootCmd.Flags().StringVar(&options.Pump.BinPath, "pump.binpath", "", "Pump instance binary path")
 	rootCmd.Flags().StringVar(&options.Drainer.BinPath, "drainer.binpath", "", "Drainer instance binary path")
-
-	rootCmd.Flags().StringVar(&options.PDAPI.BinPath, "pd.api.binpath", "", "PD API instance binary path")
-	rootCmd.Flags().StringVar(&options.PDTSO.BinPath, "pd.tso.binpath", "", "PD TSO instance binary path")
-	rootCmd.Flags().StringVar(&options.PDScheduling.BinPath, "pd.scheduling.binpath", "", "PD scheduling instance binary path")
-	rootCmd.Flags().StringVar(&options.PDRM.BinPath, "pd.rm.binpath", "", "PD resource manager instance binary path")
 
 	rootCmd.Flags().StringVar(&options.TiKVCDC.Version, "kvcdc.version", "", "TiKV-CDC instance version")
 
@@ -413,18 +402,15 @@ func populateDefaultOpt(flagSet *pflag.FlagSet) error {
 	case "pd":
 		defaultInt(&options.PD.Num, "pd", 1)
 	case "ms":
-		defaultInt(&options.PDAPI.Num, "pd.api", 1)
-		defaultStr(&options.PDAPI.BinPath, "pd.api.binpath", options.PD.BinPath)
-		defaultStr(&options.PDAPI.ConfigPath, "pd.api.config", options.PD.ConfigPath)
-		defaultInt(&options.PDTSO.Num, "pd.tso", 1)
-		defaultStr(&options.PDTSO.BinPath, "pd.tso.binpath", options.PD.BinPath)
-		defaultStr(&options.PDTSO.ConfigPath, "pd.tso.config", options.PD.ConfigPath)
-		defaultInt(&options.PDScheduling.Num, "pd.scheduling", 1)
-		defaultStr(&options.PDScheduling.BinPath, "pd.scheduling.binpath", options.PD.BinPath)
-		defaultStr(&options.PDScheduling.ConfigPath, "pd.scheduling.config", options.PD.ConfigPath)
-		defaultInt(&options.PDRM.Num, "pd.rm", 1)
-		defaultStr(&options.PDRM.BinPath, "pd.rm.binpath", options.PD.BinPath)
-		defaultStr(&options.PDRM.ConfigPath, "pd.rm.config", options.PD.ConfigPath)
+		defaultInt(&options.PD.Num, "pd", 1)
+		defaultStr(&options.PD.BinPath, "pd.binpath", options.PD.BinPath)
+		defaultStr(&options.PD.ConfigPath, "pd.config", options.PD.ConfigPath)
+		defaultInt(&options.TSO.Num, "tso", 1)
+		defaultStr(&options.TSO.BinPath, "tso.binpath", options.PD.BinPath)
+		defaultStr(&options.TSO.ConfigPath, "tso.config", options.PD.ConfigPath)
+		defaultInt(&options.Scheduling.Num, "scheduling", 1)
+		defaultStr(&options.Scheduling.BinPath, "scheduling.binpath", options.PD.BinPath)
+		defaultStr(&options.Scheduling.ConfigPath, "scheduling.config", options.PD.ConfigPath)
 	default:
 		return errors.Errorf("Unknown --pd.mode %s", options.PDMode)
 	}
