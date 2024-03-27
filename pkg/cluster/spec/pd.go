@@ -254,6 +254,7 @@ func (i *PDInstance) InitConfig(
 		LogDir:             paths.Log,
 		InitialCluster:     strings.Join(initialCluster, ","),
 		NumaNode:           spec.NumaNode,
+		MSMode:             topo.GlobalOptions.PDMode == "ms",
 	}
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pd_%s_%d.sh", i.GetHost(), i.GetPort()))
@@ -378,6 +379,7 @@ func (i *PDInstance) ScaleConfig(
 		LogDir:             paths.Log,
 		InitialCluster:     strings.Join(initialCluster, ","),
 		NumaNode:           spec.NumaNode,
+		MSMode:             cluster.GlobalOptions.PDMode == "ms",
 	}
 
 	join := []string{}

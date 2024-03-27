@@ -156,6 +156,36 @@ scrape_configs:
 {{- range .PDAddrs}}
       - '{{.}}'
 {{- end}}
+  - job_name: "tso"
+    honor_labels: true # don't overwrite job & instance labels
+{{- if .TLSEnabled}}
+    scheme: https
+    tls_config:
+      insecure_skip_verify: false
+      ca_file: ../tls/ca.crt
+      cert_file: ../tls/prometheus.crt
+      key_file: ../tls/prometheus.pem
+{{- end}}
+    static_configs:
+    - targets:
+{{- range .TSOAddrs}}
+      - '{{.}}'
+{{- end}}
+  - job_name: "scheduling"
+    honor_labels: true # don't overwrite job & instance labels
+{{- if .TLSEnabled}}
+    scheme: https
+    tls_config:
+      insecure_skip_verify: false
+      ca_file: ../tls/ca.crt
+      cert_file: ../tls/prometheus.crt
+      key_file: ../tls/prometheus.pem
+{{- end}}
+    static_configs:
+    - targets:
+{{- range .SchedulingAddrs}}
+      - '{{.}}'
+{{- end}}
 {{- if .TiFlashStatusAddrs}}
   - job_name: "tiflash"
     honor_labels: true # don't overwrite job & instance labels

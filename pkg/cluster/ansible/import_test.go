@@ -124,6 +124,8 @@ server_configs:
         binlog.enable: true
     tikv: {}
     pd: {}
+    tso: {}
+    scheduling: {}
     tidb_dashboard: {}
     tiflash: {}
     tiproxy: {}

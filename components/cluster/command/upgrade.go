@@ -22,7 +22,7 @@ import (
 func newUpgradeCmd() *cobra.Command {
 	offlineMode := false
 	ignoreVersionCheck := false
-	var tidbVer, tikvVer, pdVer, tiflashVer, kvcdcVer, dashboardVer, cdcVer, alertmanagerVer, nodeExporterVer, blackboxExporterVer, tiproxyVer string
+	var tidbVer, tikvVer, pdVer, tsoVer, schedulingVer, tiflashVer, kvcdcVer, dashboardVer, cdcVer, alertmanagerVer, nodeExporterVer, blackboxExporterVer, tiproxyVer string
 
 	cmd := &cobra.Command{
 		Use:   "upgrade <cluster-name> <version>",
@@ -47,6 +47,8 @@ func newUpgradeCmd() *cobra.Command {
 				spec.ComponentTiDB:             tidbVer,
 				spec.ComponentTiKV:             tikvVer,
 				spec.ComponentPD:               pdVer,
+				spec.ComponentTSO:              tsoVer,
+				spec.ComponentScheduling:       schedulingVer,
 				spec.ComponentTiFlash:          tiflashVer,
 				spec.ComponentTiKVCDC:          kvcdcVer,
 				spec.ComponentCDC:              cdcVer,
@@ -76,7 +78,9 @@ func newUpgradeCmd() *cobra.Command {
 
 	// cmd.Flags().StringVar(&tidbVer, "tidb-version", "", "Fix the version of tidb and no longer follows the cluster version.")
 	cmd.Flags().StringVar(&tikvVer, "tikv-version", "", "Fix the version of tikv and no longer follows the cluster version.")
-	cmd.Flags().StringVar(&pdVer, "pd-version", "", "Fix the version of pv and no longer follows the cluster version.")
+	cmd.Flags().StringVar(&pdVer, "pd-version", "", "Fix the version of pd and no longer follows the cluster version.")
+	cmd.Flags().StringVar(&tsoVer, "tso-version", "", "Fix the version of tso and no longer follows the cluster version.")
+	cmd.Flags().StringVar(&schedulingVer, "scheduling-version", "", "Fix the version of scheduling and no longer follows the cluster version.")
 	cmd.Flags().StringVar(&tiflashVer, "tiflash-version", "", "Fix the version of tiflash and no longer follows the cluster version.")
 	cmd.Flags().StringVar(&dashboardVer, "tidb-dashboard-version", "", "Fix the version of tidb-dashboard and no longer follows the cluster version.")
 	cmd.Flags().StringVar(&cdcVer, "cdc-version", "", "Fix the version of cdc and no longer follows the cluster version.")

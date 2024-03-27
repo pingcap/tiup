@@ -101,6 +101,7 @@ type (
 		Arch            string               `yaml:"arch,omitempty"`
 		Custom          any                  `yaml:"custom,omitempty" validate:"custom:ignore"`
 		SystemdMode     SystemdMode          `yaml:"systemd_mode,omitempty" default:"system"`
+		PDMode          string               `yaml:"pd_mode,omitempty"`
 	}
 
 	// MonitoredOptions represents the monitored node configuration
@@ -121,6 +122,8 @@ type (
 		TiDB           map[string]any    `yaml:"tidb"`
 		TiKV           map[string]any    `yaml:"tikv"`
 		PD             map[string]any    `yaml:"pd"`
+		TSO            map[string]any    `yaml:"tso"`
+		Scheduling     map[string]any    `yaml:"scheduling"`
 		Dashboard      map[string]any    `yaml:"tidb_dashboard"`
 		TiFlash        map[string]any    `yaml:"tiflash"`
 		TiProxy        map[string]any    `yaml:"tiproxy"`
@@ -138,6 +141,8 @@ type (
 		TiKV         string `yaml:"tikv,omitempty"`
 		TiFlash      string `yaml:"tiflash,omitempty"`
 		PD           string `yaml:"pd,omitempty"`
+		TSO          string `yaml:"tso,omitempty"`
+		Scheduling   string `yaml:"scheduling,omitempty"`
 		Dashboard    string `yaml:"tidb_dashboard,omitempty"`
 		Pump         string `yaml:"pump,omitempty"`
 		Drainer      string `yaml:"drainer,omitempty"`
@@ -177,6 +182,8 @@ type (
 		TiFlashServers    []*TiFlashSpec       `yaml:"tiflash_servers"`
 		TiProxyServers    []*TiProxySpec       `yaml:"tiproxy_servers"`
 		PDServers         []*PDSpec            `yaml:"pd_servers"`
+		TSOServers        []*TSOSpec           `yaml:"tso_servers,omitempty"`
+		SchedulingServers []*SchedulingSpec    `yaml:"scheduling_servers,omitempty"`
 		DashboardServers  []*DashboardSpec     `yaml:"tidb_dashboard_servers,omitempty"`
 		PumpServers       []*PumpSpec          `yaml:"pump_servers,omitempty"`
 		Drainers          []*DrainerSpec       `yaml:"drainer_servers,omitempty"`
@@ -561,6 +568,8 @@ func (s *Specification) Merge(that Topology) Topology {
 		DashboardServers:  append(s.DashboardServers, spec.DashboardServers...),
 		TiFlashServers:    append(s.TiFlashServers, spec.TiFlashServers...),
 		TiProxyServers:    append(s.TiProxyServers, spec.TiProxyServers...),
+		TSOServers:        append(s.TSOServers, spec.TSOServers...),
+		SchedulingServers: append(s.SchedulingServers, spec.SchedulingServers...),
 		PumpServers:       append(s.PumpServers, spec.PumpServers...),
 		Drainers:          append(s.Drainers, spec.Drainers...),
 		CDCServers:        append(s.CDCServers, spec.CDCServers...),
@@ -579,6 +588,8 @@ func (v *ComponentVersions) Merge(that ComponentVersions) ComponentVersions {
 		TiDB:         utils.Ternary(that.TiDB != "", that.TiDB, v.TiDB).(string),
 		TiKV:         utils.Ternary(that.TiKV != "", that.TiKV, v.TiKV).(string),
 		PD:           utils.Ternary(that.PD != "", that.PD, v.PD).(string),
+		TSO:          utils.Ternary(that.TSO != "", that.TSO, v.TSO).(string),
+		Scheduling:   utils.Ternary(that.Scheduling != "", that.Scheduling, v.Scheduling).(string),
 		Dashboard:    utils.Ternary(that.Dashboard != "", that.Dashboard, v.Dashboard).(string),
 		TiFlash:      utils.Ternary(that.TiFlash != "", that.TiFlash, v.TiFlash).(string),
 		TiProxy:      utils.Ternary(that.TiProxy != "", that.TiProxy, v.TiProxy).(string),
@@ -789,8 +800,10 @@ func (s *Specification) ComponentsByStopOrder() (comps []Component) {
 
 // ComponentsByStartOrder return component in the order need to start.
 func (s *Specification) ComponentsByStartOrder() (comps []Component) {
-	// "pd", "dashboard", "tiproxy", "tikv", "pump", "tidb", "tiflash", "drainer", "cdc", "tikv-cdc", "prometheus", "grafana", "alertmanager"
+	// "pd", "tso", "scheduling", "dashboard", "tiproxy", "tikv", "pump", "tidb", "tiflash", "drainer", "cdc", "tikv-cdc", "prometheus", "grafana", "alertmanager"
 	comps = append(comps, &PDComponent{s})
+	comps = append(comps, &TSOComponent{s})
+	comps = append(comps, &SchedulingComponent{s})
 	comps = append(comps, &DashboardComponent{s})
 	comps = append(comps, &TiProxyComponent{s})
 	comps = append(comps, &TiKVComponent{s})
@@ -813,12 +826,14 @@ func (s *Specification) ComponentsByUpdateOrder(curVer string) (comps []Componen
 	// Ref: https://github.com/pingcap/tiup/issues/2166
 	cdcUpgradeBeforePDTiKVTiDB := tidbver.TiCDCUpgradeBeforePDTiKVTiDB(curVer)
 
-	// "tiflash", <"cdc">, "pd", "dashboard", "tiproxy", "tikv", "pump", "tidb", "drainer", <"cdc>", "prometheus", "grafana", "alertmanager"
+	// "tiflash", <"cdc">, "pd", "tso", "scheduling", "dashboard", "tiproxy", "tikv", "pump", "tidb", "drainer", <"cdc>", "prometheus", "grafana", "alertmanager"
 	comps = append(comps, &TiFlashComponent{s})
 	if cdcUpgradeBeforePDTiKVTiDB {
 		comps = append(comps, &CDCComponent{s})
 	}
 	comps = append(comps, &PDComponent{s})
+	comps = append(comps, &TSOComponent{s})
+	comps = append(comps, &SchedulingComponent{s})
 	comps = append(comps, &DashboardComponent{s})
 	comps = append(comps, &TiProxyComponent{s})
 	comps = append(comps, &TiKVComponent{s})
