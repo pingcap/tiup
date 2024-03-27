@@ -26,6 +26,11 @@ func TiDBSupportSecureBoot(version string) bool {
 	return semver.Compare(version, "v5.3.0") >= 0 || strings.Contains(version, "nightly")
 }
 
+// TiDBSupportTiproxy return if given version of TiDB support tiproxy
+func TiDBSupportTiproxy(version string) bool {
+	return semver.Compare(version, "v6.4.0") >= 0 || strings.Contains(version, "nightly")
+}
+
 // TiDBSupportUpgradeAPI return if given version of TiDB support upgrade API
 func TiDBSupportUpgradeAPI(version string) bool {
 	return semver.Compare(version, "v7.4.0") >= 0 ||

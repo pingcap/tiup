@@ -740,7 +740,7 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 			p.rms = append(p.rms, inst)
 		}
 	case spec.ComponentTiDB:
-		inst := instance.NewTiDBInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, p.enableBinlog(), p.bootOptions.Mode == "tidb-cse")
+		inst := instance.NewTiDBInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, dataDir, p.enableBinlog(), p.bootOptions.Mode == "tidb-cse")
 		ins = inst
 		p.tidbs = append(p.tidbs, inst)
 	case spec.ComponentTiKV:
@@ -752,6 +752,9 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 		ins = inst
 		p.tiflashs = append(p.tiflashs, inst)
 	case spec.ComponentTiProxy:
+		if err := instance.GenTiProxySessionCerts(dataDir); err != nil {
+			return nil, err
+		}
 		inst := instance.NewTiProxy(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds)
 		ins = inst
 		p.tiproxys = append(p.tiproxys, inst)
@@ -1327,11 +1330,11 @@ func (p *Playground) renderSDFile() error {
 
 	_ = p.WalkInstances(func(cid string, inst instance.Instance) error {
 		v := inst.MetricAddr()
-		t, ok := cid2targets[cid]
+		t, ok := cid2targets[inst.Component()]
 		if ok {
 			v.Targets = append(v.Targets, t.Targets...)
 		}
-		cid2targets[cid] = v
+		cid2targets[inst.Component()] = v
 		return nil
 	})
 
