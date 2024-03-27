@@ -46,10 +46,11 @@ type PDInstance struct {
 	joinEndpoints []*PDInstance
 	pds           []*PDInstance
 	Process
+	isCSEMode bool
 }
 
 // NewPDInstance return a PDInstance
-func NewPDInstance(role PDRole, binPath, dir, host, configPath string, id int, pds []*PDInstance, port int) *PDInstance {
+func NewPDInstance(role PDRole, binPath, dir, host, configPath string, id int, pds []*PDInstance, port int, isCSEMode bool) *PDInstance {
 	if port <= 0 {
 		port = 2379
 	}
@@ -63,8 +64,9 @@ func NewPDInstance(role PDRole, binPath, dir, host, configPath string, id int, p
 			StatusPort: utils.MustGetFreePort(host, port),
 			ConfigPath: configPath,
 		},
-		Role: role,
-		pds:  pds,
+		Role:      role,
+		pds:       pds,
+		isCSEMode: isCSEMode,
 	}
 }
 
@@ -112,8 +114,8 @@ func (inst *PDInstance) Start(ctx context.Context, version utils.Version) error 
 			fmt.Sprintf("--client-urls=http://%s", utils.JoinHostPort(inst.Host, inst.StatusPort)),
 			fmt.Sprintf("--advertise-client-urls=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.StatusPort)),
 			fmt.Sprintf("--log-file=%s", inst.LogFile()),
+			fmt.Sprintf("--config=%s", configPath),
 		}...)
-
 		switch {
 		case len(inst.initEndpoints) > 0:
 			endpoints := make([]string, 0)
@@ -140,9 +142,7 @@ func (inst *PDInstance) Start(ctx context.Context, version utils.Version) error 
 			fmt.Sprintf("--advertise-listen-addr=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.StatusPort)),
 			fmt.Sprintf("--backend-endpoints=%s", strings.Join(endpoints, ",")),
 			fmt.Sprintf("--log-file=%s", inst.LogFile()),
-		}
-		if inst.ConfigPath != "" {
-			args = append(args, fmt.Sprintf("--config=%s", inst.ConfigPath))
+			fmt.Sprintf("--config=%s", configPath),
 		}
 	case PDRoleScheduling:
 		endpoints := pdEndpoints(inst.pds, true)
@@ -153,9 +153,7 @@ func (inst *PDInstance) Start(ctx context.Context, version utils.Version) error 
 			fmt.Sprintf("--advertise-listen-addr=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.StatusPort)),
 			fmt.Sprintf("--backend-endpoints=%s", strings.Join(endpoints, ",")),
 			fmt.Sprintf("--log-file=%s", inst.LogFile()),
-		}
-		if inst.ConfigPath != "" {
-			args = append(args, fmt.Sprintf("--config=%s", inst.ConfigPath))
+			fmt.Sprintf("--config=%s", configPath),
 		}
 	}
 

@@ -99,12 +99,6 @@ func TiFlashPlaygroundNewStartMode(version string) bool {
 	return semver.Compare(version, "v7.1.0") >= 0 || strings.Contains(version, "nightly")
 }
 
-// TiDBSupportDisagg returns true if the given version of TiDB and TiFlash supports
-// disaggregated mode.
-func TiDBSupportDisagg(version string) bool {
-	return semver.Compare(version, "v7.0.0") >= 0 || strings.Contains(version, "nightly")
-}
-
 // PDSupportMicroServices returns true if the given version of PD supports micro services.
 func PDSupportMicroServices(version string) bool {
 	return semver.Compare(version, "v7.3.0") >= 0 || strings.Contains(version, "nightly")
