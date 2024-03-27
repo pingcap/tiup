@@ -231,6 +231,7 @@ func (i *TiProxyInstance) checkConfig(
 	}
 	cfg["proxy.pd-addrs"] = strings.Join(pds, ",")
 	cfg["proxy.addr"] = utils.JoinHostPort(i.GetListenHost(), i.GetPort())
+	cfg["proxy.advertise-addr"] = spec.Host
 	cfg["api.addr"] = utils.JoinHostPort(i.GetListenHost(), spec.StatusPort)
 	cfg["log.log-file.filename"] = filepath.Join(paths.Log, "tiproxy.log")
 
