@@ -125,6 +125,7 @@ func (c *TiProxy) Start(ctx context.Context, version utils.Version) error {
 	if err := enc.Encode(spec.MergeConfig(userConfig, map[string]any{
 		"proxy.pd-addrs":        strings.Join(endpoints, ","),
 		"proxy.addr":            utils.JoinHostPort(c.Host, c.Port),
+		"proxy.advertise-addr":  AdvertiseHost(c.Host),
 		"api.addr":              utils.JoinHostPort(c.Host, c.StatusPort),
 		"log.log-file.filename": c.LogFile(),
 	})); err != nil {
