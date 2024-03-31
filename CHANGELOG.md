@@ -1,5 +1,32 @@
 TiUP Changelog
 
+## [1.15.0] 2023-04-01
+
+### New Features
+
+- Support no-sudo mode in `tiup-cluster` (#2350 #2373, @Yujie-Xie)
+- Add tidb-cse mode and remove tidb-disagg mode in `tiup-playground` (#2386, @breezewish)
+
+### Fixes
+
+- Fix can not set runtime config in config file specific by --tiflash.config in `tiup-playground` (#2346 #2383, @Lloyd-Pottiger)
+- Fix not sanitize tiproxy component config when scale in in `tiup-playground` (#2365, @xhebox)
+- Fix timeout when checking component upgrade in `tiup` (#2379, @KanShiori)
+- Fix pdms grafana display in `tiup-playground` (#2382, @HuSharp)
+- Fix not update prometheus config when scale in in `tiup-cluster` (#2387, @Yujie-Xie)
+
+### Improvements
+
+- Set the TiFlash logger level to DEBUG in `tiup-playground` (#2346, @Lloyd-Pottiger)
+- Add integration tests for tiproxy in `tiup-cluster` (#2371, @xhebox)
+- Set tiproxy addr without schema in `tiup-playground` (#2368, @xhebox)
+- Only pull nightly from cluster version in `tiup-playground` (#2364, @xhebox)
+- Skip tiproxy download & copy when upgrade in `tiup-cluster` (#2366, @xhebox)
+- Auto set session certs if there is a tiproxy in `tiup-cluster` (#2374, @xhebox)
+- Auto generate self-signed certs for TiProxy session migration in `tiup-playground` (#2372, @xhebox)
+- Remove resource manager in `tiup-playground` (#2381, @rleungx)
+- Add config advertise-addr to tiproxy spec in `tiup-cluster` and `tiup-playground` (#2392, @djshow832)
+
 ## [1.14.1] 2024-01-12
 
 ### Fixes
