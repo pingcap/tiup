@@ -139,6 +139,7 @@ var (
 	pdStoresURI          = "pd/api/v1/stores"
 	pdStoresLimitURI     = "pd/api/v1/stores/limit"
 	pdRegionsCheckURI    = "pd/api/v1/regions/check"
+	pdMSHealthPrefix     = "api/v1/health"
 )
 
 func tryURLs(endpoints []string, f func(endpoint string) ([]byte, error)) ([]byte, error) {
@@ -193,6 +194,33 @@ func (pc *PDClient) CheckHealth() error {
 
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+// CheckTSOHealth checks the health of TSO service
+func (pc *PDClient) CheckTSOHealth(retryOpt *utils.RetryOption) error {
+	servicePrefix := fmt.Sprintf("tso/%s", pdMSHealthPrefix)
+	endpoints := pc.getEndpoints(servicePrefix)
+
+	if err := utils.Retry(func() error {
+		var err error
+		for _, endpoint := range endpoints {
+			_, err = pc.httpClient.Get(pc.ctx, endpoint)
+			if err != nil {
+				return err
+			}
+		}
+		if err == nil {
+			return nil
+		}
+
+		// return error by default, to make the retry work
+		pc.l().Debugf("Still waiting for the PD Micro Service's TSO health")
+		return perrs.New("Still waiting for the PD Micro Service's TSO health")
+	}, *retryOpt); err != nil {
+		return fmt.Errorf("error check PD Micro Service's TSO health, %v", err)
 	}
 
 	return nil

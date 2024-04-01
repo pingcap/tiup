@@ -735,7 +735,7 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 		ins = inst
 		p.tidbs = append(p.tidbs, inst)
 	case spec.ComponentTiKV:
-		inst := instance.NewTiKVInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, p.bootOptions.Mode == "tidb-cse", p.bootOptions.CSEOpts)
+		inst := instance.NewTiKVInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, p.tsos, p.bootOptions.Mode == "tidb-cse", p.bootOptions.CSEOpts, p.bootOptions.PDMode == "ms")
 		ins = inst
 		p.tikvs = append(p.tikvs, inst)
 	case spec.ComponentTiFlash:
