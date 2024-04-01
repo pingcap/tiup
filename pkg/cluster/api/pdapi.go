@@ -139,7 +139,7 @@ var (
 	pdStoresURI          = "pd/api/v1/stores"
 	pdStoresLimitURI     = "pd/api/v1/stores/limit"
 	pdRegionsCheckURI    = "pd/api/v1/regions/check"
-	pdMSHealthPrefix     = "api/v1/health"
+	tsoHealthPrefix      = "tso/api/v1/health"
 )
 
 func tryURLs(endpoints []string, f func(endpoint string) ([]byte, error)) ([]byte, error) {
@@ -199,9 +199,9 @@ func (pc *PDClient) CheckHealth() error {
 	return nil
 }
 
-// CheckTSOHealth checks the health of TSO service
+// CheckTSOHealth checks the health of TSO service(which is a Micro Service component of PD)
 func (pc *PDClient) CheckTSOHealth(retryOpt *utils.RetryOption) error {
-	servicePrefix := fmt.Sprintf("tso/%s", pdMSHealthPrefix)
+	servicePrefix := fmt.Sprintf("tso/%s", tsoHealthPrefix)
 	endpoints := pc.getEndpoints(servicePrefix)
 
 	if err := utils.Retry(func() error {
