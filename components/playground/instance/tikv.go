@@ -84,10 +84,12 @@ func (inst *TiKVInstance) Start(ctx context.Context, version utils.Version) erro
 		pdcli := api.NewPDClient(ctx,
 			tsoEnds, 10*time.Second, nil,
 		)
-		pdcli.CheckTSOHealth(&utils.RetryOption{
+		if err := pdcli.CheckTSOHealth(&utils.RetryOption{
 			Delay:   time.Second * 5,
 			Timeout: time.Second * 300,
-		})
+		}); err != nil {
+			return err
+		}
 	}
 
 	endpoints := pdEndpoints(inst.pds, true)
