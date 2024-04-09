@@ -63,7 +63,6 @@ type Playground struct {
 	pds              []*instance.PDInstance
 	tsos             []*instance.PDInstance
 	schedulings      []*instance.PDInstance
-	rms              []*instance.PDInstance
 	tikvs            []*instance.TiKVInstance
 	tidbs            []*instance.TiDBInstance
 	tiflashs         []*instance.TiFlashInstance
@@ -446,7 +445,7 @@ func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) 
 	var err error
 	boundVersion := p.bindVersion(inst.Component(), p.bootOptions.Version)
 	component := inst.Component()
-	if strings.HasPrefix(component, "pd") {
+	if component == "tso" || component == "scheduling" {
 		component = string(instance.PDRoleNormal)
 	}
 	version, err = environment.GlobalEnv().V1Repository().ResolveComponentVersion(component, boundVersion)
@@ -487,7 +486,7 @@ func (p *Playground) handleScaleOut(w io.Writer, cmd *Command) error {
 	if err != nil {
 		return err
 	}
-	// TODO: Support scale-out in disaggregated mode
+	// TODO: Support scale-out in CSE mode
 	inst, err := p.addInstance(cmd.ComponentID, instance.PDRoleNormal, instance.TiFlashRoleNormal, cmd.Config)
 	if err != nil {
 		return err
@@ -617,12 +616,6 @@ func (p *Playground) WalkInstances(fn func(componentID string, ins instance.Inst
 			return err
 		}
 	}
-	for _, ins := range p.rms {
-		err := fn(spec.ComponentPD, ins)
-		if err != nil {
-			return err
-		}
-	}
 	for _, ins := range p.tikvs {
 		err := fn(spec.ComponentTiKV, ins)
 		if err != nil {
@@ -705,9 +698,9 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 
 	id := p.allocID(componentID)
 	dir := filepath.Join(dataDir, fmt.Sprintf("%s-%d", componentID, id))
-	if componentID == string(instance.PDRoleNormal) && pdRole != instance.PDRoleNormal {
-		id = p.allocID(fmt.Sprintf("%s-%s", componentID, pdRole))
-		dir = filepath.Join(dataDir, fmt.Sprintf("%s-%s-%d", componentID, pdRole, id))
+	if componentID == string(instance.PDRoleNormal) && (pdRole != instance.PDRoleNormal && pdRole != instance.PDRoleAPI) {
+		id = p.allocID(string(pdRole))
+		dir = filepath.Join(dataDir, fmt.Sprintf("%s-%d", pdRole, id))
 	}
 	if err = utils.MkdirAll(dir, 0755); err != nil {
 		return nil, err
@@ -720,7 +713,7 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 
 	switch componentID {
 	case spec.ComponentPD:
-		inst := instance.NewPDInstance(pdRole, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, cfg.Port)
+		inst := instance.NewPDInstance(pdRole, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, cfg.Port, p.bootOptions.Mode == "tidb-cse")
 		ins = inst
 		if pdRole == instance.PDRoleNormal || pdRole == instance.PDRoleAPI {
 			if p.booted {
@@ -736,22 +729,23 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 			p.tsos = append(p.tsos, inst)
 		} else if pdRole == instance.PDRoleScheduling {
 			p.schedulings = append(p.schedulings, inst)
-		} else if pdRole == instance.PDRoleResourceManager {
-			p.rms = append(p.rms, inst)
 		}
 	case spec.ComponentTiDB:
-		inst := instance.NewTiDBInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, p.enableBinlog(), p.bootOptions.Mode == "tidb-disagg")
+		inst := instance.NewTiDBInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, dataDir, p.enableBinlog(), p.bootOptions.Mode == "tidb-cse")
 		ins = inst
 		p.tidbs = append(p.tidbs, inst)
 	case spec.ComponentTiKV:
-		inst := instance.NewTiKVInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds)
+		inst := instance.NewTiKVInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, p.bootOptions.Mode == "tidb-cse", p.bootOptions.CSEOpts)
 		ins = inst
 		p.tikvs = append(p.tikvs, inst)
 	case spec.ComponentTiFlash:
-		inst := instance.NewTiFlashInstance(tiflashRole, p.bootOptions.DisaggOpts, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, p.tidbs, cfg.Version)
+		inst := instance.NewTiFlashInstance(tiflashRole, p.bootOptions.CSEOpts, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, p.tidbs, cfg.Version)
 		ins = inst
 		p.tiflashs = append(p.tiflashs, inst)
 	case spec.ComponentTiProxy:
+		if err := instance.GenTiProxySessionCerts(dataDir); err != nil {
+			return nil, err
+		}
 		inst := instance.NewTiProxy(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds)
 		ins = inst
 		p.tiproxys = append(p.tiproxys, inst)
@@ -897,20 +891,18 @@ func (p *Playground) bindVersion(comp string, version string) (bindVersion strin
 	default:
 	}
 	if bindVersion == "" {
-		if version == "nightly" {
-			bindVersion = version
-		}
+		bindVersion = version
 	}
 	return
 }
 
+//revive:disable:cognitive-complexity
+//revive:disable:error-strings
 func (p *Playground) bootCluster(ctx context.Context, env *environment.Environment, options *BootOptions) error {
 	for _, cfg := range []*instance.Config{
 		&options.PD,
-		&options.PDAPI,
-		&options.PDTSO,
-		&options.PDScheduling,
-		&options.PDRM,
+		&options.TSO,
+		&options.Scheduling,
 		&options.TiProxy,
 		&options.TiDB,
 		&options.TiKV,
@@ -967,37 +959,47 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		instances = append(instances,
 			InstancePair{spec.ComponentTiFlash, instance.PDRoleNormal, instance.TiFlashRoleNormal, options.TiFlash},
 		)
-	} else if options.Mode == "tidb-disagg" {
-		if !tidbver.TiDBSupportDisagg(options.Version) {
-			return fmt.Errorf("TiDB cluster doesn't support disaggregated mode in version %s", options.Version)
-		}
+	} else if options.Mode == "tidb-cse" {
 		if !tidbver.TiFlashPlaygroundNewStartMode(options.Version) {
 			// For simplicity, currently we only implemented disagg mode when TiFlash can run without config.
-			return fmt.Errorf("TiUP playground only supports disaggregated mode for TiDB cluster >= v7.1.0 (or nightly)")
+			return fmt.Errorf("TiUP playground only supports CSE mode for TiDB cluster >= v7.1.0 (or nightly)")
+		}
+
+		if !strings.HasPrefix(options.CSEOpts.S3Endpoint, "https://") && !strings.HasPrefix(options.CSEOpts.S3Endpoint, "http://") {
+			return fmt.Errorf("CSE mode requires S3 endpoint to start with http:// or https://")
+		}
+
+		isSecure := strings.HasPrefix(options.CSEOpts.S3Endpoint, "https://")
+		rawEndpoint := strings.TrimPrefix(options.CSEOpts.S3Endpoint, "https://")
+		rawEndpoint = strings.TrimPrefix(rawEndpoint, "http://")
+
+		// Currently we always assign region=local. Other regions are not supported.
+		if strings.Contains(rawEndpoint, "amazonaws.com") {
+			return fmt.Errorf("Currently TiUP playground CSE mode only supports local S3 (like minio). S3 on AWS Regions are not supported. Contributions are welcome!")
 		}
 
 		// Preflight check whether specified object storage is available.
-		s3Client, err := minio.New(options.DisaggOpts.S3Endpoint, &minio.Options{
-			Creds:  credentials.NewStaticV4(options.DisaggOpts.AccessKey, options.DisaggOpts.SecretKey, ""),
-			Secure: false,
+		s3Client, err := minio.New(rawEndpoint, &minio.Options{
+			Creds:  credentials.NewStaticV4(options.CSEOpts.AccessKey, options.CSEOpts.SecretKey, ""),
+			Secure: isSecure,
 		})
 		if err != nil {
-			return errors.Annotate(err, "Disaggregate mode preflight check failed")
+			return errors.Annotate(err, "CSE mode preflight check failed")
 		}
 
 		ctxCheck, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
-		bucketExists, err := s3Client.BucketExists(ctxCheck, options.DisaggOpts.Bucket)
+		bucketExists, err := s3Client.BucketExists(ctxCheck, options.CSEOpts.Bucket)
 		if err != nil {
-			return errors.Annotate(err, "Disaggregate mode preflight check failed")
+			return errors.Annotate(err, "CSE mode preflight check failed")
 		}
 
 		if !bucketExists {
 			// Try to create bucket.
-			err := s3Client.MakeBucket(ctxCheck, options.DisaggOpts.Bucket, minio.MakeBucketOptions{})
+			err := s3Client.MakeBucket(ctxCheck, options.CSEOpts.Bucket, minio.MakeBucketOptions{})
 			if err != nil {
-				return fmt.Errorf("Disaggregate mode preflight check failed: Bucket %s doesn't exist", options.DisaggOpts.Bucket)
+				return fmt.Errorf("CSE mode preflight check failed: Bucket %s doesn't exist", options.CSEOpts.Bucket)
 			}
 		}
 
@@ -1017,10 +1019,9 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			return fmt.Errorf("PD cluster doesn't support microservices mode in version %s", options.Version)
 		}
 		instances = append([]InstancePair{
-			{spec.ComponentPD, instance.PDRoleAPI, instance.TiFlashRoleNormal, options.PDAPI},
-			{spec.ComponentPD, instance.PDRoleTSO, instance.TiFlashRoleNormal, options.PDTSO},
-			{spec.ComponentPD, instance.PDRoleScheduling, instance.TiFlashRoleNormal, options.PDScheduling},
-			{spec.ComponentPD, instance.PDRoleResourceManager, instance.TiFlashRoleNormal, options.PDRM}},
+			{spec.ComponentPD, instance.PDRoleAPI, instance.TiFlashRoleNormal, options.PD},
+			{spec.ComponentPD, instance.PDRoleTSO, instance.TiFlashRoleNormal, options.TSO},
+			{spec.ComponentPD, instance.PDRoleScheduling, instance.TiFlashRoleNormal, options.Scheduling}},
 			instances...,
 		)
 	}
@@ -1127,7 +1128,6 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			var (
 				tsoAddr        []string
 				apiAddr        []string
-				rmAddr         []string
 				schedulingAddr []string
 			)
 			for _, api := range p.pds {
@@ -1139,9 +1139,6 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			for _, scheduling := range p.schedulings {
 				schedulingAddr = append(schedulingAddr, scheduling.Addr())
 			}
-			for _, rm := range p.rms {
-				rmAddr = append(rmAddr, rm.Addr())
-			}
 
 			fmt.Printf("PD API Endpoints:   ")
 			colorCmd.Printf("%s\n", strings.Join(apiAddr, ","))
@@ -1149,8 +1146,6 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			colorCmd.Printf("%s\n", strings.Join(tsoAddr, ","))
 			fmt.Printf("PD Scheduling Endpoints:   ")
 			colorCmd.Printf("%s\n", strings.Join(schedulingAddr, ","))
-			fmt.Printf("PD Resource Manager Endpoints:   ")
-			colorCmd.Printf("%s\n", strings.Join(rmAddr, ","))
 		} else {
 			var pdAddrs []string
 			for _, pd := range p.pds {
@@ -1293,11 +1288,6 @@ func (p *Playground) terminate(sig syscall.Signal) {
 			kill(inst.Component(), inst.Pid(), inst.Wait)
 		}
 	}
-	for _, inst := range p.rms {
-		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
-			kill(inst.Component(), inst.Pid(), inst.Wait)
-		}
-	}
 	for _, inst := range p.tiproxys {
 		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
 			kill(inst.Component(), inst.Pid(), inst.Wait)
@@ -1315,11 +1305,11 @@ func (p *Playground) renderSDFile() error {
 
 	_ = p.WalkInstances(func(cid string, inst instance.Instance) error {
 		v := inst.MetricAddr()
-		t, ok := cid2targets[cid]
+		t, ok := cid2targets[inst.Component()]
 		if ok {
 			v.Targets = append(v.Targets, t.Targets...)
 		}
-		cid2targets[cid] = v
+		cid2targets[inst.Component()] = v
 		return nil
 	})
 

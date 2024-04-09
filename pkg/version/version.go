@@ -21,7 +21,7 @@ var (
 	// TiUPVerMajor is the major version of TiUP
 	TiUPVerMajor = 1
 	// TiUPVerMinor is the minor version of TiUP
-	TiUPVerMinor = 14
+	TiUPVerMinor = 15
 	// TiUPVerPatch is the patch version of TiUP
 	TiUPVerPatch = 0
 	// TiUPVerName is an alternative name of the version

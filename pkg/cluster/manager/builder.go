@@ -15,7 +15,9 @@ package manager
 
 import (
 	"context"
+	"encoding/pem"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -835,6 +837,35 @@ func buildTLSTask(
 	return builder.Build(), nil
 }
 
+func genTiProxySessionCerts(dir string) error {
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+	ca, err := crypto.NewCA("tiproxy")
+	if err != nil {
+		return err
+	}
+	privKey, err := crypto.NewKeyPair(crypto.KeyTypeRSA, crypto.KeySchemeRSASSAPSSSHA256)
+	if err != nil {
+		return err
+	}
+	csr, err := privKey.CSR("tiproxy", "tiproxy", nil, nil)
+	if err != nil {
+		return err
+	}
+	cert, err := ca.Sign(csr)
+	if err != nil {
+		return err
+	}
+	if err := utils.SaveFileWithBackup(filepath.Join(dir, "tiproxy-session.key"), privKey.Pem(), ""); err != nil {
+		return err
+	}
+	return utils.SaveFileWithBackup(filepath.Join(dir, "tiproxy-session.crt"), pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: cert,
+	}), "")
+}
+
 // buildCertificateTasks generates certificate for instance and transfers it to the server
 func buildCertificateTasks(
 	m *Manager,
@@ -848,37 +879,62 @@ func buildCertificateTasks(
 		certificateTasks []*task.StepDisplay // tasks which are used to copy certificate to remote host
 	)
 
-	if topo.BaseTopo().GlobalOptions.TLSEnabled {
-		// copy certificate to remote host
-		topo.IterInstance(func(inst spec.Instance) {
-			deployDir := spec.Abs(base.User, inst.DeployDir())
-			tlsDir := filepath.Join(deployDir, spec.TLSCertKeyDir)
+	// check if there is tiproxy
+	// if there is tiproxy, whether or not TLS, we must issue a self-signed cert
+	hasTiProxy := false
+	topo.IterInstance(func(inst spec.Instance) {
+		if inst.ComponentName() == spec.ComponentTiProxy {
+			hasTiProxy = true
+		}
+	})
+	if hasTiProxy {
+		if err := genTiProxySessionCerts(m.specManager.Path(name, spec.TempConfigPath)); err != nil {
+			return certificateTasks, err
+		}
+	}
 
+	// copy certificate to remote host
+	topo.IterInstance(func(inst spec.Instance) {
+		deployDir := spec.Abs(base.User, inst.DeployDir())
+		tlsDir := filepath.Join(deployDir, spec.TLSCertKeyDir)
+
+		needSessionCert := hasTiProxy && inst.ComponentName() == spec.ComponentTiDB
+		if needSessionCert || topo.BaseTopo().GlobalOptions.TLSEnabled {
 			tb := task.NewSimpleUerSSH(m.logger, inst.GetManageHost(), inst.GetSSHPort(), base.User, gOpt, p, topo.BaseTopo().GlobalOptions.SSHType).
 				Mkdir(base.User, inst.GetManageHost(), topo.BaseTopo().GlobalOptions.SystemdMode != spec.UserMode, deployDir, tlsDir)
 
-			ca, err := crypto.ReadCA(
-				name,
-				m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSCACert),
-				m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSCAKey),
-			)
-			if err != nil {
-				iterErr = err
-				return
+			if needSessionCert {
+				tb = tb.
+					CopyFile(filepath.Join(m.specManager.Path(name, spec.TempConfigPath), "tiproxy-session.key"), filepath.Join(deployDir, spec.TLSCertKeyDir, "tiproxy-session.key"), inst.GetHost(), false, 0, false).
+					CopyFile(filepath.Join(m.specManager.Path(name, spec.TempConfigPath), "tiproxy-session.crt"), filepath.Join(deployDir, spec.TLSCertKeyDir, "tiproxy-session.crt"), inst.GetHost(), false, 0, false)
 			}
-			t := tb.TLSCert(
-				inst.GetHost(),
-				inst.ComponentName(),
-				inst.Role(),
-				inst.GetMainPort(),
-				ca,
-				meta.DirPaths{
-					Deploy: deployDir,
-					Cache:  m.specManager.Path(name, spec.TempConfigPath),
-				}).
-				BuildAsStep(fmt.Sprintf("  - Generate certificate %s -> %s", inst.ComponentName(), inst.ID()))
+
+			if topo.BaseTopo().GlobalOptions.TLSEnabled {
+				ca, err := crypto.ReadCA(
+					name,
+					m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSCACert),
+					m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSCAKey),
+				)
+				if err != nil {
+					iterErr = err
+					return
+				}
+				tb = tb.TLSCert(
+					inst.GetHost(),
+					inst.ComponentName(),
+					inst.Role(),
+					inst.GetMainPort(),
+					ca,
+					meta.DirPaths{
+						Deploy: deployDir,
+						Cache:  m.specManager.Path(name, spec.TempConfigPath),
+					})
+			}
+
+			t := tb.BuildAsStep(fmt.Sprintf("  - Generate certificate %s -> %s", inst.ComponentName(), inst.ID()))
 			certificateTasks = append(certificateTasks, t)
-		})
-	}
+		}
+	})
+
 	return certificateTasks, iterErr
 }
