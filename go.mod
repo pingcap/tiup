@@ -27,7 +27,6 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
 	github.com/jeremywohl/flatten v1.0.1
 	github.com/joomcode/errorx v1.1.0
-	github.com/juju/ansiterm v1.0.0
 	github.com/mattn/go-runewidth v0.0.14
 	github.com/minio/minio-go/v7 v7.0.52
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db
@@ -82,6 +81,7 @@ require (
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
+	github.com/juju/ansiterm v1.0.0 // indirect
 	github.com/klauspost/compress v1.16.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
 	github.com/kr/pretty v0.3.1 // indirect

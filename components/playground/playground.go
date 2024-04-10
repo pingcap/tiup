@@ -30,9 +30,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/AstroProfundis/tabby"
 	"github.com/fatih/color"
-	"github.com/juju/ansiterm"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/pingcap/errors"
@@ -107,19 +105,11 @@ func (p *Playground) allocID(componentID string) int {
 }
 
 func (p *Playground) handleDisplay(r io.Writer) (err error) {
-	w := ansiterm.NewTabWriter(r, 0, 0, 2, ' ', 0)
-	t := tabby.NewCustom(w)
-
 	// TODO add more info.
-	header := []any{"Pid", "Role", "Uptime"}
-	t.AddHeader(header...)
+	td := utils.NewTableDisplayer(r, []string{"Pid", "Role", "Uptime"})
 
 	err = p.WalkInstances(func(componentID string, ins instance.Instance) error {
-		row := make([]any, len(header))
-		row[0] = strconv.Itoa(ins.Pid())
-		row[1] = componentID
-		row[2] = ins.Uptime()
-		t.AddLine(row...)
+		td.AddRow(strconv.Itoa(ins.Pid()), componentID, ins.Uptime())
 		return nil
 	})
 
@@ -127,7 +117,7 @@ func (p *Playground) handleDisplay(r io.Writer) (err error) {
 		return err
 	}
 
-	t.Print()
+	td.Display()
 	return nil
 }
 
