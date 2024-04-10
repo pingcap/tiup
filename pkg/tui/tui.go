@@ -39,7 +39,12 @@ func PrintTable(rows [][]string, header bool) {
 	t := table.NewWriter()
 	t.SetOutputMirror(os.Stdout)
 	if header {
-		addRow(t, rows[0], header)
+		addRow(t, rows[0], true)
+		border := make([]string, len(rows[0]))
+		for i := range border {
+			border[i] = strings.Repeat("-", len(rows[0][i]))
+		}
+		addRow(t, border, false)
 		rows = rows[1:]
 	}
 	for _, row := range rows {
@@ -70,8 +75,6 @@ func PrintTable(rows [][]string, header bool) {
 			Header: text.FormatDefault,
 		},
 		Options: table.Options{
-			DrawBorder:      false,
-			SeparateHeader:  true,
 			SeparateColumns: true,
 		},
 	})
