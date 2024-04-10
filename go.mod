@@ -4,6 +4,8 @@ go 1.21
 
 replace gopkg.in/yaml.v2 => github.com/july2993/yaml v0.0.0-20200423062752-adcfa5abe2ed
 
+replace github.com/jedib0t/go-pretty/v6 => github.com/nexustar/go-pretty/v6 v6.5.8-tiup
+
 require (
 	github.com/AstroProfundis/sysinfo v0.0.0-20220902033416-231991f6df3c
 	github.com/BurntSushi/toml v1.2.1
