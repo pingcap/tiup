@@ -20,7 +20,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/AstroProfundis/tabby"
+	"github.com/cheynewallace/tabby"
 	"github.com/fatih/color"
 	"github.com/pingcap/tiup/pkg/utils/mock"
 	"golang.org/x/term"

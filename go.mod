@@ -6,7 +6,6 @@ replace gopkg.in/yaml.v2 => github.com/july2993/yaml v0.0.0-20200423062752-adcfa
 
 require (
 	github.com/AstroProfundis/sysinfo v0.0.0-20220902033416-231991f6df3c
-	github.com/AstroProfundis/tabby v1.1.1-color
 	github.com/BurntSushi/toml v1.2.1
 	github.com/ScaleFT/sshkeys v1.2.0
 	github.com/alecthomas/assert v1.0.0
@@ -14,6 +13,7 @@ require (
 	github.com/asaskevich/EventBus v0.0.0-20200907212545-49d423059eef
 	github.com/cavaliergopher/grab/v3 v3.0.1
 	github.com/cheggaaa/pb/v3 v3.1.2
+	github.com/cheynewallace/tabby v1.1.1
 	github.com/creasty/defaults v1.7.0
 	github.com/docker/go-units v0.5.0
 	github.com/fatih/color v1.15.0
@@ -81,12 +81,10 @@ require (
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/juju/ansiterm v1.0.0 // indirect
 	github.com/klauspost/compress v1.16.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/lorenzosaino/go-sysctl v0.3.1 // indirect
-	github.com/lunixbochs/vtclean v1.0.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.18 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
