@@ -873,15 +873,13 @@ func (p *Playground) waitAllTiFlashUp() {
 }
 
 func (p *Playground) bindVersion(comp string, version string) (bindVersion string) {
+	bindVersion = version
 	switch comp {
 	case spec.ComponentTiKVCDC:
 		bindVersion = p.bootOptions.TiKVCDC.Version
 	case spec.ComponentTiProxy:
 		bindVersion = p.bootOptions.TiProxy.Version
 	default:
-	}
-	if bindVersion == "" {
-		bindVersion = version
 	}
 	return
 }
