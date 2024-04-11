@@ -26,6 +26,11 @@ func TiDBSupportSecureBoot(version string) bool {
 	return semver.Compare(version, "v5.3.0") >= 0 || strings.Contains(version, "nightly")
 }
 
+// TiDBSupportTiproxy return if given version of TiDB support tiproxy
+func TiDBSupportTiproxy(version string) bool {
+	return semver.Compare(version, "v6.4.0") >= 0 || strings.Contains(version, "nightly")
+}
+
 // TiDBSupportUpgradeAPI return if given version of TiDB support upgrade API
 func TiDBSupportUpgradeAPI(version string) bool {
 	return semver.Compare(version, "v7.4.0") >= 0 ||
@@ -92,12 +97,6 @@ func TiFlashNotNeedSomeConfig(version string) bool {
 // with the new implementation in TiUP playground.
 func TiFlashPlaygroundNewStartMode(version string) bool {
 	return semver.Compare(version, "v7.1.0") >= 0 || strings.Contains(version, "nightly")
-}
-
-// TiDBSupportDisagg returns true if the given version of TiDB and TiFlash supports
-// disaggregated mode.
-func TiDBSupportDisagg(version string) bool {
-	return semver.Compare(version, "v7.0.0") >= 0 || strings.Contains(version, "nightly")
 }
 
 // PDSupportMicroServices returns true if the given version of PD supports micro services.

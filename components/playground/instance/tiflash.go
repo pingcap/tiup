@@ -39,19 +39,11 @@ const (
 	TiFlashRoleDisaggCompute TiFlashRole = "compute"
 )
 
-// DisaggOptions contains configs to run TiFlash in disaggregated mode.
-type DisaggOptions struct {
-	S3Endpoint string `yaml:"s3_endpoint"`
-	Bucket     string `yaml:"bucket"`
-	AccessKey  string `yaml:"access_key"`
-	SecretKey  string `yaml:"secret_key"`
-}
-
 // TiFlashInstance represent a running TiFlash
 type TiFlashInstance struct {
 	instance
 	Role            TiFlashRole
-	DisaggOpts      DisaggOptions
+	cseOpts         CSEOptions
 	TCPPort         int
 	ServicePort     int
 	ProxyPort       int
@@ -62,7 +54,7 @@ type TiFlashInstance struct {
 }
 
 // NewTiFlashInstance return a TiFlashInstance
-func NewTiFlashInstance(role TiFlashRole, disaggOptions DisaggOptions, binPath, dir, host, configPath string, id int, pds []*PDInstance, dbs []*TiDBInstance, version string) *TiFlashInstance {
+func NewTiFlashInstance(role TiFlashRole, cseOptions CSEOptions, binPath, dir, host, configPath string, id int, pds []*PDInstance, dbs []*TiDBInstance, version string) *TiFlashInstance {
 	if role != TiFlashRoleNormal && role != TiFlashRoleDisaggWrite && role != TiFlashRoleDisaggCompute {
 		panic(fmt.Sprintf("Unknown TiFlash role %s", role))
 	}
@@ -82,7 +74,7 @@ func NewTiFlashInstance(role TiFlashRole, disaggOptions DisaggOptions, binPath, 
 			ConfigPath: configPath,
 		},
 		Role:            role,
-		DisaggOpts:      disaggOptions,
+		cseOpts:         cseOptions,
 		TCPPort:         utils.MustGetFreePort(host, 9100), // 9000 for default object store port
 		ServicePort:     utils.MustGetFreePort(host, 3930),
 		ProxyPort:       utils.MustGetFreePort(host, 20170),
@@ -153,7 +145,6 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version utils.Version) e
 	if err != nil {
 		return errors.Trace(err)
 	}
-	fmt.Println("userConfig", userConfig)
 	for _, arg := range runtimeConfig {
 		// if user has set the config, skip it
 		if !isKeyPresentInMap(userConfig, arg[0]) {

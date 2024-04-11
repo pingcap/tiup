@@ -364,7 +364,11 @@ func newMirrorRenewCmd() *cobra.Command {
 				if !v1manifest.IsExpirationError(perrs.Cause(err)) {
 					return err
 				}
-				fmt.Println(err)
+				fmt.Printf("Ignoring expiration error: %s", err)
+			}
+
+			if m == nil {
+				return errors.New("got nil manifest")
 			}
 
 			if days > 0 {

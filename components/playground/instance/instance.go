@@ -37,6 +37,14 @@ type Config struct {
 	Version    string `yaml:"version"`
 }
 
+// CSEOptions contains configs to run TiDB cluster in CSE mode.
+type CSEOptions struct {
+	S3Endpoint string `yaml:"s3_endpoint"`
+	Bucket     string `yaml:"bucket"`
+	AccessKey  string `yaml:"access_key"`
+	SecretKey  string `yaml:"secret_key"`
+}
+
 type instance struct {
 	ID         int
 	Dir        string
@@ -115,7 +123,7 @@ func logIfErr(err error) {
 func pdEndpoints(pds []*PDInstance, isHTTP bool) []string {
 	var endpoints []string
 	for _, pd := range pds {
-		if pd.Role == PDRoleTSO || pd.Role == PDRoleScheduling || pd.Role == PDRoleResourceManager {
+		if pd.Role == PDRoleTSO || pd.Role == PDRoleScheduling {
 			continue
 		}
 		if isHTTP {
