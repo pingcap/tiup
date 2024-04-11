@@ -1,6 +1,18 @@
 TiUP Changelog
 
-## [1.15.0] 2023-04-01
+## [1.15.1] 2024-04-11
+
+### Fixes
+
+- Fix cannot choose cluster version in `tiup-playground` (#2397 #2402, @nexustar)
+- Fix wrong TiFlash numa config in `tiup-cluster` (#2401, @gengliqi)
+
+### Improvements
+
+- Wait for TSO component ready in `tiup-playground` (#2349, @HuSharp)
+- Improve error handling of mirror renew in `tiup` (#2400, @dveeden)
+
+## [1.15.0] 2024-04-01
 
 ### New Features
 
