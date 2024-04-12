@@ -7,11 +7,15 @@ DEPLOY_DIR={{.DeployDir}}
 
 cd "${DEPLOY_DIR}" || exit 1
 
+exec \
 {{- if .NumaNode}}
-exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} env GODEBUG=madvdontneed=1 bin/pd-server \
-{{- else}}
-exec env GODEBUG=madvdontneed=1 bin/pd-server \
+    numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} \
 {{- end}}
+    env GODEBUG=madvdontneed=1 \
+{{- if .MSMode}}
+    PD_SERVICE_MODE=api \
+{{- end}}
+    bin/pd-server \
     --name="{{.Name}}" \
     --client-urls="{{.ClientURL}}" \
     --advertise-client-urls="{{.AdvertiseClientURL}}" \
