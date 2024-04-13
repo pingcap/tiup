@@ -74,6 +74,7 @@ type BootOptions struct {
 	Host           string              `yaml:"host"`
 	Monitor        bool                `yaml:"monitor"`
 	CSEOpts        instance.CSEOptions `yaml:"cse"` // Only available when mode == tidb-cse
+	GrafanaPort    int                 `yaml:"grafana_port"`
 }
 
 var (
@@ -281,6 +282,7 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 	rootCmd.Flags().Bool("without-monitor", false, "Don't start prometheus and grafana component")
 	rootCmd.Flags().BoolVar(&options.Monitor, "monitor", true, "Start prometheus and grafana component")
 	_ = rootCmd.Flags().MarkDeprecated("monitor", "Please use --without-monitor to control whether to disable monitor.")
+	rootCmd.Flags().IntVar(&options.GrafanaPort, "grafana.port", 3000, "grafana port. If not provided, grafana will use 3000 as its port.")
 
 	// NOTE: Do not set default values if they may be changed in different modes.
 
