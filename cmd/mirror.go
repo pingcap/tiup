@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -74,6 +75,7 @@ of components or the repository itself.`,
 		newMirrorGrantCmd(),
 		newMirrorRotateCmd(),
 		newTransferOwnerCmd(),
+		newCheckManifestsCmd(),
 	)
 
 	return cmd
@@ -1021,6 +1023,80 @@ func newMirrorCloneCmd() *cobra.Command {
 		}
 		originHelpFunc(command, args)
 	})
+
+	return cmd
+}
+
+// the `mirror check-manifests` sub command
+func newCheckManifestsCmd() *cobra.Command {
+	var endpoint string
+	cmd := &cobra.Command{
+		Use:   "check-manifests",
+		Short: "check tiup server manifests",
+		Long:  `check tiup server manifests`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			mirror := repository.NewMirror(endpoint, repository.MirrorOptions{})
+			if err := mirror.Open(); err != nil {
+				return err
+			}
+
+			// 1. fetch timestamp.json and get snapshot hash
+			ft, err := mirror.Fetch("timestamp.json", 0)
+			if err != nil {
+				return err
+			}
+			defer ft.Close()
+			timestamp := v1manifest.Manifest{Signed: &v1manifest.Timestamp{}}
+			err = json.NewDecoder(ft).Decode(&timestamp)
+			if err != nil {
+				return err
+			}
+			snapHash := timestamp.Signed.(*v1manifest.Timestamp).SnapshotHash()
+			length := snapHash.Length
+			sha256 := snapHash.Hashes["sha256"]
+
+			// 2. get snapshot.json and check hash
+			fn, err := mirror.Fetch("snapshot.json", 0)
+			if err != nil {
+				return err
+			}
+			defer fn.Close()
+			snapshotText, err := io.ReadAll(fn)
+			if err != nil {
+				return err
+			}
+			if len(snapshotText) != int(length) {
+				return errors.New("snapshot length mismatch")
+			}
+			s, err := utils.SHA256(strings.NewReader(string(snapshotText)))
+			if err != nil {
+				return err
+			}
+			fmt.Printf("expected snapshot hash: %s\n", s)
+			fmt.Printf("actually snapshot hash: %s\n", sha256)
+			if s != sha256 {
+				return errors.New("snapshot sha256 mismatch")
+			}
+			snapshot := v1manifest.Manifest{Signed: &v1manifest.Snapshot{}}
+			err = json.Unmarshal(snapshotText, &snapshot)
+			if err != nil {
+				return err
+			}
+			for k, v := range snapshot.Signed.(*v1manifest.Snapshot).Meta {
+				filename := fmt.Sprintf("%d.%s", v.Version, k[1:])
+				ft, err := mirror.Fetch(filename, 0)
+				if err != nil {
+					return err
+				}
+				defer ft.Close()
+				fmt.Println("success to fetch " + filename)
+			}
+
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVarP(&endpoint, "endpoint", "k", "", "Path to write the private key files")
 
 	return cmd
 }
