@@ -490,7 +490,7 @@ func (r *V1Repository) DownloadComponent(item *v1manifest.VersionItem, target st
 	}
 
 	// the downloaded file is named by item.URL, which maybe differ to target name
-	if downloaded := path.Join(targetDir, item.URL); downloaded != target {
+	if downloaded := path.Join(targetDir, item.URL); downloaded != target && utils.IsExist(downloaded) {
 		err := os.Rename(downloaded, target)
 		if err != nil {
 			return err
