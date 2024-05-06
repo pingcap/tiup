@@ -14,6 +14,8 @@ if [ ! -f $EXPORTER_BIN ]; then
   EXPORTER_BIN=bin/node_exporter
 fi
 
+export GOMAXPROCS=1
+
 {{- if .NumaNode}}
 exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} $EXPORTER_BIN \
 {{- else}}
