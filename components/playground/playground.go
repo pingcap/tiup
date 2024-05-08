@@ -595,13 +595,13 @@ func (p *Playground) WalkInstances(fn func(componentID string, ins instance.Inst
 		}
 	}
 	for _, ins := range p.tsos {
-		err := fn(spec.ComponentPD, ins)
+		err := fn(spec.ComponentTSO, ins)
 		if err != nil {
 			return err
 		}
 	}
 	for _, ins := range p.schedulings {
-		err := fn(spec.ComponentPD, ins)
+		err := fn(spec.ComponentScheduling, ins)
 		if err != nil {
 			return err
 		}
