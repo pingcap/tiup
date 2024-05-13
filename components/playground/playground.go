@@ -268,7 +268,6 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 
 	switch cid {
 	case spec.ComponentPD:
-		// microservice not support scale in temporarily
 		for i := 0; i < len(p.pds); i++ {
 			if p.pds[i].Pid() == pid {
 				inst := p.pds[i]
@@ -277,6 +276,18 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 					return err
 				}
 				p.pds = append(p.pds[:i], p.pds[i+1:]...)
+			}
+		}
+	case spec.ComponentTSO:
+		for i := 0; i < len(p.tsos); i++ {
+			if p.tsos[i].Pid() == pid {
+				p.tsos = append(p.tsos[:i], p.tsos[i+1:]...)
+			}
+		}
+	case spec.ComponentScheduling:
+		for i := 0; i < len(p.schedulings); i++ {
+			if p.schedulings[i].Pid() == pid {
+				p.schedulings = append(p.schedulings[:i], p.schedulings[i+1:]...)
 			}
 		}
 	case spec.ComponentTiKV:
@@ -409,6 +420,10 @@ func (p *Playground) sanitizeComponentConfig(cid string, cfg *instance.Config) e
 	switch cid {
 	case spec.ComponentPD:
 		return p.sanitizeConfig(p.bootOptions.PD, cfg)
+	case spec.ComponentTSO:
+		return p.sanitizeConfig(p.bootOptions.TSO, cfg)
+	case spec.ComponentScheduling:
+		return p.sanitizeConfig(p.bootOptions.Scheduling, cfg)
 	case spec.ComponentTiKV:
 		return p.sanitizeConfig(p.bootOptions.TiKV, cfg)
 	case spec.ComponentTiDB:
@@ -720,6 +735,14 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 		} else if pdRole == instance.PDRoleScheduling {
 			p.schedulings = append(p.schedulings, inst)
 		}
+	case spec.ComponentTSO:
+		inst := instance.NewPDInstance(instance.PDRoleTSO, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, cfg.Port, p.bootOptions.Mode == "tidb-cse")
+		ins = inst
+		p.tsos = append(p.tsos, inst)
+	case spec.ComponentScheduling:
+		inst := instance.NewPDInstance(instance.PDRoleScheduling, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, cfg.Port, p.bootOptions.Mode == "tidb-cse")
+		ins = inst
+		p.schedulings = append(p.schedulings, inst)
 	case spec.ComponentTiDB:
 		inst := instance.NewTiDBInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, dataDir, p.enableBinlog(), p.bootOptions.Mode == "tidb-cse")
 		ins = inst
