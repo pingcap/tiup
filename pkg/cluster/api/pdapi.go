@@ -202,8 +202,7 @@ func (pc *PDClient) CheckHealth() error {
 
 // CheckTSOHealth checks the health of TSO service(which is a Micro Service component of PD)
 func (pc *PDClient) CheckTSOHealth(retryOpt *utils.RetryOption) error {
-	servicePrefix := fmt.Sprintf("tso/%s", tsoHealthPrefix)
-	endpoints := pc.getEndpoints(servicePrefix)
+	endpoints := pc.getEndpoints(tsoHealthPrefix)
 
 	if err := utils.Retry(func() error {
 		var err error
