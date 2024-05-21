@@ -40,10 +40,11 @@ type grafana struct {
 	cmd      *exec.Cmd
 }
 
-func newGrafana(version string, host string) *grafana {
+func newGrafana(version string, host string, port int) *grafana {
 	return &grafana{
 		host:    host,
 		version: version,
+		port:    port,
 	}
 }
 
@@ -151,7 +152,7 @@ var clusterName = "Test-Cluster"
 // dir should contains files untar the grafana.
 // return not error iff the Cmd is started successfully.
 func (g *grafana) start(ctx context.Context, dir string, p8sURL string) (err error) {
-	g.port, err = utils.GetFreePort(g.host, 3000)
+	g.port, err = utils.GetFreePort(g.host, g.port)
 	if err != nil {
 		return err
 	}
