@@ -114,7 +114,6 @@ func (inst *PDInstance) Start(ctx context.Context, version utils.Version) error 
 			fmt.Sprintf("--client-urls=http://%s", utils.JoinHostPort(inst.Host, inst.StatusPort)),
 			fmt.Sprintf("--advertise-client-urls=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.StatusPort)),
 			fmt.Sprintf("--log-file=%s", inst.LogFile()),
-			fmt.Sprintf("--config=%s", configPath),
 		}...)
 		switch {
 		case len(inst.initEndpoints) > 0:
