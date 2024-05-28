@@ -1,5 +1,11 @@
 TiUP Changelog
 
+## [1.15.2] 2024-05-28
+
+### Improvements
+
+- Remove LGPL dependency
+
 ## [1.15.1] 2024-04-11
 
 ### Fixes
