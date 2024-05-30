@@ -84,7 +84,14 @@ func (inst *PDInstance) InitCluster(pds []*PDInstance) *PDInstance {
 
 // Name return the name of pd.
 func (inst *PDInstance) Name() string {
-	return fmt.Sprintf("pd-%d", inst.ID)
+	switch inst.Role {
+	case PDRoleTSO:
+		return fmt.Sprintf("tso-%d", inst.ID)
+	case PDRoleScheduling:
+		return fmt.Sprintf("scheduling-%d", inst.ID)
+	default:
+		return fmt.Sprintf("pd-%d", inst.ID)
+	}
 }
 
 // Start calls set inst.cmd and Start
@@ -137,6 +144,7 @@ func (inst *PDInstance) Start(ctx context.Context, version utils.Version) error 
 		args = []string{
 			"services",
 			"tso",
+			"--name=" + uid,
 			fmt.Sprintf("--listen-addr=http://%s", utils.JoinHostPort(inst.Host, inst.StatusPort)),
 			fmt.Sprintf("--advertise-listen-addr=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.StatusPort)),
 			fmt.Sprintf("--backend-endpoints=%s", strings.Join(endpoints, ",")),
@@ -148,6 +156,7 @@ func (inst *PDInstance) Start(ctx context.Context, version utils.Version) error 
 		args = []string{
 			"services",
 			"scheduling",
+			"--name=" + uid,
 			fmt.Sprintf("--listen-addr=http://%s", utils.JoinHostPort(inst.Host, inst.StatusPort)),
 			fmt.Sprintf("--advertise-listen-addr=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.StatusPort)),
 			fmt.Sprintf("--backend-endpoints=%s", strings.Join(endpoints, ",")),

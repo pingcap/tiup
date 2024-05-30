@@ -30,6 +30,8 @@ import (
 
 // SchedulingSpec represents the scheduling topology specification in topology.yaml
 type SchedulingSpec struct {
+	// Use Name to get the name with a default value if it's empty.
+	Name                string         `yaml:"name"`
 	Host                string         `yaml:"host"`
 	ManageHost          string         `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
 	ListenHost          string         `yaml:"listen_host,omitempty"`
@@ -169,7 +171,7 @@ func (c *SchedulingComponent) Instances() []Instance {
 		ins = append(ins, &SchedulingInstance{
 			BaseInstance: BaseInstance{
 				InstanceSpec: s,
-				Name:         c.Name(),
+				Name:         s.Name,
 				Host:         s.Host,
 				ManageHost:   s.ManageHost,
 				ListenHost:   utils.Ternary(s.ListenHost != "", s.ListenHost, c.Topology.BaseTopo().GlobalOptions.ListenHost).(string),
@@ -229,6 +231,7 @@ func (i *SchedulingInstance) InitConfig(
 		pds = append(pds, pdspec.GetAdvertiseClientURL(enableTLS))
 	}
 	cfg := &scripts.SchedulingScript{
+		Name:               spec.Name,
 		ListenURL:          fmt.Sprintf("%s://%s", scheme, utils.JoinHostPort(i.GetListenHost(), spec.Port)),
 		AdvertiseListenURL: spec.GetAdvertiseListenURL(enableTLS),
 		BackendEndpoints:   strings.Join(pds, ","),
