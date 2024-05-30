@@ -18,14 +18,12 @@ import (
 	"path"
 	"text/template"
 
-	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/embed"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // SchedulingScript represent the data to generate scheduling config
 type SchedulingScript struct {
-	Name               string
 	ListenURL          string
 	AdvertiseListenURL string
 	BackendEndpoints   string
@@ -48,10 +46,6 @@ func (c *SchedulingScript) ConfigToFile(file string) error {
 	tmpl, err := template.New("Scheduling").Parse(string(tpl))
 	if err != nil {
 		return err
-	}
-
-	if c.Name == "" {
-		return errors.New("empty name")
 	}
 
 	content := bytes.NewBufferString("")
