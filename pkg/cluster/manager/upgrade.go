@@ -137,12 +137,11 @@ This operation will upgrade %s %s cluster %s to %s:%s`,
 
 	hasImported := false
 	for _, comp := range components {
-		compName := comp.Name()
 		version := comp.CalculateVersion(clusterVersion)
 
 		for _, inst := range comp.Instances() {
 			// Download component from repository
-			key := fmt.Sprintf("%s-%s-%s-%s", compName, version, inst.OS(), inst.Arch())
+			key := fmt.Sprintf("%s-%s-%s-%s", inst.ComponentSource(), version, inst.OS(), inst.Arch())
 			if _, found := uniqueComps[key]; !found {
 				uniqueComps[key] = struct{}{}
 				t := task.NewBuilder(m.logger).
