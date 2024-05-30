@@ -35,7 +35,7 @@ func Download(component, nodeOS, arch string, version string) error {
 
 	resName := fmt.Sprintf("%s-%s", component, version)
 	fileName := fmt.Sprintf("%s-%s-%s.tar.gz", resName, nodeOS, arch)
-	srcPath := spec.ProfilePath(spec.TiUPPackageCacheDir, fileName)
+	targetPath := spec.ProfilePath(spec.TiUPPackageCacheDir, fileName)
 
 	if err := utils.MkdirAll(spec.ProfilePath(spec.TiUPPackageCacheDir), 0755); err != nil {
 		return err
@@ -46,16 +46,14 @@ func Download(component, nodeOS, arch string, version string) error {
 		return err
 	}
 
-	if utils.IsExist(srcPath) {
-		if err := repo.VerifyComponent(component, version, srcPath); err != nil {
-			os.Remove(srcPath)
-		}
-	}
-
 	// Download from repository if not exists
-	if utils.IsNotExist(srcPath) {
-		if err := repo.DownloadComponent(component, version, srcPath); err != nil {
+	if utils.IsNotExist(targetPath) {
+		if err := repo.DownloadComponent(component, version, targetPath); err != nil {
 			return err
+		}
+	} else {
+		if err := repo.VerifyComponent(component, version, targetPath); err != nil {
+			os.Remove(targetPath)
 		}
 	}
 	return nil
