@@ -68,7 +68,7 @@ func HistoryRecord(env *Environment, command []string, date time.Time, code int)
 	}
 
 	h := &historyRow{
-		Command: strings.Join(command, " "),
+		Command: strings.Join(HidePassword(command), " "),
 		Date:    date,
 		Code:    code,
 	}
@@ -241,4 +241,21 @@ func getLatestHistoryFile(dir string) (item historyItem) {
 	}
 
 	return
+}
+
+// HidePassword replace password with ******
+func HidePassword(args []string) []string {
+	var record []string
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		if strings.HasPrefix(arg, "-p") && len(arg) > 2 {
+			record = append(record, "-p******")
+		} else if arg == "-p" && i+1 < len(args) {
+			record = append(record, "-p", "******")
+			i++ // skip next word that may be password
+		} else {
+			record = append(record, arg)
+		}
+	}
+	return record
 }

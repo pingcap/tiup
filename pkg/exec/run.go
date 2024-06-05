@@ -81,8 +81,10 @@ func RunComponent(env *environment.Environment, tag, spec, binPath string, args 
 		return err
 	}
 
+	fmt.Println("wtf")
+
 	if skip, ok := skipStartingMessages[component]; !skip || !ok {
-		colorstr.Fprintf(os.Stderr, "Starting component [bold]%s[reset]: %s\n", component, strings.Join(c.Args, " "))
+		colorstr.Fprintf(os.Stderr, "Starting component [bold]%s[reset]: %s\n", component, strings.Join(environment.HidePassword(c.Args), " "))
 	}
 
 	err = c.Start()
@@ -264,7 +266,7 @@ func saveProcessInfo(p *PrepareCommandParams, c *exec.Cmd) {
 		CreatedTime: time.Now().Format(time.RFC3339),
 		Pid:         c.Process.Pid,
 		Exec:        c.Args[0],
-		Args:        c.Args,
+		Args:        environment.HidePassword(c.Args),
 		Dir:         p.InstanceDir,
 		Env:         c.Env,
 		Cmd:         c,
