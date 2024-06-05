@@ -81,8 +81,6 @@ func RunComponent(env *environment.Environment, tag, spec, binPath string, args 
 		return err
 	}
 
-	fmt.Println("wtf")
-
 	if skip, ok := skipStartingMessages[component]; !skip || !ok {
 		colorstr.Fprintf(os.Stderr, "Starting component [bold]%s[reset]: %s\n", component, strings.Join(environment.HidePassword(c.Args), " "))
 	}
