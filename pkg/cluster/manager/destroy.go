@@ -17,10 +17,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
@@ -193,6 +195,14 @@ func (m *Manager) DestroyTombstone(
 		ParallelStep("+ Refresh instance configs", gOpt.Force, regenConfigTasks...).
 		ParallelStep("+ Reload prometheus and grafana", gOpt.Force,
 			buildReloadPromAndGrafanaTasks(topo, m.logger, gOpt)...).
+		Func("RemoveTomestoneNodesInPD", func(ctx context.Context) (err error) {
+			pdEndpoints := make([]string, 0)
+			for _, pd := range cluster.PDServers {
+				pdEndpoints = append(pdEndpoints, fmt.Sprintf("%s:%d", pd.Host, pd.ClientPort))
+			}
+			pdAPI := api.NewPDClient(ctx, pdEndpoints, time.Second*time.Duration(gOpt.APITimeout), tlsCfg)
+			return pdAPI.RemoveTombstone()
+		}).
 		Build()
 
 	if err := t.Execute(ctx); err != nil {
