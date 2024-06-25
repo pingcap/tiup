@@ -868,6 +868,7 @@ func (pc *PDClient) DelStore(host string, retryOpt *utils.RetryOption) error {
 	return nil
 }
 
+// RemoveTombstone remove tombstone instance
 func (pc *PDClient) RemoveTombstone() error {
 	endpoints := pc.getEndpoints(pdRemoveTombstone)
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
