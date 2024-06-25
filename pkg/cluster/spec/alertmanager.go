@@ -98,6 +98,11 @@ func (c *AlertManagerComponent) Role() string {
 	return RoleMonitor
 }
 
+// Source implements Component interface.
+func (c *AlertManagerComponent) Source() string {
+	return ComponentAlertmanager
+}
+
 // CalculateVersion implements the Component interface
 func (c *AlertManagerComponent) CalculateVersion(_ string) string {
 	// always not follow cluster version, use ""(latest) by default

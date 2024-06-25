@@ -138,14 +138,6 @@ func (s *PDSpec) GetAdvertisePeerURL(enableTLS bool) string {
 	return fmt.Sprintf("%s://%s", scheme, utils.JoinHostPort(s.Host, s.PeerPort))
 }
 
-// GetSource returns source to download the component
-func (s *PDSpec) GetSource() string {
-	if s.Source == "" {
-		return ComponentPD
-	}
-	return s.Source
-}
-
 // PDComponent represents PD component.
 type PDComponent struct{ Topology *Specification }
 
@@ -156,6 +148,15 @@ func (c *PDComponent) Name() string {
 
 // Role implements Component interface.
 func (c *PDComponent) Role() string {
+	return ComponentPD
+}
+
+// Source implements Component interface.
+func (c *PDComponent) Source() string {
+	source := c.Topology.ComponentSources.PD
+	if source != "" {
+		return source
+	}
 	return ComponentPD
 }
 
@@ -188,7 +189,7 @@ func (c *PDComponent) Instances() []Instance {
 				ListenHost:   utils.Ternary(s.ListenHost != "", s.ListenHost, c.Topology.BaseTopo().GlobalOptions.ListenHost).(string),
 				Port:         s.ClientPort,
 				SSHP:         s.SSHPort,
-				Source:       s.GetSource(),
+				Source:       s.Source,
 				NumaNode:     s.NumaNode,
 				NumaCores:    "",
 
@@ -253,6 +254,7 @@ func (i *PDInstance) InitConfig(
 		LogDir:             paths.Log,
 		InitialCluster:     strings.Join(initialCluster, ","),
 		NumaNode:           spec.NumaNode,
+		MSMode:             topo.GlobalOptions.PDMode == "ms",
 	}
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pd_%s_%d.sh", i.GetHost(), i.GetPort()))
@@ -377,6 +379,7 @@ func (i *PDInstance) ScaleConfig(
 		LogDir:             paths.Log,
 		InitialCluster:     strings.Join(initialCluster, ","),
 		NumaNode:           spec.NumaNode,
+		MSMode:             cluster.GlobalOptions.PDMode == "ms",
 	}
 
 	join := []string{}

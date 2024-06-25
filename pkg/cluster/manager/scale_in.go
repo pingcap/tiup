@@ -100,14 +100,6 @@ func (m *Manager) ScaleIn(
 
 	// Regenerate configuration
 	gOpt.IgnoreConfigCheck = true
-	regenConfigTasks, hasImported := buildInitConfigTasks(m, name, topo, base, gOpt, nodes)
-
-	// handle dir scheme changes
-	if hasImported {
-		if err := spec.HandleImportPathMigration(name); err != nil {
-			return err
-		}
-	}
 
 	tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
 	if err != nil {
@@ -118,20 +110,53 @@ func (m *Manager) ScaleIn(
 	if err != nil {
 		return err
 	}
-
 	scale(b, metadata, tlsCfg)
+	ctx := ctxt.New(
+		context.Background(),
+		gOpt.Concurrency,
+		m.logger,
+	)
 
+	if err := b.Build().Execute(ctx); err != nil {
+		if errorx.Cast(err) != nil {
+			// FIXME: Map possible task errors and give suggestions.
+			return err
+		}
+		return perrs.Trace(err)
+	}
+
+	// get new metadata
+	metadata, err = m.meta(name)
+	if err != nil &&
+		!errors.Is(perrs.Cause(err), meta.ErrValidate) &&
+		!errors.Is(perrs.Cause(err), spec.ErrMultipleTiSparkMaster) &&
+		!errors.Is(perrs.Cause(err), spec.ErrMultipleTisparkWorker) &&
+		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
+		// ignore conflict check error, node may be deployed by former version
+		// that lack of some certain conflict checks
+		return err
+	}
+
+	topo = metadata.GetTopology()
+	base = metadata.GetBaseMeta()
+
+	regenConfigTasks, hasImported := buildInitConfigTasks(m, name, topo, base, gOpt, nodes)
+	// handle dir scheme changes
+	if hasImported {
+		if err := spec.HandleImportPathMigration(name); err != nil {
+			return err
+		}
+	}
+	b, err = m.sshTaskBuilder(name, topo, base.User, gOpt)
+	if err != nil {
+		return err
+	}
 	t := b.
 		ParallelStep("+ Refresh instance configs", force, regenConfigTasks...).
 		ParallelStep("+ Reload prometheus and grafana", gOpt.Force,
 			buildReloadPromAndGrafanaTasks(metadata.GetTopology(), m.logger, gOpt, nodes...)...).
 		Build()
 
-	ctx := ctxt.New(
-		context.Background(),
-		gOpt.Concurrency,
-		m.logger,
-	)
 	if err := t.Execute(ctx); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.

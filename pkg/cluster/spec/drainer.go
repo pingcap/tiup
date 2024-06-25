@@ -113,14 +113,6 @@ func (s *DrainerSpec) IgnoreMonitorAgent() bool {
 	return s.IgnoreExporter
 }
 
-// GetSource returns source to download the component
-func (s *DrainerSpec) GetSource() string {
-	if s.Source == "" {
-		return ComponentDrainer
-	}
-	return s.Source
-}
-
 // DrainerComponent represents Drainer component.
 type DrainerComponent struct{ Topology *Specification }
 
@@ -131,6 +123,15 @@ func (c *DrainerComponent) Name() string {
 
 // Role implements Component interface.
 func (c *DrainerComponent) Role() string {
+	return ComponentDrainer
+}
+
+// Source implements Component interface.
+func (c *DrainerComponent) Source() string {
+	source := c.Topology.ComponentSources.Drainer
+	if source != "" {
+		return source
+	}
 	return ComponentDrainer
 }
 
@@ -161,7 +162,7 @@ func (c *DrainerComponent) Instances() []Instance {
 			ListenHost:   c.Topology.BaseTopo().GlobalOptions.ListenHost,
 			Port:         s.Port,
 			SSHP:         s.SSHPort,
-			Source:       s.GetSource(),
+			Source:       s.Source,
 			NumaNode:     s.NumaNode,
 			NumaCores:    "",
 

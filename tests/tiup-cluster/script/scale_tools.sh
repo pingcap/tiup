@@ -41,13 +41,13 @@ function scale_tools() {
     tiup-cluster $client display $name
 
     if [ $test_tls = true ]; then
-        total_sub_one=18
-        total=19
-        total_add_one=20
+        total_sub_one=19
+        total=20
+        total_add_one=21
     else
-        total_sub_one=20
-        total=21
-        total_add_one=22
+        total_sub_one=21
+        total=22
+        total_add_one=23
     fi
 
     echo "start scale in pump"
@@ -106,6 +106,7 @@ function scale_tools() {
         tiup-cluster $client exec $name -N n3 --command "ls /data/tiflash-data"
         echo "start scale in tiflash"
         tiup-cluster $client --yes scale-in $name -N n3:9000
+        sleep 20
         tiup-cluster $client display $name | grep Tombstone
         echo "start prune tiflash"
         yes | tiup-cluster $client prune $name

@@ -6,6 +6,8 @@ global:
   # # group is used to specify the group name the user belong to,if it's not the same as user.
   # group: "tidb"
   # # SSH port of servers in the managed cluster.
+  # # systemd_mode is used to select whether to use sudo permissions. When its value is set to user, there is no need to add global.user to sudoers. The default value is system.
+  # systemd_mode: "system"
   ssh_port: 22
   # # Storage directory for cluster deployment files, startup scripts, and configuration files.
   deploy_dir: "/tidb-deploy"

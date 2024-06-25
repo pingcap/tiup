@@ -41,6 +41,7 @@ Flags:
       --drainer int              Drainer instance number
       --drainer.binpath string   Drainer instance binary path
       --drainer.config string    Drainer instance configuration file
+      --grafana.port int         grafana port. If not provided, grafana will use 3000 as its port. (default 3000)
   -h, --help                     help for tiup
       --host string              Playground cluster host
       --kv int                   TiKV instance number

@@ -92,14 +92,6 @@ func (s *CDCSpec) IgnoreMonitorAgent() bool {
 	return s.IgnoreExporter
 }
 
-// GetSource returns source to download the component
-func (s *CDCSpec) GetSource() string {
-	if s.Source == "" {
-		return ComponentCDC
-	}
-	return s.Source
-}
-
 // CDCComponent represents CDC component.
 type CDCComponent struct{ Topology *Specification }
 
@@ -110,6 +102,15 @@ func (c *CDCComponent) Name() string {
 
 // Role implements Component interface.
 func (c *CDCComponent) Role() string {
+	return ComponentCDC
+}
+
+// Source implements Component interface.
+func (c *CDCComponent) Source() string {
+	source := c.Topology.ComponentSources.CDC
+	if source != "" {
+		return source
+	}
 	return ComponentCDC
 }
 
@@ -140,7 +141,7 @@ func (c *CDCComponent) Instances() []Instance {
 			ListenHost:   c.Topology.BaseTopo().GlobalOptions.ListenHost,
 			Port:         s.Port,
 			SSHP:         s.SSHPort,
-			Source:       s.GetSource(),
+			Source:       s.Source,
 			NumaNode:     s.NumaNode,
 			NumaCores:    "",
 

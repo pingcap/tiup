@@ -140,6 +140,8 @@ var (
 	pdStoresLimitURI     = "pd/api/v1/stores/limit"
 	pdRemoveTombstone    = "pd/api/v1/stores/remove-tombstone"
 	pdRegionsCheckURI    = "pd/api/v1/regions/check"
+	pdServicePrimaryURI  = "pd/api/v2/ms/primary"
+	tsoHealthPrefix      = "tso/api/v1/health"
 )
 
 func tryURLs(endpoints []string, f func(endpoint string) ([]byte, error)) ([]byte, error) {
@@ -194,6 +196,32 @@ func (pc *PDClient) CheckHealth() error {
 
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+// CheckTSOHealth checks the health of TSO service(which is a Micro Service component of PD)
+func (pc *PDClient) CheckTSOHealth(retryOpt *utils.RetryOption) error {
+	endpoints := pc.getEndpoints(tsoHealthPrefix)
+
+	if err := utils.Retry(func() error {
+		var err error
+		for _, endpoint := range endpoints {
+			_, err = pc.httpClient.Get(pc.ctx, endpoint)
+			if err != nil {
+				return err
+			}
+		}
+		if err == nil {
+			return nil
+		}
+
+		// return error by default, to make the retry work
+		pc.l().Debugf("Still waiting for the PD Micro Service's TSO health")
+		return perrs.New("Still waiting for the PD Micro Service's TSO health")
+	}, *retryOpt); err != nil {
+		return fmt.Errorf("error check PD Micro Service's TSO health, %v", err)
 	}
 
 	return nil
@@ -286,8 +314,8 @@ func (pc *PDClient) WaitLeader(retryOpt *utils.RetryOption) error {
 		}
 
 		// return error by default, to make the retry work
-		pc.l().Debugf("Still waitting for the PD leader to be elected")
-		return perrs.New("still waitting for the PD leader to be elected")
+		pc.l().Debugf("Still waiting for the PD leader to be elected")
+		return perrs.New("still waiting for the PD leader to be elected")
 	}, *retryOpt); err != nil {
 		return fmt.Errorf("error getting PD leader, %v", err)
 	}
@@ -445,8 +473,8 @@ func (pc *PDClient) EvictPDLeader(retryOpt *utils.RetryOption) error {
 		}
 
 		// return error by default, to make the retry work
-		pc.l().Debugf("Still waitting for the PD leader to transfer")
-		return perrs.New("still waitting for the PD leader to transfer")
+		pc.l().Debugf("Still waiting for the PD leader to transfer")
+		return perrs.New("still waiting for the PD leader to transfer")
 	}, *retryOpt); err != nil {
 		return fmt.Errorf("error evicting PD leader, %v", err)
 	}
@@ -525,7 +553,7 @@ func (pc *PDClient) EvictStoreLeader(host string, retryOpt *utils.RetryOption, c
 			return nil
 		}
 		pc.l().Infof(
-			"\t  Still waitting for %d store leaders to transfer...",
+			"\t  Still waiting for %d store leaders to transfer...",
 			leaderCount,
 		)
 
@@ -733,7 +761,7 @@ func (pc *PDClient) DelPD(name string, retryOpt *utils.RetryOption) error {
 		// check if the deleted member still present
 		for _, member := range currMembers.Members {
 			if member.Name == name {
-				return perrs.New("still waitting for the PD node to be deleted")
+				return perrs.New("still waiting for the PD node to be deleted")
 			}
 		}
 
@@ -987,4 +1015,215 @@ func (pc *PDClient) SetAllStoreLimits(value int) error {
 	}
 	pc.l().Debugf("setting store limit: %d", value)
 	return pc.updateConfig(pdStoresLimitURI, bytes.NewBuffer(body))
+}
+
+// GetServicePrimary queries for the primary of a service
+func (pc *PDClient) GetServicePrimary(service string) (string, error) {
+	endpoints := pc.getEndpoints(fmt.Sprintf("%s/%s", pdServicePrimaryURI, service))
+
+	var primary string
+	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
+		body, err := pc.httpClient.Get(pc.ctx, endpoint)
+		if err != nil {
+			return body, err
+		}
+
+		return body, json.Unmarshal(body, &primary)
+	})
+	return primary, err
+}
+
+const (
+	tsoStatusURI        = "status"
+	schedulingStatusURI = "status"
+)
+
+// TSOClient is an HTTP client of the TSO server
+type TSOClient struct {
+	version    string
+	addrs      []string
+	tlsEnabled bool
+	httpClient *utils.HTTPClient
+	ctx        context.Context
+}
+
+// NewTSOClient returns a new TSOClient, the context must have
+// a *logprinter.Logger as value of "logger"
+func NewTSOClient(
+	ctx context.Context,
+	addrs []string,
+	timeout time.Duration,
+	tlsConfig *tls.Config,
+) *TSOClient {
+	enableTLS := false
+	if tlsConfig != nil {
+		enableTLS = true
+	}
+
+	if _, ok := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger); !ok {
+		panic("the context must have logger inside")
+	}
+
+	cli := &TSOClient{
+		addrs:      addrs,
+		tlsEnabled: enableTLS,
+		httpClient: utils.NewHTTPClient(timeout, tlsConfig),
+		ctx:        ctx,
+	}
+
+	cli.tryIdentifyVersion()
+	return cli
+}
+
+// func (tc *TSOClient) l() *logprinter.Logger {
+// 	return tc.ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
+// }
+
+func (tc *TSOClient) tryIdentifyVersion() {
+	endpoints := tc.getEndpoints(tsoStatusURI)
+	response := map[string]string{}
+	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
+		body, err := tc.httpClient.Get(tc.ctx, endpoint)
+		if err != nil {
+			return body, err
+		}
+
+		return body, json.Unmarshal(body, &response)
+	})
+	if err == nil {
+		tc.version = response["version"]
+	}
+}
+
+// GetURL builds the client URL of PDClient
+func (tc *TSOClient) GetURL(addr string) string {
+	httpPrefix := "http"
+	if tc.tlsEnabled {
+		httpPrefix = "https"
+	}
+	return fmt.Sprintf("%s://%s", httpPrefix, addr)
+}
+
+func (tc *TSOClient) getEndpoints(uri string) (endpoints []string) {
+	for _, addr := range tc.addrs {
+		endpoint := fmt.Sprintf("%s/%s", tc.GetURL(addr), uri)
+		endpoints = append(endpoints, endpoint)
+	}
+
+	return
+}
+
+// CheckHealth checks the health of TSO node.
+func (tc *TSOClient) CheckHealth() error {
+	endpoints := tc.getEndpoints(tsoStatusURI)
+
+	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
+		body, err := tc.httpClient.Get(tc.ctx, endpoint)
+		if err != nil {
+			return body, err
+		}
+
+		return body, nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// SchedulingClient is an HTTP client of the scheduling server
+type SchedulingClient struct {
+	version    string
+	addrs      []string
+	tlsEnabled bool
+	httpClient *utils.HTTPClient
+	ctx        context.Context
+}
+
+// NewSchedulingClient returns a new SchedulingClient, the context must have
+// a *logprinter.Logger as value of "logger"
+func NewSchedulingClient(
+	ctx context.Context,
+	addrs []string,
+	timeout time.Duration,
+	tlsConfig *tls.Config,
+) *SchedulingClient {
+	enableTLS := false
+	if tlsConfig != nil {
+		enableTLS = true
+	}
+
+	if _, ok := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger); !ok {
+		panic("the context must have logger inside")
+	}
+
+	cli := &SchedulingClient{
+		addrs:      addrs,
+		tlsEnabled: enableTLS,
+		httpClient: utils.NewHTTPClient(timeout, tlsConfig),
+		ctx:        ctx,
+	}
+
+	cli.tryIdentifyVersion()
+	return cli
+}
+
+// func (tc *SchedulingClient) l() *logprinter.Logger {
+// 	return tc.ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
+// }
+
+func (tc *SchedulingClient) tryIdentifyVersion() {
+	endpoints := tc.getEndpoints(schedulingStatusURI)
+	response := map[string]string{}
+	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
+		body, err := tc.httpClient.Get(tc.ctx, endpoint)
+		if err != nil {
+			return body, err
+		}
+
+		return body, json.Unmarshal(body, &response)
+	})
+	if err == nil {
+		tc.version = response["version"]
+	}
+}
+
+// GetURL builds the client URL of PDClient
+func (tc *SchedulingClient) GetURL(addr string) string {
+	httpPrefix := "http"
+	if tc.tlsEnabled {
+		httpPrefix = "https"
+	}
+	return fmt.Sprintf("%s://%s", httpPrefix, addr)
+}
+
+func (tc *SchedulingClient) getEndpoints(uri string) (endpoints []string) {
+	for _, addr := range tc.addrs {
+		endpoint := fmt.Sprintf("%s/%s", tc.GetURL(addr), uri)
+		endpoints = append(endpoints, endpoint)
+	}
+
+	return
+}
+
+// CheckHealth checks the health of scheduling node.
+func (tc *SchedulingClient) CheckHealth() error {
+	endpoints := tc.getEndpoints(schedulingStatusURI)
+
+	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
+		body, err := tc.httpClient.Get(tc.ctx, endpoint)
+		if err != nil {
+			return body, err
+		}
+
+		return body, nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

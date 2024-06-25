@@ -15,7 +15,9 @@ package manager
 
 import (
 	"context"
+	"encoding/pem"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -52,6 +54,7 @@ func buildReloadPromAndGrafanaTasks(
 	}
 	var tasks []*task.StepDisplay
 	deletedNodes := set.NewStringSet(nodes...)
+	systemdMode := topo.BaseTopo().GlobalOptions.SystemdMode
 	for _, inst := range instances {
 		if deletedNodes.Exist(inst.ID()) {
 			continue
@@ -60,10 +63,10 @@ func buildReloadPromAndGrafanaTasks(
 		t := task.NewBuilder(logger)
 		if inst.ComponentName() == spec.ComponentPrometheus {
 			// reload Prometheus
-			t = t.SystemCtl(inst.GetManageHost(), inst.ServiceName(), "reload", true, true)
+			t = t.SystemCtl(inst.GetManageHost(), inst.ServiceName(), "reload", true, true, string(systemdMode))
 		} else {
 			// restart grafana
-			t = t.SystemCtl(inst.GetManageHost(), inst.ServiceName(), "restart", true, false)
+			t = t.SystemCtl(inst.GetManageHost(), inst.ServiceName(), "restart", true, false, string(systemdMode))
 		}
 
 		tasks = append(tasks, t.BuildAsStep(fmt.Sprintf("  - Reload %s -> %s", inst.ComponentName(), inst.ID())))
@@ -99,6 +102,14 @@ func buildScaleOutTask(
 		return nil, err
 	}
 
+	var sudo bool
+	systemdMode := topo.BaseTopo().GlobalOptions.SystemdMode
+	if systemdMode == spec.UserMode {
+		sudo = false
+	} else {
+		sudo = true
+	}
+
 	// Initialize the environments
 	initializedHosts := set.NewStringSet()
 	metadata.GetTopology().IterInstance(func(instance spec.Instance) {
@@ -131,7 +142,9 @@ func buildScaleOutTask(
 				dirs = append(dirs, spec.Abs(globalOptions.User, dirname))
 			}
 		}
-
+		if systemdMode == spec.UserMode {
+			dirs = append(dirs, spec.Abs(globalOptions.User, ".config/systemd/user"))
+		}
 		t := task.NewBuilder(m.logger).
 			RootSSH(
 				instance.GetManageHost(),
@@ -151,9 +164,10 @@ func buildScaleOutTask(
 				gOpt.SSHProxyTimeout,
 				gOpt.SSHType,
 				globalOptions.SSHType,
+				opt.User != "root" && systemdMode != spec.UserMode,
 			).
-			EnvInit(instance.GetManageHost(), base.User, base.Group, opt.SkipCreateUser || globalOptions.User == opt.User).
-			Mkdir(globalOptions.User, instance.GetManageHost(), dirs...).
+			EnvInit(instance.GetManageHost(), base.User, base.Group, opt.SkipCreateUser || globalOptions.User == opt.User, sudo).
+			Mkdir(globalOptions.User, instance.GetManageHost(), sudo, dirs...).
 			BuildAsStep(fmt.Sprintf("  - Initialized host %s ", host))
 		envInitTasks = append(envInitTasks, t)
 	})
@@ -186,9 +200,9 @@ func buildScaleOutTask(
 		}
 		// Deploy component
 		tb := task.NewSimpleUerSSH(m.logger, inst.GetManageHost(), inst.GetSSHPort(), base.User, gOpt, p, sshType).
-			Mkdir(base.User, inst.GetManageHost(), deployDirs...).
-			Mkdir(base.User, inst.GetManageHost(), dataDirs...).
-			Mkdir(base.User, inst.GetManageHost(), logDir)
+			Mkdir(base.User, inst.GetManageHost(), sudo, deployDirs...).
+			Mkdir(base.User, inst.GetManageHost(), sudo, dataDirs...).
+			Mkdir(base.User, inst.GetManageHost(), sudo, logDir)
 
 		srcPath := ""
 		if patchedComponents.Exist(inst.ComponentName()) {
@@ -477,7 +491,7 @@ func buildMonitoredDeployTask(
 
 			// Deploy component
 			tb := task.NewSimpleUerSSH(m.logger, host, info.ssh, globalOptions.User, gOpt, p, globalOptions.SSHType).
-				Mkdir(globalOptions.User, host, deployDirs...).
+				Mkdir(globalOptions.User, host, globalOptions.SystemdMode != spec.UserMode, deployDirs...).
 				CopyComponent(
 					comp,
 					info.os,
@@ -524,7 +538,7 @@ func buildMonitoredCertificateTasks(
 
 				// Deploy component
 				tb := task.NewSimpleUerSSH(m.logger, host, info.ssh, globalOptions.User, gOpt, p, globalOptions.SSHType).
-					Mkdir(globalOptions.User, host, tlsDir)
+					Mkdir(globalOptions.User, host, globalOptions.SystemdMode != spec.UserMode, tlsDir)
 
 				if comp == spec.ComponentBlackboxExporter {
 					ca, innerr := crypto.ReadCA(
@@ -604,6 +618,7 @@ func buildInitMonitoredConfigTasks(
 						Log:    logDir,
 						Cache:  specManager.Path(name, spec.TempConfigPath),
 					},
+					globalOptions.SystemdMode,
 				).
 				BuildAsStep(fmt.Sprintf("  - Generate config %s -> %s", comp, host))
 			tasks = append(tasks, t)
@@ -802,7 +817,7 @@ func buildTLSTask(
 	// cleanup tls files only in tls disable
 	if !topo.BaseTopo().GlobalOptions.TLSEnabled {
 		builder.Func("Cleanup TLS files", func(ctx context.Context) error {
-			return operator.CleanupComponent(ctx, delFileMap)
+			return operator.CleanupComponent(ctx, delFileMap, topo.BaseTopo().GlobalOptions.SystemdMode != spec.UserMode)
 		})
 	}
 
@@ -822,6 +837,35 @@ func buildTLSTask(
 	return builder.Build(), nil
 }
 
+func genTiProxySessionCerts(dir string) error {
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+	ca, err := crypto.NewCA("tiproxy")
+	if err != nil {
+		return err
+	}
+	privKey, err := crypto.NewKeyPair(crypto.KeyTypeRSA, crypto.KeySchemeRSASSAPSSSHA256)
+	if err != nil {
+		return err
+	}
+	csr, err := privKey.CSR("tiproxy", "tiproxy", nil, nil)
+	if err != nil {
+		return err
+	}
+	cert, err := ca.Sign(csr)
+	if err != nil {
+		return err
+	}
+	if err := utils.SaveFileWithBackup(filepath.Join(dir, "tiproxy-session.key"), privKey.Pem(), ""); err != nil {
+		return err
+	}
+	return utils.SaveFileWithBackup(filepath.Join(dir, "tiproxy-session.crt"), pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: cert,
+	}), "")
+}
+
 // buildCertificateTasks generates certificate for instance and transfers it to the server
 func buildCertificateTasks(
 	m *Manager,
@@ -835,37 +879,62 @@ func buildCertificateTasks(
 		certificateTasks []*task.StepDisplay // tasks which are used to copy certificate to remote host
 	)
 
-	if topo.BaseTopo().GlobalOptions.TLSEnabled {
-		// copy certificate to remote host
-		topo.IterInstance(func(inst spec.Instance) {
-			deployDir := spec.Abs(base.User, inst.DeployDir())
-			tlsDir := filepath.Join(deployDir, spec.TLSCertKeyDir)
-
-			tb := task.NewSimpleUerSSH(m.logger, inst.GetManageHost(), inst.GetSSHPort(), base.User, gOpt, p, topo.BaseTopo().GlobalOptions.SSHType).
-				Mkdir(base.User, inst.GetManageHost(), deployDir, tlsDir)
-
-			ca, err := crypto.ReadCA(
-				name,
-				m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSCACert),
-				m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSCAKey),
-			)
-			if err != nil {
-				iterErr = err
-				return
-			}
-			t := tb.TLSCert(
-				inst.GetHost(),
-				inst.ComponentName(),
-				inst.Role(),
-				inst.GetMainPort(),
-				ca,
-				meta.DirPaths{
-					Deploy: deployDir,
-					Cache:  m.specManager.Path(name, spec.TempConfigPath),
-				}).
-				BuildAsStep(fmt.Sprintf("  - Generate certificate %s -> %s", inst.ComponentName(), inst.ID()))
-			certificateTasks = append(certificateTasks, t)
-		})
+	// check if there is tiproxy
+	// if there is tiproxy, whether or not TLS, we must issue a self-signed cert
+	hasTiProxy := false
+	topo.IterInstance(func(inst spec.Instance) {
+		if inst.ComponentName() == spec.ComponentTiProxy {
+			hasTiProxy = true
+		}
+	})
+	if hasTiProxy {
+		if err := genTiProxySessionCerts(m.specManager.Path(name, spec.TempConfigPath)); err != nil {
+			return certificateTasks, err
+		}
 	}
+
+	// copy certificate to remote host
+	topo.IterInstance(func(inst spec.Instance) {
+		deployDir := spec.Abs(base.User, inst.DeployDir())
+		tlsDir := filepath.Join(deployDir, spec.TLSCertKeyDir)
+
+		needSessionCert := hasTiProxy && inst.ComponentName() == spec.ComponentTiDB
+		if needSessionCert || topo.BaseTopo().GlobalOptions.TLSEnabled {
+			tb := task.NewSimpleUerSSH(m.logger, inst.GetManageHost(), inst.GetSSHPort(), base.User, gOpt, p, topo.BaseTopo().GlobalOptions.SSHType).
+				Mkdir(base.User, inst.GetManageHost(), topo.BaseTopo().GlobalOptions.SystemdMode != spec.UserMode, deployDir, tlsDir)
+
+			if needSessionCert {
+				tb = tb.
+					CopyFile(filepath.Join(m.specManager.Path(name, spec.TempConfigPath), "tiproxy-session.key"), filepath.Join(deployDir, spec.TLSCertKeyDir, "tiproxy-session.key"), inst.GetHost(), false, 0, false).
+					CopyFile(filepath.Join(m.specManager.Path(name, spec.TempConfigPath), "tiproxy-session.crt"), filepath.Join(deployDir, spec.TLSCertKeyDir, "tiproxy-session.crt"), inst.GetHost(), false, 0, false)
+			}
+
+			if topo.BaseTopo().GlobalOptions.TLSEnabled {
+				ca, err := crypto.ReadCA(
+					name,
+					m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSCACert),
+					m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSCAKey),
+				)
+				if err != nil {
+					iterErr = err
+					return
+				}
+				tb = tb.TLSCert(
+					inst.GetHost(),
+					inst.ComponentName(),
+					inst.Role(),
+					inst.GetMainPort(),
+					ca,
+					meta.DirPaths{
+						Deploy: deployDir,
+						Cache:  m.specManager.Path(name, spec.TempConfigPath),
+					})
+			}
+
+			t := tb.BuildAsStep(fmt.Sprintf("  - Generate certificate %s -> %s", inst.ComponentName(), inst.ID()))
+			certificateTasks = append(certificateTasks, t)
+		}
+	})
+
 	return certificateTasks, iterErr
 }

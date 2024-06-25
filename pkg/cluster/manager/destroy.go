@@ -152,11 +152,6 @@ func (m *Manager) DestroyTombstone(
 		return err
 	}
 
-	// Destroy ignore error and force exec
-	gOpt.IgnoreConfigCheck = true
-	gOpt.Force = true
-	regenConfigTasks, _ := buildInitConfigTasks(m, name, topo, base, gOpt, nodes)
-
 	t := b.
 		Func("FindTomestoneNodes", func(ctx context.Context) (err error) {
 			if !skipConfirm {
@@ -174,9 +169,32 @@ func (m *Manager) DestroyTombstone(
 		ClusterOperate(cluster, operator.DestroyTombstoneOperation, gOpt, tlsCfg).
 		UpdateMeta(name, clusterMeta, nodes).
 		UpdateTopology(name, m.specManager.Path(name), clusterMeta, nodes).
+		Build()
+
+	if err := t.Execute(ctx); err != nil {
+		if errorx.Cast(err) != nil {
+			// FIXME: Map possible task errors and give suggestions.
+			return err
+		}
+		return perrs.Trace(err)
+	}
+
+	// Destroy ignore error and force exec
+	gOpt.IgnoreConfigCheck = true
+	gOpt.Force = true
+	// get new metadata
+	metadata, err = m.meta(name)
+	if err != nil &&
+		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
+		return err
+	}
+	topo = metadata.GetTopology()
+	base = metadata.GetBaseMeta()
+	regenConfigTasks, _ := buildInitConfigTasks(m, name, topo, base, gOpt, nodes)
+	t = b.
 		ParallelStep("+ Refresh instance configs", gOpt.Force, regenConfigTasks...).
 		ParallelStep("+ Reload prometheus and grafana", gOpt.Force,
-			buildReloadPromAndGrafanaTasks(metadata.GetTopology(), m.logger, gOpt)...).
+			buildReloadPromAndGrafanaTasks(topo, m.logger, gOpt)...).
 		Func("RemoveTomestoneNodesInPD", func(ctx context.Context) (err error) {
 			pdEndpoints := make([]string, 0)
 			for _, pd := range cluster.PDServers {

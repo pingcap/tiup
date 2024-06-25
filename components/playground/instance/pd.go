@@ -36,8 +36,6 @@ const (
 	PDRoleTSO PDRole = "tso"
 	// PDRoleScheduling is the role of PD scheduling
 	PDRoleScheduling PDRole = "scheduling"
-	// PDRoleResourceManager is the role of PD resource manager
-	PDRoleResourceManager PDRole = "resource_manager"
 )
 
 // PDInstance represent a running pd-server
@@ -48,10 +46,11 @@ type PDInstance struct {
 	joinEndpoints []*PDInstance
 	pds           []*PDInstance
 	Process
+	isCSEMode bool
 }
 
 // NewPDInstance return a PDInstance
-func NewPDInstance(role PDRole, binPath, dir, host, configPath string, id int, pds []*PDInstance, port int) *PDInstance {
+func NewPDInstance(role PDRole, binPath, dir, host, configPath string, id int, pds []*PDInstance, port int, isCSEMode bool) *PDInstance {
 	if port <= 0 {
 		port = 2379
 	}
@@ -65,8 +64,9 @@ func NewPDInstance(role PDRole, binPath, dir, host, configPath string, id int, p
 			StatusPort: utils.MustGetFreePort(host, port),
 			ConfigPath: configPath,
 		},
-		Role: role,
-		pds:  pds,
+		Role:      role,
+		pds:       pds,
+		isCSEMode: isCSEMode,
 	}
 }
 
@@ -89,6 +89,15 @@ func (inst *PDInstance) Name() string {
 
 // Start calls set inst.cmd and Start
 func (inst *PDInstance) Start(ctx context.Context, version utils.Version) error {
+	configPath := filepath.Join(inst.Dir, "pd.toml")
+	if err := prepareConfig(
+		configPath,
+		inst.ConfigPath,
+		inst.getConfig(),
+	); err != nil {
+		return err
+	}
+
 	uid := inst.Name()
 	var args []string
 	switch inst.Role {
@@ -98,6 +107,7 @@ func (inst *PDInstance) Start(ctx context.Context, version utils.Version) error 
 		}
 		args = append(args, []string{
 			"--name=" + uid,
+			fmt.Sprintf("--config=%s", configPath),
 			fmt.Sprintf("--data-dir=%s", filepath.Join(inst.Dir, "data")),
 			fmt.Sprintf("--peer-urls=http://%s", utils.JoinHostPort(inst.Host, inst.Port)),
 			fmt.Sprintf("--advertise-peer-urls=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.Port)),
@@ -105,9 +115,6 @@ func (inst *PDInstance) Start(ctx context.Context, version utils.Version) error 
 			fmt.Sprintf("--advertise-client-urls=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.StatusPort)),
 			fmt.Sprintf("--log-file=%s", inst.LogFile()),
 		}...)
-		if inst.ConfigPath != "" {
-			args = append(args, fmt.Sprintf("--config=%s", inst.ConfigPath))
-		}
 		switch {
 		case len(inst.initEndpoints) > 0:
 			endpoints := make([]string, 0)
@@ -134,9 +141,7 @@ func (inst *PDInstance) Start(ctx context.Context, version utils.Version) error 
 			fmt.Sprintf("--advertise-listen-addr=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.StatusPort)),
 			fmt.Sprintf("--backend-endpoints=%s", strings.Join(endpoints, ",")),
 			fmt.Sprintf("--log-file=%s", inst.LogFile()),
-		}
-		if inst.ConfigPath != "" {
-			args = append(args, fmt.Sprintf("--config=%s", inst.ConfigPath))
+			fmt.Sprintf("--config=%s", configPath),
 		}
 	case PDRoleScheduling:
 		endpoints := pdEndpoints(inst.pds, true)
@@ -147,22 +152,7 @@ func (inst *PDInstance) Start(ctx context.Context, version utils.Version) error 
 			fmt.Sprintf("--advertise-listen-addr=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.StatusPort)),
 			fmt.Sprintf("--backend-endpoints=%s", strings.Join(endpoints, ",")),
 			fmt.Sprintf("--log-file=%s", inst.LogFile()),
-		}
-		if inst.ConfigPath != "" {
-			args = append(args, fmt.Sprintf("--config=%s", inst.ConfigPath))
-		}
-	case PDRoleResourceManager:
-		endpoints := pdEndpoints(inst.pds, true)
-		args = []string{
-			"services",
-			"resource-manager",
-			fmt.Sprintf("--listen-addr=http://%s", utils.JoinHostPort(inst.Host, inst.StatusPort)),
-			fmt.Sprintf("--advertise-listen-addr=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.StatusPort)),
-			fmt.Sprintf("--backend-endpoints=%s", strings.Join(endpoints, ",")),
-			fmt.Sprintf("--log-file=%s", inst.LogFile()),
-		}
-		if inst.ConfigPath != "" {
-			args = append(args, fmt.Sprintf("--config=%s", inst.ConfigPath))
+			fmt.Sprintf("--config=%s", configPath),
 		}
 	}
 
@@ -178,14 +168,17 @@ func (inst *PDInstance) Start(ctx context.Context, version utils.Version) error 
 
 // Component return the component name.
 func (inst *PDInstance) Component() string {
-	if inst.Role == PDRoleNormal {
+	if inst.Role == PDRoleNormal || inst.Role == PDRoleAPI {
 		return "pd"
 	}
-	return fmt.Sprintf("pd %s", inst.Role)
+	return string(inst.Role)
 }
 
 // LogFile return the log file.
 func (inst *PDInstance) LogFile() string {
+	if inst.Role == PDRoleNormal || inst.Role == PDRoleAPI {
+		return filepath.Join(inst.Dir, "pd.log")
+	}
 	return filepath.Join(inst.Dir, fmt.Sprintf("%s.log", string(inst.Role)))
 }
 

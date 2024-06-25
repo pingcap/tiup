@@ -107,6 +107,11 @@ func (c *GrafanaComponent) Role() string {
 	return RoleMonitor
 }
 
+// Source implements Component interface.
+func (c *GrafanaComponent) Source() string {
+	return ComponentGrafana
+}
+
 // CalculateVersion implements the Component interface
 func (c *GrafanaComponent) CalculateVersion(clusterVersion string) string {
 	// always not follow cluster version, use ""(latest) by default

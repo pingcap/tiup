@@ -143,7 +143,7 @@ func (e *EasySSHExecutor) Execute(ctx context.Context, cmd string, sudo bool, ti
 	}
 
 	// set a basic PATH in case it's empty on login
-	cmd = fmt.Sprintf("PATH=$PATH:/bin:/sbin:/usr/bin:/usr/sbin %s", cmd)
+	cmd = fmt.Sprintf("PATH=$PATH:/bin:/sbin:/usr/bin:/usr/sbin; %s", cmd)
 
 	if e.Locale != "" {
 		cmd = fmt.Sprintf("export LANG=%s; %s", e.Locale, cmd)
@@ -182,6 +182,7 @@ func (e *EasySSHExecutor) Execute(ctx context.Context, cmd string, sudo bool, ti
 					e.Config.Server,
 					color.YellowString(output)))
 		}
+
 		return []byte(stdout), []byte(stderr), baseErr
 	}
 

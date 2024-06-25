@@ -46,6 +46,7 @@ function kill_all() {
     killall -9 pd-server || true
     killall -9 tikv-cdc || true
     killall -9 tiflash || true
+    killall -9 tiproxy || true
     killall -9 grafana-server || true
     killall -9 tiup-playground || true
     killall -9 prometheus || true
@@ -155,6 +156,26 @@ pid=`tiup-playground display | grep "tikv-cdc" | awk 'NR==1 {print $1}'`
 tiup-playground scale-in --pid $pid
 sleep 5
 check_instance_num tikv-cdc 2
+
+# exit all
+killall -2 tiup-playground.test || killall -2 tiup-playground
+sleep 30
+
+# test for TiProxy
+echo -e "\033[0;36m<<< Run TiProxy test >>>\033[0m"
+tiup-playground $TIDB_VERSION --db 1 --pd 1 --kv 1 --tiflash 0 --tiproxy 1 --tiproxy.version "nightly" > $outfile 2>&1 &
+sleep 3
+timeout 300 grep -q "TiDB Playground Cluster is started" <(tail -f $outfile)
+tiup-playground display | grep -qv "exit"
+# scale out
+tiup-playground scale-out --tiproxy 1
+sleep 5
+check_instance_num tiproxy 2
+# scale in
+pid=`tiup-playground display | grep "tiproxy" | awk 'NR==1 {print $1}'`
+tiup-playground scale-in --pid $pid
+sleep 5
+check_instance_num tiproxy 1
 
 # exit all
 killall -2 tiup-playground.test || killall -2 tiup-playground

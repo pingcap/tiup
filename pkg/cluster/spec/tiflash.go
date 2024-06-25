@@ -162,14 +162,6 @@ func (s *TiFlashSpec) IgnoreMonitorAgent() bool {
 	return s.IgnoreExporter
 }
 
-// GetSource returns source to download the component
-func (s *TiFlashSpec) GetSource() string {
-	if s.Source == "" {
-		return ComponentTiFlash
-	}
-	return s.Source
-}
-
 // key names for storage config
 const (
 	TiFlashStorageKeyMainDirs   string = "storage.main.dir"
@@ -282,6 +274,15 @@ func (c *TiFlashComponent) Role() string {
 	return ComponentTiFlash
 }
 
+// Source implements Component interface.
+func (c *TiFlashComponent) Source() string {
+	source := c.Topology.ComponentSources.TiFlash
+	if source != "" {
+		return source
+	}
+	return ComponentTiFlash
+}
+
 // CalculateVersion implements the Component interface
 func (c *TiFlashComponent) CalculateVersion(clusterVersion string) string {
 	version := c.Topology.ComponentVersions.TiFlash
@@ -308,7 +309,7 @@ func (c *TiFlashComponent) Instances() []Instance {
 			ListenHost:   c.Topology.BaseTopo().GlobalOptions.ListenHost,
 			Port:         s.GetMainPort(),
 			SSHP:         s.SSHPort,
-			Source:       s.GetSource(),
+			Source:       s.Source,
 			NumaNode:     s.NumaNode,
 			NumaCores:    s.NumaCores,
 
@@ -536,6 +537,7 @@ func (i *TiFlashInstance) initTiFlashConfig(ctx context.Context, version string,
 		daemonConfig = `application.runAsDaemon: true`
 		markCacheSize = `mark_cache_size: 5368709120`
 	}
+
 	err = yaml.Unmarshal([]byte(fmt.Sprintf(`
 server_configs:
   tiflash:
@@ -558,11 +560,9 @@ server_configs:
     logger.errorlog: "%[2]s/tiflash_error.log"
     logger.log: "%[2]s/tiflash.log"
     logger.count: 20
-    logger.level: "debug"
     logger.size: "1000M"
     %[13]s
     raft.pd_addr: "%[9]s"
-    profiles.default.max_memory_usage: 0
     %[12]s
     %[14]s
 `,
@@ -768,7 +768,7 @@ func (i *TiFlashInstance) InitConfig(
 		DeployDir: paths.Deploy,
 		LogDir:    paths.Log,
 
-		NumaNode:  spec.NumaCores,
+		NumaNode:  spec.NumaNode,
 		NumaCores: spec.NumaCores,
 	}
 

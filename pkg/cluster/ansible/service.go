@@ -34,6 +34,8 @@ var (
 )
 
 // parseDirs sets values of directories of component
+//
+//revive:disable
 func parseDirs(ctx context.Context, user string, ins spec.InstanceSpec, sshTimeout uint64, sshType executor.SSHType) (spec.InstanceSpec, error) {
 	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 	hostName, sshPort := ins.SSH()

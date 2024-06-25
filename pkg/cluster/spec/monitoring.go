@@ -60,6 +60,8 @@ type PrometheusSpec struct {
 	AdditionalScrapeConf  map[string]any         `yaml:"additional_scrape_conf,omitempty" validate:"additional_scrape_conf:ignore"`
 	ScrapeInterval        string                 `yaml:"scrape_interval,omitempty" validate:"scrape_interval:editable"`
 	ScrapeTimeout         string                 `yaml:"scrape_timeout,omitempty" validate:"scrape_timeout:editable"`
+
+	AdditionalArgs []string `yaml:"additional_args,omitempty" validate:"additional_args:ignore"`
 }
 
 // Remote prometheus remote config
@@ -122,6 +124,11 @@ func (c *MonitorComponent) Name() string {
 // Role implements Component interface.
 func (c *MonitorComponent) Role() string {
 	return RoleMonitor
+}
+
+// Source implements Component interface.
+func (c *MonitorComponent) Source() string {
+	return ComponentPrometheus
 }
 
 // CalculateVersion implements the Component interface
@@ -215,6 +222,8 @@ func (i *MonitorInstance) InitConfig(
 		DataDir:   paths.Data[0],
 
 		NumaNode: spec.NumaNode,
+
+		AdditionalArgs: spec.AdditionalArgs,
 	}
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_prometheus_%s_%d.sh", i.GetHost(), i.GetPort()))
@@ -250,6 +259,20 @@ func (i *MonitorInstance) InitConfig(
 			pd := servers.Index(i).Interface().(*PDSpec)
 			uniqueHosts.Insert(pd.Host)
 			cfig.AddPD(pd.Host, uint64(pd.ClientPort))
+		}
+	}
+	if servers, found := topoHasField("TSOServers"); found {
+		for i := 0; i < servers.Len(); i++ {
+			tso := servers.Index(i).Interface().(*TSOSpec)
+			uniqueHosts.Insert(tso.Host)
+			cfig.AddTSO(tso.Host, uint64(tso.Port))
+		}
+	}
+	if servers, found := topoHasField("SchedulingServers"); found {
+		for i := 0; i < servers.Len(); i++ {
+			scheduling := servers.Index(i).Interface().(*SchedulingSpec)
+			uniqueHosts.Insert(scheduling.Host)
+			cfig.AddScheduling(scheduling.Host, uint64(scheduling.Port))
 		}
 	}
 	if servers, found := topoHasField("TiKVServers"); found {

@@ -61,7 +61,7 @@ func Enable(
 	components = FilterComponent(components, roleFilter)
 	monitoredOptions := cluster.GetMonitoredOptions()
 	noAgentHosts := set.NewStringSet()
-
+	systemdMode := string(cluster.BaseTopo().GlobalOptions.SystemdMode)
 	instCount := map[string]int{}
 	cluster.IterInstance(func(inst spec.Instance) {
 		if inst.IgnoreMonitorAgent() {
@@ -73,7 +73,7 @@ func Enable(
 
 	for _, comp := range components {
 		insts := FilterInstance(comp.Instances(), nodeFilter)
-		err := EnableComponent(ctx, insts, noAgentHosts, options, isEnable)
+		err := EnableComponent(ctx, insts, noAgentHosts, options, isEnable, systemdMode)
 		if err != nil {
 			return errors.Annotatef(err, "failed to enable/disable %s", comp.Name())
 		}
@@ -98,7 +98,7 @@ func Enable(
 		hosts = append(hosts, host)
 	}
 
-	return EnableMonitored(ctx, hosts, noAgentHosts, monitoredOptions, options.OptTimeout, isEnable)
+	return EnableMonitored(ctx, hosts, noAgentHosts, monitoredOptions, options.OptTimeout, isEnable, systemdMode)
 }
 
 // Start the cluster.
@@ -116,7 +116,7 @@ func Start(
 	components = FilterComponent(components, roleFilter)
 	monitoredOptions := cluster.GetMonitoredOptions()
 	noAgentHosts := set.NewStringSet()
-
+	systemdMode := string(cluster.BaseTopo().GlobalOptions.SystemdMode)
 	cluster.IterInstance(func(inst spec.Instance) {
 		if inst.IgnoreMonitorAgent() {
 			noAgentHosts.Insert(inst.GetManageHost())
@@ -125,7 +125,7 @@ func Start(
 
 	for _, comp := range components {
 		insts := FilterInstance(comp.Instances(), nodeFilter)
-		err := StartComponent(ctx, insts, noAgentHosts, options, tlsCfg)
+		err := StartComponent(ctx, insts, noAgentHosts, options, tlsCfg, systemdMode)
 		if err != nil {
 			return errors.Annotatef(err, "failed to start %s", comp.Name())
 		}
@@ -164,7 +164,7 @@ func Start(
 	for host := range uniqueHosts {
 		hosts = append(hosts, host)
 	}
-	return StartMonitored(ctx, hosts, noAgentHosts, monitoredOptions, options.OptTimeout)
+	return StartMonitored(ctx, hosts, noAgentHosts, monitoredOptions, options.OptTimeout, systemdMode)
 }
 
 // Stop the cluster.
@@ -181,7 +181,7 @@ func Stop(
 	components = FilterComponent(components, roleFilter)
 	monitoredOptions := cluster.GetMonitoredOptions()
 	noAgentHosts := set.NewStringSet()
-
+	systemdMode := string(cluster.BaseTopo().GlobalOptions.SystemdMode)
 	instCount := map[string]int{}
 	cluster.IterInstance(func(inst spec.Instance) {
 		if inst.IgnoreMonitorAgent() {
@@ -225,7 +225,7 @@ func Stop(
 		hosts = append(hosts, host)
 	}
 
-	if err := StopMonitored(ctx, hosts, noAgentHosts, monitoredOptions, options.OptTimeout); err != nil && !options.Force {
+	if err := StopMonitored(ctx, hosts, noAgentHosts, monitoredOptions, options.OptTimeout, systemdMode); err != nil && !options.Force {
 		return err
 	}
 	return nil
@@ -278,36 +278,36 @@ func Restart(
 }
 
 // StartMonitored start BlackboxExporter and NodeExporter
-func StartMonitored(ctx context.Context, hosts []string, noAgentHosts set.StringSet, options *spec.MonitoredOptions, timeout uint64) error {
-	return systemctlMonitor(ctx, hosts, noAgentHosts, options, "start", timeout)
+func StartMonitored(ctx context.Context, hosts []string, noAgentHosts set.StringSet, options *spec.MonitoredOptions, timeout uint64, systemdMode string) error {
+	return systemctlMonitor(ctx, hosts, noAgentHosts, options, "start", timeout, systemdMode)
 }
 
 // StopMonitored stop BlackboxExporter and NodeExporter
-func StopMonitored(ctx context.Context, hosts []string, noAgentHosts set.StringSet, options *spec.MonitoredOptions, timeout uint64) error {
-	return systemctlMonitor(ctx, hosts, noAgentHosts, options, "stop", timeout)
+func StopMonitored(ctx context.Context, hosts []string, noAgentHosts set.StringSet, options *spec.MonitoredOptions, timeout uint64, systemdMode string) error {
+	return systemctlMonitor(ctx, hosts, noAgentHosts, options, "stop", timeout, systemdMode)
 }
 
 // RestartMonitored stop BlackboxExporter and NodeExporter
-func RestartMonitored(ctx context.Context, hosts []string, noAgentHosts set.StringSet, options *spec.MonitoredOptions, timeout uint64) error {
-	err := StopMonitored(ctx, hosts, noAgentHosts, options, timeout)
+func RestartMonitored(ctx context.Context, hosts []string, noAgentHosts set.StringSet, options *spec.MonitoredOptions, timeout uint64, systemdMode string) error {
+	err := StopMonitored(ctx, hosts, noAgentHosts, options, timeout, systemdMode)
 	if err != nil {
 		return err
 	}
 
-	return StartMonitored(ctx, hosts, noAgentHosts, options, timeout)
+	return StartMonitored(ctx, hosts, noAgentHosts, options, timeout, systemdMode)
 }
 
 // EnableMonitored enable/disable monitor service in a cluster
-func EnableMonitored(ctx context.Context, hosts []string, noAgentHosts set.StringSet, options *spec.MonitoredOptions, timeout uint64, isEnable bool) error {
+func EnableMonitored(ctx context.Context, hosts []string, noAgentHosts set.StringSet, options *spec.MonitoredOptions, timeout uint64, isEnable bool, systemdMode string) error {
 	action := "disable"
 	if isEnable {
 		action = "enable"
 	}
 
-	return systemctlMonitor(ctx, hosts, noAgentHosts, options, action, timeout)
+	return systemctlMonitor(ctx, hosts, noAgentHosts, options, action, timeout, systemdMode)
 }
 
-func systemctlMonitor(ctx context.Context, hosts []string, noAgentHosts set.StringSet, options *spec.MonitoredOptions, action string, timeout uint64) error {
+func systemctlMonitor(ctx context.Context, hosts []string, noAgentHosts set.StringSet, options *spec.MonitoredOptions, action string, timeout uint64, systemdMode string) error {
 	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 	ports := monitorPortMap(options)
 	for _, comp := range []string{spec.ComponentNodeExporter, spec.ComponentBlackboxExporter} {
@@ -326,7 +326,7 @@ func systemctlMonitor(ctx context.Context, hosts []string, noAgentHosts set.Stri
 				e := ctxt.GetInner(nctx).Get(host)
 				service := fmt.Sprintf("%s-%d.service", comp, ports[comp])
 
-				if err := systemctl(nctx, e, service, action, timeout); err != nil {
+				if err := systemctl(nctx, e, service, action, timeout, systemdMode); err != nil {
 					return toFailedActionError(err, action, host, service, "")
 				}
 
@@ -353,12 +353,12 @@ func systemctlMonitor(ctx context.Context, hosts []string, noAgentHosts set.Stri
 	return nil
 }
 
-func restartInstance(ctx context.Context, ins spec.Instance, timeout uint64, tlsCfg *tls.Config) error {
+func restartInstance(ctx context.Context, ins spec.Instance, timeout uint64, tlsCfg *tls.Config, systemdMode string) error {
 	e := ctxt.GetInner(ctx).Get(ins.GetManageHost())
 	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 	logger.Infof("\tRestarting instance %s", ins.ID())
 
-	if err := systemctl(ctx, e, ins.ServiceName(), "restart", timeout); err != nil {
+	if err := systemctl(ctx, e, ins.ServiceName(), "restart", timeout, systemdMode); err != nil {
 		return toFailedActionError(err, "restart", ins.GetManageHost(), ins.ServiceName(), ins.LogDir())
 	}
 
@@ -372,7 +372,7 @@ func restartInstance(ctx context.Context, ins spec.Instance, timeout uint64, tls
 	return nil
 }
 
-func enableInstance(ctx context.Context, ins spec.Instance, timeout uint64, isEnable bool) error {
+func enableInstance(ctx context.Context, ins spec.Instance, timeout uint64, isEnable bool, systemdMode string) error {
 	e := ctxt.GetInner(ctx).Get(ins.GetManageHost())
 	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 
@@ -383,7 +383,7 @@ func enableInstance(ctx context.Context, ins spec.Instance, timeout uint64, isEn
 	logger.Infof("\t%s instance %s", actionPrevMsgs[action], ins.ID())
 
 	// Enable/Disable by systemd.
-	if err := systemctl(ctx, e, ins.ServiceName(), action, timeout); err != nil {
+	if err := systemctl(ctx, e, ins.ServiceName(), action, timeout, systemdMode); err != nil {
 		return toFailedActionError(err, action, ins.GetManageHost(), ins.ServiceName(), ins.LogDir())
 	}
 
@@ -392,12 +392,12 @@ func enableInstance(ctx context.Context, ins spec.Instance, timeout uint64, isEn
 	return nil
 }
 
-func startInstance(ctx context.Context, ins spec.Instance, timeout uint64, tlsCfg *tls.Config) error {
+func startInstance(ctx context.Context, ins spec.Instance, timeout uint64, tlsCfg *tls.Config, systemdMode string) error {
 	e := ctxt.GetInner(ctx).Get(ins.GetManageHost())
 	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 	logger.Infof("\tStarting instance %s", ins.ID())
 
-	if err := systemctl(ctx, e, ins.ServiceName(), "start", timeout); err != nil {
+	if err := systemctl(ctx, e, ins.ServiceName(), "start", timeout, systemdMode); err != nil {
 		return toFailedActionError(err, "start", ins.GetManageHost(), ins.ServiceName(), ins.LogDir())
 	}
 
@@ -411,13 +411,14 @@ func startInstance(ctx context.Context, ins spec.Instance, timeout uint64, tlsCf
 	return nil
 }
 
-func systemctl(ctx context.Context, executor ctxt.Executor, service string, action string, timeout uint64) error {
+func systemctl(ctx context.Context, executor ctxt.Executor, service string, action string, timeout uint64, scope string) error {
 	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 	c := module.SystemdModuleConfig{
 		Unit:         service,
 		ReloadDaemon: true,
 		Action:       action,
 		Timeout:      time.Second * time.Duration(timeout),
+		Scope:        scope,
 	}
 	systemd := module.NewSystemdModule(c)
 	stdout, stderr, err := systemd.Execute(ctx, executor)
@@ -443,7 +444,7 @@ func systemctl(ctx context.Context, executor ctxt.Executor, service string, acti
 }
 
 // EnableComponent enable/disable the instances
-func EnableComponent(ctx context.Context, instances []spec.Instance, noAgentHosts set.StringSet, options Options, isEnable bool) error {
+func EnableComponent(ctx context.Context, instances []spec.Instance, noAgentHosts set.StringSet, options Options, isEnable bool, systemdMode string) error {
 	if len(instances) == 0 {
 		return nil
 	}
@@ -476,7 +477,7 @@ func EnableComponent(ctx context.Context, instances []spec.Instance, noAgentHost
 		// of checkpoint context every time put it into a new goroutine.
 		nctx := checkpoint.NewContext(ctx)
 		errg.Go(func() error {
-			err := enableInstance(nctx, ins, options.OptTimeout, isEnable)
+			err := enableInstance(nctx, ins, options.OptTimeout, isEnable, systemdMode)
 			if err != nil {
 				return err
 			}
@@ -488,7 +489,7 @@ func EnableComponent(ctx context.Context, instances []spec.Instance, noAgentHost
 }
 
 // StartComponent start the instances.
-func StartComponent(ctx context.Context, instances []spec.Instance, noAgentHosts set.StringSet, options Options, tlsCfg *tls.Config) error {
+func StartComponent(ctx context.Context, instances []spec.Instance, noAgentHosts set.StringSet, options Options, tlsCfg *tls.Config, systemdMode string) error {
 	if len(instances) == 0 {
 		return nil
 	}
@@ -506,7 +507,7 @@ func StartComponent(ctx context.Context, instances []spec.Instance, noAgentHosts
 		case spec.ComponentPD,
 			spec.ComponentTiFlash,
 			spec.ComponentDMMaster:
-			return serialStartInstances(ctx, instances, options, tlsCfg)
+			return serialStartInstances(ctx, instances, options, tlsCfg, systemdMode)
 		}
 	}
 
@@ -531,31 +532,31 @@ func StartComponent(ctx context.Context, instances []spec.Instance, noAgentHosts
 			if err := ins.PrepareStart(nctx, tlsCfg); err != nil {
 				return err
 			}
-			return startInstance(nctx, ins, options.OptTimeout, tlsCfg)
+			return startInstance(nctx, ins, options.OptTimeout, tlsCfg, systemdMode)
 		})
 	}
 
 	return errg.Wait()
 }
 
-func serialStartInstances(ctx context.Context, instances []spec.Instance, options Options, tlsCfg *tls.Config) error {
+func serialStartInstances(ctx context.Context, instances []spec.Instance, options Options, tlsCfg *tls.Config, systemdMode string) error {
 	for _, ins := range instances {
 		if err := ins.PrepareStart(ctx, tlsCfg); err != nil {
 			return err
 		}
-		if err := startInstance(ctx, ins, options.OptTimeout, tlsCfg); err != nil {
+		if err := startInstance(ctx, ins, options.OptTimeout, tlsCfg, systemdMode); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func stopInstance(ctx context.Context, ins spec.Instance, timeout uint64) error {
+func stopInstance(ctx context.Context, ins spec.Instance, timeout uint64, systemdMode string) error {
 	e := ctxt.GetInner(ctx).Get(ins.GetManageHost())
 	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 	logger.Infof("\tStopping instance %s", ins.GetManageHost())
 
-	if err := systemctl(ctx, e, ins.ServiceName(), "stop", timeout); err != nil {
+	if err := systemctl(ctx, e, ins.ServiceName(), "stop", timeout, systemdMode); err != nil {
 		return toFailedActionError(err, "stop", ins.GetManageHost(), ins.ServiceName(), ins.LogDir())
 	}
 
@@ -581,7 +582,7 @@ func StopComponent(ctx context.Context,
 	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 	name := instances[0].ComponentName()
 	logger.Infof("Stopping component %s", name)
-
+	systemdMode := string(topo.BaseTopo().GlobalOptions.SystemdMode)
 	errg, _ := errgroup.WithContext(ctx)
 
 	for _, ins := range instances {
@@ -607,7 +608,7 @@ func StopComponent(ctx context.Context,
 					return err
 				}
 			}
-			if err := stopInstance(nctx, ins, options.OptTimeout); err != nil {
+			if err := stopInstance(nctx, ins, options.OptTimeout, systemdMode); err != nil {
 				return err
 			}
 			// continue here, to skip the logic below.
@@ -628,7 +629,7 @@ func StopComponent(ctx context.Context,
 					}
 				}
 			}
-			err := stopInstance(nctx, ins, options.OptTimeout)
+			err := stopInstance(nctx, ins, options.OptTimeout, systemdMode)
 			if err != nil {
 				return err
 			}

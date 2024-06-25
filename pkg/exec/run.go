@@ -21,25 +21,32 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
-	"github.com/fatih/color"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/telemetry"
+	"github.com/pingcap/tiup/pkg/tui/colorstr"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/version"
 	"golang.org/x/mod/semver"
 )
+
+// Skip displaying "Starting component ..." message for some commonly used components.
+var skipStartingMessages = map[string]bool{
+	"playground": true,
+	"cluster":    true,
+}
 
 // RunComponent start a component and wait it
 func RunComponent(env *environment.Environment, tag, spec, binPath string, args []string) error {
 	component, version := environment.ParseCompVersion(spec)
 
 	if version == "" {
-		cmdCheckUpdate(component, version, 2)
+		cmdCheckUpdate(component, version)
 	}
 
 	binPath, err := PrepareBinary(component, version, binPath)
@@ -74,7 +81,10 @@ func RunComponent(env *environment.Environment, tag, spec, binPath string, args 
 		return err
 	}
 
-	fmt.Fprintf(os.Stderr, "Starting component `%s`: %s\n", component, strings.Join(c.Args, " "))
+	if skip, ok := skipStartingMessages[component]; !skip || !ok {
+		colorstr.Fprintf(os.Stderr, "Starting component [bold]%s[reset]: %s\n", component, strings.Join(environment.HidePassword(c.Args), " "))
+	}
+
 	err = c.Start()
 	if err != nil {
 		return errors.Annotatef(err, "Failed to start component `%s`", component)
@@ -170,37 +180,60 @@ func PrepareCommand(p *PrepareCommandParams) (*exec.Cmd, error) {
 	return c, nil
 }
 
-func cmdCheckUpdate(component string, version utils.Version, timeoutSec int) {
-	fmt.Fprintf(os.Stderr, "tiup is checking updates for component %s ...", component)
-	updateC := make(chan string)
-	// timeout for check update
+func cmdCheckUpdate(component string, version utils.Version) {
+	const (
+		slowTimeout   = 1 * time.Second // Timeout to display checking message
+		cancelTimeout = 2 * time.Second // Timeout to cancel the check
+	)
+
+	// This mutex is used for protecting flag as well as stdout
+	mu := sync.Mutex{}
+	isCheckFinished := false
+
+	result := make(chan string, 1)
+
 	go func() {
-		time.Sleep(time.Duration(timeoutSec) * time.Second)
-		updateC <- color.YellowString("timeout(%ds)!", timeoutSec)
+		time.Sleep(slowTimeout)
+		mu.Lock()
+		defer mu.Unlock()
+		if !isCheckFinished {
+			colorstr.Fprintf(os.Stderr, "Checking updates for component [bold]%s[reset]... ", component)
+		}
 	}()
 
 	go func() {
-		var updateInfo string
+		time.Sleep(cancelTimeout)
+		result <- colorstr.Sprintf("[yellow]Timedout (after %s)", cancelTimeout)
+	}()
+
+	go func() {
 		latestV, _, err := environment.GlobalEnv().V1Repository().LatestStableVersion(component, false)
 		if err != nil {
+			result <- ""
 			return
 		}
 		selectVer, _ := environment.GlobalEnv().SelectInstalledVersion(component, version)
 
 		if semver.Compare(selectVer.String(), latestV.String()) < 0 {
-			updateInfo = fmt.Sprint(color.YellowString(`
-A new version of %[1]s is available:
-   The latest version:         %[2]s
-   Local installed version:    %[3]s
-   Update current component:   tiup update %[1]s
-   Update all components:      tiup update --all
+			result <- colorstr.Sprintf(`
+[yellow]A new version of [bold]%[1]s[reset][yellow] is available:[reset] [red][bold]%[2]s[reset] -> [green][bold]%[3]s[reset]
+
+    To update this component:   [tiup_command]tiup update %[1]s[reset]
+    To update all components:   [tiup_command]tiup update --all[reset]
 `,
-				component, latestV.String(), selectVer.String()))
+				component, selectVer.String(), latestV.String())
+		} else {
+			result <- ""
 		}
-		updateC <- updateInfo
 	}()
 
-	fmt.Fprintln(os.Stderr, <-updateC)
+	s := <-result
+	mu.Lock()
+	defer mu.Unlock()
+	isCheckFinished = true
+	if len(s) > 0 {
+		fmt.Fprintln(os.Stderr, s)
+	}
 }
 
 // PrepareBinary use given binpath or download from tiup mirror
@@ -231,7 +264,7 @@ func saveProcessInfo(p *PrepareCommandParams, c *exec.Cmd) {
 		CreatedTime: time.Now().Format(time.RFC3339),
 		Pid:         c.Process.Pid,
 		Exec:        c.Args[0],
-		Args:        c.Args,
+		Args:        environment.HidePassword(c.Args),
 		Dir:         p.InstanceDir,
 		Env:         c.Env,
 		Cmd:         c,

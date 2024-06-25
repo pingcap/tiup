@@ -105,6 +105,15 @@ func (c *TiKVCDCComponent) Role() string {
 	return ComponentTiKVCDC
 }
 
+// Source implements Component interface.
+func (c *TiKVCDCComponent) Source() string {
+	source := c.Topology.ComponentSources.TiKVCDC
+	if source != "" {
+		return source
+	}
+	return ComponentTiKVCDC
+}
+
 // CalculateVersion implements the Component interface
 func (c *TiKVCDCComponent) CalculateVersion(clusterVersion string) string {
 	// always not follow global version, use ""(latest) by default
@@ -115,14 +124,6 @@ func (c *TiKVCDCComponent) CalculateVersion(clusterVersion string) string {
 // SetVersion implements Component interface.
 func (c *TiKVCDCComponent) SetVersion(version string) {
 	c.Topology.ComponentVersions.TiKVCDC = version
-}
-
-// GetSource returns source to download the component
-func (s *TiKVCDCSpec) GetSource() string {
-	if s.Source == "" {
-		return ComponentTiKVCDC
-	}
-	return s.Source
 }
 
 // Instances implements Component interface.
@@ -138,7 +139,7 @@ func (c *TiKVCDCComponent) Instances() []Instance {
 			ListenHost:   c.Topology.BaseTopo().GlobalOptions.ListenHost,
 			Port:         s.Port,
 			SSHP:         s.SSHPort,
-			Source:       s.GetSource(),
+			Source:       s.Source,
 			NumaNode:     s.NumaNode,
 			NumaCores:    "",
 

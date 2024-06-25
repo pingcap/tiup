@@ -32,6 +32,7 @@ import (
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/repository"
+	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/mod/semver"
@@ -88,16 +89,25 @@ func (m *Manager) Upgrade(name string, clusterVersion string, componentVersions 
 	}
 
 	compVersionMsg := ""
-	for _, comp := range topo.ComponentsByUpdateOrder(base.Version) {
+	restartComponents := []string{}
+	components := topo.ComponentsByUpdateOrder(base.Version)
+	for _, comp := range components {
 		// if component version is not specified, use the cluster version or latest("")
+		oldver := comp.CalculateVersion(base.Version)
 		version := componentVersions[comp.Name()]
 		if version != "" {
 			comp.SetVersion(version)
 		}
-		if len(comp.Instances()) > 0 {
-			compVersionMsg += fmt.Sprintf("\nwill upgrade component %19s to \"%s\",", "\""+comp.Name()+"\"", comp.CalculateVersion(clusterVersion))
+		calver := comp.CalculateVersion(clusterVersion)
+		if comp.Name() != spec.ComponentTiProxy || calver != oldver {
+			restartComponents = append(restartComponents, comp.Name(), comp.Role())
+			if len(comp.Instances()) > 0 {
+				compVersionMsg += fmt.Sprintf("\nwill upgrade and restart component \"%19s\" to \"%s\",", comp.Name(), calver)
+			}
 		}
 	}
+	components = operator.FilterComponent(components, set.NewStringSet(restartComponents...))
+
 	monitoredOptions := topo.GetMonitoredOptions()
 	if monitoredOptions != nil {
 		if componentVersions[spec.ComponentBlackboxExporter] != "" {
@@ -126,13 +136,12 @@ This operation will upgrade %s %s cluster %s to %s:%s`,
 	}
 
 	hasImported := false
-	for _, comp := range topo.ComponentsByUpdateOrder(base.Version) {
-		compName := comp.Name()
+	for _, comp := range components {
 		version := comp.CalculateVersion(clusterVersion)
 
 		for _, inst := range comp.Instances() {
 			// Download component from repository
-			key := fmt.Sprintf("%s-%s-%s-%s", compName, version, inst.OS(), inst.Arch())
+			key := fmt.Sprintf("%s-%s-%s-%s", inst.ComponentSource(), version, inst.OS(), inst.Arch())
 			if _, found := uniqueComps[key]; !found {
 				uniqueComps[key] = struct{}{}
 				t := task.NewBuilder(m.logger).
@@ -152,7 +161,7 @@ This operation will upgrade %s %s cluster %s to %s:%s`,
 
 			// for some component, dataDirs might need to be created due to upgrade
 			// eg: TiCDC support DataDir since v4.0.13
-			tb = tb.Mkdir(topo.BaseTopo().GlobalOptions.User, inst.GetManageHost(), dataDirs...)
+			tb = tb.Mkdir(topo.BaseTopo().GlobalOptions.User, inst.GetManageHost(), topo.BaseTopo().GlobalOptions.SystemdMode != spec.UserMode, dataDirs...)
 
 			if inst.IsImported() {
 				switch inst.ComponentName() {
@@ -306,7 +315,9 @@ This operation will upgrade %s %s cluster %s to %s:%s`,
 			if offline {
 				return nil
 			}
-			return operator.Upgrade(ctx, topo, opt, tlsCfg, base.Version, clusterVersion)
+			nopt := opt
+			nopt.Roles = restartComponents
+			return operator.Upgrade(ctx, topo, nopt, tlsCfg, base.Version, clusterVersion)
 		}).
 		Build()
 

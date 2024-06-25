@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pingcap/errors"
 	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/tidbver"
 	"github.com/pingcap/tiup/pkg/utils"
@@ -38,19 +39,11 @@ const (
 	TiFlashRoleDisaggCompute TiFlashRole = "compute"
 )
 
-// DisaggOptions contains configs to run TiFlash in disaggregated mode.
-type DisaggOptions struct {
-	S3Endpoint string `yaml:"s3_endpoint"`
-	Bucket     string `yaml:"bucket"`
-	AccessKey  string `yaml:"access_key"`
-	SecretKey  string `yaml:"secret_key"`
-}
-
 // TiFlashInstance represent a running TiFlash
 type TiFlashInstance struct {
 	instance
 	Role            TiFlashRole
-	DisaggOpts      DisaggOptions
+	cseOpts         CSEOptions
 	TCPPort         int
 	ServicePort     int
 	ProxyPort       int
@@ -61,7 +54,7 @@ type TiFlashInstance struct {
 }
 
 // NewTiFlashInstance return a TiFlashInstance
-func NewTiFlashInstance(role TiFlashRole, disaggOptions DisaggOptions, binPath, dir, host, configPath string, id int, pds []*PDInstance, dbs []*TiDBInstance, version string) *TiFlashInstance {
+func NewTiFlashInstance(role TiFlashRole, cseOptions CSEOptions, binPath, dir, host, configPath string, id int, pds []*PDInstance, dbs []*TiDBInstance, version string) *TiFlashInstance {
 	if role != TiFlashRoleNormal && role != TiFlashRoleDisaggWrite && role != TiFlashRoleDisaggCompute {
 		panic(fmt.Sprintf("Unknown TiFlash role %s", role))
 	}
@@ -81,7 +74,7 @@ func NewTiFlashInstance(role TiFlashRole, disaggOptions DisaggOptions, binPath, 
 			ConfigPath: configPath,
 		},
 		Role:            role,
-		DisaggOpts:      disaggOptions,
+		cseOpts:         cseOptions,
 		TCPPort:         utils.MustGetFreePort(host, 9100), // 9000 for default object store port
 		ServicePort:     utils.MustGetFreePort(host, 3930),
 		ProxyPort:       utils.MustGetFreePort(host, 20170),
@@ -131,26 +124,34 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version utils.Version) e
 
 	args := []string{
 		"server",
-	}
-	args = append(args,
 		fmt.Sprintf("--config-file=%s", configPath),
 		"--",
-		fmt.Sprintf("--tmp_path=%s", filepath.Join(inst.Dir, "tmp")),
-		fmt.Sprintf("--path=%s", filepath.Join(inst.Dir, "data")),
-		fmt.Sprintf("--listen_host=%s", inst.Host),
-		fmt.Sprintf("--logger.log=%s", inst.LogFile()),
-		fmt.Sprintf("--logger.errorlog=%s", filepath.Join(inst.Dir, "tiflash_error.log")),
-		fmt.Sprintf("--status.metrics_port=%d", inst.StatusPort),
-		fmt.Sprintf("--flash.service_addr=%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.ServicePort)),
-		fmt.Sprintf("--raft.pd_addr=%s", strings.Join(endpoints, ",")),
-		fmt.Sprintf("--flash.proxy.addr=%s", utils.JoinHostPort(inst.Host, inst.ProxyPort)),
-		fmt.Sprintf("--flash.proxy.advertise-addr=%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.ProxyPort)),
-		fmt.Sprintf("--flash.proxy.status-addr=%s", utils.JoinHostPort(inst.Host, inst.ProxyStatusPort)),
-		fmt.Sprintf("--flash.proxy.data-dir=%s", filepath.Join(inst.Dir, "proxy_data")),
-		fmt.Sprintf("--flash.proxy.log-file=%s", filepath.Join(inst.Dir, "tiflash_tikv.log")),
-	)
+	}
+	runtimeConfig := [][]string{
+		{"path", filepath.Join(inst.Dir, "data")},
+		{"listen_host", inst.Host},
+		{"logger.log", inst.LogFile()},
+		{"logger.errorlog", filepath.Join(inst.Dir, "tiflash_error.log")},
+		{"status.metrics_port", fmt.Sprintf("%d", inst.StatusPort)},
+		{"flash.service_addr", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.ServicePort)},
+		{"raft.pd_addr", strings.Join(endpoints, ",")},
+		{"flash.proxy.addr", utils.JoinHostPort(inst.Host, inst.ProxyPort)},
+		{"flash.proxy.advertise-addr", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.ProxyPort)},
+		{"flash.proxy.status-addr", utils.JoinHostPort(inst.Host, inst.ProxyStatusPort)},
+		{"flash.proxy.data-dir", filepath.Join(inst.Dir, "proxy_data")},
+		{"flash.proxy.log-file", filepath.Join(inst.Dir, "tiflash_tikv.log")},
+	}
+	userConfig, err := unmarshalConfig(configPath)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	for _, arg := range runtimeConfig {
+		// if user has set the config, skip it
+		if !isKeyPresentInMap(userConfig, arg[0]) {
+			args = append(args, fmt.Sprintf("--%s=%s", arg[0], arg[1]))
+		}
+	}
 
-	var err error
 	if inst.BinPath, err = tiupexec.PrepareBinary("tiflash", version, inst.BinPath); err != nil {
 		return err
 	}
@@ -158,6 +159,24 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version utils.Version) e
 
 	logIfErr(inst.Process.SetOutputFile(inst.LogFile()))
 	return inst.Process.Start()
+}
+
+func isKeyPresentInMap(m map[string]any, key string) bool {
+	keys := strings.Split(key, ".")
+	currentMap := m
+
+	for i := 0; i < len(keys); i++ {
+		if _, ok := currentMap[keys[i]]; !ok {
+			return false
+		}
+
+		// If the current value is a nested map, update the current map to the nested map
+		if innerMap, ok := currentMap[keys[i]].(map[string]any); ok {
+			currentMap = innerMap
+		}
+	}
+
+	return true
 }
 
 // Component return the component name.

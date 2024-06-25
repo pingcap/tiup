@@ -1,5 +1,100 @@
 TiUP Changelog
 
+## [1.15.2] 2024-05-28
+
+### Improvements
+
+- Remove LGPL dependency
+
+## [1.15.1] 2024-04-11
+
+### Fixes
+
+- Fix cannot choose cluster version in `tiup-playground` (#2397 #2402, @nexustar)
+- Fix wrong TiFlash numa config in `tiup-cluster` (#2401, @gengliqi)
+
+### Improvements
+
+- Wait for TSO component ready in `tiup-playground` (#2349, @HuSharp)
+- Improve error handling of mirror renew in `tiup` (#2400, @dveeden)
+
+## [1.15.0] 2024-04-01
+
+### New Features
+
+- Support no-sudo mode in `tiup-cluster` (#2350 #2373, @Yujie-Xie)
+- Add tidb-cse mode and remove tidb-disagg mode in `tiup-playground` (#2386, @breezewish)
+
+### Fixes
+
+- Fix can not set runtime config in config file specific by --tiflash.config in `tiup-playground` (#2346 #2383, @Lloyd-Pottiger)
+- Fix not sanitize tiproxy component config when scale in in `tiup-playground` (#2365, @xhebox)
+- Fix timeout when checking component upgrade in `tiup` (#2379, @KanShiori)
+- Fix pdms grafana display in `tiup-playground` (#2382, @HuSharp)
+- Fix not update prometheus config when scale in in `tiup-cluster` (#2387, @Yujie-Xie)
+
+### Improvements
+
+- Set the TiFlash logger level to DEBUG in `tiup-playground` (#2346, @Lloyd-Pottiger)
+- Add integration tests for tiproxy in `tiup-cluster` (#2371, @xhebox)
+- Set tiproxy addr without schema in `tiup-playground` (#2368, @xhebox)
+- Only pull nightly from cluster version in `tiup-playground` (#2364, @xhebox)
+- Skip tiproxy download & copy when upgrade in `tiup-cluster` (#2366, @xhebox)
+- Auto set session certs if there is a tiproxy in `tiup-cluster` (#2374, @xhebox)
+- Auto generate self-signed certs for TiProxy session migration in `tiup-playground` (#2372, @xhebox)
+- Remove resource manager in `tiup-playground` (#2381, @rleungx)
+- Add config advertise-addr to tiproxy spec in `tiup-cluster` and `tiup-playground` (#2392, @djshow832)
+
+## [1.14.1] 2024-01-12
+
+### Fixes
+
+- Fix tiproxy will restart even if version is the same in `tiup-cluster` (#2358, @xhebox)
+- Fix that empty label is not allowed in Prometheus in `tiup-cluster` (#2349, @borissavelev)
+- Fix can not set runtime config in config file & set TiFlash logger level to debug in `tiup-playground` (#2346, @Lloyd-Pottiger)
+- Fix TLS configs for tiproxy in `tiup-cluster` (#2356, @xhebox)
+- Fix cannot clone without global version in `tiup` (#2359, @nexustar)
+- Fix tiproxy config and version in `tiup-cluster` (#2354, @xhebox)
+- TiProxy needs to override usercfg in `tiup-playground` (#2342, @xhebox)
+- Fix the start script for alertmanager when enabling numa in `tiup-cluster` and `tiup-dm` (#2337, @KanShiori)
+- Fix metric targets will be overrided in `tiup-playground` (#2324, @xhebox)
+
+### Improvements
+
+- Change typo waitting to waiting in output messages for pdapi.go in `tiup-cluster` (#2330, @guangleibao)
+- Add check for rocky linux in `tiup-cluster` (#2333, @dveeden)
+- Fallback to default version when componen specific version is empty in `tiup-playground` (#2344, @xhebox)
+
+## [1.14.0] 2023-11-17
+
+### New Features
+
+- Support use different component versions in `tiup-cluster` (#2010 #2264 #2306, @nexustar)
+- Add global listen_host config in `tiup-cluster` and `tiup-dm` (#2303, @nexustar)
+- Add gloabl component_sources config in `tiup-cluster` and `tiup-dm` (#2320, @nexustar)
+- Support TiDB upgrade API to automatically pause DDL when upgrade in `tiup-cluster`(#2287 #2289, @nexustar)
+- Support TiProxy in `tiup-cluster` (#2271, @xhebox)
+- Support scheduling service in `tiup-playground` (#2273, @rleungx)
+- Support to show numa node when display in `tiup-cluster` and `tiup-dm` (#2295 #2312, @KanShiori)
+
+### Fixes
+
+- Make sure to signal tiproxy to stop in `tiup-playground` (#2318, @dveeden)
+- Fix "clone" operation may be missing packages without throwing an error in `tiup` (#2309 #2311, @nexustar)
+- Not cache the output of ss -tln command when checking wether components are started/stopped in `tiup-cluster` and `tiup-dm` (#2298, @KanShiori)
+- Fix tidb-dashboard listen_host in `tiup-cluster` (#2304, @nexustar)
+- Fix tiproxy metrics addr in `tiup-playground` (#2299, @xhebox)
+
+### Improvements
+
+- Upgrade go-sql-driver/mysql version to v1.7.1 (#2246, @srstack)
+- Use release version of TiProxy instead of nightly (#2305, @nexustar)
+- Use port to probe TiDB in `tiup-playground` (#2296, @KanShiori)
+- Add mcs name for pd log in `tiup-playground` (#2310, @HuSharp)
+- Not overwrite real error in retry function (#2290, @nexustar)
+- Fix alignment of output in `tiup-playground` (#2313, @dveeden)
+- ci improve (#2301 #2308 #2316, @nexustar @dveeden)
+
 ## [1.13.1] 2023-09-25
 
 ### Fixes

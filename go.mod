@@ -4,9 +4,10 @@ go 1.21
 
 replace gopkg.in/yaml.v2 => github.com/july2993/yaml v0.0.0-20200423062752-adcfa5abe2ed
 
+replace github.com/jedib0t/go-pretty/v6 => github.com/nexustar/go-pretty/v6 v6.5.8-tiup
+
 require (
 	github.com/AstroProfundis/sysinfo v0.0.0-20220902033416-231991f6df3c
-	github.com/AstroProfundis/tabby v1.1.1-color
 	github.com/BurntSushi/toml v1.2.1
 	github.com/ScaleFT/sshkeys v1.2.0
 	github.com/alecthomas/assert v1.0.0
@@ -22,16 +23,16 @@ require (
 	github.com/gofrs/flock v0.8.1
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/protobuf v1.5.3
-	github.com/google/uuid v1.3.0
+	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.0
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
+	github.com/jedib0t/go-pretty/v6 v6.5.8
 	github.com/jeremywohl/flatten v1.0.1
 	github.com/joomcode/errorx v1.1.0
-	github.com/juju/ansiterm v1.0.0
-	github.com/mattn/go-runewidth v0.0.14
+	github.com/mattn/go-runewidth v0.0.15
 	github.com/minio/minio-go/v7 v7.0.52
+	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db
 	github.com/otiai10/copy v1.9.0
-	github.com/pelletier/go-toml v1.9.5
 	github.com/pingcap/check v0.0.0-20211026125417-57bd13f7b5f0
 	github.com/pingcap/errors v0.11.5-0.20201126102027-b0a155152ca3
 	github.com/pingcap/failpoint v0.0.0-20220801062533-2eaa32854a6c
@@ -49,17 +50,17 @@ require (
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/testify v1.8.2
+	github.com/stretchr/testify v1.9.0
 	go.etcd.io/etcd/client/pkg/v3 v3.5.7
 	go.etcd.io/etcd/client/v3 v3.5.7
 	go.uber.org/atomic v1.10.0
 	go.uber.org/zap v1.24.0
-	golang.org/x/crypto v0.7.0
+	golang.org/x/crypto v0.17.0
 	golang.org/x/mod v0.9.0
 	golang.org/x/sync v0.1.0
-	golang.org/x/sys v0.6.0
-	golang.org/x/term v0.6.0
-	golang.org/x/text v0.8.0
+	golang.org/x/sys v0.17.0
+	golang.org/x/term v0.17.0
+	golang.org/x/text v0.14.0
 	google.golang.org/genproto v0.0.0-20230330200707-38013875ee22
 	google.golang.org/grpc v1.54.0
 	gopkg.in/ini.v1 v1.67.0
@@ -86,7 +87,6 @@ require (
 	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/lorenzosaino/go-sysctl v0.3.1 // indirect
-	github.com/lunixbochs/vtclean v1.0.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.18 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
@@ -110,7 +110,7 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20230321023759-10a507213a29 // indirect
 	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
-	golang.org/x/net v0.8.0 // indirect
+	golang.org/x/net v0.10.0 // indirect
 	golang.org/x/tools v0.7.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect

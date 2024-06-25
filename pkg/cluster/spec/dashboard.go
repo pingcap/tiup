@@ -94,14 +94,6 @@ func (s *DashboardSpec) IgnoreMonitorAgent() bool {
 	return s.IgnoreExporter
 }
 
-// GetSource returns source to download the component
-func (s *DashboardSpec) GetSource() string {
-	if s.Source == "" {
-		return ComponentDashboard
-	}
-	return s.Source
-}
-
 // DashboardComponent represents Drainer component.
 type DashboardComponent struct{ Topology *Specification }
 
@@ -112,6 +104,15 @@ func (c *DashboardComponent) Name() string {
 
 // Role implements Component interface.
 func (c *DashboardComponent) Role() string {
+	return ComponentDashboard
+}
+
+// Source implements Component interface.
+func (c *DashboardComponent) Source() string {
+	source := c.Topology.ComponentSources.Dashboard
+	if source != "" {
+		return source
+	}
 	return ComponentDashboard
 }
 
