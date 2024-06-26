@@ -1,5 +1,16 @@
 TiUP Changelog
 
+## [1.16.0] 2024-06-27
+
+### New Features
+
+- Deploy PD as microservices in `tiup-cluster` (#2377, @rleungx)
+
+### Improvements
+
+- Remove tombstone nodes of pd when executing `tiup-cluster prune` (#2044, @nexustar)
+- Redact `-p` (password) arguments in command execution (#2425, @nexustar)
+
 ## [1.15.2] 2024-05-28
 
 ### Improvements
