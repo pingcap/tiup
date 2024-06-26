@@ -101,7 +101,7 @@ type (
 		Arch            string               `yaml:"arch,omitempty"`
 		Custom          any                  `yaml:"custom,omitempty" validate:"custom:ignore"`
 		SystemdMode     SystemdMode          `yaml:"systemd_mode,omitempty" default:"system"`
-		PDMode          string               `yaml:"pd_mode,omitempty"`
+		PDMode          string               `yaml:"pd_mode,omitempty" validate:"pd_mode:editable"`
 	}
 
 	// MonitoredOptions represents the monitored node configuration
