@@ -331,7 +331,7 @@ func (m *Manager) Deploy(
 	if err != nil {
 		return err
 	}
-	sessionCertTasks, err := buildSessionCertTasks(m, name, topo, topo, metadata.GetBaseMeta(), gOpt, sshProxyProps)
+	sessionCertTasks, err := buildSessionCertTasks(m, name, nil, topo, metadata.GetBaseMeta(), gOpt, sshProxyProps)
 	if err != nil {
 		return err
 	}
