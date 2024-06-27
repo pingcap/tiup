@@ -261,33 +261,19 @@ func (i *TiDBInstance) InitConfig(
 
 // setTiProxyConfig sets tiproxy session certs
 func (i *TiDBInstance) setTiProxyConfig(ctx context.Context, topo *Specification, version string, configs map[string]any, paths meta.DirPaths) (map[string]any, error) {
-	hasTiProxy := false
-	topo.IterInstance(func(instance Instance) {
-		if instance.ComponentName() == ComponentTiProxy {
-			hasTiProxy = true
-		}
-	})
-	if hasTiProxy && tidbver.TiDBSupportTiproxy(version) {
-		if configs == nil {
-			configs = make(map[string]any)
-		}
-		configs["security.session-token-signing-cert"] = fmt.Sprintf(
-			"%s/tls/tiproxy-session.crt",
-			paths.Deploy)
-		configs["security.session-token-signing-key"] = fmt.Sprintf(
-			"%s/tls/tiproxy-session.key",
-			paths.Deploy)
-	} else {
-		tlsConfigs := []string{
-			"security.session-token-signing-cert",
-			"security.session-token-signing-key",
-		}
-		if configs != nil {
-			for _, config := range tlsConfigs {
-				delete(configs, config)
-			}
-		}
+	if len(topo.TiProxyServers) <= 0 || !tidbver.TiDBSupportTiproxy(version) {
+		return configs, nil
 	}
+	if configs == nil {
+		configs = make(map[string]any)
+	}
+	// Overwrite users' configs just like TLS configs.
+	configs["security.session-token-signing-cert"] = fmt.Sprintf(
+		"%s/tls/tiproxy-session.crt",
+		paths.Deploy)
+	configs["security.session-token-signing-key"] = fmt.Sprintf(
+		"%s/tls/tiproxy-session.key",
+		paths.Deploy)
 	return configs, nil
 }
 
