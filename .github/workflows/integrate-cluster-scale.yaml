@@ -39,6 +39,7 @@ jobs:
           - 'test_scale_tools'
           - 'test_scale_core_tls'
           - 'test_scale_tools_tls'
+          - 'test_scale_tiproxy'
     env:
       working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
     steps:
