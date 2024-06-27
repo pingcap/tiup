@@ -261,7 +261,7 @@ func (i *TiDBInstance) InitConfig(
 
 // setTiProxyConfig sets tiproxy session certs
 func (i *TiDBInstance) setTiProxyConfig(ctx context.Context, topo *Specification, version string, configs map[string]any, paths meta.DirPaths) (map[string]any, error) {
-	if len(topo.TiProxyServers) <= 0 || !tidbver.TiDBSupportTiproxy(version) {
+	if len(topo.TiProxyServers) == 0 || !tidbver.TiDBSupportTiproxy(version) {
 		return configs, nil
 	}
 	if configs == nil {
