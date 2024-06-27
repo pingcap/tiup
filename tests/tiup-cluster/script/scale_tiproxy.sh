@@ -42,18 +42,22 @@ function scale_tiproxy() {
     tiup-cluster $client --yes reload $name --skip-restart
 
     if [ $test_tls = true ]; then
-        total_sub_one=19
-        total=20
+        total_sub_one=18
+        total=19
     else
-        total_sub_one=24
-        total=25
+        total_sub_one=23
+        total=24
     fi
 
     # disable tiproxy
     echo "start scale in tiproxy"
     tiup-cluster $client --yes scale-in $name -N n1:6000
-    wait_instance_num_reach $name $total_sub_one $native_ssh
+    wait_instance_num_reach $name $total $native_ssh
 
+    # scale in tidb and scale out again
+    echo "start scale in tidb"
+    tiup-cluster $client --yes scale-in $name -N n2:4000
+    wait_instance_num_reach $name $total_sub_one $native_ssh
     echo "start scale out tidb"
     topo=./topo/full_scale_in_tidb_2nd.yaml
     tiup-cluster $client --yes scale-out $name $topo
@@ -74,7 +78,7 @@ function scale_tiproxy() {
     # scale in tidb and scale out again
     echo "start scale in tidb"
     tiup-cluster $client --yes scale-in $name -N n2:4000
-    wait_instance_num_reach $name $all $native_ssh
+    wait_instance_num_reach $name $total $native_ssh
     echo "start scale out tidb"
     topo=./topo/full_scale_in_tidb_2nd.yaml
     tiup-cluster $client --yes scale-out $name $topo
