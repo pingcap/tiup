@@ -57,7 +57,7 @@ function scale_tiproxy() {
     echo "start scale out tidb"
     topo=./topo/full_scale_in_tidb_2nd.yaml
     tiup-cluster $client --yes scale-out $name $topo
-    # the session certs doesn't exist on the new tidb
+    # the session certs don't exist on the new tidb
     ! tiup-cluster $client exec $name -N n2 --command "$check_cert_file"
     # the configurations are not updated on the new tidb
     ! tiup-cluster $client exec $name -N n2 --command "$check_cert_config"
