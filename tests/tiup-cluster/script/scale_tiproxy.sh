@@ -86,4 +86,7 @@ function scale_tiproxy() {
     tiup-cluster $client exec $name -N n2 --command "$check_cert_file"
     # the configurations are updated on the new tidb
     tiup-cluster $client exec $name -N n2 --command "$check_cert_config"
+
+    tiup-cluster $client _test $name writable
+    tiup-cluster $client --yes destroy $name
 }
