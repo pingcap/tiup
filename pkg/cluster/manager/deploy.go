@@ -331,6 +331,11 @@ func (m *Manager) Deploy(
 	if err != nil {
 		return err
 	}
+	sessionCertTasks, err := buildSessionCertTasks(m, name, nil, topo, metadata.GetBaseMeta(), gOpt, sshProxyProps)
+	if err != nil {
+		return err
+	}
+	certificateTasks = append(certificateTasks, sessionCertTasks...)
 
 	refreshConfigTasks, _ := buildInitConfigTasks(m, name, topo, metadata.GetBaseMeta(), gOpt, nil)
 
