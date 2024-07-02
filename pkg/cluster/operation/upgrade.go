@@ -144,6 +144,30 @@ func Upgrade(
 					logger.Debugf("Deferred upgrading of PD leader %s", instance.ID())
 					continue
 				}
+			case spec.ComponentTSO:
+				// defer TSO primary to be upgraded after others
+				isPrimary, err := instance.(*spec.TSOInstance).IsPrimary(ctx, topo, tlsCfg)
+				if err != nil {
+					logger.Warnf("cannot found TSO primary, ignore: %s", err)
+					return err
+				}
+				if isPrimary {
+					deferInstances = append(deferInstances, instance)
+					logger.Debugf("Deferred upgrading of TSO primary %s", instance.ID())
+					continue
+				}
+			case spec.ComponentScheduling:
+				// defer Scheduling primary to be upgraded after others
+				isPrimary, err := instance.(*spec.SchedulingInstance).IsPrimary(ctx, topo, tlsCfg)
+				if err != nil {
+					logger.Warnf("cannot found Scheduling primary, ignore: %s", err)
+					return err
+				}
+				if isPrimary {
+					deferInstances = append(deferInstances, instance)
+					logger.Debugf("Deferred upgrading of Scheduling primary %s", instance.ID())
+					continue
+				}
 			case spec.ComponentCDC:
 				ins := instance.(*spec.CDCInstance)
 				address := ins.GetAddr()
