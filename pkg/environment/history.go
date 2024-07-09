@@ -245,17 +245,29 @@ func getLatestHistoryFile(dir string) (item historyItem) {
 
 // HidePassword replace password with ******
 func HidePassword(args []string) []string {
-	var record []string
+	redactArgs := []string{
+		"-p",
+		"--tidb-password",
+	}
+	var r []string
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
-		if strings.HasPrefix(arg, "-p") && len(arg) > 2 {
-			record = append(record, "-p******")
-		} else if arg == "-p" && i+1 < len(args) {
-			record = append(record, "-p", "******")
-			i++ // skip next word that may be password
-		} else {
-			record = append(record, arg)
+		redacted := false
+		for _, ra := range redactArgs {
+			if strings.HasPrefix(arg, ra) && len(arg) > 2 {
+				r = append(r, ra+"******")
+				redacted = true
+				break
+			} else if arg == ra && i+1 < len(args) {
+				r = append(r, ra, "******")
+				i++ // skip next word that may be password
+				redacted = true
+				break
+			}
+		}
+		if !redacted {
+			r = append(r, arg)
 		}
 	}
-	return record
+	return r
 }
