@@ -254,7 +254,7 @@ func HidePassword(args []string) []string {
 		arg := args[i]
 		redacted := false
 		for _, ra := range redactArgs {
-			if strings.HasPrefix(arg, ra) && len(arg) > 2 {
+			if strings.HasPrefix(arg, ra) && len(arg) > len(ra) {
 				r = append(r, ra+"******")
 				redacted = true
 				break
