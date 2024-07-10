@@ -246,7 +246,11 @@ func getLatestHistoryFile(dir string) (item historyItem) {
 // HidePassword replace password with ******
 func HidePassword(args []string) []string {
 	redactArgs := []string{
+		// general
 		"-p",
+		// dumpling
+		"--password",
+		// lightning
 		"--tidb-password",
 	}
 	var r []string
