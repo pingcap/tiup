@@ -23,6 +23,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/version"
 	"github.com/prometheus/common/expfmt"
@@ -230,4 +232,83 @@ func GetDMMasterPackageName(topo Topology) string {
 		}
 	}
 	return ComponentDMMaster
+}
+
+var systemdUnitPath = "/etc/systemd/system"
+
+// ModifyPDStartScriptPath modify the start *PD* script path to add `--name` flag
+func ModifyPDStartScriptPath(ctx context.Context, component, host string, port int, name string) error {
+	e, found := ctxt.GetInner(ctx).GetExecutor(host)
+	if !found {
+		return fmt.Errorf("no executor")
+	}
+	// 1. find the script path
+	serviceFile := fmt.Sprintf("%s/%s-%d.service",
+		systemdUnitPath,
+		component,
+		port)
+	cmd := fmt.Sprintf("grep 'ExecStart' %s | sed 's/ExecStart=//'", serviceFile)
+	stdout, stderr, err := e.Execute(ctx, cmd, false)
+	if err != nil {
+		return err
+	}
+	if len(stderr) > 0 {
+		return errors.Errorf(
+			"can not detect dir paths of %s %s:%d, %s",
+			component,
+			host,
+			port,
+			stderr,
+		)
+	}
+	// 2. check script content if contains `name`
+	path := extractScriptPath(string(stdout))
+	cmd = fmt.Sprintf("cat %s", path)
+	stdout, stderr, err = e.Execute(ctx, cmd, false)
+	if err != nil {
+		return err
+	}
+	if len(stderr) > 0 {
+		return errors.Errorf(
+			"can not read script path of %s %s:%d, %s",
+			component,
+			host,
+			port,
+			stderr,
+		)
+	}
+
+	if strings.Contains(string(stdout), "name") {
+		return nil
+	}
+
+	// 3. writing the name to the script
+	content := fmt.Sprintf(" \\\n    --name='%s'", name)
+	cmd = fmt.Sprintf("sed -i '$ s|$| %s|' %s", content, path)
+	stdout, stderr, err = e.Execute(ctx, cmd, false)
+	if err != nil {
+		return err
+	}
+	if len(stderr) > 0 {
+		return errors.Errorf(
+			"can not modify script path of %s %s:%d, %s",
+			component,
+			host,
+			port,
+			stderr,
+		)
+	}
+
+	return nil
+}
+
+// path like `/bin/bash -c '/root/tidb-deploy/scheduling-3399/scripts/run_scheduling.sh'\n`
+func extractScriptPath(command string) string {
+	command = strings.TrimSuffix(command, "\n")
+	parts := strings.Split(command, " ")
+	if len(parts) < 3 {
+		return "Invalid command structure"
+	}
+
+	return strings.Trim(parts[2], "'")
 }

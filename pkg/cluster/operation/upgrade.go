@@ -18,6 +18,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"time"
@@ -25,6 +26,7 @@ import (
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/checkpoint"
 	"github.com/pingcap/tiup/pkg/cluster/api"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/set"
@@ -143,6 +145,52 @@ func Upgrade(
 					deferInstances = append(deferInstances, instance)
 					logger.Debugf("Deferred upgrading of PD leader %s", instance.ID())
 					continue
+				}
+			case spec.ComponentTSO:
+				// if component version is not specified, use the cluster version or latest("")
+				ins := instance.(*spec.TSOInstance)
+				version, err := getVersion(ctx, ins.DeployDir(), ins.GetManageHost())
+				if err != nil {
+					return err
+				}
+				logger.Infof(fmt.Sprintf("tso instance change startScript %s, %s", version, ins.Name))
+				if tidbver.PDSupportMicroServicesWithName(version) && ins.Name != "" {
+					tsos := topo.(*spec.Specification).TSOServers
+					var name string
+					for _, s := range tsos {
+						if s.Host == ins.Host && s.Port == ins.Port {
+							name = s.Name
+							break
+						}
+					}
+					logger.Infof(fmt.Sprintf("tso instance change startScript %s", name))
+					ins := instance.(*spec.TSOInstance)
+					err := spec.ModifyPDStartScriptPath(ctx, ins.Role(), ins.Host, ins.GetMainPort(), name)
+					if err != nil {
+						return err
+					}
+				}
+			case spec.ComponentScheduling:
+				ins := instance.(*spec.SchedulingInstance)
+				version, err := getVersion(ctx, ins.DeployDir(), ins.GetManageHost())
+				if err != nil {
+					return err
+				}
+				logger.Infof(fmt.Sprintf("scheduling instance change startScript %s, %s", version, ins.Name))
+				if tidbver.PDSupportMicroServicesWithName(version) && ins.Name != "" {
+					schedulings := topo.(*spec.Specification).SchedulingServers
+					var name string
+					for _, s := range schedulings {
+						if s.Host == ins.Host && s.Port == ins.Port {
+							name = s.Name
+							break
+						}
+					}
+					logger.Infof(fmt.Sprintf("scheduling instance change startScript %s", name))
+					err := spec.ModifyPDStartScriptPath(ctx, ins.Role(), ins.Host, ins.GetMainPort(), name)
+					if err != nil {
+						return err
+					}
 				}
 			case spec.ComponentCDC:
 				ins := instance.(*spec.CDCInstance)
@@ -361,4 +409,26 @@ func decreaseScheduleLimit(pc *api.PDClient, origLeaderScheduleLimit, origRegion
 		return err
 	}
 	return pc.SetReplicationConfig("region-schedule-limit", origRegionScheduleLimit)
+}
+
+func getVersion(ctx context.Context, deployDir, host string) (string, error) {
+	binPath := filepath.Join(deployDir, "bin/pd-server")
+	e, found := ctxt.GetInner(ctx).GetExecutor(host)
+	if !found {
+		return "", fmt.Errorf("no executor")
+	}
+	stdout, stderr, err := e.Execute(ctx, binPath+" --version", false)
+	if err != nil {
+		return "", perrs.Annotatef(err, "stderr: %s", string(stderr))
+	}
+
+	var version string
+	for _, line := range strings.Split(string(stdout), "\n") {
+		if strings.HasPrefix(line, "Release Version:") {
+			// Extract version number from the line
+			version = strings.TrimSpace(strings.TrimPrefix(line, "Release Version:"))
+			break
+		}
+	}
+	return version, nil
 }

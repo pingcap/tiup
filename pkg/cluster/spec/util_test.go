@@ -14,7 +14,18 @@
 package spec
 
 import (
+	"context"
+	"fmt"
+	"os"
+	"testing"
+	"time"
+
 	"github.com/pingcap/check"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 type utilSuite struct{}
@@ -60,4 +71,59 @@ func (s *utilSuite) TestMultiDirAbs(c *check.C) {
 	c.Assert(len(paths), check.Equals, 2)
 	c.Assert(paths[0], check.Equals, "/home/tidb/a")
 	c.Assert(paths[1], check.Equals, "/tmp/b")
+}
+
+func TestExtractScriptPath(t *testing.T) {
+	command := "/bin/bash -c '/root/tidb-deploy/scheduling-3399/scripts/run_scheduling.sh'\n"
+	scriptPath := extractScriptPath(command)
+	println("scriptPath:", scriptPath)
+	assert.Equal(t, "/root/tidb-deploy/scheduling-3399/scripts/run_scheduling.sh", scriptPath)
+}
+
+// MockExecutor simulates command execution
+type MockExecutor struct {
+	mock.Mock
+}
+
+func (m *MockExecutor) Execute(ctx context.Context, cmd string, sudo bool, timeout ...time.Duration) (stdout []byte, stderr []byte, err error) {
+	args := m.Called(ctx, cmd, sudo)
+	return args.Get(0).([]byte), args.Get(1).([]byte), args.Error(2)
+}
+
+func (m *MockExecutor) Transfer(ctx context.Context, src, dst string, download bool, limit int, compress bool) error {
+	panic("implement me")
+}
+
+func TestModifyStartScriptPath(t *testing.T) {
+	ctx := ctxt.New(context.Background(), 0, logprinter.NewLogger(""))
+	component := "test-component"
+	host := "localhost"
+	port := 8080
+	content := fmt.Sprintf(" \\\n    --name='%s'", "scheudling-0")
+
+	// Setup temporary file for testing
+	assert := require.New(t)
+	conf, err := os.CreateTemp("", "scheduling.conf")
+	defer os.Remove(conf.Name())
+	assert.Nil(err)
+	scriptPath := conf.Name()
+	err = os.WriteFile(scriptPath, []byte(content), 0644)
+	assert.Nil(err)
+
+	// Mock executor
+	mockExec := new(MockExecutor)
+	shPath := fmt.Sprintf("/bin/bash -c '%s'", conf.Name())
+	mockExec.On("Execute", ctx, mock.Anything, false).Return([]byte(shPath), []byte(""), nil)
+
+	// Inject mock executor
+	ctxt.GetInner(ctx).SetExecutor(host, mockExec)
+
+	// Test function
+	err = ModifyStartScriptPath(ctx, component, host, port, content)
+	assert.Nil(err)
+
+	// Verify file content
+	resultContent, err := os.ReadFile(scriptPath)
+	assert.Nil(err)
+	assert.Contains(string(resultContent), content)
 }
