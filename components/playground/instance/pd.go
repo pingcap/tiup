@@ -20,7 +20,6 @@ import (
 	"strings"
 
 	"github.com/pingcap/errors"
-	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -88,7 +87,7 @@ func (inst *PDInstance) Name() string {
 }
 
 // Start calls set inst.cmd and Start
-func (inst *PDInstance) Start(ctx context.Context, version utils.Version) error {
+func (inst *PDInstance) Start(ctx context.Context) error {
 	configPath := filepath.Join(inst.Dir, "pd.toml")
 	if err := prepareConfig(
 		configPath,
@@ -156,10 +155,6 @@ func (inst *PDInstance) Start(ctx context.Context, version utils.Version) error 
 		}
 	}
 
-	var err error
-	if inst.BinPath, err = tiupexec.PrepareBinary("pd", version, inst.BinPath); err != nil {
-		return err
-	}
 	inst.Process = &process{cmd: PrepareCommand(ctx, inst.BinPath, args, nil, inst.Dir)}
 
 	logIfErr(inst.Process.SetOutputFile(inst.LogFile()))

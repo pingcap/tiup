@@ -454,13 +454,15 @@ func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) 
 	if component == "tso" || component == "scheduling" {
 		component = string(instance.PDRoleNormal)
 	}
-	version, err = environment.GlobalEnv().V1Repository().ResolveComponentVersion(component, boundVersion)
-	if err != nil {
+	if version, err = environment.GlobalEnv().V1Repository().ResolveComponentVersion(component, boundVersion); err != nil {
 		return err
 	}
-	fmt.Printf("Start %s instance:%s\n", inst.Component(), version)
-	err = inst.Start(ctx, version)
-	if err != nil {
+
+	if err := inst.PrepareBinary(component, version); err != nil {
+		return err
+	}
+
+	if err = inst.Start(ctx); err != nil {
 		return err
 	}
 	p.addWaitInstance(inst)
