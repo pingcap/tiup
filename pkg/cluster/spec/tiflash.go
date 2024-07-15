@@ -200,7 +200,7 @@ func (s *TiFlashSpec) GetOverrideDataDir() (string, error) {
 	// and make the dirSet uniq
 	checkAbsolute := func(d, host, key string) error {
 		if !strings.HasPrefix(d, "/") {
-			return fmt.Errorf("directory '%s' should be an absolute path in 'tiflash_servers:%s.config.%s'", d, s.Host, key)
+			return fmt.Errorf("directory '%s' should be an absolute path in 'tiflash_servers:%s.config.%s'", d, host, key)
 		}
 		return nil
 	}
@@ -301,7 +301,7 @@ func (c *TiFlashComponent) SetVersion(version string) {
 func (c *TiFlashComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.TiFlashServers))
 	for _, s := range c.Topology.TiFlashServers {
-		ins = append(ins, &TiFlashInstance{BaseInstance{
+		tiflashInstance := &TiFlashInstance{BaseInstance{
 			InstanceSpec: s,
 			Name:         c.Name(),
 			Host:         s.Host,
@@ -315,7 +315,6 @@ func (c *TiFlashComponent) Instances() []Instance {
 
 			Ports: []int{
 				s.TCPPort,
-				s.HTTPPort,
 				s.FlashServicePort,
 				s.FlashProxyPort,
 				s.FlashProxyStatusPort,
@@ -330,7 +329,12 @@ func (c *TiFlashComponent) Instances() []Instance {
 				return UptimeByHost(s.GetManageHost(), s.StatusPort, timeout, tlsCfg)
 			},
 			Component: c,
-		}, c.Topology})
+		}, c.Topology}
+		// For 7.1.0 or later, TiFlash HTTP service is removed, so we don't need to set http_port
+		if !tidbver.TiFlashNotNeedHTTPPortConfig(c.Topology.ComponentVersions.TiFlash) {
+			tiflashInstance.Ports = append(tiflashInstance.Ports, s.HTTPPort)
+		}
+		ins = append(ins, tiflashInstance)
 	}
 	return ins
 }
@@ -410,7 +414,7 @@ func checkTiFlashStorageConfig(config map[string]any) (bool, error) {
 	if !isMainStorageDefined {
 		for k := range config {
 			if strings.HasPrefix(k, "storage.latest") || strings.HasPrefix(k, "storage.raft") {
-				return false, fmt.Errorf("You must set '%s' before setting '%s', please check the tiflash configuration in your yaml file", TiFlashStorageKeyMainDirs, k)
+				return false, fmt.Errorf("you must set '%s' before setting '%s', please check the tiflash configuration in your yaml file", TiFlashStorageKeyMainDirs, k)
 			}
 		}
 	}
@@ -652,7 +656,7 @@ server_configs:
 
 	enableTLS := i.topo.(*Specification).GlobalOptions.TLSEnabled
 	// set TLS configs
-	spec.LearnerConfig, err = i.setTLSConfigWithTiFlashLearner(ctx, enableTLS, spec.LearnerConfig, paths)
+	spec.LearnerConfig, err = i.setTLSConfigWithTiFlashLearner(enableTLS, spec.LearnerConfig, paths)
 	if err != nil {
 		return nil, err
 	}
@@ -662,7 +666,7 @@ server_configs:
 }
 
 // setTLSConfigWithTiFlashLearner set TLS Config to support enable/disable TLS
-func (i *TiFlashInstance) setTLSConfigWithTiFlashLearner(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error) {
+func (i *TiFlashInstance) setTLSConfigWithTiFlashLearner(enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error) {
 	if enableTLS {
 		if configs == nil {
 			configs = make(map[string]any)
