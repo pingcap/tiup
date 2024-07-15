@@ -15,7 +15,9 @@ package manager
 
 import (
 	"context"
+	"encoding/pem"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -263,6 +265,11 @@ func buildScaleOutTask(
 	if err != nil {
 		return nil, err
 	}
+	sessionCertTasks, err := buildSessionCertTasks(m, name, topo, newPart, base, gOpt, p)
+	if err != nil {
+		return nil, err
+	}
+	certificateTasks = append(certificateTasks, sessionCertTasks...)
 
 	// always ignore config check result in scale out
 	gOpt.IgnoreConfigCheck = true
@@ -835,6 +842,97 @@ func buildTLSTask(
 	return builder.Build(), nil
 }
 
+func genTiProxySessionCerts(dir string) error {
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+	ca, err := crypto.NewCA("tiproxy")
+	if err != nil {
+		return err
+	}
+	privKey, err := crypto.NewKeyPair(crypto.KeyTypeRSA, crypto.KeySchemeRSASSAPSSSHA256)
+	if err != nil {
+		return err
+	}
+	csr, err := privKey.CSR("tiproxy", "tiproxy", nil, nil)
+	if err != nil {
+		return err
+	}
+	cert, err := ca.Sign(csr)
+	if err != nil {
+		return err
+	}
+	if err := utils.SaveFileWithBackup(filepath.Join(dir, "tiproxy-session.key"), privKey.Pem(), ""); err != nil {
+		return err
+	}
+	return utils.SaveFileWithBackup(filepath.Join(dir, "tiproxy-session.crt"), pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: cert,
+	}), "")
+}
+
+// buildSessionCertTasks puts a self-signed cert to all TiDB if there is tiproxy.
+// For deploy: originalTopo = nil, newTopo = topology.
+// For scale-out: originalTopo = original topology, newTopo = new topology.
+func buildSessionCertTasks(m *Manager,
+	name string,
+	originalTopo spec.Topology,
+	newTopo spec.Topology,
+	base *spec.BaseMeta,
+	gOpt operator.Options,
+	p *tui.SSHConnectionProps) ([]*task.StepDisplay, error) {
+	var certificateTasks []*task.StepDisplay // tasks which are used to copy certificate to remote host
+	hasOriginalTiProxy := false
+	if originalTopo != nil {
+		originalTopo.IterInstance(func(inst spec.Instance) {
+			if inst.ComponentName() == spec.ComponentTiProxy {
+				hasOriginalTiProxy = true
+			}
+		})
+	}
+	hasNewTiProxy := false
+	newTopo.IterInstance(func(inst spec.Instance) {
+		if inst.ComponentName() == spec.ComponentTiProxy {
+			hasNewTiProxy = true
+		}
+	})
+	if !hasOriginalTiProxy && !hasNewTiProxy {
+		return nil, nil
+	}
+
+	tempPath := m.specManager.Path(name, spec.TempConfigPath)
+	keyPath := filepath.Join(tempPath, "tiproxy-session.key")
+	certPath := filepath.Join(tempPath, "tiproxy-session.crt")
+	copySessionCerts := func(inst spec.Instance) {
+		if inst.ComponentName() != spec.ComponentTiDB {
+			return
+		}
+		deployDir := spec.Abs(base.User, inst.DeployDir())
+		tlsDir := filepath.Join(deployDir, spec.TLSCertKeyDir)
+
+		tb := task.NewSimpleUerSSH(m.logger, inst.GetManageHost(), inst.GetSSHPort(), base.User, gOpt, p, newTopo.BaseTopo().GlobalOptions.SSHType).
+			Mkdir(base.User, inst.GetManageHost(), newTopo.BaseTopo().GlobalOptions.SystemdMode != spec.UserMode, deployDir, tlsDir)
+		tb = tb.
+			CopyFile(keyPath, filepath.Join(deployDir, spec.TLSCertKeyDir, "tiproxy-session.key"), inst.GetHost(), false, 0, false).
+			CopyFile(certPath, filepath.Join(deployDir, spec.TLSCertKeyDir, "tiproxy-session.crt"), inst.GetHost(), false, 0, false)
+		t := tb.BuildAsStep(fmt.Sprintf("  - Copy session certificate %s -> %s", inst.ComponentName(), inst.ID()))
+		certificateTasks = append(certificateTasks, t)
+	}
+
+	// If TiProxy is just enabled now (either deploy or scale-out), issue a session cert and copy the cert to original TiDB.
+	if !hasOriginalTiProxy {
+		if err := genTiProxySessionCerts(tempPath); err != nil {
+			return certificateTasks, err
+		}
+		if originalTopo != nil {
+			originalTopo.IterInstance(copySessionCerts)
+		}
+	}
+	// Copy the session cert to new TiDB.
+	newTopo.IterInstance(copySessionCerts)
+	return certificateTasks, nil
+}
+
 // buildCertificateTasks generates certificate for instance and transfers it to the server
 func buildCertificateTasks(
 	m *Manager,
@@ -848,15 +946,14 @@ func buildCertificateTasks(
 		certificateTasks []*task.StepDisplay // tasks which are used to copy certificate to remote host
 	)
 
+	// copy TLS certificate to remote host
 	if topo.BaseTopo().GlobalOptions.TLSEnabled {
-		// copy certificate to remote host
 		topo.IterInstance(func(inst spec.Instance) {
 			deployDir := spec.Abs(base.User, inst.DeployDir())
 			tlsDir := filepath.Join(deployDir, spec.TLSCertKeyDir)
 
 			tb := task.NewSimpleUerSSH(m.logger, inst.GetManageHost(), inst.GetSSHPort(), base.User, gOpt, p, topo.BaseTopo().GlobalOptions.SSHType).
 				Mkdir(base.User, inst.GetManageHost(), topo.BaseTopo().GlobalOptions.SystemdMode != spec.UserMode, deployDir, tlsDir)
-
 			ca, err := crypto.ReadCA(
 				name,
 				m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSCACert),
@@ -866,7 +963,7 @@ func buildCertificateTasks(
 				iterErr = err
 				return
 			}
-			t := tb.TLSCert(
+			tb = tb.TLSCert(
 				inst.GetHost(),
 				inst.ComponentName(),
 				inst.Role(),
@@ -875,10 +972,12 @@ func buildCertificateTasks(
 				meta.DirPaths{
 					Deploy: deployDir,
 					Cache:  m.specManager.Path(name, spec.TempConfigPath),
-				}).
-				BuildAsStep(fmt.Sprintf("  - Generate certificate %s -> %s", inst.ComponentName(), inst.ID()))
+				})
+
+			t := tb.BuildAsStep(fmt.Sprintf("  - Generate certificate %s -> %s", inst.ComponentName(), inst.ID()))
 			certificateTasks = append(certificateTasks, t)
 		})
 	}
+
 	return certificateTasks, iterErr
 }

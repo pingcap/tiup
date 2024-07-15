@@ -38,6 +38,14 @@ type Config struct {
 	Version    string `yaml:"version"`
 }
 
+// CSEOptions contains configs to run TiDB cluster in CSE mode.
+type CSEOptions struct {
+	S3Endpoint string `yaml:"s3_endpoint"`
+	Bucket     string `yaml:"bucket"`
+	AccessKey  string `yaml:"access_key"`
+	SecretKey  string `yaml:"secret_key"`
+}
+
 type instance struct {
 	ID         int
 	Dir        string
@@ -60,7 +68,7 @@ type Instance interface {
 	Pid() int
 	// Start the instance process.
 	// Will kill the process once the context is done.
-	Start(ctx context.Context) error
+	Start(ctx context.Context, version utils.Version) error
 	// Component Return the component name.
 	Component() string
 	// LogFile return the log file name
@@ -73,7 +81,7 @@ type Instance interface {
 	// The implementation should be safe to call Wait multi times.
 	Wait() error
 	// PrepareBinary use given binpath or download from tiup mirrors.
-	PrepareBinary(componentName string, version utils.Version) (string, error)
+	PrepareBinary(componentName string, version utils.Version) error
 }
 
 func (inst *instance) MetricAddr() (r MetricAddr) {
@@ -83,14 +91,14 @@ func (inst *instance) MetricAddr() (r MetricAddr) {
 	return
 }
 
-func (inst *instance) PrepareBinary(componentName string, version utils.Version) (string, error) {
+func (inst *instance) PrepareBinary(componentName string, version utils.Version) error {
 	instanceBinPath, err := tiupexec.PrepareBinary(componentName, version, inst.BinPath)
 	if err != nil {
-		return "", err
+		return err
 	}
 	inst.BinPath = instanceBinPath
 	inst.Version = version
-	return instanceBinPath, nil
+	return nil
 }
 
 // CompVersion return the format to run specified version of a component.
@@ -129,7 +137,7 @@ func logIfErr(err error) {
 func pdEndpoints(pds []*PDInstance, isHTTP bool) []string {
 	var endpoints []string
 	for _, pd := range pds {
-		if pd.Role == PDRoleTSO || pd.Role == PDRoleScheduling || pd.Role == PDRoleResourceManager {
+		if pd.Role == PDRoleTSO || pd.Role == PDRoleScheduling {
 			continue
 		}
 		if isHTTP {

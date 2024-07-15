@@ -22,6 +22,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -30,9 +31,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/AstroProfundis/tabby"
 	"github.com/fatih/color"
-	"github.com/juju/ansiterm"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/pingcap/errors"
@@ -63,7 +62,6 @@ type Playground struct {
 	pds              []*instance.PDInstance
 	tsos             []*instance.PDInstance
 	schedulings      []*instance.PDInstance
-	rms              []*instance.PDInstance
 	tikvs            []*instance.TiKVInstance
 	tidbs            []*instance.TiDBInstance
 	tiflashs         []*instance.TiFlashInstance
@@ -108,19 +106,11 @@ func (p *Playground) allocID(componentID string) int {
 }
 
 func (p *Playground) handleDisplay(r io.Writer) (err error) {
-	w := ansiterm.NewTabWriter(r, 0, 0, 2, ' ', 0)
-	t := tabby.NewCustom(w)
-
 	// TODO add more info.
-	header := []any{"Pid", "Role", "Uptime"}
-	t.AddHeader(header...)
+	td := utils.NewTableDisplayer(r, []string{"Pid", "Role", "Uptime"})
 
 	err = p.WalkInstances(func(componentID string, ins instance.Instance) error {
-		row := make([]any, len(header))
-		row[0] = strconv.Itoa(ins.Pid())
-		row[1] = componentID
-		row[2] = ins.Uptime()
-		t.AddLine(row...)
+		td.AddRow(strconv.Itoa(ins.Pid()), componentID, ins.Uptime())
 		return nil
 	})
 
@@ -128,7 +118,7 @@ func (p *Playground) handleDisplay(r io.Writer) (err error) {
 		return err
 	}
 
-	t.Print()
+	td.Display()
 	return nil
 }
 
@@ -279,7 +269,6 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 
 	switch cid {
 	case spec.ComponentPD:
-		// microservice not support scale in temporarily
 		for i := 0; i < len(p.pds); i++ {
 			if p.pds[i].Pid() == pid {
 				inst := p.pds[i]
@@ -288,6 +277,18 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 					return err
 				}
 				p.pds = append(p.pds[:i], p.pds[i+1:]...)
+			}
+		}
+	case spec.ComponentTSO:
+		for i := 0; i < len(p.tsos); i++ {
+			if p.tsos[i].Pid() == pid {
+				p.tsos = append(p.tsos[:i], p.tsos[i+1:]...)
+			}
+		}
+	case spec.ComponentScheduling:
+		for i := 0; i < len(p.schedulings); i++ {
+			if p.schedulings[i].Pid() == pid {
+				p.schedulings = append(p.schedulings[:i], p.schedulings[i+1:]...)
 			}
 		}
 	case spec.ComponentTiKV:
@@ -420,6 +421,10 @@ func (p *Playground) sanitizeComponentConfig(cid string, cfg *instance.Config) e
 	switch cid {
 	case spec.ComponentPD:
 		return p.sanitizeConfig(p.bootOptions.PD, cfg)
+	case spec.ComponentTSO:
+		return p.sanitizeConfig(p.bootOptions.TSO, cfg)
+	case spec.ComponentScheduling:
+		return p.sanitizeConfig(p.bootOptions.Scheduling, cfg)
 	case spec.ComponentTiKV:
 		return p.sanitizeConfig(p.bootOptions.TiKV, cfg)
 	case spec.ComponentTiDB:
@@ -446,7 +451,7 @@ func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) 
 	var err error
 	boundVersion := p.bindVersion(inst.Component(), p.bootOptions.Version)
 	component := inst.Component()
-	if strings.HasPrefix(component, "pd") {
+	if component == "tso" || component == "scheduling" {
 		component = string(instance.PDRoleNormal)
 	}
 	version, err = environment.GlobalEnv().V1Repository().ResolveComponentVersion(component, boundVersion)
@@ -454,13 +459,11 @@ func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) 
 		return err
 	}
 
-	instanceBinPath, err := inst.PrepareBinary(component, version)
-	if err != nil {
+	if err := inst.PrepareBinary(component, version); err != nil {
 		return err
 	}
-	fmt.Printf("Start %s instance:%s\n", inst.Component(), instanceBinPath)
 
-	err = inst.Start(ctx)
+	err = inst.Start(ctx, version)
 	if err != nil {
 		return err
 	}
@@ -493,7 +496,7 @@ func (p *Playground) handleScaleOut(w io.Writer, cmd *Command) error {
 	if err != nil {
 		return err
 	}
-	// TODO: Support scale-out in disaggregated mode
+	// TODO: Support scale-out in CSE mode
 	inst, err := p.addInstance(cmd.ComponentID, instance.PDRoleNormal, instance.TiFlashRoleNormal, cmd.Config)
 	if err != nil {
 		return err
@@ -507,22 +510,23 @@ func (p *Playground) handleScaleOut(w io.Writer, cmd *Command) error {
 		return err
 	}
 
+	mysql := mysqlCommand()
 	if cmd.ComponentID == "tidb" {
 		addr := p.tidbs[len(p.tidbs)-1].Addr()
 		if checkDB(addr, cmd.UpTimeout) {
 			ss := strings.Split(addr, ":")
-			connectMsg := "To connect new added TiDB: mysql --comments --host %s --port %s -u root -p (no password)"
-			fmt.Println(color.GreenString(connectMsg, ss[0], ss[1]))
-			fmt.Fprintln(w, color.GreenString(connectMsg, ss[0], ss[1]))
+			connectMsg := "To connect new added TiDB: %s --host %s --port %s -u root -p (no password)"
+			fmt.Println(color.GreenString(connectMsg, mysql, ss[0], ss[1]))
+			fmt.Fprintln(w, color.GreenString(connectMsg, mysql, ss[0], ss[1]))
 		}
 	}
 	if cmd.ComponentID == "tiproxy" {
 		addr := p.tiproxys[len(p.tidbs)-1].Addr()
 		if checkDB(addr, cmd.UpTimeout) {
 			ss := strings.Split(addr, ":")
-			connectMsg := "To connect to the newly added TiProxy: mysql --comments --host %s --port %s -u root -p (no password)"
-			fmt.Println(color.GreenString(connectMsg, ss[0], ss[1]))
-			fmt.Fprintln(w, color.GreenString(connectMsg, ss[0], ss[1]))
+			connectMsg := "To connect to the newly added TiProxy: %s --host %s --port %s -u root -p (no password)"
+			fmt.Println(color.GreenString(connectMsg, mysql, ss[0], ss[1]))
+			fmt.Fprintln(w, color.GreenString(connectMsg, mysql, ss[0], ss[1]))
 		}
 	}
 
@@ -612,19 +616,13 @@ func (p *Playground) WalkInstances(fn func(componentID string, ins instance.Inst
 		}
 	}
 	for _, ins := range p.tsos {
-		err := fn(spec.ComponentPD, ins)
+		err := fn(spec.ComponentTSO, ins)
 		if err != nil {
 			return err
 		}
 	}
 	for _, ins := range p.schedulings {
-		err := fn(spec.ComponentPD, ins)
-		if err != nil {
-			return err
-		}
-	}
-	for _, ins := range p.rms {
-		err := fn(spec.ComponentPD, ins)
+		err := fn(spec.ComponentScheduling, ins)
 		if err != nil {
 			return err
 		}
@@ -711,9 +709,9 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 
 	id := p.allocID(componentID)
 	dir := filepath.Join(dataDir, fmt.Sprintf("%s-%d", componentID, id))
-	if componentID == string(instance.PDRoleNormal) && pdRole != instance.PDRoleNormal {
-		id = p.allocID(fmt.Sprintf("%s-%s", componentID, pdRole))
-		dir = filepath.Join(dataDir, fmt.Sprintf("%s-%s-%d", componentID, pdRole, id))
+	if componentID == string(instance.PDRoleNormal) && (pdRole != instance.PDRoleNormal && pdRole != instance.PDRoleAPI) {
+		id = p.allocID(string(pdRole))
+		dir = filepath.Join(dataDir, fmt.Sprintf("%s-%d", pdRole, id))
 	}
 	if err = utils.MkdirAll(dir, 0755); err != nil {
 		return nil, err
@@ -726,7 +724,7 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 
 	switch componentID {
 	case spec.ComponentPD:
-		inst := instance.NewPDInstance(pdRole, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, cfg.Port)
+		inst := instance.NewPDInstance(pdRole, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, cfg.Port, p.bootOptions.Mode == "tidb-cse")
 		ins = inst
 		if pdRole == instance.PDRoleNormal || pdRole == instance.PDRoleAPI {
 			if p.booted {
@@ -742,22 +740,31 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 			p.tsos = append(p.tsos, inst)
 		} else if pdRole == instance.PDRoleScheduling {
 			p.schedulings = append(p.schedulings, inst)
-		} else if pdRole == instance.PDRoleResourceManager {
-			p.rms = append(p.rms, inst)
 		}
+	case spec.ComponentTSO:
+		inst := instance.NewPDInstance(instance.PDRoleTSO, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, cfg.Port, p.bootOptions.Mode == "tidb-cse")
+		ins = inst
+		p.tsos = append(p.tsos, inst)
+	case spec.ComponentScheduling:
+		inst := instance.NewPDInstance(instance.PDRoleScheduling, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, cfg.Port, p.bootOptions.Mode == "tidb-cse")
+		ins = inst
+		p.schedulings = append(p.schedulings, inst)
 	case spec.ComponentTiDB:
-		inst := instance.NewTiDBInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, p.enableBinlog(), p.bootOptions.Mode == "tidb-disagg")
+		inst := instance.NewTiDBInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, dataDir, p.enableBinlog(), p.bootOptions.Mode == "tidb-cse")
 		ins = inst
 		p.tidbs = append(p.tidbs, inst)
 	case spec.ComponentTiKV:
-		inst := instance.NewTiKVInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds)
+		inst := instance.NewTiKVInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, p.tsos, p.bootOptions.Mode == "tidb-cse", p.bootOptions.CSEOpts, p.bootOptions.PDMode == "ms")
 		ins = inst
 		p.tikvs = append(p.tikvs, inst)
 	case spec.ComponentTiFlash:
-		inst := instance.NewTiFlashInstance(tiflashRole, p.bootOptions.DisaggOpts, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, p.tidbs, cfg.Version)
+		inst := instance.NewTiFlashInstance(tiflashRole, p.bootOptions.CSEOpts, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, p.tidbs, cfg.Version)
 		ins = inst
 		p.tiflashs = append(p.tiflashs, inst)
 	case spec.ComponentTiProxy:
+		if err := instance.GenTiProxySessionCerts(dataDir); err != nil {
+			return nil, err
+		}
 		inst := instance.NewTiProxy(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds)
 		ins = inst
 		p.tiproxys = append(p.tiproxys, inst)
@@ -895,6 +902,7 @@ func (p *Playground) waitAllTiFlashUp() {
 }
 
 func (p *Playground) bindVersion(comp string, version string) (bindVersion string) {
+	bindVersion = version
 	switch comp {
 	case spec.ComponentTiKVCDC:
 		bindVersion = p.bootOptions.TiKVCDC.Version
@@ -902,21 +910,16 @@ func (p *Playground) bindVersion(comp string, version string) (bindVersion strin
 		bindVersion = p.bootOptions.TiProxy.Version
 	default:
 	}
-	if bindVersion == "" {
-		if version == "nightly" {
-			bindVersion = version
-		}
-	}
 	return
 }
 
+//revive:disable:cognitive-complexity
+//revive:disable:error-strings
 func (p *Playground) bootCluster(ctx context.Context, env *environment.Environment, options *BootOptions) error {
 	for _, cfg := range []*instance.Config{
 		&options.PD,
-		&options.PDAPI,
-		&options.PDTSO,
-		&options.PDScheduling,
-		&options.PDRM,
+		&options.TSO,
+		&options.Scheduling,
 		&options.TiProxy,
 		&options.TiDB,
 		&options.TiKV,
@@ -973,37 +976,47 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		instances = append(instances,
 			InstancePair{spec.ComponentTiFlash, instance.PDRoleNormal, instance.TiFlashRoleNormal, options.TiFlash},
 		)
-	} else if options.Mode == "tidb-disagg" {
-		if !tidbver.TiDBSupportDisagg(options.Version) {
-			return fmt.Errorf("TiDB cluster doesn't support disaggregated mode in version %s", options.Version)
-		}
+	} else if options.Mode == "tidb-cse" {
 		if !tidbver.TiFlashPlaygroundNewStartMode(options.Version) {
 			// For simplicity, currently we only implemented disagg mode when TiFlash can run without config.
-			return fmt.Errorf("TiUP playground only supports disaggregated mode for TiDB cluster >= v7.1.0 (or nightly)")
+			return fmt.Errorf("TiUP playground only supports CSE mode for TiDB cluster >= v7.1.0 (or nightly)")
+		}
+
+		if !strings.HasPrefix(options.CSEOpts.S3Endpoint, "https://") && !strings.HasPrefix(options.CSEOpts.S3Endpoint, "http://") {
+			return fmt.Errorf("CSE mode requires S3 endpoint to start with http:// or https://")
+		}
+
+		isSecure := strings.HasPrefix(options.CSEOpts.S3Endpoint, "https://")
+		rawEndpoint := strings.TrimPrefix(options.CSEOpts.S3Endpoint, "https://")
+		rawEndpoint = strings.TrimPrefix(rawEndpoint, "http://")
+
+		// Currently we always assign region=local. Other regions are not supported.
+		if strings.Contains(rawEndpoint, "amazonaws.com") {
+			return fmt.Errorf("Currently TiUP playground CSE mode only supports local S3 (like minio). S3 on AWS Regions are not supported. Contributions are welcome!")
 		}
 
 		// Preflight check whether specified object storage is available.
-		s3Client, err := minio.New(options.DisaggOpts.S3Endpoint, &minio.Options{
-			Creds:  credentials.NewStaticV4(options.DisaggOpts.AccessKey, options.DisaggOpts.SecretKey, ""),
-			Secure: false,
+		s3Client, err := minio.New(rawEndpoint, &minio.Options{
+			Creds:  credentials.NewStaticV4(options.CSEOpts.AccessKey, options.CSEOpts.SecretKey, ""),
+			Secure: isSecure,
 		})
 		if err != nil {
-			return errors.Annotate(err, "Disaggregate mode preflight check failed")
+			return errors.Annotate(err, "CSE mode preflight check failed")
 		}
 
 		ctxCheck, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
-		bucketExists, err := s3Client.BucketExists(ctxCheck, options.DisaggOpts.Bucket)
+		bucketExists, err := s3Client.BucketExists(ctxCheck, options.CSEOpts.Bucket)
 		if err != nil {
-			return errors.Annotate(err, "Disaggregate mode preflight check failed")
+			return errors.Annotate(err, "CSE mode preflight check failed")
 		}
 
 		if !bucketExists {
 			// Try to create bucket.
-			err := s3Client.MakeBucket(ctxCheck, options.DisaggOpts.Bucket, minio.MakeBucketOptions{})
+			err := s3Client.MakeBucket(ctxCheck, options.CSEOpts.Bucket, minio.MakeBucketOptions{})
 			if err != nil {
-				return fmt.Errorf("Disaggregate mode preflight check failed: Bucket %s doesn't exist", options.DisaggOpts.Bucket)
+				return fmt.Errorf("CSE mode preflight check failed: Bucket %s doesn't exist", options.CSEOpts.Bucket)
 			}
 		}
 
@@ -1023,10 +1036,9 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			return fmt.Errorf("PD cluster doesn't support microservices mode in version %s", options.Version)
 		}
 		instances = append([]InstancePair{
-			{spec.ComponentPD, instance.PDRoleAPI, instance.TiFlashRoleNormal, options.PDAPI},
-			{spec.ComponentPD, instance.PDRoleTSO, instance.TiFlashRoleNormal, options.PDTSO},
-			{spec.ComponentPD, instance.PDRoleScheduling, instance.TiFlashRoleNormal, options.PDScheduling},
-			{spec.ComponentPD, instance.PDRoleResourceManager, instance.TiFlashRoleNormal, options.PDRM}},
+			{spec.ComponentPD, instance.PDRoleAPI, instance.TiFlashRoleNormal, options.PD},
+			{spec.ComponentPD, instance.PDRoleTSO, instance.TiFlashRoleNormal, options.TSO},
+			{spec.ComponentPD, instance.PDRoleScheduling, instance.TiFlashRoleNormal, options.Scheduling}},
 			instances...,
 		)
 	}
@@ -1111,15 +1123,16 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		fmt.Println()
 		color.New(color.FgGreen, color.Bold).Println("🎉 TiDB Playground Cluster is started, enjoy!")
 		fmt.Println()
+		mysql := mysqlCommand()
 		for _, dbAddr := range tidbSucc {
 			ss := strings.Split(dbAddr, ":")
 			fmt.Printf("Connect TiDB:    ")
-			colorCmd.Printf("mysql --comments --host %s --port %s -u root\n", ss[0], ss[1])
+			colorCmd.Printf("%s --host %s --port %s -u root\n", mysql, ss[0], ss[1])
 		}
 		for _, dbAddr := range tiproxySucc {
 			ss := strings.Split(dbAddr, ":")
 			fmt.Printf("Connect TiProxy: ")
-			colorCmd.Printf("mysql --comments --host %s --port %s -u root\n", ss[0], ss[1])
+			colorCmd.Printf("%s --host %s --port %s -u root\n", mysql, ss[0], ss[1])
 		}
 	}
 
@@ -1133,7 +1146,6 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			var (
 				tsoAddr        []string
 				apiAddr        []string
-				rmAddr         []string
 				schedulingAddr []string
 			)
 			for _, api := range p.pds {
@@ -1145,9 +1157,6 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			for _, scheduling := range p.schedulings {
 				schedulingAddr = append(schedulingAddr, scheduling.Addr())
 			}
-			for _, rm := range p.rms {
-				rmAddr = append(rmAddr, rm.Addr())
-			}
 
 			fmt.Printf("PD API Endpoints:   ")
 			colorCmd.Printf("%s\n", strings.Join(apiAddr, ","))
@@ -1155,8 +1164,6 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			colorCmd.Printf("%s\n", strings.Join(tsoAddr, ","))
 			fmt.Printf("PD Scheduling Endpoints:   ")
 			colorCmd.Printf("%s\n", strings.Join(schedulingAddr, ","))
-			fmt.Printf("PD Resource Manager Endpoints:   ")
-			colorCmd.Printf("%s\n", strings.Join(rmAddr, ","))
 		} else {
 			var pdAddrs []string
 			for _, pd := range p.pds {
@@ -1299,11 +1306,6 @@ func (p *Playground) terminate(sig syscall.Signal) {
 			kill(inst.Component(), inst.Pid(), inst.Wait)
 		}
 	}
-	for _, inst := range p.rms {
-		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
-			kill(inst.Component(), inst.Pid(), inst.Wait)
-		}
-	}
 	for _, inst := range p.tiproxys {
 		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
 			kill(inst.Component(), inst.Pid(), inst.Wait)
@@ -1321,11 +1323,11 @@ func (p *Playground) renderSDFile() error {
 
 	_ = p.WalkInstances(func(cid string, inst instance.Instance) error {
 		v := inst.MetricAddr()
-		t, ok := cid2targets[cid]
+		t, ok := cid2targets[inst.Component()]
 		if ok {
 			v.Targets = append(v.Targets, t.Targets...)
 		}
-		cid2targets[cid] = v
+		cid2targets[inst.Component()] = v
 		return nil
 	})
 
@@ -1467,7 +1469,7 @@ func (p *Playground) bootGrafana(ctx context.Context, env *environment.Environme
 		return nil, err
 	}
 
-	grafana := newGrafana(options.Version, options.Host)
+	grafana := newGrafana(options.Version, options.Host, options.GrafanaPort)
 	// fmt.Println("Start Grafana instance...")
 	err = grafana.start(ctx, grafanaDir, "http://"+utils.JoinHostPort(monitorInfo.IP, monitorInfo.Port))
 	if err != nil {
@@ -1491,4 +1493,62 @@ func logIfErr(err error) {
 	if err != nil {
 		fmt.Println(err)
 	}
+}
+
+// Check the MySQL Client version
+//
+// Since v8.1.0 `--comments` is the default, so we don't need to specify it.
+// Without `--comments` the MySQL client strips TiDB specific comments
+// like `/*T![clustered_index] CLUSTERED */`
+//
+// This returns `mysql --comments` for older versions or in case we failed to check
+// the version for any reason as `mysql --comments` is the safe option.
+// For newer MySQL versions it returns just `mysql`.
+//
+// For MariaDB versions of the MySQL Client it is expected to return `mysql --comments`.
+func mysqlCommand() (cmd string) {
+	cmd = "mysql --comments"
+	mysqlVerOutput, err := exec.Command("mysql", "--version").Output()
+	if err != nil {
+		return
+	}
+	vMaj, vMin, _, err := parseMysqlVersion(string(mysqlVerOutput))
+	if err == nil {
+		if vMaj == 8 && vMin >= 1 { // 8.1.0 and newer
+			return "mysql"
+		}
+	}
+	return
+}
+
+// parseMysqlVersion parses the output from `mysql --version` that is in `versionOutput`
+// and returns the major, minor and patch version.
+//
+// New format example: `mysql  Ver 8.2.0 for Linux on x86_64 (MySQL Community Server - GPL)`
+// Old format example: `mysql  Ver 14.14 Distrib 5.7.36, for linux-glibc2.12 (x86_64) using  EditLine wrapper`
+// MariaDB 11.2 format: `/usr/bin/mysql from 11.2.2-MariaDB, client 15.2 for linux-systemd (x86_64) using readline 5.1`
+//
+// Note that MariaDB has `bin/mysql` (deprecated) and `bin/mariadb`. This is to parse the version from `bin/mysql`.
+// As TiDB is a MySQL compatible database we recommend `bin/mysql` from MySQL.
+// If we ever want to auto-detect other clients like `bin/mariadb`, `bin/mysqlsh`, `bin/mycli`, etc then
+// each of them needs their own version detection and adjust for the right commandline options.
+func parseMysqlVersion(versionOutput string) (vMaj int, vMin int, vPatch int, err error) {
+	mysqlVerRegexp := regexp.MustCompile(`(Ver|Distrib|from) ([0-9]+)\.([0-9]+)\.([0-9]+)`)
+	mysqlVerMatch := mysqlVerRegexp.FindStringSubmatch(versionOutput)
+	if mysqlVerMatch == nil {
+		return 0, 0, 0, errors.New("No match")
+	}
+	vMaj, err = strconv.Atoi(mysqlVerMatch[2])
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	vMin, err = strconv.Atoi(mysqlVerMatch[3])
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	vPatch, err = strconv.Atoi(mysqlVerMatch[4])
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	return
 }

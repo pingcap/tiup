@@ -37,6 +37,7 @@ type PDScript struct {
 	LogDir    string
 
 	NumaNode string
+	MSMode   bool
 }
 
 // ConfigToFile write config content to specific path

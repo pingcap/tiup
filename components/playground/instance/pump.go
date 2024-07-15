@@ -88,7 +88,7 @@ func (p *Pump) Addr() string {
 }
 
 // Start implements Instance interface.
-func (p *Pump) Start(ctx context.Context) error {
+func (p *Pump) Start(ctx context.Context, _ utils.Version) error {
 	endpoints := pdEndpoints(p.pds, true)
 
 	args := []string{

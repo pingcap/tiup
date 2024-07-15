@@ -82,7 +82,7 @@ func RunComponent(env *environment.Environment, tag, spec, binPath string, args 
 	}
 
 	if skip, ok := skipStartingMessages[component]; !skip || !ok {
-		colorstr.Fprintf(os.Stderr, "Starting component [bold]%s[reset]: %s\n", component, strings.Join(c.Args, " "))
+		colorstr.Fprintf(os.Stderr, "Starting component [bold]%s[reset]: %s\n", component, strings.Join(environment.HidePassword(c.Args), " "))
 	}
 
 	err = c.Start()
@@ -244,6 +244,7 @@ func PrepareBinary(component string, version utils.Version, binPath string) (str
 			return "", errors.Trace(err)
 		}
 		binPath = tmp
+		fmt.Printf("Start %s instance:%s\n", component, binPath)
 	} else {
 		selectVer, err := environment.GlobalEnv().DownloadComponentIfMissing(component, version)
 		if err != nil {
@@ -254,6 +255,7 @@ func PrepareBinary(component string, version utils.Version, binPath string) (str
 		if err != nil {
 			return "", err
 		}
+		fmt.Printf("Start %s instance:%s\n", component, version)
 	}
 	return binPath, nil
 }
@@ -264,7 +266,7 @@ func saveProcessInfo(p *PrepareCommandParams, c *exec.Cmd) {
 		CreatedTime: time.Now().Format(time.RFC3339),
 		Pid:         c.Process.Pid,
 		Exec:        c.Args[0],
-		Args:        c.Args,
+		Args:        environment.HidePassword(c.Args),
 		Dir:         p.InstanceDir,
 		Env:         c.Env,
 		Cmd:         c,

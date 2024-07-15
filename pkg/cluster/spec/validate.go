@@ -935,6 +935,8 @@ func (s *Specification) validateTLSEnabled() error {
 	for _, c := range compList {
 		switch c.Name() {
 		case ComponentPD,
+			ComponentTSO,
+			ComponentScheduling,
 			ComponentTiDB,
 			ComponentTiKV,
 			ComponentTiFlash,

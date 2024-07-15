@@ -768,7 +768,7 @@ func (i *TiFlashInstance) InitConfig(
 		DeployDir: paths.Deploy,
 		LogDir:    paths.Log,
 
-		NumaNode:  spec.NumaCores,
+		NumaNode:  spec.NumaNode,
 		NumaCores: spec.NumaCores,
 	}
 

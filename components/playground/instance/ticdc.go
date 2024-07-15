@@ -53,7 +53,7 @@ func NewTiCDC(binPath string, dir, host, configPath string, id int, port int, pd
 }
 
 // Start implements Instance interface.
-func (c *TiCDC) Start(ctx context.Context) error {
+func (c *TiCDC) Start(ctx context.Context, _ utils.Version) error {
 	endpoints := pdEndpoints(c.pds, true)
 
 	args := []string{

@@ -18,19 +18,25 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
+	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // TiKVInstance represent a running tikv-server
 type TiKVInstance struct {
 	instance
-	pds []*PDInstance
+	pds  []*PDInstance
+	tsos []*PDInstance
 	Process
+	isCSEMode  bool
+	cseOpts    CSEOptions
+	isPDMSMode bool
 }
 
 // NewTiKVInstance return a TiKVInstance
-func NewTiKVInstance(binPath string, dir, host, configPath string, id int, port int, pds []*PDInstance) *TiKVInstance {
+func NewTiKVInstance(binPath string, dir, host, configPath string, id int, port int, pds []*PDInstance, tsos []*PDInstance, isCSEMode bool, cseOptions CSEOptions, isPDMSMode bool) *TiKVInstance {
 	if port <= 0 {
 		port = 20160
 	}
@@ -44,7 +50,11 @@ func NewTiKVInstance(binPath string, dir, host, configPath string, id int, port 
 			StatusPort: utils.MustGetFreePort(host, 20180),
 			ConfigPath: configPath,
 		},
-		pds: pds,
+		pds:        pds,
+		tsos:       tsos,
+		isCSEMode:  isCSEMode,
+		cseOpts:    cseOptions,
+		isPDMSMode: isPDMSMode,
 	}
 }
 
@@ -54,7 +64,7 @@ func (inst *TiKVInstance) Addr() string {
 }
 
 // Start calls set inst.cmd and Start
-func (inst *TiKVInstance) Start(ctx context.Context) error {
+func (inst *TiKVInstance) Start(ctx context.Context, _ utils.Version) error {
 	configPath := filepath.Join(inst.Dir, "tikv.toml")
 	if err := prepareConfig(
 		configPath,
@@ -62,6 +72,23 @@ func (inst *TiKVInstance) Start(ctx context.Context) error {
 		inst.getConfig(),
 	); err != nil {
 		return err
+	}
+
+	// Need to check tso status
+	if inst.isPDMSMode {
+		var tsoEnds []string
+		for _, pd := range inst.tsos {
+			tsoEnds = append(tsoEnds, fmt.Sprintf("%s:%d", AdvertiseHost(pd.Host), pd.StatusPort))
+		}
+		pdcli := api.NewPDClient(ctx,
+			tsoEnds, 10*time.Second, nil,
+		)
+		if err := pdcli.CheckTSOHealth(&utils.RetryOption{
+			Delay:   time.Second * 5,
+			Timeout: time.Second * 300,
+		}); err != nil {
+			return err
+		}
 	}
 
 	endpoints := pdEndpoints(inst.pds, true)
