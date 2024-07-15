@@ -96,6 +96,12 @@ func (inst *instance) PrepareBinary(componentName string, version utils.Version)
 	if err != nil {
 		return err
 	}
+	// distinguish whether the instance is started by specific binary path.
+	if inst.BinPath == "" {
+		fmt.Printf("Start %s instance:%s\n", componentName, version)
+	} else {
+		fmt.Printf("Start %s instance:%s\n", componentName, instanceBinPath)
+	}
 	inst.Version = version
 	inst.BinPath = instanceBinPath
 	return nil

@@ -244,7 +244,6 @@ func PrepareBinary(component string, version utils.Version, binPath string) (str
 			return "", errors.Trace(err)
 		}
 		binPath = tmp
-		fmt.Printf("Start %s instance:%s\n", component, binPath)
 	} else {
 		selectVer, err := environment.GlobalEnv().DownloadComponentIfMissing(component, version)
 		if err != nil {
@@ -255,7 +254,6 @@ func PrepareBinary(component string, version utils.Version, binPath string) (str
 		if err != nil {
 			return "", err
 		}
-		fmt.Printf("Start %s instance:%s\n", component, version)
 	}
 	return binPath, nil
 }
