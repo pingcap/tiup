@@ -96,9 +96,9 @@ func (inst *TiFlashInstance) StatusAddrs() (addrs []string) {
 }
 
 // Start calls set inst.cmd and Start
-func (inst *TiFlashInstance) Start(ctx context.Context, version utils.Version) error {
-	if !tidbver.TiFlashPlaygroundNewStartMode(version.String()) {
-		return inst.startOld(ctx, version)
+func (inst *TiFlashInstance) Start(ctx context.Context) error {
+	if !tidbver.TiFlashPlaygroundNewStartMode(inst.Version.String()) {
+		return inst.startOld(ctx, inst.Version)
 	}
 
 	proxyConfigPath := filepath.Join(inst.Dir, "tiflash_proxy.toml")

@@ -64,7 +64,7 @@ func (inst *TiKVInstance) Addr() string {
 }
 
 // Start calls set inst.cmd and Start
-func (inst *TiKVInstance) Start(ctx context.Context, _ utils.Version) error {
+func (inst *TiKVInstance) Start(ctx context.Context) error {
 	configPath := filepath.Join(inst.Dir, "tikv.toml")
 	if err := prepareConfig(
 		configPath,

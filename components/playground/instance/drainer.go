@@ -69,7 +69,7 @@ func (d *Drainer) NodeID() string {
 }
 
 // Start implements Instance interface.
-func (d *Drainer) Start(ctx context.Context, _ utils.Version) error {
+func (d *Drainer) Start(ctx context.Context) error {
 	endpoints := pdEndpoints(d.pds, true)
 
 	args := []string{

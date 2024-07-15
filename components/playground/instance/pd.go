@@ -87,7 +87,7 @@ func (inst *PDInstance) Name() string {
 }
 
 // Start calls set inst.cmd and Start
-func (inst *PDInstance) Start(ctx context.Context, _ utils.Version) error {
+func (inst *PDInstance) Start(ctx context.Context) error {
 	configPath := filepath.Join(inst.Dir, "pd.toml")
 	if err := prepareConfig(
 		configPath,

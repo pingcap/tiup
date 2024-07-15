@@ -97,7 +97,7 @@ func (c *TiProxy) MetricAddr() (r MetricAddr) {
 }
 
 // Start implements Instance interface.
-func (c *TiProxy) Start(ctx context.Context, _ utils.Version) error {
+func (c *TiProxy) Start(ctx context.Context) error {
 	endpoints := pdEndpoints(c.pds, false)
 
 	configPath := filepath.Join(c.Dir, "config", "proxy.toml")

@@ -56,7 +56,7 @@ func NewTiDBInstance(binPath string, dir, host, configPath string, id, port int,
 }
 
 // Start calls set inst.cmd and Start
-func (inst *TiDBInstance) Start(ctx context.Context, _ utils.Version) error {
+func (inst *TiDBInstance) Start(ctx context.Context) error {
 	configPath := filepath.Join(inst.Dir, "tidb.toml")
 	if err := prepareConfig(
 		configPath,

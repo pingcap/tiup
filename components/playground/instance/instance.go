@@ -68,7 +68,7 @@ type Instance interface {
 	Pid() int
 	// Start the instance process.
 	// Will kill the process once the context is done.
-	Start(ctx context.Context, version utils.Version) error
+	Start(ctx context.Context) error
 	// Component Return the component name.
 	Component() string
 	// LogFile return the log file name
@@ -96,8 +96,8 @@ func (inst *instance) PrepareBinary(componentName string, version utils.Version)
 	if err != nil {
 		return err
 	}
-	inst.BinPath = instanceBinPath
 	inst.Version = version
+	inst.BinPath = instanceBinPath
 	return nil
 }
 
