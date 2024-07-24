@@ -1,5 +1,21 @@
 TiUP Changelog
 
+## [1.16.0] 2024-06-27
+
+### New Features
+
+- Deploy PD as microservices in `tiup-cluster` (#2377, @rleungx)
+
+### Fixes
+
+- Fix missing TiProxy session certs when `tiup-cluster` scale-out (#2432, @djshow832)
+
+### Improvements
+
+- Remove tombstone nodes of pd when executing `tiup-cluster prune` (#2044, @nexustar)
+- Redact `-p` (password) arguments in command execution (#2425, @nexustar)
+- Avoid duplicated downloads when upgrade (#2423, @nexustar)
+
 ## [1.15.2] 2024-05-28
 
 ### Improvements

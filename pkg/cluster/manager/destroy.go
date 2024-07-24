@@ -190,6 +190,12 @@ func (m *Manager) DestroyTombstone(
 	}
 	topo = metadata.GetTopology()
 	base = metadata.GetBaseMeta()
+
+	b, err = m.sshTaskBuilder(name, topo, base.User, gOpt)
+	if err != nil {
+		return err
+	}
+
 	regenConfigTasks, _ := buildInitConfigTasks(m, name, topo, base, gOpt, nodes)
 	t = b.
 		ParallelStep("+ Refresh instance configs", gOpt.Force, regenConfigTasks...).

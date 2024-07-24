@@ -231,13 +231,26 @@ func (m *Manager) RestartCluster(name string, gOpt operator.Options, skipConfirm
 	}
 
 	if !skipConfirm {
-		if err := tui.PromptForConfirmOrAbortError(
-			fmt.Sprintf("Will restart the cluster %s with nodes: %s roles: %s.\nCluster will be unavailable\nDo you want to continue? [y/N]:",
-				color.HiYellowString(name),
-				color.HiYellowString(strings.Join(gOpt.Nodes, ",")),
-				color.HiYellowString(strings.Join(gOpt.Roles, ",")),
-			),
-		); err != nil {
+		var availabilityMessage string
+		var rolesToRestart string
+		var nodesToRestart string
+		if len(gOpt.Nodes) == 0 && len(gOpt.Roles) == 0 {
+			availabilityMessage = "Cluster will be unavailable"
+			rolesToRestart = "all"
+			nodesToRestart = "all"
+		} else {
+			availabilityMessage = fmt.Sprintf("Cluster functionality related to nodes: %s roles: %s will be unavailable", strings.Join(gOpt.Nodes, ","), strings.Join(gOpt.Roles, ","))
+			nodesToRestart = strings.Join(gOpt.Nodes, ",")
+			rolesToRestart = strings.Join(gOpt.Roles, ",")
+		}
+
+		confirmationMessage := fmt.Sprintf("Will restart the cluster %s with nodes: %s roles: %s.\n%s\nDo you want to continue? [y/N]:",
+			color.HiYellowString(name),
+			color.HiYellowString(nodesToRestart),
+			color.HiYellowString(rolesToRestart),
+			availabilityMessage,
+		)
+		if err := tui.PromptForConfirmOrAbortError(confirmationMessage); err != nil {
 			return err
 		}
 	}

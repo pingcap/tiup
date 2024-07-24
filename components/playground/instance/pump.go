@@ -21,7 +21,6 @@ import (
 	"strings"
 	"time"
 
-	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -89,7 +88,7 @@ func (p *Pump) Addr() string {
 }
 
 // Start implements Instance interface.
-func (p *Pump) Start(ctx context.Context, version utils.Version) error {
+func (p *Pump) Start(ctx context.Context) error {
 	endpoints := pdEndpoints(p.pds, true)
 
 	args := []string{
@@ -103,10 +102,6 @@ func (p *Pump) Start(ctx context.Context, version utils.Version) error {
 		args = append(args, fmt.Sprintf("--config=%s", p.ConfigPath))
 	}
 
-	var err error
-	if p.BinPath, err = tiupexec.PrepareBinary("pump", version, p.BinPath); err != nil {
-		return err
-	}
 	p.Process = &process{cmd: PrepareCommand(ctx, p.BinPath, args, nil, p.Dir)}
 
 	logIfErr(p.Process.SetOutputFile(p.LogFile()))

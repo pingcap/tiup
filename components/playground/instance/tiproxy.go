@@ -24,7 +24,6 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/crypto"
-	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -98,7 +97,7 @@ func (c *TiProxy) MetricAddr() (r MetricAddr) {
 }
 
 // Start implements Instance interface.
-func (c *TiProxy) Start(ctx context.Context, version utils.Version) error {
+func (c *TiProxy) Start(ctx context.Context) error {
 	endpoints := pdEndpoints(c.pds, false)
 
 	configPath := filepath.Join(c.Dir, "config", "proxy.toml")
@@ -134,10 +133,6 @@ func (c *TiProxy) Start(ctx context.Context, version utils.Version) error {
 
 	args := []string{
 		fmt.Sprintf("--config=%s", configPath),
-	}
-
-	if c.BinPath, err = tiupexec.PrepareBinary("tiproxy", version, c.BinPath); err != nil {
-		return err
 	}
 
 	c.Process = &process{cmd: PrepareCommand(ctx, c.BinPath, args, nil, c.Dir)}
