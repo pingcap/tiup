@@ -691,7 +691,7 @@ func (r *V1Repository) DownloadTiUP(targetDir string) error {
 		TargetDir: targetDir,
 		ID:        TiUPBinaryName,
 		Version:   "",
-		Force:     false,
+		Force:     true,
 	}
 	return r.UpdateComponents([]ComponentSpec{spec})
 }
