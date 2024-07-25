@@ -131,17 +131,19 @@ func Upgrade(
 			if instance.IgnoreMonitorAgent() {
 				noAgentHosts.Insert(instance.GetManageHost())
 			}
+
+			// Usage within the switch statement
 			switch component.Name() {
-			case spec.ComponentPD:
-				// defer PD leader to be upgraded after others
-				isLeader, err := instance.(*spec.PDInstance).IsLeader(ctx, topo, int(options.APITimeout), tlsCfg)
+			case spec.ComponentPD, spec.ComponentTSO, spec.ComponentScheduling:
+				// defer PD leader/primary to be upgraded after others
+				isPrimary, err := checkAndDeferPDInstance(ctx, topo, int(options.APITimeout), tlsCfg, instance)
 				if err != nil {
-					logger.Warnf("cannot found pd leader, ignore: %s", err)
+					logger.Warnf("cannot found pd related leader/primary, ignore: %s", err)
 					return err
 				}
-				if isLeader {
+				if isPrimary {
 					deferInstances = append(deferInstances, instance)
-					logger.Debugf("Deferred upgrading of PD leader %s", instance.ID())
+					logger.Debugf("Deferred upgrading of TSO primary %s", instance.ID())
 					continue
 				}
 			case spec.ComponentCDC:
@@ -216,6 +218,22 @@ func Upgrade(
 	}
 
 	return RestartMonitored(ctx, uniqueHosts.Slice(), noAgentHosts, topo.GetMonitoredOptions(), options.OptTimeout, systemdMode)
+}
+
+// checkAndDeferInstance checks the instance's status and defers its upgrade if necessary.
+func checkAndDeferPDInstance(ctx context.Context, topo spec.Topology, apiTimeout int, tlsCfg *tls.Config, instance spec.Instance) (isPrimary bool, err error) {
+	switch instance.ComponentName() {
+	case spec.ComponentPD:
+		isPrimary, err = instance.(*spec.PDInstance).IsLeader(ctx, topo, apiTimeout, tlsCfg)
+	case spec.ComponentScheduling:
+		isPrimary, err = instance.(*spec.SchedulingInstance).IsPrimary(ctx, topo, tlsCfg)
+	case spec.ComponentTSO:
+		isPrimary, err = instance.(*spec.TSOInstance).IsPrimary(ctx, topo, tlsCfg)
+	}
+	if err != nil {
+		return false, err
+	}
+	return isPrimary, nil
 }
 
 func upgradeInstance(

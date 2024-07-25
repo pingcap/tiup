@@ -21,12 +21,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/utils"
 )
+
+var tsoService = "tso"
 
 // TSOSpec represents the TSO topology specification in topology.yaml
 type TSOSpec struct {
@@ -63,7 +66,7 @@ func (s *TSOSpec) Status(ctx context.Context, timeout time.Duration, tlsCfg *tls
 		return "Down"
 	}
 
-	primary, err := pc.GetServicePrimary("tso")
+	primary, err := pc.GetServicePrimary(tsoService)
 	if err != nil {
 		return "ERR"
 	}
@@ -301,6 +304,27 @@ func (i *TSOInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs 
 	}
 
 	return configs, nil
+}
+
+// IsPrimary checks if the instance is primary
+func (i *TSOInstance) IsPrimary(ctx context.Context, topo Topology, tlsCfg *tls.Config) (bool, error) {
+	tidbTopo, ok := topo.(*Specification)
+	if !ok {
+		panic("topo should be type of tidb topology")
+	}
+	pdClient := api.NewPDClient(ctx, tidbTopo.GetPDListWithManageHost(), time.Second*5, tlsCfg)
+	primary, err := pdClient.GetServicePrimary(tsoService)
+	if err != nil {
+		return false, errors.Annotatef(err, "failed to get TSO primary %s", i.GetHost())
+	}
+
+	spec := i.InstanceSpec.(*TSOSpec)
+	enableTLS := false
+	if tlsCfg != nil {
+		enableTLS = true
+	}
+
+	return primary == spec.GetAdvertiseListenURL(enableTLS), nil
 }
 
 // ScaleConfig deploy temporary config on scaling
