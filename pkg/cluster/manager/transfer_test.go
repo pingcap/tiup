@@ -53,4 +53,32 @@ func TestRenderSpec(t *testing.T) {
 	dir, err = renderSpec("{{.DataDir}}", s, "test-pd")
 	assert.Nil(t, err)
 	assert.NotEmpty(t, dir)
+
+	s = &spec.TSOInstance{BaseInstance: spec.BaseInstance{
+		InstanceSpec: &spec.TSOSpec{
+			Host:      "172.16.5.140",
+			SSHPort:   22,
+			Name:      "tso-1",
+			DeployDir: "/home/test/deploy/tso-3379",
+			DataDir:   "/home/test/deploy/tso-3379/data",
+		},
+	}}
+	// s.BaseInstance.InstanceSpec
+	dir, err = renderSpec("{{.DataDir}}", s, "test-tso")
+	assert.Nil(t, err)
+	assert.NotEmpty(t, dir)
+
+	s = &spec.SchedulingInstance{BaseInstance: spec.BaseInstance{
+		InstanceSpec: &spec.SchedulingSpec{
+			Host:      "172.16.5.140",
+			SSHPort:   22,
+			Name:      "scheduling-1",
+			DeployDir: "/home/test/deploy/scheduling-3379",
+			DataDir:   "/home/test/deploy/scheduling-3379/data",
+		},
+	}}
+	// s.BaseInstance.InstanceSpec
+	dir, err = renderSpec("{{.DataDir}}", s, "test-scheduling")
+	assert.Nil(t, err)
+	assert.NotEmpty(t, dir)
 }
