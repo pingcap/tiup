@@ -20,7 +20,6 @@ import (
 	"strconv"
 	"strings"
 
-	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -57,7 +56,7 @@ func NewTiDBInstance(binPath string, dir, host, configPath string, id, port int,
 }
 
 // Start calls set inst.cmd and Start
-func (inst *TiDBInstance) Start(ctx context.Context, version utils.Version) error {
+func (inst *TiDBInstance) Start(ctx context.Context) error {
 	configPath := filepath.Join(inst.Dir, "tidb.toml")
 	if err := prepareConfig(
 		configPath,
@@ -82,10 +81,6 @@ func (inst *TiDBInstance) Start(ctx context.Context, version utils.Version) erro
 		args = append(args, "--enable-binlog=true")
 	}
 
-	var err error
-	if inst.BinPath, err = tiupexec.PrepareBinary("tidb", version, inst.BinPath); err != nil {
-		return err
-	}
 	inst.Process = &process{cmd: PrepareCommand(ctx, inst.BinPath, args, nil, inst.Dir)}
 
 	logIfErr(inst.Process.SetOutputFile(inst.LogFile()))

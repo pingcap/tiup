@@ -22,6 +22,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -453,13 +454,15 @@ func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) 
 	if component == "tso" || component == "scheduling" {
 		component = string(instance.PDRoleNormal)
 	}
-	version, err = environment.GlobalEnv().V1Repository().ResolveComponentVersion(component, boundVersion)
-	if err != nil {
+	if version, err = environment.GlobalEnv().V1Repository().ResolveComponentVersion(component, boundVersion); err != nil {
 		return err
 	}
-	fmt.Printf("Start %s instance:%s\n", inst.Component(), version)
-	err = inst.Start(ctx, version)
-	if err != nil {
+
+	if err := inst.PrepareBinary(component, version); err != nil {
+		return err
+	}
+
+	if err = inst.Start(ctx); err != nil {
 		return err
 	}
 	p.addWaitInstance(inst)
@@ -505,22 +508,23 @@ func (p *Playground) handleScaleOut(w io.Writer, cmd *Command) error {
 		return err
 	}
 
+	mysql := mysqlCommand()
 	if cmd.ComponentID == "tidb" {
 		addr := p.tidbs[len(p.tidbs)-1].Addr()
 		if checkDB(addr, cmd.UpTimeout) {
 			ss := strings.Split(addr, ":")
-			connectMsg := "To connect new added TiDB: mysql --comments --host %s --port %s -u root -p (no password)"
-			fmt.Println(color.GreenString(connectMsg, ss[0], ss[1]))
-			fmt.Fprintln(w, color.GreenString(connectMsg, ss[0], ss[1]))
+			connectMsg := "To connect new added TiDB: %s --host %s --port %s -u root -p (no password)"
+			fmt.Println(color.GreenString(connectMsg, mysql, ss[0], ss[1]))
+			fmt.Fprintln(w, color.GreenString(connectMsg, mysql, ss[0], ss[1]))
 		}
 	}
 	if cmd.ComponentID == "tiproxy" {
 		addr := p.tiproxys[len(p.tidbs)-1].Addr()
 		if checkDB(addr, cmd.UpTimeout) {
 			ss := strings.Split(addr, ":")
-			connectMsg := "To connect to the newly added TiProxy: mysql --comments --host %s --port %s -u root -p (no password)"
-			fmt.Println(color.GreenString(connectMsg, ss[0], ss[1]))
-			fmt.Fprintln(w, color.GreenString(connectMsg, ss[0], ss[1]))
+			connectMsg := "To connect to the newly added TiProxy: %s --host %s --port %s -u root -p (no password)"
+			fmt.Println(color.GreenString(connectMsg, mysql, ss[0], ss[1]))
+			fmt.Fprintln(w, color.GreenString(connectMsg, mysql, ss[0], ss[1]))
 		}
 	}
 
@@ -1117,15 +1121,16 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		fmt.Println()
 		color.New(color.FgGreen, color.Bold).Println("🎉 TiDB Playground Cluster is started, enjoy!")
 		fmt.Println()
+		mysql := mysqlCommand()
 		for _, dbAddr := range tidbSucc {
 			ss := strings.Split(dbAddr, ":")
 			fmt.Printf("Connect TiDB:    ")
-			colorCmd.Printf("mysql --comments --host %s --port %s -u root\n", ss[0], ss[1])
+			colorCmd.Printf("%s --host %s --port %s -u root\n", mysql, ss[0], ss[1])
 		}
 		for _, dbAddr := range tiproxySucc {
 			ss := strings.Split(dbAddr, ":")
 			fmt.Printf("Connect TiProxy: ")
-			colorCmd.Printf("mysql --comments --host %s --port %s -u root\n", ss[0], ss[1])
+			colorCmd.Printf("%s --host %s --port %s -u root\n", mysql, ss[0], ss[1])
 		}
 	}
 
@@ -1486,4 +1491,62 @@ func logIfErr(err error) {
 	if err != nil {
 		fmt.Println(err)
 	}
+}
+
+// Check the MySQL Client version
+//
+// Since v8.1.0 `--comments` is the default, so we don't need to specify it.
+// Without `--comments` the MySQL client strips TiDB specific comments
+// like `/*T![clustered_index] CLUSTERED */`
+//
+// This returns `mysql --comments` for older versions or in case we failed to check
+// the version for any reason as `mysql --comments` is the safe option.
+// For newer MySQL versions it returns just `mysql`.
+//
+// For MariaDB versions of the MySQL Client it is expected to return `mysql --comments`.
+func mysqlCommand() (cmd string) {
+	cmd = "mysql --comments"
+	mysqlVerOutput, err := exec.Command("mysql", "--version").Output()
+	if err != nil {
+		return
+	}
+	vMaj, vMin, _, err := parseMysqlVersion(string(mysqlVerOutput))
+	if err == nil {
+		if vMaj == 8 && vMin >= 1 { // 8.1.0 and newer
+			return "mysql"
+		}
+	}
+	return
+}
+
+// parseMysqlVersion parses the output from `mysql --version` that is in `versionOutput`
+// and returns the major, minor and patch version.
+//
+// New format example: `mysql  Ver 8.2.0 for Linux on x86_64 (MySQL Community Server - GPL)`
+// Old format example: `mysql  Ver 14.14 Distrib 5.7.36, for linux-glibc2.12 (x86_64) using  EditLine wrapper`
+// MariaDB 11.2 format: `/usr/bin/mysql from 11.2.2-MariaDB, client 15.2 for linux-systemd (x86_64) using readline 5.1`
+//
+// Note that MariaDB has `bin/mysql` (deprecated) and `bin/mariadb`. This is to parse the version from `bin/mysql`.
+// As TiDB is a MySQL compatible database we recommend `bin/mysql` from MySQL.
+// If we ever want to auto-detect other clients like `bin/mariadb`, `bin/mysqlsh`, `bin/mycli`, etc then
+// each of them needs their own version detection and adjust for the right commandline options.
+func parseMysqlVersion(versionOutput string) (vMaj int, vMin int, vPatch int, err error) {
+	mysqlVerRegexp := regexp.MustCompile(`(Ver|Distrib|from) ([0-9]+)\.([0-9]+)\.([0-9]+)`)
+	mysqlVerMatch := mysqlVerRegexp.FindStringSubmatch(versionOutput)
+	if mysqlVerMatch == nil {
+		return 0, 0, 0, errors.New("No match")
+	}
+	vMaj, err = strconv.Atoi(mysqlVerMatch[2])
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	vMin, err = strconv.Atoi(mysqlVerMatch[3])
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	vPatch, err = strconv.Atoi(mysqlVerMatch[4])
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	return
 }

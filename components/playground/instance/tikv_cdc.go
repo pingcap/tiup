@@ -19,7 +19,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -50,7 +49,7 @@ func NewTiKVCDC(binPath string, dir, host, configPath string, id int, pds []*PDI
 }
 
 // Start implements Instance interface.
-func (c *TiKVCDC) Start(ctx context.Context, version utils.Version) error {
+func (c *TiKVCDC) Start(ctx context.Context) error {
 	endpoints := pdEndpoints(c.pds, true)
 
 	args := []string{
@@ -65,10 +64,6 @@ func (c *TiKVCDC) Start(ctx context.Context, version utils.Version) error {
 		args = append(args, fmt.Sprintf("--config=%s", c.ConfigPath))
 	}
 
-	var err error
-	if c.BinPath, err = tiupexec.PrepareBinary("tikv-cdc", version, c.BinPath); err != nil {
-		return err
-	}
 	c.Process = &process{cmd: PrepareCommand(ctx, c.BinPath, args, nil, c.Dir)}
 
 	logIfErr(c.Process.SetOutputFile(c.LogFile()))
