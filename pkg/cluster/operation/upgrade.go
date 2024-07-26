@@ -135,15 +135,15 @@ func Upgrade(
 			// Usage within the switch statement
 			switch component.Name() {
 			case spec.ComponentPD, spec.ComponentTSO, spec.ComponentScheduling:
-				// defer PD leader/primary to be upgraded after others
-				isPrimary, err := checkAndDeferPDInstance(ctx, topo, int(options.APITimeout), tlsCfg, instance)
+				// defer PD related leader/primary to be upgraded after others
+				isLeader, err := checkAndDeferPDLeader(ctx, topo, int(options.APITimeout), tlsCfg, instance)
 				if err != nil {
-					logger.Warnf("cannot found pd related leader/primary, ignore: %s", err)
+					logger.Warnf("cannot found pd related leader/primary, ignore: %s, instance: %s", err, instance.ID())
 					return err
 				}
-				if isPrimary {
+				if isLeader {
 					deferInstances = append(deferInstances, instance)
-					logger.Debugf("Deferred upgrading of TSO primary %s", instance.ID())
+					logger.Debugf("Upgrading deferred instance %s...", instance.ID())
 					continue
 				}
 			case spec.ComponentCDC:
@@ -220,20 +220,20 @@ func Upgrade(
 	return RestartMonitored(ctx, uniqueHosts.Slice(), noAgentHosts, topo.GetMonitoredOptions(), options.OptTimeout, systemdMode)
 }
 
-// checkAndDeferInstance checks the instance's status and defers its upgrade if necessary.
-func checkAndDeferPDInstance(ctx context.Context, topo spec.Topology, apiTimeout int, tlsCfg *tls.Config, instance spec.Instance) (isPrimary bool, err error) {
+// checkAndDeferPDLeader checks the PD related leader/primary instance's status and defers its upgrade if necessary.
+func checkAndDeferPDLeader(ctx context.Context, topo spec.Topology, apiTimeout int, tlsCfg *tls.Config, instance spec.Instance) (isLeader bool, err error) {
 	switch instance.ComponentName() {
 	case spec.ComponentPD:
-		isPrimary, err = instance.(*spec.PDInstance).IsLeader(ctx, topo, apiTimeout, tlsCfg)
+		isLeader, err = instance.(*spec.PDInstance).IsLeader(ctx, topo, apiTimeout, tlsCfg)
 	case spec.ComponentScheduling:
-		isPrimary, err = instance.(*spec.SchedulingInstance).IsPrimary(ctx, topo, tlsCfg)
+		isLeader, err = instance.(*spec.SchedulingInstance).IsPrimary(ctx, topo, tlsCfg)
 	case spec.ComponentTSO:
-		isPrimary, err = instance.(*spec.TSOInstance).IsPrimary(ctx, topo, tlsCfg)
+		isLeader, err = instance.(*spec.TSOInstance).IsPrimary(ctx, topo, tlsCfg)
 	}
 	if err != nil {
 		return false, err
 	}
-	return isPrimary, nil
+	return isLeader, nil
 }
 
 func upgradeInstance(
