@@ -23,7 +23,8 @@ exec $EXPORTER_BIN \
     --collector.tcpstat \
     --collector.mountstats \
     --collector.meminfo_numa \
-    --collector.interrupts \
     --collector.buddyinfo \
     --collector.vmstat.fields="^.*" \
     --log.level="info"
+    #--collector.systemd \
+    #--collector.interrupts \
