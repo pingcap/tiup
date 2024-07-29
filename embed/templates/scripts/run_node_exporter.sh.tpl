@@ -21,7 +21,6 @@ exec $EXPORTER_BIN \
 {{- end}}
     --web.listen-address=":{{.Port}}" \
     --collector.tcpstat \
-    --collector.systemd \
     --collector.mountstats \
     --collector.meminfo_numa \
     --collector.interrupts \
