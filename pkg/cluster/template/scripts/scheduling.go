@@ -24,7 +24,6 @@ import (
 
 // SchedulingScript represent the data to generate scheduling config
 type SchedulingScript struct {
-	Name               string
 	ListenURL          string
 	AdvertiseListenURL string
 	BackendEndpoints   string

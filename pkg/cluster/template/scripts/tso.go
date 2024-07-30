@@ -24,7 +24,6 @@ import (
 
 // TSOScript represent the data to generate tso config
 type TSOScript struct {
-	Name               string
 	ListenURL          string
 	AdvertiseListenURL string
 	BackendEndpoints   string
