@@ -984,38 +984,6 @@ func (s *Specification) validatePDNames() error {
 	return nil
 }
 
-func (s *Specification) validateTSONames() error {
-	// check tso server name
-	tsoNames := set.NewStringSet()
-	for _, tso := range s.TSOServers {
-		if tso.Name == "" {
-			continue
-		}
-
-		if tsoNames.Exist(tso.Name) {
-			return errors.Errorf("component tso_servers.name is not supported duplicated, the name %s is duplicated", tso.Name)
-		}
-		tsoNames.Insert(tso.Name)
-	}
-	return nil
-}
-
-func (s *Specification) validateSchedulingNames() error {
-	// check scheduling server name
-	schedulingNames := set.NewStringSet()
-	for _, scheduling := range s.SchedulingServers {
-		if scheduling.Name == "" {
-			continue
-		}
-
-		if schedulingNames.Exist(scheduling.Name) {
-			return errors.Errorf("component scheduling_servers.name is not supported duplicated, the name %s is duplicated", scheduling.Name)
-		}
-		schedulingNames.Insert(scheduling.Name)
-	}
-	return nil
-}
-
 func (s *Specification) validateTiFlashConfigs() error {
 	c := FindComponent(s, ComponentTiFlash)
 	for _, ins := range c.Instances() {
@@ -1095,8 +1063,6 @@ func (s *Specification) Validate() error {
 		s.dirConflictsDetect,
 		s.validateUserGroup,
 		s.validatePDNames,
-		s.validateTSONames,
-		s.validateSchedulingNames,
 		s.validateTiSparkSpec,
 		s.validateTiFlashConfigs,
 		s.validateMonitorAgent,

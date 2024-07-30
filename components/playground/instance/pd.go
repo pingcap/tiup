@@ -20,7 +20,6 @@ import (
 	"strings"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/tidbver"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -84,14 +83,7 @@ func (inst *PDInstance) InitCluster(pds []*PDInstance) *PDInstance {
 
 // Name return the name of pd.
 func (inst *PDInstance) Name() string {
-	switch inst.Role {
-	case PDRoleTSO:
-		return fmt.Sprintf("tso-%d", inst.ID)
-	case PDRoleScheduling:
-		return fmt.Sprintf("scheduling-%d", inst.ID)
-	default:
-		return fmt.Sprintf("pd-%d", inst.ID)
-	}
+	return fmt.Sprintf("pd-%d", inst.ID)
 }
 
 // Start calls set inst.cmd and Start
@@ -150,9 +142,6 @@ func (inst *PDInstance) Start(ctx context.Context) error {
 			fmt.Sprintf("--log-file=%s", inst.LogFile()),
 			fmt.Sprintf("--config=%s", configPath),
 		}
-		if tidbver.PDSupportMicroServicesWithName(inst.Version.String()) {
-			args = append(args, fmt.Sprintf("--name=%s", uid))
-		}
 	case PDRoleScheduling:
 		endpoints := pdEndpoints(inst.pds, true)
 		args = []string{
@@ -163,9 +152,6 @@ func (inst *PDInstance) Start(ctx context.Context) error {
 			fmt.Sprintf("--backend-endpoints=%s", strings.Join(endpoints, ",")),
 			fmt.Sprintf("--log-file=%s", inst.LogFile()),
 			fmt.Sprintf("--config=%s", configPath),
-		}
-		if tidbver.PDSupportMicroServicesWithName(inst.Version.String()) {
-			args = append(args, fmt.Sprintf("--name=%s", uid))
 		}
 	}
 
