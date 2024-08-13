@@ -81,6 +81,7 @@ func (m *Manager) Deploy(
 
 	metadata := m.specManager.NewMetadata()
 	topo := metadata.GetTopology()
+	m.logger.Infof("topology, %v", topo.(*spec.Specification).ComponentVersions)
 
 	if err := spec.ParseTopologyYaml(topoFile, topo); err != nil {
 		return err

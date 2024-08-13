@@ -97,10 +97,10 @@ func buildScaleOutTask(
 	base := metadata.GetBaseMeta()
 	specManager := m.specManager
 
-	m.logger.Infof("topo %v, mergedTopo %v, newPart %v",
-		topo.(*spec.Specification),
-		mergedTopo.(*spec.Specification),
-		newPart.(*spec.Specification))
+	m.logger.Infof("topo %v\n mergedTopo %v\n newPart %v\n",
+		topo.(*spec.Specification).ComponentVersions,
+		mergedTopo.(*spec.Specification).ComponentVersions,
+		newPart.(*spec.Specification).ComponentVersions)
 
 	tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
 	if err != nil {
