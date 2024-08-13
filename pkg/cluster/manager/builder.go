@@ -97,6 +97,11 @@ func buildScaleOutTask(
 	base := metadata.GetBaseMeta()
 	specManager := m.specManager
 
+	m.logger.Infof("topo component versions %v, mergedTopo component versions %v, newPart component versions %v",
+		topo.(*spec.Specification).ComponentVersions,
+		mergedTopo.(*spec.Specification).ComponentVersions,
+		newPart.(*spec.Specification).ComponentVersions)
+
 	tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
 	if err != nil {
 		return nil, err
@@ -117,6 +122,14 @@ func buildScaleOutTask(
 	})
 	// uninitializedHosts are hosts which haven't been initialized yet
 	uninitializedHosts := make(map[string]hostInfo) // host -> ssh-port, os, arch
+
+	// When iterating over the newPart, the original component_versions is not passed in.
+	// Copy the merged component_versions to newPart.
+	if newSpec, ok := newPart.(*spec.Specification); ok {
+		if mergedSpec, ok := mergedTopo.(*spec.Specification); ok {
+			newSpec.ComponentVersions = mergedSpec.ComponentVersions
+		}
+	}
 	newPart.IterInstance(func(instance spec.Instance) {
 		host := instance.GetManageHost()
 		if initializedHosts.Exist(host) {
@@ -175,7 +188,7 @@ func buildScaleOutTask(
 	// Download missing component
 	downloadCompTasks = buildDownloadCompTasks(
 		base.Version,
-		newPart,
+		mergedTopo,
 		m.logger,
 		gOpt,
 	)
