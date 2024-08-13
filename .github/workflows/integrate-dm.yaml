@@ -62,6 +62,9 @@ jobs:
           make build_integration_test
           make tiup
 
+      - uses: KengoTODA/actions-setup-docker-compose@v1
+        with:
+          version: '2.14.2'
       - name: Build the docker-compose stack
         working-directory: ${{ env.working-directory }}
         # with --dev the first run will fail for unknow reason, just retry it and will success now..
