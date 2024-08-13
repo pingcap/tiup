@@ -87,6 +87,7 @@ jobs:
 
       - name: Collect component log
         working-directory: ${{ env.working-directory }}
+        if: ${{ failure() }}
         # if: always()
         run: |
           docker exec tiup-cluster-control bash /tiup-cluster/tests/tiup-cluster/script/pull_log.sh /tiup-cluster/logs
@@ -94,6 +95,7 @@ jobs:
 
       - name: Detect error log
         working-directory: ${{ env.working-directory }}
+        if: ${{ failure() }}
         # if: always()
         run: |
           bash ./tests/tiup-cluster/script/detect_error.sh ./logs/
@@ -108,7 +110,8 @@ jobs:
 
       - name: Output cluster debug log
         working-directory: ${{ env.working-directory }}
-        if: always()
+        if: ${{ failure() }}
+        # if: always()
         run: |
           pwd
           docker ps
