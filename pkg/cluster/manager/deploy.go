@@ -86,8 +86,6 @@ func (m *Manager) Deploy(
 		return err
 	}
 
-	m.logger.Infof("topology, %v", topo.(*spec.Specification).ComponentVersions)
-
 	if err := checkTiFlashWithTLS(topo, clusterVersion); err != nil {
 		return err
 	}

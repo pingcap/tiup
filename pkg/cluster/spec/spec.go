@@ -270,10 +270,9 @@ type UpgradableMetadata interface {
 // NewPart implements ScaleOutTopology interface.
 func (s *Specification) NewPart() Topology {
 	return &Specification{
-		GlobalOptions:     s.GlobalOptions,
-		MonitoredOptions:  s.MonitoredOptions,
-		ServerConfigs:     s.ServerConfigs,
-		ComponentVersions: s.ComponentVersions,
+		GlobalOptions:    s.GlobalOptions,
+		MonitoredOptions: s.MonitoredOptions,
+		ServerConfigs:    s.ServerConfigs,
 	}
 }
 
