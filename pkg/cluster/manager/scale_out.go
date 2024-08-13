@@ -175,12 +175,6 @@ func (m *Manager) ScaleOut(
 					}
 				}
 			}
-
-			// newPart needs ComponentVersions but the original ComponentVersions is not passed to newPart.
-			// Copy the merged ComponentVersions to newPart.
-			if newSpec, ok := newPart.(*spec.Specification); ok {
-				newSpec.ComponentVersions = topo.ComponentVersions
-			}
 		}
 
 		if err := checkConflict(m, name, mergedTopo); err != nil {
