@@ -268,7 +268,6 @@ func (m *Manager) Deploy(
 	// Download missing component
 	downloadCompTasks = buildDownloadCompTasks(clusterVersion, topo, m.logger, gOpt)
 
-	m.logger.Infof("component version: %v", topo.(*spec.Specification).ComponentVersions)
 	// Deploy components to remote
 	topo.IterInstance(func(inst spec.Instance) {
 		version := inst.CalculateVersion(clusterVersion)

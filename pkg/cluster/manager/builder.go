@@ -97,10 +97,10 @@ func buildScaleOutTask(
 	base := metadata.GetBaseMeta()
 	specManager := m.specManager
 
-	m.logger.Infof("topo component versions %v, mergedTopo component versions %v, newPart component versions %v",
-		topo.(*spec.Specification).ComponentVersions,
-		mergedTopo.(*spec.Specification).ComponentVersions,
-		newPart.(*spec.Specification).ComponentVersions)
+	m.logger.Infof("topo %v, mergedTopo %v, newPart %v",
+		topo.(*spec.Specification),
+		mergedTopo.(*spec.Specification),
+		newPart.(*spec.Specification))
 
 	tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
 	if err != nil {
@@ -188,7 +188,7 @@ func buildScaleOutTask(
 	// Download missing component
 	downloadCompTasks = buildDownloadCompTasks(
 		base.Version,
-		mergedTopo,
+		newPart,
 		m.logger,
 		gOpt,
 	)
