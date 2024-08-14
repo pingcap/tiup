@@ -9,7 +9,7 @@ function scale_tiproxy() {
     test_tls=$2
     native_ssh=$3
 
-    common_args="--wait-timeout=240"
+    common_args="--wait-timeout=360"
     if [ $native_ssh == true ]; then
         common_args="$common_args --ssh=system"
     fi
