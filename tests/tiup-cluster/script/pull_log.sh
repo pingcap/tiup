@@ -21,3 +21,4 @@ do
         done
     fi
 done
+chmod -R 777 $out_dir
