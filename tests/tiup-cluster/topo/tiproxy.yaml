@@ -2,7 +2,7 @@ global:
   user: tidb
   group: pingcap
 
-component_version:
+component_versions:
   tiproxy: v1.2.0
 
 tidb_servers:
