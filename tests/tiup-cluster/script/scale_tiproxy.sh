@@ -36,8 +36,8 @@ function scale_tiproxy() {
 
     tiup-cluster $common_args --yes reload $name --skip-restart
 
-    total_sub_one=23
-    total=24
+    total_sub_one=7
+    total=8
 
     # disable tiproxy
     echo "start scale in tiproxy"
