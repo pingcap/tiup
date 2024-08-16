@@ -17,7 +17,8 @@ do
         logs=$(ssh -o "StrictHostKeyChecking no" root@$h "find /home/tidb | grep '.*log/.*\.log'")
         for log in $logs
         do
-            scp -o "StrictHostKeyChecking no" -r root@$h:$log "$out_dir/$h/"
+            scp -o "StrictHostKeyChecking no" -pr root@$h:$log "$out_dir/$h/"
         done
     fi
 done
+chmod -R 777 $out_dir

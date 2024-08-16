@@ -1,0 +1,23 @@
+global:
+  user: tidb
+  group: pingcap
+
+component_versions:
+  tiproxy: v1.2.0
+
+tidb_servers:
+  - host: n1
+  - host: n2
+
+pd_servers:
+  - host: n3
+  - host: n4
+  - host: n5
+
+tikv_servers:
+  - host: n3
+  - host: n4
+  - host: n5
+
+tiproxy_servers:
+  - host: n1
