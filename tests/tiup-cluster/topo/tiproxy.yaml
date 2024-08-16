@@ -1,0 +1,26 @@
+global:
+  user: tidb
+  group: pingcap
+
+component_version:
+  tiproxy: v1.2.0
+
+tidb_servers:
+  - host: n1
+  - host: n2
+
+pd_servers:
+  - host: n3
+  - host: n4
+  - host: n5
+
+# Note if only 3 instance, when scale-in one of it.
+# It may not be tombstone.
+tikv_servers:
+  - host: n1
+  - host: n3
+  - host: n4
+  - host: n5
+
+tiproxy_servers:
+  - host: n1

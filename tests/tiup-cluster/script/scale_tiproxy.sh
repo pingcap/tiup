@@ -6,8 +6,7 @@ function scale_tiproxy() {
     mkdir -p ~/.tiup/bin/
 
     version=$1
-    test_tls=$2
-    native_ssh=$3
+    native_ssh=$2
 
     common_args="--wait-timeout=360"
     if [ $native_ssh == true ]; then
@@ -15,11 +14,7 @@ function scale_tiproxy() {
     fi
 
     name="test_scale_tiproxy_$RANDOM"
-    if [ $test_tls = true ]; then
-        topo=./topo/full_tls.yaml
-    else
-        topo=./topo/full.yaml
-    fi
+    topo=./topo/tiproxy.yaml
 
     check_cert_file="ls /home/tidb/deploy/tidb-4000/tls/tiproxy-session.crt /home/tidb/deploy/tidb-4000/tls/tiproxy-session.key"
     check_cert_config="grep -q session-token-signing-key /home/tidb/deploy/tidb-4000/conf/tidb.toml"
@@ -41,13 +36,8 @@ function scale_tiproxy() {
 
     tiup-cluster $common_args --yes reload $name --skip-restart
 
-    if [ $test_tls = true ]; then
-        total_sub_one=18
-        total=19
-    else
-        total_sub_one=23
-        total=24
-    fi
+    total_sub_one=23
+    total=24
 
     # disable tiproxy
     echo "start scale in tiproxy"
