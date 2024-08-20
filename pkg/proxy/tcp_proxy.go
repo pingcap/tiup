@@ -66,11 +66,7 @@ func NewTCPProxy(
 		p.config.Password = password
 	}
 
-	port, err := utils.GetFreePort("127.0.0.1", 22345)
-	if err != nil {
-		logger.Errorf("get free port error: %v", err)
-		return nil
-	}
+	port = utils.MustGetFreePort("127.0.0.1", 22345, 0)
 	p.endpoint = fmt.Sprintf("127.0.0.1:%d", port)
 
 	listener, err := net.Listen("tcp", p.endpoint)

@@ -24,6 +24,7 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	tiupexec "github.com/pingcap/tiup/pkg/exec"
+	"github.com/pingcap/tiup/pkg/tui/colorstr"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -98,9 +99,9 @@ func (inst *instance) PrepareBinary(componentName string, version utils.Version)
 	}
 	// distinguish whether the instance is started by specific binary path.
 	if inst.BinPath == "" {
-		fmt.Printf("Start %s instance:%s\n", componentName, version)
+		colorstr.Printf("[dark_gray]Start %s instance: %s[reset]\n", componentName, version)
 	} else {
-		fmt.Printf("Start %s instance:%s\n", componentName, instanceBinPath)
+		colorstr.Printf("[dark_gray]Start %s instance: %s[reset]\n", componentName, instanceBinPath)
 	}
 	inst.Version = version
 	inst.BinPath = instanceBinPath

@@ -32,14 +32,14 @@ type Drainer struct {
 var _ Instance = &Drainer{}
 
 // NewDrainer create a Drainer instance.
-func NewDrainer(binPath string, dir, host, configPath string, id int, pds []*PDInstance) *Drainer {
+func NewDrainer(binPath string, dir, host, configPath string, portOffset int, id int, pds []*PDInstance) *Drainer {
 	d := &Drainer{
 		instance: instance{
 			BinPath:    binPath,
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
-			Port:       utils.MustGetFreePort(host, 8250),
+			Port:       utils.MustGetFreePort(host, 8250, portOffset),
 			ConfigPath: configPath,
 		},
 		pds: pds,

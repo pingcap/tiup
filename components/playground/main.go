@@ -75,6 +75,7 @@ type BootOptions struct {
 	Monitor        bool                `yaml:"monitor"`
 	CSEOpts        instance.CSEOptions `yaml:"cse"` // Only available when mode == tidb-cse
 	GrafanaPort    int                 `yaml:"grafana_port"`
+	PortOffset     int                 `yaml:"port_offset"`
 }
 
 var (
@@ -175,11 +176,8 @@ Examples:
 				return err
 			}
 
-			port, err := utils.GetFreePort("0.0.0.0", 9527)
-			if err != nil {
-				return err
-			}
-			err = dumpPort(filepath.Join(dataDir, "port"), port)
+			port := utils.MustGetFreePort("0.0.0.0", 9527, options.PortOffset)
+			err := dumpPort(filepath.Join(dataDir, "port"), port)
 			p := NewPlayground(dataDir, port)
 			if err != nil {
 				return err
@@ -207,7 +205,7 @@ Examples:
 
 				sig := (<-sc).(syscall.Signal)
 				atomic.StoreInt32(&p.curSig, int32(sig))
-				fmt.Println("Playground receive signal: ", sig)
+				colorstr.Printf("\n[red][bold]Playground receive signal: %s[reset]\n", sig)
 
 				// if bootCluster is not done we just cancel context to make it
 				// clean up and return ASAP and exit directly after timeout.
@@ -283,6 +281,7 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 	rootCmd.Flags().BoolVar(&options.Monitor, "monitor", true, "Start prometheus and grafana component")
 	_ = rootCmd.Flags().MarkDeprecated("monitor", "Please use --without-monitor to control whether to disable monitor.")
 	rootCmd.Flags().IntVar(&options.GrafanaPort, "grafana.port", 3000, "grafana port. If not provided, grafana will use 3000 as its port.")
+	rootCmd.Flags().IntVar(&options.PortOffset, "port-offset", 0, "If specified, all components will use default_port+port_offset as the port. This argument is useful when you want to start multiple playgrounds on the same host. Recommend to set to 10000, 20000, etc.")
 
 	// NOTE: Do not set default values if they may be changed in different modes.
 
@@ -347,10 +346,10 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 
 	rootCmd.Flags().StringVar(&options.TiKVCDC.Version, "kvcdc.version", "", "TiKV-CDC instance version")
 
-	rootCmd.Flags().StringVar(&options.CSEOpts.S3Endpoint, "cse.s3_endpoint", "http://127.0.0.1:9000", "Object store URL for the disaggregated TiFlash, available when --mode=tidb-cse")
-	rootCmd.Flags().StringVar(&options.CSEOpts.Bucket, "cse.bucket", "tiflash", "Object store bucket for the disaggregated TiFlash, available when --mode=tidb-cse")
-	rootCmd.Flags().StringVar(&options.CSEOpts.AccessKey, "cse.access_key", "minioadmin", "Object store access key, available when --mode=tidb-cse")
-	rootCmd.Flags().StringVar(&options.CSEOpts.SecretKey, "cse.secret_key", "minioadmin", "Object store secret key, available when --mode=tidb-cse")
+	rootCmd.Flags().StringVar(&options.CSEOpts.S3Endpoint, "cse.s3_endpoint", "http://127.0.0.1:9000", "Object store URL for --mode=tidb-cse")
+	rootCmd.Flags().StringVar(&options.CSEOpts.Bucket, "cse.bucket", "tiflash", "Object store bucket for --mode=tidb-cse")
+	rootCmd.Flags().StringVar(&options.CSEOpts.AccessKey, "cse.access_key", "minioadmin", "Object store access key for --mode=tidb-cse")
+	rootCmd.Flags().StringVar(&options.CSEOpts.SecretKey, "cse.secret_key", "minioadmin", "Object store secret key for --mode=tidb-cse")
 
 	rootCmd.AddCommand(newDisplay())
 	rootCmd.AddCommand(newScaleOut())
