@@ -41,6 +41,7 @@ import (
 	"github.com/pingcap/tiup/pkg/environment"
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/tidbver"
+	"github.com/pingcap/tiup/pkg/tui/colorstr"
 	"github.com/pingcap/tiup/pkg/tui/progress"
 	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/mod/semver"
@@ -722,7 +723,7 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 
 	switch componentID {
 	case spec.ComponentPD:
-		inst := instance.NewPDInstance(pdRole, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, cfg.Port, p.bootOptions.Mode == "tidb-cse")
+		inst := instance.NewPDInstance(pdRole, cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, p.pds, cfg.Port, p.bootOptions.Mode == "tidb-cse")
 		ins = inst
 		if pdRole == instance.PDRoleNormal || pdRole == instance.PDRoleAPI {
 			if p.booted {
@@ -740,46 +741,46 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 			p.schedulings = append(p.schedulings, inst)
 		}
 	case spec.ComponentTSO:
-		inst := instance.NewPDInstance(instance.PDRoleTSO, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, cfg.Port, p.bootOptions.Mode == "tidb-cse")
+		inst := instance.NewPDInstance(instance.PDRoleTSO, cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, p.pds, cfg.Port, p.bootOptions.Mode == "tidb-cse")
 		ins = inst
 		p.tsos = append(p.tsos, inst)
 	case spec.ComponentScheduling:
-		inst := instance.NewPDInstance(instance.PDRoleScheduling, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, cfg.Port, p.bootOptions.Mode == "tidb-cse")
+		inst := instance.NewPDInstance(instance.PDRoleScheduling, cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, p.pds, cfg.Port, p.bootOptions.Mode == "tidb-cse")
 		ins = inst
 		p.schedulings = append(p.schedulings, inst)
 	case spec.ComponentTiDB:
-		inst := instance.NewTiDBInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, dataDir, p.enableBinlog(), p.bootOptions.Mode == "tidb-cse")
+		inst := instance.NewTiDBInstance(cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, cfg.Port, p.pds, dataDir, p.enableBinlog(), p.bootOptions.Mode == "tidb-cse")
 		ins = inst
 		p.tidbs = append(p.tidbs, inst)
 	case spec.ComponentTiKV:
-		inst := instance.NewTiKVInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, p.tsos, p.bootOptions.Mode == "tidb-cse", p.bootOptions.CSEOpts, p.bootOptions.PDMode == "ms")
+		inst := instance.NewTiKVInstance(cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, cfg.Port, p.pds, p.tsos, p.bootOptions.Mode == "tidb-cse", p.bootOptions.CSEOpts, p.bootOptions.PDMode == "ms")
 		ins = inst
 		p.tikvs = append(p.tikvs, inst)
 	case spec.ComponentTiFlash:
-		inst := instance.NewTiFlashInstance(tiflashRole, p.bootOptions.CSEOpts, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, p.tidbs, cfg.Version)
+		inst := instance.NewTiFlashInstance(tiflashRole, p.bootOptions.CSEOpts, cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, p.pds, p.tidbs, cfg.Version)
 		ins = inst
 		p.tiflashs = append(p.tiflashs, inst)
 	case spec.ComponentTiProxy:
 		if err := instance.GenTiProxySessionCerts(dataDir); err != nil {
 			return nil, err
 		}
-		inst := instance.NewTiProxy(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds)
+		inst := instance.NewTiProxy(cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, cfg.Port, p.pds)
 		ins = inst
 		p.tiproxys = append(p.tiproxys, inst)
 	case spec.ComponentCDC:
-		inst := instance.NewTiCDC(cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds)
+		inst := instance.NewTiCDC(cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, cfg.Port, p.pds)
 		ins = inst
 		p.ticdcs = append(p.ticdcs, inst)
 	case spec.ComponentTiKVCDC:
-		inst := instance.NewTiKVCDC(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds)
+		inst := instance.NewTiKVCDC(cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, p.pds)
 		ins = inst
 		p.tikvCdcs = append(p.tikvCdcs, inst)
 	case spec.ComponentPump:
-		inst := instance.NewPump(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds)
+		inst := instance.NewPump(cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, p.pds)
 		ins = inst
 		p.pumps = append(p.pumps, inst)
 	case spec.ComponentDrainer:
-		inst := instance.NewDrainer(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds)
+		inst := instance.NewDrainer(cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, p.pds)
 		ins = inst
 		p.drainers = append(p.drainers, inst)
 	default:
@@ -797,13 +798,13 @@ func (p *Playground) waitAllDBUp() ([]string, []string) {
 		var tidbMu, tiproxyMu sync.Mutex
 		var bars *progress.MultiBar
 		if len(p.tiproxys) > 0 {
-			bars = progress.NewMultiBar(color.YellowString("Waiting for tidb and tiproxy instances ready"))
+			bars = progress.NewMultiBar(colorstr.Sprintf("[dark_gray]Waiting for tidb and tiproxy instances ready"))
 		} else {
-			bars = progress.NewMultiBar(color.YellowString("Waiting for tidb instances ready"))
+			bars = progress.NewMultiBar(colorstr.Sprintf("[dark_gray]Waiting for tidb instances ready"))
 		}
 		for _, db := range p.tidbs {
 			wg.Add(1)
-			prefix := color.YellowString(db.Addr())
+			prefix := db.Addr()
 			bar := bars.AddBar(prefix)
 			go func(dbInst *instance.TiDBInstance) {
 				defer wg.Done()
@@ -868,10 +869,10 @@ func (p *Playground) waitAllTiFlashUp() {
 		)
 
 		var wg sync.WaitGroup
-		bars := progress.NewMultiBar(color.YellowString("Waiting for tiflash instances ready"))
+		bars := progress.NewMultiBar(colorstr.Sprintf("[dark_gray]Waiting for tiflash instances ready"))
 		for _, flash := range p.tiflashs {
 			wg.Add(1)
-			prefix := color.YellowString(flash.Addr())
+			prefix := flash.Addr()
 			bar := bars.AddBar(prefix)
 			go func(flashInst *instance.TiFlashInstance) {
 				defer wg.Done()
@@ -1014,7 +1015,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			// Try to create bucket.
 			err := s3Client.MakeBucket(ctxCheck, options.CSEOpts.Bucket, minio.MakeBucketOptions{})
 			if err != nil {
-				return fmt.Errorf("CSE mode preflight check failed: Bucket %s doesn't exist", options.CSEOpts.Bucket)
+				return fmt.Errorf("CSE mode preflight check failed: Bucket %s doesn't exist and fail to create automatically (your bucket name may be invalid?)", options.CSEOpts.Bucket)
 			}
 		}
 
@@ -1228,9 +1229,9 @@ func (p *Playground) wait() error {
 func (p *Playground) terminate(sig syscall.Signal) {
 	kill := func(name string, pid int, wait func() error) {
 		if sig == syscall.SIGKILL {
-			fmt.Printf("Force %s(%d) to quit...\n", name, pid)
+			colorstr.Printf("[dark_gray]Force %s(%d) to quit...\n", name, pid)
 		} else if atomic.LoadInt32(&p.curSig) == int32(sig) { // In case of double ctr+c
-			fmt.Printf("Wait %s(%d) to quit...\n", name, pid)
+			colorstr.Printf("[dark_gray]Wait %s(%d) to quit...\n", name, pid)
 		}
 
 		_ = syscall.Kill(pid, sig)
@@ -1346,7 +1347,7 @@ func (p *Playground) bootMonitor(ctx context.Context, env *environment.Environme
 	dataDir := p.dataDir
 	promDir := filepath.Join(dataDir, "prometheus")
 
-	monitor, err := newMonitor(ctx, options.Version, options.Host, promDir)
+	monitor, err := newMonitor(ctx, options.Version, options.Host, promDir, options.PortOffset)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1390,7 +1391,7 @@ func (p *Playground) bootNGMonitoring(ctx context.Context, env *environment.Envi
 	dataDir := p.dataDir
 	promDir := filepath.Join(dataDir, "prometheus")
 
-	ngm, err := newNGMonitoring(ctx, options.Version, options.Host, promDir, p.pds)
+	ngm, err := newNGMonitoring(ctx, options.Version, options.Host, promDir, options.PortOffset, p.pds)
 	if err != nil {
 		return nil, err
 	}
@@ -1469,7 +1470,7 @@ func (p *Playground) bootGrafana(ctx context.Context, env *environment.Environme
 
 	grafana := newGrafana(options.Version, options.Host, options.GrafanaPort)
 	// fmt.Println("Start Grafana instance...")
-	err = grafana.start(ctx, grafanaDir, "http://"+utils.JoinHostPort(monitorInfo.IP, monitorInfo.Port))
+	err = grafana.start(ctx, grafanaDir, options.PortOffset, "http://"+utils.JoinHostPort(monitorInfo.IP, monitorInfo.Port))
 	if err != nil {
 		return nil, err
 	}

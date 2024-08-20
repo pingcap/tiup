@@ -68,7 +68,7 @@ func GenTiProxySessionCerts(dir string) error {
 }
 
 // NewTiProxy create a TiProxy instance.
-func NewTiProxy(binPath string, dir, host, configPath string, id int, port int, pds []*PDInstance) *TiProxy {
+func NewTiProxy(binPath string, dir, host, configPath string, portOffset int, id int, port int, pds []*PDInstance) *TiProxy {
 	if port <= 0 {
 		port = 6000
 	}
@@ -78,8 +78,8 @@ func NewTiProxy(binPath string, dir, host, configPath string, id int, port int, 
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
-			Port:       utils.MustGetFreePort(host, port),
-			StatusPort: utils.MustGetFreePort(host, 3080),
+			Port:       utils.MustGetFreePort(host, port, portOffset),
+			StatusPort: utils.MustGetFreePort(host, 3080, portOffset),
 			ConfigPath: configPath,
 		},
 		pds: pds,

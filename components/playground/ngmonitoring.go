@@ -45,16 +45,12 @@ func (m *ngMonitoring) wait() error {
 }
 
 // the cmd is not started after return
-func newNGMonitoring(ctx context.Context, version string, host, dir string, pds []*instance.PDInstance) (*ngMonitoring, error) {
+func newNGMonitoring(ctx context.Context, version string, host, dir string, portOffset int, pds []*instance.PDInstance) (*ngMonitoring, error) {
 	if err := utils.MkdirAll(dir, 0755); err != nil {
 		return nil, errors.AddStack(err)
 	}
 
-	port, err := utils.GetFreePort(host, 12020)
-	if err != nil {
-		return nil, err
-	}
-
+	port := utils.MustGetFreePort(host, 12020, portOffset)
 	m := new(ngMonitoring)
 	var endpoints []string
 	for _, pd := range pds {

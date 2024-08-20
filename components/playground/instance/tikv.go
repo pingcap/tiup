@@ -36,7 +36,7 @@ type TiKVInstance struct {
 }
 
 // NewTiKVInstance return a TiKVInstance
-func NewTiKVInstance(binPath string, dir, host, configPath string, id int, port int, pds []*PDInstance, tsos []*PDInstance, isCSEMode bool, cseOptions CSEOptions, isPDMSMode bool) *TiKVInstance {
+func NewTiKVInstance(binPath string, dir, host, configPath string, portOffset int, id int, port int, pds []*PDInstance, tsos []*PDInstance, isCSEMode bool, cseOptions CSEOptions, isPDMSMode bool) *TiKVInstance {
 	if port <= 0 {
 		port = 20160
 	}
@@ -46,8 +46,8 @@ func NewTiKVInstance(binPath string, dir, host, configPath string, id int, port 
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
-			Port:       utils.MustGetFreePort(host, port),
-			StatusPort: utils.MustGetFreePort(host, 20180),
+			Port:       utils.MustGetFreePort(host, port, portOffset),
+			StatusPort: utils.MustGetFreePort(host, 20180, portOffset),
 			ConfigPath: configPath,
 		},
 		pds:        pds,

@@ -50,7 +50,7 @@ type PDInstance struct {
 }
 
 // NewPDInstance return a PDInstance
-func NewPDInstance(role PDRole, binPath, dir, host, configPath string, id int, pds []*PDInstance, port int, isCSEMode bool) *PDInstance {
+func NewPDInstance(role PDRole, binPath, dir, host, configPath string, portOffset int, id int, pds []*PDInstance, port int, isCSEMode bool) *PDInstance {
 	if port <= 0 {
 		port = 2379
 	}
@@ -60,8 +60,8 @@ func NewPDInstance(role PDRole, binPath, dir, host, configPath string, id int, p
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
-			Port:       utils.MustGetFreePort(host, 2380),
-			StatusPort: utils.MustGetFreePort(host, port),
+			Port:       utils.MustGetFreePort(host, 2380, portOffset),
+			StatusPort: utils.MustGetFreePort(host, port, portOffset),
 			ConfigPath: configPath,
 		},
 		Role:      role,
