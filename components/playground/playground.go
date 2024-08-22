@@ -804,7 +804,7 @@ func (p *Playground) waitAllDBUp() ([]string, []string) {
 		}
 		for _, db := range p.tidbs {
 			wg.Add(1)
-			prefix := db.Addr()
+			prefix := "- TiDB: " + db.Addr()
 			bar := bars.AddBar(prefix)
 			go func(dbInst *instance.TiDBInstance) {
 				defer wg.Done()
@@ -828,7 +828,7 @@ func (p *Playground) waitAllDBUp() ([]string, []string) {
 		}
 		for _, db := range p.tiproxys {
 			wg.Add(1)
-			prefix := color.YellowString(db.Addr())
+			prefix := "- TiProxy: " + db.Addr()
 			bar := bars.AddBar(prefix)
 			go func(dbInst *instance.TiProxy) {
 				defer wg.Done()
@@ -872,7 +872,15 @@ func (p *Playground) waitAllTiFlashUp() {
 		bars := progress.NewMultiBar(colorstr.Sprintf("[dark_gray]Waiting for tiflash instances ready"))
 		for _, flash := range p.tiflashs {
 			wg.Add(1)
-			prefix := flash.Addr()
+
+			tiflashKindName := "TiFlash"
+			if flash.Role == instance.TiFlashRoleDisaggCompute {
+				tiflashKindName = "TiFlash (CN)"
+			} else if flash.Role == instance.TiFlashRoleDisaggWrite {
+				tiflashKindName = "TiFlash (WN)"
+			}
+
+			prefix := fmt.Sprintf("- %s: %s", tiflashKindName, flash.Addr())
 			bar := bars.AddBar(prefix)
 			go func(flashInst *instance.TiFlashInstance) {
 				defer wg.Done()
