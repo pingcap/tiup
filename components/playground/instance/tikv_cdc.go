@@ -32,14 +32,14 @@ type TiKVCDC struct {
 var _ Instance = &TiKVCDC{}
 
 // NewTiKVCDC create a TiKVCDC instance.
-func NewTiKVCDC(binPath string, dir, host, configPath string, id int, pds []*PDInstance) *TiKVCDC {
+func NewTiKVCDC(binPath string, dir, host, configPath string, portOffset int, id int, pds []*PDInstance) *TiKVCDC {
 	tikvCdc := &TiKVCDC{
 		instance: instance{
 			BinPath:    binPath,
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
-			Port:       utils.MustGetFreePort(host, 8600),
+			Port:       utils.MustGetFreePort(host, 8600, portOffset),
 			ConfigPath: configPath,
 		},
 		pds: pds,

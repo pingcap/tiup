@@ -14,13 +14,13 @@
 package telemetry
 
 import (
+	"crypto/rand"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/google/uuid"
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/crypto/rand"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/utils"

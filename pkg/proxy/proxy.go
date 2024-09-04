@@ -49,11 +49,7 @@ func MaybeStartProxy(
 		return err
 	}
 
-	httpPort, err := utils.GetFreePort("127.0.0.1", 12345)
-	if err != nil {
-		return err
-	}
-
+	httpPort := utils.MustGetFreePort("127.0.0.1", 12345, 0)
 	addr := fmt.Sprintf("127.0.0.1:%d", httpPort)
 
 	// TODO: Using environment variables to share data may not be a good idea

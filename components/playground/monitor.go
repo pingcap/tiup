@@ -78,15 +78,12 @@ func (m *monitor) wait() error {
 }
 
 // the cmd is not started after return
-func newMonitor(ctx context.Context, version string, host, dir string) (*monitor, error) {
+func newMonitor(ctx context.Context, version string, host, dir string, portOffset int) (*monitor, error) {
 	if err := utils.MkdirAll(dir, 0755); err != nil {
 		return nil, errors.AddStack(err)
 	}
 
-	port, err := utils.GetFreePort(host, 9090)
-	if err != nil {
-		return nil, err
-	}
+	port := utils.MustGetFreePort(host, 9090, portOffset)
 	addr := utils.JoinHostPort(host, port)
 
 	tmpl := `
@@ -132,6 +129,7 @@ scrape_configs:
 	}
 
 	var binPath string
+	var err error
 	if binPath, err = tiupexec.PrepareBinary("prometheus", utils.Version(version), binPath); err != nil {
 		return nil, err
 	}

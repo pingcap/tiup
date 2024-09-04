@@ -14,42 +14,45 @@
 package rand
 
 import (
-	cr "crypto/rand"
-	"encoding/binary"
-	"fmt"
-	"math/rand"
+	"crypto/rand"
+	"io"
+	"math/big"
 )
 
-var (
-	// Reader is a global random number source
-	Reader *rand.Rand
-)
+// rand provides a simple wrap of "crypto/rand".
 
-func init() {
-	src := make([]byte, 8)
-	if _, err := cr.Read(src); err != nil {
-		panic(fmt.Sprintf("initial random: %s", err.Error()))
-	}
-	seed := binary.BigEndian.Uint64(src)
-	Reader = rand.New(rand.NewSource(int64(seed)))
+// Reader is a global random number source
+var Reader io.Reader = &cryptoRandReader{}
+
+type cryptoRandReader struct{}
+
+func (c *cryptoRandReader) Read(b []byte) (int, error) {
+	return rand.Read(b)
 }
 
-// Int wraps Rand.Int
+// Int wraps Int63n
 func Int() int {
-	return Reader.Int()
+	val := Int63n(int64(int(^uint(0) >> 1)))
+	return int(val)
 }
 
-// Intn wraps Rand.Intn
+// Intn wraps Int63n
 func Intn(n int) int {
-	return Reader.Intn(n)
+	if n <= 0 {
+		panic("argument to Intn must be positive")
+	}
+	val := Int63n(int64(n))
+	return int(val)
 }
 
-// Int63n wraps Rand.Int63n
+// Int63n wraps rand.Int
 func Int63n(n int64) int64 {
-	return Reader.Int63n(n)
-}
-
-// Read wraps Rand.Read
-func Read(b []byte) (int, error) {
-	return Reader.Read(b)
+	if n <= 0 {
+		panic("argument to Int63n must be positive")
+	}
+	val, err := rand.Int(rand.Reader, big.NewInt(n))
+	if err != nil {
+		panic(err)
+	}
+	return val.Int64()
 }

@@ -270,9 +270,10 @@ type UpgradableMetadata interface {
 // NewPart implements ScaleOutTopology interface.
 func (s *Specification) NewPart() Topology {
 	return &Specification{
-		GlobalOptions:    s.GlobalOptions,
-		MonitoredOptions: s.MonitoredOptions,
-		ServerConfigs:    s.ServerConfigs,
+		GlobalOptions:     s.GlobalOptions,
+		MonitoredOptions:  s.MonitoredOptions,
+		ServerConfigs:     s.ServerConfigs,
+		ComponentVersions: s.ComponentVersions,
 	}
 }
 
@@ -679,10 +680,20 @@ func setCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) error 
 			}
 			field.Field(j).Set(reflect.ValueOf(globalOptions.SSHPort))
 		case "Name":
+			// Only PD related components have `Name` field,
 			if field.Field(j).String() != "" {
 				continue
 			}
 			host := reflect.Indirect(field).FieldByName("Host").String()
+			// `TSO` and `Scheduling` components use `Port` filed
+			if reflect.Indirect(field).FieldByName("Port").IsValid() {
+				port := reflect.Indirect(field).FieldByName("Port").Int()
+				// field.String() is <spec.TSOSpec Value>
+				role := strings.Split(strings.Split(field.Type().String(), ".")[1], "Spec")[0]
+				component := strings.ToLower(role)
+				field.Field(j).Set(reflect.ValueOf(fmt.Sprintf("%s-%s-%d", component, host, port)))
+				continue
+			}
 			clientPort := reflect.Indirect(field).FieldByName("ClientPort").Int()
 			field.Field(j).Set(reflect.ValueOf(fmt.Sprintf("pd-%s-%d", host, clientPort)))
 		case "DataDir":

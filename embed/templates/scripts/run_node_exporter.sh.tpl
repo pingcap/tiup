@@ -21,10 +21,10 @@ exec $EXPORTER_BIN \
 {{- end}}
     --web.listen-address=":{{.Port}}" \
     --collector.tcpstat \
-    --collector.systemd \
     --collector.mountstats \
     --collector.meminfo_numa \
-    --collector.interrupts \
     --collector.buddyinfo \
     --collector.vmstat.fields="^.*" \
     --log.level="info"
+    #--collector.systemd \
+    #--collector.interrupts \

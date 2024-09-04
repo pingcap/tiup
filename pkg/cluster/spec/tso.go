@@ -26,6 +26,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/tidbver"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -33,21 +34,23 @@ var tsoService = "tso"
 
 // TSOSpec represents the TSO topology specification in topology.yaml
 type TSOSpec struct {
-	Host                string         `yaml:"host"`
-	ManageHost          string         `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
-	ListenHost          string         `yaml:"listen_host,omitempty"`
-	AdvertiseListenAddr string         `yaml:"advertise_listen_addr,omitempty"`
-	SSHPort             int            `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	IgnoreExporter      bool           `yaml:"ignore_exporter,omitempty"`
-	Port                int            `yaml:"port" default:"3379"`
-	DeployDir           string         `yaml:"deploy_dir,omitempty"`
-	DataDir             string         `yaml:"data_dir,omitempty"`
-	LogDir              string         `yaml:"log_dir,omitempty"`
-	Source              string         `yaml:"source,omitempty" validate:"source:editable"`
-	NumaNode            string         `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
-	Config              map[string]any `yaml:"config,omitempty" validate:"config:ignore"`
-	Arch                string         `yaml:"arch,omitempty"`
-	OS                  string         `yaml:"os,omitempty"`
+	Host                string `yaml:"host"`
+	ManageHost          string `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
+	ListenHost          string `yaml:"listen_host,omitempty"`
+	AdvertiseListenAddr string `yaml:"advertise_listen_addr,omitempty"`
+	SSHPort             int    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
+	IgnoreExporter      bool   `yaml:"ignore_exporter,omitempty"`
+	// Use Name to get the name with a default value if it's empty.
+	Name      string         `yaml:"name,omitempty"`
+	Port      int            `yaml:"port" default:"3379"`
+	DeployDir string         `yaml:"deploy_dir,omitempty"`
+	DataDir   string         `yaml:"data_dir,omitempty"`
+	LogDir    string         `yaml:"log_dir,omitempty"`
+	Source    string         `yaml:"source,omitempty" validate:"source:editable"`
+	NumaNode  string         `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
+	Config    map[string]any `yaml:"config,omitempty" validate:"config:ignore"`
+	Arch      string         `yaml:"arch,omitempty"`
+	OS        string         `yaml:"os,omitempty"`
 }
 
 // Status queries current status of the instance
@@ -203,7 +206,6 @@ func (c *TSOComponent) Instances() []Instance {
 
 // TSOInstance represent the TSO instance
 type TSOInstance struct {
-	Name string
 	BaseInstance
 	topo Topology
 }
@@ -232,6 +234,7 @@ func (i *TSOInstance) InitConfig(
 		pds = append(pds, pdspec.GetAdvertiseClientURL(enableTLS))
 	}
 	cfg := &scripts.TSOScript{
+		Name:               spec.Name,
 		ListenURL:          fmt.Sprintf("%s://%s", scheme, utils.JoinHostPort(i.GetListenHost(), spec.Port)),
 		AdvertiseListenURL: spec.GetAdvertiseListenURL(enableTLS),
 		BackendEndpoints:   strings.Join(pds, ","),
@@ -239,6 +242,9 @@ func (i *TSOInstance) InitConfig(
 		DataDir:            paths.Data[0],
 		LogDir:             paths.Log,
 		NumaNode:           spec.NumaNode,
+	}
+	if !tidbver.PDSupportMicroServicesWithName(version) {
+		cfg.Name = ""
 	}
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tso_%s_%d.sh", i.GetHost(), i.GetPort()))

@@ -87,8 +87,8 @@ jobs:
 
       - name: Collect component log
         working-directory: ${{ env.working-directory }}
+        if: ${{ failure() }}
         # if: ${{ failure() }}
-        if: always()
         run: |
           docker exec tiup-cluster-control bash -c 'mkdir -p /tiup-cluster/logs; [[ -d ~/.tiup/logs ]] && find ~/.tiup/logs -type f -name "*.log" -exec cp {} /tiup-cluster/logs \; || true'
           ls ${{ env.working-directory }}
