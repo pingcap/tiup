@@ -20,6 +20,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -502,10 +503,14 @@ func TestLatestStableVersionWithPrerelease(t *testing.T) {
 }
 
 func TestUpdateComponents(t *testing.T) {
+	t1 := t.TempDir()
+	t2 := t.TempDir()
+
 	mirror := MockMirror{
 		Resources: map[string]string{},
 	}
 	local := v1manifest.NewMockManifests()
+	local.RootDir = t1
 	priv := setNewRoot(t, local)
 
 	repo := NewV1Repo(&mirror, Options{GOOS: "plat", GOARCH: "form"}, local)
@@ -533,7 +538,7 @@ func TestUpdateComponents(t *testing.T) {
 	assert.Equal(t, 1, len(local.Installed))
 	assert.Equal(t, "v2.0.1", local.Installed["foo"].Version)
 	assert.Equal(t, "foo201", local.Installed["foo"].Contents)
-	assert.Equal(t, "/tmp/mock/components/foo/v2.0.1/foo-2.0.1.tar.gz", local.Installed["foo"].BinaryPath)
+	assert.Equal(t, filepath.Join(t1, "components/foo/v2.0.1/foo-2.0.1.tar.gz"), local.Installed["foo"].BinaryPath)
 
 	// Update
 	foo.Version = 8
@@ -552,13 +557,13 @@ func TestUpdateComponents(t *testing.T) {
 	repo.PurgeTimestamp()
 	err = repo.UpdateComponents([]ComponentSpec{{
 		ID:        "foo",
-		TargetDir: "/tmp/mock-mock",
+		TargetDir: t2,
 	}})
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(local.Installed))
 	assert.Equal(t, "v2.0.2", local.Installed["foo"].Version)
 	assert.Equal(t, "foo202", local.Installed["foo"].Contents)
-	assert.Equal(t, "/tmp/mock-mock/foo-2.0.2.tar.gz", local.Installed["foo"].BinaryPath)
+	assert.Equal(t, filepath.Join(t2, "foo-2.0.2.tar.gz"), local.Installed["foo"].BinaryPath)
 
 	// Update; already up to date
 	err = repo.UpdateComponents([]ComponentSpec{{

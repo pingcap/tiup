@@ -484,9 +484,15 @@ func (r *V1Repository) updateComponentManifest(id string, withYanked bool) (*v1m
 // the component will be removed if hash is not correct
 func (r *V1Repository) DownloadComponent(item *v1manifest.VersionItem, target string) error {
 	// make a tempdir such that every download will not inference each other
-	targetDir, err := os.MkdirTemp(filepath.Dir(target), "download")
+	targetDir := filepath.Dir(target)
+	err := os.MkdirAll(targetDir, 0755)
 	if err != nil {
-		return err
+		return errors.Trace(err)
+	}
+
+	targetDir, err = os.MkdirTemp(targetDir, "download")
+	if err != nil {
+		return errors.Trace(err)
 	}
 
 	if err := r.mirror.Download(item.URL, targetDir); err != nil {
