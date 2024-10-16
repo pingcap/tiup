@@ -65,11 +65,17 @@ sleep 3
 trap "kill_all" EXIT
 
 # wait start cluster successfully
-timeout 400 grep -q "TiDB Playground Cluster is started" <(tail -f $outfile)
-
-tiup-playground display || true
-
-tiup-playground display | grep -qv "exit"
+function wait_tiup() {
+	while ! grep -q "TiDB Playground Cluster is started" $outfile; do
+		sleep 1
+	done
+	while ! tiup-playground display; do
+		sleep 1
+	done
+}
+export -f tiup-playground wait_tiup
+timeout 300s bash -c wait_tiup
+tiup-playground display
 tiup-playground scale-out --db 2
 sleep 5
 
