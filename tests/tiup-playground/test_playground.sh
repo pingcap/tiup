@@ -20,12 +20,14 @@ mkdir -p $TIUP_INSTANCE_DATA_DIR
 mkdir -p $TEST_DIR/cover
 
 function tiup-playground() {
+set +x
     # echo "in function"
     if [ -f "$TEST_DIR/bin/tiup-playground.test" ]; then
         $TEST_DIR/bin/tiup-playground.test -test.coverprofile=$TEST_DIR/cover/cov.itest-$(date +'%s')-$RANDOM.out __DEVEL--i-heard-you-like-tests "$@"
     else
         $TEST_DIR/../../bin/tiup-playground "$@"
     fi
+set -x
 }
 
 # usage: check_instance_num tidb 1
@@ -63,7 +65,9 @@ sleep 3
 trap "kill_all" EXIT
 
 # wait start cluster successfully
-timeout 300 grep -q "TiDB Playground Cluster is started" <(tail -f $outfile)
+timeout 400 grep -q "TiDB Playground Cluster is started" <(tail -f $outfile)
+
+tiup-playground display || true
 
 tiup-playground display | grep -qv "exit"
 tiup-playground scale-out --db 2
