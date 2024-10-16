@@ -73,7 +73,11 @@ function wait_tiup() {
 export outfile
 export -f wait_tiup
 timeout 300s bash -c wait_tiup
-tiup-playground display
+n=0
+while [ "$n" -lt 10 ] && ! tiup-playground display; do
+    n=$(( n + 1 ))
+    sleep 1
+done
 tiup-playground scale-out --db 2
 sleep 5
 
