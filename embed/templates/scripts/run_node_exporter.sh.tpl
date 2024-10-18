@@ -24,7 +24,6 @@ exec $EXPORTER_BIN \
     --collector.systemd \
     --collector.mountstats \
     --collector.meminfo_numa \
-    --collector.interrupts \
     --collector.buddyinfo \
     --collector.vmstat.fields="^.*" \
     --log.level="info"
