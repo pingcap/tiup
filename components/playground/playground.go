@@ -71,6 +71,8 @@ type Playground struct {
 	tikvCdcs         []*instance.TiKVCDC
 	pumps            []*instance.Pump
 	drainers         []*instance.Drainer
+	dmMasters        []*instance.DMMaster
+	dmWorkers        []*instance.DMWorker
 	startedInstances []instance.Instance
 
 	idAlloc        map[string]int
@@ -682,6 +684,20 @@ func (p *Playground) WalkInstances(fn func(componentID string, ins instance.Inst
 		}
 	}
 
+	for _, ins := range p.dmMasters {
+		err := fn(spec.ComponentDMMaster, ins)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, ins := range p.dmWorkers {
+		err := fn(spec.ComponentDMWorker, ins)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -783,6 +799,17 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 		inst := instance.NewDrainer(cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, p.pds)
 		ins = inst
 		p.drainers = append(p.drainers, inst)
+	case spec.ComponentDMMaster:
+		inst := instance.NewDMMaster(cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, cfg.Port)
+		ins = inst
+		p.dmMasters = append(p.dmMasters, inst)
+		for _, master := range p.dmMasters {
+			master.SetInitEndpoints(p.dmMasters)
+		}
+	case spec.ComponentDMWorker:
+		inst := instance.NewDMWorker(cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, cfg.Port, p.dmMasters)
+		ins = inst
+		p.dmWorkers = append(p.dmWorkers, inst)
 	default:
 		return nil, errors.Errorf("unknown component: %s", componentID)
 	}
@@ -928,6 +955,8 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		&options.Pump,
 		&options.Drainer,
 		&options.TiKVCDC,
+		&options.DMMaster,
+		&options.DMWorker,
 	} {
 		path, err := getAbsolutePath(cfg.ConfigPath)
 		if err != nil {
@@ -969,6 +998,8 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		{spec.ComponentCDC, "", "", options.TiCDC},
 		{spec.ComponentTiKVCDC, "", "", options.TiKVCDC},
 		{spec.ComponentDrainer, "", "", options.Drainer},
+		{spec.ComponentDMMaster, "", "", options.DMMaster},
+		{spec.ComponentDMWorker, "", "", options.DMWorker},
 	}
 
 	if options.Mode == "tidb" {
@@ -1254,6 +1285,19 @@ func (p *Playground) terminate(sig syscall.Signal) {
 	if p.grafana != nil && p.grafana.cmd != nil && p.grafana.cmd.Process != nil {
 		go kill("grafana", p.grafana.cmd.Process.Pid, p.grafana.wait)
 	}
+
+	for _, inst := range p.dmMasters {
+		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
+			kill(inst.Component(), inst.Pid(), inst.Wait)
+		}
+	}
+
+	for _, inst := range p.dmWorkers {
+		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
+			kill(inst.Component(), inst.Pid(), inst.Wait)
+		}
+	}
+
 	for _, inst := range p.tiflashs {
 		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
 			kill(inst.Component(), inst.Pid(), inst.Wait)
