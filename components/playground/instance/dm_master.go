@@ -9,6 +9,7 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
+// DMMaster represent a DM master instance.
 type DMMaster struct {
 	instance
 	Process
@@ -17,6 +18,7 @@ type DMMaster struct {
 
 var _ Instance = &DMMaster{}
 
+// NewDMMaster create a new DMMaster instance.
 func NewDMMaster(binPath string, dir, host, configPath string, portOffset int, id int, port int) *DMMaster {
 	if port <= 0 {
 		port = 8261
@@ -35,10 +37,12 @@ func NewDMMaster(binPath string, dir, host, configPath string, portOffset int, i
 	}
 }
 
+// Name return the name of the instance.
 func (m *DMMaster) Name() string {
 	return fmt.Sprintf("dm-master-%d", m.ID)
 }
 
+// Start starts the instance.
 func (m *DMMaster) Start(ctx context.Context) error {
 	args := []string{
 		fmt.Sprintf("--name=%s", m.Name()),
@@ -65,18 +69,22 @@ func (m *DMMaster) Start(ctx context.Context) error {
 	return m.Process.Start()
 }
 
+// SetInitEndpoints set the initial endpoints for the DM master.
 func (m *DMMaster) SetInitEndpoints(endpoints []*DMMaster) {
 	m.initEndpoints = endpoints
 }
 
+// Component return the component of the instance.
 func (m *DMMaster) Component() string {
 	return "dm-master"
 }
 
+// LogFile return the log file path of the instance.
 func (m *DMMaster) LogFile() string {
 	return filepath.Join(m.Dir, "dm-master.log")
 }
 
+// Addr return the address of the instance.
 func (m *DMMaster) Addr() string {
 	return utils.JoinHostPort(m.Host, m.StatusPort)
 }
