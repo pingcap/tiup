@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -66,11 +65,6 @@ func (w *DMWorker) Start(ctx context.Context) error {
 
 	logIfErr(w.Process.SetOutputFile(w.LogFile()))
 
-	// try to wait for the master to be ready
-	// this is a very ugly implementation, but it may mostly works
-	// TODO: find a better way to do this,
-	// e.g, let master support a HTTP API to check if it's ready
-	time.Sleep(time.Second * 3)
 	return w.Process.Start()
 }
 

@@ -76,3 +76,7 @@ func (m *DMMaster) Component() string {
 func (m *DMMaster) LogFile() string {
 	return filepath.Join(m.Dir, "dm-master.log")
 }
+
+func (m *DMMaster) Addr() string {
+	return utils.JoinHostPort(m.Host, m.StatusPort)
+}
