@@ -394,32 +394,12 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 			}
 		}
 	case spec.ComponentDMWorker:
-		for i := 0; i < len(p.dmWorkers); i++ {
-			if p.dmWorkers[i].Pid() == pid {
-				inst := p.dmWorkers[i]
-
-				c := p.dmMasterClient()
-				err = c.OfflineWorker(inst.Name(), nil)
-				if err != nil {
-					return err
-				}
-				p.dmWorkers = append(p.dmWorkers[:i], p.dmWorkers[i+1:]...)
-				return nil
-			}
+		if err := p.handleScaleInDMWorker(pid); err != nil {
+			return err
 		}
 	case spec.ComponentDMMaster:
-		for i := 0; i < len(p.dmMasters); i++ {
-			if p.dmMasters[i].Pid() == pid {
-				inst := p.dmMasters[i]
-
-				c := p.dmMasterClient()
-				err = c.OfflineMaster(inst.Name(), nil)
-				if err != nil {
-					return err
-				}
-				p.dmMasters = append(p.dmMasters[:i], p.dmMasters[i+1:]...)
-				return nil
-			}
+		if err := p.handleScaleInDMMaster(pid); err != nil {
+			return err
 		}
 	default:
 		fmt.Fprintf(w, "unknown component in scale in: %s", cid)
@@ -435,6 +415,38 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 
 	fmt.Fprintf(w, "scale in %s success\n", cid)
 
+	return nil
+}
+
+func (p *Playground) handleScaleInDMWorker(pid int) error {
+	for i := 0; i < len(p.dmWorkers); i++ {
+		if p.dmWorkers[i].Pid() == pid {
+			inst := p.dmWorkers[i]
+
+			c := p.dmMasterClient()
+			if err := c.OfflineWorker(inst.Name(), nil); err != nil {
+				return err
+			}
+			p.dmWorkers = append(p.dmWorkers[:i], p.dmWorkers[i+1:]...)
+			return nil
+		}
+	}
+	return nil
+}
+
+func (p *Playground) handleScaleInDMMaster(pid int) error {
+	for i := 0; i < len(p.dmMasters); i++ {
+		if p.dmMasters[i].Pid() == pid {
+			inst := p.dmMasters[i]
+
+			c := p.dmMasterClient()
+			if err := c.OfflineMaster(inst.Name(), nil); err != nil {
+				return err
+			}
+			p.dmMasters = append(p.dmMasters[:i], p.dmMasters[i+1:]...)
+			return nil
+		}
+	}
 	return nil
 }
 

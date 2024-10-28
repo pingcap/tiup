@@ -9,6 +9,7 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
+// DMWorker represent a DM worker instance.
 type DMWorker struct {
 	instance
 	Process
@@ -36,6 +37,7 @@ func NewDMWorker(binPath string, dir, host, configPath string, portOffset int, i
 	}
 }
 
+// MasterAddrs return the master addresses.
 func (w *DMWorker) MasterAddrs() []string {
 	var addrs []string
 	for _, master := range w.masters {
@@ -44,10 +46,12 @@ func (w *DMWorker) MasterAddrs() []string {
 	return addrs
 }
 
+// Name return the name of the instance.
 func (w *DMWorker) Name() string {
 	return fmt.Sprintf("dm-worker-%d", w.ID)
 }
 
+// Start starts the instance.
 func (w *DMWorker) Start(ctx context.Context) error {
 	args := []string{
 		fmt.Sprintf("--name=%s", w.Name()),
@@ -68,10 +72,12 @@ func (w *DMWorker) Start(ctx context.Context) error {
 	return w.Process.Start()
 }
 
+// Component return the component of the instance.
 func (w *DMWorker) Component() string {
 	return "dm-worker"
 }
 
+// LogFile return the log file of the instance.
 func (w *DMWorker) LogFile() string {
 	return filepath.Join(w.Dir, "dm-worker.log")
 }
