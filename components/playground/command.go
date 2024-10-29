@@ -61,6 +61,8 @@ func buildCommands(tp CommandType, opt *BootOptions) (cmds []Command) {
 		{"ticdc", opt.TiCDC},
 		{"tikv-cdc", opt.TiKVCDC},
 		{"drainer", opt.Drainer},
+		{"dm-master", opt.DMMaster},
+		{"dm-worker", opt.DMWorker},
 	}
 
 	for _, cmd := range commands {
@@ -113,6 +115,8 @@ func newScaleOut() *cobra.Command {
 	cmd.Flags().StringVarP(&opt.TSO.Host, "tso.host", "", opt.TSO.Host, "Playground TSO host. If not provided, TSO will still use `host` flag as its host")
 	cmd.Flags().StringVarP(&opt.Scheduling.Host, "scheduling.host", "", opt.Scheduling.Host, "Playground Scheduling host. If not provided, Scheduling will still use `host` flag as its host")
 	cmd.Flags().StringVarP(&opt.TiProxy.Host, "tiproxy.host", "", opt.PD.Host, "Playground TiProxy host. If not provided, TiProxy will still use `host` flag as its host")
+	cmd.Flags().IntVarP(&opt.DMMaster.Num, "dm-master", "", opt.DMMaster.Num, "DM-master instance number")
+	cmd.Flags().IntVarP(&opt.DMWorker.Num, "dm-worker", "", opt.DMWorker.Num, "DM-worker instance number")
 
 	cmd.Flags().StringVarP(&opt.TiDB.ConfigPath, "db.config", "", opt.TiDB.ConfigPath, "TiDB instance configuration file")
 	cmd.Flags().StringVarP(&opt.TiKV.ConfigPath, "kv.config", "", opt.TiKV.ConfigPath, "TiKV instance configuration file")
@@ -123,6 +127,8 @@ func newScaleOut() *cobra.Command {
 	cmd.Flags().StringVarP(&opt.TiProxy.ConfigPath, "tiproxy.config", "", opt.TiProxy.ConfigPath, "TiProxy instance configuration file")
 	cmd.Flags().StringVarP(&opt.Pump.ConfigPath, "pump.config", "", opt.Pump.ConfigPath, "Pump instance configuration file")
 	cmd.Flags().StringVarP(&opt.Drainer.ConfigPath, "drainer.config", "", opt.Drainer.ConfigPath, "Drainer instance configuration file")
+	cmd.Flags().StringVarP(&opt.DMMaster.ConfigPath, "dm-master.config", "", opt.DMMaster.ConfigPath, "DM-master instance configuration file")
+	cmd.Flags().StringVarP(&opt.DMWorker.ConfigPath, "dm-worker.config", "", opt.DMWorker.ConfigPath, "DM-worker instance configuration file")
 
 	cmd.Flags().StringVarP(&opt.TiDB.BinPath, "db.binpath", "", opt.TiDB.BinPath, "TiDB instance binary path")
 	cmd.Flags().StringVarP(&opt.TiKV.BinPath, "kv.binpath", "", opt.TiKV.BinPath, "TiKV instance binary path")
@@ -135,6 +141,8 @@ func newScaleOut() *cobra.Command {
 	cmd.Flags().StringVarP(&opt.TiKVCDC.BinPath, "kvcdc.binpath", "", opt.TiKVCDC.BinPath, "TiKVCDC instance binary path")
 	cmd.Flags().StringVarP(&opt.Pump.BinPath, "pump.binpath", "", opt.Pump.BinPath, "Pump instance binary path")
 	cmd.Flags().StringVarP(&opt.Drainer.BinPath, "drainer.binpath", "", opt.Drainer.BinPath, "Drainer instance binary path")
+	cmd.Flags().StringVarP(&opt.DMMaster.BinPath, "dm-master.binpath", "", opt.DMMaster.BinPath, "DM-master instance binary path")
+	cmd.Flags().StringVarP(&opt.DMWorker.BinPath, "dm-worker.binpath", "", opt.DMWorker.BinPath, "DM-worker instance binary path")
 
 	return cmd
 }
