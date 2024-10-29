@@ -1178,7 +1178,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		}
 		// wait dm-master up before dm-worker
 		if cid == spec.ComponentDMWorker && !allDMMasterReady {
-			p.waitAllDMMasterUp()
+			//p.waitAllDMMasterUp()
 			allDMMasterReady = true
 		}
 
