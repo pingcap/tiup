@@ -301,30 +301,30 @@ kvcdc_servers:
     log_dir: "/data1/tidb-deploy/tikv-cdc-8600/log"
 
 # # Server configs are used to specify the configuration of TiCDC Servers.  
-cdc_servers:
-  - host: 10.0.1.20
+#cdc_servers:
+#  - host: 10.0.1.20
     # # SSH port of the server.
     # ssh_port: 22
     # # TiCDC Server communication port.
-    port: 8300
+    # port: 8300
     # # TiCDC Server data storage directory.
-    data_dir: "/data1/tidb-deploy/cdc-8300"
+    # data_dir: "/data1/tidb-deploy/cdc-8300"
     # # TiCDC Server log file storage directory.
-    log_dir: "/data1/tidb-deploy/cdc-8300/log"
+    # log_dir: "/data1/tidb-deploy/cdc-8300/log"
     # # TiCDC Server deployment file, startup script, configuration file storage directory.
-    deploy_dir: "/data1/tidb-deploy/cdc-8300"
+    # deploy_dir: "/data1/tidb-deploy/cdc-8300"
     # gc-ttl: 86400 # 24h
     # tz: "System"
     # numa_node: "0,1"
     # config:
     #   log.level: warn
     # ticdc_cluster_id: "default"
-  - host: 10.0.1.21
+  # - host: 10.0.1.21
     # ssh_port: 22
-    port: 8301
-    data_dir: "/data2/tidb-deploy/cdc-8301"
-    log_dir: "/data2/tidb-deploy/cdc-8301/log"
-    deploy_dir: "/data2/tidb-deploy/cdc-8301"
+    # port: 8301
+    # data_dir: "/data2/tidb-deploy/cdc-8301"
+    # log_dir: "/data2/tidb-deploy/cdc-8301/log"
+    # deploy_dir: "/data2/tidb-deploy/cdc-8301"
     
 # # Server configs are used to specify the configuration of TiDB Dashboard Servers. Available from v6.5.0
 # tidb_dashboard_servers:
