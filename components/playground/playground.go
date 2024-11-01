@@ -1512,7 +1512,12 @@ func mysqlCommand() (cmd string) {
 	}
 	vMaj, vMin, _, err := parseMysqlVersion(string(mysqlVerOutput))
 	if err == nil {
-		if vMaj == 8 && vMin >= 1 { // 8.1.0 and newer
+		// MySQL Client 8.1.0 and newer
+		if vMaj == 8 && vMin >= 1 {
+			return "mysql"
+		}
+		// MySQL Client 9.x.x. Note that 10.x is likely to be MariaDB, so not using >= here.
+		if vMaj == 9 {
 			return "mysql"
 		}
 	}
