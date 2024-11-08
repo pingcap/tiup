@@ -81,7 +81,7 @@ func TestMergeAdditionalGrafanaConf(t *testing.T) {
 ;enabled = false
 ;host = localhost:25
 ;user =
-;password =
+password = ` + "`1#2`" + `
 ;cert_file =
 ;key_file =
 ;skip_verify = false
@@ -113,12 +113,12 @@ level = info
 
 	expected := `# ################################### SMTP / Emailing ##########################
 [smtp]
-enabled = true
-
 ; enabled = false
 ; host = localhost:25
 ; user =
-; password =
+password = ` + "`1#2`" + `
+enabled  = true
+
 ; cert_file =
 ; key_file =
 ; skip_verify = false
