@@ -66,7 +66,7 @@ trap "kill_all" EXIT
 
 # wait start cluster successfully
 n=0
-while [ "$n" -lt 300 ] && ! grep -q "TiDB Playground Cluster is started" $outfile; do
+while [ "$n" -lt 600 ] && ! grep -q "TiDB Playground Cluster is started" $outfile; do
 	n=$(( n + 1 ))
 	sleep 1
 done
