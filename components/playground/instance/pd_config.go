@@ -22,7 +22,7 @@ func (inst *PDInstance) getConfig() map[string]any {
 		config["replication.enable-placement-rules"] = true
 		config["replication.max-replica"] = 1
 		config["schedule.merge-schedule-limit"] = 0
-		config["schedule.low-space-ration"] = 1.0
+		config["schedule.low-space-ratio"] = 1.0
 		config["schedule.replica-schedule-limit"] = 500
 	}
 
