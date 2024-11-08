@@ -514,7 +514,7 @@ func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) 
 		return err
 	}
 
-	if err := inst.PrepareBinary(component, version); err != nil {
+	if err := inst.PrepareBinary(component, inst.Component(), version); err != nil {
 		return err
 	}
 
