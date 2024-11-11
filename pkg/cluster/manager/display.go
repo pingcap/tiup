@@ -35,6 +35,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/crypto"
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
@@ -267,7 +268,7 @@ func (m *Manager) Display(dopt DisplayOption, opt operator.Options) error {
 		m.logger,
 	)
 	if t, ok := topo.(*spec.Specification); ok {
-		_ = m.displayDashboards(ctx, t, j, statusTimeout, tlsCfg, masterActive...)
+		_ = m.displayDashboards(ctx, t, j, statusTimeout, tlsCfg, "", masterActive...)
 	}
 
 	if m.logger.GetDisplayMode() == logprinter.DisplayModeJSON {
@@ -789,10 +790,10 @@ func (m *Manager) DisplayDashboardInfo(clusterName string, timeout time.Duration
 	}
 
 	ctx := context.WithValue(context.Background(), logprinter.ContextKeyLogger, m.logger)
-	return m.displayDashboards(ctx, metadata.Topology, nil, timeout, tlsCfg, metadata.Topology.GetPDListWithManageHost()...)
+	return m.displayDashboards(ctx, metadata.Topology, nil, timeout, tlsCfg, clusterName, metadata.Topology.GetPDListWithManageHost()...)
 }
 
-func (m *Manager) displayDashboards(ctx context.Context, t *spec.Specification, j *JSONOutput, timeout time.Duration, tlsCfg *tls.Config, pdList ...string) error {
+func (m *Manager) displayDashboards(ctx context.Context, t *spec.Specification, j *JSONOutput, timeout time.Duration, tlsCfg *tls.Config, clusterName string, pdList ...string) error {
 	dashboardAddrs := []string{}
 	t.IterInstance(func(ins spec.Instance) {
 		if ins.Role() != spec.ComponentDashboard {
@@ -808,6 +809,17 @@ func (m *Manager) displayDashboards(ctx context.Context, t *spec.Specification, 
 
 	if len(dashboardAddrs) == 0 {
 		return fmt.Errorf("TiDB Dashboard is missing, try again later")
+	}
+
+	if clusterName != "" && tlsCfg != nil {
+		fmt.Println(
+			"Client certificate:",
+			color.CyanString(m.specManager.Path(clusterName, spec.TLSCertKeyDir, spec.PFXClientCert)),
+		)
+		fmt.Println(
+			"Certificate password:",
+			color.CyanString(crypto.PKCS12Password),
+		)
 	}
 
 	for i, addr := range dashboardAddrs {
