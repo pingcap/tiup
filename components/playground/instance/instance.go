@@ -82,7 +82,7 @@ type Instance interface {
 	// The implementation should be safe to call Wait multi times.
 	Wait() error
 	// PrepareBinary use given binpath or download from tiup mirrors.
-	PrepareBinary(componentName string, version utils.Version) error
+	PrepareBinary(binaryName string, componentName string, version utils.Version) error
 }
 
 func (inst *instance) MetricAddr() (r MetricAddr) {
@@ -92,8 +92,8 @@ func (inst *instance) MetricAddr() (r MetricAddr) {
 	return
 }
 
-func (inst *instance) PrepareBinary(componentName string, version utils.Version) error {
-	instanceBinPath, err := tiupexec.PrepareBinary(componentName, version, inst.BinPath)
+func (inst *instance) PrepareBinary(binaryName string, componentName string, version utils.Version) error {
+	instanceBinPath, err := tiupexec.PrepareBinary(binaryName, version, inst.BinPath)
 	if err != nil {
 		return err
 	}
