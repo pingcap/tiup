@@ -1320,7 +1320,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		p.updateMonitorTopology(spec.ComponentPrometheus, *monitorInfo)
 	}
 
-	dumpDSN(filepath.Join(p.dataDir, "dsn"), p.tidbs)
+	dumpDSN(filepath.Join(p.dataDir, "dsn"), p.tidbs, p.tiproxys)
 
 	go func() {
 		// fmt.Printf("serve at :%d\n", p.port)

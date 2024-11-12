@@ -553,10 +553,13 @@ func loadPort(dir string) (port int, err error) {
 	return
 }
 
-func dumpDSN(fname string, dbs []*instance.TiDBInstance) {
+func dumpDSN(fname string, dbs []*instance.TiDBInstance, tdbs []*instance.TiProxy) {
 	var dsn []string
 	for _, db := range dbs {
 		dsn = append(dsn, fmt.Sprintf("mysql://root@%s", db.Addr()))
+	}
+	for _, tdb := range tdbs {
+		dsn = append(dsn, fmt.Sprintf("mysql://root@%s", tdb.Addr()))
 	}
 	_ = utils.WriteFile(fname, []byte(strings.Join(dsn, "\n")), 0644)
 }
