@@ -164,6 +164,48 @@ func (s *TiKVSpec) Labels() (map[string]string, error) {
 	return lbs, nil
 }
 
+// getExtraDeployDirs returns the extra directories that needs to be checked.
+func (s *TiKVSpec) getExtraDeployDirs(globalConf map[string]any) []string {
+	var extractDir = func(dir any, rootPath string) string {
+		realDir := strings.TrimSpace(dir.(string))
+		// Skip the relative path under the root path.
+		if realDir == "" || (strings.HasPrefix(realDir, "./") || strings.HasPrefix(realDir, rootPath)) {
+			return ""
+		}
+		elemStr := strings.TrimSuffix(realDir, "/")
+		return elemStr
+	}
+
+	extraDirs := []string{}
+	rootPath := s.DataDir
+	candidates := []string{
+		"storage.data-dir",
+		"rocksdb.wal-dir",
+		"rocksdb.titan.dirname",
+		"raft-engine.dir",
+		"raft-engine.spill-dir",
+	}
+	for _, candidate := range candidates {
+		// Check the global configuration first.
+		globalConfDir, ok := globalConf[candidate]
+		if ok {
+			elemStr := extractDir(globalConfDir, rootPath)
+			if elemStr != "" {
+				extraDirs = append(extraDirs, elemStr)
+			}
+		}
+		// Check the instance configuration.
+		dir, ok := s.Config[candidate]
+		if ok {
+			elemStr := extractDir(dir, rootPath)
+			if elemStr != "" {
+				extraDirs = append(extraDirs, elemStr)
+			}
+		}
+	}
+	return extraDirs
+}
+
 // TiKVComponent represents TiKV component.
 type TiKVComponent struct{ Topology *Specification }
 
@@ -205,6 +247,8 @@ func (c *TiKVComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.TiKVServers))
 	for _, s := range c.Topology.TiKVServers {
 		s := s
+		dirs := []string{s.DeployDir, s.DataDir}
+		dirs = append(dirs, s.getExtraDeployDirs(c.Topology.ServerConfigs.TiKV)...)
 		ins = append(ins, &TiKVInstance{BaseInstance{
 			InstanceSpec: s,
 			Name:         c.Name(),
@@ -221,10 +265,7 @@ func (c *TiKVComponent) Instances() []Instance {
 				s.Port,
 				s.StatusPort,
 			},
-			Dirs: []string{
-				s.DeployDir,
-				s.DataDir,
-			},
+			Dirs:     dirs,
 			StatusFn: s.Status,
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 				return UptimeByHost(s.GetManageHost(), s.StatusPort, timeout, tlsCfg)

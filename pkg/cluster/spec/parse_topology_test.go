@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"testing"
 
 	"github.com/pingcap/check"
@@ -274,6 +275,52 @@ tikv_servers:
 		c.Assert(topo.TiKVServers[1].DeployDir, check.Equals, "/home/test/deploy/tikv-20161")
 		c.Assert(topo.TiKVServers[1].DataDir, check.Equals, "/home/test/deploy/tikv-20161/my-global-data")
 		c.Assert(topo.TiKVServers[1].LogDir, check.Equals, "/home/test/deploy/tikv-20161/my-global-log")
+	})
+}
+
+func (s *topoSuite) TestTiKVServerConfigs(c *check.C) {
+	// test tikv server config section
+	withTempFile(`
+global:
+  user: tidb
+  deploy_dir: my-global-deploy
+  data_dir: my-global-data
+  log_dir: my-global-log
+
+server_configs:
+  tikv:
+    storage.reserve-space: 1K
+    storage.data-dir: /data1/tikv
+    raft-engine.dir: /data1/data/raft
+    raft-engine.spill-dir: /data1/data/spill
+    rocksdb.wal-dir: /data2/data/wal
+    rocksdb.titan.dirname: /data2/data/titan
+
+tikv_servers:
+  - host: 172.16.5.140
+    port: 20161
+    status_port: 20181
+`, func(file string) {
+		topo := Specification{}
+		err := ParseTopologyYaml(file, &topo)
+		c.Assert(err, check.IsNil)
+		ExpandRelativeDir(&topo)
+
+		c.Assert(topo.TiKVServers[0].DeployDir, check.Equals, "/home/tidb/my-global-deploy/tikv-20161")
+		c.Assert(topo.TiKVServers[0].DataDir, check.Equals, "/home/tidb/my-global-deploy/tikv-20161/my-global-data")
+		c.Assert(topo.TiKVServers[0].LogDir, check.Equals, "/home/tidb/my-global-deploy/tikv-20161/my-global-log")
+
+		c.Assert(topo.ServerConfigs.TiKV["storage.data-dir"], check.Equals, "/data1/tikv")
+		c.Assert(topo.ServerConfigs.TiKV["raft-engine.dir"], check.Equals, "/data1/data/raft")
+		c.Assert(topo.ServerConfigs.TiKV["raft-engine.spill-dir"], check.Equals, "/data1/data/spill")
+		c.Assert(topo.ServerConfigs.TiKV["rocksdb.wal-dir"], check.Equals, "/data2/data/wal")
+		c.Assert(topo.ServerConfigs.TiKV["rocksdb.titan.dirname"], check.Equals, "/data2/data/titan")
+
+		extraDirs := topo.TiKVServers[0].getExtraDeployDirs(topo.ServerConfigs.TiKV)
+		sort.Strings(extraDirs)
+		targetDirs := []string{"/data1/tikv", "/data1/data/raft", "/data1/data/spill", "/data2/data/wal", "/data2/data/titan"}
+		sort.Strings(targetDirs)
+		c.Assert(extraDirs, check.DeepEquals, targetDirs)
 	})
 }
 
