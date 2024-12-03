@@ -291,8 +291,9 @@ server_configs:
   tikv:
     storage.reserve-space: 1K
     storage.data-dir: /data1/tikv
-    raft-engine.dir: /data1/data/raft
-    raft-engine.spill-dir: /data1/data/spill
+    raft-engine:
+      dir: /data1/data/raft
+      spill-dir: /data1/data/spill
     rocksdb.wal-dir: /data2/data/wal
     rocksdb.titan.dirname: /data2/data/titan
 
@@ -311,8 +312,6 @@ tikv_servers:
 		c.Assert(topo.TiKVServers[0].LogDir, check.Equals, "/home/tidb/my-global-deploy/tikv-20161/my-global-log")
 
 		c.Assert(topo.ServerConfigs.TiKV["storage.data-dir"], check.Equals, "/data1/tikv")
-		c.Assert(topo.ServerConfigs.TiKV["raft-engine.dir"], check.Equals, "/data1/data/raft")
-		c.Assert(topo.ServerConfigs.TiKV["raft-engine.spill-dir"], check.Equals, "/data1/data/spill")
 		c.Assert(topo.ServerConfigs.TiKV["rocksdb.wal-dir"], check.Equals, "/data2/data/wal")
 		c.Assert(topo.ServerConfigs.TiKV["rocksdb.titan.dirname"], check.Equals, "/data2/data/titan")
 

@@ -166,6 +166,7 @@ func (s *TiKVSpec) Labels() (map[string]string, error) {
 
 // getExtraDeployDirs returns the extra directories that needs to be checked.
 func (s *TiKVSpec) getExtraDeployDirs(globalConf map[string]any) []string {
+	// Extract the directory from the configuration.
 	var extractDir = func(dir any, rootPath string) string {
 		realDir := strings.TrimSpace(dir.(string))
 		// Skip the relative path under the root path.
@@ -174,6 +175,37 @@ func (s *TiKVSpec) getExtraDeployDirs(globalConf map[string]any) []string {
 		}
 		elemStr := strings.TrimSuffix(realDir, "/")
 		return elemStr
+	}
+	// Search the directory from the nested configuration.
+	var searchDir = func(fieldName string, confs map[string]any) string {
+		if confs == nil {
+			return ""
+		}
+		steps := strings.Split(fieldName, ".")
+		if len(steps) == 0 {
+			return ""
+		}
+		// Search the directory from the nested configuration.
+		var tmpConfs map[any]any
+		for _, step := range steps {
+			if step == steps[0] {
+				tmpConfs, _ = confs[steps[0]].(map[any]any)
+				if tmpConfs == nil {
+					return ""
+				}
+				continue
+			}
+			nextTmpConfs, ok := tmpConfs[step].(map[any]any)
+			if !ok || nextTmpConfs == nil {
+				break
+			}
+			tmpConfs = nextTmpConfs
+		}
+		dir, ok := tmpConfs[steps[len(steps)-1]]
+		if !ok {
+			return ""
+		}
+		return strings.TrimSpace(dir.(string))
 	}
 
 	extraDirs := []string{}
@@ -186,20 +218,20 @@ func (s *TiKVSpec) getExtraDeployDirs(globalConf map[string]any) []string {
 		"raft-engine.spill-dir",
 	}
 	for _, candidate := range candidates {
-		// Check the global configuration first.
-		globalConfDir, ok := globalConf[candidate]
-		if ok {
-			elemStr := extractDir(globalConfDir, rootPath)
-			if elemStr != "" {
-				extraDirs = append(extraDirs, elemStr)
+		// Check the global configurations and the instance configurations.
+		for _, conf := range []any{globalConf, s.Config} {
+			config := conf.(map[string]any)
+			dir, ok := config[candidate]
+			if ok {
+				elemStr := extractDir(dir, rootPath)
+				if elemStr != "" {
+					extraDirs = append(extraDirs, elemStr)
+				}
 			}
-		}
-		// Check the instance configuration.
-		dir, ok := s.Config[candidate]
-		if ok {
-			elemStr := extractDir(dir, rootPath)
-			if elemStr != "" {
-				extraDirs = append(extraDirs, elemStr)
+			// Check the configuration with nested fields.
+			dataDir := searchDir(candidate, config)
+			if dataDir != "" {
+				extraDirs = append(extraDirs, dataDir)
 			}
 		}
 	}
