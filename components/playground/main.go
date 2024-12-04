@@ -58,6 +58,7 @@ type BootOptions struct {
 	Mode           string              `yaml:"mode"`
 	PDMode         string              `yaml:"pd_mode"`
 	Version        string              `yaml:"version"`
+	DryRun         bool                `yaml:"dry_run"`
 	PD             instance.Config     `yaml:"pd"`         // will change to api when pd_mode == ms
 	TSO            instance.Config     `yaml:"tso"`        // Only available when pd_mode == ms
 	Scheduling     instance.Config     `yaml:"scheduling"` // Only available when pd_mode == ms
@@ -284,6 +285,8 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 	_ = rootCmd.Flags().MarkDeprecated("monitor", "Please use --without-monitor to control whether to disable monitor.")
 	rootCmd.Flags().IntVar(&options.GrafanaPort, "grafana.port", 3000, "grafana port. If not provided, grafana will use 3000 as its port.")
 	rootCmd.Flags().IntVar(&options.PortOffset, "port-offset", 0, "If specified, all components will use default_port+port_offset as the port. This argument is useful when you want to start multiple playgrounds on the same host. Recommend to set to 10000, 20000, etc.")
+
+	rootCmd.Flags().BoolVar(&options.DryRun, "dry-run", false, "Do not actually run any component. Useful to prepare binaries in CI environment, or checkout what will be started.")
 
 	// NOTE: Do not set default values if they may be changed in different modes.
 

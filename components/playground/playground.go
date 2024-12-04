@@ -518,10 +518,12 @@ func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) 
 		return err
 	}
 
-	if err = inst.Start(ctx); err != nil {
-		return err
+	if !p.bootOptions.DryRun {
+		if err = inst.Start(ctx); err != nil {
+			return err
+		}
+		p.addWaitInstance(inst)
 	}
-	p.addWaitInstance(inst)
 	return nil
 }
 
@@ -871,6 +873,11 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 }
 
 func (p *Playground) waitAllDBUp() ([]string, []string) {
+	if p.bootOptions.DryRun {
+		// No wait, return immediately.
+		return nil, nil
+	}
+
 	var tidbSucc []string
 	var tiproxySucc []string
 	if len(p.tidbs) > 0 {
@@ -938,6 +945,11 @@ func (p *Playground) waitAllDBUp() ([]string, []string) {
 }
 
 func (p *Playground) waitAllTiFlashUp() {
+	if p.bootOptions.DryRun {
+		// No wait, return immediately.
+		return
+	}
+
 	if len(p.tiflashs) > 0 {
 		var endpoints []string
 		for _, pd := range p.pds {
@@ -1238,7 +1250,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 	colorCmd := color.New(color.FgHiCyan, color.Bold)
 
-	if len(tidbSucc) > 0 {
+	if len(tidbSucc) > 0 || p.bootOptions.DryRun {
 		// start TiFlash after at least one TiDB is up.
 		var started []*instance.TiFlashInstance
 		for _, flash := range p.tiflashs {
@@ -1251,23 +1263,25 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		p.tiflashs = started
 		p.waitAllTiFlashUp()
 
-		fmt.Println()
-		color.New(color.FgGreen, color.Bold).Println("🎉 TiDB Playground Cluster is started, enjoy!")
-		fmt.Println()
-		mysql := mysqlCommand()
-		for _, dbAddr := range tidbSucc {
-			ss := strings.Split(dbAddr, ":")
-			fmt.Printf("Connect TiDB:    ")
-			colorCmd.Printf("%s --host %s --port %s -u root\n", mysql, ss[0], ss[1])
-		}
-		for _, dbAddr := range tiproxySucc {
-			ss := strings.Split(dbAddr, ":")
-			fmt.Printf("Connect TiProxy: ")
-			colorCmd.Printf("%s --host %s --port %s -u root\n", mysql, ss[0], ss[1])
+		if !p.bootOptions.DryRun {
+			fmt.Println()
+			color.New(color.FgGreen, color.Bold).Println("🎉 TiDB Playground Cluster is started, enjoy!")
+			fmt.Println()
+			mysql := mysqlCommand()
+			for _, dbAddr := range tidbSucc {
+				ss := strings.Split(dbAddr, ":")
+				fmt.Printf("Connect TiDB:    ")
+				colorCmd.Printf("%s --host %s --port %s -u root\n", mysql, ss[0], ss[1])
+			}
+			for _, dbAddr := range tiproxySucc {
+				ss := strings.Split(dbAddr, ":")
+				fmt.Printf("Connect TiProxy: ")
+				colorCmd.Printf("%s --host %s --port %s -u root\n", mysql, ss[0], ss[1])
+			}
 		}
 	}
 
-	if len(p.dmMasters) > 0 {
+	if len(p.dmMasters) > 0 && !p.bootOptions.DryRun {
 		fmt.Printf("Connect DM:      ")
 		endpoints := make([]string, 0, len(p.dmMasters))
 		for _, dmMaster := range p.dmMasters {
@@ -1276,7 +1290,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		colorCmd.Printf("tiup dmctl --master-addr %s\n", strings.Join(endpoints, ","))
 	}
 
-	if len(p.pds) > 0 {
+	if len(p.pds) > 0 && !p.bootOptions.DryRun {
 		if pdAddr := p.pds[0].Addr(); len(p.tidbs) > 0 && hasDashboard(pdAddr) {
 			fmt.Printf("TiDB Dashboard:  ")
 			colorCmd.Printf("http://%s/dashboard\n", pdAddr)
@@ -1316,7 +1330,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		}
 	}
 
-	if monitorInfo != nil {
+	if monitorInfo != nil && !p.bootOptions.DryRun {
 		p.updateMonitorTopology(spec.ComponentPrometheus, *monitorInfo)
 	}
 
@@ -1332,7 +1346,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 	logIfErr(p.renderSDFile())
 
-	if g := p.grafana; g != nil {
+	if g := p.grafana; g != nil && !p.bootOptions.DryRun {
 		p.updateMonitorTopology(spec.ComponentGrafana, MonitorInfo{g.host, g.port, g.cmd.Path})
 		fmt.Printf("Grafana:         ")
 		colorCmd.Printf("http://%s\n", utils.JoinHostPort(g.host, g.port))
@@ -1522,6 +1536,10 @@ func (p *Playground) bootMonitor(ctx context.Context, env *environment.Environme
 	monitor.cmd.Stderr = log
 	monitor.cmd.Stdout = os.Stdout
 
+	if p.bootOptions.DryRun {
+		return nil, nil, nil
+	}
+
 	if err := monitor.cmd.Start(); err != nil {
 		return nil, nil, err
 	}
@@ -1555,6 +1573,10 @@ func (p *Playground) bootNGMonitoring(ctx context.Context, env *environment.Envi
 	// ng-monitoring only exists when tidb >= 5.3.0
 	_, err = os.Stat(ngm.cmd.Path)
 	if os.IsNotExist(err) {
+		return nil, nil
+	}
+
+	if p.bootOptions.DryRun {
 		return nil, nil
 	}
 
@@ -1625,7 +1647,11 @@ func (p *Playground) bootGrafana(ctx context.Context, env *environment.Environme
 	}
 
 	grafana := newGrafana(options.Version, options.Host, options.GrafanaPort)
-	// fmt.Println("Start Grafana instance...")
+
+	if p.bootOptions.DryRun {
+		return nil, nil
+	}
+
 	err = grafana.start(ctx, grafanaDir, options.PortOffset, "http://"+utils.JoinHostPort(monitorInfo.IP, monitorInfo.Port))
 	if err != nil {
 		return nil, err
