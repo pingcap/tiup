@@ -64,10 +64,14 @@ fi
 
 chmod 755 "$bin_dir/tiup"
 
-"$bin_dir/tiup" mirror set $repo
+"$bin_dir/tiup" mirror set $repo --silent
 
 bold=$(tput bold 2>/dev/null)
+green=$(tput setaf 2 2>/dev/null)
+cyan=$(tput setaf 6 2>/dev/null)
 sgr0=$(tput sgr0 2>/dev/null)
+
+echo
 
 # Refrence: https://stackoverflow.com/questions/14637979/how-to-permanently-set-path-on-linux-unix
 shell=$(echo $SHELL | awk 'BEGIN {FS="/";} { print $NF }')
@@ -82,16 +86,21 @@ else
     PROFILE=${HOME}/.profile
 fi
 echo "Shell profile:  ${bold}$PROFILE${sgr0}"
-
+echo
+echo "${bold}${green}✔ ${sgr0}Installed in ${bold}$bin_dir/tiup${sgr0}"
 case :$PATH: in
-    *:$bin_dir:*) echo "PATH already contains $bin_dir" ;;
+    *:$bin_dir:*) echo "${bold}${green}✔ ${sgr0}tiup PATH is already set, skip" ;;
     *) printf '\nexport PATH=%s:$PATH\n' "$bin_dir" >> "$PROFILE"
-        echo "$PROFILE has been modified to add tiup to PATH"
-        echo "open a new terminal or ${bold}source ${PROFILE}${sgr0} to use it"
+        echo "${bold}${green}✔ ${sgr0}Added tiup PATH into ${bold}${shell}${sgr0} profile"
         ;;
 esac
-
-echo "Installed path: ${bold}$bin_dir/tiup${sgr0}"
-echo "==============================================="
-echo "Have a try:     ${bold}tiup playground${sgr0}"
-echo "==============================================="
+echo
+echo "${bold}tiup is installed now${sgr0} 🎉"
+echo
+echo Next step:
+echo
+echo "  1: To make PATH change effective, restart your shell or execute:"
+echo "     ${bold}${cyan}source ${PROFILE}${sgr0}"
+echo
+echo "  2: Start a local TiDB for development:"
+echo "     ${bold}${cyan}tiup playground${sgr0}"

@@ -24,6 +24,7 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	tiupexec "github.com/pingcap/tiup/pkg/exec"
+	"github.com/pingcap/tiup/pkg/tui/colorstr"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -81,7 +82,7 @@ type Instance interface {
 	// The implementation should be safe to call Wait multi times.
 	Wait() error
 	// PrepareBinary use given binpath or download from tiup mirrors.
-	PrepareBinary(componentName string, version utils.Version) error
+	PrepareBinary(binaryName string, componentName string, version utils.Version) error
 }
 
 func (inst *instance) MetricAddr() (r MetricAddr) {
@@ -91,16 +92,16 @@ func (inst *instance) MetricAddr() (r MetricAddr) {
 	return
 }
 
-func (inst *instance) PrepareBinary(componentName string, version utils.Version) error {
-	instanceBinPath, err := tiupexec.PrepareBinary(componentName, version, inst.BinPath)
+func (inst *instance) PrepareBinary(binaryName string, componentName string, version utils.Version) error {
+	instanceBinPath, err := tiupexec.PrepareBinary(binaryName, version, inst.BinPath)
 	if err != nil {
 		return err
 	}
 	// distinguish whether the instance is started by specific binary path.
 	if inst.BinPath == "" {
-		fmt.Printf("Start %s instance:%s\n", componentName, version)
+		colorstr.Printf("[dark_gray]Start %s instance: %s[reset]\n", componentName, version)
 	} else {
-		fmt.Printf("Start %s instance:%s\n", componentName, instanceBinPath)
+		colorstr.Printf("[dark_gray]Start %s instance: %s[reset]\n", componentName, instanceBinPath)
 	}
 	inst.Version = version
 	inst.BinPath = instanceBinPath

@@ -182,9 +182,6 @@ exists python ||
 exists docker ||
     { ERROR "Please install docker (https://docs.docker.com/engine/installation/)";
       exit 1; }
-exists docker-compose ||
-    { ERROR "Please install docker-compose (https://docs.docker.com/compose/install/)";
-      exit 1; }
 
 exists pip ||
     {
@@ -233,17 +230,17 @@ echo "TIUP_TEST_IP_PREFIX=$ipprefix" >> ./secret/control.env
 
 INFO "Running \`docker-compose build\`"
 # shellcheck disable=SC2086
-docker-compose -f docker-compose.yml ${COMPOSE} ${DEV} build
+docker compose -f docker-compose.yml ${COMPOSE} ${DEV} build
 
 INFO "Running \`docker-compose up\`"
 if [ "${RUN_AS_DAEMON}" -eq 1 ]; then
     # shellcheck disable=SC2086
-    docker-compose -f docker-compose.yml ${COMPOSE} ${DEV} up -d
+    docker compose -f docker-compose.yml ${COMPOSE} ${DEV} up -d
     INFO "All containers started, run \`docker ps\` to view"
 else
     INFO "Please run \`docker exec -it tiup-cluster-control bash\` in another terminal to proceed"
     # shellcheck disable=SC2086
-    docker-compose -f docker-compose.yml ${COMPOSE} ${DEV} up
+    docker compose -f docker-compose.yml ${COMPOSE} ${DEV} up
 fi
 
 popd

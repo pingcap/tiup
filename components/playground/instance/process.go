@@ -11,6 +11,10 @@ import (
 	"github.com/pingcap/errors"
 )
 
+var (
+	errNotUp = errors.New("not up")
+)
+
 // Process represent process to be run by playground
 type Process interface {
 	Start() error
@@ -32,6 +36,10 @@ type process struct {
 
 // Start the process
 func (p *process) Start() error {
+	if p == nil {
+		return errNotUp
+	}
+
 	// fmt.Printf("Starting `%s`: %s", filepath.Base(p.cmd.Path), strings.Join(p.cmd.Args, " "))
 	p.startTime = time.Now()
 	return p.cmd.Start()
@@ -39,6 +47,10 @@ func (p *process) Start() error {
 
 // Wait implements Instance interface.
 func (p *process) Wait() error {
+	if p == nil {
+		return errNotUp
+	}
+
 	p.waitOnce.Do(func() {
 		p.waitErr = p.cmd.Wait()
 	})
@@ -48,11 +60,18 @@ func (p *process) Wait() error {
 
 // Pid implements Instance interface.
 func (p *process) Pid() int {
+	if p == nil {
+		return 0
+	}
 	return p.cmd.Process.Pid
 }
 
 // Uptime implements Instance interface.
 func (p *process) Uptime() string {
+	if p == nil {
+		return errNotUp.Error()
+	}
+
 	s := p.cmd.ProcessState
 
 	if s != nil {
@@ -64,6 +83,10 @@ func (p *process) Uptime() string {
 }
 
 func (p *process) SetOutputFile(fname string) error {
+	if p == nil {
+		return errNotUp
+	}
+
 	f, err := os.OpenFile(fname, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
 		return errors.AddStack(err)
@@ -73,11 +96,19 @@ func (p *process) SetOutputFile(fname string) error {
 }
 
 func (p *process) setOutput(w io.Writer) {
+	if p == nil {
+		return
+	}
+
 	p.cmd.Stdout = w
 	p.cmd.Stderr = w
 }
 
 func (p *process) Cmd() *exec.Cmd {
+	if p == nil {
+		panic(errNotUp)
+	}
+
 	return p.cmd
 }
 

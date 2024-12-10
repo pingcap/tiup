@@ -129,7 +129,7 @@ check_for_updates = true
 admin_user = {{.Username}}
 
 # default admin password, can be changed before first start of grafana,  or in profile settings
-admin_password = {{.Password}}
+admin_password = `{{.Password}}`
 
 # used for signing
 ;secret_key = SW2YcwTIb9zpOOhoPsMm

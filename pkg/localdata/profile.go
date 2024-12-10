@@ -275,9 +275,9 @@ func (p *Profile) ResetMirror(addr, root string) error {
 
 	// Only cache remote mirror
 	if strings.HasPrefix(addr, "http") && root != localRoot {
-		if strings.HasPrefix(root, "http") {
-			fmt.Printf("WARN: adding root certificate via internet: %s\n", root)
-			fmt.Printf("You can revoke this by remove %s\n", localRoot)
+		if strings.HasPrefix(root, "http") && !strings.HasPrefix(root, "https") {
+			fmt.Printf("WARN: Trusting component distribution key via insecure Internet: %s\n", root)
+			fmt.Printf("      To revoke TiUP's trust, remove this file: %s\n", localRoot)
 		}
 		_ = utils.Copy(p.Path("bin", "root.json"), localRoot)
 	}

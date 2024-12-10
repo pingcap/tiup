@@ -12,6 +12,9 @@ exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} env GODEBUG=mad
 {{- else}}
 exec env GODEBUG=madvdontneed=1 bin/pd-server services tso \
 {{- end}}
+{{- if .Name}}
+    --name="{{.Name}}" \
+{{- end}}
     --backend-endpoints="{{.BackendEndpoints}}" \
     --listen-addr="{{.ListenURL}}" \
     --advertise-listen-addr="{{.AdvertiseListenURL}}" \

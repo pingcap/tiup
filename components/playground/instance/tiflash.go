@@ -53,14 +53,14 @@ type TiFlashInstance struct {
 }
 
 // NewTiFlashInstance return a TiFlashInstance
-func NewTiFlashInstance(role TiFlashRole, cseOptions CSEOptions, binPath, dir, host, configPath string, id int, pds []*PDInstance, dbs []*TiDBInstance, version string) *TiFlashInstance {
+func NewTiFlashInstance(role TiFlashRole, cseOptions CSEOptions, binPath, dir, host, configPath string, portOffset int, id int, pds []*PDInstance, dbs []*TiDBInstance, version string) *TiFlashInstance {
 	if role != TiFlashRoleNormal && role != TiFlashRoleDisaggWrite && role != TiFlashRoleDisaggCompute {
 		panic(fmt.Sprintf("Unknown TiFlash role %s", role))
 	}
 
 	httpPort := 8123
 	if !tidbver.TiFlashNotNeedHTTPPortConfig(version) {
-		httpPort = utils.MustGetFreePort(host, httpPort)
+		httpPort = utils.MustGetFreePort(host, httpPort, portOffset)
 	}
 	return &TiFlashInstance{
 		instance: instance{
@@ -69,15 +69,15 @@ func NewTiFlashInstance(role TiFlashRole, cseOptions CSEOptions, binPath, dir, h
 			Dir:        dir,
 			Host:       host,
 			Port:       httpPort,
-			StatusPort: utils.MustGetFreePort(host, 8234),
+			StatusPort: utils.MustGetFreePort(host, 8234, portOffset),
 			ConfigPath: configPath,
 		},
 		Role:            role,
 		cseOpts:         cseOptions,
-		TCPPort:         utils.MustGetFreePort(host, 9100), // 9000 for default object store port
-		ServicePort:     utils.MustGetFreePort(host, 3930),
-		ProxyPort:       utils.MustGetFreePort(host, 20170),
-		ProxyStatusPort: utils.MustGetFreePort(host, 20292),
+		TCPPort:         utils.MustGetFreePort(host, 9100, portOffset), // 9000 for default object store port
+		ServicePort:     utils.MustGetFreePort(host, 3930, portOffset),
+		ProxyPort:       utils.MustGetFreePort(host, 20170, portOffset),
+		ProxyStatusPort: utils.MustGetFreePort(host, 20292, portOffset),
 		pds:             pds,
 		dbs:             dbs,
 	}

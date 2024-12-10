@@ -75,6 +75,9 @@ type BootOptions struct {
 	Monitor        bool                `yaml:"monitor"`
 	CSEOpts        instance.CSEOptions `yaml:"cse"` // Only available when mode == tidb-cse
 	GrafanaPort    int                 `yaml:"grafana_port"`
+	PortOffset     int                 `yaml:"port_offset"`
+	DMMaster       instance.Config     `yaml:"dm_master"`
+	DMWorker       instance.Config     `yaml:"dm_worker"`
 }
 
 var (
@@ -175,11 +178,8 @@ Examples:
 				return err
 			}
 
-			port, err := utils.GetFreePort("0.0.0.0", 9527)
-			if err != nil {
-				return err
-			}
-			err = dumpPort(filepath.Join(dataDir, "port"), port)
+			port := utils.MustGetFreePort("0.0.0.0", 9527, options.PortOffset)
+			err := dumpPort(filepath.Join(dataDir, "port"), port)
 			p := NewPlayground(dataDir, port)
 			if err != nil {
 				return err
@@ -207,7 +207,7 @@ Examples:
 
 				sig := (<-sc).(syscall.Signal)
 				atomic.StoreInt32(&p.curSig, int32(sig))
-				fmt.Println("Playground receive signal: ", sig)
+				colorstr.Printf("\n[red][bold]Playground receive signal: %s[reset]\n", sig)
 
 				// if bootCluster is not done we just cancel context to make it
 				// clean up and return ASAP and exit directly after timeout.
@@ -283,6 +283,7 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 	rootCmd.Flags().BoolVar(&options.Monitor, "monitor", true, "Start prometheus and grafana component")
 	_ = rootCmd.Flags().MarkDeprecated("monitor", "Please use --without-monitor to control whether to disable monitor.")
 	rootCmd.Flags().IntVar(&options.GrafanaPort, "grafana.port", 3000, "grafana port. If not provided, grafana will use 3000 as its port.")
+	rootCmd.Flags().IntVar(&options.PortOffset, "port-offset", 0, "If specified, all components will use default_port+port_offset as the port. This argument is useful when you want to start multiple playgrounds on the same host. Recommend to set to 10000, 20000, etc.")
 
 	// NOTE: Do not set default values if they may be changed in different modes.
 
@@ -299,6 +300,8 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 	rootCmd.Flags().IntVar(&options.TiKVCDC.Num, "kvcdc", 0, "TiKV-CDC instance number")
 	rootCmd.Flags().IntVar(&options.Pump.Num, "pump", 0, "Pump instance number")
 	rootCmd.Flags().IntVar(&options.Drainer.Num, "drainer", 0, "Drainer instance number")
+	rootCmd.Flags().IntVar(&options.DMMaster.Num, "dm-master", 0, "DM-master instance number")
+	rootCmd.Flags().IntVar(&options.DMWorker.Num, "dm-worker", 0, "DM-worker instance number")
 
 	rootCmd.Flags().IntVar(&options.TiDB.UpTimeout, "db.timeout", 60, "TiDB max wait time in seconds for starting, 0 means no limit")
 	rootCmd.Flags().IntVar(&options.TiFlash.UpTimeout, "tiflash.timeout", 120, "TiFlash max wait time in seconds for starting, 0 means no limit")
@@ -315,6 +318,10 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 	rootCmd.Flags().IntVar(&options.TiCDC.Port, "ticdc.port", 0, "Playground TiCDC port. If not provided, TiCDC will use 8300 as its port")
 	rootCmd.Flags().StringVar(&options.TiProxy.Host, "tiproxy.host", "", "Playground TiProxy host. If not provided, TiProxy will still use `host` flag as its host")
 	rootCmd.Flags().IntVar(&options.TiProxy.Port, "tiproxy.port", 0, "Playground TiProxy port. If not provided, TiProxy will use 6000 as its port")
+	rootCmd.Flags().StringVar(&options.DMMaster.Host, "dm-master.host", "", "DM-master instance host")
+	rootCmd.Flags().IntVar(&options.DMMaster.Port, "dm-master.port", 8261, "DM-master instance port")
+	rootCmd.Flags().StringVar(&options.DMWorker.Host, "dm-worker.host", "", "DM-worker instance host")
+	rootCmd.Flags().IntVar(&options.DMWorker.Port, "dm-worker.port", 8262, "DM-worker instance port")
 
 	rootCmd.Flags().StringVar(&options.TiDB.ConfigPath, "db.config", "", "TiDB instance configuration file")
 	rootCmd.Flags().StringVar(&options.TiKV.ConfigPath, "kv.config", "", "TiKV instance configuration file")
@@ -329,6 +336,8 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 	rootCmd.Flags().StringVar(&options.Drainer.ConfigPath, "drainer.config", "", "Drainer instance configuration file")
 	rootCmd.Flags().StringVar(&options.TiCDC.ConfigPath, "ticdc.config", "", "TiCDC instance configuration file")
 	rootCmd.Flags().StringVar(&options.TiKVCDC.ConfigPath, "kvcdc.config", "", "TiKV-CDC instance configuration file")
+	rootCmd.Flags().StringVar(&options.DMMaster.ConfigPath, "dm-master.config", "", "DM-master instance configuration file")
+	rootCmd.Flags().StringVar(&options.DMWorker.ConfigPath, "dm-worker.config", "", "DM-worker instance configuration file")
 
 	rootCmd.Flags().StringVar(&options.TiDB.BinPath, "db.binpath", "", "TiDB instance binary path")
 	rootCmd.Flags().StringVar(&options.TiKV.BinPath, "kv.binpath", "", "TiKV instance binary path")
@@ -344,13 +353,15 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 	rootCmd.Flags().StringVar(&options.TiKVCDC.BinPath, "kvcdc.binpath", "", "TiKV-CDC instance binary path")
 	rootCmd.Flags().StringVar(&options.Pump.BinPath, "pump.binpath", "", "Pump instance binary path")
 	rootCmd.Flags().StringVar(&options.Drainer.BinPath, "drainer.binpath", "", "Drainer instance binary path")
+	rootCmd.Flags().StringVar(&options.DMMaster.BinPath, "dm-master.binpath", "", "DM-master instance binary path")
+	rootCmd.Flags().StringVar(&options.DMWorker.BinPath, "dm-worker.binpath", "", "DM-worker instance binary path")
 
 	rootCmd.Flags().StringVar(&options.TiKVCDC.Version, "kvcdc.version", "", "TiKV-CDC instance version")
 
-	rootCmd.Flags().StringVar(&options.CSEOpts.S3Endpoint, "cse.s3_endpoint", "http://127.0.0.1:9000", "Object store URL for the disaggregated TiFlash, available when --mode=tidb-cse")
-	rootCmd.Flags().StringVar(&options.CSEOpts.Bucket, "cse.bucket", "tiflash", "Object store bucket for the disaggregated TiFlash, available when --mode=tidb-cse")
-	rootCmd.Flags().StringVar(&options.CSEOpts.AccessKey, "cse.access_key", "minioadmin", "Object store access key, available when --mode=tidb-cse")
-	rootCmd.Flags().StringVar(&options.CSEOpts.SecretKey, "cse.secret_key", "minioadmin", "Object store secret key, available when --mode=tidb-cse")
+	rootCmd.Flags().StringVar(&options.CSEOpts.S3Endpoint, "cse.s3_endpoint", "http://127.0.0.1:9000", "Object store URL for --mode=tidb-cse")
+	rootCmd.Flags().StringVar(&options.CSEOpts.Bucket, "cse.bucket", "tiflash", "Object store bucket for --mode=tidb-cse")
+	rootCmd.Flags().StringVar(&options.CSEOpts.AccessKey, "cse.access_key", "minioadmin", "Object store access key for --mode=tidb-cse")
+	rootCmd.Flags().StringVar(&options.CSEOpts.SecretKey, "cse.secret_key", "minioadmin", "Object store secret key for --mode=tidb-cse")
 
 	rootCmd.AddCommand(newDisplay())
 	rootCmd.AddCommand(newScaleOut())
@@ -467,6 +478,24 @@ func checkStoreStatus(pdClient *api.PDClient, storeAddr string, timeout int) boo
 	}
 }
 
+func checkDMMasterStatus(dmMasterClient *api.DMMasterClient, dmMasterAddr string, timeout int) bool {
+	if timeout > 0 {
+		for i := 0; i < timeout; i++ {
+			if _, isActive, _, err := dmMasterClient.GetMaster(dmMasterAddr); err == nil && isActive {
+				return true
+			}
+			time.Sleep(time.Second)
+		}
+		return false
+	}
+	for {
+		if _, isActive, _, err := dmMasterClient.GetMaster(dmMasterAddr); err == nil && isActive {
+			return true
+		}
+		time.Sleep(time.Second)
+	}
+}
+
 func hasDashboard(pdAddr string) bool {
 	resp, err := http.Get(fmt.Sprintf("http://%s/dashboard", pdAddr))
 	if err != nil {
@@ -524,10 +553,13 @@ func loadPort(dir string) (port int, err error) {
 	return
 }
 
-func dumpDSN(fname string, dbs []*instance.TiDBInstance) {
+func dumpDSN(fname string, dbs []*instance.TiDBInstance, tdbs []*instance.TiProxy) {
 	var dsn []string
 	for _, db := range dbs {
 		dsn = append(dsn, fmt.Sprintf("mysql://root@%s", db.Addr()))
+	}
+	for _, tdb := range tdbs {
+		dsn = append(dsn, fmt.Sprintf("mysql://root@%s", tdb.Addr()))
 	}
 	_ = utils.WriteFile(fname, []byte(strings.Join(dsn, "\n")), 0644)
 }

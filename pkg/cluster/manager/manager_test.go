@@ -85,6 +85,21 @@ pd_servers:
 	assert.Nil(err)
 	err = validateNewTopo(&topo)
 	assert.NotNil(err)
+
+	topo = spec.Specification{}
+	err = yaml.Unmarshal([]byte(`
+global:
+  user: "test4"
+  deploy_dir: "test-deploy"
+  data_dir: "test-data"
+tso_servers:
+  - host: 172.16.5.53
+scheduling_servers:
+  - host: 172.16.5.54
+`), &topo)
+	assert.Nil(err)
+	err = validateNewTopo(&topo)
+	assert.Nil(err)
 }
 
 func TestDeduplicateCheckResult(t *testing.T) {

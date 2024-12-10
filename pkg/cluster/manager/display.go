@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -102,6 +101,7 @@ type ClusterMetaInfo struct {
 	TLSClientCert  string   `json:"tls_client_cert,omitempty"`
 	TLSClientKey   string   `json:"tls_client_key,omitempty"`
 	DashboardURL   string   `json:"dashboard_url,omitempty"`
+	DashboardURLS  []string `json:"dashboard_urls,omitempty"`
 	GrafanaURLS    []string `json:"grafana_urls,omitempty"`
 }
 
@@ -156,6 +156,7 @@ func (m *Manager) Display(dopt DisplayOption, opt operator.Options) error {
 				"", // Client Cert
 				"", // Client Key
 				"",
+				nil,
 				nil,
 			},
 			InstanceInfos: clusterInstInfos,
@@ -261,26 +262,13 @@ func (m *Manager) Display(dopt DisplayOption, opt operator.Options) error {
 		return err
 	}
 
-	var dashboardAddr string
 	ctx := ctxt.New(
 		context.Background(),
 		opt.Concurrency,
 		m.logger,
 	)
 	if t, ok := topo.(*spec.Specification); ok {
-		var err error
-		dashboardAddr, err = t.GetDashboardAddress(ctx, tlsCfg, statusTimeout, masterActive...)
-		if err == nil && !set.NewStringSet("", "auto", "none").Exist(dashboardAddr) {
-			scheme := "http"
-			if tlsCfg != nil {
-				scheme = "https"
-			}
-			if m.logger.GetDisplayMode() == logprinter.DisplayModeJSON {
-				j.ClusterMetaInfo.DashboardURL = fmt.Sprintf("%s://%s/dashboard", scheme, dashboardAddr)
-			} else {
-				fmt.Printf("Dashboard URL:      %s\n", cyan.Sprintf("%s://%s/dashboard", scheme, dashboardAddr))
-			}
-		}
+		_ = m.displayDashboards(ctx, t, j, statusTimeout, tlsCfg, "", masterActive...)
 	}
 
 	if m.logger.GetDisplayMode() == logprinter.DisplayModeJSON {
@@ -385,6 +373,7 @@ func (m *Manager) DisplayTiKVLabels(dopt DisplayOption, opt operator.Options) er
 				"", // Client Cert
 				"", // Client Key
 				"",
+				nil,
 				nil,
 			},
 		}
@@ -582,7 +571,7 @@ func (m *Manager) GetClusterTopology(dopt DisplayOption, opt operator.Options) (
 
 	var dashboardAddr string
 	if t, ok := topo.(*spec.Specification); ok {
-		dashboardAddr, _ = t.GetDashboardAddress(ctx, tlsCfg, statusTimeout, masterActive...)
+		dashboardAddr, _ = t.GetPDDashboardAddress(ctx, tlsCfg, statusTimeout, masterActive...)
 	}
 
 	clusterInstInfos := []InstInfo{}
@@ -801,25 +790,28 @@ func (m *Manager) DisplayDashboardInfo(clusterName string, timeout time.Duration
 	}
 
 	ctx := context.WithValue(context.Background(), logprinter.ContextKeyLogger, m.logger)
-	pdAPI := api.NewPDClient(ctx, metadata.Topology.GetPDListWithManageHost(), timeout, tlsCfg)
-	dashboardAddr, err := pdAPI.GetDashboardAddress()
-	if err != nil {
-		return fmt.Errorf("failed to retrieve TiDB Dashboard instance from PD: %s", err)
-	}
-	if dashboardAddr == "auto" {
-		return fmt.Errorf("TiDB Dashboard is not initialized, please start PD and try again")
-	} else if dashboardAddr == "none" {
-		return fmt.Errorf("TiDB Dashboard is disabled")
+	return m.displayDashboards(ctx, metadata.Topology, nil, timeout, tlsCfg, clusterName, metadata.Topology.GetPDListWithManageHost()...)
+}
+
+func (m *Manager) displayDashboards(ctx context.Context, t *spec.Specification, j *JSONOutput, timeout time.Duration, tlsCfg *tls.Config, clusterName string, pdList ...string) error {
+	dashboardAddrs := []string{}
+	t.IterInstance(func(ins spec.Instance) {
+		if ins.Role() != spec.ComponentDashboard {
+			return
+		}
+		dashboardAddrs = append(dashboardAddrs, utils.JoinHostPort(ins.GetManageHost(), ins.GetPort()))
+	})
+
+	pdDashboardAddr, err := t.GetPDDashboardAddress(ctx, tlsCfg, timeout, pdList...)
+	if err == nil && !set.NewStringSet("", "auto", "none").Exist(pdDashboardAddr) {
+		dashboardAddrs = append(dashboardAddrs, pdDashboardAddr)
 	}
 
-	u, err := url.Parse(dashboardAddr)
-	if err != nil {
-		return fmt.Errorf("unknown TiDB Dashboard PD instance: %s", dashboardAddr)
+	if len(dashboardAddrs) == 0 {
+		return fmt.Errorf("TiDB Dashboard is missing, try again later")
 	}
 
-	u.Path = "/dashboard/"
-
-	if tlsCfg != nil {
+	if clusterName != "" && tlsCfg != nil {
 		fmt.Println(
 			"Client certificate:",
 			color.CyanString(m.specManager.Path(clusterName, spec.TLSCertKeyDir, spec.PFXClientCert)),
@@ -829,10 +821,32 @@ func (m *Manager) DisplayDashboardInfo(clusterName string, timeout time.Duration
 			color.CyanString(crypto.PKCS12Password),
 		)
 	}
-	fmt.Println(
-		"Dashboard URL:",
-		color.CyanString(u.String()),
-	)
+
+	for i, addr := range dashboardAddrs {
+		scheme := "http"
+
+		// show the original info
+		if addr == pdDashboardAddr {
+			if tlsCfg != nil {
+				scheme = "https"
+			}
+			if m.logger.GetDisplayMode() == logprinter.DisplayModeJSON && j != nil {
+				j.ClusterMetaInfo.DashboardURL = fmt.Sprintf("%s://%s/dashboard", scheme, addr)
+			} else {
+				fmt.Printf("Dashboard URL:      %s\n", color.CyanString("%s://%s/dashboard", scheme, addr))
+			}
+		}
+
+		if m.logger.GetDisplayMode() == logprinter.DisplayModeJSON && j != nil {
+			j.ClusterMetaInfo.DashboardURLS = append(j.ClusterMetaInfo.DashboardURLS, fmt.Sprintf("%s://%s/dashboard", scheme, addr))
+		} else {
+			dashboardAddrs[i] = color.CyanString("%s://%s/dashboard", scheme, addr)
+		}
+	}
+
+	if m.logger.GetDisplayMode() != logprinter.DisplayModeJSON || j == nil {
+		fmt.Printf("Dashboard URLs:     %s\n", strings.Join(dashboardAddrs, ","))
+	}
 
 	return nil
 }
