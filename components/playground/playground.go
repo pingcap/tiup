@@ -1252,6 +1252,9 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		p.waitAllTiFlashUp()
 
 		fmt.Println()
+		color.New(color.FgYellow, color.Bold).Println("TiDB Playground Cluster will delete all data after exit. Please use --tag xx to pin the data dir.")
+
+		fmt.Println()
 		color.New(color.FgGreen, color.Bold).Println("🎉 TiDB Playground Cluster is started, enjoy!")
 		fmt.Println()
 		mysql := mysqlCommand()
