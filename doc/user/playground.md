@@ -55,7 +55,7 @@ Flags:
       --pump int                 Pump instance number
       --pump.binpath string      Pump instance binary path
       --pump.config string       Pump instance configuration file
-  -T, --tag string               Specify a tag for playground
+  -T, --tag string               Specify a tag for playground, data dir of this tag will not be removed after exit
       --ticdc int                TiCDC instance number
       --ticdc.binpath string     TiCDC instance binary path
       --ticdc.config string      TiCDC instance configuration file
