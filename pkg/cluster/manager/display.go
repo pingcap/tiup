@@ -325,7 +325,7 @@ func (m *Manager) Display(dopt DisplayOption, opt operator.Options) error {
 func getGrafanaURL(clusterInstInfos []InstInfo) (result []string) {
 	var grafanaURLs []string
 	for _, instance := range clusterInstInfos {
-		if instance.Role == "grafana" {
+		if instance.Role == "grafana" || instance.Role == "grafana (patched)" {
 			grafanaURLs = append(grafanaURLs, "http://"+utils.JoinHostPort(instance.Host, instance.Port))
 		}
 	}
