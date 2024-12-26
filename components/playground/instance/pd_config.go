@@ -19,6 +19,7 @@ func (inst *PDInstance) getConfig() map[string]any {
 
 	if inst.isCSEMode {
 		config["keyspace.pre-alloc"] = []string{"mykeyspace"}
+		config["keyspace.enable-global-safe-point-v2"] = true
 		config["replication.enable-placement-rules"] = true
 		config["replication.max-replica"] = 1
 		config["schedule.merge-schedule-limit"] = 0
