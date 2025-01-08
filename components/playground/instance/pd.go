@@ -150,7 +150,7 @@ func (inst *PDInstance) Start(ctx context.Context) error {
 			fmt.Sprintf("--log-file=%s", inst.LogFile()),
 			fmt.Sprintf("--config=%s", configPath),
 		}
-		if tidbver.PDSupportMicroServicesWithName(inst.Version.String()) {
+		if tidbver.PDSupportMicroservicesWithName(inst.Version.String()) {
 			args = append(args, fmt.Sprintf("--name=%s", uid))
 		}
 	case PDRoleScheduling:
@@ -164,7 +164,7 @@ func (inst *PDInstance) Start(ctx context.Context) error {
 			fmt.Sprintf("--log-file=%s", inst.LogFile()),
 			fmt.Sprintf("--config=%s", configPath),
 		}
-		if tidbver.PDSupportMicroServicesWithName(inst.Version.String()) {
+		if tidbver.PDSupportMicroservicesWithName(inst.Version.String()) {
 			args = append(args, fmt.Sprintf("--name=%s", uid))
 		}
 	}

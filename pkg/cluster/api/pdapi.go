@@ -201,7 +201,7 @@ func (pc *PDClient) CheckHealth() error {
 	return nil
 }
 
-// CheckTSOHealth checks the health of TSO service(which is a Micro Service component of PD)
+// CheckTSOHealth checks the health of TSO service(which is a microservice component of PD)
 func (pc *PDClient) CheckTSOHealth(retryOpt *utils.RetryOption) error {
 	endpoints := pc.getEndpoints(tsoHealthPrefix)
 
@@ -218,10 +218,10 @@ func (pc *PDClient) CheckTSOHealth(retryOpt *utils.RetryOption) error {
 		}
 
 		// return error by default, to make the retry work
-		pc.l().Debugf("Still waiting for the PD Micro Service's TSO health")
-		return perrs.New("Still waiting for the PD Micro Service's TSO health")
+		pc.l().Debugf("Still waiting for the PD microservice's TSO health")
+		return perrs.New("Still waiting for the PD microservice's TSO health")
 	}, *retryOpt); err != nil {
-		return fmt.Errorf("error check PD Micro Service's TSO health, %v", err)
+		return fmt.Errorf("error check PD microservice's TSO health, %v", err)
 	}
 
 	return nil

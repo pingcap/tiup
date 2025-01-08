@@ -99,13 +99,13 @@ func TiFlashPlaygroundNewStartMode(version string) bool {
 	return semver.Compare(version, "v7.1.0") >= 0 || strings.Contains(version, "nightly")
 }
 
-// PDSupportMicroServices returns true if the given version of PD supports micro services.
-func PDSupportMicroServices(version string) bool {
+// PDSupportMicroservices returns true if the given version of PD supports microservices.
+func PDSupportMicroservices(version string) bool {
 	return semver.Compare(version, "v7.3.0") >= 0 || strings.Contains(version, "nightly")
 }
 
-// PDSupportMicroServicesWithName return if the given version of PD supports micro services with name.
-func PDSupportMicroServicesWithName(version string) bool {
+// PDSupportMicroservicesWithName return if the given version of PD supports microservices with name.
+func PDSupportMicroservicesWithName(version string) bool {
 	return semver.Compare(version, "v8.3.0") >= 0 || strings.Contains(version, "nightly")
 }
 
