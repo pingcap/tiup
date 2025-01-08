@@ -243,7 +243,7 @@ func (i *TSOInstance) InitConfig(
 		LogDir:             paths.Log,
 		NumaNode:           spec.NumaNode,
 	}
-	if !tidbver.PDSupportMicroServicesWithName(version) {
+	if !tidbver.PDSupportMicroservicesWithName(version) {
 		cfg.Name = ""
 	}
 

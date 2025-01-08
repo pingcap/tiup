@@ -1157,7 +1157,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			instances...,
 		)
 	} else if options.PDMode == "ms" {
-		if !tidbver.PDSupportMicroServices(options.Version) {
+		if !tidbver.PDSupportMicroservices(options.Version) {
 			return fmt.Errorf("PD cluster doesn't support microservices mode in version %s", options.Version)
 		}
 		instances = append([]InstancePair{
