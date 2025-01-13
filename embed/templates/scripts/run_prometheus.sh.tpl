@@ -40,7 +40,7 @@ exec bin/prometheus/prometheus \
 {{- end}}
     --config.file="{{.DeployDir}}/conf/prometheus.yml" \
 {{- if .BasicAuthPassword}}
-    --web.config.file="{{.DeployDir}}/conf/web_config.yml" \
+    --web.config.file="{{.DeployDir}}/conf/web.config.yml" \
 {{- end}}
     --web.listen-address=":{{.Port}}" \
     --web.external-url="{{.WebExternalURL}}/" \
