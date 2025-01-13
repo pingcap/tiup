@@ -234,11 +234,11 @@ func (i *MonitorInstance) InitConfig(
 	}
 
 	// transfer web config
-	srcfp := filepath.Join(paths.Cache, fmt.Sprintf("web_config_%s_%d.yml", i.GetHost(), i.GetPort()))
+	srcfp := filepath.Join(paths.Cache, fmt.Sprintf("web.config_%s_%d.yml", i.GetHost(), i.GetPort()))
 	if err := cfg.WebConfigToFile(srcfp); err != nil {
 		return err
 	}
-	dstfp := filepath.Join(paths.Deploy, "conf", "web_config.yml")
+	dstfp := filepath.Join(paths.Deploy, "conf", "web.config.yml")
 	if err := e.Transfer(ctx, srcfp, dstfp, false, 0, false); err != nil {
 		return err
 	}
