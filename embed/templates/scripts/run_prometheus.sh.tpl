@@ -39,6 +39,9 @@ exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/prometheus/
 exec bin/prometheus/prometheus \
 {{- end}}
     --config.file="{{.DeployDir}}/conf/prometheus.yml" \
+{{- if .BasicAuthPassword}}
+    --web.config.file="{{.DeployDir}}/conf/web.config.yml" \
+{{- end}}
     --web.listen-address=":{{.Port}}" \
     --web.external-url="{{.WebExternalURL}}/" \
     --web.enable-admin-api \

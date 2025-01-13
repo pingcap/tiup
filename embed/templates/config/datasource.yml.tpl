@@ -10,3 +10,8 @@ datasources:
     tlsAuthWithCACert: false
     version: 1
     editable: true
+{{- if .AuthPassword}}
+    basicAuth: true
+    basicAuthUser: admin
+    basicAuthPassword: {{.AuthPassword}}
+{{- end}}    

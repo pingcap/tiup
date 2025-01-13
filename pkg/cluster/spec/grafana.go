@@ -275,8 +275,9 @@ func (i *GrafanaInstance) InitConfig(
 	}
 	fp = filepath.Join(paths.Cache, fmt.Sprintf("datasource_%s.yml", i.GetHost()))
 	datasourceCfg := &config.DatasourceConfig{
-		ClusterName: clusterName,
-		URL:         fmt.Sprintf("http://%s", utils.JoinHostPort(monitors[0].Host, monitors[0].Port)),
+		ClusterName:  clusterName,
+		URL:          fmt.Sprintf("http://%s", utils.JoinHostPort(monitors[0].Host, monitors[0].Port)),
+		AuthPassword: monitors[0].BasicAuthPassword,
 	}
 	if err := datasourceCfg.ConfigToFile(fp); err != nil {
 		return err

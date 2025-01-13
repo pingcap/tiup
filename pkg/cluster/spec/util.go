@@ -18,6 +18,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"net/url"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -123,46 +124,56 @@ func LoadClientCert(dir string) (*tls.Config, error) {
 	}.ClientConfig()
 }
 
-// statusByHost queries current status of the instance by http status api.
-func statusByHost(host string, port int, path string, timeout time.Duration, tlsCfg *tls.Config) string {
+func getStatusByHost(uri string, timeout time.Duration, tlsCfg *tls.Config) string {
 	if timeout < time.Second {
 		timeout = statusQueryTimeout
 	}
-
-	client := utils.NewHTTPClient(timeout, tlsCfg)
-
 	scheme := "http"
 	if tlsCfg != nil {
 		scheme = "https"
 	}
-	if path == "" {
-		path = "/"
-	}
-	url := fmt.Sprintf("%s://%s%s", scheme, utils.JoinHostPort(host, port), path)
+
+	urlStr := fmt.Sprintf("%s://%s", scheme, uri)
+	client := utils.NewHTTPClient(timeout, tlsCfg)
 
 	// body doesn't have any status section needed
-	body, err := client.Get(context.TODO(), url)
+	body, err := client.Get(context.TODO(), urlStr)
 	if err != nil || body == nil {
 		return "Down"
 	}
 	return "Up"
 }
 
-// UptimeByHost queries current uptime of the instance by http Prometheus metric api.
-func UptimeByHost(host string, port int, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
+// statusByHost queries current status of the instance by http status api.
+func statusByHost(host string, port int, path string, timeout time.Duration, tlsCfg *tls.Config) string {
+	if path == "" {
+		path = "/"
+	}
+	uri := fmt.Sprintf("%s%s", utils.JoinHostPort(host, port), path)
+
+	return getStatusByHost(uri, timeout, tlsCfg)
+}
+
+func statusByHostWithAuth(authPassword string, host string, port int, path string, timeout time.Duration, tlsCfg *tls.Config) string {
+	if path == "" {
+		path = "/"
+	}
+	uri := fmt.Sprintf("admin:%s@%s%s", url.QueryEscape(authPassword), utils.JoinHostPort(host, port), path)
+	return getStatusByHost(uri, timeout, tlsCfg)
+}
+
+func getUptimeByHost(uri string, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 	if timeout < time.Second {
 		timeout = statusQueryTimeout
 	}
-
 	scheme := "http"
 	if tlsCfg != nil {
 		scheme = "https"
 	}
-	url := fmt.Sprintf("%s://%s/metrics", scheme, utils.JoinHostPort(host, port))
 
+	urlStr := fmt.Sprintf("%s://%s", scheme, uri)
 	client := utils.NewHTTPClient(timeout, tlsCfg)
-
-	body, err := client.Get(context.TODO(), url)
+	body, err := client.Get(context.TODO(), urlStr)
 	if err != nil || body == nil {
 		return 0
 	}
@@ -187,6 +198,17 @@ func UptimeByHost(host string, port int, timeout time.Duration, tlsCfg *tls.Conf
 	}
 
 	return 0
+}
+
+// UptimeByHost queries current uptime of the instance by http Prometheus metric api.
+func UptimeByHost(host string, port int, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
+	uri := fmt.Sprintf("%s/metrics", utils.JoinHostPort(host, port))
+	return getUptimeByHost(uri, timeout, tlsCfg)
+}
+
+func UptimeByHostWithAuth(authPassword string, host string, port int, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
+	uri := fmt.Sprintf("admin:%s@%s/metrics", url.QueryEscape(authPassword), utils.JoinHostPort(host, port))
+	return getUptimeByHost(uri, timeout, tlsCfg)
 }
 
 // Abs returns the absolute path
