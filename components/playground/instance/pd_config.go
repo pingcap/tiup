@@ -17,7 +17,7 @@ func (inst *PDInstance) getConfig() map[string]any {
 	config := make(map[string]any)
 	config["schedule.patrol-region-interval"] = "100ms"
 
-	if inst.isCSEMode {
+	if inst.mode == "tidb-cse" {
 		config["keyspace.pre-alloc"] = []string{"mykeyspace"}
 		config["replication.enable-placement-rules"] = true
 		config["replication.max-replica"] = 1

@@ -30,13 +30,13 @@ type TiKVInstance struct {
 	pds  []*PDInstance
 	tsos []*PDInstance
 	Process
-	isCSEMode  bool
+	mode       string
 	cseOpts    CSEOptions
 	isPDMSMode bool
 }
 
 // NewTiKVInstance return a TiKVInstance
-func NewTiKVInstance(binPath string, dir, host, configPath string, portOffset int, id int, port int, pds []*PDInstance, tsos []*PDInstance, isCSEMode bool, cseOptions CSEOptions, isPDMSMode bool) *TiKVInstance {
+func NewTiKVInstance(binPath string, dir, host, configPath string, portOffset int, id int, port int, pds []*PDInstance, tsos []*PDInstance, mode string, cseOptions CSEOptions, isPDMSMode bool) *TiKVInstance {
 	if port <= 0 {
 		port = 20160
 	}
@@ -52,7 +52,7 @@ func NewTiKVInstance(binPath string, dir, host, configPath string, portOffset in
 		},
 		pds:        pds,
 		tsos:       tsos,
-		isCSEMode:  isCSEMode,
+		mode:       mode,
 		cseOpts:    cseOptions,
 		isPDMSMode: isPDMSMode,
 	}

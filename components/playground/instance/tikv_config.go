@@ -20,7 +20,7 @@ func (inst *TiKVInstance) getConfig() map[string]any {
 	config["storage.reserve-space"] = 0
 	config["storage.reserve-raft-space"] = 0
 
-	if inst.isCSEMode {
+	if inst.mode == "tidb-cse" {
 		config["storage.api-version"] = 2
 		config["storage.enable-ttl"] = true
 		config["dfs.prefix"] = "tikv"

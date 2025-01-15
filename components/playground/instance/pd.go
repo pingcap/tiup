@@ -46,11 +46,11 @@ type PDInstance struct {
 	joinEndpoints []*PDInstance
 	pds           []*PDInstance
 	Process
-	isCSEMode bool
+	mode string
 }
 
 // NewPDInstance return a PDInstance
-func NewPDInstance(role PDRole, binPath, dir, host, configPath string, portOffset int, id int, pds []*PDInstance, port int, isCSEMode bool) *PDInstance {
+func NewPDInstance(role PDRole, binPath, dir, host, configPath string, portOffset int, id int, pds []*PDInstance, port int, mode string) *PDInstance {
 	if port <= 0 {
 		port = 2379
 	}
@@ -64,9 +64,9 @@ func NewPDInstance(role PDRole, binPath, dir, host, configPath string, portOffse
 			StatusPort: utils.MustGetFreePort(host, port, portOffset),
 			ConfigPath: configPath,
 		},
-		Role:      role,
-		pds:       pds,
-		isCSEMode: isCSEMode,
+		Role: role,
+		pds:  pds,
+		mode: mode,
 	}
 }
 
