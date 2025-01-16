@@ -1256,7 +1256,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 		if deleteWhenExit {
 			fmt.Println()
-			colorstr.Printf("[yellow][bold]Warning[reset][bold]: cluster data will be destroyed after exit. To persist data after exit, specify [tiup_command]--tag <name>[reset].")
+			colorstr.Printf("[yellow][bold]Warning[reset][bold]: cluster data will be destroyed after exit. To persist data after exit, specify [tiup_command]--tag <name>[reset].\n")
 		}
 
 		fmt.Println()
