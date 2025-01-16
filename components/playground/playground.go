@@ -1252,10 +1252,13 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		p.waitAllTiFlashUp()
 
 		fmt.Println()
-		color.New(color.FgYellow, color.Bold).Println("TiDB Playground Cluster will delete all data of the cluster after exit. Please use --tag xx to pin the data dir.")
-
-		fmt.Println()
 		color.New(color.FgGreen, color.Bold).Println("🎉 TiDB Playground Cluster is started, enjoy!")
+
+		if tag == "" {
+			fmt.Println()
+			colorstr.Printf("[yellow][bold]Warning[reset][bold]: cluster data will be destroyed after exit. To persist data after exit, specify [tiup_command]--tag <name>[reset].")
+		}
+
 		fmt.Println()
 		mysql := mysqlCommand()
 		for _, dbAddr := range tidbSucc {
