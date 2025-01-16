@@ -1101,7 +1101,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		instances = append(instances,
 			InstancePair{spec.ComponentTiFlash, instance.PDRoleNormal, instance.TiFlashRoleNormal, options.TiFlash},
 		)
-	} else if options.Mode == "tidb-cse" {
+	} else if options.Mode == "tidb-cse" || options.Mode == "tiflash-disagg" {
 		if !tidbver.TiFlashPlaygroundNewStartMode(options.Version) {
 			// For simplicity, currently we only implemented disagg mode when TiFlash can run without config.
 			return fmt.Errorf("TiUP playground only supports CSE/Disagg mode for TiDB cluster >= v7.1.0 (or nightly)")
