@@ -1254,7 +1254,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		fmt.Println()
 		color.New(color.FgGreen, color.Bold).Println("🎉 TiDB Playground Cluster is started, enjoy!")
 
-		if tag == "" {
+		if deleteWhenExit {
 			fmt.Println()
 			colorstr.Printf("[yellow][bold]Warning[reset][bold]: cluster data will be destroyed after exit. To persist data after exit, specify [tiup_command]--tag <name>[reset].")
 		}
