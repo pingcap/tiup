@@ -30,11 +30,11 @@ type TiDBInstance struct {
 	Process
 	tiproxyCertDir string
 	enableBinlog   bool
-	isCSEMode      bool
+	mode           string
 }
 
 // NewTiDBInstance return a TiDBInstance
-func NewTiDBInstance(binPath string, dir, host, configPath string, portOffset int, id, port int, pds []*PDInstance, tiproxyCertDir string, enableBinlog bool, isCSEMode bool) *TiDBInstance {
+func NewTiDBInstance(binPath string, dir, host, configPath string, portOffset int, id, port int, pds []*PDInstance, tiproxyCertDir string, enableBinlog bool, mode string) *TiDBInstance {
 	if port <= 0 {
 		port = 4000
 	}
@@ -51,7 +51,7 @@ func NewTiDBInstance(binPath string, dir, host, configPath string, portOffset in
 		tiproxyCertDir: tiproxyCertDir,
 		pds:            pds,
 		enableBinlog:   enableBinlog,
-		isCSEMode:      isCSEMode,
+		mode:           mode,
 	}
 }
 
