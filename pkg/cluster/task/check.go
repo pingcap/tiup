@@ -85,7 +85,8 @@ func (c *CheckSys) Execute(ctx context.Context) error {
 		}
 		results = append(
 			results,
-			operator.CheckSELinux(ctx, e, sudo),
+			operator.CheckSELinuxConf(ctx, e, sudo),
+			operator.CheckSELinuxStatus(ctx, e, sudo),
 			operator.CheckTHP(ctx, e, sudo),
 		)
 		storeResults(ctx, c.host, results)

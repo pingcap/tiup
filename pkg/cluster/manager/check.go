@@ -671,7 +671,7 @@ func fixFailedChecks(host string, res *operator.CheckResult, t *task.Builder, sy
 		}
 		t.Limit(host, fields[0], fields[1], fields[2], fields[3], sudo)
 		msg = fmt.Sprintf("will try to set '%s'", color.HiBlueString(res.Msg))
-	case operator.CheckNameSELinux:
+	case operator.CheckNameSELinuxConf, operator.CheckNameSELinuxStatus:
 		t.Shell(host,
 			fmt.Sprintf(
 				"sed -i 's/^[[:blank:]]*SELINUX=enforcing/SELINUX=disabled/g' %s && %s",
