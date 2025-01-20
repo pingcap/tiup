@@ -16,8 +16,11 @@ package instance
 func (inst *PDInstance) getConfig() map[string]any {
 	config := make(map[string]any)
 	config["schedule.patrol-region-interval"] = "100ms"
-	config["replication.max-replica"] = 1
 	config["schedule.low-space-ratio"] = 1.0
+
+	if inst.kvIsSingleReplica {
+		config["replication.max-replica"] = 1
+	}
 
 	if inst.mode == "tidb-cse" {
 		config["keyspace.pre-alloc"] = []string{"mykeyspace"}

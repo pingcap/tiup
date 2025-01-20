@@ -46,11 +46,12 @@ type PDInstance struct {
 	joinEndpoints []*PDInstance
 	pds           []*PDInstance
 	Process
-	mode string
+	mode              string
+	kvIsSingleReplica bool
 }
 
 // NewPDInstance return a PDInstance
-func NewPDInstance(role PDRole, binPath, dir, host, configPath string, portOffset int, id int, pds []*PDInstance, port int, mode string) *PDInstance {
+func NewPDInstance(role PDRole, binPath, dir, host, configPath string, portOffset int, id int, pds []*PDInstance, port int, mode string, kvIsSingleReplica bool) *PDInstance {
 	if port <= 0 {
 		port = 2379
 	}
@@ -64,9 +65,10 @@ func NewPDInstance(role PDRole, binPath, dir, host, configPath string, portOffse
 			StatusPort: utils.MustGetFreePort(host, port, portOffset),
 			ConfigPath: configPath,
 		},
-		Role: role,
-		pds:  pds,
-		mode: mode,
+		Role:              role,
+		pds:               pds,
+		mode:              mode,
+		kvIsSingleReplica: kvIsSingleReplica,
 	}
 }
 

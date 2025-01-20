@@ -792,7 +792,7 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 
 	switch componentID {
 	case spec.ComponentPD:
-		inst := instance.NewPDInstance(pdRole, cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, p.pds, cfg.Port, p.bootOptions.Mode)
+		inst := instance.NewPDInstance(pdRole, cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, p.pds, cfg.Port, p.bootOptions.Mode, p.bootOptions.TiKV.Num == 1)
 		ins = inst
 		if pdRole == instance.PDRoleNormal || pdRole == instance.PDRoleAPI {
 			if p.booted {
@@ -810,11 +810,11 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 			p.schedulings = append(p.schedulings, inst)
 		}
 	case spec.ComponentTSO:
-		inst := instance.NewPDInstance(instance.PDRoleTSO, cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, p.pds, cfg.Port, p.bootOptions.Mode)
+		inst := instance.NewPDInstance(instance.PDRoleTSO, cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, p.pds, cfg.Port, p.bootOptions.Mode, p.bootOptions.TiKV.Num == 1)
 		ins = inst
 		p.tsos = append(p.tsos, inst)
 	case spec.ComponentScheduling:
-		inst := instance.NewPDInstance(instance.PDRoleScheduling, cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, p.pds, cfg.Port, p.bootOptions.Mode)
+		inst := instance.NewPDInstance(instance.PDRoleScheduling, cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, p.pds, cfg.Port, p.bootOptions.Mode, p.bootOptions.TiKV.Num == 1)
 		ins = inst
 		p.schedulings = append(p.schedulings, inst)
 	case spec.ComponentTiDB:
