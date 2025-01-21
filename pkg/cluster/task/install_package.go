@@ -53,7 +53,7 @@ func (c *InstallPackage) Execute(ctx context.Context) error {
 	_, stderr, err := exec.Execute(ctx, cmd, false)
 	if err != nil {
 		if bytes.Contains(stderr, []byte("command not found")) {
-			return errors.New("tar command was not found, please install it")
+			return errors.Errorf("tar command was not found on %s, please install it", c.host)
 		}
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}
