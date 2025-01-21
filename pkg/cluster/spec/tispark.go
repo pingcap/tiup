@@ -274,7 +274,7 @@ func (i *TiSparkMasterInstance) InitConfig(
 	// - We don't support SELinux in Enforcing mode
 	// - restorecon might not be available (Ubuntu doesn't install SELinux tools by default)
 	cmd = fmt.Sprintf("restorecon %s%s-%d.service", systemdDir, comp, port)
-	e.Execute(ctx, cmd, sudo)
+	e.Execute(ctx, cmd, sudo) //nolint
 
 	// transfer default config
 	pdList := topo.GetPDList()

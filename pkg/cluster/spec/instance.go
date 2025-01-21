@@ -231,7 +231,7 @@ func (i *BaseInstance) InitConfig(ctx context.Context, e ctxt.Executor, opt Glob
 	// - We don't support SELinux in Enforcing mode
 	// - restorecon might not be available (Ubuntu doesn't install SELinux tools by default)
 	cmd = fmt.Sprintf("restorecon %s%s-%d.service", systemdDir, comp, port)
-	e.Execute(ctx, cmd, sudo)
+	e.Execute(ctx, cmd, sudo) //nolint
 
 	// doesn't work
 	if _, err := i.setTLSConfig(ctx, false, nil, paths); err != nil {
