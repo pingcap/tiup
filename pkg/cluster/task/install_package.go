@@ -14,6 +14,7 @@
 package task
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"path"
@@ -51,7 +52,11 @@ func (c *InstallPackage) Execute(ctx context.Context) error {
 
 	_, stderr, err := exec.Execute(ctx, cmd, false)
 	if err != nil {
-		return errors.Annotatef(err, "stderr: %s", string(stderr))
+		if bytes.Contains(stderr, []byte("command not found")) {
+			return errors.New("tar command was not found, please install it")
+		} else {
+			return errors.Annotatef(err, "stderr: %s", string(stderr))
+		}
 	}
 	return nil
 }
