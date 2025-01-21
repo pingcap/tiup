@@ -54,9 +54,8 @@ func (c *InstallPackage) Execute(ctx context.Context) error {
 	if err != nil {
 		if bytes.Contains(stderr, []byte("command not found")) {
 			return errors.New("tar command was not found, please install it")
-		} else {
-			return errors.Annotatef(err, "stderr: %s", string(stderr))
 		}
+		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}
 	return nil
 }
