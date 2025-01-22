@@ -7,7 +7,7 @@ replace gopkg.in/yaml.v2 => github.com/july2993/yaml v0.0.0-20200423062752-adcfa
 replace github.com/jedib0t/go-pretty/v6 => github.com/nexustar/go-pretty/v6 v6.5.8-tiup
 
 require (
-	github.com/AstroProfundis/sysinfo v0.0.0-20220902033416-231991f6df3c
+	github.com/AstroProfundis/sysinfo v0.0.0-20240112160158-ed54df16e9ce
 	github.com/BurntSushi/toml v1.2.1
 	github.com/ScaleFT/sshkeys v1.2.0
 	github.com/alecthomas/assert v1.0.0

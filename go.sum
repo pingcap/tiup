@@ -1,7 +1,8 @@
 cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
 cloud.google.com/go v0.34.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
-github.com/AstroProfundis/sysinfo v0.0.0-20220902033416-231991f6df3c h1:Uf603egKJU8kRS5SsL8tBuBQb/t/qmKio06pwTeRH24=
 github.com/AstroProfundis/sysinfo v0.0.0-20220902033416-231991f6df3c/go.mod h1:Zc/DBosH2jLHhf/5Ux6sifoneJ1JSvtVCRExJ84A/q8=
+github.com/AstroProfundis/sysinfo v0.0.0-20240112160158-ed54df16e9ce h1:gZeTM/cITaHpJzdV1kMfq/XdEMQPYv8rdeVueGrbCkY=
+github.com/AstroProfundis/sysinfo v0.0.0-20240112160158-ed54df16e9ce/go.mod h1:InOUjgR40M4ZG3lDfn8taRJxzzvU8FTF/v6IBNKXjyQ=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/toml v0.4.1/go.mod h1:CxXYINrC8qIiEnFrOxCa7Jy5BFHlXnUU2pbicEuybxQ=
 github.com/BurntSushi/toml v1.1.0/go.mod h1:CxXYINrC8qIiEnFrOxCa7Jy5BFHlXnUU2pbicEuybxQ=
