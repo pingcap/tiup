@@ -117,7 +117,7 @@ func removeComponents(env *environment.Environment, specs []string, all bool) er
 			if !utils.IsExist(path) {
 				return errors.Trace(fmt.Errorf("component `%s` is not installed, please check", spec))
 			}
-			fmt.Println(path)
+			fmt.Printf("Removing directory %s\n", path)
 			if err := os.RemoveAll(path); err != nil {
 				return errors.Trace(err)
 			}
