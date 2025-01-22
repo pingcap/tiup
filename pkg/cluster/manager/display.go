@@ -832,7 +832,7 @@ func (m *Manager) displayDashboards(ctx context.Context, t *spec.Specification, 
 			}
 			if m.logger.GetDisplayMode() == logprinter.DisplayModeJSON && j != nil {
 				j.ClusterMetaInfo.DashboardURL = fmt.Sprintf("%s://%s/dashboard", scheme, addr)
-			} else {
+			} else if len(dashboardAddrs) == 1 {
 				fmt.Printf("Dashboard URL:      %s\n", color.CyanString("%s://%s/dashboard", scheme, addr))
 			}
 		}
@@ -845,7 +845,9 @@ func (m *Manager) displayDashboards(ctx context.Context, t *spec.Specification, 
 	}
 
 	if m.logger.GetDisplayMode() != logprinter.DisplayModeJSON || j == nil {
-		fmt.Printf("Dashboard URLs:     %s\n", strings.Join(dashboardAddrs, ","))
+		if len(dashboardAddrs) > 1 {
+			fmt.Printf("Dashboard URLs:     %s\n", strings.Join(dashboardAddrs, ","))
+		}
 	}
 
 	return nil
