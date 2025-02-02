@@ -34,7 +34,7 @@ var (
 	ErrorFsCommitConflict = errors.New("conflict on fs commit")
 )
 
-// The localTxn is used to implment a filesystem transaction, the basic principle is to
+// The localTxn is used to implement a filesystem transaction, the basic principle is to
 // record the timestamp before access any manifest file, and when writing them back, check
 // if the origin files' timestamp is newer than recorded one, if so, a conflict is detected.
 //
@@ -56,7 +56,7 @@ var (
 // To commit a localTxn:
 //  1. for every accessed file, get the recorded timestamp
 //  2. for every accessed file, get the current modify time of their origin file in root directory
-//  3. check if the origin file is newer thant recorded timestamp, if so, there must be conflict
+//  3. check if the origin file is newer than recorded timestamp, if so, there must be conflict
 //  4. copy every file in temporary directory to root directory, if there is a timestamp.json in
 //     temporary directory, it should be the last one to copy
 type localTxn struct {

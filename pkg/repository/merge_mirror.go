@@ -239,7 +239,7 @@ func mapOwnerKeys(base Mirror, keys map[string]*v1manifest.KeyInfo) (map[string]
 			}
 		}
 		if len(keyList[ownerID]) < owner.Threshold {
-			// We set keys of this owner to empty becase we can't clone components belong to this owner
+			// We set keys of this owner to empty because we can't clone components belong to this owner
 			keyList[ownerID] = nil
 		}
 	}

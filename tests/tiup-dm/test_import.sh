@@ -84,7 +84,7 @@ EOF
     cp /root/.tiup/bin/root.json /home/tidb/.tiup/bin/
     chown -R tidb:tidb /home/tidb/.tiup
 
-    # import ans start new cluster
+    # import and start new cluster
 su tidb <<EOF
     tiup-dm --yes import --dir /home/tidb/dm-ansible --cluster-version v2.0.0-rc
     tiup-dm --yes start test-cluster

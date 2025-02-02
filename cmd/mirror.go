@@ -233,7 +233,7 @@ func newMirrorGrantCmd() *cobra.Command {
 				name = id
 			}
 
-			// the privPath can point to a public key becase the Public method of KeyInfo works on both priv and pub keys
+			// the privPath can point to a public key because the Public method of KeyInfo works on both priv and pub keys
 			privKey, err := loadPrivKey(privPath)
 			if err != nil {
 				return err
@@ -826,7 +826,7 @@ func newMirrorGenkeyCmd() *cobra.Command {
 // the `mirror init` sub command
 func newMirrorInitCmd() *cobra.Command {
 	var (
-		keyDir string // Directory to write genreated key files
+		keyDir string // Directory to write generated key files
 	)
 	cmd := &cobra.Command{
 		Use:   "init <path>",

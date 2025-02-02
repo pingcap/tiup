@@ -532,7 +532,7 @@ func genLeaderCounter(topo *Specification, tlsCfg *tls.Config) func(string) (int
 func makeTransport(tlsCfg *tls.Config) *http.Transport {
 	// Start with the DefaultTransport for sane defaults.
 	transport := http.DefaultTransport.(*http.Transport).Clone()
-	// Conservatively disable HTTP keep-alives as this program will only
+	// Conservatively disable HTTP keep-alive as this program will only
 	// ever need a single HTTP request.
 	transport.DisableKeepAlives = true
 	// Timeout early if the server doesn't even return the headers.

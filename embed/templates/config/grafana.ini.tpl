@@ -114,7 +114,7 @@ server_from_sub_path = true
 ;reporting_enabled = true
 
 # Set to false to disable all checks to https://grafana.net
-# for new vesions (grafana itself and plugins), check is used
+# for new versions (grafana itself and plugins), check is used
 # in some UI views to notify that grafana or plugin update exists
 # This option does not cause any auto updates, nor send any information
 # only a GET request to http://grafana.net to get latest versions
