@@ -41,7 +41,7 @@ var (
 )
 
 // place the check utilities are stored
-const (
+var (
 	CheckToolsPathDir = "/tmp/tiup"
 )
 
