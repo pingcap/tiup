@@ -235,7 +235,7 @@ func instancesToPatch(topo spec.Topology, options operator.Options) ([]spec.Inst
 	}
 
 	if len(instances) == 0 {
-		return nil, fmt.Errorf("no instance found on specifid role(%v) and nodes(%v)", options.Roles, options.Nodes)
+		return nil, fmt.Errorf("no instance found on specified role(%v) and nodes(%v)", options.Roles, options.Nodes)
 	}
 
 	return instances, nil

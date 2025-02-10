@@ -247,7 +247,7 @@ func CheckClusterDirOverlap(entries []DirEntry) error {
 				}
 
 				// overlap is allowed in the case one side is data dir of a monitor instance,
-				// as the *_exporter don't need data dir, the field is only kept for compatiability
+				// as the *_exporter don't need data dir, the field is only kept for compatibility
 				// with legacy tidb-ansible deployments.
 				if (strings.HasPrefix(d1.dirKind, "monitor data directory")) ||
 					(strings.HasPrefix(d2.dirKind, "monitor data directory")) {

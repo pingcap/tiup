@@ -15,11 +15,11 @@ package model
 
 import "io"
 
-// ComponentData is used to represent the tarbal
+// ComponentData is used to represent the tarball
 type ComponentData interface {
 	io.Reader
 
-	// Filename is the name of tarbal
+	// Filename is the name of tarball
 	Filename() string
 }
 

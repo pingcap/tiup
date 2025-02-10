@@ -44,7 +44,7 @@ type RootSSH struct {
 	proxyKeyFile    string           // path to the private key file
 	proxyPassphrase string           // passphrase of the private key file
 	proxyTimeout    uint64           // timeout in seconds when connecting via SSH
-	sshType         executor.SSHType // the type of SSH chanel
+	sshType         executor.SSHType // the type of SSH channel
 	sudo            bool
 }
 

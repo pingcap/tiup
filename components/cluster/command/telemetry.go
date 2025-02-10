@@ -44,7 +44,7 @@ func newTelemetryCmd() *cobra.Command {
 	return cmd
 }
 
-// nodeInfo dispaly telemetry.NodeInfo in stdout.
+// nodeInfo display telemetry.NodeInfo in stdout.
 func nodeInfo(ctx context.Context) error {
 	info := new(telemetry.NodeInfo)
 	err := telemetry.FillNodeInfo(ctx, info)

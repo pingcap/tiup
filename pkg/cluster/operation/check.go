@@ -648,7 +648,7 @@ func CheckPartitions(opt *CheckOptions, host string, topo *spec.Specification, r
 	flt := flatPartitions(insightInfo.Partitions)
 	parts := sortPartitions(flt)
 
-	// check if multiple instances are using the same partition as data storeage
+	// check if multiple instances are using the same partition as data storage
 	type storePartitionInfo struct {
 		comp string
 		path string

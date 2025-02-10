@@ -37,7 +37,7 @@ type Options struct {
 	OptTimeout          uint64           // timeout in seconds for operations that support it, not to confuse with SSH timeout
 	APITimeout          uint64           // timeout in seconds for API operations that support it, like transferring store leader
 	IgnoreConfigCheck   bool             // should we ignore the config check result after init config
-	NativeSSH           bool             // should use native ssh client or builtin easy ssh (deprecated, shoule use SSHType)
+	NativeSSH           bool             // should use native ssh client or builtin easy ssh (deprecated, should use SSHType)
 	SSHType             executor.SSHType // the ssh type: 'builtin', 'system', 'none'
 	Concurrency         int              // max number of parallel tasks to run
 	SSHProxyHost        string           // the ssh proxy host

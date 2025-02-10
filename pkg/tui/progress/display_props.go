@@ -58,7 +58,7 @@ func (m *Mode) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	switch strings.ToLower(s) {
-	case "spinner", "running": // keep "spinner" for compatiability
+	case "spinner", "running": // keep "spinner" for compatibility
 		*m = ModeSpinner
 	case "progress":
 		*m = ModeProgress

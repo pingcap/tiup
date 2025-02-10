@@ -153,7 +153,7 @@ func (c *TiSparkMasterComponent) CalculateVersion(clusterVersion string) string 
 
 // SetVersion implements Component interface.
 func (c *TiSparkMasterComponent) SetVersion(version string) {
-	// should never be calles
+	// should never be calls
 }
 
 // Instances implements Component interface.
@@ -208,7 +208,7 @@ func (i *TiSparkMasterInstance) GetCustomFields() map[string]any {
 	return v.Interface().(map[string]any)
 }
 
-// GetCustomEnvs get custom spark envionment variables of the instance
+// GetCustomEnvs get custom spark environment variables of the instance
 func (i *TiSparkMasterInstance) GetCustomEnvs() map[string]string {
 	v := reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("SparkEnvs")
 	if !v.IsValid() {

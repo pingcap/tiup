@@ -27,7 +27,7 @@ type ContextKey string
 // ContextKeyLogger is the key used for logger stored in context
 const ContextKeyLogger ContextKey = "logger"
 
-// Logger is a set of fuctions writing output to custom writters, but still
+// Logger is a set of functions writing output to custom writters, but still
 // using the global zap logger as our default config does not writes everything
 // to a memory buffer.
 // TODO: use also separate zap loggers

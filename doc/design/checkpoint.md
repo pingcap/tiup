@@ -1,4 +1,4 @@
-# The checkpoint implemention for tiup-cluster and tiup-dm
+# The checkpoint implementation for tiup-cluster and tiup-dm
 
 When there is an occasional error on `tiup cluster` or `tiup dm` command, some users may want to retry previews action from the fail point instead of from scratch.
 

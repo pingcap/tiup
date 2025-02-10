@@ -28,7 +28,7 @@ import (
 	"github.com/pingcap/tiup/pkg/localdata"
 )
 
-// SSHType represent the type of the chanel used by ssh
+// SSHType represent the type of the channel used by ssh
 type SSHType string
 
 var (
@@ -47,7 +47,7 @@ var (
 
 	// This command will be execute once the NativeSSHExecutor is created.
 	// It's used to predict if the connection can establish success in the future.
-	// Its main purpose is to avoid sshpass hang when user speficied a wrong prompt.
+	// Its main purpose is to avoid sshpass hang when user specified a wrong prompt.
 	connectionTestCommand = "echo connection test, if killed, check the password prompt"
 
 	// SSH authorized_keys file

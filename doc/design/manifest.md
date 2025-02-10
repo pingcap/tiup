@@ -39,7 +39,7 @@ TiUp itself can be treated as a component and I think does not need to be treate
 * Zero-trust access control.
 * Minimise the number of keys and the frequency with which they must be replaced.
 * Uploads and downloads should be secure.
-* All operations should be idempotent or at least repeatable. If an operation is interupted, the user can just retry until it succeeds.
+* All operations should be idempotent or at least repeatable. If an operation is interrupted, the user can just retry until it succeeds.
 * There should be no 'transaction' mechanism between client and server, groups of operations should not require atomicity.
 * Minimise required knowledge in the client - the metadata should direct the client how to perform operations with minimal knowledge of the server's data layout, etc.
 * We should not require consistency between files in the repo (beyond hashes and keys).
@@ -471,7 +471,7 @@ Adding a repo is trivial - we just need a URL and trusted root manifest, then fo
 Whether a key is rotated due to it being compromised or due to regular rotation, the procedure is the same. A top-level key cannot be removed without being replaced. This is an entirely server-side action.
 
 * Produce a new key pair.
-* Store the new private key or give it to the adminstrator to store securely.
+* Store the new private key or give it to the administrator to store securely.
 * Update root.json to add the new public key and remove the old one.
 * If replacing a root key, the new root.json should be signed with both the old and the new keys.
 * If a non-root key is replaced, create a new version of the relevant manifest and sign with the new key (and any older, non-replaced keys).

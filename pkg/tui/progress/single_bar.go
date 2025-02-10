@@ -41,7 +41,7 @@ func (b *singleBarCore) renderDoneOrError(w io.Writer, dp *DisplayProps) {
 		tail = errorTail
 		tailColor = colorError
 	default:
-		panic("Unexpect dp.Mode")
+		panic("Unexpected dp.Mode")
 	}
 	var displayPrefix string
 	midWidth := 1 + 3 + 1 + len(tail)

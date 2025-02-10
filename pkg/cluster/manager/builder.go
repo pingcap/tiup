@@ -711,7 +711,7 @@ func buildDownloadCompTasks(
 		if found := uniqueTaskList.Exist(key); !found {
 			uniqueTaskList.Insert(key)
 
-			// we don't set version for tispark, so the lastest tispark will be used
+			// we don't set version for tispark, so the latest tispark will be used
 			var version string
 			if inst.ComponentName() == spec.ComponentTiSpark {
 				// download spark as dependency of tispark

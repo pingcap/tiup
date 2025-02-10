@@ -30,7 +30,7 @@ message ClusterReport {
 	uint64 take_milliseconds = 3;
 	int32 exit_code = 4;
 
-	// only deploy and scale-out is setted:
+	// only deploy and scale-out is set:
 	string topology = 5;// topology.yaml of the cluster, with all the value scrubbed.
 	repeated NodeInfo nodes = 6;
 }

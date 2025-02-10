@@ -242,7 +242,7 @@ type ClusterReport struct {
 	Command          string `protobuf:"bytes,2,opt,name=command,proto3" json:"command,omitempty"`
 	TakeMilliseconds uint64 `protobuf:"varint,3,opt,name=take_milliseconds,json=takeMilliseconds,proto3" json:"take_milliseconds,omitempty"`
 	ExitCode         int32  `protobuf:"varint,4,opt,name=exit_code,json=exitCode,proto3" json:"exit_code,omitempty"`
-	// only deploy and scale-out is setted:
+	// only deploy and scale-out is set:
 	Topology             string      `protobuf:"bytes,5,opt,name=topology,proto3" json:"topology,omitempty"`
 	Nodes                []*NodeInfo `protobuf:"bytes,6,rep,name=nodes,proto3" json:"nodes,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}    `json:"-"`

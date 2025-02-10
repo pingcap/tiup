@@ -268,7 +268,7 @@ func checkForGlobalConfigs(logger *logprinter.Logger, topoFile string, skipConfi
 			logger.Warnf(`You have one or more of %s fields configured in
 	the scale out topology, but they will be ignored during the scaling out process.
 	If you want to use configs different from the existing cluster, cancel now and
-	set them in the specification fileds for each host.`, color.YellowString(`["global", "monitored", "server_configs"]`))
+	set them in the specification fields for each host.`, color.YellowString(`["global", "monitored", "server_configs"]`))
 			if !skipConfirm {
 				if err := tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: "); err != nil {
 					return err
