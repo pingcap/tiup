@@ -42,8 +42,9 @@ type CheckOptions struct {
 	IdentityFile string // path to the private key file
 	UsePassword  bool   // use password instead of identity file for ssh connection
 	Opr          *operator.CheckOptions
-	ApplyFix     bool // try to apply fixes of failed checks
-	ExistCluster bool // check an exist cluster
+	ApplyFix     bool   // try to apply fixes of failed checks
+	ExistCluster bool   // check an exist cluster
+	TempDir      string // tempdir
 }
 
 // CheckCluster check cluster before deploying or upgrading
@@ -188,6 +189,7 @@ func checkSystemInfo(
 		applyFixTasks      []*task.StepDisplay
 		downloadTasks      []*task.StepDisplay
 	)
+	task.CheckToolsPathDir = opt.TempDir
 	logger := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 	insightVer := ""
 
