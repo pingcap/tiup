@@ -15,19 +15,22 @@ package scripts
 
 import (
 	"bytes"
+	"os"
 	"path"
 	"text/template"
 
 	"github.com/pingcap/tiup/embed"
 	"github.com/pingcap/tiup/pkg/utils"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // PrometheusScript represent the data to generate Prometheus config
 type PrometheusScript struct {
-	Port           int
-	WebExternalURL string
-	Retention      string
-	EnableNG       bool
+	Port              int
+	WebExternalURL    string
+	BasicAuthPassword string
+	Retention         string
+	EnableNG          bool
 
 	DeployDir string
 	DataDir   string
@@ -57,4 +60,31 @@ func (c *PrometheusScript) ConfigToFile(file string) error {
 	}
 
 	return utils.WriteFile(file, content.Bytes(), 0755)
+}
+
+func (c *PrometheusScript) WebConfigToFile(file string) error {
+	fp := path.Join("templates", "config", "web.config.yml.tpl")
+	tpl, err := embed.ReadTemplate(fp)
+	if err != nil {
+		return err
+	}
+	tmpl, err := template.New("web.config").Parse(string(tpl))
+	if err != nil {
+		return err
+	}
+
+	pswHash, err := bcrypt.GenerateFromPassword([]byte(c.BasicAuthPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	tmp := struct {
+		BasicAuthPassword string
+	}{BasicAuthPassword: string(pswHash)}
+
+	content := bytes.NewBufferString("")
+	if err := tmpl.Execute(content, tmp); err != nil {
+		return err
+	}
+
+	return os.WriteFile(file, content.Bytes(), 0755)
 }
