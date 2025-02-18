@@ -16,6 +16,7 @@ package task
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -185,6 +186,10 @@ func (c *CheckSys) runFIO(ctx context.Context) (outRR []byte, outRW []byte, outL
 	}
 
 	checkDir := spec.Abs(c.topo.GlobalOptions.User, c.checkDir)
+	checkDirExists := true
+	if _, err := os.Stat(checkDir); err != nil && os.IsNotExist(err) {
+		checkDirExists = false
+	}
 	testWd := filepath.Join(checkDir, "tiup-fio-test")
 	fioBin := filepath.Join(CheckToolsPathDir, "bin", "fio")
 
@@ -307,9 +312,13 @@ func (c *CheckSys) runFIO(ctx context.Context) (outRR []byte, outRW []byte, outL
 	}
 
 	// cleanup
+	dirToRm := testWd
+	if !checkDirExists {
+		dirToRm = filepath.Join(checkDir, testWd)
+	}
 	_, stderr, err = e.Execute(
 		ctx,
-		fmt.Sprintf("rm -rf %s", testWd),
+		fmt.Sprintf("rm -rf %s", dirToRm),
 		false,
 	)
 	if err != nil {
