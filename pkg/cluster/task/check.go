@@ -314,7 +314,7 @@ func (c *CheckSys) runFIO(ctx context.Context) (outRR []byte, outRW []byte, outL
 	// cleanup
 	dirToRm := testWd
 	if !checkDirExists {
-		dirToRm = filepath.Join(checkDir, testWd)
+		dirToRm = checkDir
 	}
 	_, stderr, err = e.Execute(
 		ctx,
