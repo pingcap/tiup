@@ -294,8 +294,6 @@ func upgradeInstance(
 		return err
 	}
 
-
-
 	return nil
 }
 
@@ -322,7 +320,8 @@ var (
 func increaseScheduleLimit(ctx context.Context, pc *api.PDClient) (
 	currLeaderScheduleLimit int,
 	currRegionScheduleLimit int,
-	err error) {
+	err error,
+) {
 	// insert checkpoint
 	point := checkpoint.Acquire(ctx, increaseLimitPoint, map[string]any{})
 	defer func() {
