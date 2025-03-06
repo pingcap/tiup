@@ -39,6 +39,7 @@ var (
 	increaseLimitPoint = checkpoint.Register()
 )
 
+// UpgradeWaitFunc is the function that is called after an instance has been upgraded
 type UpgradeWaitFunc func()
 
 // Upgrade the cluster. (actually, it's rolling restart)
