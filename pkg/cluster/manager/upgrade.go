@@ -39,7 +39,7 @@ import (
 )
 
 // Upgrade the cluster.
-func (m *Manager) Upgrade(name string, clusterVersion string, componentVersions map[string]string, opt operator.Options, skipConfirm, offline, ignoreVersionCheck bool) error {
+func (m *Manager) Upgrade(name string, clusterVersion string, componentVersions map[string]string, opt operator.Options, skipConfirm, offline, ignoreVersionCheck bool, restartTimeout time.Duration) error {
 	if !skipConfirm && strings.ToLower(opt.DisplayMode) != "json" {
 		for _, v := range componentVersions {
 			if v != "" {
@@ -121,11 +121,12 @@ func (m *Manager) Upgrade(name string, clusterVersion string, componentVersions 
 	}
 
 	m.logger.Warnf(`%s
-This operation will upgrade %s %s cluster %s to %s:%s`,
+This operation will upgrade %s %s cluster %s (with a concurrency of %d) to %s:%s`,
 		color.YellowString("Before the upgrade, it is recommended to read the upgrade guide at https://docs.pingcap.com/tidb/stable/upgrade-tidb-using-tiup and finish the preparation steps."),
 		m.sysName,
 		color.HiYellowString(base.Version),
 		color.HiYellowString(name),
+		opt.Concurrency,
 		color.HiYellowString(clusterVersion),
 		compVersionMsg)
 	if !skipConfirm {
@@ -317,7 +318,23 @@ This operation will upgrade %s %s cluster %s to %s:%s`,
 			}
 			nopt := opt
 			nopt.Roles = restartComponents
-			return operator.Upgrade(ctx, topo, nopt, tlsCfg, base.Version, clusterVersion)
+			waitFunc := func() {}
+			if restartTimeout.Nanoseconds() > 0 {
+				waitFunc = func() {
+					// A tui.PromptWithTimeout(str, time.Duration) would have been nice
+					ch := make(chan any, 1)
+					go func() {
+						tui.Prompt(fmt.Sprintf("\nPress any key to continue (timeout %s)", restartTimeout))
+						ch <- nil
+					}()
+					select {
+					case <-time.After(restartTimeout):
+						fmt.Printf("\nTimeout, continueing\n")
+					case <-ch:
+					}
+				}
+			}
+			return operator.Upgrade(ctx, topo, nopt, tlsCfg, base.Version, clusterVersion, waitFunc)
 		}).
 		Build()
 
