@@ -46,11 +46,12 @@ type PDInstance struct {
 	joinEndpoints []*PDInstance
 	pds           []*PDInstance
 	Process
-	isCSEMode bool
+	mode              string
+	kvIsSingleReplica bool
 }
 
 // NewPDInstance return a PDInstance
-func NewPDInstance(role PDRole, binPath, dir, host, configPath string, portOffset int, id int, pds []*PDInstance, port int, isCSEMode bool) *PDInstance {
+func NewPDInstance(role PDRole, binPath, dir, host, configPath string, portOffset int, id int, pds []*PDInstance, port int, mode string, kvIsSingleReplica bool) *PDInstance {
 	if port <= 0 {
 		port = 2379
 	}
@@ -64,9 +65,10 @@ func NewPDInstance(role PDRole, binPath, dir, host, configPath string, portOffse
 			StatusPort: utils.MustGetFreePort(host, port, portOffset),
 			ConfigPath: configPath,
 		},
-		Role:      role,
-		pds:       pds,
-		isCSEMode: isCSEMode,
+		Role:              role,
+		pds:               pds,
+		mode:              mode,
+		kvIsSingleReplica: kvIsSingleReplica,
 	}
 }
 
@@ -150,7 +152,7 @@ func (inst *PDInstance) Start(ctx context.Context) error {
 			fmt.Sprintf("--log-file=%s", inst.LogFile()),
 			fmt.Sprintf("--config=%s", configPath),
 		}
-		if tidbver.PDSupportMicroServicesWithName(inst.Version.String()) {
+		if tidbver.PDSupportMicroservicesWithName(inst.Version.String()) {
 			args = append(args, fmt.Sprintf("--name=%s", uid))
 		}
 	case PDRoleScheduling:
@@ -164,7 +166,7 @@ func (inst *PDInstance) Start(ctx context.Context) error {
 			fmt.Sprintf("--log-file=%s", inst.LogFile()),
 			fmt.Sprintf("--config=%s", configPath),
 		}
-		if tidbver.PDSupportMicroServicesWithName(inst.Version.String()) {
+		if tidbver.PDSupportMicroservicesWithName(inst.Version.String()) {
 			args = append(args, fmt.Sprintf("--name=%s", uid))
 		}
 	}

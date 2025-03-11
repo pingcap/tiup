@@ -87,7 +87,7 @@ func ScpDownload(session *ssh.Session, client *ssh.Client, src, dst string, limi
 			}
 
 			fp := filepath.Join(wd, name)
-			// fisrt scp command is 'C' means src is a single file
+			// first scp command is 'C' means src is a single file
 			if firstCommand {
 				fp = dst
 			}
@@ -121,7 +121,7 @@ func ScpDownload(session *ssh.Session, client *ssh.Client, src, dst string, limi
 			// normally, workdir is like this
 			wd = filepath.Join(wd, name)
 
-			// fisrt scp command is 'D' means src is a dir
+			// first scp command is 'D' means src is a dir
 			if firstCommand {
 				fi, err := os.Stat(dst)
 				if err != nil && !os.IsNotExist(err) {

@@ -38,7 +38,7 @@ type FsTxn interface {
 	Rollback() error
 }
 
-// New returns a Store, curretly only qcloud supported
+// New returns a Store, currently only qcloud supported
 func New(root string, upstream string) Store {
 	return newLocalStore(root, upstream)
 }

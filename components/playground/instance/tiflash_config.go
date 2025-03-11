@@ -23,14 +23,16 @@ func (inst *TiFlashInstance) getProxyConfig() map[string]any {
 	config["storage.reserve-raft-space"] = 0
 
 	if inst.Role == TiFlashRoleDisaggWrite {
-		config["storage.api-version"] = 2
-		config["storage.enable-ttl"] = true
-		config["dfs.prefix"] = "tikv"
-		config["dfs.s3-endpoint"] = inst.cseOpts.S3Endpoint
-		config["dfs.s3-key-id"] = inst.cseOpts.AccessKey
-		config["dfs.s3-secret-key"] = inst.cseOpts.SecretKey
-		config["dfs.s3-bucket"] = inst.cseOpts.Bucket
-		config["dfs.s3-region"] = "local"
+		if inst.mode == "tidb-cse" {
+			config["storage.api-version"] = 2
+			config["storage.enable-ttl"] = true
+			config["dfs.prefix"] = "tikv"
+			config["dfs.s3-endpoint"] = inst.cseOpts.S3Endpoint
+			config["dfs.s3-key-id"] = inst.cseOpts.AccessKey
+			config["dfs.s3-secret-key"] = inst.cseOpts.SecretKey
+			config["dfs.s3-bucket"] = inst.cseOpts.Bucket
+			config["dfs.s3-region"] = "local"
+		}
 	}
 
 	return config
@@ -43,8 +45,6 @@ func (inst *TiFlashInstance) getConfig() map[string]any {
 	config["logger.level"] = "debug"
 
 	if inst.Role == TiFlashRoleDisaggWrite {
-		config["enable_safe_point_v2"] = true
-		config["storage.api_version"] = 2
 		config["storage.s3.endpoint"] = inst.cseOpts.S3Endpoint
 		config["storage.s3.bucket"] = inst.cseOpts.Bucket
 		config["storage.s3.root"] = "/tiflash-cse/"
@@ -52,17 +52,23 @@ func (inst *TiFlashInstance) getConfig() map[string]any {
 		config["storage.s3.secret_access_key"] = inst.cseOpts.SecretKey
 		config["storage.main.dir"] = []string{filepath.Join(inst.Dir, "main_data")}
 		config["flash.disaggregated_mode"] = "tiflash_write"
+		if inst.mode == "tidb-cse" {
+			config["enable_safe_point_v2"] = true
+			config["storage.api_version"] = 2
+		}
 	} else if inst.Role == TiFlashRoleDisaggCompute {
-		config["enable_safe_point_v2"] = true
 		config["storage.s3.endpoint"] = inst.cseOpts.S3Endpoint
 		config["storage.s3.bucket"] = inst.cseOpts.Bucket
 		config["storage.s3.root"] = "/tiflash-cse/"
 		config["storage.s3.access_key_id"] = inst.cseOpts.AccessKey
 		config["storage.s3.secret_access_key"] = inst.cseOpts.SecretKey
 		config["storage.remote.cache.dir"] = filepath.Join(inst.Dir, "remote_cache")
-		config["storage.remote.cache.capacity"] = 20000000000 // 20GB
+		config["storage.remote.cache.capacity"] = 50000000000 // 50GB
 		config["storage.main.dir"] = []string{filepath.Join(inst.Dir, "main_data")}
 		config["flash.disaggregated_mode"] = "tiflash_compute"
+		if inst.mode == "tidb-cse" {
+			config["enable_safe_point_v2"] = true
+		}
 	}
 
 	return config

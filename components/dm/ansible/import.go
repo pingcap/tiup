@@ -125,7 +125,7 @@ type Importer struct {
 	sources map[string]*SourceConfig // addr(ip:port) -> SourceConfig
 
 	// only use for test.
-	// when setted, we use this executor instead of getting a truly one.
+	// when set, we use this executor instead of getting a truly one.
 	testExecutorGetter ExecutorGetter
 }
 

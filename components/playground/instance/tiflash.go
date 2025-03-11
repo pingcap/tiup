@@ -42,6 +42,7 @@ const (
 type TiFlashInstance struct {
 	instance
 	Role            TiFlashRole
+	mode            string
 	cseOpts         CSEOptions
 	TCPPort         int
 	ServicePort     int
@@ -53,9 +54,12 @@ type TiFlashInstance struct {
 }
 
 // NewTiFlashInstance return a TiFlashInstance
-func NewTiFlashInstance(role TiFlashRole, cseOptions CSEOptions, binPath, dir, host, configPath string, portOffset int, id int, pds []*PDInstance, dbs []*TiDBInstance, version string) *TiFlashInstance {
+func NewTiFlashInstance(mode string, role TiFlashRole, cseOptions CSEOptions, binPath, dir, host, configPath string, portOffset int, id int, pds []*PDInstance, dbs []*TiDBInstance, version string) *TiFlashInstance {
 	if role != TiFlashRoleNormal && role != TiFlashRoleDisaggWrite && role != TiFlashRoleDisaggCompute {
 		panic(fmt.Sprintf("Unknown TiFlash role %s", role))
+	}
+	if (role == TiFlashRoleDisaggCompute || role == TiFlashRoleDisaggWrite) && mode != "tidb-cse" && mode != "tiflash-disagg" {
+		panic(fmt.Sprintf("Unsupported disagg role in mode %s", mode))
 	}
 
 	httpPort := 8123
@@ -72,6 +76,7 @@ func NewTiFlashInstance(role TiFlashRole, cseOptions CSEOptions, binPath, dir, h
 			StatusPort: utils.MustGetFreePort(host, 8234, portOffset),
 			ConfigPath: configPath,
 		},
+		mode:            mode,
 		Role:            role,
 		cseOpts:         cseOptions,
 		TCPPort:         utils.MustGetFreePort(host, 9100, portOffset), // 9000 for default object store port

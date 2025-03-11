@@ -469,7 +469,7 @@ func CheckKernelParameters(opt *CheckOptions, p []byte) []*CheckResult {
 			if val < 32768 {
 				results = append(results, &CheckResult{
 					Name: CheckNameSysctl,
-					Err:  fmt.Errorf("net.core.somaxconn = %d, should be greater than 32768", val),
+					Err:  fmt.Errorf("net.core.somaxconn = %d, should 32768 or greater", val),
 					Msg:  "net.core.somaxconn = 32768",
 				})
 			}
@@ -648,7 +648,7 @@ func CheckPartitions(opt *CheckOptions, host string, topo *spec.Specification, r
 	flt := flatPartitions(insightInfo.Partitions)
 	parts := sortPartitions(flt)
 
-	// check if multiple instances are using the same partition as data storeage
+	// check if multiple instances are using the same partition as data storage
 	type storePartitionInfo struct {
 		comp string
 		path string

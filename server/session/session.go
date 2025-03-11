@@ -112,7 +112,7 @@ func (s *sessionManager) Read(id string) (string, io.ReadCloser, error) {
 	return name, file, nil
 }
 
-// Delele delete a session
+// Delete a session
 func (s *sessionManager) Delete(id string) {
 	logprinter.Debugf("Delete session: %s", id)
 	n, ok := s.m.Load(id)

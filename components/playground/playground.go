@@ -792,7 +792,7 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 
 	switch componentID {
 	case spec.ComponentPD:
-		inst := instance.NewPDInstance(pdRole, cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, p.pds, cfg.Port, p.bootOptions.Mode == "tidb-cse")
+		inst := instance.NewPDInstance(pdRole, cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, p.pds, cfg.Port, p.bootOptions.Mode, p.bootOptions.TiKV.Num == 1)
 		ins = inst
 		if pdRole == instance.PDRoleNormal || pdRole == instance.PDRoleAPI {
 			if p.booted {
@@ -810,23 +810,23 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 			p.schedulings = append(p.schedulings, inst)
 		}
 	case spec.ComponentTSO:
-		inst := instance.NewPDInstance(instance.PDRoleTSO, cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, p.pds, cfg.Port, p.bootOptions.Mode == "tidb-cse")
+		inst := instance.NewPDInstance(instance.PDRoleTSO, cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, p.pds, cfg.Port, p.bootOptions.Mode, p.bootOptions.TiKV.Num == 1)
 		ins = inst
 		p.tsos = append(p.tsos, inst)
 	case spec.ComponentScheduling:
-		inst := instance.NewPDInstance(instance.PDRoleScheduling, cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, p.pds, cfg.Port, p.bootOptions.Mode == "tidb-cse")
+		inst := instance.NewPDInstance(instance.PDRoleScheduling, cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, p.pds, cfg.Port, p.bootOptions.Mode, p.bootOptions.TiKV.Num == 1)
 		ins = inst
 		p.schedulings = append(p.schedulings, inst)
 	case spec.ComponentTiDB:
-		inst := instance.NewTiDBInstance(cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, cfg.Port, p.pds, dataDir, p.enableBinlog(), p.bootOptions.Mode == "tidb-cse")
+		inst := instance.NewTiDBInstance(cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, cfg.Port, p.pds, dataDir, p.enableBinlog(), p.bootOptions.Mode)
 		ins = inst
 		p.tidbs = append(p.tidbs, inst)
 	case spec.ComponentTiKV:
-		inst := instance.NewTiKVInstance(cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, cfg.Port, p.pds, p.tsos, p.bootOptions.Mode == "tidb-cse", p.bootOptions.CSEOpts, p.bootOptions.PDMode == "ms")
+		inst := instance.NewTiKVInstance(cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, cfg.Port, p.pds, p.tsos, p.bootOptions.Mode, p.bootOptions.CSEOpts, p.bootOptions.PDMode == "ms")
 		ins = inst
 		p.tikvs = append(p.tikvs, inst)
 	case spec.ComponentTiFlash:
-		inst := instance.NewTiFlashInstance(tiflashRole, p.bootOptions.CSEOpts, cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, p.pds, p.tidbs, cfg.Version)
+		inst := instance.NewTiFlashInstance(p.bootOptions.Mode, tiflashRole, p.bootOptions.CSEOpts, cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, p.pds, p.tidbs, cfg.Version)
 		ins = inst
 		p.tiflashs = append(p.tiflashs, inst)
 	case spec.ComponentTiProxy:
@@ -1101,14 +1101,14 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		instances = append(instances,
 			InstancePair{spec.ComponentTiFlash, instance.PDRoleNormal, instance.TiFlashRoleNormal, options.TiFlash},
 		)
-	} else if options.Mode == "tidb-cse" {
+	} else if options.Mode == "tidb-cse" || options.Mode == "tiflash-disagg" {
 		if !tidbver.TiFlashPlaygroundNewStartMode(options.Version) {
 			// For simplicity, currently we only implemented disagg mode when TiFlash can run without config.
-			return fmt.Errorf("TiUP playground only supports CSE mode for TiDB cluster >= v7.1.0 (or nightly)")
+			return fmt.Errorf("TiUP playground only supports CSE/Disagg mode for TiDB cluster >= v7.1.0 (or nightly)")
 		}
 
 		if !strings.HasPrefix(options.CSEOpts.S3Endpoint, "https://") && !strings.HasPrefix(options.CSEOpts.S3Endpoint, "http://") {
-			return fmt.Errorf("CSE mode requires S3 endpoint to start with http:// or https://")
+			return fmt.Errorf("CSE/Disagg mode requires S3 endpoint to start with http:// or https://")
 		}
 
 		isSecure := strings.HasPrefix(options.CSEOpts.S3Endpoint, "https://")
@@ -1117,7 +1117,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 		// Currently we always assign region=local. Other regions are not supported.
 		if strings.Contains(rawEndpoint, "amazonaws.com") {
-			return fmt.Errorf("Currently TiUP playground CSE mode only supports local S3 (like minio). S3 on AWS Regions are not supported. Contributions are welcome!")
+			return fmt.Errorf("Currently TiUP playground CSE/Disagg mode only supports local S3 (like minio). S3 on AWS Regions are not supported. Contributions are welcome!")
 		}
 
 		// Preflight check whether specified object storage is available.
@@ -1126,7 +1126,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			Secure: isSecure,
 		})
 		if err != nil {
-			return errors.Annotate(err, "CSE mode preflight check failed")
+			return errors.Annotate(err, "CSE/Disagg mode preflight check failed")
 		}
 
 		ctxCheck, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -1134,14 +1134,14 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 		bucketExists, err := s3Client.BucketExists(ctxCheck, options.CSEOpts.Bucket)
 		if err != nil {
-			return errors.Annotate(err, "CSE mode preflight check failed")
+			return errors.Annotate(err, "CSE/Disagg mode preflight check failed")
 		}
 
 		if !bucketExists {
 			// Try to create bucket.
 			err := s3Client.MakeBucket(ctxCheck, options.CSEOpts.Bucket, minio.MakeBucketOptions{})
 			if err != nil {
-				return fmt.Errorf("CSE mode preflight check failed: Bucket %s doesn't exist and fail to create automatically (your bucket name may be invalid?)", options.CSEOpts.Bucket)
+				return fmt.Errorf("CSE/Disagg mode preflight check failed: Bucket %s doesn't exist and fail to create automatically (your bucket name may be invalid?)", options.CSEOpts.Bucket)
 			}
 		}
 
@@ -1157,7 +1157,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			instances...,
 		)
 	} else if options.PDMode == "ms" {
-		if !tidbver.PDSupportMicroServices(options.Version) {
+		if !tidbver.PDSupportMicroservices(options.Version) {
 			return fmt.Errorf("PD cluster doesn't support microservices mode in version %s", options.Version)
 		}
 		instances = append([]InstancePair{
@@ -1252,10 +1252,13 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		p.waitAllTiFlashUp()
 
 		fmt.Println()
-		color.New(color.FgYellow, color.Bold).Println("TiDB Playground Cluster will delete all data of the cluster after exit. Please use --tag xx to pin the data dir.")
-
-		fmt.Println()
 		color.New(color.FgGreen, color.Bold).Println("🎉 TiDB Playground Cluster is started, enjoy!")
+
+		if deleteWhenExit {
+			fmt.Println()
+			colorstr.Printf("[yellow][bold]Warning[reset][bold]: cluster data will be destroyed after exit. To persist data after exit, specify [tiup_command]--tag <name>[reset].\n")
+		}
+
 		fmt.Println()
 		mysql := mysqlCommand()
 		for _, dbAddr := range tidbSucc {

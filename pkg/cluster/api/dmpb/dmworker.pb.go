@@ -955,7 +955,7 @@ func (m *SyncStatus) GetSecondsBehindMaster() int64 {
 	return 0
 }
 
-// SourceStatus represents status for source runing on dm-worker
+// SourceStatus represents status for source running on dm-worker
 type SourceStatus struct {
 	Source      string         `protobuf:"bytes,1,opt,name=source,proto3" json:"source,omitempty"`
 	Worker      string         `protobuf:"bytes,2,opt,name=worker,proto3" json:"worker,omitempty"`
@@ -1909,7 +1909,7 @@ func (m *SubTaskErrorList) GetError() []*SubTaskError {
 //
 //	when Stop or Pause is requested from external, isCanceled will be true
 //
-// errors: includes all (potential) errors occured when processing
+// errors: includes all (potential) errors occurred when processing
 type ProcessResult struct {
 	IsCanceled bool            `protobuf:"varint,1,opt,name=isCanceled,proto3" json:"isCanceled,omitempty"`
 	Errors     []*ProcessError `protobuf:"bytes,2,rep,name=errors,proto3" json:"errors,omitempty"`

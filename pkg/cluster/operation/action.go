@@ -640,7 +640,7 @@ func StopComponent(ctx context.Context,
 	return errg.Wait()
 }
 
-// toFailedActionError formats the errror msg for failed action
+// toFailedActionError formats the error msg for failed action
 func toFailedActionError(err error, action string, host, service, logDir string) error {
 	return errors.Annotatef(err,
 		"failed to %s: %s %s, please check the instance's log(%s) for more detail.",

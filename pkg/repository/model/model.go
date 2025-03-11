@@ -134,7 +134,7 @@ func (m *model) Rotate(manifest *v1manifest.Manifest) error {
 			return err
 		}
 
-		// write new 'root.json' file with verion prefix
+		// write new 'root.json' file with version prefix
 		manifestFilename := fmt.Sprintf("%d.root.json", root.Version)
 		if err := m.txn.WriteManifest(manifestFilename, manifest); err != nil {
 			return err
@@ -198,7 +198,7 @@ func (m *model) Publish(manifest *v1manifest.Manifest, info ComponentInfo) error
 		var owner *v1manifest.Owner
 		if err := m.updateIndexManifest(initTime, func(im *v1manifest.Manifest) (*v1manifest.Manifest, error) {
 			// We only update index.json when it's a new component
-			// or the yanked, standalone, hidden fileds changed,
+			// or the yanked, standalone, hidden fields changed,
 			// or the owner of component changed
 			var (
 				compItem  v1manifest.ComponentItem
