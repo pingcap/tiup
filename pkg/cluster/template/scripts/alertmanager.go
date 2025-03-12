@@ -33,7 +33,8 @@ type AlertManagerScript struct {
 	LogDir    string
 	DataDir   string
 
-	NumaNode string
+	NumaNode       string
+	AdditionalArgs []string
 }
 
 // ConfigToFile write config content to specific path
