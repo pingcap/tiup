@@ -43,10 +43,11 @@ type AlertmanagerSpec struct {
 	LogDir          string               `yaml:"log_dir,omitempty"`
 	NumaNode        string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
 	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
-	Arch            string               `yaml:"arch,omitempty"`
-	OS              string               `yaml:"os,omitempty"`
-	ConfigFilePath  string               `yaml:"config_file,omitempty" validate:"config_file:editable"`
-	AdditionalArgs  []string             `yaml:"additional_args,omitempty" validate:"additional_args:ignore"`
+	// This field allows users to define additional arguments for customization.
+	AdditionalArgs []string `yaml:"additional_args,omitempty" validate:"additional_args:ignore"`
+	Arch           string   `yaml:"arch,omitempty"`
+	OS             string   `yaml:"os,omitempty"`
+	ConfigFilePath string   `yaml:"config_file,omitempty" validate:"config_file:editable"`
 }
 
 // Role returns the component role of the instance
