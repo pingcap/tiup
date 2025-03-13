@@ -24,8 +24,9 @@ import (
 
 // DatasourceConfig represent the data to generate Datasource config
 type DatasourceConfig struct {
-	ClusterName string
-	URL         string
+	ClusterName  string
+	URL          string
+	AuthPassword string
 }
 
 // ConfigToFile write config content to specific path

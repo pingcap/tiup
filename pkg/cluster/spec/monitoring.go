@@ -44,6 +44,7 @@ type PrometheusSpec struct {
 	Patched               bool                   `yaml:"patched,omitempty"`
 	IgnoreExporter        bool                   `yaml:"ignore_exporter,omitempty"`
 	Port                  int                    `yaml:"port" default:"9090"`
+	BasicAuthPassword     string                 `yaml:"basic_auth_password,omitempty"`
 	NgPort                int                    `yaml:"ng_port,omitempty" validate:"ng_port:editable"` // ng_port is usable since v5.3.0 and default as 12020 since v5.4.0, so the default value is set in spec.go/AdjustByVersion
 	DeployDir             string                 `yaml:"deploy_dir,omitempty"`
 	DataDir               string                 `yaml:"data_dir,omitempty"`
@@ -172,9 +173,15 @@ func (c *MonitorComponent) Instances() []Instance {
 				s.DataDir,
 			},
 			StatusFn: func(_ context.Context, timeout time.Duration, _ *tls.Config, _ ...string) string {
+				if s.BasicAuthPassword != "" {
+					return statusByHostWithAuth(s.BasicAuthPassword, s.GetManageHost(), s.Port, "/-/ready", timeout, nil)
+				}
 				return statusByHost(s.GetManageHost(), s.Port, "/-/ready", timeout, nil)
 			},
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
+				if s.BasicAuthPassword != "" {
+					return UptimeByHostWithAuth(s.BasicAuthPassword, s.GetManageHost(), s.Port, timeout, tlsCfg)
+				}
 				return UptimeByHost(s.GetManageHost(), s.Port, timeout, tlsCfg)
 			},
 			Component: c,
@@ -224,6 +231,16 @@ func (i *MonitorInstance) InitConfig(
 		NumaNode: spec.NumaNode,
 
 		AdditionalArgs: spec.AdditionalArgs,
+	}
+
+	// transfer web config
+	srcfp := filepath.Join(paths.Cache, fmt.Sprintf("web.config_%s_%d.yml", i.GetHost(), i.GetPort()))
+	if err := cfg.WebConfigToFile(srcfp); err != nil {
+		return err
+	}
+	dstfp := filepath.Join(paths.Deploy, "conf", "web.config.yml")
+	if err := e.Transfer(ctx, srcfp, dstfp, false, 0, false); err != nil {
+		return err
 	}
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_prometheus_%s_%d.sh", i.GetHost(), i.GetPort()))
