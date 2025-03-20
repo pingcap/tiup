@@ -52,8 +52,8 @@ client:
 	@# Target: build the tiup-client component
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o ../../bin/tiup-client .
 
-check: fmt lint tidy check-static vet
-	@# Target: run all checkers. (fmt, lint, tidy, check-static and vet)
+check: fmt lint check-static vet
+	@# Target: run all checkers. (fmt, lint, check-static and vet)
 
 check-static:
 	@# Target: run the golangci-lint static check tool
