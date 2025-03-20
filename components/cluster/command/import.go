@@ -79,7 +79,7 @@ func newImportCmd() *cobra.Command {
 				return errDeployNameDuplicate.
 					New("Cluster name '%s' is duplicated", clsName).
 					WithProperty(tui.SuggestionFromFormat(
-						fmt.Sprintf("Please use --rename `NAME` to specify another name (You can use `%s list` to see all clusters)", tui.OsArgs0())))
+						"%s", fmt.Sprintf("Please use --rename `NAME` to specify another name (You can use `%s list` to see all clusters)", tui.OsArgs0())))
 			}
 
 			// prompt for backups
@@ -91,7 +91,7 @@ func newImportCmd() *cobra.Command {
 				prompt = fmt.Sprintf("The inventory file will be renamed to %s after import.", backupFile)
 			}
 			log.Warnf("TiDB-Ansible and TiUP Cluster can NOT be used together, please DO NOT try to use ansible to manage the imported cluster anymore to avoid metadata conflict.")
-			log.Infof(prompt)
+			log.Infof("%s", prompt)
 			if !skipConfirm {
 				err = tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: ")
 				if err != nil {
