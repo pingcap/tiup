@@ -41,6 +41,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/otiai10/copy v1.9.0 // indirect
 	github.com/pingcap/errors v0.11.5-0.20201126102027-b0a155152ca3 // indirect
+	github.com/pingcap/failpoint v0.0.0-20240528011301-b51a646c7c86 // indirect
 	github.com/r3labs/diff/v2 v2.15.1 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
@@ -69,4 +70,7 @@ require (
 	google.golang.org/protobuf v1.36.1 // indirect
 )
 
-tool github.com/mgechev/revive
+tool (
+	github.com/mgechev/revive
+	github.com/pingcap/failpoint/failpoint-ctl
+)
