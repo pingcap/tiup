@@ -68,11 +68,6 @@ vet:
 	@# Target: run the go vet tool
 	$(GO) vet ./...
 
-tidy:
-	@# Target: run tidy check
-	@echo "go mod tidy"
-	../../tools/check/check-tidy.sh
-
 clean:
 	@# Target: run the build cleanup steps
 	@rm -rf bin
