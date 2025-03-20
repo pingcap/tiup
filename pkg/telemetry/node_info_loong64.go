@@ -1,5 +1,6 @@
 //go:build loong64
 // +build loong64
+
 //
 // Copyright 2025 PingCAP, Inc.
 //

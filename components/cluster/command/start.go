@@ -70,7 +70,7 @@ func newStartCmd() *cobra.Command {
 					log.Errorf("Failed to set root password of TiDB database to '%s'", pwd)
 					if strings.Contains(strings.ToLower(err.Error()), "error 1045") {
 						log.Errorf("Initializing is only working when the root password is empty")
-						log.Errorf(color.YellowString("Did you already set root password before?"))
+						log.Errorf("%s", color.YellowString("Did you already set root password before?"))
 					}
 					return err
 				}
