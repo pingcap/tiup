@@ -33,8 +33,8 @@ LDFLAGS += $(EXTRA_LDFLAGS)
 
 FILES   := $$(find . -name "*.go")
 
-FAILPOINT_ENABLE  := $$(../../tools/bin/failpoint-ctl enable)
-FAILPOINT_DISABLE := $$(../../tools/bin/failpoint-ctl disable)
+FAILPOINT_ENABLE  := $$(go tool github.com/pingcap/failpoint/failpoint-ctl enable)
+FAILPOINT_DISABLE := $$(go tool github.com/pingcap/failpoint/failpoint-ctl disable)
 
 default: check build
 	@# Target: run the checks and then build.
