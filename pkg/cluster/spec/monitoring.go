@@ -44,7 +44,8 @@ type PrometheusSpec struct {
 	Patched               bool                   `yaml:"patched,omitempty"`
 	IgnoreExporter        bool                   `yaml:"ignore_exporter,omitempty"`
 	Port                  int                    `yaml:"port" default:"9090"`
-	NgPort                int                    `yaml:"ng_port,omitempty" validate:"ng_port:editable"` // ng_port is usable since v5.3.0 and default as 12020 since v5.4.0, so the default value is set in spec.go/AdjustByVersion
+	NgPort                int                    `yaml:"ng_port,omitempty" validate:"ng_port:editable"`                               // ng_port is usable since v5.3.0 and default as 12020 since v5.4.0, so the default value is set in spec.go/AdjustByVersion
+	EnableVMRemoteWrite   bool                   `yaml:"enable_vm_remote_write,omitempty" validate:"enable_vm_remote_write:editable"` // Enable remote write to ng-monitoring
 	DeployDir             string                 `yaml:"deploy_dir,omitempty"`
 	DataDir               string                 `yaml:"data_dir,omitempty"`
 	LogDir                string                 `yaml:"log_dir,omitempty"`
@@ -437,6 +438,18 @@ func (i *MonitorInstance) InitConfig(
 			for i := 0; i < servers.Len(); i++ {
 				monitoring := servers.Index(i).Interface().(*PrometheusSpec)
 				cfig.AddNGMonitoring(monitoring.Host, uint64(monitoring.NgPort))
+
+				// Add remote write configuration if enabled
+				if spec.EnableVMRemoteWrite && monitoring.NgPort > 0 {
+					remoteWrite := map[string]any{
+						"url": fmt.Sprintf("http://%s/api/v1/write", utils.JoinHostPort(monitoring.Host, monitoring.NgPort)),
+					}
+					if spec.RemoteConfig.RemoteWrite == nil {
+						spec.RemoteConfig.RemoteWrite = []map[string]any{remoteWrite}
+					} else {
+						spec.RemoteConfig.RemoteWrite = append(spec.RemoteConfig.RemoteWrite, remoteWrite)
+					}
+				}
 			}
 		}
 		fp = filepath.Join(paths.Cache, fmt.Sprintf("ngmonitoring_%s_%d.toml", i.GetHost(), i.GetPort()))
