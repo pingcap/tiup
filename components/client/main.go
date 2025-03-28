@@ -139,6 +139,7 @@ func isInstanceAlive(tiupHome, instance string) bool {
 		return false
 	}
 
+	//revive:disable
 	if v, ok := process["pid"]; !ok {
 		return false
 	} else if pid, ok := v.(float64); !ok {
@@ -148,6 +149,7 @@ func isInstanceAlive(tiupHome, instance string) bool {
 	} else {
 		return exist
 	}
+	//revive:enable
 }
 
 func readDsn(dir, component string) []*endpoint {
