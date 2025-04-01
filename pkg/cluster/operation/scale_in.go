@@ -17,7 +17,6 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
-	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -257,7 +256,7 @@ func ScaleInCluster(
 		maxReplicas := config.MaxReplicas
 
 		if len(tikvInstances) < maxReplicas {
-			logger.Warnf("%s", fmt.Sprintf("TiKV instance number %d will be less than max-replicas setting after scale-in. TiFlash won't be able to receive data from leader before TiKV instance number reach %d", len(tikvInstances), maxReplicas))
+			logger.Warnf("TiKV instance number %d will be less than max-replicas setting after scale-in. TiFlash won't be able to receive data from leader before TiKV instance number reach %d", len(tikvInstances), maxReplicas)
 		}
 	}
 

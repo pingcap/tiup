@@ -369,7 +369,7 @@ func (m *Manager) RestoreClusterMeta(clusterName, filePath string, skipConfirm b
 	if err != nil {
 		return err
 	}
-	m.logger.Warnf("%s", fmt.Sprintf("the given tarball was last modified at %s", color.HiYellowString(fi.ModTime().Format(time.RFC3339))))
+	m.logger.Warnf("the given tarball was last modified at %s", color.HiYellowString(fi.ModTime().Format(time.RFC3339)))
 	if !skipConfirm {
 		if err := tui.PromptForAnswerOrAbortError(
 			"Yes, I know my cluster meta will be be overridden.",
