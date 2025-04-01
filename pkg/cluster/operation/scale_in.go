@@ -257,7 +257,7 @@ func ScaleInCluster(
 		maxReplicas := config.MaxReplicas
 
 		if len(tikvInstances) < maxReplicas {
-			logger.Warnf(fmt.Sprintf("TiKV instance number %d will be less than max-replicas setting after scale-in. TiFlash won't be able to receive data from leader before TiKV instance number reach %d", len(tikvInstances), maxReplicas))
+			logger.Warnf("%s", fmt.Sprintf("TiKV instance number %d will be less than max-replicas setting after scale-in. TiFlash won't be able to receive data from leader before TiKV instance number reach %d", len(tikvInstances), maxReplicas))
 		}
 	}
 
@@ -301,7 +301,7 @@ func ScaleInCluster(
 					return err
 				}
 			} else {
-				logger.Warnf(color.YellowString("The component `%s` will become tombstone, maybe exists in several minutes or hours, after that you can use the prune command to clean it",
+				logger.Warnf("%s", color.YellowString("The component `%s` will become tombstone, maybe exists in several minutes or hours, after that you can use the prune command to clean it",
 					component.Name()))
 			}
 		}
@@ -327,7 +327,7 @@ func ScaleInCluster(
 					return err
 				}
 			} else {
-				logger.Warnf(color.YellowString("The component `%s` will become tombstone, maybe exists in several minutes or hours, after that you can use the prune command to clean it",
+				logger.Warnf("%s", color.YellowString("The component `%s` will become tombstone, maybe exists in several minutes or hours, after that you can use the prune command to clean it",
 					component.Name()))
 			}
 		}

@@ -57,12 +57,12 @@ check: fmt lint check-static vet
 
 check-static:
 	@# Target: run the golangci-lint static check tool
-	../../tools/bin/golangci-lint run --config ../../tools/check/golangci.yaml ./... --deadline=3m --fix
+	../../tools/bin/golangci-lint run --config ../../tools/check/golangci.yaml ./... --timeout=3m --fix
 
 lint:
 	@# Target: run the lint checker revive
 	@echo "linting"
-	@../../tools/bin/revive -formatter friendly -config ../../tools/check/revive.toml $(FILES)
+	@go tool github.com/mgechev/revive -formatter friendly -config ../../tools/check/revive.toml $(FILES)
 
 vet:
 	@# Target: run the go vet tool

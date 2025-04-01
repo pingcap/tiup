@@ -427,7 +427,7 @@ func systemctl(ctx context.Context, executor ctxt.Executor, service string, acti
 		fmt.Println(string(stdout))
 	}
 	if len(stderr) > 0 && !bytes.Contains(stderr, []byte("Created symlink ")) && !bytes.Contains(stderr, []byte("Removed symlink ")) {
-		logger.Errorf(string(stderr))
+		logger.Errorf("%s", string(stderr))
 	}
 	if len(stderr) > 0 && action == "stop" {
 		// ignore "unit not loaded" error, as this means the unit is not
@@ -435,10 +435,10 @@ func systemctl(ctx context.Context, executor ctxt.Executor, service string, acti
 		// NOTE: there will be a potential bug if the unit name is set
 		// wrong and the real unit still remains started.
 		if bytes.Contains(stderr, []byte(" not loaded.")) {
-			logger.Warnf(string(stderr))
+			logger.Warnf("%s", string(stderr))
 			return nil // reset the error to avoid exiting
 		}
-		logger.Errorf(string(stderr))
+		logger.Errorf("%s", string(stderr))
 	}
 	return err
 }

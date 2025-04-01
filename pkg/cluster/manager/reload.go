@@ -59,7 +59,7 @@ func (m *Manager) Reload(name string, gOpt operator.Options, skipRestart, skipCo
 
 	if !skipConfirm {
 		if err := tui.PromptForConfirmOrAbortError(
-			fmt.Sprintf("Will reload the cluster %s with restart policy is %s, nodes: %s, roles: %s.\nDo you want to continue? [y/N]:",
+			"%s", fmt.Sprintf("Will reload the cluster %s with restart policy is %s, nodes: %s, roles: %s.\nDo you want to continue? [y/N]:",
 				color.HiYellowString(name),
 				color.HiRedString(fmt.Sprintf("%v", !skipRestart)),
 				color.HiRedString(strings.Join(gOpt.Nodes, ",")),

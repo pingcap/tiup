@@ -23,6 +23,7 @@ import (
 var portCache sync.Map
 
 func getFreePort(host string, defaultPort int) (int, error) {
+	//revive:disable
 	if port, err := getPort(host, defaultPort); err == nil {
 		return port, nil
 	} else if port, err := getPort(host, 0); err == nil {
@@ -30,6 +31,7 @@ func getFreePort(host string, defaultPort int) (int, error) {
 	} else {
 		return 0, err
 	}
+	//revive:enable
 }
 
 // MustGetFreePort asks the kernel for a free open port that is ready to use, if fail, panic
