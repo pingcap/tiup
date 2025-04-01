@@ -285,10 +285,7 @@ func TailN(fname string, n int) (lines []string, err error) {
 		return nil, errors.AddStack(err)
 	}
 
-	start := int(stat.Size()) - n*estimateLineSize
-	if start < 0 {
-		start = 0
-	}
+	start := max(int(stat.Size())-n*estimateLineSize, 0)
 
 	_, err = file.Seek(int64(start), 0 /*means relative to the origin of the file*/)
 	if err != nil {
