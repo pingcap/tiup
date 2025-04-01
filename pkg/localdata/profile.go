@@ -30,6 +30,7 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/mod/semver"
+	"slices"
 )
 
 // Profile represents the `tiup` profile
@@ -214,10 +215,8 @@ func (p *Profile) VersionIsInstalled(component, version string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	for _, v := range installed {
-		if v == version {
-			return true, nil
-		}
+	if slices.Contains(installed, version) {
+		return true, nil
 	}
 	return false, nil
 }

@@ -13,6 +13,8 @@
 
 package queue
 
+import "slices"
+
 // AnyQueue is a queue stores any
 type AnyQueue struct {
 	eq    func(a any, b any) bool
@@ -28,7 +30,7 @@ func NewAnyQueue(eq func(a any, b any) bool, aa ...any) *AnyQueue {
 func (q *AnyQueue) Get(val any) any {
 	for i, a := range q.slice {
 		if q.eq(a, val) {
-			q.slice = append(q.slice[:i], q.slice[i+1:]...)
+			q.slice = slices.Delete(q.slice, i, i+1)
 			return a
 		}
 	}
