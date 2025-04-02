@@ -157,7 +157,7 @@ func (m *Manager) Deploy(
 		msg := "The value of systemd_mode is set to `user` in the topology, please note that you'll need to manually execute the following command using root or sudo on the host(s) to enable lingering for the systemd user instance.\n"
 		msg += color.GreenString(hint)
 		msg += "\nYou can read the systemd documentation for reference: https://wiki.archlinux.org/title/Systemd/User#Automatic_start-up_of_systemd_user_instances."
-		m.logger.Warnf(msg)
+		m.logger.Warnf("%s", msg)
 		err = tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: ")
 		if err != nil {
 			return err

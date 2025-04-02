@@ -141,7 +141,7 @@ func (m *Manager) confirmTopology(name, version string, topo spec.Topology, patc
 			msg := cyan.Sprint(`There are TiSpark nodes defined in the topology, please note that you'll need to manually install Java Runtime Environment (JRE) 8 on the host, otherwise the TiSpark nodes will fail to start.
 You may read the OpenJDK doc for a reference: https://openjdk.java.net/install/
 			`)
-			m.logger.Warnf(msg)
+			m.logger.Warnf("%s", msg)
 		}
 	}
 

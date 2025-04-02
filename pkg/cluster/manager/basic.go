@@ -172,7 +172,7 @@ func (m *Manager) StopCluster(
 
 	if !skipConfirm {
 		if err := tui.PromptForConfirmOrAbortError(
-			fmt.Sprintf("Will stop the cluster %s with nodes: %s, roles: %s.\nDo you want to continue? [y/N]:",
+			"%s", fmt.Sprintf("Will stop the cluster %s with nodes: %s, roles: %s.\nDo you want to continue? [y/N]:",
 				color.HiYellowString(name),
 				color.HiRedString(strings.Join(gOpt.Nodes, ",")),
 				color.HiRedString(strings.Join(gOpt.Roles, ",")),
@@ -250,7 +250,7 @@ func (m *Manager) RestartCluster(name string, gOpt operator.Options, skipConfirm
 			color.HiYellowString(rolesToRestart),
 			availabilityMessage,
 		)
-		if err := tui.PromptForConfirmOrAbortError(confirmationMessage); err != nil {
+		if err := tui.PromptForConfirmOrAbortError("%s", confirmationMessage); err != nil {
 			return err
 		}
 	}
@@ -350,30 +350,30 @@ func (m *Manager) RestoreClusterMeta(clusterName, filePath string, skipConfirm b
 		if !os.IsNotExist(err) {
 			return perrs.AddStack(err)
 		}
-		m.logger.Infof(fmt.Sprintf("meta of cluster %s didn't exist before restore", clusterName))
+		m.logger.Infof("%s", fmt.Sprintf("meta of cluster %s didn't exist before restore", clusterName))
 		skipConfirm = true
 	} else {
-		m.logger.Warnf(color.HiRedString(tui.ASCIIArtWarning))
+		m.logger.Warnf("%s", color.HiRedString(tui.ASCIIArtWarning))
 
 		exist, err := m.specManager.Exist(clusterName)
 		if err != nil {
 			return err
 		}
 		if exist {
-			m.logger.Infof(fmt.Sprintf("the exist meta.yaml of cluster %s was last modified at %s", clusterName, color.HiYellowString(fi.ModTime().Format(time.RFC3339))))
+			m.logger.Infof("%s", fmt.Sprintf("the exist meta.yaml of cluster %s was last modified at %s", clusterName, color.HiYellowString(fi.ModTime().Format(time.RFC3339))))
 		} else {
-			m.logger.Infof(fmt.Sprintf("the meta.yaml of cluster %s does not exist", clusterName))
+			m.logger.Infof("%s", fmt.Sprintf("the meta.yaml of cluster %s does not exist", clusterName))
 		}
 	}
 	fi, err = os.Stat(filePath)
 	if err != nil {
 		return err
 	}
-	m.logger.Warnf(fmt.Sprintf("the given tarball was last modified at %s", color.HiYellowString(fi.ModTime().Format(time.RFC3339))))
+	m.logger.Warnf("the given tarball was last modified at %s", color.HiYellowString(fi.ModTime().Format(time.RFC3339)))
 	if !skipConfirm {
 		if err := tui.PromptForAnswerOrAbortError(
 			"Yes, I know my cluster meta will be be overridden.",
-			fmt.Sprintf("This operation will override topology file and other meta file of %s cluster %s .",
+			"%s", fmt.Sprintf("This operation will override topology file and other meta file of %s cluster %s .",
 				m.sysName,
 				color.HiYellowString(clusterName),
 			)+"\nAre you sure to continue?",
@@ -392,7 +392,7 @@ func (m *Manager) RestoreClusterMeta(clusterName, filePath string, skipConfirm b
 	}
 	err = utils.Untar(f, m.specManager.Path(clusterName))
 	if err == nil {
-		m.logger.Infof(fmt.Sprintf("restore meta of cluster %s successfully.", clusterName))
+		m.logger.Infof("%s", fmt.Sprintf("restore meta of cluster %s successfully.", clusterName))
 	}
 	return err
 }
