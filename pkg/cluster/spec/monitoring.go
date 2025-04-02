@@ -379,12 +379,6 @@ func (i *MonitorInstance) InitConfig(
 		}
 	}
 
-	remoteCfg, err := encodeRemoteCfg2Yaml(spec.RemoteConfig)
-	if err != nil {
-		return err
-	}
-	cfig.SetRemoteConfig(string(remoteCfg))
-
 	// doesn't work
 	if _, err := i.setTLSConfig(ctx, false, nil, paths); err != nil {
 		return err
@@ -461,6 +455,12 @@ func (i *MonitorInstance) InitConfig(
 			return err
 		}
 	}
+	// set remote config
+	remoteCfg, err := encodeRemoteCfg2Yaml(spec.RemoteConfig)
+	if err != nil {
+		return err
+	}
+	cfig.SetRemoteConfig(string(remoteCfg))
 
 	fp = filepath.Join(paths.Cache, fmt.Sprintf("prometheus_%s_%d.yml", i.GetHost(), i.GetPort()))
 	if err := cfig.ConfigToFile(fp); err != nil {

@@ -14,6 +14,7 @@
 package spec
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"fmt"
@@ -273,14 +274,44 @@ func (i *GrafanaInstance) InitConfig(
 	if len(monitors) == 0 {
 		return errors.New("no prometheus found in topology")
 	}
-	fp = filepath.Join(paths.Cache, fmt.Sprintf("datasource_%s.yml", i.GetHost()))
-	datasourceCfg := &config.DatasourceConfig{
-		ClusterName: clusterName,
-		URL:         fmt.Sprintf("http://%s", utils.JoinHostPort(monitors[0].Host, monitors[0].Port)),
+
+	// Create datasources configuration
+	datasources := make([]*config.DatasourceConfig, 0)
+
+	// Add default Prometheus datasource
+	defaultDatasource := config.NewDatasourceConfig(
+		clusterName,
+		fmt.Sprintf("http://%s", utils.JoinHostPort(monitors[0].Host, monitors[0].Port)),
+	)
+	datasources = append(datasources, defaultDatasource)
+
+	// Add VM datasource if enabled
+	if monitors[0].EnableVMRemoteWrite {
+		vmDatasource := config.NewDatasourceConfig(
+			fmt.Sprintf("%s-vm", clusterName),
+			fmt.Sprintf("http://%s", utils.JoinHostPort(monitors[0].Host, monitors[0].NgPort)),
+		).WithIsDefault(false)
+		datasources = append(datasources, vmDatasource)
 	}
-	if err := datasourceCfg.ConfigToFile(fp); err != nil {
+
+	// Write datasources configuration
+	fp = filepath.Join(paths.Cache, fmt.Sprintf("datasource_%s.yml", i.GetHost()))
+	content := bytes.NewBuffer(nil)
+	for idx, ds := range datasources {
+		dsContent, err := ds.Config()
+		if err != nil {
+			return err
+		}
+		if idx > 0 {
+			content.WriteString("\n")
+		}
+		content.Write(dsContent)
+	}
+
+	if err := utils.WriteFile(fp, content.Bytes(), 0644); err != nil {
 		return err
 	}
+
 	dst = filepath.Join(paths.Deploy, "provisioning", "datasources", "datasource.yml")
 	return i.TransferLocalConfigFile(ctx, e, fp, dst)
 }
