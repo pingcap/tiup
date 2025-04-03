@@ -1,12 +1,14 @@
 apiVersion: 1
 datasources:
-  - name: {{.ClusterName}}
-    type: prometheus
+{{- range .Datasources}}
+  - name: {{.Name}}
+    type: {{.Type}}
     access: proxy
     url: {{.URL}}
     withCredentials: false
-    isDefault: false
+    isDefault: {{.IsDefault}}
     tlsAuth: false
     tlsAuthWithCACert: false
     version: 1
     editable: true
+{{- end}}
