@@ -19,12 +19,16 @@ import (
 	"crypto/tls"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"time"
 
+	"text/template"
+
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/embed"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/config"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
@@ -297,15 +301,25 @@ func (i *GrafanaInstance) InitConfig(
 	// Write datasources configuration
 	fp = filepath.Join(paths.Cache, fmt.Sprintf("datasource_%s.yml", i.GetHost()))
 	content := bytes.NewBuffer(nil)
-	for idx, ds := range datasources {
-		dsContent, err := ds.Config()
-		if err != nil {
-			return err
-		}
-		if idx > 0 {
-			content.WriteString("\n")
-		}
-		content.Write(dsContent)
+
+	// Create a map to hold all datasources
+	datasourceMap := map[string]any{
+		"Datasources": datasources,
+	}
+
+	// Create a template for the datasource configuration
+	tpl, err := embed.ReadTemplate(path.Join("templates", "config", "datasource.yml.tpl"))
+	if err != nil {
+		return err
+	}
+
+	tmpl, err := template.New("Datasource").Parse(string(tpl))
+	if err != nil {
+		return err
+	}
+
+	if err := tmpl.Execute(content, datasourceMap); err != nil {
+		return err
 	}
 
 	if err := utils.WriteFile(fp, content.Bytes(), 0644); err != nil {

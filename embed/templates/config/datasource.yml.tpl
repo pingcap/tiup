@@ -1,5 +1,6 @@
 apiVersion: 1
 datasources:
+{{- range .Datasources}}
   - name: {{.Name}}
     type: {{.Type}}
     access: proxy
@@ -10,3 +11,4 @@ datasources:
     tlsAuthWithCACert: false
     version: 1
     editable: true
+{{- end}}

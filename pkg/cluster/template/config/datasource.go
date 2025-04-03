@@ -24,21 +24,19 @@ import (
 
 // DatasourceConfig represent the data to generate Datasource config
 type DatasourceConfig struct {
-	ClusterName string
-	URL         string
-	Name        string
-	Type        string
-	IsDefault   bool
+	Name      string
+	Type      string
+	URL       string
+	IsDefault bool
 }
 
 // NewDatasourceConfig returns a DatasourceConfig
 func NewDatasourceConfig(clusterName, url string) *DatasourceConfig {
 	return &DatasourceConfig{
-		ClusterName: clusterName,
-		URL:         url,
-		Name:        clusterName,
-		Type:        "prometheus",
-		IsDefault:   true,
+		Name:      clusterName,
+		Type:      "prometheus",
+		URL:       url,
+		IsDefault: true,
 	}
 }
 
@@ -83,7 +81,9 @@ func (c *DatasourceConfig) Config() ([]byte, error) {
 	}
 
 	content := bytes.NewBufferString("")
-	if err := tmpl.Execute(content, c); err != nil {
+	if err := tmpl.Execute(content, map[string]any{
+		"Datasources": []any{c},
+	}); err != nil {
 		return nil, err
 	}
 
