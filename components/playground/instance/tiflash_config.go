@@ -63,7 +63,7 @@ func (inst *TiFlashInstance) getConfig() map[string]any {
 		config["storage.s3.access_key_id"] = inst.cseOpts.AccessKey
 		config["storage.s3.secret_access_key"] = inst.cseOpts.SecretKey
 		config["storage.remote.cache.dir"] = filepath.Join(inst.Dir, "remote_cache")
-		config["storage.remote.cache.capacity"] = 50000000000 // 50GB
+		config["storage.remote.cache.capacity"] = uint64(50000000000) // 50GB
 		config["storage.main.dir"] = []string{filepath.Join(inst.Dir, "main_data")}
 		config["flash.disaggregated_mode"] = "tiflash_compute"
 		if inst.mode == "tidb-cse" {
