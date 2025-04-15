@@ -285,6 +285,7 @@ func (i *GrafanaInstance) InitConfig(
 	// Add default Prometheus datasource
 	defaultDatasource := config.NewDatasourceConfig(
 		clusterName,
+		// not support tls
 		fmt.Sprintf("http://%s", utils.JoinHostPort(monitors[0].Host, monitors[0].Port)),
 	)
 	datasources = append(datasources, defaultDatasource)
@@ -293,6 +294,7 @@ func (i *GrafanaInstance) InitConfig(
 	if monitors[0].EnableVMRemoteWrite {
 		vmDatasource := config.NewDatasourceConfig(
 			fmt.Sprintf("%s-vm", clusterName),
+			// not support tls
 			fmt.Sprintf("http://%s", utils.JoinHostPort(monitors[0].Host, monitors[0].NgPort)),
 		).WithIsDefault(false)
 		datasources = append(datasources, vmDatasource)
