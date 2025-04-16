@@ -13,6 +13,8 @@
 
 package set
 
+import "slices"
+
 // AnySet is a set stores any
 type AnySet struct {
 	eq    func(a any, b any) bool
@@ -66,7 +68,7 @@ func (s *AnySet) Intersection(rhs *AnySet) *AnySet {
 func (s *AnySet) Remove(val any) {
 	for i, a := range s.slice {
 		if s.eq(a, val) {
-			s.slice = append(s.slice[:i], s.slice[i+1:]...)
+			s.slice = slices.Delete(s.slice, i, i+1)
 			return
 		}
 	}
@@ -86,5 +88,5 @@ func (s *AnySet) Difference(rhs *AnySet) *AnySet {
 
 // Slice converts the set to a slice
 func (s *AnySet) Slice() []any {
-	return append([]any{}, s.slice...)
+	return slices.Clone(s.slice)
 }

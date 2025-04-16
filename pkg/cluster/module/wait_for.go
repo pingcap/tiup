@@ -64,7 +64,7 @@ func NewWaitFor(c WaitForConfig) *WaitFor {
 
 // Execute the module return nil if successfully wait for the event.
 func (w *WaitFor) Execute(ctx context.Context, e ctxt.Executor) (err error) {
-	pattern := []byte(fmt.Sprintf(":%d ", w.c.Port))
+	pattern := fmt.Appendf(nil, ":%d ", w.c.Port)
 
 	retryOpt := utils.RetryOption{
 		Delay:   w.c.Sleep,

@@ -32,6 +32,7 @@ import (
 	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/sync/errgroup"
+	"slices"
 )
 
 // TODO: We can make drainer not async.
@@ -43,12 +44,7 @@ func AsyncNodes(spec *spec.Specification, nodes []string, async bool) []string {
 	var notAsyncNodes []string
 
 	inNodes := func(n string) bool {
-		for _, e := range nodes {
-			if n == e {
-				return true
-			}
-		}
-		return false
+		return slices.Contains(nodes, n)
 	}
 
 	for _, c := range spec.ComponentsByStartOrder() {
