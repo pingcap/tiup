@@ -44,7 +44,8 @@ type PrometheusSpec struct {
 	Patched               bool                   `yaml:"patched,omitempty"`
 	IgnoreExporter        bool                   `yaml:"ignore_exporter,omitempty"`
 	Port                  int                    `yaml:"port" default:"9090"`
-	NgPort                int                    `yaml:"ng_port,omitempty" validate:"ng_port:editable"` // ng_port is usable since v5.3.0 and default as 12020 since v5.4.0, so the default value is set in spec.go/AdjustByVersion
+	NgPort                int                    `yaml:"ng_port,omitempty" validate:"ng_port:editable"`                               // ng_port is usable since v5.3.0 and default as 12020 since v5.4.0, so the default value is set in spec.go/AdjustByVersion
+	EnableVMRemoteWrite   bool                   `yaml:"enable_vm_remote_write,omitempty" validate:"enable_vm_remote_write:editable"` // Enable remote write to ng-monitoring
 	DeployDir             string                 `yaml:"deploy_dir,omitempty"`
 	DataDir               string                 `yaml:"data_dir,omitempty"`
 	LogDir                string                 `yaml:"log_dir,omitempty"`
@@ -193,6 +194,38 @@ type MonitorInstance struct {
 	topo Topology
 }
 
+// handleRemoteWrite handles remote write configuration for NG monitoring
+func (i *MonitorInstance) handleRemoteWrite(spec *PrometheusSpec, monitoring *PrometheusSpec) {
+	if !spec.EnableVMRemoteWrite || monitoring.NgPort <= 0 {
+		return
+	}
+
+	// monitor do not support tls for itself
+	remoteWriteURL := fmt.Sprintf("http://%s/api/v1/write", utils.JoinHostPort(monitoring.Host, monitoring.NgPort))
+
+	// Check if this URL already exists in remote write configs
+	urlExists := false
+	if spec.RemoteConfig.RemoteWrite != nil {
+		for _, rw := range spec.RemoteConfig.RemoteWrite {
+			if url, ok := rw["url"].(string); ok && url == remoteWriteURL {
+				urlExists = true
+				break
+			}
+		}
+	}
+
+	if !urlExists {
+		remoteWrite := map[string]any{
+			"url": remoteWriteURL,
+		}
+		if spec.RemoteConfig.RemoteWrite == nil {
+			spec.RemoteConfig.RemoteWrite = []map[string]any{remoteWrite}
+		} else {
+			spec.RemoteConfig.RemoteWrite = append(spec.RemoteConfig.RemoteWrite, remoteWrite)
+		}
+	}
+}
+
 // InitConfig implement Instance interface
 func (i *MonitorInstance) InitConfig(
 	ctx context.Context,
@@ -333,8 +366,8 @@ func (i *MonitorInstance) InitConfig(
 		}
 	}
 	if servers, found := topoHasField("Monitors"); found {
-		for i := 0; i < servers.Len(); i++ {
-			monitoring := servers.Index(i).Interface().(*PrometheusSpec)
+		for idx := 0; idx < servers.Len(); idx++ {
+			monitoring := servers.Index(idx).Interface().(*PrometheusSpec)
 			uniqueHosts.Insert(monitoring.Host)
 		}
 	}
@@ -377,12 +410,6 @@ func (i *MonitorInstance) InitConfig(
 			cfig.AddMonitoredServer(host)
 		}
 	}
-
-	remoteCfg, err := encodeRemoteCfg2Yaml(spec.RemoteConfig)
-	if err != nil {
-		return err
-	}
-	cfig.SetRemoteConfig(string(remoteCfg))
 
 	// doesn't work
 	if _, err := i.setTLSConfig(ctx, false, nil, paths); err != nil {
@@ -434,11 +461,13 @@ func (i *MonitorInstance) InitConfig(
 		}
 
 		if servers, found := topoHasField("Monitors"); found {
-			for i := 0; i < servers.Len(); i++ {
-				monitoring := servers.Index(i).Interface().(*PrometheusSpec)
+			for idx := 0; idx < servers.Len(); idx++ {
+				monitoring := servers.Index(idx).Interface().(*PrometheusSpec)
 				cfig.AddNGMonitoring(monitoring.Host, uint64(monitoring.NgPort))
+				i.handleRemoteWrite(spec, monitoring)
 			}
 		}
+
 		fp = filepath.Join(paths.Cache, fmt.Sprintf("ngmonitoring_%s_%d.toml", i.GetHost(), i.GetPort()))
 		if err := ngcfg.ConfigToFile(fp); err != nil {
 			return err
@@ -448,6 +477,12 @@ func (i *MonitorInstance) InitConfig(
 			return err
 		}
 	}
+	// set remote config
+	remoteCfg, err := encodeRemoteCfg2Yaml(spec.RemoteConfig)
+	if err != nil {
+		return err
+	}
+	cfig.SetRemoteConfig(string(remoteCfg))
 
 	fp = filepath.Join(paths.Cache, fmt.Sprintf("prometheus_%s_%d.yml", i.GetHost(), i.GetPort()))
 	if err := cfig.ConfigToFile(fp); err != nil {

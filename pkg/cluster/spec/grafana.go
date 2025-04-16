@@ -14,16 +14,21 @@
 package spec
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"time"
 
+	"text/template"
+
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/embed"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/config"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
@@ -273,14 +278,56 @@ func (i *GrafanaInstance) InitConfig(
 	if len(monitors) == 0 {
 		return errors.New("no prometheus found in topology")
 	}
-	fp = filepath.Join(paths.Cache, fmt.Sprintf("datasource_%s.yml", i.GetHost()))
-	datasourceCfg := &config.DatasourceConfig{
-		ClusterName: clusterName,
-		URL:         fmt.Sprintf("http://%s", utils.JoinHostPort(monitors[0].Host, monitors[0].Port)),
+
+	// Create datasources configuration
+	datasources := make([]*config.DatasourceConfig, 0)
+
+	// Add default Prometheus datasource
+	defaultDatasource := config.NewDatasourceConfig(
+		clusterName,
+		// not support tls
+		fmt.Sprintf("http://%s", utils.JoinHostPort(monitors[0].Host, monitors[0].Port)),
+	)
+	datasources = append(datasources, defaultDatasource)
+
+	// Add VM datasource if enabled
+	if monitors[0].EnableVMRemoteWrite {
+		vmDatasource := config.NewDatasourceConfig(
+			fmt.Sprintf("%s-vm", clusterName),
+			// not support tls
+			fmt.Sprintf("http://%s", utils.JoinHostPort(monitors[0].Host, monitors[0].NgPort)),
+		).WithIsDefault(false)
+		datasources = append(datasources, vmDatasource)
 	}
-	if err := datasourceCfg.ConfigToFile(fp); err != nil {
+
+	// Write datasources configuration
+	fp = filepath.Join(paths.Cache, fmt.Sprintf("datasource_%s.yml", i.GetHost()))
+	content := bytes.NewBuffer(nil)
+
+	// Create a map to hold all datasources
+	datasourceMap := map[string]any{
+		"Datasources": datasources,
+	}
+
+	// Create a template for the datasource configuration
+	tpl, err := embed.ReadTemplate(path.Join("templates", "config", "datasource.yml.tpl"))
+	if err != nil {
 		return err
 	}
+
+	tmpl, err := template.New("Datasource").Parse(string(tpl))
+	if err != nil {
+		return err
+	}
+
+	if err := tmpl.Execute(content, datasourceMap); err != nil {
+		return err
+	}
+
+	if err := utils.WriteFile(fp, content.Bytes(), 0644); err != nil {
+		return err
+	}
+
 	dst = filepath.Join(paths.Deploy, "provisioning", "datasources", "datasource.yml")
 	return i.TransferLocalConfigFile(ctx, e, fp, dst)
 }
