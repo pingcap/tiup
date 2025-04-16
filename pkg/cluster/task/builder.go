@@ -165,22 +165,22 @@ func (b *Builder) ClusterSSH(
 }
 
 // UpdateMeta maintain the meta information
-func (b *Builder) UpdateMeta(cluster string, metadata *spec.ClusterMeta, deletedNodeIds []string) *Builder {
+func (b *Builder) UpdateMeta(cluster string, metadata *spec.ClusterMeta, deletedNodeIDs []string) *Builder {
 	b.tasks = append(b.tasks, &UpdateMeta{
 		cluster:        cluster,
 		metadata:       metadata,
-		deletedNodeIDs: deletedNodeIds,
+		deletedNodeIDs: deletedNodeIDs,
 	})
 	return b
 }
 
 // UpdateTopology maintain the topology information
-func (b *Builder) UpdateTopology(cluster, profile string, metadata *spec.ClusterMeta, deletedNodeIds []string) *Builder {
+func (b *Builder) UpdateTopology(cluster, profile string, metadata *spec.ClusterMeta, deletedNodeIDs []string) *Builder {
 	b.tasks = append(b.tasks, &UpdateTopology{
 		metadata:       metadata,
 		cluster:        cluster,
 		profileDir:     profile,
-		deletedNodeIDs: deletedNodeIds,
+		deletedNodeIDs: deletedNodeIDs,
 		tcpProxy:       proxy.GetTCPProxy(),
 	})
 	return b

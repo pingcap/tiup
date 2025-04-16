@@ -57,7 +57,7 @@ func (c *ClusterOperate) Execute(ctx context.Context) error {
 	}
 
 	if err != nil {
-		return errors.Annotatef(err, opErrMsg[c.op])
+		return errors.Annotatef(err, "%s", opErrMsg[c.op])
 	}
 
 	return nil

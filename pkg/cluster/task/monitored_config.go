@@ -134,7 +134,7 @@ func (m *MonitoredConfig) syncMonitoredSystemConfig(ctx context.Context, exec ct
 		}
 		if len(errp) > 0 {
 			ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger).
-				Errorf(string(errp))
+				Errorf("%s", string(errp))
 		}
 		return err
 	}
