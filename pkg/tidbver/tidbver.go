@@ -93,6 +93,11 @@ func TiFlashNotNeedSomeConfig(version string) bool {
 	return semver.Compare(version, "v5.4.0") >= 0 || strings.Contains(version, "nightly")
 }
 
+// TiFlashNeedClusterManager return if given version of TiFlash do not need to start `cluster_manager`
+func TiFlashNeedClusterManager(version string) bool {
+	return semver.Compare(version, "v6.0.0") < 0 && !strings.Contains(version, "nightly")
+}
+
 // TiFlashPlaygroundNewStartMode return true if the given version of TiFlash could be started
 // with the new implementation in TiUP playground.
 func TiFlashPlaygroundNewStartMode(version string) bool {
