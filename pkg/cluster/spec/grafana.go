@@ -282,21 +282,25 @@ func (i *GrafanaInstance) InitConfig(
 	// Create datasources configuration
 	datasources := make([]*config.DatasourceConfig, 0)
 
-	// Add default Prometheus datasource
-	defaultDatasource := config.NewDatasourceConfig(
+	// Create both Prometheus and VM datasources, setting defaults based on configuration
+	vmIsDefault := monitors[0].VMConfig.Enable && monitors[0].VMConfig.IsDefaultDatasource
+	promIsDefault := !vmIsDefault
+
+	// Add Prometheus datasource
+	promDatasource := config.NewDatasourceConfig(
 		clusterName,
 		// not support tls
 		fmt.Sprintf("http://%s", utils.JoinHostPort(monitors[0].Host, monitors[0].Port)),
-	)
-	datasources = append(datasources, defaultDatasource)
+	).WithIsDefault(promIsDefault)
+	datasources = append(datasources, promDatasource)
 
 	// Add VM datasource if enabled
-	if monitors[0].EnableVMRemoteWrite {
+	if monitors[0].VMConfig.Enable {
 		vmDatasource := config.NewDatasourceConfig(
 			fmt.Sprintf("%s-vm", clusterName),
 			// not support tls
 			fmt.Sprintf("http://%s", utils.JoinHostPort(monitors[0].Host, monitors[0].NgPort)),
-		).WithIsDefault(false)
+		).WithIsDefault(vmIsDefault)
 		datasources = append(datasources, vmDatasource)
 	}
 
@@ -355,7 +359,24 @@ func (i *GrafanaInstance) initDashboards(ctx context.Context, e ctxt.Executor, s
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}
 
-	// Deal with the cluster name
+	// Get the monitor component to check if VM is the default datasource
+	topo := reflect.ValueOf(i.topo)
+	if topo.Kind() == reflect.Ptr {
+		topo = topo.Elem()
+	}
+	val := topo.FieldByName("Monitors")
+	if (val == reflect.Value{}) {
+		return errors.Errorf("field Monitors not found in topology: %v", topo)
+	}
+
+	// Determine which datasource to use in dashboards
+	datasourceName := clusterName
+	monitors := val.Interface().([]*PrometheusSpec)
+	if len(monitors) > 0 && monitors[0].VMConfig.Enable && monitors[0].VMConfig.IsDefaultDatasource {
+		datasourceName = fmt.Sprintf("%s-vm", clusterName)
+	}
+
+	// Deal with the cluster name and datasource
 	for _, cmd := range []string{
 		`find %s -type f -exec sed -i 's/\${DS_.*-CLUSTER}/%s/g' {} \;`,
 		`find %s -type f -exec sed -i 's/DS_.*-CLUSTER/%s/g' {} \;`,
@@ -364,7 +385,7 @@ func (i *GrafanaInstance) initDashboards(ctx context.Context, e ctxt.Executor, s
 		`find %s -type f -exec sed -i 's/test-cluster/%s/g' {} \;`,
 		`find %s -type f -exec sed -i 's/Test-Cluster/%s/g' {} \;`,
 	} {
-		cmd := fmt.Sprintf(cmd, dashboardsDir, clusterName)
+		cmd := fmt.Sprintf(cmd, dashboardsDir, datasourceName)
 		_, stderr, err := e.Execute(ctx, cmd, false)
 		if err != nil {
 			return errors.Annotatef(err, "stderr: %s", string(stderr))

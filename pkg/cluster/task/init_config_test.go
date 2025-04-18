@@ -22,10 +22,10 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/utils/mock"
 
 	"github.com/pingcap/check"
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/utils/mock"
 )
 
 type initConfigSuite struct {

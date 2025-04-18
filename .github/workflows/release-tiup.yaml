@@ -25,7 +25,7 @@ on:
 
 jobs:
   release:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     timeout-minutes: 30
     outputs:
       REL_VER: ${{ steps.build_tiup.outputs.REL_VER }}
