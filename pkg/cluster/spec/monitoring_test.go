@@ -253,3 +253,165 @@ func TestGetRetention(t *testing.T) {
 	val = getRetention("999d")
 	assert.EqualValues(t, "999d", val)
 }
+
+func TestHandleRemoteWrite(t *testing.T) {
+	topo := new(Specification)
+
+	// Create monitoring instance
+	monitorInstance := &MonitorInstance{
+		BaseInstance: BaseInstance{
+			InstanceSpec: &PrometheusSpec{},
+		},
+		topo: topo,
+	}
+
+	// Test case 1: VM is disabled
+	spec := &PrometheusSpec{
+		VMConfig: VMConfig{
+			Enable: false,
+		},
+		RemoteConfig: Remote{},
+	}
+
+	monitoring := &PrometheusSpec{
+		Host:   "127.0.0.1",
+		NgPort: 12020,
+	}
+
+	// Call the function
+	monitorInstance.handleRemoteWrite(spec, monitoring)
+
+	// Check that no remote write config was added when VM is disabled
+	assert.Nil(t, spec.RemoteConfig.RemoteWrite)
+
+	// Test case 2: VM is enabled but NgPort is 0
+	spec = &PrometheusSpec{
+		VMConfig: VMConfig{
+			Enable: true,
+		},
+		RemoteConfig: Remote{},
+	}
+
+	monitoring = &PrometheusSpec{
+		Host:   "127.0.0.1",
+		NgPort: 0,
+	}
+
+	// Call the function
+	monitorInstance.handleRemoteWrite(spec, monitoring)
+
+	// Check that no remote write config was added when NgPort is 0
+	assert.Nil(t, spec.RemoteConfig.RemoteWrite)
+
+	// Test case 3: VM is enabled and NgPort is set
+	spec = &PrometheusSpec{
+		VMConfig: VMConfig{
+			Enable: true,
+		},
+		RemoteConfig: Remote{},
+	}
+
+	monitoring = &PrometheusSpec{
+		Host:   "127.0.0.1",
+		NgPort: 12020,
+	}
+
+	// Call the function
+	monitorInstance.handleRemoteWrite(spec, monitoring)
+
+	// Check that remote write config was added
+	assert.NotNil(t, spec.RemoteConfig.RemoteWrite)
+	assert.Len(t, spec.RemoteConfig.RemoteWrite, 1)
+	assert.Equal(t, "http://127.0.0.1:12020/api/v1/write", spec.RemoteConfig.RemoteWrite[0]["url"])
+
+	// Test case 4: URL already exists in remote write configs
+	expectedURL := fmt.Sprintf("http://%s/api/v1/write", "127.0.0.1:12020")
+	existingRemoteWrite := []map[string]any{
+		{
+			"url": expectedURL,
+		},
+	}
+
+	spec = &PrometheusSpec{
+		VMConfig: VMConfig{
+			Enable: true,
+		},
+		RemoteConfig: Remote{
+			RemoteWrite: existingRemoteWrite,
+		},
+	}
+
+	monitoring = &PrometheusSpec{
+		Host:   "127.0.0.1",
+		NgPort: 12020,
+	}
+
+	// Call the function
+	monitorInstance.handleRemoteWrite(spec, monitoring)
+
+	// Check that no duplicate remote write config was added
+	assert.Len(t, spec.RemoteConfig.RemoteWrite, 1)
+	assert.Equal(t, expectedURL, spec.RemoteConfig.RemoteWrite[0]["url"])
+}
+
+// TestVMConfigField tests that the VMConfig field is properly defined in PrometheusSpec
+func TestVMConfigField(t *testing.T) {
+	// Create a PrometheusSpec with VMConfig
+	spec := PrometheusSpec{
+		Host: "127.0.0.1",
+		Port: 9090,
+		VMConfig: VMConfig{
+			Enable:              true,
+			IsDefaultDatasource: true,
+		},
+	}
+
+	// Validate VMConfig field exists and is accessible
+	assert.True(t, spec.VMConfig.Enable)
+	assert.True(t, spec.VMConfig.IsDefaultDatasource)
+
+	// Test setting fields
+	spec.VMConfig.Enable = false
+	spec.VMConfig.IsDefaultDatasource = false
+
+	assert.False(t, spec.VMConfig.Enable)
+	assert.False(t, spec.VMConfig.IsDefaultDatasource)
+}
+
+// TestVMConfigYAMLBackwardsCompatibility tests loading YAML with and without VMConfig field
+func TestVMConfigYAMLBackwardsCompatibility(t *testing.T) {
+	// Old YAML without VMConfig
+	oldYAML := `
+host: 127.0.0.1
+port: 9090
+ng_port: 12020
+`
+
+	// New YAML with VMConfig
+	newYAML := `
+host: 127.0.0.1
+port: 9090
+ng_port: 12020
+vm_config:
+  enable: true
+  is_default_datasource: true
+`
+
+	// Test unmarshaling old YAML
+	var oldSpec PrometheusSpec
+	err := yaml.Unmarshal([]byte(oldYAML), &oldSpec)
+	assert.NoError(t, err)
+
+	// Default values should be false
+	assert.False(t, oldSpec.VMConfig.Enable)
+	assert.False(t, oldSpec.VMConfig.IsDefaultDatasource)
+
+	// Test unmarshaling new YAML
+	var newSpec PrometheusSpec
+	err = yaml.Unmarshal([]byte(newYAML), &newSpec)
+	assert.NoError(t, err)
+
+	// New values should match what's in the YAML
+	assert.True(t, newSpec.VMConfig.Enable)
+	assert.True(t, newSpec.VMConfig.IsDefaultDatasource)
+}

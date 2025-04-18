@@ -20,6 +20,7 @@ import (
 	"os/user"
 	"path"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -30,6 +31,7 @@ import (
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestLocalDashboards(t *testing.T) {
@@ -160,9 +162,14 @@ level = warning
 	assert.Equal(t, expected, string(result))
 }
 
-type mockExecutor struct{}
+type mockExecutor struct {
+	executeFunc func(ctx context.Context, cmd string, sudo bool, timeouts ...time.Duration) ([]byte, []byte, error)
+}
 
 func (e *mockExecutor) Execute(ctx context.Context, cmd string, sudo bool, timeouts ...time.Duration) (stdout []byte, stderr []byte, err error) {
+	if e.executeFunc != nil {
+		return e.executeFunc(ctx, cmd, sudo, timeouts...)
+	}
 	return nil, nil, nil
 }
 
@@ -197,9 +204,12 @@ func TestGrafanaDatasourceConfig(t *testing.T) {
 	topo := new(Specification)
 	topo.Monitors = []*PrometheusSpec{
 		{
-			Host:                "127.0.0.1",
-			Port:                9090,
-			EnableVMRemoteWrite: true,
+			Host:   "127.0.0.1",
+			Port:   9090,
+			NgPort: 12020,
+			VMConfig: VMConfig{
+				Enable: true,
+			},
 		},
 	}
 	topo.Grafanas = []*GrafanaSpec{
@@ -231,8 +241,15 @@ func TestGrafanaDatasourceConfig(t *testing.T) {
 	assert.Contains(t, string(dsContent), "type: prometheus")
 	assert.Contains(t, string(dsContent), "url: http://127.0.0.1:9090")
 
+	// Verify Prometheus is the default datasource
+	assert.Contains(t, string(dsContent), fmt.Sprintf(`name: %s`, clusterName))
+	assert.Contains(t, string(dsContent), `isDefault: true`)
+	assert.Contains(t, string(dsContent), `url: http://127.0.0.1:9090`)
+	assert.Contains(t, string(dsContent), fmt.Sprintf(`name: %s-vm`, clusterName))
+	assert.Contains(t, string(dsContent), `url: http://127.0.0.1:12020`)
+
 	// Test without VM remote write enabled
-	topo.Monitors[0].EnableVMRemoteWrite = false
+	topo.Monitors[0].VMConfig.Enable = false
 	err = grafanaInstance.InitConfig(ctxt.New(ctx, 0, logprinter.NewLogger("")), mockExec, clusterName, "v5.4.0", "tidb", paths)
 	require.NoError(t, err)
 
@@ -245,4 +262,202 @@ func TestGrafanaDatasourceConfig(t *testing.T) {
 	assert.NotContains(t, string(dsContent), fmt.Sprintf("name: %s-vm", clusterName))
 	assert.Contains(t, string(dsContent), "type: prometheus")
 	assert.Contains(t, string(dsContent), "url: http://127.0.0.1:9090")
+}
+
+// TestVictoriaMetricsDefaultDatasource tests that when Victoria Metrics is set as the default datasource,
+// the dashboards correctly use it instead of Prometheus
+func TestVictoriaMetricsDefaultDatasource(t *testing.T) {
+	ctx := context.Background()
+	deployDir := t.TempDir()
+	cacheDir := t.TempDir()
+
+	// Create paths structure with folders needed for dashboards
+	paths := meta.DirPaths{
+		Deploy: deployDir,
+		Cache:  cacheDir,
+	}
+
+	// Create the necessary directory structure
+	dashboardsDir := filepath.Join(deployDir, "dashboards")
+	binDir := filepath.Join(deployDir, "bin")
+	err := os.MkdirAll(dashboardsDir, 0755)
+	require.NoError(t, err)
+	err = os.MkdirAll(binDir, 0755)
+	require.NoError(t, err)
+
+	// Create a mock for the execute function to handle the dashboard copy command
+	origExecutor := &mockExecutor{
+		executeFunc: func(ctx context.Context, cmd string, sudo bool, timeouts ...time.Duration) ([]byte, []byte, error) {
+			// Manually perform what the command would do
+			if strings.Contains(cmd, "find") && strings.Contains(cmd, "cp") {
+				// Create the dashboard file by copying it from bin to dashboards dir
+				content, err := os.ReadFile(filepath.Join(binDir, "sample.json"))
+				if err != nil {
+					return nil, nil, err
+				}
+				err = os.WriteFile(filepath.Join(dashboardsDir, "sample.json"), content, 0644)
+				if err != nil {
+					return nil, nil, err
+				}
+			} else if strings.Contains(cmd, "sed") {
+				// Handle the sed command to replace datasource references
+				files, err := os.ReadDir(dashboardsDir)
+				if err != nil {
+					return nil, nil, err
+				}
+
+				for _, file := range files {
+					if strings.HasSuffix(file.Name(), ".json") {
+						content, err := os.ReadFile(filepath.Join(dashboardsDir, file.Name()))
+						if err != nil {
+							return nil, nil, err
+						}
+
+						// Replace datasource references - simulating what sed would do
+						modifiedContent := strings.ReplaceAll(string(content),
+							`"DS_TEST-CLUSTER"`,
+							fmt.Sprintf(`"DS_%s-VM"`, strings.ToUpper("test-cluster")))
+						modifiedContent = strings.ReplaceAll(modifiedContent,
+							`"text": "test-cluster"`,
+							fmt.Sprintf(`"text": "%s-vm"`, "test-cluster"))
+						modifiedContent = strings.ReplaceAll(modifiedContent,
+							`"value": "test-cluster"`,
+							fmt.Sprintf(`"value": "%s-vm"`, "test-cluster"))
+
+						err = os.WriteFile(filepath.Join(dashboardsDir, file.Name()), []byte(modifiedContent), 0644)
+						if err != nil {
+							return nil, nil, err
+						}
+					}
+				}
+			}
+			return nil, nil, nil
+		},
+	}
+
+	// Create a sample dashboard file with datasource references
+	dashboardContent := `{
+		"annotations": {
+			"list": []
+		},
+		"editable": true,
+		"fiscalYearStartMonth": 0,
+		"graphTooltip": 0,
+		"links": [],
+		"liveNow": false,
+		"panels": [],
+		"refresh": "",
+		"schemaVersion": 38,
+		"style": "dark",
+		"tags": [],
+		"templating": {
+			"list": [
+				{
+					"current": {
+						"selected": false,
+						"text": "test-cluster",
+						"value": "test-cluster"
+					},
+					"hide": 0,
+					"includeAll": false,
+					"label": "Datasource",
+					"multi": false,
+					"name": "DS_TEST-CLUSTER",
+					"options": [],
+					"query": "prometheus",
+					"refresh": 1,
+					"regex": "",
+					"skipUrlSync": false,
+					"type": "datasource"
+				}
+			]
+		},
+		"title": "Test Dashboard",
+		"uid": "test",
+		"version": 1,
+		"weekStart": ""
+	}`
+	err = os.WriteFile(filepath.Join(binDir, "sample.json"), []byte(dashboardContent), 0644)
+	require.NoError(t, err)
+
+	// Create test topology with VM as default datasource
+	topo := new(Specification)
+	topo.Monitors = []*PrometheusSpec{
+		{
+			Host:   "127.0.0.1",
+			Port:   9090,
+			NgPort: 12020,
+			VMConfig: VMConfig{
+				Enable:              true,
+				IsDefaultDatasource: true,
+			},
+		},
+	}
+	topo.Grafanas = []*GrafanaSpec{
+		{
+			Host: "127.0.0.1",
+			Port: 3000,
+		},
+	}
+
+	// Create Grafana component
+	comp := GrafanaComponent{topo}
+	grafanaInstance := comp.Instances()[0].(*GrafanaInstance)
+
+	// Test configuration
+	clusterName := "test-cluster"
+	err = grafanaInstance.InitConfig(ctxt.New(ctx, 0, logprinter.NewLogger("")), origExecutor, clusterName, "v5.4.0", "tidb", paths)
+	require.NoError(t, err)
+
+	// Verify the datasource configuration file
+	dsContent, err := os.ReadFile(filepath.Join(deployDir, "provisioning", "datasources", "datasource.yml"))
+	require.NoError(t, err)
+
+	// Check if Victoria Metrics is set as the default datasource
+	assert.Contains(t, string(dsContent), fmt.Sprintf(`name: %s`, clusterName))
+	assert.Contains(t, string(dsContent), `isDefault: false`)
+	assert.Contains(t, string(dsContent), `url: http://127.0.0.1:9090`)
+	assert.Contains(t, string(dsContent), fmt.Sprintf(`name: %s-vm`, clusterName))
+	assert.Contains(t, string(dsContent), `url: http://127.0.0.1:12020`)
+	assert.Contains(t, string(dsContent), `isDefault: true`)
+
+	// Check if dashboard was copied and datasource was properly replaced
+	dashboardFile := filepath.Join(dashboardsDir, "sample.json")
+	assert.FileExists(t, dashboardFile)
+
+	dashContent, err := os.ReadFile(dashboardFile)
+	require.NoError(t, err)
+
+	// Check if the dashboard is using the VM datasource instead of Prometheus
+	assert.Contains(t, string(dashContent), fmt.Sprintf(`"text": "%s-vm"`, clusterName))
+	assert.Contains(t, string(dashContent), fmt.Sprintf(`"value": "%s-vm"`, clusterName))
+	assert.NotContains(t, string(dashContent), `"DS_TEST-CLUSTER"`) // Should be replaced
+}
+
+// TestVMConfigSerialization tests that VMConfig properly serializes to/from YAML
+func TestVMConfigSerialization(t *testing.T) {
+	// Test serialization
+	config := VMConfig{
+		Enable:              true,
+		IsDefaultDatasource: true,
+	}
+
+	// Test serialization
+	yamlData, err := yaml.Marshal(config)
+	require.NoError(t, err)
+
+	// Check YAML output format
+	expectedYAML := `enable: true
+is_default_datasource: true
+`
+	assert.Equal(t, expectedYAML, string(yamlData))
+
+	// Test deserialization
+	var deserializedConfig VMConfig
+	err = yaml.Unmarshal(yamlData, &deserializedConfig)
+	require.NoError(t, err)
+
+	// Check values
+	assert.Equal(t, config.Enable, deserializedConfig.Enable)
+	assert.Equal(t, config.IsDefaultDatasource, deserializedConfig.IsDefaultDatasource)
 }

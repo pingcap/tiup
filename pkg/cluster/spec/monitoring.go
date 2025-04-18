@@ -44,8 +44,8 @@ type PrometheusSpec struct {
 	Patched               bool                   `yaml:"patched,omitempty"`
 	IgnoreExporter        bool                   `yaml:"ignore_exporter,omitempty"`
 	Port                  int                    `yaml:"port" default:"9090"`
-	NgPort                int                    `yaml:"ng_port,omitempty" validate:"ng_port:editable"`                               // ng_port is usable since v5.3.0 and default as 12020 since v5.4.0, so the default value is set in spec.go/AdjustByVersion
-	EnableVMRemoteWrite   bool                   `yaml:"enable_vm_remote_write,omitempty" validate:"enable_vm_remote_write:editable"` // Enable remote write to ng-monitoring
+	NgPort                int                    `yaml:"ng_port,omitempty" validate:"ng_port:editable"`     // ng_port is usable since v5.3.0 and default as 12020 since v5.4.0, so the default value is set in spec.go/AdjustByVersion
+	VMConfig              VMConfig               `yaml:"vm_config,omitempty" validate:"vm_config:editable"` // Victoria Metrics configuration
 	DeployDir             string                 `yaml:"deploy_dir,omitempty"`
 	DataDir               string                 `yaml:"data_dir,omitempty"`
 	LogDir                string                 `yaml:"log_dir,omitempty"`
@@ -63,6 +63,12 @@ type PrometheusSpec struct {
 	ScrapeTimeout         string                 `yaml:"scrape_timeout,omitempty" validate:"scrape_timeout:editable"`
 
 	AdditionalArgs []string `yaml:"additional_args,omitempty" validate:"additional_args:ignore"`
+}
+
+// VMConfig represents Victoria Metrics configuration
+type VMConfig struct {
+	Enable              bool `yaml:"enable,omitempty" validate:"enable:editable"`                               // Enable remote write to ng-monitoring
+	IsDefaultDatasource bool `yaml:"is_default_datasource,omitempty" validate:"is_default_datasource:editable"` // Use Victoria Metrics as default datasource for Grafana
 }
 
 // Remote prometheus remote config
@@ -196,7 +202,7 @@ type MonitorInstance struct {
 
 // handleRemoteWrite handles remote write configuration for NG monitoring
 func (i *MonitorInstance) handleRemoteWrite(spec *PrometheusSpec, monitoring *PrometheusSpec) {
-	if !spec.EnableVMRemoteWrite || monitoring.NgPort <= 0 {
+	if !spec.VMConfig.Enable || monitoring.NgPort <= 0 {
 		return
 	}
 
