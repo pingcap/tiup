@@ -197,7 +197,31 @@ type MonitorInstance struct {
 
 // handleRemoteWrite handles remote write configuration for NG monitoring
 func (i *MonitorInstance) handleRemoteWrite(spec *PrometheusSpec, monitoring *PrometheusSpec) {
-	if !spec.EnableVMRemoteWrite || monitoring.NgPort <= 0 {
+	// When EnableVMRemoteWrite is false, remove any VM remote write configurations
+	if !spec.EnableVMRemoteWrite {
+		// If there are no remote write configurations, nothing to do
+		if spec.RemoteConfig.RemoteWrite == nil || len(spec.RemoteConfig.RemoteWrite) == 0 {
+			return
+		}
+
+		// Filter out any remote write configurations pointing to the VM endpoint
+		filteredRemoteWrite := make([]map[string]any, 0)
+		for _, rw := range spec.RemoteConfig.RemoteWrite {
+			if url, ok := rw["url"].(string); ok {
+				// Keep only non-VM remote write configurations
+				if !strings.Contains(url, fmt.Sprintf("%s/api/v1/write", utils.JoinHostPort(monitoring.Host, monitoring.NgPort))) {
+					filteredRemoteWrite = append(filteredRemoteWrite, rw)
+				}
+			} else {
+				// Keep entries without URL or with non-string URL (shouldn't happen normally)
+				filteredRemoteWrite = append(filteredRemoteWrite, rw)
+			}
+		}
+		spec.RemoteConfig.RemoteWrite = filteredRemoteWrite
+		return
+	}
+
+	if monitoring.NgPort <= 0 {
 		return
 	}
 

@@ -344,3 +344,60 @@ enable_vm_remote_write: true
 	// New value should match what's in the YAML
 	assert.True(t, newSpec.EnableVMRemoteWrite)
 }
+
+// TestHandleRemoteWriteDisabled tests that VM remote write configuration is removed when EnableVMRemoteWrite is false
+func TestHandleRemoteWriteDisabled(t *testing.T) {
+	// Create spec with existing remote write config and EnableVMRemoteWrite=false
+	spec := &PrometheusSpec{
+		Host:                "192.168.1.10",
+		Port:                9090,
+		EnableVMRemoteWrite: false,
+	}
+	monitoring := &PrometheusSpec{
+		Host:   "192.168.1.20",
+		NgPort: 12020,
+	}
+
+	// Add VM remote write URL
+	vmURL := fmt.Sprintf("http://%s/api/v1/write", utils.JoinHostPort(monitoring.Host, monitoring.NgPort))
+	spec.RemoteConfig.RemoteWrite = []map[string]any{
+		{"url": vmURL},
+	}
+
+	// Add another remote write URL that should be preserved
+	otherURL := "http://some-other-target:9090/api/v1/write"
+	spec.RemoteConfig.RemoteWrite = append(spec.RemoteConfig.RemoteWrite, map[string]any{
+		"url": otherURL,
+	})
+
+	monitorInstance := &MonitorInstance{
+		BaseInstance: BaseInstance{
+			InstanceSpec: spec,
+			Host:         spec.Host,
+			Port:         spec.Port,
+			SSHP:         22,
+		},
+	}
+
+	// Execute handleRemoteWrite with EnableVMRemoteWrite=false
+	monitorInstance.handleRemoteWrite(spec, monitoring)
+
+	// Check that VM remote write config was removed but other config was preserved
+	assert.Len(t, spec.RemoteConfig.RemoteWrite, 1)
+	assert.Equal(t, otherURL, spec.RemoteConfig.RemoteWrite[0]["url"])
+
+	// Test with no remote write configs
+	spec.RemoteConfig.RemoteWrite = nil
+	monitorInstance.handleRemoteWrite(spec, monitoring)
+
+	// No remote write configs should still be nil/empty
+	assert.Empty(t, spec.RemoteConfig.RemoteWrite)
+
+	// Now test with EnableVMRemoteWrite toggled back to true
+	spec.EnableVMRemoteWrite = true
+	monitorInstance.handleRemoteWrite(spec, monitoring)
+
+	// VM remote write config should be added back
+	assert.Len(t, spec.RemoteConfig.RemoteWrite, 1)
+	assert.Equal(t, vmURL, spec.RemoteConfig.RemoteWrite[0]["url"])
+}

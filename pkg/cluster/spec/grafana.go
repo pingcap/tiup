@@ -288,7 +288,7 @@ func (i *GrafanaInstance) InitConfig(
 	datasources := make([]*config.DatasourceConfig, 0)
 
 	// Determine which datasource is default based on Grafana spec
-	vmIsDefault := spec.IsVMDefaultDatasource
+	vmIsDefault := spec.IsVMDefaultDatasource && monitors[0].EnableVMRemoteWrite
 	promIsDefault := !vmIsDefault
 
 	// Add Prometheus datasource
