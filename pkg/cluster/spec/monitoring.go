@@ -37,19 +37,20 @@ import (
 
 // PrometheusSpec represents the Prometheus Server topology specification in topology.yaml
 type PrometheusSpec struct {
-	Host                  string                 `yaml:"host"`
-	ManageHost            string                 `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
-	SSHPort               int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported              bool                   `yaml:"imported,omitempty"`
-	Patched               bool                   `yaml:"patched,omitempty"`
-	IgnoreExporter        bool                   `yaml:"ignore_exporter,omitempty"`
-	Port                  int                    `yaml:"port" default:"9090"`
-	NgPort                int                    `yaml:"ng_port,omitempty" validate:"ng_port:editable"`     // ng_port is usable since v5.3.0 and default as 12020 since v5.4.0, so the default value is set in spec.go/AdjustByVersion
-	VMConfig              VMConfig               `yaml:"vm_config,omitempty" validate:"vm_config:editable"` // Victoria Metrics configuration
+	Host           string `yaml:"host"`
+	ManageHost     string `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
+	SSHPort        int    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
+	Imported       bool   `yaml:"imported,omitempty"`
+	Patched        bool   `yaml:"patched,omitempty"`
+	IgnoreExporter bool   `yaml:"ignore_exporter,omitempty"`
+	Port           int    `yaml:"port" default:"9090"`
+	NgPort         int    `yaml:"ng_port,omitempty" validate:"ng_port:editable"` // ng_port is usable since v5.3.0 and default as 12020 since v5.4.0, so the default value is set in spec.go/AdjustByVersion
+
 	DeployDir             string                 `yaml:"deploy_dir,omitempty"`
 	DataDir               string                 `yaml:"data_dir,omitempty"`
 	LogDir                string                 `yaml:"log_dir,omitempty"`
 	NumaNode              string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
+	EnableVMRemoteWrite   bool                   `yaml:"enable_vm_remote_write,omitempty" validate:"enable_vm_remote_write:editable"` // Enable remote write to ng-monitoring
 	RemoteConfig          Remote                 `yaml:"remote_config,omitempty" validate:"remote_config:ignore"`
 	ExternalAlertmanagers []ExternalAlertmanager `yaml:"external_alertmanagers" validate:"external_alertmanagers:ignore"`
 	PushgatewayAddrs      []string               `yaml:"pushgateway_addrs,omitempty" validate:"pushgateway_addrs:ignore"`
@@ -63,12 +64,6 @@ type PrometheusSpec struct {
 	ScrapeTimeout         string                 `yaml:"scrape_timeout,omitempty" validate:"scrape_timeout:editable"`
 
 	AdditionalArgs []string `yaml:"additional_args,omitempty" validate:"additional_args:ignore"`
-}
-
-// VMConfig represents Victoria Metrics configuration
-type VMConfig struct {
-	Enable              bool `yaml:"enable,omitempty" validate:"enable:editable"`                               // Enable remote write to ng-monitoring
-	IsDefaultDatasource bool `yaml:"is_default_datasource,omitempty" validate:"is_default_datasource:editable"` // Use Victoria Metrics as default datasource for Grafana
 }
 
 // Remote prometheus remote config
@@ -202,7 +197,7 @@ type MonitorInstance struct {
 
 // handleRemoteWrite handles remote write configuration for NG monitoring
 func (i *MonitorInstance) handleRemoteWrite(spec *PrometheusSpec, monitoring *PrometheusSpec) {
-	if !spec.VMConfig.Enable || monitoring.NgPort <= 0 {
+	if !spec.EnableVMRemoteWrite || monitoring.NgPort <= 0 {
 		return
 	}
 

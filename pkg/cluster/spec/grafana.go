@@ -39,27 +39,28 @@ import (
 
 // GrafanaSpec represents the Grafana topology specification in topology.yaml
 type GrafanaSpec struct {
-	Host            string               `yaml:"host"`
-	ManageHost      string               `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
-	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported        bool                 `yaml:"imported,omitempty"`
-	Patched         bool                 `yaml:"patched,omitempty"`
-	IgnoreExporter  bool                 `yaml:"ignore_exporter,omitempty"`
-	Port            int                  `yaml:"port" default:"3000"`
-	DeployDir       string               `yaml:"deploy_dir,omitempty"`
-	Config          map[string]string    `yaml:"config,omitempty" validate:"config:ignore"`
-	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
-	Arch            string               `yaml:"arch,omitempty"`
-	OS              string               `yaml:"os,omitempty"`
-	DashboardDir    string               `yaml:"dashboard_dir,omitempty" validate:"dashboard_dir:editable"`
-	Username        string               `yaml:"username,omitempty" default:"admin" validate:"username:editable"`
-	Password        string               `yaml:"password,omitempty" default:"admin" validate:"password:editable"`
-	AnonymousEnable bool                 `yaml:"anonymous_enable" default:"false" validate:"anonymous_enable:editable"`
-	RootURL         string               `yaml:"root_url" validate:"root_url:editable"`
-	Domain          string               `yaml:"domain" validate:"domain:editable"`
-	DefaultTheme    string               `yaml:"default_theme,omitempty" validate:"default_theme:editable"`
-	OrgName         string               `yaml:"org_name,omitempty" validate:"org_name:editable"`
-	OrgRole         string               `yaml:"org_role,omitempty" validate:"org_role:editable"`
+	Host                  string               `yaml:"host"`
+	ManageHost            string               `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
+	SSHPort               int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
+	Imported              bool                 `yaml:"imported,omitempty"`
+	Patched               bool                 `yaml:"patched,omitempty"`
+	IgnoreExporter        bool                 `yaml:"ignore_exporter,omitempty"`
+	Port                  int                  `yaml:"port" default:"3000"`
+	DeployDir             string               `yaml:"deploy_dir,omitempty"`
+	Config                map[string]string    `yaml:"config,omitempty" validate:"config:ignore"`
+	ResourceControl       meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
+	Arch                  string               `yaml:"arch,omitempty"`
+	OS                    string               `yaml:"os,omitempty"`
+	DashboardDir          string               `yaml:"dashboard_dir,omitempty" validate:"dashboard_dir:editable"`
+	Username              string               `yaml:"username,omitempty" default:"admin" validate:"username:editable"`
+	Password              string               `yaml:"password,omitempty" default:"admin" validate:"password:editable"`
+	AnonymousEnable       bool                 `yaml:"anonymous_enable" default:"false" validate:"anonymous_enable:editable"`
+	RootURL               string               `yaml:"root_url" validate:"root_url:editable"`
+	Domain                string               `yaml:"domain" validate:"domain:editable"`
+	DefaultTheme          string               `yaml:"default_theme,omitempty" validate:"default_theme:editable"`
+	OrgName               string               `yaml:"org_name,omitempty" validate:"org_name:editable"`
+	OrgRole               string               `yaml:"org_role,omitempty" validate:"org_role:editable"`
+	IsVMDefaultDatasource bool                 `yaml:"is_vm_default_datasource,omitempty" validate:"is_vm_default_datasource:editable"`
 }
 
 // Role returns the component role of the instance
@@ -265,6 +266,10 @@ func (i *GrafanaInstance) InitConfig(
 		return err
 	}
 
+	// Get the grafana spec
+	spec = i.InstanceSpec.(*GrafanaSpec)
+
+	// Get monitors
 	topo := reflect.ValueOf(i.topo)
 	if topo.Kind() == reflect.Ptr {
 		topo = topo.Elem()
@@ -282,8 +287,8 @@ func (i *GrafanaInstance) InitConfig(
 	// Create datasources configuration
 	datasources := make([]*config.DatasourceConfig, 0)
 
-	// Create both Prometheus and VM datasources, setting defaults based on configuration
-	vmIsDefault := monitors[0].VMConfig.Enable && monitors[0].VMConfig.IsDefaultDatasource
+	// Determine which datasource is default based on Grafana spec
+	vmIsDefault := spec.IsVMDefaultDatasource
 	promIsDefault := !vmIsDefault
 
 	// Add Prometheus datasource
@@ -295,7 +300,7 @@ func (i *GrafanaInstance) InitConfig(
 	datasources = append(datasources, promDatasource)
 
 	// Add VM datasource if enabled
-	if monitors[0].VMConfig.Enable {
+	if monitors[0].EnableVMRemoteWrite && monitors[0].NgPort > 0 {
 		vmDatasource := config.NewDatasourceConfig(
 			fmt.Sprintf("%s-vm", clusterName),
 			// not support tls
@@ -372,7 +377,7 @@ func (i *GrafanaInstance) initDashboards(ctx context.Context, e ctxt.Executor, s
 	// Determine which datasource to use in dashboards
 	datasourceName := clusterName
 	monitors := val.Interface().([]*PrometheusSpec)
-	if len(monitors) > 0 && monitors[0].VMConfig.Enable && monitors[0].VMConfig.IsDefaultDatasource {
+	if len(monitors) > 0 && monitors[0].EnableVMRemoteWrite && monitors[0].NgPort > 0 && (spec.IsVMDefaultDatasource) {
 		datasourceName = fmt.Sprintf("%s-vm", clusterName)
 	}
 
