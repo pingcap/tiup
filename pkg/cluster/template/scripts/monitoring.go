@@ -28,6 +28,7 @@ type PrometheusScript struct {
 	WebExternalURL string
 	Retention      string
 	EnableNG       bool
+	EnableAgent    bool
 
 	DeployDir string
 	DataDir   string

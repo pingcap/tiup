@@ -46,6 +46,7 @@ type PrometheusSpec struct {
 	Port                  int                    `yaml:"port" default:"9090"`
 	NgPort                int                    `yaml:"ng_port,omitempty" validate:"ng_port:editable"`                               // ng_port is usable since v5.3.0 and default as 12020 since v5.4.0, so the default value is set in spec.go/AdjustByVersion
 	EnableVMRemoteWrite   bool                   `yaml:"enable_vm_remote_write,omitempty" validate:"enable_vm_remote_write:editable"` // Enable remote write to ng-monitoring
+	EnableAgentMode       bool                   `yaml:"enable_agent_mode,omitempty" validate:"enable_agent_mode:editable"`           // Enable Prometheus agent mode
 	DeployDir             string                 `yaml:"deploy_dir,omitempty"`
 	DataDir               string                 `yaml:"data_dir,omitempty"`
 	LogDir                string                 `yaml:"log_dir,omitempty"`
@@ -249,6 +250,7 @@ func (i *MonitorInstance) InitConfig(
 		WebExternalURL: fmt.Sprintf("http://%s", utils.JoinHostPort(spec.Host, spec.Port)),
 		Retention:      getRetention(spec.Retention),
 		EnableNG:       spec.NgPort > 0,
+		EnableAgent:    spec.EnableAgentMode, // Get from spec directly
 
 		DeployDir: paths.Deploy,
 		LogDir:    paths.Log,
@@ -257,6 +259,16 @@ func (i *MonitorInstance) InitConfig(
 		NumaNode: spec.NumaNode,
 
 		AdditionalArgs: spec.AdditionalArgs,
+	}
+
+	// Check if agent mode is enabled in additional arguments
+	if !cfg.EnableAgent {
+		for _, arg := range spec.AdditionalArgs {
+			if arg == "--enable-feature=agent" {
+				cfg.EnableAgent = true
+				break
+			}
+		}
 	}
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_prometheus_%s_%d.sh", i.GetHost(), i.GetPort()))
@@ -485,9 +497,24 @@ func (i *MonitorInstance) InitConfig(
 	cfig.SetRemoteConfig(string(remoteCfg))
 
 	fp = filepath.Join(paths.Cache, fmt.Sprintf("prometheus_%s_%d.yml", i.GetHost(), i.GetPort()))
-	if err := cfig.ConfigToFile(fp); err != nil {
-		return err
+
+	// Generate config file with agent mode consideration
+	if spec.EnableAgentMode {
+		// Use agent mode configuration (without rule_files section)
+		configBytes, err := cfig.ConfigWithAgentMode(true)
+		if err != nil {
+			return err
+		}
+		if err := utils.WriteFile(fp, configBytes, 0644); err != nil {
+			return err
+		}
+	} else {
+		// Use normal configuration
+		if err := cfig.ConfigToFile(fp); err != nil {
+			return err
+		}
 	}
+
 	if spec.AdditionalScrapeConf != nil {
 		err = mergeAdditionalScrapeConf(fp, spec.AdditionalScrapeConf)
 		if err != nil {

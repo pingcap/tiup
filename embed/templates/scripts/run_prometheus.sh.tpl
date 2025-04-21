@@ -43,10 +43,17 @@ exec bin/prometheus/prometheus \
     --web.external-url="{{.WebExternalURL}}/" \
     --web.enable-admin-api \
     --log.level="info" \
+{{- if not .EnableAgent}}
     --storage.tsdb.path="{{.DataDir}}" \
+{{- end}}
+{{- if .EnableAgent}}
+    --enable-feature=agent \
+{{- end}}
 {{- if .AdditionalArgs}}
 {{- range .AdditionalArgs}}
     {{.}} \
 {{- end}}
 {{- end}}
+{{- if not .EnableAgent}}
     --storage.tsdb.retention="{{.Retention}}"
+{{- end}}
