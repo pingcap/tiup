@@ -389,9 +389,9 @@ func TestVictoriaMetricsDefaultDatasource(t *testing.T) {
 	}
 	topo.Grafanas = []*GrafanaSpec{
 		{
-			Host:                  "127.0.0.1",
-			Port:                  3000,
-			IsVMDefaultDatasource: true,
+			Host:                     "127.0.0.1",
+			Port:                     3000,
+			UseVMAsDefaultDatasource: true,
 		},
 	}
 
