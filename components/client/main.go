@@ -192,10 +192,7 @@ func selectEndpoint(endpoints []*endpoint) *endpoint {
 	l.TextStyle = ui.NewStyle(ui.ColorWhite)
 	l.SelectedRowStyle = ui.NewStyle(ui.ColorGreen)
 	l.WrapText = false
-	size := 16
-	if len(endpoints) < size {
-		size = len(endpoints)
-	}
+	size := min(len(endpoints), 16)
 	l.SetRect(0, 0, 80, size+2)
 
 	ui.Render(l)

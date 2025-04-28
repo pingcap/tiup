@@ -71,6 +71,7 @@ it will check the new instances `,
 	cmd.Flags().BoolVar(&opt.ApplyFix, "apply", false, "Try to fix failed checks")
 	cmd.Flags().BoolVar(&opt.ExistCluster, "cluster", false, "Check existing cluster, the input is a cluster name.")
 	cmd.Flags().Uint64Var(&gOpt.APITimeout, "api-timeout", 10, "Timeout in seconds when querying PD APIs.")
+	cmd.Flags().StringVarP(&opt.TempDir, "tempdir", "t", "/tmp/tiup", "The temporary directory.")
 
 	return cmd
 }

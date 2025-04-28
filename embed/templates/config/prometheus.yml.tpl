@@ -97,6 +97,11 @@ scrape_configs:
 {{- end}}
   - job_name: "tidb"
     honor_labels: true # don't overwrite job & instance labels
+    metric_relabel_configs:
+      - action: drop
+        regex: tidb_tikvclient_source_request_seconds_count|tidb_tikvclient_batch_requests_sum|tidb_tikvclient_batch_requests_count|tidb_tikvclient_batch_pending_requests_sum|tidb_tikvclient_batch_pending_requests_count
+        source_labels:
+        - __name__
 {{- if .TLSEnabled}}
     scheme: https
     tls_config:

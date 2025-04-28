@@ -17,6 +17,7 @@ import (
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/spf13/cobra"
+	"slices"
 )
 
 func newReloadCmd() *cobra.Command {
@@ -55,21 +56,15 @@ func newReloadCmd() *cobra.Command {
 	cmd.Flags().Uint64Var(&gOpt.APITimeout, "transfer-timeout", 600, "Timeout in seconds when transferring PD and TiKV store leaders, also for TiCDC drain one capture")
 	cmd.Flags().BoolVarP(&gOpt.IgnoreConfigCheck, "ignore-config-check", "", false, "Ignore the config check result")
 	cmd.Flags().BoolVar(&skipRestart, "skip-restart", false, "Only refresh configuration to remote and do not restart services")
-	cmd.Flags().StringVar(&gOpt.SSHCustomScripts.BeforeRestartInstance.Raw, "pre-restart-script", "", "(EXPERIMENTAL) Custom script to be executed on each server before the service is restarted, does not take effect when --skip-restart is set to true")
-	cmd.Flags().StringVar(&gOpt.SSHCustomScripts.AfterRestartInstance.Raw, "post-restart-script", "", "(EXPERIMENTAL) Custom script to be executed on each server after the service is restarted, does not take effect when --skip-restart is set to true")
+	cmd.Flags().StringVar(&gOpt.SSHCustomScripts.BeforeRestartInstance.Raw, "pre-restart-script", "", "Custom script to be executed on each server before the service is restarted, does not take effect when --skip-restart is set to true")
+	cmd.Flags().StringVar(&gOpt.SSHCustomScripts.AfterRestartInstance.Raw, "post-restart-script", "", "Custom script to be executed on each server after the service is restarted, does not take effect when --skip-restart is set to true")
 
 	return cmd
 }
 
 func validRoles(roles []string) error {
 	for _, r := range roles {
-		match := false
-		for _, has := range spec.AllComponentNames() {
-			if r == has {
-				match = true
-				break
-			}
-		}
+		match := slices.Contains(spec.AllComponentNames(), r)
 
 		if !match {
 			return perrs.Errorf("not valid role: %s, should be one of: %v", r, spec.AllComponentNames())

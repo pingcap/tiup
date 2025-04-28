@@ -1,5 +1,41 @@
 TiUP Changelog
 
+## [1.16.2] 2025-04-02
+
+### New Features
+
+- `tiup-cluster` display will also show dashboard server URLs (#2472, @xhebox)
+- Add --mode=tiflash-disagg for `tiup-playground` (#2492, @breezewish)
+- `tiup-cluster` now accepts args config for alertmanager (#2516, @WalterWj)
+- `tiup-cluster` will fill node & role information in custom upgrade scripts (#2524, @xhebox)
+
+### Fixes
+
+- Fix `tiup-playground` typo and display names for tiflash (#2454, @breezewish)
+- Fix # cannot be included in grafana password for `tiup-cluster` (#2468, @kaaaaaaang, @xhebox)
+- Fix binary name display of `tiup-playground` for pd-ms binaries (#2471, @xhebox)
+- In `tiup-playground`, MySQL 9.x don't need --comments (#2469, #dveeden)
+- Fix code typo (#2487, @rleungx)
+- Fix loong64 build (#2493, @xhebox)
+- Remove created directories after fio test in `tiup-cluster check` (#2511, @djshow832)
+- Remove some useless metrics for performance for `tiup-cluster` (#2523, @XuHuaiyu)
+
+### Improvements
+
+- Add cdc server topology example for `tiup-cluster` (#2466, @wk989898)
+- Add tiproxy to `tiup-playground` DSN (#2474, @xhebox)
+- Polish the trust key warning for `tiup-cluster` and `tiup mirror` (#2475, @breezewish)
+- Update supported OS version for `tiup-cluster` check (#2476, @dveeden)
+- add warning for deletion of data dir for `tiup-playground` (#2481, @xhebox, @bb7133)
+- `tiup-cluster` will now display grafana, and also grafana patched (#2483, @WalterWj)
+- Improve error of missing tar for `tiup-cluster` (#2499, @dveeden)
+- Reword for `tiup uninstall` (#2488, @makocchi-git)
+- Code cleanup, dependency sysinfo update (#2500, @dveeden)
+- Fix message for net.core.somaxconn check in `tiup-cluster` (#2495, @dveeden)
+- Code cleanup, fix code misc spelling (#2504, @ottok)
+- Add `tmpdir` option for `tiup-cluster` (#2505, @dveeden)
+- Code cleanup, unify main deps with client component deps (#2517, @dveeden)
+
 ## [1.16.1] 2024-10-31
 
 ### New Features

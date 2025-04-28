@@ -30,8 +30,8 @@ func (inst *TiDBInstance) getConfig() map[string]any {
 		config["disaggregated-tiflash"] = true
 		config["ratelimit.full-speed"] = 1048576000
 		config["ratelimit.full-speed-capacity"] = 1048576000
-		config["ratelimit.low-speed-watermark"] = 1048576000000
-		config["ratelimit.block-write-watermark"] = 1048576000000
+		config["ratelimit.low-speed-watermark"] = uint64(1048576000000)
+		config["ratelimit.block-write-watermark"] = uint64(1048576000000)
 		config["security.enable-sem"] = false
 		config["tiflash-replicas.constraints"] = []any{
 			map[string]any{
