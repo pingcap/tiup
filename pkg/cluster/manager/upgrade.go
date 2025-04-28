@@ -38,8 +38,7 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-// Upgrade the cluster.
-func (m *Manager) Upgrade(name string, clusterVersion string, componentVersions map[string]string, opt operator.Options, skipConfirm, offline, ignoreVersionCheck bool, restartTimeout time.Duration) error {
+func (m *Manager) upgradePrecheck(name string, componentVersions map[string]string, opt operator.Options, skipConfirm bool) error {
 	if !skipConfirm && strings.ToLower(opt.DisplayMode) != "json" {
 		for _, v := range componentVersions {
 			if v != "" {
@@ -57,7 +56,13 @@ func (m *Manager) Upgrade(name string, clusterVersion string, componentVersions 
 	}
 
 	// check locked
-	if err := m.specManager.ScaleOutLockedErr(name); err != nil {
+	return m.specManager.ScaleOutLockedErr(name)
+}
+
+// Upgrade the cluster.
+func (m *Manager) Upgrade(name string, clusterVersion string, componentVersions map[string]string, opt operator.Options, skipConfirm, offline, ignoreVersionCheck bool, restartTimeout time.Duration) error {
+	err := m.upgradePrecheck(name, componentVersions, opt, skipConfirm)
+	if err != nil {
 		return err
 	}
 
