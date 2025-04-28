@@ -24,6 +24,7 @@ import (
 	"github.com/pingcap/tiup/pkg/repository/model"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/server/session"
+	"slices"
 )
 
 // SignComponent handles requests to re-sign component manifest
@@ -68,10 +69,8 @@ func (h *componentSigner) sign(r *http.Request, m *v1manifest.RawManifest) (sr *
 	info := buildInfo(r, sid)
 
 	blackList := []string{"root", "index", "snapshot", "timestamp"}
-	for _, b := range blackList {
-		if name == b {
-			return nil, ErrorForbiden
-		}
+	if slices.Contains(blackList, name) {
+		return nil, ErrorForbiden
 	}
 
 	logprinter.Infof("Sign component manifest for %s, sid: %s", name, sid)

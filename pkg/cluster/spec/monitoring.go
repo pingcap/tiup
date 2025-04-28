@@ -44,13 +44,13 @@ type PrometheusSpec struct {
 	Patched               bool                   `yaml:"patched,omitempty"`
 	IgnoreExporter        bool                   `yaml:"ignore_exporter,omitempty"`
 	Port                  int                    `yaml:"port" default:"9090"`
-	NgPort                int                    `yaml:"ng_port,omitempty" validate:"ng_port:editable"`                               // ng_port is usable since v5.3.0 and default as 12020 since v5.4.0, so the default value is set in spec.go/AdjustByVersion
-	EnableVMRemoteWrite   bool                   `yaml:"enable_vm_remote_write,omitempty" validate:"enable_vm_remote_write:editable"` // Enable remote write to ng-monitoring
-	EnableAgentMode       bool                   `yaml:"enable_agent_mode,omitempty" validate:"enable_agent_mode:editable"`           // Enable Prometheus agent mode
+	NgPort                int                    `yaml:"ng_port,omitempty" validate:"ng_port:editable"` // ng_port is usable since v5.3.0 and default as 12020 since v5.4.0, so the default value is set in spec.go/AdjustByVersion
 	DeployDir             string                 `yaml:"deploy_dir,omitempty"`
 	DataDir               string                 `yaml:"data_dir,omitempty"`
 	LogDir                string                 `yaml:"log_dir,omitempty"`
 	NumaNode              string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
+	EnableVMRemoteWrite   bool                   `yaml:"enable_vm_remote_write,omitempty" validate:"enable_vm_remote_write:editable"` // Enable remote write to ng-monitoring
+	EnableAgentMode       bool                   `yaml:"enable_agent_mode,omitempty" validate:"enable_agent_mode:editable"`           // Enable Prometheus agent mode
 	RemoteConfig          Remote                 `yaml:"remote_config,omitempty" validate:"remote_config:ignore"`
 	ExternalAlertmanagers []ExternalAlertmanager `yaml:"external_alertmanagers" validate:"external_alertmanagers:ignore"`
 	PushgatewayAddrs      []string               `yaml:"pushgateway_addrs,omitempty" validate:"pushgateway_addrs:ignore"`
@@ -197,7 +197,31 @@ type MonitorInstance struct {
 
 // handleRemoteWrite handles remote write configuration for NG monitoring
 func (i *MonitorInstance) handleRemoteWrite(spec *PrometheusSpec, monitoring *PrometheusSpec) {
-	if !spec.EnableVMRemoteWrite || monitoring.NgPort <= 0 {
+	// When EnableVMRemoteWrite is false, remove any VM remote write configurations
+	if !spec.EnableVMRemoteWrite {
+		// If there are no remote write configurations, nothing to do
+		if spec.RemoteConfig.RemoteWrite == nil || len(spec.RemoteConfig.RemoteWrite) == 0 {
+			return
+		}
+
+		// Filter out any remote write configurations pointing to the VM endpoint
+		filteredRemoteWrite := make([]map[string]any, 0)
+		for _, rw := range spec.RemoteConfig.RemoteWrite {
+			if url, ok := rw["url"].(string); ok {
+				// Keep only non-VM remote write configurations
+				if !strings.Contains(url, fmt.Sprintf("%s/api/v1/write", utils.JoinHostPort(monitoring.Host, monitoring.NgPort))) {
+					filteredRemoteWrite = append(filteredRemoteWrite, rw)
+				}
+			} else {
+				// Keep entries without URL or with non-string URL (shouldn't happen normally)
+				filteredRemoteWrite = append(filteredRemoteWrite, rw)
+			}
+		}
+		spec.RemoteConfig.RemoteWrite = filteredRemoteWrite
+		return
+	}
+
+	if monitoring.NgPort <= 0 {
 		return
 	}
 
