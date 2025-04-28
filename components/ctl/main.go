@@ -12,6 +12,7 @@ import (
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
+	"slices"
 )
 
 func main() {
@@ -48,7 +49,7 @@ func execute() error {
 			if ignoreVersion {
 				for i, arg := range transparentParams {
 					if arg == "--ignore-version" {
-						transparentParams = append(transparentParams[:i], transparentParams[i+1:]...)
+						transparentParams = slices.Delete(transparentParams, i, i+1)
 					}
 				}
 			} else if os.Getenv(localdata.EnvNameUserInputVersion) == "" {

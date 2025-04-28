@@ -46,6 +46,7 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
+	"slices"
 )
 
 // The duration process need to quit gracefully, or we kill the process.
@@ -177,7 +178,7 @@ func (p *Playground) killKVIfTombstone(inst *instance.TiKVInstance) {
 					if err != nil {
 						fmt.Println(err)
 					}
-					p.tikvs = append(p.tikvs[:i], p.tikvs[i+1:]...)
+					p.tikvs = slices.Delete(p.tikvs, i, i+1)
 					return
 				}
 			}
@@ -200,7 +201,7 @@ func (p *Playground) removePumpWhenTombstone(c *api.BinlogClient, inst *instance
 			for i, e := range p.pumps {
 				if e == inst {
 					fmt.Printf("pump already offline %s\n", inst.Addr())
-					p.pumps = append(p.pumps[:i], p.pumps[i+1:]...)
+					p.pumps = slices.Delete(p.pumps, i, i+1)
 					return
 				}
 			}
@@ -223,7 +224,7 @@ func (p *Playground) removeDrainerWhenTombstone(c *api.BinlogClient, inst *insta
 			for i, e := range p.drainers {
 				if e == inst {
 					fmt.Printf("drainer already offline %s\n", inst.Addr())
-					p.drainers = append(p.drainers[:i], p.drainers[i+1:]...)
+					p.drainers = slices.Delete(p.drainers, i, i+1)
 					return
 				}
 			}
@@ -250,7 +251,7 @@ func (p *Playground) killTiFlashIfTombstone(inst *instance.TiFlashInstance) {
 					if err != nil {
 						fmt.Println(err)
 					}
-					p.tiflashs = append(p.tiflashs[:i], p.tiflashs[i+1:]...)
+					p.tiflashs = slices.Delete(p.tiflashs, i, i+1)
 					return
 				}
 			}
@@ -288,19 +289,19 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 				if err != nil {
 					return err
 				}
-				p.pds = append(p.pds[:i], p.pds[i+1:]...)
+				p.pds = slices.Delete(p.pds, i, i+1)
 			}
 		}
 	case spec.ComponentTSO:
 		for i := 0; i < len(p.tsos); i++ {
 			if p.tsos[i].Pid() == pid {
-				p.tsos = append(p.tsos[:i], p.tsos[i+1:]...)
+				p.tsos = slices.Delete(p.tsos, i, i+1)
 			}
 		}
 	case spec.ComponentScheduling:
 		for i := 0; i < len(p.schedulings); i++ {
 			if p.schedulings[i].Pid() == pid {
-				p.schedulings = append(p.schedulings[:i], p.schedulings[i+1:]...)
+				p.schedulings = slices.Delete(p.schedulings, i, i+1)
 			}
 		}
 	case spec.ComponentTiKV:
@@ -320,25 +321,25 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 	case spec.ComponentTiDB:
 		for i := 0; i < len(p.tidbs); i++ {
 			if p.tidbs[i].Pid() == pid {
-				p.tidbs = append(p.tidbs[:i], p.tidbs[i+1:]...)
+				p.tidbs = slices.Delete(p.tidbs, i, i+1)
 			}
 		}
 	case spec.ComponentCDC:
 		for i := 0; i < len(p.ticdcs); i++ {
 			if p.ticdcs[i].Pid() == pid {
-				p.ticdcs = append(p.ticdcs[:i], p.ticdcs[i+1:]...)
+				p.ticdcs = slices.Delete(p.ticdcs, i, i+1)
 			}
 		}
 	case spec.ComponentTiProxy:
 		for i := 0; i < len(p.tiproxys); i++ {
 			if p.tiproxys[i].Pid() == pid {
-				p.tiproxys = append(p.tiproxys[:i], p.tiproxys[i+1:]...)
+				p.tiproxys = slices.Delete(p.tiproxys, i, i+1)
 			}
 		}
 	case spec.ComponentTiKVCDC:
 		for i := 0; i < len(p.tikvCdcs); i++ {
 			if p.tikvCdcs[i].Pid() == pid {
-				p.tikvCdcs = append(p.tikvCdcs[:i], p.tikvCdcs[i+1:]...)
+				p.tikvCdcs = slices.Delete(p.tikvCdcs, i, i+1)
 			}
 		}
 	case spec.ComponentTiFlash:
@@ -427,7 +428,7 @@ func (p *Playground) handleScaleInDMWorker(pid int) error {
 			if err := c.OfflineWorker(inst.Name(), nil); err != nil {
 				return err
 			}
-			p.dmWorkers = append(p.dmWorkers[:i], p.dmWorkers[i+1:]...)
+			p.dmWorkers = slices.Delete(p.dmWorkers, i, i+1)
 			return nil
 		}
 	}
@@ -443,7 +444,7 @@ func (p *Playground) handleScaleInDMMaster(pid int) error {
 			if err := c.OfflineMaster(inst.Name(), nil); err != nil {
 				return err
 			}
-			p.dmMasters = append(p.dmMasters[:i], p.dmMasters[i+1:]...)
+			p.dmMasters = slices.Delete(p.dmMasters, i, i+1)
 			return nil
 		}
 	}
