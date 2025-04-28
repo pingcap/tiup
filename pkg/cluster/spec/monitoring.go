@@ -49,8 +49,8 @@ type PrometheusSpec struct {
 	DataDir               string                 `yaml:"data_dir,omitempty"`
 	LogDir                string                 `yaml:"log_dir,omitempty"`
 	NumaNode              string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
-	EnableVMRemoteWrite   bool                   `yaml:"enable_vm_remote_write,omitempty" validate:"enable_vm_remote_write:editable"` // Enable remote write to ng-monitoring
-	EnableAgentMode       bool                   `yaml:"enable_agent_mode,omitempty" validate:"enable_agent_mode:editable"`           // Enable Prometheus agent mode
+	PromRemoteWriteToVM   bool                   `yaml:"prom_remote_write_to_vm,omitempty" validate:"prom_remote_write_to_vm:editable"` // Enable remote write to ng-monitoring
+	EnablePromAgentMode   bool                   `yaml:"enable_prom_agent_mode,omitempty" validate:"enable_prom_agent_mode:editable"`   // Enable Prometheus agent mode
 	RemoteConfig          Remote                 `yaml:"remote_config,omitempty" validate:"remote_config:ignore"`
 	ExternalAlertmanagers []ExternalAlertmanager `yaml:"external_alertmanagers" validate:"external_alertmanagers:ignore"`
 	PushgatewayAddrs      []string               `yaml:"pushgateway_addrs,omitempty" validate:"pushgateway_addrs:ignore"`
@@ -197,8 +197,8 @@ type MonitorInstance struct {
 
 // handleRemoteWrite handles remote write configuration for NG monitoring
 func (i *MonitorInstance) handleRemoteWrite(spec *PrometheusSpec, monitoring *PrometheusSpec) {
-	// When EnableVMRemoteWrite is false, remove any VM remote write configurations
-	if !spec.EnableVMRemoteWrite {
+	// When PromRemoteWriteToVM is false, remove any VM remote write configurations
+	if !spec.PromRemoteWriteToVM {
 		// If there are no remote write configurations, nothing to do
 		if spec.RemoteConfig.RemoteWrite == nil || len(spec.RemoteConfig.RemoteWrite) == 0 {
 			return
@@ -270,11 +270,11 @@ func (i *MonitorInstance) InitConfig(
 	spec := i.InstanceSpec.(*PrometheusSpec)
 
 	cfg := &scripts.PrometheusScript{
-		Port:           spec.Port,
-		WebExternalURL: fmt.Sprintf("http://%s", utils.JoinHostPort(spec.Host, spec.Port)),
-		Retention:      getRetention(spec.Retention),
-		EnableNG:       spec.NgPort > 0,
-		EnableAgent:    spec.EnableAgentMode, // Get from spec directly
+		Port:                spec.Port,
+		WebExternalURL:      fmt.Sprintf("http://%s", utils.JoinHostPort(spec.Host, spec.Port)),
+		Retention:           getRetention(spec.Retention),
+		EnableNG:            spec.NgPort > 0,
+		EnablePromAgentMode: spec.EnablePromAgentMode, // Get from spec directly
 
 		DeployDir: paths.Deploy,
 		LogDir:    paths.Log,
@@ -286,10 +286,10 @@ func (i *MonitorInstance) InitConfig(
 	}
 
 	// Check if agent mode is enabled in additional arguments
-	if !cfg.EnableAgent {
+	if !cfg.EnablePromAgentMode {
 		for _, arg := range spec.AdditionalArgs {
 			if arg == "--enable-feature=agent" {
-				cfg.EnableAgent = true
+				cfg.EnablePromAgentMode = true
 				break
 			}
 		}
@@ -523,7 +523,7 @@ func (i *MonitorInstance) InitConfig(
 	fp = filepath.Join(paths.Cache, fmt.Sprintf("prometheus_%s_%d.yml", i.GetHost(), i.GetPort()))
 
 	// Generate config file with agent mode consideration
-	if spec.EnableAgentMode {
+	if spec.EnablePromAgentMode {
 		// Use agent mode configuration (without rule_files section)
 		configBytes, err := cfig.ConfigWithAgentMode(true)
 		if err != nil {

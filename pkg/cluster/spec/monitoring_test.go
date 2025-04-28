@@ -260,7 +260,7 @@ func TestHandleRemoteWrite(t *testing.T) {
 	spec := &PrometheusSpec{
 		Host:                "192.168.1.10",
 		Port:                9090,
-		EnableVMRemoteWrite: true,
+		PromRemoteWriteToVM: true,
 	}
 	monitoring := &PrometheusSpec{
 		Host:   "192.168.1.20",
@@ -294,38 +294,38 @@ func TestHandleRemoteWrite(t *testing.T) {
 	assert.Equal(t, expectedURL, spec.RemoteConfig.RemoteWrite[0]["url"])
 }
 
-// TestEnableVMRemoteWrite tests remote write configuration
-func TestEnableVMRemoteWrite(t *testing.T) {
-	// Create a PrometheusSpec with EnableVMRemoteWrite
+// TestPromRemoteWriteToVM tests remote write configuration
+func TestPromRemoteWriteToVM(t *testing.T) {
+	// Create a PrometheusSpec with PromRemoteWriteToVM
 	spec := PrometheusSpec{
 		Host:                "127.0.0.1",
 		Port:                9090,
-		EnableVMRemoteWrite: true,
+		PromRemoteWriteToVM: true,
 	}
 
 	// Validate field is accessible
-	assert.True(t, spec.EnableVMRemoteWrite)
+	assert.True(t, spec.PromRemoteWriteToVM)
 
 	// Test setting field
-	spec.EnableVMRemoteWrite = false
-	assert.False(t, spec.EnableVMRemoteWrite)
+	spec.PromRemoteWriteToVM = false
+	assert.False(t, spec.PromRemoteWriteToVM)
 }
 
-// TestVMRemoteWriteYAMLBackwardsCompatibility tests loading YAML with and without EnableVMRemoteWrite field
+// TestVMRemoteWriteYAMLBackwardsCompatibility tests loading YAML with and without PromRemoteWriteToVM field
 func TestVMRemoteWriteYAMLBackwardsCompatibility(t *testing.T) {
-	// Old YAML without EnableVMRemoteWrite
+	// Old YAML without PromRemoteWriteToVM
 	oldYAML := `
 host: 127.0.0.1
 port: 9090
 ng_port: 12020
 `
 
-	// New YAML with EnableVMRemoteWrite
+	// New YAML with PromRemoteWriteToVM
 	newYAML := `
 host: 127.0.0.1
 port: 9090
 ng_port: 12020
-enable_vm_remote_write: true
+prom_remote_write_to_vm: true
 `
 
 	// Test unmarshaling old YAML
@@ -334,7 +334,7 @@ enable_vm_remote_write: true
 	assert.NoError(t, err)
 
 	// Default value should be false
-	assert.False(t, oldSpec.EnableVMRemoteWrite)
+	assert.False(t, oldSpec.PromRemoteWriteToVM)
 
 	// Test unmarshaling new YAML
 	var newSpec PrometheusSpec
@@ -342,16 +342,16 @@ enable_vm_remote_write: true
 	assert.NoError(t, err)
 
 	// New value should match what's in the YAML
-	assert.True(t, newSpec.EnableVMRemoteWrite)
+	assert.True(t, newSpec.PromRemoteWriteToVM)
 }
 
-// TestHandleRemoteWriteDisabled tests that VM remote write configuration is removed when EnableVMRemoteWrite is false
+// TestHandleRemoteWriteDisabled tests that VM remote write configuration is removed when PromRemoteWriteToVM is false
 func TestHandleRemoteWriteDisabled(t *testing.T) {
-	// Create spec with existing remote write config and EnableVMRemoteWrite=false
+	// Create spec with existing remote write config and PromRemoteWriteToVM=false
 	spec := &PrometheusSpec{
 		Host:                "192.168.1.10",
 		Port:                9090,
-		EnableVMRemoteWrite: false,
+		PromRemoteWriteToVM: false,
 	}
 	monitoring := &PrometheusSpec{
 		Host:   "192.168.1.20",
@@ -379,7 +379,7 @@ func TestHandleRemoteWriteDisabled(t *testing.T) {
 		},
 	}
 
-	// Execute handleRemoteWrite with EnableVMRemoteWrite=false
+	// Execute handleRemoteWrite with PromRemoteWriteToVM=false
 	monitorInstance.handleRemoteWrite(spec, monitoring)
 
 	// Check that VM remote write config was removed but other config was preserved
@@ -393,8 +393,8 @@ func TestHandleRemoteWriteDisabled(t *testing.T) {
 	// No remote write configs should still be nil/empty
 	assert.Empty(t, spec.RemoteConfig.RemoteWrite)
 
-	// Now test with EnableVMRemoteWrite toggled back to true
-	spec.EnableVMRemoteWrite = true
+	// Now test with PromRemoteWriteToVM toggled back to true
+	spec.PromRemoteWriteToVM = true
 	monitorInstance.handleRemoteWrite(spec, monitoring)
 
 	// VM remote write config should be added back

@@ -30,16 +30,16 @@ func TestPrometheusScriptWithAgentMode(t *testing.T) {
 
 	// Initialize Prometheus script with agent mode enabled
 	script := &PrometheusScript{
-		Port:           9090,
-		WebExternalURL: "http://localhost:9090",
-		Retention:      "30d",
-		EnableNG:       false,
-		EnableAgent:    true,
-		DeployDir:      "/deploy",
-		LogDir:         "/log",
-		DataDir:        "/data",
-		NumaNode:       "",
-		AdditionalArgs: []string{"--some-additional-arg=value"},
+		Port:                9090,
+		WebExternalURL:      "http://localhost:9090",
+		Retention:           "30d",
+		EnableNG:            false,
+		EnablePromAgentMode: true,
+		DeployDir:           "/deploy",
+		LogDir:              "/log",
+		DataDir:             "/data",
+		NumaNode:            "",
+		AdditionalArgs:      []string{"--some-additional-arg=value"},
 	}
 
 	// Write to the temp file
@@ -76,7 +76,7 @@ func TestPrometheusScriptWithAgentMode(t *testing.T) {
 	defer tmpfile2.Close()
 
 	// Initialize Prometheus script with agent mode disabled
-	script.EnableAgent = false
+	script.EnablePromAgentMode = false
 
 	// Write to the second temp file
 	err = script.ConfigToFile(tmpfile2.Name())

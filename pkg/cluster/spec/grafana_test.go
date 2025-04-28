@@ -209,7 +209,7 @@ func TestGrafanaDatasourceConfig(t *testing.T) {
 			Host:                "127.0.0.1",
 			Port:                9090,
 			NgPort:              12020,
-			EnableVMRemoteWrite: true,
+			PromRemoteWriteToVM: true,
 		},
 	}
 	topo.Grafanas = []*GrafanaSpec{
@@ -246,7 +246,7 @@ func TestGrafanaDatasourceConfig(t *testing.T) {
 	assert.Contains(t, string(dsContent), `url: http://127.0.0.1:12020`)
 
 	// Test without VM remote write enabled
-	topo.Monitors[0].EnableVMRemoteWrite = false
+	topo.Monitors[0].PromRemoteWriteToVM = false
 	err = grafanaInstance.InitConfig(ctxt.New(ctx, 0, logprinter.NewLogger("")), mockExec, clusterName, "v5.4.0", "tidb", paths)
 	require.NoError(t, err)
 
@@ -384,14 +384,14 @@ func TestVictoriaMetricsDefaultDatasource(t *testing.T) {
 			Host:                "127.0.0.1",
 			Port:                9090,
 			NgPort:              12020,
-			EnableVMRemoteWrite: true,
+			PromRemoteWriteToVM: true,
 		},
 	}
 	topo.Grafanas = []*GrafanaSpec{
 		{
-			Host:                     "127.0.0.1",
-			Port:                     3000,
-			UseVMAsDefaultDatasource: true,
+			Host:              "127.0.0.1",
+			Port:              3000,
+			UseVMAsDatasource: true,
 		},
 	}
 
