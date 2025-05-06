@@ -34,14 +34,14 @@ type Pump struct {
 var _ Instance = &Pump{}
 
 // NewPump create a Pump instance.
-func NewPump(binPath string, dir, host, configPath string, portOffset int, id int, pds []*PDInstance) *Pump {
+func NewPump(shOpt SharedOptions, binPath string, dir, host, configPath string, id int, pds []*PDInstance) *Pump {
 	pump := &Pump{
 		instance: instance{
 			BinPath:    binPath,
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
-			Port:       utils.MustGetFreePort(host, 8249, portOffset),
+			Port:       utils.MustGetFreePort(host, 8249, shOpt.PortOffset),
 			ConfigPath: configPath,
 		},
 		pds: pds,

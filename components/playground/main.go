@@ -55,29 +55,26 @@ import (
 
 // BootOptions is the topology and options used to start a playground cluster
 type BootOptions struct {
-	Mode           string              `yaml:"mode"`
-	PDMode         string              `yaml:"pd_mode"`
-	Version        string              `yaml:"version"`
-	PD             instance.Config     `yaml:"pd"`         // will change to api when pd_mode == ms
-	TSO            instance.Config     `yaml:"tso"`        // Only available when pd_mode == ms
-	Scheduling     instance.Config     `yaml:"scheduling"` // Only available when pd_mode == ms
-	TiProxy        instance.Config     `yaml:"tiproxy"`
-	TiDB           instance.Config     `yaml:"tidb"`
-	TiKV           instance.Config     `yaml:"tikv"`
-	TiFlash        instance.Config     `yaml:"tiflash"`         // ignored when mode == tidb-cse or tiflash-disagg
-	TiFlashWrite   instance.Config     `yaml:"tiflash_write"`   // Only available when mode == tidb-cse or tiflash-disagg
-	TiFlashCompute instance.Config     `yaml:"tiflash_compute"` // Only available when mode == tidb-cse or tiflash-disagg
-	TiCDC          instance.Config     `yaml:"ticdc"`
-	TiKVCDC        instance.Config     `yaml:"tikv_cdc"`
-	Pump           instance.Config     `yaml:"pump"`
-	Drainer        instance.Config     `yaml:"drainer"`
-	Host           string              `yaml:"host"`
-	Monitor        bool                `yaml:"monitor"`
-	CSEOpts        instance.CSEOptions `yaml:"cse"` // Only available when mode == tidb-cse or tiflash-disagg
-	GrafanaPort    int                 `yaml:"grafana_port"`
-	PortOffset     int                 `yaml:"port_offset"`
-	DMMaster       instance.Config     `yaml:"dm_master"`
-	DMWorker       instance.Config     `yaml:"dm_worker"`
+	ShOpt          instance.SharedOptions `yaml:"shared_opt"`
+	Version        string                 `yaml:"version"`
+	PD             instance.Config        `yaml:"pd"`         // will change to api when pd_mode == ms
+	TSO            instance.Config        `yaml:"tso"`        // Only available when pd_mode == ms
+	Scheduling     instance.Config        `yaml:"scheduling"` // Only available when pd_mode == ms
+	TiProxy        instance.Config        `yaml:"tiproxy"`
+	TiDB           instance.Config        `yaml:"tidb"`
+	TiKV           instance.Config        `yaml:"tikv"`
+	TiFlash        instance.Config        `yaml:"tiflash"`         // ignored when ShOpt.Mode == tidb-cse or tiflash-disagg
+	TiFlashWrite   instance.Config        `yaml:"tiflash_write"`   // Only available when ShOpt.Mode == tidb-cse or tiflash-disagg
+	TiFlashCompute instance.Config        `yaml:"tiflash_compute"` // Only available when ShOpt.Mode == tidb-cse or tiflash-disagg
+	TiCDC          instance.Config        `yaml:"ticdc"`
+	TiKVCDC        instance.Config        `yaml:"tikv_cdc"`
+	Pump           instance.Config        `yaml:"pump"`
+	Drainer        instance.Config        `yaml:"drainer"`
+	Host           string                 `yaml:"host"`
+	Monitor        bool                   `yaml:"monitor"`
+	GrafanaPort    int                    `yaml:"grafana_port"`
+	DMMaster       instance.Config        `yaml:"dm_master"`
+	DMWorker       instance.Config        `yaml:"dm_worker"`
 }
 
 var (
@@ -179,7 +176,7 @@ Examples:
 				return err
 			}
 
-			port := utils.MustGetFreePort("0.0.0.0", 9527, options.PortOffset)
+			port := utils.MustGetFreePort("0.0.0.0", 9527, options.ShOpt.PortOffset)
 			err := dumpPort(filepath.Join(dataDir, "port"), port)
 			p := NewPlayground(dataDir, port)
 			if err != nil {
@@ -277,14 +274,20 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 		},
 	}
 
-	rootCmd.Flags().StringVar(&options.Mode, "mode", "tidb", "TiUP playground mode: 'tidb', 'tidb-cse', 'tiflash-disagg', 'tikv-slim'")
-	rootCmd.Flags().StringVar(&options.PDMode, "pd.mode", "pd", "PD mode: 'pd', 'ms'")
+	rootCmd.Flags().StringVar(&options.ShOpt.Mode, "mode", "tidb", "TiUP playground mode: 'tidb', 'tidb-cse', 'tiflash-disagg', 'tikv-slim'")
+	rootCmd.Flags().StringVar(&options.ShOpt.PDMode, "pd.mode", "pd", "PD mode: 'pd', 'ms'")
+	rootCmd.Flags().StringVar(&options.ShOpt.CSE.S3Endpoint, "cse.s3_endpoint", "http://127.0.0.1:9000", "Object store URL for --mode=tidb-cse or --mode=tiflash-disagg")
+	rootCmd.Flags().StringVar(&options.ShOpt.CSE.Bucket, "cse.bucket", "tiflash", "Object store bucket for --mode=tidb-cse or --mode=tiflash-disagg")
+	rootCmd.Flags().StringVar(&options.ShOpt.CSE.AccessKey, "cse.access_key", "minioadmin", "Object store access key for --mode=tidb-cse or --mode=tiflash-disagg")
+	rootCmd.Flags().StringVar(&options.ShOpt.CSE.SecretKey, "cse.secret_key", "minioadmin", "Object store secret key for --mode=tidb-cse or --mode=tiflash-disagg")
+	rootCmd.Flags().BoolVar(&options.ShOpt.HighPerf, "perf", false, "Tune default config for better performance instead of debug troubleshooting")
+
 	rootCmd.PersistentFlags().StringVarP(&tag, "tag", "T", "", "Specify a tag for playground, data dir of this tag will not be removed after exit")
 	rootCmd.Flags().Bool("without-monitor", false, "Don't start prometheus and grafana component")
 	rootCmd.Flags().BoolVar(&options.Monitor, "monitor", true, "Start prometheus and grafana component")
 	_ = rootCmd.Flags().MarkDeprecated("monitor", "Please use --without-monitor to control whether to disable monitor.")
 	rootCmd.Flags().IntVar(&options.GrafanaPort, "grafana.port", 3000, "grafana port. If not provided, grafana will use 3000 as its port.")
-	rootCmd.Flags().IntVar(&options.PortOffset, "port-offset", 0, "If specified, all components will use default_port+port_offset as the port. This argument is useful when you want to start multiple playgrounds on the same host. Recommend to set to 10000, 20000, etc.")
+	rootCmd.Flags().IntVar(&options.ShOpt.PortOffset, "port-offset", 0, "If specified, all components will use default_port+port_offset as the port. This argument is useful when you want to start multiple playgrounds on the same host. Recommend to set to 10000, 20000, etc.")
 
 	// NOTE: Do not set default values if they may be changed in different modes.
 
@@ -359,11 +362,6 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 
 	rootCmd.Flags().StringVar(&options.TiKVCDC.Version, "kvcdc.version", "", "TiKV-CDC instance version")
 
-	rootCmd.Flags().StringVar(&options.CSEOpts.S3Endpoint, "cse.s3_endpoint", "http://127.0.0.1:9000", "Object store URL for --mode=tidb-cse or --mode=tiflash-disagg")
-	rootCmd.Flags().StringVar(&options.CSEOpts.Bucket, "cse.bucket", "tiflash", "Object store bucket for --mode=tidb-cse or --mode=tiflash-disagg")
-	rootCmd.Flags().StringVar(&options.CSEOpts.AccessKey, "cse.access_key", "minioadmin", "Object store access key for --mode=tidb-cse or --mode=tiflash-disagg")
-	rootCmd.Flags().StringVar(&options.CSEOpts.SecretKey, "cse.secret_key", "minioadmin", "Object store secret key for --mode=tidb-cse or --mode=tiflash-disagg")
-
 	rootCmd.AddCommand(newDisplay())
 	rootCmd.AddCommand(newScaleOut())
 	rootCmd.AddCommand(newScaleIn())
@@ -389,7 +387,7 @@ func populateDefaultOpt(flagSet *pflag.FlagSet) error {
 		}
 	}
 
-	switch options.Mode {
+	switch options.ShOpt.Mode {
 	case "tidb":
 		defaultInt(&options.TiDB.Num, "db", 1)
 		defaultInt(&options.TiKV.Num, "kv", 1)
@@ -409,10 +407,10 @@ func populateDefaultOpt(flagSet *pflag.FlagSet) error {
 		defaultStr(&options.TiFlashCompute.ConfigPath, "tiflash.compute.config", options.TiFlash.ConfigPath)
 		options.TiFlashCompute.UpTimeout = options.TiFlash.UpTimeout
 	default:
-		return errors.Errorf("Unknown --mode %s", options.Mode)
+		return errors.Errorf("Unknown --mode %s", options.ShOpt.Mode)
 	}
 
-	switch options.PDMode {
+	switch options.ShOpt.PDMode {
 	case "pd":
 		defaultInt(&options.PD.Num, "pd", 1)
 	case "ms":
@@ -426,7 +424,7 @@ func populateDefaultOpt(flagSet *pflag.FlagSet) error {
 		defaultStr(&options.Scheduling.BinPath, "scheduling.binpath", options.PD.BinPath)
 		defaultStr(&options.Scheduling.ConfigPath, "scheduling.config", options.PD.ConfigPath)
 	default:
-		return errors.Errorf("Unknown --pd.mode %s", options.PDMode)
+		return errors.Errorf("Unknown --pd.mode %s", options.ShOpt.PDMode)
 	}
 
 	return nil

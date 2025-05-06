@@ -19,7 +19,7 @@ type DMMaster struct {
 var _ Instance = &DMMaster{}
 
 // NewDMMaster create a new DMMaster instance.
-func NewDMMaster(binPath string, dir, host, configPath string, portOffset int, id int, port int) *DMMaster {
+func NewDMMaster(shOpt SharedOptions, binPath string, dir, host, configPath string, id int, port int) *DMMaster {
 	if port <= 0 {
 		port = 8261
 	}
@@ -29,9 +29,9 @@ func NewDMMaster(binPath string, dir, host, configPath string, portOffset int, i
 			ID:      id,
 			Dir:     dir,
 			Host:    host,
-			Port:    utils.MustGetFreePort(host, 8291, portOffset),
+			Port:    utils.MustGetFreePort(host, 8291, shOpt.PortOffset),
 			// Similar like PD's client port, here use StatusPort for Master Port.
-			StatusPort: utils.MustGetFreePort(host, port, portOffset),
+			StatusPort: utils.MustGetFreePort(host, port, shOpt.PortOffset),
 			ConfigPath: configPath,
 		},
 	}

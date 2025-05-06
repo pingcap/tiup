@@ -33,7 +33,7 @@ type TiCDC struct {
 var _ Instance = &TiCDC{}
 
 // NewTiCDC create a TiCDC instance.
-func NewTiCDC(binPath string, dir, host, configPath string, portOffset int, id int, port int, pds []*PDInstance) *TiCDC {
+func NewTiCDC(shOpt SharedOptions, binPath string, dir, host, configPath string, id int, port int, pds []*PDInstance) *TiCDC {
 	if port <= 0 {
 		port = 8300
 	}
@@ -43,7 +43,7 @@ func NewTiCDC(binPath string, dir, host, configPath string, portOffset int, id i
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
-			Port:       utils.MustGetFreePort(host, port, portOffset),
+			Port:       utils.MustGetFreePort(host, port, shOpt.PortOffset),
 			ConfigPath: configPath,
 		},
 		pds: pds,

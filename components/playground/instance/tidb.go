@@ -26,32 +26,32 @@ import (
 // TiDBInstance represent a running tidb-server
 type TiDBInstance struct {
 	instance
-	pds []*PDInstance
+	shOpt SharedOptions
+	pds   []*PDInstance
 	Process
 	tiproxyCertDir string
 	enableBinlog   bool
-	mode           string
 }
 
 // NewTiDBInstance return a TiDBInstance
-func NewTiDBInstance(binPath string, dir, host, configPath string, portOffset int, id, port int, pds []*PDInstance, tiproxyCertDir string, enableBinlog bool, mode string) *TiDBInstance {
+func NewTiDBInstance(shOpt SharedOptions, binPath string, dir, host, configPath string, id, port int, pds []*PDInstance, tiproxyCertDir string, enableBinlog bool) *TiDBInstance {
 	if port <= 0 {
 		port = 4000
 	}
 	return &TiDBInstance{
+		shOpt: shOpt,
 		instance: instance{
 			BinPath:    binPath,
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
-			Port:       utils.MustGetFreePort(host, port, portOffset),
-			StatusPort: utils.MustGetFreePort("0.0.0.0", 10080, portOffset),
+			Port:       utils.MustGetFreePort(host, port, shOpt.PortOffset),
+			StatusPort: utils.MustGetFreePort("0.0.0.0", 10080, shOpt.PortOffset),
 			ConfigPath: configPath,
 		},
 		tiproxyCertDir: tiproxyCertDir,
 		pds:            pds,
 		enableBinlog:   enableBinlog,
-		mode:           mode,
 	}
 }
 

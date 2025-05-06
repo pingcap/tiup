@@ -27,34 +27,30 @@ import (
 // TiKVInstance represent a running tikv-server
 type TiKVInstance struct {
 	instance
-	pds  []*PDInstance
-	tsos []*PDInstance
+	shOpt SharedOptions
+	pds   []*PDInstance
+	tsos  []*PDInstance
 	Process
-	mode       string
-	cseOpts    CSEOptions
-	isPDMSMode bool
 }
 
 // NewTiKVInstance return a TiKVInstance
-func NewTiKVInstance(binPath string, dir, host, configPath string, portOffset int, id int, port int, pds []*PDInstance, tsos []*PDInstance, mode string, cseOptions CSEOptions, isPDMSMode bool) *TiKVInstance {
+func NewTiKVInstance(shOpt SharedOptions, binPath string, dir, host, configPath string, id int, port int, pds []*PDInstance, tsos []*PDInstance) *TiKVInstance {
 	if port <= 0 {
 		port = 20160
 	}
 	return &TiKVInstance{
+		shOpt: shOpt,
 		instance: instance{
 			BinPath:    binPath,
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
-			Port:       utils.MustGetFreePort(host, port, portOffset),
-			StatusPort: utils.MustGetFreePort(host, 20180, portOffset),
+			Port:       utils.MustGetFreePort(host, port, shOpt.PortOffset),
+			StatusPort: utils.MustGetFreePort(host, 20180, shOpt.PortOffset),
 			ConfigPath: configPath,
 		},
-		pds:        pds,
-		tsos:       tsos,
-		mode:       mode,
-		cseOpts:    cseOptions,
-		isPDMSMode: isPDMSMode,
+		pds:  pds,
+		tsos: tsos,
 	}
 }
 
@@ -75,7 +71,7 @@ func (inst *TiKVInstance) Start(ctx context.Context) error {
 	}
 
 	// Need to check tso status
-	if inst.isPDMSMode {
+	if inst.shOpt.PDMode == "ms" {
 		var tsoEnds []string
 		for _, pd := range inst.tsos {
 			tsoEnds = append(tsoEnds, fmt.Sprintf("%s:%d", AdvertiseHost(pd.Host), pd.StatusPort))

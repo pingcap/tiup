@@ -141,12 +141,12 @@ func (inst *TiFlashInstance) checkConfigOld(deployDir, clusterManagerPath string
 	}()
 
 	// Write default config to buffer
-	if err := writeTiFlashConfigOld(flashBuf, version, inst.TCPPort, inst.Port, inst.ServicePort, inst.StatusPort,
+	if err := writeTiFlashConfigOld(flashBuf, version, inst.tcpPort, inst.Port, inst.servicePort, inst.StatusPort,
 		inst.Host, deployDir, clusterManagerPath, tidbStatusAddrs, endpoints); err != nil {
 		return errors.Trace(err)
 	}
 	if err := writeTiFlashProxyConfigOld(proxyBuf, version, inst.Host, deployDir,
-		inst.ServicePort, inst.ProxyPort, inst.ProxyStatusPort); err != nil {
+		inst.servicePort, inst.proxyPort, inst.proxyStatusPort); err != nil {
 		return errors.Trace(err)
 	}
 
