@@ -68,6 +68,7 @@ type BootOptions struct {
 	TiFlashCompute instance.Config        `yaml:"tiflash_compute"` // Only available when ShOpt.Mode == tidb-cse or tiflash-disagg
 	TiCDC          instance.Config        `yaml:"ticdc"`
 	TiKVCDC        instance.Config        `yaml:"tikv_cdc"`
+	TiKVWorker     instance.Config        `yaml:"tikv_worker"` // Only available when ShOpt.Mode == tidb-cse
 	Pump           instance.Config        `yaml:"pump"`
 	Drainer        instance.Config        `yaml:"drainer"`
 	Host           string                 `yaml:"host"`
@@ -281,6 +282,7 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 	rootCmd.Flags().StringVar(&options.ShOpt.CSE.AccessKey, "cse.access_key", "minioadmin", "Object store access key for --mode=tidb-cse or --mode=tiflash-disagg")
 	rootCmd.Flags().StringVar(&options.ShOpt.CSE.SecretKey, "cse.secret_key", "minioadmin", "Object store secret key for --mode=tidb-cse or --mode=tiflash-disagg")
 	rootCmd.Flags().BoolVar(&options.ShOpt.HighPerf, "perf", false, "Tune default config for better performance instead of debug troubleshooting")
+	rootCmd.Flags().BoolVar(&options.ShOpt.EnableTiKVColumnar, "tikv.columnar", false, "Enable TiKV columnar storage engine, only available when --mode=tidb-cse")
 
 	rootCmd.PersistentFlags().StringVarP(&tag, "tag", "T", "", "Specify a tag for playground, data dir of this tag will not be removed after exit")
 	rootCmd.Flags().Bool("without-monitor", false, "Don't start prometheus and grafana component")
@@ -306,6 +308,7 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 	rootCmd.Flags().IntVar(&options.Drainer.Num, "drainer", 0, "Drainer instance number")
 	rootCmd.Flags().IntVar(&options.DMMaster.Num, "dm-master", 0, "DM-master instance number")
 	rootCmd.Flags().IntVar(&options.DMWorker.Num, "dm-worker", 0, "DM-worker instance number")
+	rootCmd.Flags().IntVar(&options.TiKVWorker.Num, "tikv.worker", 0, "TiKV worker instance number, only available when --mode=tidb-cse. Could be 0 or 1.")
 
 	rootCmd.Flags().IntVar(&options.TiDB.UpTimeout, "db.timeout", 60, "TiDB max wait time in seconds for starting, 0 means no limit")
 	rootCmd.Flags().IntVar(&options.TiFlash.UpTimeout, "tiflash.timeout", 120, "TiFlash max wait time in seconds for starting, 0 means no limit")
@@ -326,6 +329,8 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 	rootCmd.Flags().IntVar(&options.DMMaster.Port, "dm-master.port", 8261, "DM-master instance port")
 	rootCmd.Flags().StringVar(&options.DMWorker.Host, "dm-worker.host", "", "DM-worker instance host")
 	rootCmd.Flags().IntVar(&options.DMWorker.Port, "dm-worker.port", 8262, "DM-worker instance port")
+	rootCmd.Flags().StringVar(&options.TiKVWorker.Host, "tikv.worker.host", "", "TiKV worker instance host")
+	rootCmd.Flags().IntVar(&options.TiKVWorker.Port, "tikv.worker.port", 19000, "TiKV worker instance port")
 
 	rootCmd.Flags().StringVar(&options.TiDB.ConfigPath, "db.config", "", "TiDB instance configuration file")
 	rootCmd.Flags().StringVar(&options.TiKV.ConfigPath, "kv.config", "", "TiKV instance configuration file")
@@ -342,6 +347,7 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 	rootCmd.Flags().StringVar(&options.TiKVCDC.ConfigPath, "kvcdc.config", "", "TiKV-CDC instance configuration file")
 	rootCmd.Flags().StringVar(&options.DMMaster.ConfigPath, "dm-master.config", "", "DM-master instance configuration file")
 	rootCmd.Flags().StringVar(&options.DMWorker.ConfigPath, "dm-worker.config", "", "DM-worker instance configuration file")
+	rootCmd.Flags().StringVar(&options.TiKVWorker.ConfigPath, "tikv.worker.config", "", "TiKV worker instance configuration file")
 
 	rootCmd.Flags().StringVar(&options.TiDB.BinPath, "db.binpath", "", "TiDB instance binary path")
 	rootCmd.Flags().StringVar(&options.TiKV.BinPath, "kv.binpath", "", "TiKV instance binary path")
@@ -359,6 +365,7 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 	rootCmd.Flags().StringVar(&options.Drainer.BinPath, "drainer.binpath", "", "Drainer instance binary path")
 	rootCmd.Flags().StringVar(&options.DMMaster.BinPath, "dm-master.binpath", "", "DM-master instance binary path")
 	rootCmd.Flags().StringVar(&options.DMWorker.BinPath, "dm-worker.binpath", "", "DM-worker instance binary path")
+	rootCmd.Flags().StringVar(&options.TiKVWorker.BinPath, "tikv.worker.binpath", "", "TiKV worker instance binary path. If a path of `tikv-server` is specified, `tikv-worker` in the same directory will be used")
 
 	rootCmd.Flags().StringVar(&options.TiKVCDC.Version, "kvcdc.version", "", "TiKV-CDC instance version")
 
@@ -406,6 +413,9 @@ func populateDefaultOpt(flagSet *pflag.FlagSet) error {
 		defaultStr(&options.TiFlashCompute.BinPath, "tiflash.compute.binpath", options.TiFlash.BinPath)
 		defaultStr(&options.TiFlashCompute.ConfigPath, "tiflash.compute.config", options.TiFlash.ConfigPath)
 		options.TiFlashCompute.UpTimeout = options.TiFlash.UpTimeout
+		// Note: if a path of `tikv-server` is specified, the real resolved path of tikv-worker will become `tikv-worker` in the same directory.
+		defaultInt(&options.TiKVWorker.Num, "tikv.worker", 1)
+		defaultStr(&options.TiKVWorker.BinPath, "tikv.worker.binpath", options.TiKV.BinPath)
 	default:
 		return errors.Errorf("Unknown --mode %s", options.ShOpt.Mode)
 	}

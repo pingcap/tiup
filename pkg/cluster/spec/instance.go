@@ -39,6 +39,7 @@ import (
 const (
 	ComponentTiDB             = "tidb"
 	ComponentTiKV             = "tikv"
+	ComponentTiKVWorker       = "tikv-worker"
 	ComponentPD               = "pd"
 	ComponentTSO              = "tso"
 	ComponentScheduling       = "scheduling"
