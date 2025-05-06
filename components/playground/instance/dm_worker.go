@@ -20,7 +20,7 @@ type DMWorker struct {
 var _ Instance = &DMWorker{}
 
 // NewDMWorker create a DMWorker instance.
-func NewDMWorker(binPath string, dir, host, configPath string, portOffset int, id int, port int, masters []*DMMaster) *DMWorker {
+func NewDMWorker(shOpt SharedOptions, binPath string, dir, host, configPath string, id int, port int, masters []*DMMaster) *DMWorker {
 	if port <= 0 {
 		port = 8262
 	}
@@ -30,7 +30,7 @@ func NewDMWorker(binPath string, dir, host, configPath string, portOffset int, i
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
-			Port:       utils.MustGetFreePort(host, port, portOffset),
+			Port:       utils.MustGetFreePort(host, port, shOpt.PortOffset),
 			ConfigPath: configPath,
 		},
 		masters: masters,

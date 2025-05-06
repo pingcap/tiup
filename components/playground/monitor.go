@@ -78,12 +78,12 @@ func (m *monitor) wait() error {
 }
 
 // the cmd is not started after return
-func newMonitor(ctx context.Context, version string, host, dir string, portOffset int) (*monitor, error) {
+func newMonitor(ctx context.Context, shOpt instance.SharedOptions, version string, host, dir string) (*monitor, error) {
 	if err := utils.MkdirAll(dir, 0755); err != nil {
 		return nil, errors.AddStack(err)
 	}
 
-	port := utils.MustGetFreePort(host, 9090, portOffset)
+	port := utils.MustGetFreePort(host, 9090, shOpt.PortOffset)
 	addr := utils.JoinHostPort(host, port)
 
 	tmpl := `

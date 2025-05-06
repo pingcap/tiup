@@ -31,6 +31,8 @@ import (
 	"syscall"
 	"time"
 
+	"slices"
+
 	"github.com/fatih/color"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -46,7 +48,6 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
-	"slices"
 )
 
 // The duration process need to quit gracefully, or we kill the process.
@@ -793,7 +794,7 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 
 	switch componentID {
 	case spec.ComponentPD:
-		inst := instance.NewPDInstance(pdRole, cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, p.pds, cfg.Port, p.bootOptions.Mode, p.bootOptions.TiKV.Num == 1)
+		inst := instance.NewPDInstance(pdRole, p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, cfg.Port, p.bootOptions.TiKV.Num == 1)
 		ins = inst
 		if pdRole == instance.PDRoleNormal || pdRole == instance.PDRoleAPI {
 			if p.booted {
@@ -811,57 +812,57 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 			p.schedulings = append(p.schedulings, inst)
 		}
 	case spec.ComponentTSO:
-		inst := instance.NewPDInstance(instance.PDRoleTSO, cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, p.pds, cfg.Port, p.bootOptions.Mode, p.bootOptions.TiKV.Num == 1)
+		inst := instance.NewPDInstance(instance.PDRoleTSO, p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, cfg.Port, p.bootOptions.TiKV.Num == 1)
 		ins = inst
 		p.tsos = append(p.tsos, inst)
 	case spec.ComponentScheduling:
-		inst := instance.NewPDInstance(instance.PDRoleScheduling, cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, p.pds, cfg.Port, p.bootOptions.Mode, p.bootOptions.TiKV.Num == 1)
+		inst := instance.NewPDInstance(instance.PDRoleScheduling, p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, cfg.Port, p.bootOptions.TiKV.Num == 1)
 		ins = inst
 		p.schedulings = append(p.schedulings, inst)
 	case spec.ComponentTiDB:
-		inst := instance.NewTiDBInstance(cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, cfg.Port, p.pds, dataDir, p.enableBinlog(), p.bootOptions.Mode)
+		inst := instance.NewTiDBInstance(p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, dataDir, p.enableBinlog())
 		ins = inst
 		p.tidbs = append(p.tidbs, inst)
 	case spec.ComponentTiKV:
-		inst := instance.NewTiKVInstance(cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, cfg.Port, p.pds, p.tsos, p.bootOptions.Mode, p.bootOptions.CSEOpts, p.bootOptions.PDMode == "ms")
+		inst := instance.NewTiKVInstance(p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, p.tsos)
 		ins = inst
 		p.tikvs = append(p.tikvs, inst)
 	case spec.ComponentTiFlash:
-		inst := instance.NewTiFlashInstance(p.bootOptions.Mode, tiflashRole, p.bootOptions.CSEOpts, cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, p.pds, p.tidbs, cfg.Version)
+		inst := instance.NewTiFlashInstance(tiflashRole, p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, p.tidbs, cfg.Version)
 		ins = inst
 		p.tiflashs = append(p.tiflashs, inst)
 	case spec.ComponentTiProxy:
 		if err := instance.GenTiProxySessionCerts(dataDir); err != nil {
 			return nil, err
 		}
-		inst := instance.NewTiProxy(cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, cfg.Port, p.pds)
+		inst := instance.NewTiProxy(p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds)
 		ins = inst
 		p.tiproxys = append(p.tiproxys, inst)
 	case spec.ComponentCDC:
-		inst := instance.NewTiCDC(cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, cfg.Port, p.pds)
+		inst := instance.NewTiCDC(p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds)
 		ins = inst
 		p.ticdcs = append(p.ticdcs, inst)
 	case spec.ComponentTiKVCDC:
-		inst := instance.NewTiKVCDC(cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, p.pds)
+		inst := instance.NewTiKVCDC(p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds)
 		ins = inst
 		p.tikvCdcs = append(p.tikvCdcs, inst)
 	case spec.ComponentPump:
-		inst := instance.NewPump(cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, p.pds)
+		inst := instance.NewPump(p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds)
 		ins = inst
 		p.pumps = append(p.pumps, inst)
 	case spec.ComponentDrainer:
-		inst := instance.NewDrainer(cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, p.pds)
+		inst := instance.NewDrainer(p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds)
 		ins = inst
 		p.drainers = append(p.drainers, inst)
 	case spec.ComponentDMMaster:
-		inst := instance.NewDMMaster(cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, cfg.Port)
+		inst := instance.NewDMMaster(p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port)
 		ins = inst
 		p.dmMasters = append(p.dmMasters, inst)
 		for _, master := range p.dmMasters {
 			master.SetInitEndpoints(p.dmMasters)
 		}
 	case spec.ComponentDMWorker:
-		inst := instance.NewDMWorker(cfg.BinPath, dir, host, cfg.ConfigPath, options.PortOffset, id, cfg.Port, p.dmMasters)
+		inst := instance.NewDMWorker(p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.dmMasters)
 		ins = inst
 		p.dmWorkers = append(p.dmWorkers, inst)
 	default:
@@ -1064,7 +1065,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 	p.bootOptions = options
 
 	// All others components depend on the pd except dm, we just ensure the pd count must be great than 0
-	if options.PDMode != "ms" && options.PD.Num < 1 && options.DMMaster.Num < 1 {
+	if options.ShOpt.PDMode != "ms" && options.PD.Num < 1 && options.DMMaster.Num < 1 {
 		return fmt.Errorf("all components count must be great than 0 (pd=%v)", options.PD.Num)
 	}
 
@@ -1098,22 +1099,22 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		{spec.ComponentDMWorker, "", "", options.DMWorker},
 	}
 
-	if options.Mode == "tidb" {
+	if options.ShOpt.Mode == "tidb" {
 		instances = append(instances,
 			InstancePair{spec.ComponentTiFlash, instance.PDRoleNormal, instance.TiFlashRoleNormal, options.TiFlash},
 		)
-	} else if options.Mode == "tidb-cse" || options.Mode == "tiflash-disagg" {
+	} else if options.ShOpt.Mode == "tidb-cse" || options.ShOpt.Mode == "tiflash-disagg" {
 		if !tidbver.TiFlashPlaygroundNewStartMode(options.Version) {
 			// For simplicity, currently we only implemented disagg mode when TiFlash can run without config.
 			return fmt.Errorf("TiUP playground only supports CSE/Disagg mode for TiDB cluster >= v7.1.0 (or nightly)")
 		}
 
-		if !strings.HasPrefix(options.CSEOpts.S3Endpoint, "https://") && !strings.HasPrefix(options.CSEOpts.S3Endpoint, "http://") {
+		if !strings.HasPrefix(options.ShOpt.CSE.S3Endpoint, "https://") && !strings.HasPrefix(options.ShOpt.CSE.S3Endpoint, "http://") {
 			return fmt.Errorf("CSE/Disagg mode requires S3 endpoint to start with http:// or https://")
 		}
 
-		isSecure := strings.HasPrefix(options.CSEOpts.S3Endpoint, "https://")
-		rawEndpoint := strings.TrimPrefix(options.CSEOpts.S3Endpoint, "https://")
+		isSecure := strings.HasPrefix(options.ShOpt.CSE.S3Endpoint, "https://")
+		rawEndpoint := strings.TrimPrefix(options.ShOpt.CSE.S3Endpoint, "https://")
 		rawEndpoint = strings.TrimPrefix(rawEndpoint, "http://")
 
 		// Currently we always assign region=local. Other regions are not supported.
@@ -1123,7 +1124,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 		// Preflight check whether specified object storage is available.
 		s3Client, err := minio.New(rawEndpoint, &minio.Options{
-			Creds:  credentials.NewStaticV4(options.CSEOpts.AccessKey, options.CSEOpts.SecretKey, ""),
+			Creds:  credentials.NewStaticV4(options.ShOpt.CSE.AccessKey, options.ShOpt.CSE.SecretKey, ""),
 			Secure: isSecure,
 		})
 		if err != nil {
@@ -1133,16 +1134,16 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		ctxCheck, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
-		bucketExists, err := s3Client.BucketExists(ctxCheck, options.CSEOpts.Bucket)
+		bucketExists, err := s3Client.BucketExists(ctxCheck, options.ShOpt.CSE.Bucket)
 		if err != nil {
 			return errors.Annotate(err, "CSE/Disagg mode preflight check failed")
 		}
 
 		if !bucketExists {
 			// Try to create bucket.
-			err := s3Client.MakeBucket(ctxCheck, options.CSEOpts.Bucket, minio.MakeBucketOptions{})
+			err := s3Client.MakeBucket(ctxCheck, options.ShOpt.CSE.Bucket, minio.MakeBucketOptions{})
 			if err != nil {
-				return fmt.Errorf("CSE/Disagg mode preflight check failed: Bucket %s doesn't exist and fail to create automatically (your bucket name may be invalid?)", options.CSEOpts.Bucket)
+				return fmt.Errorf("CSE/Disagg mode preflight check failed: Bucket %s doesn't exist and fail to create automatically (your bucket name may be invalid?)", options.ShOpt.CSE.Bucket)
 			}
 		}
 
@@ -1153,11 +1154,11 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		)
 	}
 
-	if options.PDMode == "pd" {
+	if options.ShOpt.PDMode == "pd" {
 		instances = append([]InstancePair{{spec.ComponentPD, instance.PDRoleNormal, instance.TiFlashRoleNormal, options.PD}},
 			instances...,
 		)
-	} else if options.PDMode == "ms" {
+	} else if options.ShOpt.PDMode == "ms" {
 		if !tidbver.PDSupportMicroservices(options.Version) {
 			return fmt.Errorf("PD cluster doesn't support microservices mode in version %s", options.Version)
 		}
@@ -1290,8 +1291,8 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		}
 	}
 
-	if p.bootOptions.Mode == "tikv-slim" {
-		if p.bootOptions.PDMode == "ms" {
+	if p.bootOptions.ShOpt.Mode == "tikv-slim" {
+		if p.bootOptions.ShOpt.PDMode == "ms" {
 			var (
 				tsoAddr        []string
 				apiAddr        []string
@@ -1510,7 +1511,7 @@ func (p *Playground) bootMonitor(ctx context.Context, env *environment.Environme
 	dataDir := p.dataDir
 	promDir := filepath.Join(dataDir, "prometheus")
 
-	monitor, err := newMonitor(ctx, options.Version, options.Host, promDir, options.PortOffset)
+	monitor, err := newMonitor(ctx, options.ShOpt, options.Version, options.Host, promDir)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1554,7 +1555,7 @@ func (p *Playground) bootNGMonitoring(ctx context.Context, env *environment.Envi
 	dataDir := p.dataDir
 	promDir := filepath.Join(dataDir, "prometheus")
 
-	ngm, err := newNGMonitoring(ctx, options.Version, options.Host, promDir, options.PortOffset, p.pds)
+	ngm, err := newNGMonitoring(ctx, options.ShOpt, options.Version, options.Host, promDir, p.pds)
 	if err != nil {
 		return nil, err
 	}
@@ -1633,7 +1634,7 @@ func (p *Playground) bootGrafana(ctx context.Context, env *environment.Environme
 
 	grafana := newGrafana(options.Version, options.Host, options.GrafanaPort)
 	// fmt.Println("Start Grafana instance...")
-	err = grafana.start(ctx, grafanaDir, options.PortOffset, "http://"+utils.JoinHostPort(monitorInfo.IP, monitorInfo.Port))
+	err = grafana.start(ctx, grafanaDir, options.ShOpt.PortOffset, "http://"+utils.JoinHostPort(monitorInfo.IP, monitorInfo.Port))
 	if err != nil {
 		return nil, err
 	}

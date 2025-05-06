@@ -22,7 +22,7 @@ func (inst *PDInstance) getConfig() map[string]any {
 		config["replication.max-replica"] = 1
 	}
 
-	if inst.mode == "tidb-cse" {
+	if inst.shOpt.Mode == "tidb-cse" {
 		config["keyspace.pre-alloc"] = []string{"mykeyspace"}
 		config["replication.enable-placement-rules"] = true
 		config["schedule.merge-schedule-limit"] = 0
