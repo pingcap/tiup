@@ -101,6 +101,7 @@ func (inst *TiKVWorkerInstance) Component() string {
 	return "tikv_worker"
 }
 
+// LogFile return the log file name.
 func (inst *TiKVWorkerInstance) LogFile() string {
 	return filepath.Join(inst.Dir, "tikv_worker.log")
 }
