@@ -66,6 +66,7 @@ type Playground struct {
 	tsos             []*instance.PDInstance
 	schedulings      []*instance.PDInstance
 	tikvs            []*instance.TiKVInstance
+	tikvWorkers      []*instance.TiKVWorkerInstance
 	tidbs            []*instance.TiDBInstance
 	tiflashs         []*instance.TiFlashInstance
 	tiproxys         []*instance.TiProxy
@@ -481,6 +482,8 @@ func (p *Playground) sanitizeComponentConfig(cid string, cfg *instance.Config) e
 		return p.sanitizeConfig(p.bootOptions.Scheduling, cfg)
 	case spec.ComponentTiKV:
 		return p.sanitizeConfig(p.bootOptions.TiKV, cfg)
+	case spec.ComponentTiKVWorker:
+		return p.sanitizeConfig(p.bootOptions.TiKVWorker, cfg)
 	case spec.ComponentTiDB:
 		return p.sanitizeConfig(p.bootOptions.TiDB, cfg)
 	case spec.ComponentTiFlash:
@@ -511,6 +514,9 @@ func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) 
 	component := inst.Component()
 	if component == "tso" || component == "scheduling" {
 		component = string(instance.PDRoleNormal)
+	}
+	if component == "tikv_worker" {
+		component = "tikv"
 	}
 	if version, err = environment.GlobalEnv().V1Repository().ResolveComponentVersion(component, boundVersion); err != nil {
 		return err
@@ -683,8 +689,15 @@ func (p *Playground) WalkInstances(fn func(componentID string, ins instance.Inst
 			return err
 		}
 	}
+
 	for _, ins := range p.tikvs {
 		err := fn(spec.ComponentTiKV, ins)
+		if err != nil {
+			return err
+		}
+	}
+	for _, ins := range p.tikvWorkers {
+		err := fn(spec.ComponentTiKVWorker, ins)
 		if err != nil {
 			return err
 		}
@@ -827,6 +840,10 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 		inst := instance.NewTiKVInstance(p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, p.tsos)
 		ins = inst
 		p.tikvs = append(p.tikvs, inst)
+	case spec.ComponentTiKVWorker:
+		inst := instance.NewTiKVWorkerInstance(p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds)
+		ins = inst
+		p.tikvWorkers = append(p.tikvWorkers, inst)
 	case spec.ComponentTiFlash:
 		inst := instance.NewTiFlashInstance(tiflashRole, p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, p.tidbs, cfg.Version)
 		ins = inst
@@ -1046,6 +1063,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		&options.TiProxy,
 		&options.TiDB,
 		&options.TiKV,
+		&options.TiKVWorker,
 		&options.TiFlash,
 		&options.TiFlashCompute,
 		&options.TiFlashWrite,
@@ -1067,6 +1085,18 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 	// All others components depend on the pd except dm, we just ensure the pd count must be great than 0
 	if options.ShOpt.PDMode != "ms" && options.PD.Num < 1 && options.DMMaster.Num < 1 {
 		return fmt.Errorf("all components count must be great than 0 (pd=%v)", options.PD.Num)
+	}
+
+	if options.ShOpt.Mode != "tidb-cse" {
+		if options.TiKVWorker.Num > 0 {
+			return fmt.Errorf("TiKV worker is only supported in tidb-cse mode")
+		}
+	}
+
+	if options.ShOpt.Mode == "tidb-cse" {
+		if options.TiKVWorker.Num > 1 {
+			return fmt.Errorf("TiKV worker only supports at most 1 instance")
+		}
 	}
 
 	if !utils.Version(options.Version).IsNightly() {
@@ -1151,6 +1181,13 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			instances,
 			InstancePair{spec.ComponentTiFlash, instance.PDRoleNormal, instance.TiFlashRoleDisaggWrite, options.TiFlashWrite},
 			InstancePair{spec.ComponentTiFlash, instance.PDRoleNormal, instance.TiFlashRoleDisaggCompute, options.TiFlashCompute},
+		)
+	}
+
+	if options.ShOpt.Mode == "tidb-cse" {
+		instances = append(
+			instances,
+			InstancePair{comp: spec.ComponentTiKVWorker, Config: options.TiKVWorker},
 		)
 	}
 
@@ -1404,6 +1441,11 @@ func (p *Playground) terminate(sig syscall.Signal) {
 
 	if p.grafana != nil && p.grafana.cmd != nil && p.grafana.cmd.Process != nil {
 		go kill("grafana", p.grafana.cmd.Process.Pid, p.grafana.wait)
+	}
+	for _, inst := range p.tikvWorkers {
+		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
+			kill(inst.Component(), inst.Pid(), inst.Wait)
+		}
 	}
 
 	for _, inst := range p.dmWorkers {

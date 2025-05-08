@@ -43,11 +43,12 @@ type Config struct {
 // Unlike Config, these options are shared for all instances of all components.
 type SharedOptions struct {
 	/// Whether or not to tune the cluster in order to run faster (instead of easier to debug).
-	HighPerf   bool       `yaml:"high_perf"`
-	CSE        CSEOptions `yaml:"cse"` // Only available when mode == tidb-cse or tiflash-disagg
-	PDMode     string     `yaml:"pd_mode"`
-	Mode       string     `yaml:"mode"`
-	PortOffset int        `yaml:"port_offset"`
+	HighPerf           bool       `yaml:"high_perf"`
+	CSE                CSEOptions `yaml:"cse"` // Only available when mode == tidb-cse or tiflash-disagg
+	PDMode             string     `yaml:"pd_mode"`
+	Mode               string     `yaml:"mode"`
+	PortOffset         int        `yaml:"port_offset"`
+	EnableTiKVColumnar bool       `yaml:"enable_tikv_columnar"` // Only available when mode == tidb-cse
 }
 
 // CSEOptions contains configs to run TiDB cluster in CSE mode.

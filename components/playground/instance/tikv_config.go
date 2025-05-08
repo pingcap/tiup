@@ -29,6 +29,7 @@ func (inst *TiKVInstance) getConfig() map[string]any {
 		config["dfs.s3-secret-key"] = inst.shOpt.CSE.SecretKey
 		config["dfs.s3-bucket"] = inst.shOpt.CSE.Bucket
 		config["dfs.s3-region"] = "local"
+		config["kvengine.build-columnar"] = true
 	}
 
 	return config

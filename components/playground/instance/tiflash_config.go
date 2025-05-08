@@ -34,6 +34,15 @@ func (inst *TiFlashInstance) getProxyConfig() map[string]any {
 			config["dfs.s3-region"] = "local"
 		}
 	}
+	// If TiKVColumnar is enabled, TiFlash Proxy need to know how to access S3 as well.
+	if inst.Role == TiFlashRoleDisaggCompute && inst.shOpt.Mode == "tidb-cse" && inst.shOpt.EnableTiKVColumnar {
+		config["dfs.prefix"] = "tikv"
+		config["dfs.s3-endpoint"] = inst.shOpt.CSE.S3Endpoint
+		config["dfs.s3-key-id"] = inst.shOpt.CSE.AccessKey
+		config["dfs.s3-secret-key"] = inst.shOpt.CSE.SecretKey
+		config["dfs.s3-bucket"] = inst.shOpt.CSE.Bucket
+		config["dfs.s3-region"] = "local"
+	}
 
 	return config
 }
@@ -68,6 +77,9 @@ func (inst *TiFlashInstance) getConfig() map[string]any {
 		config["flash.disaggregated_mode"] = "tiflash_compute"
 		if inst.shOpt.Mode == "tidb-cse" {
 			config["enable_safe_point_v2"] = true
+			if inst.shOpt.EnableTiKVColumnar {
+				config["flash.use_columnar"] = true
+			}
 		}
 	}
 
