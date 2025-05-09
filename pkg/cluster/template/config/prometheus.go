@@ -16,6 +16,7 @@ package config
 import (
 	"bytes"
 	"path"
+	"strings"
 	"text/template"
 
 	"github.com/pingcap/tiup/embed"
@@ -227,6 +228,40 @@ func (c *PrometheusConfig) Config() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	return c.ConfigWithTemplate(string(tpl))
+}
+
+// ConfigWithAgentMode generate the config file data with agent mode enabled/disabled.
+// In agent mode, we need to exclude rule_files section which is not supported.
+func (c *PrometheusConfig) ConfigWithAgentMode(enableAgent bool) ([]byte, error) {
+	fp := path.Join("templates", "config", "prometheus.yml.tpl")
+	tpl, err := embed.ReadTemplate(fp)
+	if err != nil {
+		return nil, err
+	}
+
+	// If agent mode is enabled, remove rule_files section from the template
+	if enableAgent {
+		// Remove the rule_files section which isn't allowed in agent mode
+		// This is a simple string manipulation to remove the section - a more robust approach
+		// would be to create a dedicated template for agent mode
+		tplContent := string(tpl)
+		ruleSectionStart := "rule_files:"
+		startIndex := strings.Index(tplContent, ruleSectionStart)
+
+		if startIndex >= 0 {
+			// Find the end of the rule_files section (next section with same indentation)
+			scrapeConfigsSection := "scrape_configs:"
+			endIndex := strings.Index(tplContent[startIndex:], scrapeConfigsSection)
+
+			if endIndex >= 0 {
+				// Build a new template without the rule_files section
+				newTemplate := tplContent[:startIndex] + tplContent[startIndex+endIndex:]
+				return c.ConfigWithTemplate(newTemplate)
+			}
+		}
+	}
+
 	return c.ConfigWithTemplate(string(tpl))
 }
 

@@ -37,20 +37,20 @@ import (
 
 // PrometheusSpec represents the Prometheus Server topology specification in topology.yaml
 type PrometheusSpec struct {
-	Host           string `yaml:"host"`
-	ManageHost     string `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
-	SSHPort        int    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported       bool   `yaml:"imported,omitempty"`
-	Patched        bool   `yaml:"patched,omitempty"`
-	IgnoreExporter bool   `yaml:"ignore_exporter,omitempty"`
-	Port           int    `yaml:"port" default:"9090"`
-	NgPort         int    `yaml:"ng_port,omitempty" validate:"ng_port:editable"` // ng_port is usable since v5.3.0 and default as 12020 since v5.4.0, so the default value is set in spec.go/AdjustByVersion
-
+	Host                  string                 `yaml:"host"`
+	ManageHost            string                 `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
+	SSHPort               int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
+	Imported              bool                   `yaml:"imported,omitempty"`
+	Patched               bool                   `yaml:"patched,omitempty"`
+	IgnoreExporter        bool                   `yaml:"ignore_exporter,omitempty"`
+	Port                  int                    `yaml:"port" default:"9090"`
+	NgPort                int                    `yaml:"ng_port,omitempty" validate:"ng_port:editable"` // ng_port is usable since v5.3.0 and default as 12020 since v5.4.0, so the default value is set in spec.go/AdjustByVersion
 	DeployDir             string                 `yaml:"deploy_dir,omitempty"`
 	DataDir               string                 `yaml:"data_dir,omitempty"`
 	LogDir                string                 `yaml:"log_dir,omitempty"`
 	NumaNode              string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
-	EnableVMRemoteWrite   bool                   `yaml:"enable_vm_remote_write,omitempty" validate:"enable_vm_remote_write:editable"` // Enable remote write to ng-monitoring
+	PromRemoteWriteToVM   bool                   `yaml:"prom_remote_write_to_vm,omitempty" validate:"prom_remote_write_to_vm:editable"` // Enable remote write to ng-monitoring
+	EnablePromAgentMode   bool                   `yaml:"enable_prom_agent_mode,omitempty" validate:"enable_prom_agent_mode:editable"`   // Enable Prometheus agent mode
 	RemoteConfig          Remote                 `yaml:"remote_config,omitempty" validate:"remote_config:ignore"`
 	ExternalAlertmanagers []ExternalAlertmanager `yaml:"external_alertmanagers" validate:"external_alertmanagers:ignore"`
 	PushgatewayAddrs      []string               `yaml:"pushgateway_addrs,omitempty" validate:"pushgateway_addrs:ignore"`
@@ -197,8 +197,8 @@ type MonitorInstance struct {
 
 // handleRemoteWrite handles remote write configuration for NG monitoring
 func (i *MonitorInstance) handleRemoteWrite(spec *PrometheusSpec, monitoring *PrometheusSpec) {
-	// When EnableVMRemoteWrite is false, remove any VM remote write configurations
-	if !spec.EnableVMRemoteWrite {
+	// When PromRemoteWriteToVM is false, remove any VM remote write configurations
+	if !spec.PromRemoteWriteToVM {
 		// If there are no remote write configurations, nothing to do
 		if spec.RemoteConfig.RemoteWrite == nil || len(spec.RemoteConfig.RemoteWrite) == 0 {
 			return
@@ -270,10 +270,11 @@ func (i *MonitorInstance) InitConfig(
 	spec := i.InstanceSpec.(*PrometheusSpec)
 
 	cfg := &scripts.PrometheusScript{
-		Port:           spec.Port,
-		WebExternalURL: fmt.Sprintf("http://%s", utils.JoinHostPort(spec.Host, spec.Port)),
-		Retention:      getRetention(spec.Retention),
-		EnableNG:       spec.NgPort > 0,
+		Port:                spec.Port,
+		WebExternalURL:      fmt.Sprintf("http://%s", utils.JoinHostPort(spec.Host, spec.Port)),
+		Retention:           getRetention(spec.Retention),
+		EnableNG:            spec.NgPort > 0,
+		EnablePromAgentMode: spec.EnablePromAgentMode, // Get from spec directly
 
 		DeployDir: paths.Deploy,
 		LogDir:    paths.Log,
@@ -282,6 +283,16 @@ func (i *MonitorInstance) InitConfig(
 		NumaNode: spec.NumaNode,
 
 		AdditionalArgs: spec.AdditionalArgs,
+	}
+
+	// Check if agent mode is enabled in additional arguments
+	if !cfg.EnablePromAgentMode {
+		for _, arg := range spec.AdditionalArgs {
+			if arg == "--enable-feature=agent" {
+				cfg.EnablePromAgentMode = true
+				break
+			}
+		}
 	}
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_prometheus_%s_%d.sh", i.GetHost(), i.GetPort()))
@@ -510,9 +521,24 @@ func (i *MonitorInstance) InitConfig(
 	cfig.SetRemoteConfig(string(remoteCfg))
 
 	fp = filepath.Join(paths.Cache, fmt.Sprintf("prometheus_%s_%d.yml", i.GetHost(), i.GetPort()))
-	if err := cfig.ConfigToFile(fp); err != nil {
-		return err
+
+	// Generate config file with agent mode consideration
+	if spec.EnablePromAgentMode {
+		// Use agent mode configuration (without rule_files section)
+		configBytes, err := cfig.ConfigWithAgentMode(true)
+		if err != nil {
+			return err
+		}
+		if err := utils.WriteFile(fp, configBytes, 0644); err != nil {
+			return err
+		}
+	} else {
+		// Use normal configuration
+		if err := cfig.ConfigToFile(fp); err != nil {
+			return err
+		}
 	}
+
 	if spec.AdditionalScrapeConf != nil {
 		err = mergeAdditionalScrapeConf(fp, spec.AdditionalScrapeConf)
 		if err != nil {

@@ -24,10 +24,11 @@ import (
 
 // PrometheusScript represent the data to generate Prometheus config
 type PrometheusScript struct {
-	Port           int
-	WebExternalURL string
-	Retention      string
-	EnableNG       bool
+	Port                int
+	WebExternalURL      string
+	Retention           string
+	EnableNG            bool
+	EnablePromAgentMode bool
 
 	DeployDir string
 	DataDir   string
