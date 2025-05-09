@@ -47,7 +47,7 @@ func (m *Manager) Rename(name string, opt operator.Options, newName string, skip
 
 	if !skipConfirm {
 		if err := tui.PromptForConfirmOrAbortError(
-			fmt.Sprintf("Will rename the cluster name from %s to %s.\nDo you confirm this action? [y/N]:", color.HiYellowString(name), color.HiYellowString(newName)),
+			"%s", fmt.Sprintf("Will rename the cluster name from %s to %s.\nDo you confirm this action? [y/N]:", color.HiYellowString(name), color.HiYellowString(newName)),
 		); err != nil {
 			return err
 		}

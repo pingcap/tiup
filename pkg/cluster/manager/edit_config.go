@@ -153,7 +153,7 @@ func (m *Manager) editTopo(origTopo spec.Topology, data []byte, opt EditConfigOp
 
 	if !skipConfirm {
 		if err := tui.PromptForConfirmOrAbortError(
-			color.HiYellowString("Please check change highlight above, do you want to apply the change? [y/N]:"),
+			"%s", color.HiYellowString("Please check change highlight above, do you want to apply the change? [y/N]:"),
 		); err != nil {
 			return nil, err
 		}

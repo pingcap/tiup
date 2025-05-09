@@ -190,7 +190,7 @@ func DeleteGlobalDirs(ctx context.Context, host string, options *spec.GlobalOpti
 			fmt.Println(string(stdout))
 		}
 		if len(stderr) > 0 {
-			logger.Errorf(string(stderr))
+			logger.Errorf("%s", string(stderr))
 		}
 
 		if err != nil {
@@ -229,7 +229,7 @@ func DeletePublicKey(ctx context.Context, host string) error {
 		fmt.Println(string(stdout))
 	}
 	if len(stderr) > 0 {
-		logger.Errorf(string(stderr))
+		logger.Errorf("%s", string(stderr))
 	}
 
 	if err != nil {
@@ -284,7 +284,7 @@ func DestroyMonitored(ctx context.Context, inst spec.Instance, options *spec.Mon
 		fmt.Println(string(stdout))
 	}
 	if len(stderr) > 0 {
-		logger.Errorf(string(stderr))
+		logger.Errorf("%s", string(stderr))
 	}
 
 	if err != nil {
@@ -293,13 +293,13 @@ func DestroyMonitored(ctx context.Context, inst spec.Instance, options *spec.Mon
 
 	if err := spec.PortStopped(ctx, e, options.NodeExporterPort, timeout); err != nil {
 		str := fmt.Sprintf("%s failed to destroy node exportoer: %s", inst.GetManageHost(), err)
-		logger.Errorf(str)
-		return perrs.Annotatef(err, str)
+		logger.Errorf("%s", str)
+		return perrs.Annotatef(err, "%s", str)
 	}
 	if err := spec.PortStopped(ctx, e, options.BlackboxExporterPort, timeout); err != nil {
 		str := fmt.Sprintf("%s failed to destroy blackbox exportoer: %s", inst.GetManageHost(), err)
-		logger.Errorf(str)
-		return perrs.Annotatef(err, str)
+		logger.Errorf("%s", str)
+		return perrs.Annotatef(err, "%s", str)
 	}
 
 	logger.Infof("Destroy monitored on %s success", inst.GetManageHost())
@@ -327,7 +327,7 @@ func CleanupComponent(ctx context.Context, delFileMaps map[string]set.StringSet,
 			fmt.Println(string(stdout))
 		}
 		if len(stderr) > 0 {
-			logger.Errorf(string(stderr))
+			logger.Errorf("%s", string(stderr))
 		}
 
 		if err != nil {
@@ -459,7 +459,7 @@ func DestroyComponent(ctx context.Context, instances []spec.Instance, cls spec.T
 
 			if err != nil {
 				// Ignore error and continue.For example, deleting a mount point will result in a "Device or resource busy" error.
-				logger.Warnf(color.YellowString("Warn: failed to delete path \"%s\" on %s.Please check this error message and manually delete if necessary.\nerrmsg: %s", delPath, ins.GetManageHost(), err))
+				logger.Warnf("%s", color.YellowString("Warn: failed to delete path \"%s\" on %s.Please check this error message and manually delete if necessary.\nerrmsg: %s", delPath, ins.GetManageHost(), err))
 			}
 		}
 

@@ -54,10 +54,10 @@ func (m *Manager) DestroyCluster(name string, gOpt operator.Options, destroyOpt 
 	}
 
 	if !skipConfirm {
-		m.logger.Warnf(color.HiRedString(tui.ASCIIArtWarning))
+		m.logger.Warnf("%s", color.HiRedString(tui.ASCIIArtWarning))
 		if err := tui.PromptForAnswerOrAbortError(
 			"Yes, I know my cluster and data will be deleted.",
-			fmt.Sprintf("This operation will destroy %s %s cluster %s and its data.",
+			"%s", fmt.Sprintf("This operation will destroy %s %s cluster %s and its data.",
 				m.sysName,
 				color.HiYellowString(base.Version),
 				color.HiYellowString(name),
@@ -156,7 +156,7 @@ func (m *Manager) DestroyTombstone(
 		Func("FindTomestoneNodes", func(ctx context.Context) (err error) {
 			if !skipConfirm {
 				err = tui.PromptForConfirmOrAbortError(
-					fmt.Sprintf("%s\nDo you confirm this action? [y/N]:",
+					"%s", fmt.Sprintf("%s\nDo you confirm this action? [y/N]:",
 						color.HiYellowString("Will destroy these nodes: %v", nodes)),
 				)
 				if err != nil {

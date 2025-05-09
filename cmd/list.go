@@ -86,7 +86,7 @@ func (lr *listResult) print() {
 	if lr == nil {
 		return
 	}
-	fmt.Printf(lr.header)
+	fmt.Printf("%s", lr.header)
 	tui.PrintTable(lr.cmpTable, true)
 }
 

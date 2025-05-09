@@ -145,7 +145,7 @@ func checkTLSEnv(topo spec.Topology, clusterName, version string, skipConfirm bo
 
 	if !skipConfirm {
 		return tui.PromptForConfirmOrAbortError(
-			fmt.Sprintf("Enable/Disable TLS will %s the cluster `%s`\nDo you want to continue? [y/N]:",
+			"%s", fmt.Sprintf("Enable/Disable TLS will %s the cluster `%s`\nDo you want to continue? [y/N]:",
 				color.HiYellowString("stop and restart"),
 				color.HiYellowString(clusterName),
 			))

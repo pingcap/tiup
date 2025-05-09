@@ -65,7 +65,7 @@ func MaybeStartProxy(
 		),
 	}
 
-	logger.Infof(color.HiGreenString("Start HTTP inner proxy %s", httpProxy.Addr))
+	logger.Infof("%s", color.HiGreenString("Start HTTP inner proxy %s", httpProxy.Addr))
 	go func() {
 		if err := httpProxy.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Errorf("Failed to listen HTTP proxy: %v", err)
@@ -81,7 +81,7 @@ func MaybeStartProxy(
 	)
 	tcpProxy.Store(p)
 
-	logger.Infof(color.HiGreenString("Start TCP inner proxy %s", p.endpoint))
+	logger.Infof("%s", color.HiGreenString("Start TCP inner proxy %s", p.endpoint))
 
 	return nil
 }

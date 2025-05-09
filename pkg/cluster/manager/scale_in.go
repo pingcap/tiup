@@ -70,10 +70,10 @@ func (m *Manager) ScaleIn(
 
 	if !skipConfirm {
 		if force {
-			m.logger.Warnf(color.HiRedString(tui.ASCIIArtWarning))
+			m.logger.Warnf("%s", color.HiRedString(tui.ASCIIArtWarning))
 			if err := tui.PromptForAnswerOrAbortError(
 				"Yes, I know my data might be lost.",
-				color.HiRedString("Forcing scale in is unsafe and may result in data loss for stateful components.\n"+
+				"%s", color.HiRedString("Forcing scale in is unsafe and may result in data loss for stateful components.\n"+
 					"DO NOT use `--force` if you have any component in ")+
 					color.YellowString("Pending Offline")+color.HiRedString(" status.\n")+
 					color.HiRedString("The process is irreversible and could NOT be cancelled.\n")+
@@ -184,7 +184,7 @@ func checkAsyncComps(topo spec.Topology, nodes []string) error {
 	})
 
 	if len(delAsyncOfflineComps.Slice()) > 0 {
-		return tui.PromptForConfirmOrAbortError(fmt.Sprintf(
+		return tui.PromptForConfirmOrAbortError("%s", fmt.Sprintf(
 			"%s\nDo you want to continue? [y/N]:", color.YellowString(
 				"The component `%s` will become tombstone, maybe exists in several minutes or hours, after that you can use the prune command to clean it",
 				delAsyncOfflineComps.Slice())))
