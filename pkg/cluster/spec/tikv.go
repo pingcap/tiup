@@ -164,6 +164,80 @@ func (s *TiKVSpec) Labels() (map[string]string, error) {
 	return lbs, nil
 }
 
+// getExtraDeployDirs returns the extra directories that needs to be checked.
+func (s *TiKVSpec) getExtraDeployDirs(globalConf map[string]any) []string {
+	// Extract the directory from the configuration.
+	var extractDir = func(dir any, rootPath string) string {
+		realDir := strings.TrimSpace(dir.(string))
+		// Skip the relative path under the root path.
+		if realDir == "" || (strings.HasPrefix(realDir, "./") || strings.HasPrefix(realDir, rootPath)) {
+			return ""
+		}
+		elemStr := strings.TrimSuffix(realDir, "/")
+		return elemStr
+	}
+	// Search the directory from the nested configuration.
+	var searchDir = func(fieldName string, confs map[string]any) string {
+		if confs == nil {
+			return ""
+		}
+		steps := strings.Split(fieldName, ".")
+		if len(steps) == 0 {
+			return ""
+		}
+		// Search the directory from the nested configuration.
+		var tmpConfs map[any]any
+		for _, step := range steps {
+			if step == steps[0] {
+				tmpConfs, _ = confs[steps[0]].(map[any]any)
+				if tmpConfs == nil {
+					return ""
+				}
+				continue
+			}
+			nextTmpConfs, ok := tmpConfs[step].(map[any]any)
+			if !ok || nextTmpConfs == nil {
+				break
+			}
+			tmpConfs = nextTmpConfs
+		}
+		dir, ok := tmpConfs[steps[len(steps)-1]]
+		if !ok {
+			return ""
+		}
+		return strings.TrimSpace(dir.(string))
+	}
+
+	extraDirs := []string{}
+	rootPath := s.DataDir
+	candidates := []string{
+		"storage.data-dir",
+		"rocksdb.wal-dir",
+		"rocksdb.titan.dirname",
+		"raft-engine.dir",
+		"raft-engine.spill-dir",
+	}
+	for _, candidate := range candidates {
+		// Check the global configurations and the instance configurations.
+		for _, conf := range []any{globalConf, s.Config} {
+			config := conf.(map[string]any)
+			dir, ok := config[candidate]
+			if ok {
+				elemStr := extractDir(dir, rootPath)
+				if elemStr != "" {
+					extraDirs = append(extraDirs, elemStr)
+				}
+			}
+			// Check the configuration with nested fields.
+			dataDir := searchDir(candidate, config)
+			if dataDir != "" {
+				extraDirs = append(extraDirs, dataDir)
+			}
+		}
+	}
+	return extraDirs
+}
+
 // TiKVComponent represents TiKV component.
 type TiKVComponent struct{ Topology *Specification }
 
@@ -205,6 +279,8 @@ func (c *TiKVComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.TiKVServers))
 	for _, s := range c.Topology.TiKVServers {
 		s := s
+		dirs := []string{s.DeployDir, s.DataDir}
+		dirs = append(dirs, s.getExtraDeployDirs(c.Topology.ServerConfigs.TiKV)...)
 		ins = append(ins, &TiKVInstance{BaseInstance{
 			InstanceSpec: s,
 			Name:         c.Name(),
@@ -221,10 +297,7 @@ func (c *TiKVComponent) Instances() []Instance {
 				s.Port,
 				s.StatusPort,
 			},
-			Dirs: []string{
-				s.DeployDir,
-				s.DataDir,
-			},
+			Dirs:     dirs,
 			StatusFn: s.Status,
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
 				return UptimeByHost(s.GetManageHost(), s.StatusPort, timeout, tlsCfg)
