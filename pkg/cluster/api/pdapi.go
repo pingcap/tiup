@@ -141,6 +141,7 @@ var (
 	pdRemoveTombstone    = "pd/api/v1/stores/remove-tombstone"
 	pdRegionsCheckURI    = "pd/api/v1/regions/check"
 	pdServicePrimaryURI  = "pd/api/v2/ms/primary"
+	pdRegionReadyURI     = "pd/api/v2/ready"
 	tsoHealthPrefix      = "tso/api/v1/health"
 )
 
@@ -193,12 +194,43 @@ func (pc *PDClient) CheckHealth() error {
 
 		return body, nil
 	})
-
 	if err != nil {
 		return err
 	}
 
-	return nil
+	// PD may cost minutes to load region, during which the PD is unavaible. Before the leader restarts, the leader
+	// will be transferred to a PD that is not ready, so we need to wait until the PD is ready.
+	// In most cases, we only need to wait before PD leader restarts.
+	// But there may be a case: PD1, PD2, PD3, and PD3 is the leader. When PD1 restarts but is not ready,
+	// PD3 transfers the leader to PD1 and then the cluster is unavailable. So we always wait for each PD.
+	endpoints = pc.getEndpoints(pdRegionReadyURI)
+	client := pc.httpClient.Client()
+	// Actually endpoints contain only one endpoint.
+	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
+		// pc.httpClient.SetRequestHeader makes pc.httpClient dirty, so explicitly create a request.
+		req, err := http.NewRequest("GET", endpoint, nil)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("PD-Allow-follower-handle", "true")
+		req = req.WithContext(pc.ctx)
+		res, err := client.Do(req)
+		if err != nil {
+			return nil, err
+		}
+		defer res.Body.Close()
+
+		switch {
+		// PD supports this API from v9.0.0, so old versions will report 404. Skip checking.
+		case res.StatusCode == http.StatusNotFound:
+			return nil, nil
+		case res.StatusCode < 200 || res.StatusCode >= 400:
+			return nil, fmt.Errorf("error checking PD health, code %d", res.StatusCode)
+		default:
+			return nil, nil
+		}
+	})
+	return err
 }
 
 // CheckTSOHealth checks the health of TSO service(which is a microservice component of PD)
