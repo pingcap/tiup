@@ -33,6 +33,10 @@ import (
 var (
 	// ErrInstallFirst indicates that a component/version is not installed
 	ErrInstallFirst = errors.New("component not installed")
+
+	// IsPackagedBuild is be hard-coded to 'true' in binaries produced by packaged builds
+    // (e.g., Debian, RPM, Homebrew) to change their behavior to be more like real system programs.
+	IsPackagedBuild = true
 )
 
 // Mirror return mirror of tiup.
@@ -79,6 +83,16 @@ type Environment struct {
 func InitEnv(options repository.Options, mOpt repository.MirrorOptions) (*Environment, error) {
 	if env := GlobalEnv(); env != nil {
 		return env, nil
+	}
+
+	// Check if running in packaged build mode
+	if IsPackagedBuild {
+		fmt.Fprintln(os.Stderr, "Online version check and repository interaction skipped in packaged build.")
+		// Return a minimal environment that won't try to use the network repo
+		profile := localdata.InitProfile()
+		// We return a valid Environment struct but with v1Repo set to nil.
+		// Functions that use v1Repo must check for nil or IsPackagedBuild.
+		return &Environment{profile: profile, v1Repo: nil}, nil
 	}
 
 	initRepo := time.Now()
@@ -153,6 +167,9 @@ func (env *Environment) PlatformString() string {
 
 // SelfUpdate updates TiUP.
 func (env *Environment) SelfUpdate() error {
+	if IsPackagedBuild {
+		return errors.New("tiup self-update is disabled in this packaged build")
+	}
 	if err := env.v1Repo.DownloadTiUP(env.LocalPath("bin")); err != nil {
 		return err
 	}
@@ -280,6 +297,15 @@ func (env *Environment) BinaryPath(component string, ver utils.Version) (string,
 	installPath, err := env.profile.ComponentInstalledPath(component, ver)
 	if err != nil {
 		return "", err
+	}
+
+	if IsPackagedBuild {
+		// In packaged builds, the binary path is simply the install path
+		// followed by the component name. We don't use the repository object
+		// to determine the binary name within the installation directory.
+		// Assuming the binary name is the same as the component name.
+		// This might need adjustment if binary names differ from component names.
+		return filepath.Join(installPath, component), nil
 	}
 
 	return env.v1Repo.BinaryPath(installPath, component, ver.String())
