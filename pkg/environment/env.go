@@ -33,6 +33,10 @@ import (
 var (
 	// ErrInstallFirst indicates that a component/version is not installed
 	ErrInstallFirst = errors.New("component not installed")
+
+	// IsPackagedBuild is a flag to indicate if this is a packaged build (e.g., Debian, RPM, Homebrew).
+	// This should be set to true by the packaging process.
+	IsPackagedBuild = true // Temporarily set to true for testing packaged build behavior
 )
 
 // Mirror return mirror of tiup.
@@ -79,6 +83,16 @@ type Environment struct {
 func InitEnv(options repository.Options, mOpt repository.MirrorOptions) (*Environment, error) {
 	if env := GlobalEnv(); env != nil {
 		return env, nil
+	}
+
+	// Check if running in packaged build mode
+	if IsPackagedBuild {
+		fmt.Fprintln(os.Stderr, "Online version check and repository interaction skipped in packaged build.")
+		// Return a minimal environment that won't try to use the network repo
+		profile := localdata.InitProfile()
+		// We return a valid Environment struct but with v1Repo set to nil.
+		// Functions that use v1Repo must check for nil or IsPackagedBuild.
+		return &Environment{profile: profile, v1Repo: nil}, nil
 	}
 
 	initRepo := time.Now()
@@ -135,6 +149,9 @@ func (env *Environment) LocalPath(path ...string) string {
 
 // UpdateComponents updates or installs all components described by specs.
 func (env *Environment) UpdateComponents(specs []string, nightly, force bool) error {
+	if IsPackagedBuild {
+		return errors.New("component updates are disabled in this packaged build")
+	}
 	var v1specs []repository.ComponentSpec
 	for _, spec := range specs {
 		component, v := ParseCompVersion(spec)
@@ -153,6 +170,9 @@ func (env *Environment) PlatformString() string {
 
 // SelfUpdate updates TiUP.
 func (env *Environment) SelfUpdate() error {
+	if IsPackagedBuild {
+		return errors.New("tiup self-update is disabled in this packaged build")
+	}
 	if err := env.v1Repo.DownloadTiUP(env.LocalPath("bin")); err != nil {
 		return err
 	}
@@ -162,6 +182,9 @@ func (env *Environment) SelfUpdate() error {
 }
 
 func (env *Environment) downloadComponentv1(component string, version utils.Version, overwrite bool) error {
+	if IsPackagedBuild {
+		return errors.Errorf("downloading component '%s:%s' is disabled in this packaged build", component, version)
+	}
 	spec := repository.ComponentSpec{
 		ID:      component,
 		Version: string(version),
@@ -173,6 +196,9 @@ func (env *Environment) downloadComponentv1(component string, version utils.Vers
 
 // downloadComponent downloads the specific version of a component from repository
 func (env *Environment) downloadComponent(component string, version utils.Version, overwrite bool) error {
+	if IsPackagedBuild {
+		return errors.Errorf("downloading component '%s:%s' is disabled in this packaged build", component, version)
+	}
 	return env.downloadComponentv1(component, version, overwrite)
 }
 
@@ -184,6 +210,41 @@ func (env *Environment) SelectInstalledVersion(component string, ver utils.Versi
 		return ver, err
 	}
 
+	if IsPackagedBuild {
+		// In packaged builds, we only care about the exact version requested
+		// or the latest installed version if no version is specified.
+		// We cannot consult the repository for latest stable or yanked status.
+		versions := []string{}
+		for _, v := range installed {
+			versions = append(versions, v)
+		}
+		// Reverse sort to find the latest installed version
+		sort.Slice(versions, func(i, j int) bool {
+			return semver.Compare(versions[i], versions[j]) > 0
+		})
+
+		errInstallFirst := errors.Annotatef(ErrInstallFirst, "component `%s` is not installed locally", component)
+		if !ver.IsEmpty() {
+			errInstallFirst = errors.Annotatef(ErrInstallFirst, "component `%s:%s` is not installed locally", component, ver.String())
+		}
+
+		if !ver.IsEmpty() {
+			for _, v := range versions {
+				if utils.Version(v) == ver {
+					return ver, nil
+				}
+			}
+			return ver, errInstallFirst
+		} else {
+			// No version specified, return the latest installed
+			if len(versions) > 0 {
+				return utils.Version(versions[0]), nil
+			}
+			return ver, errInstallFirst
+		}
+	}
+
+	// Original logic for non-Debian builds
 	versions := []string{}
 	for _, v := range installed {
 		vi, err := env.v1Repo.LocalComponentVersion(component, v, true)
@@ -238,6 +299,17 @@ func (env *Environment) SelectInstalledVersion(component string, ver utils.Versi
 
 // DownloadComponentIfMissing downloads the specific version of a component if it is missing
 func (env *Environment) DownloadComponentIfMissing(component string, ver utils.Version) (utils.Version, error) {
+	if IsPackagedBuild {
+		// Downloading components is disabled in packaged builds.
+		// We should only rely on components installed via the package.
+		// Check if the requested version is installed locally.
+		selectedVer, err := env.SelectInstalledVersion(component, ver)
+		if err != nil {
+			return "", errors.Annotatef(err, "component '%s:%s' is not installed locally in this packaged build", component, ver.String())
+		}
+		return selectedVer, nil
+	}
+
 	var err error
 	if ver.String() == utils.NightlyVersionAlias {
 		if ver, _, err = env.v1Repo.LatestNightlyVersion(component); err != nil {
@@ -280,6 +352,15 @@ func (env *Environment) BinaryPath(component string, ver utils.Version) (string,
 	installPath, err := env.profile.ComponentInstalledPath(component, ver)
 	if err != nil {
 		return "", err
+	}
+
+	if IsPackagedBuild {
+		// In packaged builds, the binary path is simply the install path
+		// followed by the component name. We don't use the repository object
+		// to determine the binary name within the installation directory.
+		// Assuming the binary name is the same as the component name.
+		// This might need adjustment if binary names differ from component names.
+		return filepath.Join(installPath, component), nil
 	}
 
 	return env.v1Repo.BinaryPath(installPath, component, ver.String())
