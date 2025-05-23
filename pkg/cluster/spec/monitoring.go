@@ -200,7 +200,7 @@ func (i *MonitorInstance) handleRemoteWrite(spec *PrometheusSpec, monitoring *Pr
 	// When PromRemoteWriteToVM is false, remove any VM remote write configurations
 	if !spec.PromRemoteWriteToVM {
 		// If there are no remote write configurations, nothing to do
-		if spec.RemoteConfig.RemoteWrite == nil || len(spec.RemoteConfig.RemoteWrite) == 0 {
+		if len(spec.RemoteConfig.RemoteWrite) == 0 {
 			return
 		}
 
