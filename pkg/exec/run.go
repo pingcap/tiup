@@ -181,6 +181,12 @@ func PrepareCommand(p *PrepareCommandParams) (*exec.Cmd, error) {
 }
 
 func cmdCheckUpdate(component string, version utils.Version) {
+	// Check if running in packaged build mode
+	if environment.IsPackagedBuild {
+		// Online version check skipped in packaged build.
+		return // Skip update check in packaged build mode
+	}
+
 	const (
 		slowTimeout   = 1 * time.Second // Timeout to display checking message
 		cancelTimeout = 2 * time.Second // Timeout to cancel the check
