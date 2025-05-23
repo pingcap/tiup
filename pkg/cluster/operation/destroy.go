@@ -382,6 +382,15 @@ func DestroyComponent(ctx context.Context, instances []spec.Instance, cls spec.T
 			}
 		}
 
+		// For TiKV, we need to delete all extra data directories if the data is not retained.
+		if ins.ComponentName() == spec.ComponentTiKV {
+			for _, dir := range ins.UsedDirs() {
+				if !dataRetained {
+					delPaths.Insert(dir)
+				}
+			}
+		}
+
 		// For TiFlash, we need to delete storage.remote.cache.dir
 		if ins.ComponentName() == spec.ComponentTiFlash {
 			tiflashInstance := ins.(*spec.TiFlashInstance)
