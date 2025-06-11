@@ -146,11 +146,6 @@ func (env *Environment) UpdateComponents(specs []string, nightly, force bool) er
 	return env.v1Repo.UpdateComponents(v1specs)
 }
 
-// PlatformString returns a string identifying the current system.
-func (env *Environment) PlatformString() string {
-	return env.v1Repo.PlatformString()
-}
-
 // SelfUpdate updates TiUP.
 func (env *Environment) SelfUpdate() error {
 	if err := env.v1Repo.DownloadTiUP(env.LocalPath("bin")); err != nil {
