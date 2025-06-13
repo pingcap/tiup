@@ -108,8 +108,8 @@ func (r *V1Repository) LocalLoadComponentManifest(component *v1manifest.Componen
 	return r.local.LoadComponentManifest(component, filename)
 }
 
-// ComponentInstalled checks if the current component is already installed.
-func (r *V1Repository) ComponentInstalled(component, version string) (bool, error) {
+// LocalComponentInstalled checks if the current component is already installed.
+func (r *V1Repository) LocalComponentInstalled(component, version string) (bool, error) {
 	return r.local.ComponentInstalled(component, version)
 }
 

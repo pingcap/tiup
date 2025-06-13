@@ -86,7 +86,7 @@ var (
 func installIfMissing(component, version string) error {
 	env := environment.GlobalEnv()
 
-	installed, err := env.V1Repository().ComponentInstalled(component, version)
+	installed, err := env.V1Repository().LocalComponentInstalled(component, version)
 	if err != nil {
 		return err
 	}
