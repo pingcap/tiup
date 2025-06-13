@@ -13,11 +13,30 @@
 
 package repository
 
-// Repository represents a components repository. All logic concerning manifests and the locations of tarballs
-// is contained in the Repository object. Any IO is delegated to mirrorSource, which in turn will delegate fetching
-// files to a Mirror.
-type Repository struct {
-	Options
+import (
+	"github.com/pingcap/tiup/pkg/repository/v1manifest"
+	"github.com/pingcap/tiup/pkg/utils"
+)
+
+// Repository represents a local components repository that mirrored the remote Repository(either filesystem or HTTP server).
+type Repository interface {
+	UpdateComponents(specs []ComponentSpec) error
+	ResolveComponentVersion(id, constraint string) (utils.Version, error)
+	ComponentInstalled(component, version string) (bool, error)
+	BinaryPath(installPath string, componentID string, ver string) (string, error)
+	DownloadTiUP(targetDir string) error
+	UpdateComponentManifests() error
+	LatestStableVersion(id string, withYanked bool) (utils.Version, *v1manifest.VersionItem, error)
+	LocalLoadManifest(index *v1manifest.Index) (*v1manifest.Manifest, bool, error)
+	LocalLoadComponentManifest(component *v1manifest.ComponentItem, filename string) (*v1manifest.Component, error)
+	LocalComponentManifest(id string, withYanked bool) (com *v1manifest.Component, err error)
+	GetComponentManifest(id string, withYanked bool) (com *v1manifest.Component, err error)
+	Mirror() Mirror
+	FetchIndexManifest() (index *v1manifest.Index, err error)
+	FetchRootManifest() (root *v1manifest.Root, err error)
+	PurgeTimestamp()
+	LatestNightlyVersion(id string) (utils.Version, *v1manifest.VersionItem, error)
+	WithOptions(opts Options) Repository
 }
 
 // Options represents options for a repository
