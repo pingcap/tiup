@@ -24,7 +24,6 @@ type Repository interface {
 	WithOptions(opts Options) Repository
 	UpdateComponents(specs []ComponentSpec) error
 	ResolveComponentVersion(id, constraint string) (utils.Version, error)
-	ComponentInstalled(component, version string) (bool, error)
 	BinaryPath(installPath string, componentID string, ver string) (string, error)
 	DownloadTiUP(targetDir string) error
 	DownloadComponent(item *v1manifest.VersionItem, target string) error
@@ -32,6 +31,7 @@ type Repository interface {
 	LocalLoadComponentManifest(component *v1manifest.ComponentItem, filename string) (*v1manifest.Component, error)
 	LocalComponentManifest(id string, withYanked bool) (com *v1manifest.Component, err error)
 	LocalComponentVersion(id, ver string, includeYanked bool) (*v1manifest.VersionItem, error)
+	LocalComponentInstalled(component, version string) (bool, error)
 	GetComponentManifest(id string, withYanked bool) (com *v1manifest.Component, err error)
 	FetchIndexManifest() (index *v1manifest.Index, err error)
 	FetchRootManifest() (root *v1manifest.Root, err error)
