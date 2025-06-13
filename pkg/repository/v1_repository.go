@@ -90,7 +90,7 @@ const maxRootSize uint = 1024 * 1024
 
 // WithOptions clone a new V1Repository with given options
 func (r *V1Repository) WithOptions(opts Options) *V1Repository {
-	return NewV1Repo(r.Mirror(), opts, r.Local())
+	return NewV1Repo(r.Mirror(), opts, r.local)
 }
 
 // Mirror returns Mirror
@@ -98,9 +98,19 @@ func (r *V1Repository) Mirror() Mirror {
 	return r.mirror
 }
 
-// Local returns the local cached manifests
-func (r *V1Repository) Local() v1manifest.LocalManifests {
-	return r.local
+// LocalLoadManifest returns the local cached manifests
+func (r *V1Repository) LocalLoadManifest(index *v1manifest.Index) (*v1manifest.Manifest, bool, error) {
+	return r.local.LoadManifest(index)
+}
+
+// LocalLoadComponentManifest returns the local cached manifests for component
+func (r *V1Repository) LocalLoadComponentManifest(component *v1manifest.ComponentItem, filename string) (*v1manifest.Component, error) {
+	return r.local.LoadComponentManifest(component, filename)
+}
+
+// ComponentInstalled checks if the current component is already installed.
+func (r *V1Repository) ComponentInstalled(component, version string) (bool, error) {
+	return r.local.ComponentInstalled(component, version)
 }
 
 // UpdateComponents updates the components described by specs.
@@ -741,12 +751,12 @@ func (r *V1Repository) GetComponentManifest(id string, withYanked bool) (com *v1
 // LocalComponentManifest load the component manifest from local.
 func (r *V1Repository) LocalComponentManifest(id string, withYanked bool) (com *v1manifest.Component, err error) {
 	index := v1manifest.Index{}
-	_, exists, err := r.Local().LoadManifest(&index)
+	_, exists, err := r.local.LoadManifest(&index)
 	if err == nil && exists {
 		components := index.ComponentList()
 		comp := components[id]
 		filename := v1manifest.ComponentManifestFilename(id)
-		componentManifest, err := r.Local().LoadComponentManifest(&comp, filename)
+		componentManifest, err := r.local.LoadComponentManifest(&comp, filename)
 		if err == nil && componentManifest != nil {
 			return componentManifest, nil
 		}
