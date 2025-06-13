@@ -156,21 +156,6 @@ func (env *Environment) SelfUpdate() error {
 	return localdata.InitProfile().ResetMirror(Mirror(), "")
 }
 
-func (env *Environment) downloadComponentv1(component string, version utils.Version, overwrite bool) error {
-	spec := repository.ComponentSpec{
-		ID:      component,
-		Version: string(version),
-		Force:   overwrite,
-	}
-
-	return env.v1Repo.UpdateComponents([]repository.ComponentSpec{spec})
-}
-
-// downloadComponent downloads the specific version of a component from repository
-func (env *Environment) downloadComponent(component string, version utils.Version, overwrite bool) error {
-	return env.downloadComponentv1(component, version, overwrite)
-}
-
 // SelectInstalledVersion selects the installed versions and the latest release version
 // will be chosen if there is an empty version
 func (env *Environment) SelectInstalledVersion(component string, ver utils.Version) (utils.Version, error) {
@@ -252,8 +237,12 @@ func (env *Environment) DownloadComponentIfMissing(component string, ver utils.V
 
 	if needDownload {
 		fmt.Fprintf(os.Stderr, "The component `%s` version %s is not installed; downloading from repository.\n", component, ver.String())
-		err := env.downloadComponent(component, ver, false)
-		if err != nil {
+		spec := repository.ComponentSpec{
+			ID:      component,
+			Version: string(ver),
+			Force:   false,
+		}
+		if err := env.v1Repo.UpdateComponents([]repository.ComponentSpec{spec}); err != nil {
 			return "", err
 		}
 	}
@@ -263,11 +252,6 @@ func (env *Environment) DownloadComponentIfMissing(component string, ver utils.V
 	}
 
 	return ver, nil
-}
-
-// GetComponentInstalledVersion return the installed version of component.
-func (env *Environment) GetComponentInstalledVersion(component string, version utils.Version) (utils.Version, error) {
-	return env.profile.GetComponentInstalledVersion(component, version)
 }
 
 // BinaryPath return the installed binary path.
