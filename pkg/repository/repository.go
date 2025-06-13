@@ -20,23 +20,26 @@ import (
 
 // Repository represents a local components repository that mirrored the remote Repository(either filesystem or HTTP server).
 type Repository interface {
+	Mirror() Mirror
+	WithOptions(opts Options) Repository
 	UpdateComponents(specs []ComponentSpec) error
 	ResolveComponentVersion(id, constraint string) (utils.Version, error)
 	ComponentInstalled(component, version string) (bool, error)
 	BinaryPath(installPath string, componentID string, ver string) (string, error)
 	DownloadTiUP(targetDir string) error
-	UpdateComponentManifests() error
-	LatestStableVersion(id string, withYanked bool) (utils.Version, *v1manifest.VersionItem, error)
+	DownloadComponent(item *v1manifest.VersionItem, target string) error
 	LocalLoadManifest(index *v1manifest.Index) (*v1manifest.Manifest, bool, error)
 	LocalLoadComponentManifest(component *v1manifest.ComponentItem, filename string) (*v1manifest.Component, error)
 	LocalComponentManifest(id string, withYanked bool) (com *v1manifest.Component, err error)
+	LocalComponentVersion(id, ver string, includeYanked bool) (*v1manifest.VersionItem, error)
 	GetComponentManifest(id string, withYanked bool) (com *v1manifest.Component, err error)
-	Mirror() Mirror
 	FetchIndexManifest() (index *v1manifest.Index, err error)
 	FetchRootManifest() (root *v1manifest.Root, err error)
 	PurgeTimestamp()
+	UpdateComponentManifests() error
+	LatestStableVersion(id string, withYanked bool) (utils.Version, *v1manifest.VersionItem, error)
 	LatestNightlyVersion(id string) (utils.Version, *v1manifest.VersionItem, error)
-	WithOptions(opts Options) Repository
+	ComponentVersion(id, ver string, includeYanked bool) (*v1manifest.VersionItem, error)
 }
 
 // Options represents options for a repository

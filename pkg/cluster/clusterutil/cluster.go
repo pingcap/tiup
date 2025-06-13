@@ -18,7 +18,6 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/environment"
-	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/pkg/utils"
@@ -32,27 +31,16 @@ type Repository interface {
 }
 
 type repositoryT struct {
-	repo *repository.V1Repository
+	repo repository.Repository
 }
 
 // NewRepository returns repository
 func NewRepository(os, arch string) (Repository, error) {
-	profile := localdata.InitProfile()
-	mirror := repository.NewMirror(environment.Mirror(), repository.MirrorOptions{
-		Progress: repository.DisableProgress{},
-	})
-	if err := mirror.Open(); err != nil {
-		return nil, err
-	}
-	local, err := v1manifest.NewManifests(profile)
-	if err != nil {
-		return nil, err
-	}
-	repo := repository.NewV1Repo(mirror, repository.Options{
+	repo := environment.GlobalEnv().V1Repository().WithOptions(repository.Options{
 		GOOS:              os,
 		GOARCH:            arch,
 		DisableDecompress: true,
-	}, local)
+	})
 	return &repositoryT{repo}, nil
 }
 

@@ -72,7 +72,7 @@ type Environment struct {
 	profile *localdata.Profile
 	// repo represents the components repository of TiUP, it can be a
 	// local file system or a HTTP URL
-	v1Repo *repository.V1Repository
+	v1Repo repository.Repository
 }
 
 // InitEnv creates a new Environment object configured using env vars and defaults.
