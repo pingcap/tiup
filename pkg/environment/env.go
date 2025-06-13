@@ -108,7 +108,7 @@ func InitEnv(options repository.Options, mOpt repository.MirrorOptions) (*Enviro
 }
 
 // V1Repository returns the initialized v1 repository
-func (env *Environment) V1Repository() *repository.V1Repository {
+func (env *Environment) V1Repository() repository.Repository {
 	return env.v1Repo
 }
 

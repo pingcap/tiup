@@ -89,7 +89,7 @@ const maxTimeStampSize uint = 1024
 const maxRootSize uint = 1024 * 1024
 
 // WithOptions clone a new V1Repository with given options
-func (r *V1Repository) WithOptions(opts Options) *V1Repository {
+func (r *V1Repository) WithOptions(opts Options) Repository {
 	return NewV1Repo(r.Mirror(), opts, r.local)
 }
 
