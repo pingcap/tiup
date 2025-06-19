@@ -1,4 +1,4 @@
-.PHONY: components server targets
+.PHONY: components server targets check-dependencies
 .DEFAULT_GOAL := default
 
 LANG=C
@@ -37,13 +37,13 @@ FILES   := $$(find . -name "*.go")
 FAILPOINT_ENABLE  := $$(tools/bin/failpoint-ctl enable)
 FAILPOINT_DISABLE := $$(tools/bin/failpoint-ctl disable)
 
-default: check build
+default: check-dependencies check build
 	@# Target: run the checks and then build.
 
 include ./tests/Makefile
 
 # Build TiUP and all components
-build: tiup components
+build: check-dependencies tiup components
 	@# Target: build tiup and all it's components
 
 components: playground client cluster dm server
@@ -105,6 +105,33 @@ clean:
 	@rm -rf cover
 	@rm -rf tests/*/{bin/*.test,logs,cover/*.out}
 
+check-dependencies:
+	@# Target: check for required dependencies on Debian systems
+	@# Use shell commands for OS detection to avoid relying on go env
+	@if [ "$$(uname -s)" != "Linux" ]; then \
+		echo "Skipping dependency check on non-Linux OS: $$(uname -s)"; \
+		exit 0; \
+	fi
+	@if [ ! -f /etc/debian_version ]; then \
+		echo "Skipping dependency check on non-Debian system"; \
+		exit 0; \
+	fi
+	@echo "Checking dependencies on Debian..."; \
+	missing_packages=""; \
+	for pkg in ca-certificates golang git curl; do \
+		dpkg -s $$pkg > /dev/null 2>&1 || missing_packages="$$missing_packages $$pkg"; \
+	done; \
+	if [ -n "$$missing_packages" ]; then \
+		echo "Error: Missing required system packages:$$missing_packages"; \
+		echo "Please install them using: apt install -y$$missing_packages"; \
+		exit 1; \
+	fi
+	@if [[ "$$(go version | cut -c 14-20)" < "1.19" ]]; then \
+	  echo "Error: Go version is too old. Please use Go 1.21 or later."; \
+	  exit 1; \
+	fi
+	@echo "Dependencies check passed."
+
 test: failpoint-enable run-tests failpoint-disable
 	@# Target: run tests with failpoint enabled
 	$(MAKE) -C components/client ${MAKECMDGOALS}
@@ -142,7 +169,7 @@ fmt:
 	@echo "gofmt (simplify)"
 	@gofmt -s -l -w $(FILES) 2>&1
 	@echo "goimports (if installed)"
-	$(shell goimports -w $(FILES) 2>/dev/null)
+	@goimports -w $(FILES) 2>/dev/null || true
 
 tools/bin/revive: tools/check/go.mod
 	@# Target: build revive utility
