@@ -237,7 +237,7 @@ func (t *TiCIInstance) WorkerAddr() string {
 func (t *TiCIInstance) PrepareBinary(component, name string, version utils.Version) error {
 	// TiCI uses external binaries, no preparation needed
 	// But we output the startup message to match other components
-	colorstr.Printf("[dark_gray]Start %s instance: %s[reset]\n", component, t.ticiDir)
+	_, _ = colorstr.Printf("[dark_gray]Start %s instance: %s[reset]\n", component, t.ticiDir)
 	return nil
 }
 
