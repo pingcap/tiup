@@ -27,8 +27,10 @@ import (
 type TiCIRole int
 
 const (
-	TiCIRoleMeta   TiCIRole = iota // MetaServer
-	TiCIRoleWorker                 // WorkerNode
+	// TiCIRoleMeta represents the MetaServer role
+	TiCIRoleMeta TiCIRole = iota // MetaServer
+	// TiCIRoleWorker represents the WorkerNode role
+	TiCIRoleWorker // WorkerNode
 )
 
 // TiCIInstance represents a TiCI service instance (either MetaServer or WorkerNode)
@@ -62,7 +64,6 @@ func NewTiCIWorkerInstance(shOpt SharedOptions, baseDir, host string, id int, pd
 // NewTiCIInstanceWithRole creates a TiCI instance with specified role
 func NewTiCIInstanceWithRole(shOpt SharedOptions, baseDir, host string, id int, pds []*PDInstance,
 	ticiDir, configDir string, role TiCIRole) *TiCIInstance {
-
 	var componentSuffix string
 	var defaultPort int
 
@@ -209,7 +210,7 @@ func (t *TiCIInstance) LogFile() string {
 }
 
 // Cmd returns the process command
-func (t *TiCIInstance) Cmd() interface{} {
+func (t *TiCIInstance) Cmd() any {
 	if t.process != nil {
 		return t.process.Cmd()
 	}
