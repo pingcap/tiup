@@ -141,5 +141,5 @@ fmt:
 	$(shell goimports -w $(FILES) 2>/dev/null)
 
 tools/bin/golangci-lint:
-    @# Target: pull in specific version of golangci-lint (v1.64.8)
+	@# Target: pull in specific version of golangci-lint (v1.64.8)
 	curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ./tools/bin v1.64.8
