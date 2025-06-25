@@ -23,7 +23,7 @@ import (
 
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cluster/api/dmpb"
+	dmpb "github.com/pingcap/tiflow/dm/pb"
 	"github.com/pingcap/tiup/pkg/utils"
 	"go.uber.org/zap"
 )
