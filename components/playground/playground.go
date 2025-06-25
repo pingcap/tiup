@@ -1163,11 +1163,17 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		{spec.ComponentTiKV, "", "", options.TiKV},
 		{spec.ComponentPump, "", "", options.Pump},
 		{spec.ComponentTiDB, "", "", options.TiDB},
-		{spec.ComponentCDC, "", "", options.TiCDC},
 		{spec.ComponentTiKVCDC, "", "", options.TiKVCDC},
 		{spec.ComponentDrainer, "", "", options.Drainer},
 		{spec.ComponentDMMaster, "", "", options.DMMaster},
 		{spec.ComponentDMWorker, "", "", options.DMWorker},
+	}
+
+	// Add TiCDC to instances only if TiCI components are not enabled
+	// When TiCI is enabled, TiCDC will be started separately with special configuration
+	hasTiCI := options.TiCIMeta.Num > 0 || options.TiCIWorker.Num > 0
+	if !hasTiCI {
+		instances = append(instances, InstancePair{spec.ComponentCDC, "", "", options.TiCDC})
 	}
 
 	if options.ShOpt.Mode == "tidb" {
@@ -1296,9 +1302,9 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 	tidbSucc, tiproxySucc := p.waitAllDBUp()
 
-	// Start TiCDC after TiDB is up
-	if len(tidbSucc) > 0 && options.TiCDC.Num > 0 {
-		fmt.Println("Starting TiCDC components...")
+	// Start TiCDC with special configuration when TiCI is enabled
+	if len(tidbSucc) > 0 && hasTiCI && options.TiCDC.Num > 0 {
+		fmt.Println("Starting TiCDC components with TiCI configuration...")
 
 		// Set the TICDC_NEWARCH environment variable
 		envs := []string{"TICDC_NEWARCH=true"}
@@ -1322,7 +1328,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		}
 
 		// Wait for TiCDC to be ready
-		time.Sleep(5 * time.Second)
+		time.Sleep(8 * time.Second)
 
 		// Create changefeed
 		fmt.Println("Creating changefeed...")
@@ -1332,7 +1338,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			fmt.Println("Changefeed created successfully.")
 		}
 
-		fmt.Println("TiCDC components started.")
+		fmt.Println("TiCDC components started with TiCI configuration.")
 	}
 
 	// Start TiCI components after CDC
@@ -1340,7 +1346,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		fmt.Println("Starting TiCI components...")
 
 		// Wait a bit more for TiDB and CDC to be fully stable
-		time.Sleep(3 * time.Second)
+		time.Sleep(4 * time.Second)
 
 		// Create and start TiCI MetaServer instances first
 		for i := 0; i < options.TiCIMeta.Num; i++ {
@@ -1357,7 +1363,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		// Wait for MetaServer to be ready before starting WorkerNodes
 		if options.TiCIMeta.Num > 0 {
 			fmt.Println("Waiting for TiCI MetaServer to be ready...")
-			time.Sleep(2 * time.Second)
+			time.Sleep(5 * time.Second)
 			fmt.Println("MetaServer should be ready now, starting WorkerNodes...")
 		}
 
