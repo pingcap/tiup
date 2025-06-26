@@ -37,12 +37,11 @@ require (
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db
 	github.com/otiai10/copy v1.9.0
 	github.com/pingcap/check v0.0.0-20211026125417-57bd13f7b5f0
-	github.com/pingcap/errors v0.11.5-0.20201126102027-b0a155152ca3
+	github.com/pingcap/errors v0.11.5-0.20250523034308-74f78ae071ee
 	github.com/pingcap/failpoint v0.0.0-20240528011301-b51a646c7c86
 	github.com/pingcap/fn v1.0.0
 	github.com/pingcap/kvproto v0.0.0-20230331024443-349815129e6d
 	github.com/pingcap/tidb-insight/collector v0.0.0-20220902034607-fb5ae0ddc8c1
-	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_model v0.3.0
 	github.com/prometheus/common v0.42.0
 	github.com/prometheus/prom2json v1.3.2
@@ -57,7 +56,7 @@ require (
 	github.com/xo/usql v0.9.5
 	go.etcd.io/etcd/client/pkg/v3 v3.5.7
 	go.etcd.io/etcd/client/v3 v3.5.7
-	go.uber.org/atomic v1.10.0
+	go.uber.org/atomic v1.11.0
 	go.uber.org/zap v1.24.0
 	golang.org/x/crypto v0.36.0
 	golang.org/x/mod v0.24.0

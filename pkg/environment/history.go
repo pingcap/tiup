@@ -27,9 +27,9 @@ import (
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
-	"github.com/pkg/errors"
 )
 
 const (
