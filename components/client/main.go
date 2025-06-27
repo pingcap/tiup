@@ -16,7 +16,6 @@ package main
 import (
 	"bufio"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -26,7 +25,9 @@ import (
 
 	ui "github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
+	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
+	"github.com/pingcap/tiup/pkg/repository"
 	gops "github.com/shirou/gopsutil/process"
 	"github.com/spf13/cobra"
 	_ "github.com/xo/usql/drivers/mysql"
@@ -51,6 +52,11 @@ func execute() error {
 			if len(args) > 0 {
 				target = args[0]
 			}
+			env, err := environment.InitEnv(repository.Options{}, repository.MirrorOptions{})
+			if err != nil {
+				return err
+			}
+			environment.SetGlobalEnv(env)
 			return connect(target)
 		},
 	}
@@ -121,35 +127,12 @@ func scanEndpoint(tiupHome string) ([]*endpoint, error) {
 }
 
 func isInstanceAlive(tiupHome, instance string) bool {
-	metaFile := path.Join(tiupHome, localdata.DataParentDir, instance, localdata.MetaFilename)
-
-	// If the path doesn't contain the meta file, which means startup interrupted
-	_, err := os.Stat(metaFile)
-	if os.IsNotExist(err) {
-		return false
-	}
-
-	file, err := os.Open(metaFile)
+	s, err := environment.GlobalEnv().Profile().ReadMetaFile(instance)
 	if err != nil {
 		return false
 	}
-	defer file.Close()
-	var process map[string]any
-	if err := json.NewDecoder(file).Decode(&process); err != nil {
-		return false
-	}
-
-	//revive:disable
-	if v, ok := process["pid"]; !ok {
-		return false
-	} else if pid, ok := v.(float64); !ok {
-		return false
-	} else if exist, err := gops.PidExists(int32(pid)); err != nil {
-		return false
-	} else {
-		return exist
-	}
-	//revive:enable
+	exist, _ := gops.PidExists(int32(s.Pid))
+	return exist
 }
 
 func readDsn(dir, component string) []*endpoint {
