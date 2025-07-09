@@ -206,7 +206,12 @@ tiflash_servers:
     # data_dir: /tidb-data/tiflash-9000
     # # TiFlash Server log file storage directory.
     # log_dir: /tidb-deploy/tiflash-9000/log
-  # # The ip address of the TiKV Server.
+    # # The following configs are used to overwrite the `server_configs.tiflash` values.
+    # config:
+    #   logger.level: info
+    # # The following configs are used to overwrite the `server_configs.tiflash-learner` values.
+    # learner_config:
+    #   log.level: info
   - host: 10.0.1.21
     # ssh_port: 22
     # tcp_port: 9000
