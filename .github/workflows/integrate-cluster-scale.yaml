@@ -30,7 +30,7 @@ on:
 
 jobs:
   cluster:
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, ubuntu-22.04]
     strategy:
       fail-fast: true
       matrix:
