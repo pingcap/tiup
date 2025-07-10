@@ -35,7 +35,6 @@ on:
 
 jobs:
   tiup:
-    runs-on: self-hosted
     runs-on:
       labels: arc-runner-set-docker-pingcap
     timeout-minutes: 10
