@@ -266,16 +266,25 @@ func (manifest *Component) LatestVersion(platform string) string {
 		return ""
 	}
 
-	var latest string
+	var last string
+	var lastStable string
 	for v := range versions {
 		if utils.Version(v).IsNightly() {
 			continue
 		}
-		if latest == "" || semver.Compare(v, latest) > 0 {
-			latest = v
+
+		if last == "" || semver.Compare(last, v) < 0 {
+			last = v
+		}
+		if semver.Prerelease(v) == "" && (lastStable == "" || semver.Compare(lastStable, v) < 0) {
+			lastStable = v
 		}
 	}
-	return latest
+
+	if lastStable == "" {
+		return last
+	}
+	return lastStable
 }
 
 // VersionListWithYanked return all versions include yanked versions

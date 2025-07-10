@@ -30,7 +30,8 @@ on:
 
 jobs:
   cluster:
-    runs-on: ubuntu-22.04
+    runs-on:
+      labels: arc-runner-set-docker-pingcap
     strategy:
       fail-fast: true
       matrix:
@@ -59,6 +60,8 @@ jobs:
         run: |
           export GOPATH=${GITHUB_WORKSPACE}/go
           export PATH=$PATH:$GOPATH/bin
+          sudo apt update
+          sudo apt-get install -y build-essential python
           make build_integration_test
 
       - name: Build the docker-compose stack
