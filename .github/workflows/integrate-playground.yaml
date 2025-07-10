@@ -58,6 +58,8 @@ jobs:
         run: |
           export GOPATH=${GITHUB_WORKSPACE}/go
           export PATH=$PATH:$GOPATH/bin
+          sudo apt update
+          sudo apt install make
           make tiup build_tiup_playground_test
 
       - name: Run test suite

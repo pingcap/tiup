@@ -60,6 +60,8 @@ jobs:
         run: |
           export GOPATH=${GITHUB_WORKSPACE}/go
           export PATH=$PATH:$GOPATH/bin
+          sudo apt update
+          sudo apt install make
           make build_integration_test
 
       - name: Build the docker-compose stack

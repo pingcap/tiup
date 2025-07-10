@@ -63,8 +63,8 @@ jobs:
         run: |
           export GOPATH=${GITHUB_WORKSPACE}/go
           export PATH=$PATH:$GOPATH/bin
-          df -h
-          cat /etc/os-release
+          sudo apt update
+          sudo apt install make
           make build_tiup_test
 
       - name: Run test suite
