@@ -31,8 +31,7 @@ on:
 
 jobs:
   playground:
-    runs-on:
-      labels: arc-runner-set-docker-pingcap
+    runs-on: self-hosted
     timeout-minutes: 10
     strategy:
       fail-fast: true

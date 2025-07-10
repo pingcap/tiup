@@ -35,6 +35,7 @@ on:
 
 jobs:
   tiup:
+    runs-on: self-hosted
     runs-on:
       labels: arc-runner-set-docker-pingcap
     timeout-minutes: 10
@@ -63,6 +64,8 @@ jobs:
         run: |
           export GOPATH=${GITHUB_WORKSPACE}/go
           export PATH=$PATH:$GOPATH/bin
+          df -h
+          cat /etc/os-release
           make build_tiup_test
 
       - name: Run test suite
