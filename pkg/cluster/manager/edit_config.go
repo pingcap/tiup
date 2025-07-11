@@ -27,7 +27,7 @@ import (
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 // EditConfigOptions contains the options for config edition.
@@ -113,7 +113,7 @@ func (m *Manager) editTopo(origTopo spec.Topology, data []byte, opt EditConfigOp
 	}
 
 	newTopo := m.specManager.NewMetadata().GetTopology()
-	err = yaml.UnmarshalStrict(newData, newTopo)
+	err = yaml.Unmarshal(newData, newTopo)
 	if err != nil {
 		fmt.Print(color.RedString("New topology could not be saved: "))
 		m.logger.Infof("Failed to parse topology file: %v", err)

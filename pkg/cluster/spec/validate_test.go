@@ -22,7 +22,7 @@ import (
 	. "github.com/pingcap/check"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/utils"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 func (s *metaSuiteTopo) TestDirectoryConflicts1(c *C) {
@@ -346,7 +346,7 @@ func (s *metaSuiteTopo) TestCountDir2(c *C) {
 	meta := ClusterMeta{}
 	yamlFile, err := os.ReadFile(file)
 	c.Assert(err, IsNil)
-	err = yaml.UnmarshalStrict(yamlFile, &meta)
+	err = yaml.Unmarshal(yamlFile, &meta)
 	c.Assert(err, IsNil)
 	topo := meta.Topology
 

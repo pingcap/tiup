@@ -21,7 +21,7 @@ import (
 	. "github.com/pingcap/check"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 type metaSuiteDM struct {
