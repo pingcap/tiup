@@ -23,11 +23,11 @@ import (
 	"strings"
 
 	"github.com/AstroProfundis/sysinfo"
-	"github.com/pingcap/tidb-insight/collector/insight"
 	"github.com/pingcap/tiup/pkg/checkpoint"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/module"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/insight"
 	"go.uber.org/zap"
 )
 
