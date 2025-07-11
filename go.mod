@@ -4,8 +4,6 @@ go 1.24
 
 toolchain go1.24.1
 
-replace gopkg.in/yaml.v2 => github.com/july2993/yaml v0.0.0-20200423062752-adcfa5abe2ed
-
 replace github.com/jedib0t/go-pretty/v6 => github.com/nexustar/go-pretty/v6 v6.5.8-tiup
 
 require (
@@ -67,7 +65,6 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20241209162323-e6fa225c2576
 	google.golang.org/grpc v1.67.3
 	gopkg.in/ini.v1 v1.67.0
-	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 	software.sslmate.com/src/go-pkcs12 v0.2.0
 )

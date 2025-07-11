@@ -19,7 +19,7 @@ import (
 	"reflect"
 
 	"github.com/pingcap/tiup/pkg/set"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 // ScrubStrategy for scrub sensible value.

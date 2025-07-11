@@ -25,7 +25,7 @@ import (
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/tidbver"
 	"github.com/pingcap/tiup/pkg/utils"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 type metaSuiteTopo struct {
@@ -904,7 +904,7 @@ tiflash_servers:
 
 func (s *metaSuiteTopo) TestYAMLAnchor(c *C) {
 	topo := Specification{}
-	err := yaml.UnmarshalStrict([]byte(`
+	err := yaml.Unmarshal([]byte(`
 global:
   custom:
     tidb_spec: &tidb_spec
@@ -924,7 +924,7 @@ tidb_servers:
 
 func (s *metaSuiteTopo) TestYAMLAnchorWithUndeclared(c *C) {
 	topo := Specification{}
-	err := yaml.UnmarshalStrict([]byte(`
+	err := yaml.Unmarshal([]byte(`
 global:
   custom:
     tidb_spec: &tidb_spec
