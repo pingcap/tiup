@@ -15,56 +15,52 @@ package utils
 
 import (
 	"errors"
+	"testing"
 
-	. "github.com/pingcap/check"
+	"github.com/stretchr/testify/require"
 )
 
-type errSuite struct {
-}
-
-var _ = Suite(&errSuite{})
-
-func (s *errSuite) TestHashValidationErr(c *C) {
+func TestHashValidationErr(t *testing.T) {
 	err0 := &HashValidationErr{
 		cipher: "sha256",
 		expect: "hash111",
 		actual: "hash222",
 	}
 	// identical errors are equal
-	c.Assert(errors.Is(err0, err0), IsTrue)
-	c.Assert(errors.Is(ErrValidateChecksum, ErrValidateChecksum), IsTrue)
-	c.Assert(errors.Is(ErrValidateChecksum, &HashValidationErr{}), IsTrue)
-	c.Assert(errors.Is(&HashValidationErr{}, ErrValidateChecksum), IsTrue)
+	require.True(t, errors.Is(err0, err0))
+	require.True(t, errors.Is(ErrValidateChecksum, ErrValidateChecksum))
+	require.True(t, errors.Is(ErrValidateChecksum, &HashValidationErr{}))
+	require.True(t, errors.Is(&HashValidationErr{}, ErrValidateChecksum))
 	// not equal for different error types
-	c.Assert(errors.Is(err0, errors.New("")), IsFalse)
+	require.False(t, errors.Is(err0, errors.New("")))
 	// default Value matches any error
-	c.Assert(errors.Is(err0, ErrValidateChecksum), IsTrue)
+	require.True(t, errors.Is(err0, ErrValidateChecksum))
 	// error with values are not matching default ones
-	c.Assert(errors.Is(ErrValidateChecksum, err0), IsFalse)
+	require.False(t, errors.Is(ErrValidateChecksum, err0))
 
 	err1 := &HashValidationErr{
 		cipher: "sha256",
 		expect: "hash111",
 		actual: "hash222",
 	}
-	c.Assert(errors.Is(err1, ErrValidateChecksum), IsTrue)
+	require.True(t, errors.Is(err1, ErrValidateChecksum))
 	// errors with same values are equal
-	c.Assert(errors.Is(err0, err1), IsTrue)
-	c.Assert(errors.Is(err1, err0), IsTrue)
+	require.True(t, errors.Is(err0, err1))
+	require.True(t, errors.Is(err1, err0))
 	// errors with different ciphers are not equal
 	err1.cipher = "sha512"
-	c.Assert(errors.Is(err0, err1), IsFalse)
-	c.Assert(errors.Is(err1, err0), IsFalse)
+	require.False(t, errors.Is(err0, err1))
+	require.False(t, errors.Is(err1, err0))
 	// errors with different expected hashes are not equal
 	err1.cipher = err0.cipher
-	c.Assert(errors.Is(err0, err1), IsTrue)
+	require.True(t, errors.Is(err0, err1))
 	err1.expect = "hash1112"
-	c.Assert(errors.Is(err0, err1), IsFalse)
-	c.Assert(errors.Is(err1, err0), IsFalse)
+	require.False(t, errors.Is(err0, err1))
+	require.False(t, errors.Is(err1, err0))
 	// errors with different actual hashes are not equal
 	err1.expect = err0.expect
-	c.Assert(errors.Is(err0, err1), IsTrue)
+	require.True(t, errors.Is(err0, err1))
 	err1.actual = "hash2223"
-	c.Assert(errors.Is(err0, err1), IsFalse)
-	c.Assert(errors.Is(err1, err0), IsFalse)
+	require.False(t, errors.Is(err0, err1))
+	require.False(t, errors.Is(err1, err0))
 }
