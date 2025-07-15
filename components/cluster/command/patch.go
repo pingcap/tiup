@@ -39,8 +39,6 @@ func newPatchCmd() *cobra.Command {
 				return perrs.New("the flag -R or -N must be specified at least one")
 			}
 			clusterName := args[0]
-			clusterReport.ID = scrubClusterName(clusterName)
-			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
 			return cm.Patch(clusterName, args[1], gOpt, overwrite, offlineMode, skipConfirm)
 		},

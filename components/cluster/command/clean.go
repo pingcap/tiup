@@ -43,8 +43,6 @@ You can retain some nodes and roles data when cleanup the cluster, eg:
 			}
 
 			clusterName := args[0]
-			clusterReport.ID = scrubClusterName(clusterName)
-			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
 			if cleanALl {
 				cleanOpt.CleanupData = true

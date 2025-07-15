@@ -27,9 +27,6 @@ func newShowConfigCmd() *cobra.Command {
 			}
 
 			clusterName := args[0]
-			clusterReport.ID = scrubClusterName(clusterName)
-			teleCommand = append(teleCommand, scrubClusterName(clusterName))
-
 			return cm.ShowConfig(clusterName)
 		},
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {

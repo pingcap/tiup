@@ -49,8 +49,6 @@ func newStartCmd() *cobra.Command {
 			}
 
 			clusterName := args[0]
-			clusterReport.ID = scrubClusterName(clusterName)
-			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
 			if err := cm.StartCluster(clusterName, gOpt, restoreLeader, func(b *task.Builder, metadata spec.Metadata) {
 				b.UpdateTopology(

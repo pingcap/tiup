@@ -24,7 +24,6 @@ func newLinkCmd() *cobra.Command {
 		Short: "Link component binary to $TIUP_HOME/bin/",
 		Long:  `[experimental] Link component binary to $TIUP_HOME/bin/`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			teleCommand = cmd.CommandPath()
 			env := environment.GlobalEnv()
 			if len(args) != 1 {
 				return cmd.Help()

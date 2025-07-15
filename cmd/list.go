@@ -53,7 +53,6 @@ components or versions which have not been installed.
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			teleCommand = cmd.CommandPath()
 			env := environment.GlobalEnv()
 			switch len(args) {
 			case 0:

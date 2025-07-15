@@ -1,6 +1,0 @@
-tidb_servers:
-- host: badee9e1e6212d0c4f6bdc58e55198ca
-  no_hash_str: aaaaaaaaaaaaaa
-  port: 22
-- host: 54ab9723ff45bb84558ba1e2582be534
-  port: 33

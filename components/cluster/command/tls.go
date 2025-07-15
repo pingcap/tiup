@@ -39,8 +39,6 @@ func newTLSCmd() *cobra.Command {
 				return err
 			}
 			clusterName := args[0]
-			clusterReport.ID = scrubClusterName(clusterName)
-			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
 			switch strings.ToLower(args[1]) {
 			case "enable":

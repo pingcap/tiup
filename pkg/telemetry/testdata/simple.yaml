@@ -1,6 +1,0 @@
-tidb_servers:
-  - host: 172.19.0.101
-    no_hash_str: aaaaaaaaaaaaaa
-    port: 22
-  - host: 172.19.0.102
-    port: 33

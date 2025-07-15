@@ -33,7 +33,6 @@ of the same component:
   tiup install tidb:v3.0.5 tikv pd
   tiup install tidb:v3.0.5 tidb:v3.0.8 tikv:v3.0.9`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			teleCommand = cmd.CommandPath()
 			env := environment.GlobalEnv()
 			if len(args) == 0 {
 				return cmd.Help()

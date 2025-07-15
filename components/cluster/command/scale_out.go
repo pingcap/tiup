@@ -14,7 +14,6 @@
 package command
 
 import (
-	"os"
 	"path/filepath"
 
 	"github.com/pingcap/tiup/pkg/cluster/manager"
@@ -55,14 +54,6 @@ func newScaleOutCmd() *cobra.Command {
 				}
 				clusterName = args[0]
 				topoFile = args[1]
-			}
-
-			clusterReport.ID = scrubClusterName(clusterName)
-			teleCommand = append(teleCommand, scrubClusterName(clusterName))
-
-			// stage2: topoFile is ""
-			if data, err := os.ReadFile(topoFile); err == nil {
-				teleTopology = string(data)
 			}
 
 			return cm.ScaleOut(

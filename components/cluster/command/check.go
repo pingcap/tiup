@@ -44,10 +44,6 @@ it will check the new instances `,
 			}
 			scaleOutTopo := ""
 
-			if opt.ExistCluster {
-				clusterReport.ID = scrubClusterName(args[0])
-			}
-
 			if len(args) == 2 {
 				if !opt.ExistCluster {
 					return cmd.Help()

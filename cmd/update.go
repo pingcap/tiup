@@ -29,11 +29,11 @@ func newUpdateCmd() *cobra.Command {
 		Use:   "update [component1][:version] [component2..N]",
 		Short: "Update tiup components to the latest version",
 		Long: `Update some components to the latest version. Use --nightly
-to update to the latest nightly version. Use --all to update all components 
-installed locally. Use <component>:<version> to update to the specified 
-version. Components will be ignored if the latest version has already been 
-installed locally, but you can use --force explicitly to overwrite an 
-existing installation. Use --self which is used to update TiUP to the 
+to update to the latest nightly version. Use --all to update all components
+installed locally. Use <component>:<version> to update to the specified
+version. Components will be ignored if the latest version has already been
+installed locally, but you can use --force explicitly to overwrite an
+existing installation. Use --self which is used to update TiUP to the
 latest version. All other flags will be ignored if the flag --self is given.
 
   $ tiup update --all                     # Update all components to the latest stable version
@@ -41,7 +41,6 @@ latest version. All other flags will be ignored if the flag --self is given.
   $ tiup update playground:v0.0.3 --force # Overwrite an existing local installation
   $ tiup update --self                    # Update TiUP to the latest version`,
 		RunE: func(cmd *cobra.Command, components []string) error {
-			teleCommand = cmd.CommandPath()
 			if (len(components) == 0 && !all && !force && !self) || (len(components) > 0 && all) {
 				return cmd.Help()
 			}
