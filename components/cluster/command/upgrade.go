@@ -37,9 +37,6 @@ func newUpgradeCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clusterReport.ID = scrubClusterName(clusterName)
-			teleCommand = append(teleCommand, scrubClusterName(clusterName))
-			teleCommand = append(teleCommand, version)
 
 			componentVersions := map[string]string{
 				spec.ComponentDashboard:        dashboardVer,

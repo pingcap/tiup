@@ -14,15 +14,12 @@
 package cmd
 
 import (
-	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
 	"syscall"
-	"time"
 
 	"github.com/fatih/color"
 	"github.com/google/uuid"
@@ -33,7 +30,6 @@ import (
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
-	"github.com/pingcap/tiup/pkg/telemetry"
 	"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
 )
@@ -85,9 +81,7 @@ the latest stable version will be downloaded from the repository.`,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			teleCommand = cmd.CommandPath()
 			switch cmd.Name() {
-			case "init",
-				"rotate",
-				"set":
+			case "init", "rotate", "set":
 				if cmd.HasParent() && cmd.Parent().Name() == "mirror" {
 					// skip environment init
 					break
@@ -222,7 +216,6 @@ the latest stable version will be downloaded from the repository.`,
 		newStatusCmd(),
 		newCleanCmd(),
 		newMirrorCmd(),
-		newTelemetryCmd(),
 		newEnvCmd(),
 		newHistoryCmd(),
 		newLinkCmd(),
@@ -232,7 +225,6 @@ the latest stable version will be downloaded from the repository.`,
 
 // Execute parses the command line arguments and calls proper functions
 func Execute() {
-	start := time.Now()
 	code := 0
 
 	err := rootCmd.Execute()
@@ -245,74 +237,6 @@ func Execute() {
 			fmt.Fprintln(os.Stderr, color.RedString("Error: %v", err))
 			code = 1
 		}
-	}
-
-	teleReport := new(telemetry.Report)
-	tiupReport := new(telemetry.TiUPReport)
-	teleReport.EventDetail = &telemetry.Report_Tiup{Tiup: tiupReport}
-
-	env := environment.GlobalEnv()
-	if env == nil {
-		// if the env is not initialized, skip telemetry upload
-		// as many info are read from the env.
-		// TODO: split pure meta information from env object and
-		// us a dedicated package for that
-		reportEnabled = false
-	} else {
-		// record TiUP execution history
-		err := environment.HistoryRecord(env, os.Args, start, code)
-		if err != nil {
-			log.Warnf("Record TiUP execution history log failed: %v", err)
-		}
-
-		teleMeta, _, err := telemetry.GetMeta(env)
-		if err == nil {
-			reportEnabled = teleMeta.Status == telemetry.EnableStatus
-			teleReport.InstallationUUID = teleMeta.UUID
-		} // default to false on errors
-	}
-	if teleCommand == "tiup __complete" {
-		reportEnabled = false
-	}
-
-	if reportEnabled {
-		teleReport.EventUUID = eventUUID
-		teleReport.EventUnixTimestamp = start.Unix()
-		teleReport.Version = telemetry.TiUPMeta()
-		teleReport.Version.TiUPVersion = version.NewTiUPVersion().SemVer()
-		tiupReport.Command = teleCommand
-		tiupReport.CustomMirror = env.Profile().Config.Mirror != repository.DefaultMirror
-		if tag != "" {
-			tiupReport.Tag = telemetry.SaltedHash(tag)
-		}
-
-		f := func() {
-			defer func() {
-				if r := recover(); r != nil {
-					if environment.DebugMode {
-						log.Debugf("Recovered in telemetry report: %v", r)
-					}
-				}
-			}()
-
-			tiupReport.ExitCode = int32(code)
-			tiupReport.TakeMilliseconds = uint64(time.Since(start).Milliseconds())
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
-			tele := telemetry.NewTelemetry()
-			err := tele.Report(ctx, teleReport)
-			if environment.DebugMode {
-				if err != nil {
-					log.Infof("report failed: %v", err)
-				}
-				fmt.Fprintf(os.Stderr, "report: %s\n", teleReport.String())
-				if data, err := json.Marshal(teleReport); err == nil {
-					log.Debugf("report: %s\n", string(data))
-				}
-			}
-			cancel()
-		}
-
-		f()
 	}
 
 	color.Unset()
