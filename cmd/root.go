@@ -39,7 +39,6 @@ var (
 	repoOpts      repository.Options
 	reportEnabled bool // is telemetry report enabled
 	eventUUID     = uuid.New().String()
-	teleCommand   string
 	log           = logprinter.NewLogger("") // use default logger
 )
 
@@ -79,7 +78,6 @@ the latest stable version will be downloaded from the repository.`,
 			return nil
 		},
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			teleCommand = cmd.CommandPath()
 			switch cmd.Name() {
 			case "init", "rotate", "set":
 				if cmd.HasParent() && cmd.Parent().Name() == "mirror" {
@@ -165,7 +163,6 @@ the latest stable version will be downloaded from the repository.`,
 				args = args[1:]
 			}
 
-			teleCommand = fmt.Sprintf("%s %s", cmd.CommandPath(), componentSpec)
 			return tiupexec.RunComponent(env, tag, componentSpec, binPath, args)
 		},
 		SilenceUsage: true,
