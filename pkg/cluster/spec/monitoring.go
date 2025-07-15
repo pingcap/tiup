@@ -167,6 +167,8 @@ func (c *MonitorComponent) Instances() []Instance {
 			NumaCores:    "",
 
 			Ports: []int{
+				c.GetMonitoredOptions().BlackboxExporterPort,
+				c.GetMonitoredOptions().NodeExporterPort,
 				s.Port,
 			},
 			Dirs: []string{

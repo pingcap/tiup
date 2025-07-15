@@ -55,6 +55,9 @@ func TestLocalRuleDirs(t *testing.T) {
 	assert.Equal(t, len(ints), 1)
 	promInstance := ints[0].(*MonitorInstance)
 
+	assert.Contains(t, promInstance.Ports, topo.GetMonitoredOptions().NodeExporterPort)
+	assert.Contains(t, promInstance.Ports, topo.GetMonitoredOptions().BlackboxExporterPort)
+
 	user, err := user.Current()
 	assert.Nil(t, err)
 	e, err := executor.New(executor.SSHTypeNone, false, executor.SSHConfig{Host: "127.0.0.1", User: user.Username})
