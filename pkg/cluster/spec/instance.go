@@ -51,6 +51,7 @@ const (
 	ComponentPump             = "pump"
 	ComponentCDC              = "cdc"
 	ComponentTiKVCDC          = "tikv-cdc"
+	ComponentTiCI             = "tici"
 	ComponentTiSpark          = "tispark"
 	ComponentSpark            = "spark"
 	ComponentAlertmanager     = "alertmanager"
