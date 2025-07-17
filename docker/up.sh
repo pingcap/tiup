@@ -6,7 +6,7 @@
 set -o errexit
 set -o pipefail
 set -o nounset
-# set -o xtrace
+set -o xtrace
 
 ERROR() {
     echo -e "\e[101m\e[97m[ERROR]\e[49m\e[39m" "$@"
