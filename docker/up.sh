@@ -184,11 +184,9 @@ exists docker ||
       exit 1; }
 
 exists pip ||
-    {
-        INFO "Install pip from https://bootstrap.pypa.io/get-pip.py";
-        curl -sSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py || exit 1;
-    }
-pip install -U jinja2
+    { ERROR "Please install pip (https://docs.docker.com/engine/installation/)";
+      exit 1; }
+pip3 install -U jinja2
 
 exist_network=$(docker network ls | awk '{if($2 == "tiops") print $1}')
 if [[ "$exist_network" == "" ]]; then
