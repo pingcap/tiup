@@ -221,24 +221,25 @@ if [[ "${INCLUDE_PROXY_NODES}" -eq 1 ]]; then
     proxy_prefix=${PROXY_SUBNET%.*}
 fi
 
-python -c "from jinja2 import Template; print(Template(open('docker-compose.yml.tpl').read()).render(nodes=$NODES, ipprefix='$ipprefix', ssh_proxy=$ssh_proxy, proxy_prefix='$proxy_prefix'))" > docker-compose.yml
+python -c "from jinja2 import Template; print(Template(open('docker-compose.yml.tpl').read()).render(nodes=$NODES, ipprefix='$ipprefix', ssh_proxy=$ssh_proxy, proxy_prefix='$proxy_prefix', dev='$DEV'))" > docker-compose.yml
 sed "s/__IPPREFIX__/$ipprefix/g" docker-compose.dm.yml.tpl > docker-compose.dm.yml
 sed -i '/TIUP_TEST_IP_PREFIX/d' ./secret/control.env
 echo "TIUP_TEST_IP_PREFIX=$ipprefix" >> ./secret/control.env
 
 INFO "Running \`docker-compose build\`"
 # shellcheck disable=SC2086
-docker compose -f docker-compose.yml ${COMPOSE} ${DEV} build
+cat docker-compose.yml
+docker compose -f docker-compose.yml ${COMPOSE} build
 
 INFO "Running \`docker-compose up\`"
 if [ "${RUN_AS_DAEMON}" -eq 1 ]; then
     # shellcheck disable=SC2086
-    docker compose -f docker-compose.yml ${COMPOSE} ${DEV} up -d
+    docker compose -f docker-compose.yml ${COMPOSE} up -d
     INFO "All containers started, run \`docker ps\` to view"
 else
     INFO "Please run \`docker exec -it tiup-cluster-control bash\` in another terminal to proceed"
     # shellcheck disable=SC2086
-    docker compose -f docker-compose.yml ${COMPOSE} ${DEV} up
+    docker compose -f docker-compose.yml ${COMPOSE} up
 fi
 
 popd
