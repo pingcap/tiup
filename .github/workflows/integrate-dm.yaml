@@ -95,6 +95,8 @@ jobs:
           sleep 4
           # should not use -it
           # ref: https://stackoverflow.com/questions/43099116/error-the-input-device-is-not-a-tty
+          docker exec tiup-cluster-control ls /tiup-cluster || true
+          docker exec tiup-cluster-control ls /tiup-cluster/tiup-cluster || true
           docker exec tiup-cluster-control bash /tiup-cluster/tests/tiup-dm/run.sh ${{ matrix.cases }}
 
       - name: Collect component log
