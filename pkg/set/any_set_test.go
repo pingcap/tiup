@@ -15,18 +15,19 @@ package set
 
 import (
 	"reflect"
+	"testing"
 
-	"github.com/pingcap/check"
+	"github.com/stretchr/testify/require"
 )
 
-func (s *setTestSuite) TestAnySet(c *check.C) {
+func TestAnySet(t *testing.T) {
 	set := NewAnySet(reflect.DeepEqual)
 	set.Insert(true)
 	set.Insert(9527)
 
-	c.Assert(set.slice[0], check.DeepEquals, true)
-	c.Assert(set.Slice()[0], check.DeepEquals, true)
+	require.Equal(t, true, set.slice[0])
+	require.Equal(t, true, set.Slice()[0])
 
-	c.Assert(set.slice[1], check.DeepEquals, 9527)
-	c.Assert(set.Slice()[1], check.DeepEquals, 9527)
+	require.Equal(t, 9527, set.slice[1])
+	require.Equal(t, 9527, set.Slice()[1])
 }
