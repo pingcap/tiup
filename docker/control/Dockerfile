@@ -18,8 +18,8 @@ FROM golang:1.21
 
 # without --dev flag up.sh copies tiup-cluster to these subfolders
 # with --dev flag they are empty until mounted
-COPY tiup-cluster/tiup-cluster /tiup-cluster/tiup-cluster/
-COPY tiup-cluster /tiup-cluster/
+#COPY tiup-cluster/tiup-cluster /tiup-cluster/tiup-cluster/
+#COPY tiup-cluster /tiup-cluster/
 
 ADD bashrc /root/.bashrc
 ADD init.sh /init.sh
@@ -30,6 +30,6 @@ RUN dos2unix /init.sh /root/.bashrc && \
 
 # build tiup-cluster in without --dev flag
 WORKDIR /tiup-cluster
-RUN (test Makefile && make failpoint-enable && make cluster && make failpoint-disable) || true
+#RUN (test Makefile && make failpoint-enable && make cluster && make failpoint-disable) || true
 
 CMD /init.sh
