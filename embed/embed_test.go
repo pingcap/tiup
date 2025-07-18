@@ -5,14 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/pingcap/check"
+	"github.com/stretchr/testify/require"
 )
-
-func Test(t *testing.T) { check.TestingT(t) }
-
-type embedSuite struct{}
-
-var _ = check.Suite(&embedSuite{})
 
 func getAllFilePaths(dir string) (paths []string, err error) {
 	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
@@ -36,39 +30,39 @@ func getAllFilePaths(dir string) (paths []string, err error) {
 }
 
 // Test can read all file in /templates
-func (s *embedSuite) TestCanReadTemplates(c *check.C) {
+func TestCanReadTemplates(t *testing.T) {
 	paths, err := getAllFilePaths("templates")
-	c.Assert(err, check.IsNil)
-	c.Assert(len(paths), check.Greater, 0)
+	require.Nil(t, err)
+	require.Greater(t, len(paths), 0)
 
 	for _, path := range paths {
-		c.Log("check file: ", path)
+		t.Log("check file: ", path)
 
 		data, err := os.ReadFile(path)
-		c.Assert(err, check.IsNil)
+		require.Nil(t, err)
 
 		embedData, err := ReadTemplate(path)
-		c.Assert(err, check.IsNil)
+		require.Nil(t, err)
 
-		c.Assert(embedData, check.BytesEquals, data)
+		require.Equal(t, embedData, data)
 	}
 }
 
 // Test can read all file in /examples
-func (s *embedSuite) TestCanReadExamples(c *check.C) {
+func TestCanReadExamples(t *testing.T) {
 	paths, err := getAllFilePaths("examples")
-	c.Assert(err, check.IsNil)
-	c.Assert(len(paths), check.Greater, 0)
+	require.Nil(t, err)
+	require.Greater(t, len(paths), 0)
 
 	for _, path := range paths {
-		c.Log("check file: ", path)
+		t.Log("check file: ", path)
 
 		data, err := os.ReadFile(path)
-		c.Assert(err, check.IsNil)
+		require.Nil(t, err)
 
 		embedData, err := ReadExample(path)
-		c.Assert(err, check.IsNil)
+		require.Nil(t, err)
 
-		c.Assert(embedData, check.BytesEquals, data)
+		require.Equal(t, embedData, data)
 	}
 }
