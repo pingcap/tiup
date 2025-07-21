@@ -26,7 +26,8 @@ import (
 // TiCDC represent a ticdc instance.
 type TiCDC struct {
 	instance
-	pds []*PDInstance
+	pds  []*PDInstance
+	envs []string // Environment variables
 	Process
 }
 
@@ -75,10 +76,15 @@ func (c *TiCDC) Start(ctx context.Context) error {
 		}
 	}
 
-	c.Process = &process{cmd: PrepareCommand(ctx, c.BinPath, args, nil, c.Dir)}
+	c.Process = &process{cmd: PrepareCommand(ctx, c.BinPath, args, c.envs, c.Dir)}
 
 	logIfErr(c.Process.SetOutputFile(c.LogFile()))
 	return c.Process.Start()
+}
+
+// SetEnvs sets environment variables for the TiCDC instance
+func (c *TiCDC) SetEnvs(envs []string) {
+	c.envs = envs
 }
 
 // Component return component name.
@@ -89,4 +95,9 @@ func (c *TiCDC) Component() string {
 // LogFile return the log file.
 func (c *TiCDC) LogFile() string {
 	return filepath.Join(c.Dir, "ticdc.log")
+}
+
+// Addr return the address of TiCDC
+func (c *TiCDC) Addr() string {
+	return utils.JoinHostPort(AdvertiseHost(c.Host), c.Port)
 }

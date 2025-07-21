@@ -72,6 +72,7 @@ type Playground struct {
 	tiproxys         []*instance.TiProxy
 	ticdcs           []*instance.TiCDC
 	tikvCdcs         []*instance.TiKVCDC
+	ticis            []*instance.TiCIInstance
 	pumps            []*instance.Pump
 	drainers         []*instance.Drainer
 	dmMasters        []*instance.DMMaster
@@ -344,6 +345,13 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 				p.tikvCdcs = slices.Delete(p.tikvCdcs, i, i+1)
 			}
 		}
+	case "tici-meta", "tici-worker":
+		for i := 0; i < len(p.ticis); i++ {
+			if p.ticis[i].Pid() == pid {
+				p.ticis = slices.Delete(p.ticis, i, i+1)
+				break
+			}
+		}
 	case spec.ComponentTiFlash:
 		for i := 0; i < len(p.tiflashs); i++ {
 			if p.tiflashs[i].Pid() == pid {
@@ -492,6 +500,10 @@ func (p *Playground) sanitizeComponentConfig(cid string, cfg *instance.Config) e
 		return p.sanitizeConfig(p.bootOptions.TiCDC, cfg)
 	case spec.ComponentTiKVCDC:
 		return p.sanitizeConfig(p.bootOptions.TiKVCDC, cfg)
+	case "tici-meta":
+		return p.sanitizeConfig(p.bootOptions.TiCIMeta, cfg)
+	case "tici-worker":
+		return p.sanitizeConfig(p.bootOptions.TiCIWorker, cfg)
 	case spec.ComponentPump:
 		return p.sanitizeConfig(p.bootOptions.Pump, cfg)
 	case spec.ComponentDrainer:
@@ -517,6 +529,18 @@ func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) 
 	}
 	if component == "tikv_worker" {
 		component = "tikv"
+	}
+	if component == "tici-meta" || component == "tici-worker" {
+		// TiCI is a custom component that doesn't need version resolution
+		// But we still need to call PrepareBinary to show startup message
+		if err := inst.PrepareBinary(component, inst.Component(), utils.Version("")); err != nil {
+			return err
+		}
+		if err = inst.Start(ctx); err != nil {
+			return err
+		}
+		p.addWaitInstance(inst)
+		return nil
 	}
 	if version, err = environment.GlobalEnv().V1Repository().ResolveComponentVersion(component, boundVersion); err != nil {
 		return err
@@ -738,6 +762,13 @@ func (p *Playground) WalkInstances(fn func(componentID string, ins instance.Inst
 		}
 	}
 
+	for _, ins := range p.ticis {
+		err := fn(ins.Component(), ins)
+		if err != nil {
+			return err
+		}
+	}
+
 	for _, ins := range p.drainers {
 		err := fn(spec.ComponentDrainer, ins)
 		if err != nil {
@@ -863,6 +894,16 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 		inst := instance.NewTiKVCDC(p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds)
 		ins = inst
 		p.tikvCdcs = append(p.tikvCdcs, inst)
+	case "tici-meta":
+		inst := instance.NewTiCIInstanceWithRole(p.bootOptions.ShOpt, p.dataDir, host, id, p.pds,
+			cfg.BinPath, cfg.ConfigPath, instance.TiCIRoleMeta)
+		ins = inst
+		p.ticis = append(p.ticis, inst)
+	case "tici-worker":
+		inst := instance.NewTiCIInstanceWithRole(p.bootOptions.ShOpt, p.dataDir, host, id, p.pds,
+			cfg.BinPath, cfg.ConfigPath, instance.TiCIRoleWorker)
+		ins = inst
+		p.ticis = append(p.ticis, inst)
 	case spec.ComponentPump:
 		inst := instance.NewPump(p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds)
 		ins = inst
@@ -1122,11 +1163,17 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		{spec.ComponentTiKV, "", "", options.TiKV},
 		{spec.ComponentPump, "", "", options.Pump},
 		{spec.ComponentTiDB, "", "", options.TiDB},
-		{spec.ComponentCDC, "", "", options.TiCDC},
 		{spec.ComponentTiKVCDC, "", "", options.TiKVCDC},
 		{spec.ComponentDrainer, "", "", options.Drainer},
 		{spec.ComponentDMMaster, "", "", options.DMMaster},
 		{spec.ComponentDMWorker, "", "", options.DMWorker},
+	}
+
+	// Add TiCDC to instances only if TiCI components are not enabled
+	// When TiCI is enabled, TiCDC will be started separately with special configuration
+	hasTiCI := options.TiCIMeta.Num > 0 || options.TiCIWorker.Num > 0
+	if !hasTiCI {
+		instances = append(instances, InstancePair{spec.ComponentCDC, "", "", options.TiCDC})
 	}
 
 	if options.ShOpt.Mode == "tidb" {
@@ -1255,6 +1302,86 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 	tidbSucc, tiproxySucc := p.waitAllDBUp()
 
+	// Start TiCDC with special configuration when TiCI is enabled
+	if len(tidbSucc) > 0 && hasTiCI && options.TiCDC.Num > 0 {
+		fmt.Println("Starting TiCDC components with TiCI configuration...")
+
+		// Set the TICDC_NEWARCH environment variable
+		envs := []string{"TICDC_NEWARCH=true"}
+
+		// Create and start TiCDC instances
+		for i := 0; i < options.TiCDC.Num; i++ {
+			inst, err := p.addInstance(spec.ComponentCDC, instance.PDRoleNormal, instance.TiFlashRoleNormal, options.TiCDC)
+			if err != nil {
+				fmt.Println(color.RedString("TiCDC %d failed to create: %s", i, err))
+				continue
+			}
+
+			// Set environment variable for TiCDC instance
+			if cdcInst, ok := inst.(*instance.TiCDC); ok {
+				cdcInst.SetEnvs(envs)
+			}
+
+			if err := p.startInstance(ctx, inst); err != nil {
+				fmt.Println(color.RedString("TiCDC %d failed to start: %s", i, err))
+			}
+		}
+
+		// Wait for TiCDC to be ready
+		time.Sleep(8 * time.Second)
+
+		// Create changefeed
+		fmt.Println("Creating changefeed...")
+		if err := p.createChangefeed(); err != nil {
+			fmt.Println(color.RedString("Failed to create changefeed: %s", err))
+		} else {
+			fmt.Println("Changefeed created successfully.")
+		}
+
+		fmt.Println("TiCDC components started with TiCI configuration.")
+	}
+
+	// Start TiCI components after CDC
+	if len(tidbSucc) > 0 && (options.TiCIMeta.Num > 0 || options.TiCIWorker.Num > 0) {
+		fmt.Println("Starting TiCI components...")
+
+		// Wait a bit more for TiDB and CDC to be fully stable
+		time.Sleep(4 * time.Second)
+
+		// Create and start TiCI MetaServer instances first
+		for i := 0; i < options.TiCIMeta.Num; i++ {
+			inst, err := p.addInstance("tici-meta", instance.PDRoleNormal, instance.TiFlashRoleNormal, options.TiCIMeta)
+			if err != nil {
+				fmt.Println(color.RedString("TiCI MetaServer %d failed to create: %s", i, err))
+				continue
+			}
+			if err := p.startInstance(ctx, inst); err != nil {
+				fmt.Println(color.RedString("TiCI MetaServer %d failed to start: %s", i, err))
+			}
+		}
+
+		// Wait for MetaServer to be ready before starting WorkerNodes
+		if options.TiCIMeta.Num > 0 {
+			fmt.Println("Waiting for TiCI MetaServer to be ready...")
+			time.Sleep(5 * time.Second)
+			fmt.Println("MetaServer should be ready now, starting WorkerNodes...")
+		}
+
+		// Create and start TiCI WorkerNode instances
+		for i := 0; i < options.TiCIWorker.Num; i++ {
+			inst, err := p.addInstance("tici-worker", instance.PDRoleNormal, instance.TiFlashRoleNormal, options.TiCIWorker)
+			if err != nil {
+				fmt.Println(color.RedString("TiCI WorkerNode %d failed to create: %s", i, err))
+				continue
+			}
+			if err := p.startInstance(ctx, inst); err != nil {
+				fmt.Println(color.RedString("TiCI WorkerNode %d failed to start: %s", i, err))
+			}
+		}
+
+		fmt.Println("TiCI components started.")
+	}
+
 	var monitorInfo *MonitorInfo
 	if options.Monitor {
 		var err error
@@ -1291,7 +1418,12 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		p.waitAllTiFlashUp()
 
 		fmt.Println()
-		color.New(color.FgGreen, color.Bold).Println("🎉 TiDB Playground Cluster is started, enjoy!")
+		successMsg := "🎉 TiDB Playground Cluster is started"
+		if len(p.ticis) > 0 {
+			successMsg += " with TiCI"
+		}
+		successMsg += ", enjoy!"
+		color.New(color.FgGreen, color.Bold).Println(successMsg)
 
 		if deleteWhenExit {
 			fmt.Println()
@@ -1462,6 +1594,12 @@ func (p *Playground) terminate(sig syscall.Signal) {
 
 	for _, inst := range p.tiflashs {
 		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
+			kill(inst.Component(), inst.Pid(), inst.Wait)
+		}
+	}
+	// Terminate TiCI instances
+	for _, inst := range p.ticis {
+		if inst.Pid() > 0 {
 			kill(inst.Component(), inst.Pid(), inst.Wait)
 		}
 	}
@@ -1761,4 +1899,30 @@ func parseMysqlVersion(versionOutput string) (vMaj int, vMin int, vPatch int, er
 		return 0, 0, 0, err
 	}
 	return
+}
+
+// createChangefeed creates a changefeed using tiup cdc cli
+func (p *Playground) createChangefeed() error {
+	if len(p.ticdcs) == 0 {
+		return fmt.Errorf("no TiCDC instances available")
+	}
+
+	// Get TiCDC server address
+	cdcAddr := fmt.Sprintf("http://%s", p.ticdcs[0].Addr())
+
+	// Prepare changefeed creation command
+	sinkURI := "s3://logbucket/storage_test?protocol=canal-json&access-key=minioadmin&secret-access-key=minioadmin&endpoint=http://127.0.0.1:9000&enable-tidb-extension=true&output-row-key=true"
+
+	cmd := exec.Command("tiup", "cdc", "cli", "changefeed", "create",
+		fmt.Sprintf("--server=%s", cdcAddr),
+		fmt.Sprintf("--sink-uri=%s", sinkURI),
+	)
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to create changefeed: %v, output: %s", err, string(output))
+	}
+
+	fmt.Printf("Changefeed creation output: %s\n", string(output))
+	return nil
 }
