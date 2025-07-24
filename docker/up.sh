@@ -148,19 +148,19 @@ fi
 rm -rf ./control/tiup-cluster
 mkdir -p ./control/tiup-cluster/tiup-cluster
 # Copy the tiup-cluster directory if we're not mounting the TIUP_CLUSTER_ROOT
-if [ -z "${DEV}" ]; then
-    # Dockerfile does not allow `ADD ..`. So we need to copy it here in setup.
-    INFO "Copying .. to control/tiup-cluster"
-    (
-        # TODO support exclude-ignore, check version of tar support this.
-        # https://www.gnu.org/software/tar/manual/html_section/tar_48.html#IDX408
-        # (cd ..; tar --exclude=./docker --exclude=./.git --exclude-ignore=.gitignore -cf - .)  | tar Cxf ./control/tiup-cluster -
-        (cd ..; tar --exclude=./docker --exclude=./.git -cf - .)  | tar Cxf ./control/tiup-cluster -
-    )
-else
-    INFO "Build tiup-cluster in $TIUP_CLUSTER_ROOT"
-    (cd "${TIUP_CLUSTER_ROOT}";make failpoint-enable;GOOS=linux GOARCH=amd64 make tiup cluster dm;make failpoint-disable)
-fi
+#if [ -z "${DEV}" ]; then
+#    # Dockerfile does not allow `ADD ..`. So we need to copy it here in setup.
+#    INFO "Copying .. to control/tiup-cluster"
+#    (
+#        # TODO support exclude-ignore, check version of tar support this.
+#        # https://www.gnu.org/software/tar/manual/html_section/tar_48.html#IDX408
+#        # (cd ..; tar --exclude=./docker --exclude=./.git --exclude-ignore=.gitignore -cf - .)  | tar Cxf ./control/tiup-cluster -
+#        (cd ..; tar --exclude=./docker --exclude=./.git -cf - .)  | tar Cxf ./control/tiup-cluster -
+#    )
+#else
+#    INFO "Build tiup-cluster in $TIUP_CLUSTER_ROOT"
+#    (cd "${TIUP_CLUSTER_ROOT}";make failpoint-enable;GOOS=linux GOARCH=amd64 make tiup cluster dm;make failpoint-disable)
+#fi
 
 if [ "${INIT_ONLY}" -eq 1 ]; then
     exit 0

@@ -16,11 +16,6 @@ services:
     privileged: true
     ports:
       - "8080"
-    volumes:
-{% if tiup_cluster_root %}
-      - {{tiup_cluster_root}}:/tiup-cluster # Mounts $TIUP_CLUSTER_ROOT on host to /tiup-cluster control container
-      - ${TIUP_MIRRORS:-/dev/null}:/mirrors
-{% endif %}
     networks:
       tiops:
         ipv4_address: {{ipprefix}}.100

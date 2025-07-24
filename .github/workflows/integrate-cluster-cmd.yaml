@@ -80,8 +80,7 @@ jobs:
 
       - name: Build the docker-compose stack
         working-directory: ${{ env.working-directory }}
-        # with --dev the first run will fail for unknow reason, just retry it and will success now..
-        run: TIUP_CLUSTER_ROOT=${{ env.working-directory }} ./docker/up.sh --daemon --dev || TIUP_CLUSTER_ROOT=${{ env.working-directory }} ./docker/up.sh --daemon --dev
+        run: TIUP_CLUSTER_ROOT=${{ env.working-directory }} ./docker/up.sh --daemon --dev
 
       - name: Check running containers
         run: |
