@@ -1,4 +1,3 @@
-version: "3.7"
 x-node: &default-node
   build: ./node
   env_file: ./secret/node.env
@@ -17,9 +16,9 @@ services:
     privileged: true
     ports:
       - "8080"
-{% if dev %}
     volumes:
-      - ${TIUP_CLUSTER_ROOT}:/tiup-cluster # Mounts $TIUP_CLUSTER_ROOT on host to /tiup-cluster control container
+{% if tiup_cluster_root %}
+      - {{tiup_cluster_root}}:/tiup-cluster # Mounts $TIUP_CLUSTER_ROOT on host to /tiup-cluster control container
       - ${TIUP_MIRRORS:-/dev/null}:/mirrors
 {% endif %}
     networks:

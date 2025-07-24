@@ -221,7 +221,7 @@ if [[ "${INCLUDE_PROXY_NODES}" -eq 1 ]]; then
     proxy_prefix=${PROXY_SUBNET%.*}
 fi
 
-python -c "from jinja2 import Template; print(Template(open('docker-compose.yml.tpl').read()).render(nodes=$NODES, ipprefix='$ipprefix', ssh_proxy=$ssh_proxy, proxy_prefix='$proxy_prefix', dev='$DEV'))" > docker-compose.yml
+python -c "from jinja2 import Template; print(Template(open('docker-compose.yml.tpl').read()).render(nodes=$NODES, ipprefix='$ipprefix', ssh_proxy=$ssh_proxy, proxy_prefix='$proxy_prefix', tiup_cluster_root='$TIUP_CLUSTER_ROOT'))" > docker-compose.yml
 sed "s/__IPPREFIX__/$ipprefix/g" docker-compose.dm.yml.tpl > docker-compose.dm.yml
 sed -i '/TIUP_TEST_IP_PREFIX/d' ./secret/control.env
 echo "TIUP_TEST_IP_PREFIX=$ipprefix" >> ./secret/control.env
@@ -244,3 +244,5 @@ else
 fi
 
 popd
+
+exit 1
