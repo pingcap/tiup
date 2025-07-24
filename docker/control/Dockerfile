@@ -1,10 +1,7 @@
 FROM golang:1.21
 
-
-# Use mirrors for poor network...
-#RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list && \
-#    sed -i 's/security.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list
-
+WORKDIR /tiup-cluster
+RUN ls /tiup-cluster
 
 # tiup-cluster dependencies
  RUN apt-get -y -q update && \
@@ -29,7 +26,6 @@ RUN dos2unix /init.sh /root/.bashrc && \
     echo "Host *\n    ServerAliveInterval 30\n    ServerAliveCountMax 3" >> /root/.ssh/config
 
 # build tiup-cluster in without --dev flag
-WORKDIR /tiup-cluster
 #RUN (test Makefile && make failpoint-enable && make cluster && make failpoint-disable) || true
 
 CMD /init.sh

@@ -1,5 +1,0 @@
-services:
-  control:
-    volumes:
-      - ${TIUP_CLUSTER_ROOT}:/tiup-cluster # Mounts $TIUP_CLUSTER_ROOT on host to /tiup-cluster control container
-      - ${TIUP_MIRRORS:-/dev/null}:/mirrors
