@@ -14,16 +14,13 @@
 package command
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path"
 	"strings"
-	"time"
 
 	"github.com/fatih/color"
-	"github.com/google/uuid"
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
@@ -36,7 +33,7 @@ import (
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/proxy"
 	"github.com/pingcap/tiup/pkg/repository"
-	"github.com/pingcap/tiup/pkg/telemetry"
+
 	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/version"
@@ -45,27 +42,17 @@ import (
 )
 
 var (
-	errNS         = errorx.NewNamespace("cmd")
-	rootCmd       *cobra.Command
-	gOpt          operator.Options
-	skipConfirm   bool
-	reportEnabled bool // is telemetry report enabled
-	teleReport    *telemetry.Report
-	clusterReport *telemetry.ClusterReport
-	teleNodeInfos []*telemetry.NodeInfo
-	teleTopology  string
-	teleCommand   []string
-	log           = logprinter.NewLogger("") // init default logger
+	errNS       = errorx.NewNamespace("cmd")
+	rootCmd     *cobra.Command
+	gOpt        operator.Options
+	skipConfirm bool
+	log         = logprinter.NewLogger("") // init default logger
 )
 
-var tidbSpec *spec.SpecManager
-var cm *manager.Manager
-
-func scrubClusterName(n string) string {
-	// prepend the telemetry secret to cluster name, so that two installations
-	// of tiup with the same cluster name produce different hashes
-	return "cluster_" + telemetry.SaltedHash(n)
-}
+var (
+	tidbSpec *spec.SpecManager
+	cm       *manager.Manager
+)
 
 func getParentNames(cmd *cobra.Command) []string {
 	if cmd == nil {
@@ -124,8 +111,6 @@ func init() {
 				return err
 			}
 			tiupmeta.SetGlobalEnv(env)
-
-			teleCommand = getParentNames(cmd)
 
 			if gOpt.NativeSSH {
 				gOpt.SSHType = executor.SSHTypeSystem
@@ -208,7 +193,6 @@ func init() {
 		newPullCmd(),
 		newPushCmd(),
 		newTestCmd(), // hidden command for test internally
-		newTelemetryCmd(),
 		newReplayCmd(),
 		newTemplateCmd(),
 		newTLSCmd(),
@@ -277,22 +261,6 @@ func Execute() {
 	zap.L().Info("Execute command", zap.String("command", tui.OsArgs()))
 	zap.L().Debug("Environment variables", zap.Strings("env", os.Environ()))
 
-	teleReport = new(telemetry.Report)
-	clusterReport = new(telemetry.ClusterReport)
-	teleReport.EventDetail = &telemetry.Report_Cluster{Cluster: clusterReport}
-	reportEnabled = telemetry.Enabled()
-	if reportEnabled {
-		eventUUID := os.Getenv(localdata.EnvNameTelemetryEventUUID)
-		if eventUUID == "" {
-			eventUUID = uuid.New().String()
-		}
-		teleReport.InstallationUUID = telemetry.GetUUID()
-		teleReport.EventUUID = eventUUID
-		teleReport.EventUnixTimestamp = time.Now().Unix()
-		teleReport.Version = telemetry.TiUPMeta()
-	}
-
-	start := time.Now()
 	code := 0
 	err := rootCmd.Execute()
 	if err != nil {
@@ -300,59 +268,6 @@ func Execute() {
 	}
 
 	zap.L().Info("Execute command finished", zap.Int("code", code), zap.Error(err))
-
-	if reportEnabled {
-		f := func() {
-			defer func() {
-				if r := recover(); r != nil {
-					if tiupmeta.DebugMode {
-						log.Debugf("Recovered in telemetry report: %v", r)
-					}
-				}
-			}()
-
-			clusterReport.ExitCode = int32(code)
-			clusterReport.Nodes = teleNodeInfos
-			if teleTopology != "" {
-				if data, err := telemetry.ScrubYaml(
-					[]byte(teleTopology),
-					map[string]struct{}{
-						"host":       {},
-						"name":       {},
-						"user":       {},
-						"group":      {},
-						"deploy_dir": {},
-						"data_dir":   {},
-						"log_dir":    {},
-					}, // fields to hash
-					map[string]struct{}{
-						"config":         {},
-						"server_configs": {},
-					}, // fields to omit
-					telemetry.GetSecret(),
-				); err == nil {
-					clusterReport.Topology = (string(data))
-				}
-			}
-			clusterReport.TakeMilliseconds = uint64(time.Since(start).Milliseconds())
-			clusterReport.Command = strings.Join(teleCommand, " ")
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
-			tele := telemetry.NewTelemetry()
-			err := tele.Report(ctx, teleReport)
-			if tiupmeta.DebugMode {
-				if err != nil {
-					log.Infof("report failed: %v", err)
-				}
-				log.Errorf("report: %s\n", teleReport.String())
-				if data, err := json.Marshal(teleReport); err == nil {
-					log.Debugf("report: %s\n", string(data))
-				}
-			}
-			cancel()
-		}
-
-		f()
-	}
 
 	switch log.GetDisplayMode() {
 	case logprinter.DisplayModeJSON:

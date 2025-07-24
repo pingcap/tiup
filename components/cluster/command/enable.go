@@ -31,8 +31,6 @@ func newEnableCmd() *cobra.Command {
 			}
 
 			clusterName := args[0]
-			clusterReport.ID = scrubClusterName(clusterName)
-			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
 			return cm.EnableCluster(clusterName, gOpt, true)
 		},

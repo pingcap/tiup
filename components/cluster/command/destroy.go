@@ -38,8 +38,6 @@ You can retain some nodes and roles data when destroy cluster, eg:
 			}
 
 			clusterName := args[0]
-			clusterReport.ID = scrubClusterName(clusterName)
-			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
 			// Validate the retained roles to prevent unexpected deleting data
 			if len(destroyOpt.RetainDataRoles) > 0 {

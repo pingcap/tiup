@@ -44,8 +44,6 @@ func newDisplayCmd() *cobra.Command {
 
 			gOpt.APITimeout = statusTimeout
 			dopt.ClusterName = args[0]
-			clusterReport.ID = scrubClusterName(dopt.ClusterName)
-			teleCommand = append(teleCommand, scrubClusterName(dopt.ClusterName))
 
 			exist, err := tidbSpec.Exist(dopt.ClusterName)
 			if err != nil {
