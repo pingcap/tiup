@@ -6,7 +6,7 @@
 set -o errexit
 set -o pipefail
 set -o nounset
-# set -o xtrace
+set -o xtrace
 
 ERROR() {
     echo -e "\e[101m\e[97m[ERROR]\e[49m\e[39m" "$@"
@@ -148,19 +148,19 @@ fi
 rm -rf ./control/tiup-cluster
 mkdir -p ./control/tiup-cluster/tiup-cluster
 # Copy the tiup-cluster directory if we're not mounting the TIUP_CLUSTER_ROOT
-if [ -z "${DEV}" ]; then
-    # Dockerfile does not allow `ADD ..`. So we need to copy it here in setup.
-    INFO "Copying .. to control/tiup-cluster"
-    (
-        # TODO support exclude-ignore, check version of tar support this.
-        # https://www.gnu.org/software/tar/manual/html_section/tar_48.html#IDX408
-        # (cd ..; tar --exclude=./docker --exclude=./.git --exclude-ignore=.gitignore -cf - .)  | tar Cxf ./control/tiup-cluster -
-        (cd ..; tar --exclude=./docker --exclude=./.git -cf - .)  | tar Cxf ./control/tiup-cluster -
-    )
-else
-    INFO "Build tiup-cluster in $TIUP_CLUSTER_ROOT"
-    (cd "${TIUP_CLUSTER_ROOT}";make failpoint-enable;GOOS=linux GOARCH=amd64 make tiup cluster dm;make failpoint-disable)
-fi
+#if [ -z "${DEV}" ]; then
+#    # Dockerfile does not allow `ADD ..`. So we need to copy it here in setup.
+#    INFO "Copying .. to control/tiup-cluster"
+#    (
+#        # TODO support exclude-ignore, check version of tar support this.
+#        # https://www.gnu.org/software/tar/manual/html_section/tar_48.html#IDX408
+#        # (cd ..; tar --exclude=./docker --exclude=./.git --exclude-ignore=.gitignore -cf - .)  | tar Cxf ./control/tiup-cluster -
+#        (cd ..; tar --exclude=./docker --exclude=./.git -cf - .)  | tar Cxf ./control/tiup-cluster -
+#    )
+#else
+#    INFO "Build tiup-cluster in $TIUP_CLUSTER_ROOT"
+#    (cd "${TIUP_CLUSTER_ROOT}";make failpoint-enable;GOOS=linux GOARCH=amd64 make tiup cluster dm;make failpoint-disable)
+#fi
 
 if [ "${INIT_ONLY}" -eq 1 ]; then
     exit 0
@@ -184,11 +184,9 @@ exists docker ||
       exit 1; }
 
 exists pip ||
-    {
-        INFO "Install pip from https://bootstrap.pypa.io/get-pip.py";
-        curl -sSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py || exit 1;
-    }
-pip install -U jinja2
+    { ERROR "Please install pip (https://docs.docker.com/engine/installation/)";
+      exit 1; }
+pip3 install -U jinja2
 
 exist_network=$(docker network ls | awk '{if($2 == "tiops") print $1}')
 if [[ "$exist_network" == "" ]]; then
@@ -223,24 +221,28 @@ if [[ "${INCLUDE_PROXY_NODES}" -eq 1 ]]; then
     proxy_prefix=${PROXY_SUBNET%.*}
 fi
 
-python -c "from jinja2 import Template; print(Template(open('docker-compose.yml.tpl').read()).render(nodes=$NODES, ipprefix='$ipprefix', ssh_proxy=$ssh_proxy, proxy_prefix='$proxy_prefix'))" > docker-compose.yml
+python -c "from jinja2 import Template; print(Template(open('docker-compose.yml.tpl').read()).render(nodes=$NODES, ipprefix='$ipprefix', ssh_proxy=$ssh_proxy, proxy_prefix='$proxy_prefix', tiup_cluster_root='$TIUP_CLUSTER_ROOT'))" > docker-compose.yml
 sed "s/__IPPREFIX__/$ipprefix/g" docker-compose.dm.yml.tpl > docker-compose.dm.yml
 sed -i '/TIUP_TEST_IP_PREFIX/d' ./secret/control.env
 echo "TIUP_TEST_IP_PREFIX=$ipprefix" >> ./secret/control.env
 
 INFO "Running \`docker-compose build\`"
 # shellcheck disable=SC2086
-docker compose -f docker-compose.yml ${COMPOSE} ${DEV} build
+cat docker-compose.yml
+echo ${TIUP_CLUSTER_ROOT}
+docker compose -f docker-compose.yml ${COMPOSE} build
 
 INFO "Running \`docker-compose up\`"
 if [ "${RUN_AS_DAEMON}" -eq 1 ]; then
     # shellcheck disable=SC2086
-    docker compose -f docker-compose.yml ${COMPOSE} ${DEV} up -d
+    docker compose -f docker-compose.yml ${COMPOSE} up -d
     INFO "All containers started, run \`docker ps\` to view"
 else
     INFO "Please run \`docker exec -it tiup-cluster-control bash\` in another terminal to proceed"
     # shellcheck disable=SC2086
-    docker compose -f docker-compose.yml ${COMPOSE} ${DEV} up
+    docker compose -f docker-compose.yml ${COMPOSE} up
 fi
 
 popd
+
+exit 1

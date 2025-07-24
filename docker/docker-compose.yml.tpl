@@ -1,4 +1,3 @@
-version: "3.7"
 x-node: &default-node
   build: ./node
   env_file: ./secret/node.env
