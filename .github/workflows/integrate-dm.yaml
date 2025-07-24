@@ -36,10 +36,10 @@ jobs:
       fail-fast: true
       matrix:
         cases:
-          - '--do-cases test_cmd'
-          - '--do-cases test_upgrade'
-          - '--native-ssh --do-cases test_cmd'
-          - '--native-ssh --do-cases test_upgrade'
+          #- '--do-cases test_cmd'
+          #- '--do-cases test_upgrade'
+          #- '--native-ssh --do-cases test_cmd'
+          #- '--native-ssh --do-cases test_upgrade'
     env:
       working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
     steps:

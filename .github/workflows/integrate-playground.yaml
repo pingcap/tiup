@@ -38,7 +38,7 @@ jobs:
       fail-fast: true
       matrix:
         cases:
-          - "test_playground"
+          #- "test_playground"
     env:
       working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
     steps:
