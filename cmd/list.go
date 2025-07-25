@@ -110,7 +110,13 @@ func showComponentList(env *environment.Environment, opt listOptions) (*listResu
 	}
 
 	index := v1manifest.Index{}
-	_, exists, err := env.V1Repository().Local().LoadManifest(&index)
+	repo := env.V1Repository()
+
+	if repo == nil {
+		return nil, errors.New("invalid or corrupt repository")
+	}
+
+	_, exists, err := repo.Local().LoadManifest(&index)
 	if err != nil {
 		return nil, err
 	}
