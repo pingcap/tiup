@@ -914,7 +914,7 @@ func newMirrorCloneCmd() *cobra.Command {
 	var (
 		options     = repository.CloneOptions{Components: map[string]*[]string{}}
 		components  []string
-		repo        *repository.V1Repository
+		repo        repository.Repository
 		initialized bool
 	)
 

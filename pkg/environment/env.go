@@ -72,7 +72,7 @@ type Environment struct {
 	profile *localdata.Profile
 	// repo represents the components repository of TiUP, it can be a
 	// local file system or a HTTP URL
-	v1Repo *repository.V1Repository
+	v1Repo repository.Repository
 }
 
 // InitEnv creates a new Environment object configured using env vars and defaults.
@@ -108,7 +108,7 @@ func InitEnv(options repository.Options, mOpt repository.MirrorOptions) (*Enviro
 }
 
 // V1Repository returns the initialized v1 repository
-func (env *Environment) V1Repository() *repository.V1Repository {
+func (env *Environment) V1Repository() repository.Repository {
 	return env.v1Repo
 }
 
@@ -146,11 +146,6 @@ func (env *Environment) UpdateComponents(specs []string, nightly, force bool) er
 	return env.v1Repo.UpdateComponents(v1specs)
 }
 
-// PlatformString returns a string identifying the current system.
-func (env *Environment) PlatformString() string {
-	return env.v1Repo.PlatformString()
-}
-
 // SelfUpdate updates TiUP.
 func (env *Environment) SelfUpdate() error {
 	if err := env.v1Repo.DownloadTiUP(env.LocalPath("bin")); err != nil {
@@ -159,21 +154,6 @@ func (env *Environment) SelfUpdate() error {
 
 	// Cover the root.json from tiup.bar.gz
 	return localdata.InitProfile().ResetMirror(Mirror(), "")
-}
-
-func (env *Environment) downloadComponentv1(component string, version utils.Version, overwrite bool) error {
-	spec := repository.ComponentSpec{
-		ID:      component,
-		Version: string(version),
-		Force:   overwrite,
-	}
-
-	return env.v1Repo.UpdateComponents([]repository.ComponentSpec{spec})
-}
-
-// downloadComponent downloads the specific version of a component from repository
-func (env *Environment) downloadComponent(component string, version utils.Version, overwrite bool) error {
-	return env.downloadComponentv1(component, version, overwrite)
 }
 
 // SelectInstalledVersion selects the installed versions and the latest release version
@@ -257,8 +237,12 @@ func (env *Environment) DownloadComponentIfMissing(component string, ver utils.V
 
 	if needDownload {
 		fmt.Fprintf(os.Stderr, "The component `%s` version %s is not installed; downloading from repository.\n", component, ver.String())
-		err := env.downloadComponent(component, ver, false)
-		if err != nil {
+		spec := repository.ComponentSpec{
+			ID:      component,
+			Version: string(ver),
+			Force:   false,
+		}
+		if err := env.v1Repo.UpdateComponents([]repository.ComponentSpec{spec}); err != nil {
 			return "", err
 		}
 	}
@@ -268,11 +252,6 @@ func (env *Environment) DownloadComponentIfMissing(component string, ver utils.V
 	}
 
 	return ver, nil
-}
-
-// GetComponentInstalledVersion return the installed version of component.
-func (env *Environment) GetComponentInstalledVersion(component string, version utils.Version) (utils.Version, error) {
-	return env.profile.GetComponentInstalledVersion(component, version)
 }
 
 // BinaryPath return the installed binary path.
