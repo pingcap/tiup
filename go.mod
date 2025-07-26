@@ -44,7 +44,6 @@ require (
 	github.com/prometheus/common v0.42.0
 	github.com/prometheus/prom2json v1.3.2
 	github.com/r3labs/diff/v3 v3.0.1
-	github.com/relex/aini v1.5.0
 	github.com/sergi/go-diff v1.3.1
 	github.com/sethvargo/go-password v0.2.0
 	github.com/shirou/gopsutil v3.21.11+incompatible
@@ -92,7 +91,6 @@ require (
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/gohxs/readline v0.0.0-20171011095936-a780388e6e7c // indirect
 	github.com/google/flatbuffers v23.5.26+incompatible // indirect
-	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/hashicorp/go-version v1.7.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
