@@ -17,15 +17,16 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"testing"
 
 	"github.com/joomcode/errorx"
-	. "github.com/pingcap/check"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/utils"
+	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
 )
 
-func (s *metaSuiteTopo) TestDirectoryConflicts1(c *C) {
+func TestDirectoryConflicts1(t *testing.T) {
 	topo := Specification{}
 
 	err := yaml.Unmarshal([]byte(`
@@ -41,8 +42,8 @@ pd_servers:
   - host: 172.16.5.138
     data_dir: "/test-1"
 `), &topo)
-	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "directory conflict for '/test-1' between 'tidb_servers:172.16.5.138.deploy_dir' and 'pd_servers:172.16.5.138.data_dir'")
+	require.Error(t, err)
+	require.Equal(t, "directory conflict for '/test-1' between 'tidb_servers:172.16.5.138.deploy_dir' and 'pd_servers:172.16.5.138.data_dir'", err.Error())
 
 	err = yaml.Unmarshal([]byte(`
 global:
@@ -57,7 +58,7 @@ pd_servers:
   - host: 172.16.5.138
     data_dir: "test-1"
 `), &topo)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 
 	// report conflict if a non-import node use same dir as an imported one
 	err = yaml.Unmarshal([]byte(`
@@ -77,8 +78,8 @@ pd_servers:
     data_dir: /home/tidb/deploy/data.pd
     log_dir: /home/tidb/deploy/log
 `), &topo)
-	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "directory conflict for '/home/tidb/deploy' between 'tidb_servers:172.16.4.190.deploy_dir' and 'pd_servers:172.16.4.190.deploy_dir'")
+	require.Error(t, err)
+	require.Equal(t, "directory conflict for '/home/tidb/deploy' between 'tidb_servers:172.16.4.190.deploy_dir' and 'pd_servers:172.16.4.190.deploy_dir'", err.Error())
 
 	// two imported tidb pass the validation, two pd servers (only one is imported) don't
 	err = yaml.Unmarshal([]byte(`
@@ -107,11 +108,11 @@ pd_servers:
     peer_port: 2382
     deploy_dir: /home/tidb/deploy
 `), &topo)
-	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "directory conflict for '/home/tidb/deploy' between 'pd_servers:172.16.4.190.deploy_dir' and 'pd_servers:172.16.4.190.deploy_dir'")
+	require.Error(t, err)
+	require.Equal(t, "directory conflict for '/home/tidb/deploy' between 'pd_servers:172.16.4.190.deploy_dir' and 'pd_servers:172.16.4.190.deploy_dir'", err.Error())
 }
 
-func (s *metaSuiteTopo) TestPortConflicts(c *C) {
+func TestPortConflicts(t *testing.T) {
 	topo := Specification{}
 	err := yaml.Unmarshal([]byte(`
 global:
@@ -126,8 +127,8 @@ tikv_servers:
   - host: 172.16.5.138
     status_port: 1234
 `), &topo)
-	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "port conflict for '1234' between 'tidb_servers:172.16.5.138.port' and 'tikv_servers:172.16.5.138.status_port'")
+	require.Error(t, err)
+	require.Equal(t, "port conflict for '1234' between 'tidb_servers:172.16.5.138.port' and 'tikv_servers:172.16.5.138.status_port'", err.Error())
 
 	topo = Specification{}
 	err = yaml.Unmarshal([]byte(`
@@ -152,8 +153,8 @@ tiflash_servers:
     flash_proxy_status_port: 1234
     metrics_port: 1666
 `), &topo)
-	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "port conflict for '1234' between 'tiflash_servers:172.16.5.138.flash_service_port' and 'tiflash_servers:172.16.5.138.flash_proxy_status_port'")
+	require.Error(t, err)
+	require.Equal(t, "port conflict for '1234' between 'tiflash_servers:172.16.5.138.flash_service_port' and 'tiflash_servers:172.16.5.138.flash_proxy_status_port'", err.Error())
 
 	topo = Specification{}
 	err = yaml.Unmarshal([]byte(`
@@ -178,8 +179,8 @@ tiflash_servers:
     flash_proxy_status_port: 1555
     metrics_port: 1666
 `), &topo)
-	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "port conflict for '1234' between 'tiflash_servers:172.16.5.138.flash_proxy_port' and 'tiflash_servers:172.16.5.138.flash_proxy_port'")
+	require.Error(t, err)
+	require.Equal(t, "port conflict for '1234' between 'tiflash_servers:172.16.5.138.flash_proxy_port' and 'tiflash_servers:172.16.5.138.flash_proxy_port'", err.Error())
 
 	topo = Specification{}
 	// tispark_masters has "omitempty" in its tag value
@@ -193,11 +194,11 @@ tikv_servers:
   - host: 172.16.5.138
     status_port: 2345
 `), &topo)
-	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "port conflict for '1234' between 'tispark_masters:172.16.5.138.port' and 'monitored:172.16.5.138.node_exporter_port'")
+	require.Error(t, err)
+	require.Equal(t, "port conflict for '1234' between 'tispark_masters:172.16.5.138.port' and 'monitored:172.16.5.138.node_exporter_port'", err.Error())
 }
 
-func (s *metaSuiteTopo) TestPlatformConflicts(c *C) {
+func TestPlatformConflicts(t *testing.T) {
 	// aarch64 and arm64 are equal
 	topo := Specification{}
 	err := yaml.Unmarshal([]byte(`
@@ -213,7 +214,7 @@ tikv_servers:
     arch: "arm64"
     os: "linux"
 `), &topo)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 
 	// different arch defined for the same host
 	topo = Specification{}
@@ -229,8 +230,8 @@ tikv_servers:
     arch: "amd64"
     os: "linux"
 `), &topo)
-	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "platform mismatch for '172.16.5.138' between 'tidb_servers:linux/arm64' and 'tikv_servers:linux/amd64'")
+	require.Error(t, err)
+	require.Equal(t, "platform mismatch for '172.16.5.138' between 'tidb_servers:linux/arm64' and 'tikv_servers:linux/amd64'", err.Error())
 
 	// different os defined for the same host
 	topo = Specification{}
@@ -247,11 +248,11 @@ tikv_servers:
     arch: "arm64"
     os: "linux"
 `), &topo)
-	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "platform mismatch for '172.16.5.138' between 'tidb_servers:darwin/arm64' and 'tikv_servers:linux/arm64'")
+	require.Error(t, err)
+	require.Equal(t, "platform mismatch for '172.16.5.138' between 'tidb_servers:darwin/arm64' and 'tikv_servers:linux/arm64'", err.Error())
 }
 
-func (s *metaSuiteTopo) TestCountDir(c *C) {
+func TestCountDir(t *testing.T) {
 	topo := Specification{}
 
 	err := yaml.Unmarshal([]byte(`
@@ -266,13 +267,13 @@ pd_servers:
   - host: 172.16.5.138
     data_dir: "/test-data/data-2"
 `), &topo)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 	cnt := topo.CountDir("172.16.5.138", "/home/test1/test-deploy/pd-2379")
-	c.Assert(cnt, Equals, 2)
+	require.Equal(t, 2, cnt)
 	cnt = topo.CountDir("172.16.5.138", "") // the default user home
-	c.Assert(cnt, Equals, 4)
+	require.Equal(t, 4, cnt)
 	cnt = topo.CountDir("172.16.5.138", "/test-data/data")
-	c.Assert(cnt, Equals, 0) // should not match partial path
+	require.Equal(t, 0, cnt) // should not match partial path
 
 	err = yaml.Unmarshal([]byte(`
 global:
@@ -286,13 +287,13 @@ pd_servers:
   - host: 172.16.5.138
     data_dir: "/test-data/data-2"
 `), &topo)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 	cnt = topo.CountDir("172.16.5.138", "/test-deploy/pd-2379")
-	c.Assert(cnt, Equals, 2)
+	require.Equal(t, 2, cnt)
 	cnt = topo.CountDir("172.16.5.138", "")
-	c.Assert(cnt, Equals, 0)
+	require.Equal(t, 0, cnt)
 	cnt = topo.CountDir("172.16.5.138", "test-data")
-	c.Assert(cnt, Equals, 0)
+	require.Equal(t, 0, cnt)
 
 	err = yaml.Unmarshal([]byte(`
 global:
@@ -308,15 +309,15 @@ pd_servers:
     data_dir: "data-2"
   - host: 172.16.5.139
 `), &topo)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 	// if per-instance data_dir is set, the global data_dir is ignored, and if it
 	// is a relative path, it will be under the instance's deploy_dir
 	cnt = topo.CountDir("172.16.5.138", "/test-deploy/pd-2379")
-	c.Assert(cnt, Equals, 3)
+	require.Equal(t, 3, cnt)
 	cnt = topo.CountDir("172.16.5.138", "")
-	c.Assert(cnt, Equals, 0)
+	require.Equal(t, 0, cnt)
 	cnt = topo.CountDir("172.16.5.139", "/test-data")
-	c.Assert(cnt, Equals, 1)
+	require.Equal(t, 1, cnt)
 
 	err = yaml.Unmarshal([]byte(`
 global:
@@ -336,40 +337,40 @@ pd_servers:
     data_dir: /home/tidb/deploy/data.pd
     log_dir: /home/tidb/deploy/log
 `), &topo)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 	cnt = topo.CountDir("172.16.4.190", "/home/tidb/deploy")
-	c.Assert(cnt, Equals, 5)
+	require.Equal(t, 5, cnt)
 }
 
-func (s *metaSuiteTopo) TestCountDir2(c *C) {
+func TestCountDir2(t *testing.T) {
 	file := filepath.Join("testdata", "countdir.yaml")
 	meta := ClusterMeta{}
 	yamlFile, err := os.ReadFile(file)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 	err = yaml.UnmarshalStrict(yamlFile, &meta)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 	topo := meta.Topology
 
 	// If the imported dir is somehow containing paths ens with slash,
 	// or having multiple slash in it, the count result should not
 	// be different.
 	cnt := topo.CountDir("172.17.0.4", "/foo/bar/sometidbpath123")
-	c.Assert(cnt, Equals, 3)
+	require.Equal(t, 3, cnt)
 	cnt = topo.CountDir("172.17.0.4", "/foo/bar/sometidbpath123/")
-	c.Assert(cnt, Equals, 3)
+	require.Equal(t, 3, cnt)
 	cnt = topo.CountDir("172.17.0.4", "/foo/bar/sometidbpath123//")
-	c.Assert(cnt, Equals, 3)
+	require.Equal(t, 3, cnt)
 	cnt = topo.CountDir("172.17.0.4", "/foo/bar/sometidbpath123/log")
-	c.Assert(cnt, Equals, 1)
+	require.Equal(t, 1, cnt)
 	cnt = topo.CountDir("172.17.0.4", "/foo/bar/sometidbpath123//log")
-	c.Assert(cnt, Equals, 1)
+	require.Equal(t, 1, cnt)
 	cnt = topo.CountDir("172.17.0.4", "/foo/bar/sometidbpath123/log/")
-	c.Assert(cnt, Equals, 1)
+	require.Equal(t, 1, cnt)
 	cnt = topo.CountDir("172.17.0.4", "/foo/bar/sometidbpath123//log/")
-	c.Assert(cnt, Equals, 1)
+	require.Equal(t, 1, cnt)
 }
 
-func (s *metaSuiteTopo) TestTiSparkSpecValidation(c *C) {
+func TestTiSparkSpecValidation(t *testing.T) {
 	topo := Specification{}
 	err := yaml.Unmarshal([]byte(`
 pd_servers:
@@ -384,7 +385,7 @@ tispark_workers:
   - host: 172.16.5.139
     port: 1235
 `), &topo)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 
 	topo = Specification{}
 	err = yaml.Unmarshal([]byte(`
@@ -397,8 +398,8 @@ tispark_masters:
   - host: 172.16.5.139
     port: 1235
 `), &topo)
-	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "a TiSpark enabled cluster with more than 1 Spark master node is not supported")
+	require.Error(t, err)
+	require.Equal(t, "a TiSpark enabled cluster with more than 1 Spark master node is not supported", err.Error())
 
 	topo = Specification{}
 	err = yaml.Unmarshal([]byte(`
@@ -411,8 +412,8 @@ tispark_workers:
   - host: 172.16.5.139
     port: 1235
 `), &topo)
-	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "there must be a Spark master node if you want to use the TiSpark component")
+	require.Error(t, err)
+	require.Equal(t, "there must be a Spark master node if you want to use the TiSpark component", err.Error())
 
 	err = yaml.Unmarshal([]byte(`
 pd_servers:
@@ -430,11 +431,11 @@ tispark_workers:
     port: 1236
     web_port: 8089
 `), &topo)
-	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "the host 172.16.5.139 is duplicated: multiple TiSpark workers on the same host is not supported by Spark")
+	require.Error(t, err)
+	require.Equal(t, "the host 172.16.5.139 is duplicated: multiple TiSpark workers on the same host is not supported by Spark", err.Error())
 }
 
-func (s *metaSuiteTopo) TestTLSEnabledValidation(c *C) {
+func TestTLSEnabledValidation(t *testing.T) {
 	topo := Specification{}
 	err := yaml.Unmarshal([]byte(`
 global:
@@ -449,7 +450,7 @@ tikv_servers:
   - host: 172.16.5.138
     port: 1236
 `), &topo)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 
 	topo = Specification{}
 	err = yaml.Unmarshal([]byte(`
@@ -464,11 +465,11 @@ tispark_masters:
   - host: 172.16.5.139
     port: 1235
 `), &topo)
-	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "component tispark is not supported in TLS enabled cluster")
+	require.Error(t, err)
+	require.Equal(t, "component tispark is not supported in TLS enabled cluster", err.Error())
 }
 
-func (s *metaSuiteTopo) TestMonitorAgentValidation(c *C) {
+func TestMonitorAgentValidation(t *testing.T) {
 	topo := Specification{}
 	err := yaml.Unmarshal([]byte(`
 pd_servers:
@@ -477,7 +478,7 @@ pd_servers:
   - host: 172.16.5.139
     ignore_exporter: true
 `), &topo)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 
 	topo = Specification{}
 	err = yaml.Unmarshal([]byte(`
@@ -488,11 +489,11 @@ tikv_servers:
   - host: 172.16.5.138
     ignore_exporter: true
 `), &topo)
-	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "ignore_exporter mismatch for '172.16.5.138' between 'tikv_servers:true' and 'pd_servers:false'")
+	require.Error(t, err)
+	require.Equal(t, "ignore_exporter mismatch for '172.16.5.138' between 'tikv_servers:true' and 'pd_servers:false'", err.Error())
 }
 
-func (s *metaSuiteTopo) TestCrossClusterPortConflicts(c *C) {
+func TestCrossClusterPortConflicts(t *testing.T) {
 	topo1 := Specification{}
 	err := yaml.Unmarshal([]byte(`
 pd_servers:
@@ -500,7 +501,7 @@ pd_servers:
     client_port: 1234
     peer_port: 1235
 `), &topo1)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 
 	topo2 := Specification{}
 	err = yaml.Unmarshal([]byte(`
@@ -516,19 +517,19 @@ pd_servers:
     peer_port: 2237
     ignore_exporter: true
 `), &topo2)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 
 	clsList := make(map[string]Metadata)
 
 	// no port conflict with empty list
 	err = CheckClusterPortConflict(clsList, "topo", &topo2)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 
 	clsList["topo1"] = &ClusterMeta{Topology: &topo1}
 
 	// no port conflict
 	err = CheckClusterPortConflict(clsList, "topo", &topo2)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 
 	// add topo2 to the list
 	clsList["topo2"] = &ClusterMeta{Topology: &topo2}
@@ -539,13 +540,13 @@ pd_servers:
 tidb_servers:
   - host: 172.16.5.138
 `), &topo3)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 	err = CheckClusterPortConflict(clsList, "topo", &topo3)
-	c.Assert(err, NotNil)
-	c.Assert(errors.Cause(err).Error(), Equals, "spec.deploy.port_conflict: Deploy port conflicts to an existing cluster")
+	require.Error(t, err)
+	require.Equal(t, "spec.deploy.port_conflict: Deploy port conflicts to an existing cluster", errors.Cause(err).Error())
 	suggestion, ok := errorx.ExtractProperty(err, utils.ErrPropSuggestion)
-	c.Assert(ok, IsTrue)
-	c.Assert(suggestion, Equals, `The port you specified in the topology file is:
+	require.True(t, ok)
+	require.Equal(t, `The port you specified in the topology file is:
   Port:      9100
   Component: monitor 172.16.5.138
 
@@ -554,7 +555,7 @@ It conflicts to a port in the existing cluster:
   Existing Port:         9100
   Existing Component:    monitor 172.16.5.138
 
-Please change to use another port or another host.`)
+Please change to use another port or another host.`, suggestion)
 
 	// monitoring agent port conflict but the instance marked as ignore_exporter
 	topo3 = Specification{}
@@ -563,9 +564,9 @@ tidb_servers:
 - host: 172.16.5.138
   ignore_exporter: true
 `), &topo3)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 	err = CheckClusterPortConflict(clsList, "topo", &topo3)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 
 	// monitoring agent port conflict but the existing instance marked as ignore_exporter
 	topo3 = Specification{}
@@ -576,9 +577,9 @@ monitored:
 tidb_servers:
 - host: 172.16.5.139
 `), &topo3)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 	err = CheckClusterPortConflict(clsList, "topo", &topo3)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 
 	// component port conflict
 	topo4 := Specification{}
@@ -590,13 +591,13 @@ pump_servers:
   - host: 172.16.5.138
     port: 2235
 `), &topo4)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 	err = CheckClusterPortConflict(clsList, "topo", &topo4)
-	c.Assert(err, NotNil)
-	c.Assert(errors.Cause(err).Error(), Equals, "spec.deploy.port_conflict: Deploy port conflicts to an existing cluster")
+	require.Error(t, err)
+	require.Equal(t, "spec.deploy.port_conflict: Deploy port conflicts to an existing cluster", errors.Cause(err).Error())
 	suggestion, ok = errorx.ExtractProperty(err, utils.ErrPropSuggestion)
-	c.Assert(ok, IsTrue)
-	c.Assert(suggestion, Equals, `The port you specified in the topology file is:
+	require.True(t, ok)
+	require.Equal(t, `The port you specified in the topology file is:
   Port:      2235
   Component: pump 172.16.5.138
 
@@ -605,10 +606,10 @@ It conflicts to a port in the existing cluster:
   Existing Port:         2235
   Existing Component:    pd 172.16.5.138
 
-Please change to use another port or another host.`)
+Please change to use another port or another host.`, suggestion)
 }
 
-func (s *metaSuiteTopo) TestCrossClusterDirConflicts(c *C) {
+func TestCrossClusterDirConflicts(t *testing.T) {
 	topo1 := Specification{}
 	err := yaml.Unmarshal([]byte(`
 pd_servers:
@@ -616,7 +617,7 @@ pd_servers:
     client_port: 1234
     peer_port: 1235
 `), &topo1)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 
 	topo2 := Specification{}
 	err = yaml.Unmarshal([]byte(`
@@ -628,19 +629,19 @@ pd_servers:
     client_port: 2234
     peer_port: 2235
 `), &topo2)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 
 	clsList := make(map[string]Metadata)
 
 	// no port conflict with empty list
 	err = CheckClusterDirConflict(clsList, "topo", &topo2)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 
 	clsList["topo1"] = &ClusterMeta{Topology: &topo1}
 
 	// no port conflict
 	err = CheckClusterDirConflict(clsList, "topo", &topo2)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 
 	// add topo2 to the list
 	clsList["topo2"] = &ClusterMeta{Topology: &topo2}
@@ -651,13 +652,13 @@ pd_servers:
 tidb_servers:
   - host: 172.16.5.138
 `), &topo3)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 	err = CheckClusterDirConflict(clsList, "topo", &topo3)
-	c.Assert(err, NotNil)
-	c.Assert(errors.Cause(err).Error(), Equals, "spec.deploy.dir_conflict: Deploy directory conflicts to an existing cluster")
+	require.Error(t, err)
+	require.Equal(t, "spec.deploy.dir_conflict: Deploy directory conflicts to an existing cluster", errors.Cause(err).Error())
 	suggestion, ok := errorx.ExtractProperty(err, utils.ErrPropSuggestion)
-	c.Assert(ok, IsTrue)
-	c.Assert(suggestion, Equals, `The directory you specified in the topology file is:
+	require.True(t, ok)
+	require.Equal(t, `The directory you specified in the topology file is:
   Directory: monitor deploy directory /home/tidb/deploy/monitor-9100
   Component: tidb 172.16.5.138
 
@@ -666,7 +667,7 @@ It conflicts to a directory in the existing cluster:
   Existing Directory:    monitor deploy directory /home/tidb/deploy/monitor-9100
   Existing Component:    pd 172.16.5.138
 
-Please change to use another directory or another host.`)
+Please change to use another directory or another host.`, suggestion)
 
 	// no dir conflict error if one of the instance is marked as ignore_exporter
 	err = yaml.Unmarshal([]byte(`
@@ -674,9 +675,9 @@ tidb_servers:
   - host: 172.16.5.138
     ignore_exporter: true
 `), &topo3)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 	err = CheckClusterDirConflict(clsList, "topo", &topo3)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 
 	// component with different port has no dir conflict
 	topo4 := Specification{}
@@ -688,9 +689,9 @@ pump_servers:
   - host: 172.16.5.138
     port: 2235
 `), &topo4)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 	err = CheckClusterDirConflict(clsList, "topo", &topo4)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 
 	// component with relative dir has no dir conflic
 	err = yaml.Unmarshal([]byte(`
@@ -702,9 +703,9 @@ pump_servers:
     port: 2235
     data_dir: "pd-1234"
 `), &topo4)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 	err = CheckClusterDirConflict(clsList, "topo", &topo4)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 
 	// component with absolute dir conflict
 	err = yaml.Unmarshal([]byte(`
@@ -716,13 +717,13 @@ pump_servers:
     port: 2235
     data_dir: "/home/tidb/deploy/pd-2234"
 `), &topo4)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 	err = CheckClusterDirConflict(clsList, "topo", &topo4)
-	c.Assert(err, NotNil)
-	c.Assert(errors.Cause(err).Error(), Equals, "spec.deploy.dir_conflict: Deploy directory conflicts to an existing cluster")
+	require.Error(t, err)
+	require.Equal(t, "spec.deploy.dir_conflict: Deploy directory conflicts to an existing cluster", errors.Cause(err).Error())
 	suggestion, ok = errorx.ExtractProperty(err, utils.ErrPropSuggestion)
-	c.Assert(ok, IsTrue)
-	c.Assert(suggestion, Equals, `The directory you specified in the topology file is:
+	require.True(t, ok)
+	require.Equal(t, `The directory you specified in the topology file is:
   Directory: data directory /home/tidb/deploy/pd-2234
   Component: pump 172.16.5.138
 
@@ -731,36 +732,40 @@ It conflicts to a directory in the existing cluster:
   Existing Directory:    deploy directory /home/tidb/deploy/pd-2234
   Existing Component:    pd 172.16.5.138
 
-Please change to use another directory or another host.`)
+Please change to use another directory or another host.`, suggestion)
 }
 
-func (s *metaSuiteTopo) TestRelativePathDetect(c *C) {
+func TestRelativePathDetect(t *testing.T) {
 	servers := map[string]string{
 		"monitoring_servers":   "rule_dir",
 		"grafana_servers":      "dashboard_dir",
 		"alertmanager_servers": "config_file",
 	}
-	paths := map[string]Checker{
-		"/an/absolute/path":   IsNil,
-		"an/relative/path":    NotNil,
-		"./an/relative/path":  NotNil,
-		"../an/relative/path": NotNil,
+	paths := map[string]bool{
+		"/an/absolute/path":   true,
+		"an/relative/path":    false,
+		"./an/relative/path":  false,
+		"../an/relative/path": false,
 	}
 
 	for server, field := range servers {
-		for p, checker := range paths {
+		for p, expectNil := range paths {
 			topo5 := Specification{}
 			content := fmt.Sprintf(`
 %s:
   - host: 1.1.1.1
     %s: %s
 `, server, field, p)
-			c.Assert(yaml.Unmarshal([]byte(content), &topo5), checker)
+      if expectNil {
+        require.Nil(t, yaml.Unmarshal([]byte(content), &topo5))
+      } else {
+        require.NotNil(t, yaml.Unmarshal([]byte(content), &topo5))
+      }
 		}
 	}
 }
 
-func (s *metaSuiteTopo) TestTiKVLocationLabelsCheck(c *C) {
+func TestTiKVLocationLabelsCheck(t *testing.T) {
 	// 2 tikv on different host
 	topo := Specification{}
 	err := yaml.Unmarshal([]byte(`
@@ -772,11 +777,11 @@ tikv_servers:
     port: 20160
     status_port: 20180
 `), &topo)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 	err = CheckTiKVLabels(nil, &topo)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 	err = CheckTiKVLabels([]string{}, &topo)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 
 	// 2 tikv on the same host without label
 	topo = Specification{}
@@ -789,9 +794,9 @@ tikv_servers:
     port: 20161
     status_port: 20181
 `), &topo)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 	err = CheckTiKVLabels(nil, &topo)
-	c.Assert(err, NotNil)
+	require.Error(t, err)
 
 	// 2 tikv on the same host with unacquainted label
 	topo = Specification{}
@@ -808,9 +813,9 @@ tikv_servers:
     config:
       server.labels: { zone: "zone1", host: "172.16.5.140" }
 `), &topo)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 	err = CheckTiKVLabels(nil, &topo)
-	c.Assert(err, NotNil)
+	require.Error(t, err)
 
 	// 2 tikv on the same host with correct label
 	topo = Specification{}
@@ -827,9 +832,9 @@ tikv_servers:
     config:
       server.labels: { zone: "zone1", host: "172.16.5.140" }
 `), &topo)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 	err = CheckTiKVLabels([]string{"zone", "host"}, &topo)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 
 	// 2 tikv on the same host with different config style
 	topo = Specification{}
@@ -849,12 +854,12 @@ tikv_servers:
         zone: "zone1"
         host: "172.16.5.140"
 `), &topo)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 	err = CheckTiKVLabels([]string{"zone", "host"}, &topo)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 }
 
-func (s *metaSuiteTopo) TestCountDirMultiPath(c *C) {
+func TestCountDirMultiPath(t *testing.T) {
 	topo := Specification{}
 
 	err := yaml.Unmarshal([]byte(`
@@ -866,15 +871,15 @@ tiflash_servers:
   - host: 172.19.0.104
     data_dir: "/home/tidb/birdstorm/data1, /home/tidb/birdstorm/data3"
 `), &topo)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 	cnt := topo.CountDir("172.19.0.104", "/home/tidb/birdstorm/data1")
-	c.Assert(cnt, Equals, 1)
+	require.Equal(t, 1, cnt)
 	cnt = topo.CountDir("172.19.0.104", "/home/tidb/birdstorm/data2")
-	c.Assert(cnt, Equals, 0)
+	require.Equal(t, 0, cnt)
 	cnt = topo.CountDir("172.19.0.104", "/home/tidb/birdstorm/data3")
-	c.Assert(cnt, Equals, 1)
+	require.Equal(t, 1, cnt)
 	cnt = topo.CountDir("172.19.0.104", "/home/tidb/birdstorm")
-	c.Assert(cnt, Equals, 2)
+	require.Equal(t, 2, cnt)
 
 	err = yaml.Unmarshal([]byte(`
 global:
@@ -885,44 +890,46 @@ tiflash_servers:
   - host: 172.19.0.104
     data_dir: "birdstorm/data1,/birdstorm/data3"
 `), &topo)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 	cnt = topo.CountDir("172.19.0.104", "/home/test1/test-deploy/tiflash-9000/birdstorm/data1")
-	c.Assert(cnt, Equals, 1)
+	require.Equal(t, 1, cnt)
 	cnt = topo.CountDir("172.19.0.104", "/birdstorm/data3")
-	c.Assert(cnt, Equals, 1)
+	require.Equal(t, 1, cnt)
 	cnt = topo.CountDir("172.19.0.104", "/home/tidb/birdstorm/data3")
-	c.Assert(cnt, Equals, 0)
+	require.Equal(t, 0, cnt)
 	cnt = topo.CountDir("172.19.0.104", "/home/test1/test-deploy/tiflash-9000/birdstorm/data3")
-	c.Assert(cnt, Equals, 0)
+	require.Equal(t, 0, cnt)
 	cnt = topo.CountDir("172.19.0.104", "/home/tidb/birdstorm")
-	c.Assert(cnt, Equals, 0)
+	require.Equal(t, 0, cnt)
 	cnt = topo.CountDir("172.19.0.104", "/birdstorm")
-	c.Assert(cnt, Equals, 1)
+	require.Equal(t, 1, cnt)
 
 	err = yaml.Unmarshal([]byte(`
 global:
   user: "test1"
   ssh_port: 220
   deploy_dir: "test-deploy"
-tiflash_servers:
+  data_dir: "/test-data"
+tikv_servers:
   - host: 172.19.0.104
-    data_dir: /data1 # this is ignored
-    config:
-      # test with these paths
-      storage.main.dir: [ /home/tidb/birdstorm/data1,/home/tidb/birdstorm/data3]
+    data_dir: "data-1"
+pd_servers:
+  - host: 172.19.0.104
+    data_dir: "data-2"
+  - host: 172.19.0.105
 `), &topo)
-	c.Assert(err, IsNil)
-	cnt = topo.CountDir("172.19.0.104", "/home/tidb/birdstorm/data1")
-	c.Assert(cnt, Equals, 1)
-	cnt = topo.CountDir("172.19.0.104", "/home/tidb/birdstorm/data2")
-	c.Assert(cnt, Equals, 0)
-	cnt = topo.CountDir("172.19.0.104", "/home/tidb/birdstorm/data3")
-	c.Assert(cnt, Equals, 1)
-	cnt = topo.CountDir("172.19.0.104", "/home/tidb/birdstorm")
-	c.Assert(cnt, Equals, 2)
+	require.NoError(t, err)
+	// if per-instance data_dir is set, the global data_dir is ignored, and if it
+	// is a relative path, it will be under the instance's deploy_dir
+	cnt = topo.CountDir("172.19.0.104", "/test-deploy/pd-2379")
+	require.Equal(t, 3, cnt)
+	cnt = topo.CountDir("172.19.0.104", "")
+	require.Equal(t, 0, cnt)
+	cnt = topo.CountDir("172.19.0.105", "/test-data")
+	require.Equal(t, 1, cnt)
 }
 
-func (s *metaSuiteTopo) TestDirectoryConflictsWithMultiDir(c *C) {
+func TestDirectoryConflictsWithMultiDir(t *testing.T) {
 	topo := Specification{}
 
 	err := yaml.Unmarshal([]byte(`
@@ -938,8 +945,8 @@ pd_servers:
   - host: 172.16.5.138
     data_dir: "/test-2"
 `), &topo)
-	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "directory conflict for '/test-2' between 'tiflash_servers:172.16.5.138.data_dir' and 'pd_servers:172.16.5.138.data_dir'")
+	require.Error(t, err)
+	require.Equal(t, "directory conflict for '/test-2' between 'tiflash_servers:172.16.5.138.data_dir' and 'pd_servers:172.16.5.138.data_dir'", err.Error())
 
 	err = yaml.Unmarshal([]byte(`
 global:
@@ -954,11 +961,11 @@ pd_servers:
   - host: 172.16.5.138
     data_dir: "/test-2"
 `), &topo)
-	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "directory conflict for '/test-1' between 'tiflash_servers:172.16.5.138.data_dir' and 'tiflash_servers:172.16.5.138.data_dir'")
+	require.Error(t, err)
+	require.Equal(t, "directory conflict for '/test-1' between 'tiflash_servers:172.16.5.138.data_dir' and 'tiflash_servers:172.16.5.138.data_dir'", err.Error())
 }
 
-func (s *metaSuiteTopo) TestDirectoryConflictsWithTiFlashMultiDir2(c *C) {
+func TestDirectoryConflictsWithTiFlashMultiDir2(t *testing.T) {
 	topo := Specification{}
 	err := yaml.Unmarshal([]byte(`
 global:
@@ -975,8 +982,8 @@ pd_servers:
   - host: 172.16.5.138
     data_dir: "/test-2"
 `), &topo)
-	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "directory conflict for '/test-2' between 'tiflash_servers:172.16.5.138.data_dir' and 'pd_servers:172.16.5.138.data_dir'")
+	require.Error(t, err)
+	require.Equal(t, "directory conflict for '/test-2' between 'tiflash_servers:172.16.5.138.data_dir' and 'pd_servers:172.16.5.138.data_dir'", err.Error())
 
 	err = yaml.Unmarshal([]byte(`
 global:
@@ -994,8 +1001,8 @@ pd_servers:
   - host: 172.16.5.138
     data_dir: "/test-1"
 `), &topo)
-	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "directory conflict for '/test-2' between 'tiflash_servers:172.16.5.138.config.storage.main.dir' and 'tiflash_servers:172.16.5.138.config.storage.main.dir'")
+	require.Error(t, err)
+	require.Equal(t, "directory conflict for '/test-2' between 'tiflash_servers:172.16.5.138.config.storage.main.dir' and 'tiflash_servers:172.16.5.138.config.storage.main.dir'", err.Error())
 
 	err = yaml.Unmarshal([]byte(`
 global:
@@ -1014,10 +1021,10 @@ pd_servers:
   - host: 172.16.5.138
     data_dir: "/test-3"
 `), &topo)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 }
 
-func (s *metaSuiteTopo) TestPdServerWithSameName(c *C) {
+func TestPdServerWithSameName(t *testing.T) {
 	topo := Specification{}
 	err := yaml.Unmarshal([]byte(`
 pd_servers:
@@ -1028,7 +1035,7 @@ pd_servers:
     perr_port: 1234
     name: name2
 `), &topo)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 
 	topo = Specification{}
 	err = yaml.Unmarshal([]byte(`
@@ -1040,19 +1047,19 @@ pd_servers:
     perr_port: 1234
     name: name1
 `), &topo)
-	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "component pd_servers.name is not supported duplicated, the name name1 is duplicated")
+	require.Error(t, err)
+	require.Equal(t, "component pd_servers.name is not supported duplicated, the name name1 is duplicated", err.Error())
 }
 
-func (s *metaSuiteTopo) TestInvalidPort(c *C) {
+func TestInvalidPort(t *testing.T) {
 	topo := Specification{}
 
 	err := yaml.Unmarshal([]byte(`
 global:
   ssh_port: 65536
 `), &topo)
-	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "`global` of ssh_port=65536 is invalid, port should be in the range [1, 65535]")
+	require.Error(t, err)
+	require.Equal(t, "`global` of ssh_port=65536 is invalid, port should be in the range [1, 65535]", err.Error())
 
 	err = yaml.Unmarshal([]byte(`
 global:
@@ -1061,62 +1068,62 @@ tidb_servers:
   - host: 172.16.5.138
     port: -1
 `), &topo)
-	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "`tidb_servers` of port=-1 is invalid, port should be in the range [1, 65535]")
+	require.Error(t, err)
+	require.Equal(t, "`tidb_servers` of port=-1 is invalid, port should be in the range [1, 65535]", err.Error())
 
 	err = yaml.Unmarshal([]byte(`
 monitored:
     node_exporter_port: 102400
 `), &topo)
-	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "`monitored` of node_exporter_port=102400 is invalid, port should be in the range [1, 65535]")
+	require.Error(t, err)
+	require.Equal(t, "`monitored` of node_exporter_port=102400 is invalid, port should be in the range [1, 65535]", err.Error())
 }
 
-func (s *metaSuiteTopo) TestInvalidUserGroup(c *C) {
+func TestInvalidUserGroup(t *testing.T) {
 	topo := Specification{}
 	err := yaml.Unmarshal([]byte(`
 global:
   user: helloworldtidb-_-_
   group: wor_l-d
 `), &topo)
-	c.Assert(err, IsNil)
-	c.Assert(topo.GlobalOptions.User, Equals, "helloworldtidb-_-_")
-	c.Assert(topo.GlobalOptions.Group, Equals, "wor_l-d")
+	require.NoError(t, err)
+	require.Equal(t, "helloworldtidb-_-_", topo.GlobalOptions.User)
+	require.Equal(t, "wor_l-d", topo.GlobalOptions.Group)
 
 	topo = Specification{}
 	err = yaml.Unmarshal([]byte(`
 global:
   user: ../hello
 `), &topo)
-	c.Assert(err, NotNil)
+	require.Error(t, err)
 
 	topo = Specification{}
 	err = yaml.Unmarshal([]byte(`
 global:
   user: hel.lo
 `), &topo)
-	c.Assert(err, NotNil)
+	require.Error(t, err)
 
 	topo = Specification{}
 	err = yaml.Unmarshal([]byte(`
 global:
   group: hello123456789012
 `), &topo)
-	c.Assert(err, NotNil)
+	require.Error(t, err)
 }
 
-func (s *metaSuiteTopo) TestMissingGroup(c *C) {
+func TestMissingGroup(t *testing.T) {
 	topo := Specification{}
 	err := yaml.Unmarshal([]byte(`
 global:
   user: tidb
 `), &topo)
-	c.Assert(err, IsNil)
-	c.Assert(topo.GlobalOptions.User, Equals, "tidb")
-	c.Assert(topo.GlobalOptions.Group, Equals, "")
+	require.NoError(t, err)
+	require.Equal(t, "tidb", topo.GlobalOptions.User)
+	require.Equal(t, "", topo.GlobalOptions.Group)
 }
 
-func (s *metaSuiteTopo) TestLogDirUnderDataDir(c *C) {
+func TestLogDirUnderDataDir(t *testing.T) {
 	topo := Specification{}
 	clsList := make(map[string]Metadata)
 
@@ -1133,13 +1140,13 @@ tikv_servers:
     log_dir: "/home/tidb6wu/tidb1-data/tikv-32160/log"
     data_dir: "/home/tidb6wu/tidb1-data/tikv-32160"
 `), &topo)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 	err = CheckClusterDirConflict(clsList, "topo", &topo)
-	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "spec.deploy.dir_overlap: Deploy directory overlaps to another instance")
+	require.Error(t, err)
+	require.Equal(t, "spec.deploy.dir_overlap: Deploy directory overlaps to another instance", err.Error())
 	suggestion, ok := errorx.ExtractProperty(err, utils.ErrPropSuggestion)
-	c.Assert(ok, IsTrue)
-	c.Assert(suggestion, Equals, `The directory you specified in the topology file is:
+	require.True(t, ok)
+	require.Equal(t, `The directory you specified in the topology file is:
   Directory: data directory /home/tidb6wu/tidb1-data/tikv-32160
   Component: tikv n1
 
@@ -1147,7 +1154,7 @@ It overlaps to another instance:
   Other Directory: log directory /home/tidb6wu/tidb1-data/tikv-32160/log
   Other Component: tikv n1
 
-Please modify the topology file and try again.`)
+Please modify the topology file and try again.`, suggestion)
 
 	goodTopos := []string{
 		`
@@ -1194,9 +1201,9 @@ cdc_servers:
 	}
 	for _, s := range goodTopos {
 		err = yaml.Unmarshal([]byte(s), &topo)
-		c.Assert(err, IsNil)
+		require.NoError(t, err)
 		err = CheckClusterDirConflict(clsList, "topo", &topo)
-		c.Assert(err, IsNil)
+		require.NoError(t, err)
 	}
 
 	overlapTopos := []string{
@@ -1275,9 +1282,9 @@ tikv_servers:
 
 	for _, s := range overlapTopos {
 		err = yaml.Unmarshal([]byte(s), &topo)
-		c.Assert(err, IsNil)
+		require.NoError(t, err)
 		err = CheckClusterDirConflict(clsList, "topo", &topo)
-		c.Assert(err, NotNil)
-		c.Assert(err.Error(), Equals, "spec.deploy.dir_overlap: Deploy directory overlaps to another instance")
+		require.Error(t, err)
+		require.Equal(t, "spec.deploy.dir_overlap: Deploy directory overlaps to another instance", err.Error())
 	}
 }
