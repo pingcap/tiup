@@ -15,34 +15,31 @@ package queue
 
 import (
 	"reflect"
+	"testing"
 
-	"github.com/pingcap/check"
+	"github.com/stretchr/testify/require"
 )
 
-var _ = check.Suite(&queueTestSuite{})
-
-type queueTestSuite struct{}
-
-func (s *queueTestSuite) TestAnyQueue(c *check.C) {
+func TestAnyQueue(t *testing.T) {
 	q := NewAnyQueue(reflect.DeepEqual)
 
 	q.Put(true)
 	q.Put(9527)
 
-	c.Assert(q.slice[0], check.DeepEquals, true)
-	c.Assert(q.slice[1], check.DeepEquals, 9527)
+	require.Equal(t, true, q.slice[0])
+	require.Equal(t, 9527, q.slice[1])
 
 	q.Put(true)
 	q.Put(9527)
 
-	c.Assert(q.slice[2], check.DeepEquals, true)
-	c.Assert(q.slice[3], check.DeepEquals, 9527)
+	require.Equal(t, true, q.slice[2])
+	require.Equal(t, 9527, q.slice[3])
 
-	c.Assert(q.Get(true), check.DeepEquals, true)
-	c.Assert(q.Get(true), check.DeepEquals, true)
-	c.Assert(q.Get(true), check.DeepEquals, nil)
+	require.Equal(t, true, q.Get(true))
+	require.Equal(t, true, q.Get(true))
+	require.Nil(t, q.Get(true))
 
-	c.Assert(q.Get(9527), check.DeepEquals, 9527)
-	c.Assert(q.Get(9527), check.DeepEquals, 9527)
-	c.Assert(q.Get(9527), check.DeepEquals, nil)
+	require.Equal(t, 9527, q.Get(9527))
+	require.Equal(t, 9527, q.Get(9527))
+	require.Nil(t, q.Get(9527))
 }

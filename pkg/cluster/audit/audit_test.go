@@ -24,16 +24,10 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/pingcap/check"
 	"github.com/pingcap/tiup/pkg/base52"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 )
-
-func Test(t *testing.T) { TestingT(t) }
-
-var _ = Suite(&testAuditSuite{})
-
-type testAuditSuite struct{}
 
 func currentDir() string {
 	_, file, _, _ := runtime.Caller(0)
@@ -46,7 +40,7 @@ func auditDir() string {
 
 func resetDir() {
 	_ = os.RemoveAll(auditDir())
-	_ = os.MkdirAll(auditDir(), 0777)
+	_ = os.MkdirAll(auditDir(), 0o777)
 }
 
 func readFakeStdout(f io.ReadSeeker) string {
@@ -55,15 +49,7 @@ func readFakeStdout(f io.ReadSeeker) string {
 	return string(read)
 }
 
-func (s *testAuditSuite) SetUpSuite(c *C) {
-	resetDir()
-}
-
-func (s *testAuditSuite) TearDownSuite(c *C) {
-	_ = os.RemoveAll(auditDir()) // path.Join(currentDir(), "testdata"))
-}
-
-func (s *testAuditSuite) TestOutputAuditLog(c *C) {
+func TestOutputAuditLog(t *testing.T) {
 	dir := auditDir()
 	resetDir()
 
@@ -72,7 +58,7 @@ func (s *testAuditSuite) TestOutputAuditLog(c *C) {
 		g.Go(func() error { return OutputAuditLog(dir, "", []byte("audit log")) })
 	}
 	err := g.Wait()
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 
 	var paths []string
 	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
@@ -81,11 +67,11 @@ func (s *testAuditSuite) TestOutputAuditLog(c *C) {
 		}
 		return nil
 	})
-	c.Assert(err, IsNil)
-	c.Assert(len(paths), Equals, 20)
+	require.NoError(t, err)
+	require.Equal(t, 20, len(paths))
 }
 
-func (s *testAuditSuite) TestShowAuditLog(c *C) {
+func TestShowAuditLog(t *testing.T) {
 	dir := auditDir()
 	resetDir()
 
@@ -99,8 +85,8 @@ func (s *testAuditSuite) TestShowAuditLog(c *C) {
 
 	openStdout := func() *os.File {
 		_ = os.Remove(fakeStdout)
-		f, err := os.OpenFile(fakeStdout, os.O_CREATE|os.O_RDWR, 0644)
-		c.Assert(err, IsNil)
+		f, err := os.OpenFile(fakeStdout, os.O_CREATE|os.O_RDWR, 0o644)
+		require.NoError(t, err)
 		os.Stdout = f
 		return f
 	}
@@ -109,41 +95,36 @@ func (s *testAuditSuite) TestShowAuditLog(c *C) {
 	nanoSecond := int64(1604413624836105381)
 
 	fname := filepath.Join(dir, base52.Encode(second))
-	c.Assert(os.WriteFile(fname, []byte("test with second"), 0644), IsNil)
+	require.NoError(t, os.WriteFile(fname, []byte("test with second"), 0o644))
 	fname = filepath.Join(dir, base52.Encode(nanoSecond))
-	c.Assert(os.WriteFile(fname, []byte("test with nanosecond"), 0644), IsNil)
+	require.NoError(t, os.WriteFile(fname, []byte("test with nanosecond"), 0o644))
 
 	f := openStdout()
-	c.Assert(ShowAuditList(dir), IsNil)
+	require.NoError(t, ShowAuditList(dir))
 	// tabby table size is based on column width, while time.RFC3339 maybe print out timezone like +08:00 or Z(UTC)
 	// skip the first two lines
 	list := strings.Join(strings.Split(readFakeStdout(f), "\n")[2:], "\n")
-	c.Assert(list, Equals, fmt.Sprintf(`4F7ZTL       %s  test with second
+	require.Equal(t, fmt.Sprintf(`4F7ZTL       %s  test with second
 ftmpqzww84Q  %s  test with nanosecond
 `,
 		time.Unix(second, 0).Format(time.RFC3339),
 		time.Unix(nanoSecond/1e9, 0).Format(time.RFC3339),
-	))
+	), list)
 	f.Close()
 
 	f = openStdout()
-	c.Assert(ShowAuditLog(dir, "4F7ZTL"), IsNil)
-	c.Assert(readFakeStdout(f), Equals, fmt.Sprintf(`---------------------------------------
+	require.NoError(t, ShowAuditLog(dir, "4F7ZTL"))
+	require.Equal(t, fmt.Sprintf(`---------------------------------------
 - OPERATION TIME: %s -
 ---------------------------------------
-test with second`,
-		time.Unix(second, 0).Format("2006-01-02T15:04:05"),
-	))
-
+test with second`, time.Unix(second, 0).Format("2006-01-02T15:04:05")), readFakeStdout(f))
 	f.Close()
 
 	f = openStdout()
-	c.Assert(ShowAuditLog(dir, "ftmpqzww84Q"), IsNil)
-	c.Assert(readFakeStdout(f), Equals, fmt.Sprintf(`---------------------------------------
+	require.NoError(t, ShowAuditLog(dir, "ftmpqzww84Q"))
+	require.Equal(t, fmt.Sprintf(`---------------------------------------
 - OPERATION TIME: %s -
 ---------------------------------------
-test with nanosecond`,
-		time.Unix(nanoSecond/1e9, 0).Format("2006-01-02T15:04:05"),
-	))
+test with nanosecond`, time.Unix(nanoSecond/1e9, 0).Format("2006-01-02T15:04:05")), readFakeStdout(f))
 	f.Close()
 }

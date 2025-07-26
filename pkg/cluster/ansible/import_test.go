@@ -23,22 +23,13 @@ import (
 	"testing"
 
 	"github.com/creasty/defaults"
-	. "github.com/pingcap/check"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
+	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
 
-type ansSuite struct {
-}
-
-var _ = Suite(&ansSuite{})
-
-func TestAnsible(t *testing.T) {
-	TestingT(t)
-}
-
-func (s *ansSuite) TestMonitoredDeployDir(c *C) {
+func TestMonitoredDeployDir(t *testing.T) {
 	r := strings.NewReader(`
 [monitored_servers]
 172.16.10.1
@@ -50,8 +41,8 @@ process_supervision = systemd
 	`)
 
 	_, clsMeta, _, err := parseInventoryFile(r)
-	c.Assert(err, IsNil)
-	c.Assert(clsMeta.Topology.MonitoredOptions.DeployDir, Equals, "")
+	require.NoError(t, err)
+	require.Equal(t, "", clsMeta.Topology.MonitoredOptions.DeployDir)
 
 	r = strings.NewReader(`
 [monitored_servers]
@@ -65,8 +56,8 @@ process_supervision = systemd
 	`)
 
 	_, clsMeta, _, err = parseInventoryFile(r)
-	c.Assert(err, IsNil)
-	c.Assert(clsMeta.Topology.MonitoredOptions.DeployDir, Equals, "/data1/deploy")
+	require.NoError(t, err)
+	require.Equal(t, "/data1/deploy", clsMeta.Topology.MonitoredOptions.DeployDir)
 
 	r = strings.NewReader(`
 [monitored_servers]
@@ -80,8 +71,8 @@ process_supervision = systemd
 	`)
 
 	_, clsMeta, _, err = parseInventoryFile(r)
-	c.Assert(err, IsNil)
-	c.Assert(clsMeta.Topology.MonitoredOptions.DeployDir, Equals, "/data/deploy")
+	require.NoError(t, err)
+	require.Equal(t, "/data/deploy", clsMeta.Topology.MonitoredOptions.DeployDir)
 
 	r = strings.NewReader(`
 [monitored_servers]
@@ -95,22 +86,22 @@ process_supervision = systemd
 	`)
 
 	_, clsMeta, _, err = parseInventoryFile(r)
-	c.Assert(err, IsNil)
-	c.Assert(clsMeta.Topology.MonitoredOptions.DeployDir, Equals, "/data1/deploy")
+	require.NoError(t, err)
+	require.Equal(t, "/data1/deploy", clsMeta.Topology.MonitoredOptions.DeployDir)
 }
 
-func (s *ansSuite) TestParseInventoryFile(c *C) {
+func TestParseInventoryFile(t *testing.T) {
 	dir := "test-data"
 	invData, err := os.Open(filepath.Join(dir, "inventory.ini"))
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 
 	clsName, clsMeta, inv, err := parseInventoryFile(invData)
-	c.Assert(err, IsNil)
-	c.Assert(inv, NotNil)
-	c.Assert(clsName, Equals, "ansible-cluster")
-	c.Assert(clsMeta, NotNil)
-	c.Assert(clsMeta.Version, Equals, "v3.0.12")
-	c.Assert(clsMeta.User, Equals, "tiops")
+	require.NoError(t, err)
+	require.NotNil(t, inv)
+	require.Equal(t, "ansible-cluster", clsName)
+	require.NotNil(t, clsMeta)
+	require.Equal(t, "v3.0.12", clsMeta.Version)
+	require.Equal(t, "tiops", clsMeta.User)
 
 	expected := []byte(`global:
     user: tiops
@@ -144,45 +135,45 @@ monitoring_servers: []
 `)
 
 	topo, err := yaml.Marshal(clsMeta.Topology)
-	c.Assert(err, IsNil)
-	c.Assert(string(topo), DeepEquals, string(expected))
+	require.NoError(t, err)
+	require.Equal(t, string(expected), string(topo))
 }
 
-func (s *ansSuite) TestParseGroupVars(c *C) {
+func TestParseGroupVars(t *testing.T) {
 	dir := "test-data"
 	ansCfgFile := filepath.Join(dir, "ansible.cfg")
 	invData, err := os.Open(filepath.Join(dir, "inventory.ini"))
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 	_, clsMeta, inv, err := parseInventoryFile(invData)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 
 	err = parseGroupVars(context.WithValue(
 		context.TODO(), logprinter.ContextKeyLogger, logprinter.NewLogger(""),
 	), dir, ansCfgFile, clsMeta, inv)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 	err = defaults.Set(clsMeta)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 
 	var expected spec.ClusterMeta
 	var metaFull spec.ClusterMeta
 
 	expectedTopo, err := os.ReadFile(filepath.Join(dir, "meta.yaml"))
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 	err = yaml.Unmarshal(expectedTopo, &expected)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 
 	// marshal and unmarshal the meta to ensure custom defaults are populated
 	meta, err := yaml.Marshal(clsMeta)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 	err = yaml.Unmarshal(meta, &metaFull)
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 
 	sortClusterMeta(&metaFull)
 	sortClusterMeta(&expected)
 
 	_, err = yaml.Marshal(metaFull)
-	c.Assert(err, IsNil)
-	c.Assert(metaFull, DeepEquals, expected)
+	require.NoError(t, err)
+	require.Equal(t, expected, metaFull)
 }
 
 func sortClusterMeta(clsMeta *spec.ClusterMeta) {
@@ -234,7 +225,7 @@ func withTempFile(content string, fn func(string)) {
 	fn(file.Name())
 }
 
-func (s *ansSuite) TestParseConfig(c *C) {
+func TestParseConfig(t *testing.T) {
 	// base test
 	withTempFile(`
 a = true
@@ -244,15 +235,15 @@ c = 1
 d = "\""
 `, func(file string) {
 		m, err := parseConfigFile(file)
-		c.Assert(err, IsNil)
-		c.Assert(m["x"], IsNil)
-		c.Assert(m["a"], Equals, true)
-		c.Assert(m["b.c"], Equals, int64(1))
-		c.Assert(m["b.d"], Equals, "\"")
+		require.NoError(t, err)
+		require.Nil(t, m["x"])
+		require.Equal(t, true, m["a"])
+		require.Equal(t, int64(1), m["b.c"])
+		require.Equal(t, "\"", m["b.d"])
 	})
 }
 
-func (s *ansSuite) TestDiffConfig(c *C) {
+func TestDiffConfig(t *testing.T) {
 	global, locals := diffConfigs([]map[string]any{
 		{
 			"a":       true,
@@ -271,11 +262,11 @@ func (s *ansSuite) TestDiffConfig(c *C) {
 		},
 	})
 
-	c.Assert(global["a"], NotNil)
-	c.Assert(global["b"], IsNil)
-	c.Assert(global["a"], Equals, true)
-	c.Assert(global["foo.bar"], Equals, 1)
-	c.Assert(locals[0]["b"], Equals, 1)
-	c.Assert(locals[1]["b"], Equals, 2)
-	c.Assert(locals[2]["b"], Equals, 3)
+	require.NotNil(t, global["a"])
+	require.Nil(t, global["b"])
+	require.Equal(t, true, global["a"])
+	require.Equal(t, 1, global["foo.bar"])
+	require.Equal(t, 1, locals[0]["b"])
+	require.Equal(t, 2, locals[1]["b"])
+	require.Equal(t, 3, locals[2]["b"])
 }
