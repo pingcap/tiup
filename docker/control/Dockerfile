@@ -2,7 +2,6 @@ FROM golang:1.24
 
 WORKDIR /tiup-cluster
 COPY . /tiup-cluster/
-RUN test Makefile && make failpoint-enable && make cluster && make failpoint-disable
 
 # tiup-cluster dependencies
  RUN apt-get -y -q update && \

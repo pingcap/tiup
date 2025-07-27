@@ -227,7 +227,7 @@ sed -i '/TIUP_TEST_IP_PREFIX/d' ./secret/control.env
 echo "TIUP_TEST_IP_PREFIX=$ipprefix" >> ./secret/control.env
 
 INFO "Running \`docker-compose build\`"
-cp -a ${TIUP_CLUSTER_ROOT}/* ./control/
+cp -a ${TIUP_CLUSTER_ROOT}/* ./control/ || true
 docker compose -f docker-compose.yml ${COMPOSE} build
 
 INFO "Running \`docker-compose up\`"
