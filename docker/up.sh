@@ -242,5 +242,3 @@ else
 fi
 
 popd
-
-exit 1
