@@ -37,17 +37,17 @@ jobs:
       matrix:
         cases:
           - 'test_cmd'
-          # - 'test_cmd_tls_native_ssh'
-          #- 'test_upgrade'
-          #- 'test_upgrade_tls'
-          #- 'test_tikv_cdc'
+          - 'test_cmd_tls_native_ssh'
+          - 'test_upgrade'
+          - 'test_upgrade_tls'
+          - 'test_tikv_cdc'
     env:
       working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
     steps:
-      - name: Set up Go 1.21
+      - name: Set up Go 1.24
         uses: actions/setup-go@v4
         with:
-          go-version: 1.21.x
+          go-version: 1.24.x
         id: go
 
       - name: Check out code into the Go module directory
@@ -75,7 +75,7 @@ jobs:
 
       - name: Build the docker-compose stack
         working-directory: ${{ env.working-directory }}
-        run: TIUP_CLUSTER_ROOT=${{ env.working-directory }} ./docker/up.sh --daemon --dev
+        run: TIUP_CLUSTER_ROOT=${{ env.working-directory }} ./docker/up.sh --daemon
 
       - name: Check running containers
         run: |
@@ -135,9 +135,9 @@ jobs:
           chmod +x codecov
           ./codecov -F cluster -s ${{ env.working-directory }}/tests/tiup-cluster/cover -f '*.out'
 
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-        if: ${{ failure() }}
-        with:
-          limit-access-to-actor: true
+      #- name: Setup tmate session
+      #  uses: mxschmitt/action-tmate@v3
+      #  if: ${{ failure() }}
+      #  with:
+      #    limit-access-to-actor: true
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -eux
+set -eu
 
 function cmd_subtest() {
     mkdir -p ~/.tiup/bin/
