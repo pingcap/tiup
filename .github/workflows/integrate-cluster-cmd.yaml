@@ -73,11 +73,6 @@ jobs:
           sudo apt-get install -y docker-compose-plugin
           make build_integration_test
 
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-        with:
-          limit-access-to-actor: true
-
       - name: Build the docker-compose stack
         working-directory: ${{ env.working-directory }}
         run: TIUP_CLUSTER_ROOT=${{ env.working-directory }} ./docker/up.sh --daemon --dev
@@ -139,3 +134,10 @@ jobs:
           curl -Os https://uploader.codecov.io/latest/linux/codecov
           chmod +x codecov
           ./codecov -F cluster -s ${{ env.working-directory }}/tests/tiup-cluster/cover -f '*.out'
+
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ failure() }}
+        with:
+          limit-access-to-actor: true
+
