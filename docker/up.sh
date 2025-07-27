@@ -105,7 +105,7 @@ if [ "${HELP}" -eq 1 ]; then
     echo "  --nodes NODES                                         Start how much nodes"
     echo "  --ssh-proxy                                           Start with ssh proxy nodes"
     echo "  --proxy-subnet PROXY_SUBNET                           Proxy subnet in 24 bit netmask"
-    echo "To provide multiple additional docker-compose args, set the COMPOSE var directly, with the -f flag. Ex: COMPOSE=\"-f FILE_PATH_HERE -f ANOTHER_PATH\" ./up.sh'
+    echo "To provide multiple additional docker-compose args, set the COMPOSE var directly, with the -f flag. Ex: COMPOSE=\"-f FILE_PATH_HERE -f ANOTHER_PATH\" ./up.sh'"
     exit 0
 fi
 
