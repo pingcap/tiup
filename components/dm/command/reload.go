@@ -14,10 +14,11 @@
 package command
 
 import (
+	"slices"
+
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/dm/spec"
 	"github.com/spf13/cobra"
-	"slices"
 )
 
 func newReloadCmd() *cobra.Command {

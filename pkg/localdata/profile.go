@@ -27,10 +27,11 @@ import (
 	"sort"
 	"strings"
 
+	"slices"
+
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/mod/semver"
-	"slices"
 )
 
 // Profile represents the `tiup` profile

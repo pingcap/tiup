@@ -17,6 +17,8 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"slices"
+
 	"github.com/gorilla/mux"
 	"github.com/pingcap/fn"
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
@@ -24,7 +26,6 @@ import (
 	"github.com/pingcap/tiup/pkg/repository/model"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/server/session"
-	"slices"
 )
 
 // SignComponent handles requests to re-sign component manifest
