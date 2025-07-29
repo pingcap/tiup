@@ -52,7 +52,6 @@ jobs:
         id: go
       - name: Build build_integration_test
         run: |
-          export GOPATH=${GITHUB_WORKSPACE}/go
           export PATH=$PATH:$GOPATH/bin
           sudo apt-get update
           sudo apt-get install -y build-essential python-is-python3 python3-pip ca-certificates curl

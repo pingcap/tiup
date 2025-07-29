@@ -56,7 +56,6 @@ jobs:
 
       - name: Build build_tiup_test
         run: |
-          export GOPATH=${GITHUB_WORKSPACE}/go
           export PATH=$PATH:$GOPATH/bin
           sudo apt update
           sudo apt-get install -y build-essential
@@ -90,7 +89,6 @@ jobs:
 
       - name: make unit-test
         run: |
-          export GOPATH=${GITHUB_WORKSPACE}/go
           export PATH=$PATH:$GOPATH/bin
           make check
           make test
