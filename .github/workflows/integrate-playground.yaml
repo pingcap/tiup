@@ -31,8 +31,7 @@ on:
 
 jobs:
   playground:
-    runs-on:
-      labels: arc-runner-set-docker-pingcap
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
       fail-fast: true
@@ -59,7 +58,7 @@ jobs:
           export GOPATH=${GITHUB_WORKSPACE}/go
           export PATH=$PATH:$GOPATH/bin
           sudo apt update
-          sudo apt-get install -y build-essential
+          sudo apt-get install -y build-essential psmisc
           make tiup build_tiup_playground_test
 
       - name: Run test suite

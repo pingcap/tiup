@@ -30,8 +30,7 @@ on:
 
 jobs:
   cluster:
-    runs-on:
-      labels: arc-runner-set-docker-pingcap
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: true
       matrix:
@@ -71,7 +70,7 @@ jobs:
                 sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
           sudo apt-get update
           sudo apt-get install -y docker-compose-plugin
-          make build_integration_test
+          make build_integration_test tiup
 
       - name: Build the docker-compose stack
         working-directory: ${{ env.working-directory }}

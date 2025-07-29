@@ -54,20 +54,6 @@ var (
 	cm       *manager.Manager
 )
 
-func getParentNames(cmd *cobra.Command) []string {
-	if cmd == nil {
-		return nil
-	}
-
-	p := cmd.Parent()
-	// always use 'cluster' as the root command name
-	if cmd.Parent() == nil {
-		return []string{"cluster"}
-	}
-
-	return append(getParentNames(p), cmd.Name())
-}
-
 func init() {
 	logger.InitGlobalLogger()
 

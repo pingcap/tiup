@@ -14,7 +14,6 @@
 package exec
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -89,7 +88,9 @@ func RunComponent(env *environment.Environment, tag, spec, binPath string, args 
 		return errors.Annotatef(err, "Failed to start component `%s`", component)
 	}
 	// If the process has been launched, we must save the process info to meta directory
-	saveProcessInfo(params, c)
+	if err := saveProcessInfo(params, c); err != nil {
+		fmt.Fprintf(os.Stderr, "Error saving process info %s\n", err.Error())
+	}
 
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
@@ -249,7 +250,7 @@ func PrepareBinary(component string, version utils.Version, binPath string) (str
 	return binPath, nil
 }
 
-func saveProcessInfo(p *PrepareCommandParams, c *exec.Cmd) {
+func saveProcessInfo(p *PrepareCommandParams, c *exec.Cmd) error {
 	info := &localdata.Process{
 		Component:   p.Component,
 		CreatedTime: time.Now().Format(time.RFC3339),
@@ -260,12 +261,5 @@ func saveProcessInfo(p *PrepareCommandParams, c *exec.Cmd) {
 		Env:         c.Env,
 		Cmd:         c,
 	}
-	metaFile := filepath.Join(info.Dir, localdata.MetaFilename)
-	file, err := os.OpenFile(metaFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.ModePerm)
-	if err == nil {
-		defer file.Close()
-		encoder := json.NewEncoder(file)
-		encoder.SetIndent("", "    ")
-		_ = encoder.Encode(info)
-	}
+	return environment.GlobalEnv().Profile().WriteMetaFile(info.Dir, info)
 }
