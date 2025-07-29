@@ -24,7 +24,9 @@ exists() {
     type "$1" > /dev/null 2>&1
 }
 
-TIUP_CLUSTER_ROOT=${TIUP_CLUSTER_ROOT:-""}
+
+bb=$(dirname $(realpath $0))
+TIUP_CLUSTER_ROOT=${TIUP_CLUSTER_ROOT:-"$bb/../.."}
 
 # Change directory to the source directory of this script. Taken from:
 # https://stackoverflow.com/a/246128/3858681
