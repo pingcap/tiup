@@ -464,7 +464,6 @@ func (s *Specification) portConflictsDetect() error {
 	if monitoredOpt.IsZero() {
 		return nil
 	}
-	monitoredOpt = monitoredOpt.Elem()
 	for host := range uniqueHosts {
 		cfg := "monitored"
 		for _, portType := range monitoredPortTypes {
