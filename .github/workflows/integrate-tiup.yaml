@@ -82,6 +82,7 @@ jobs:
           ./codecov -F tiup -s ${{ env.working-directory }}/tests/tiup/cover -f '*.out'
 
   unit-test:
+    runs-on: ubuntu-latest
     env:
       working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
     steps:
