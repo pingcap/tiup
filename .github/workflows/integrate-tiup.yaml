@@ -36,7 +36,7 @@ on:
 jobs:
   tiup:
     timeout-minutes: 10
-    runs-on: [ubuntu-latest, arc-runner-set-docker-pingcap]
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: true
       matrix:
