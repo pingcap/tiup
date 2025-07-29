@@ -30,6 +30,7 @@ on:
 
 jobs:
   cluster:
+    runs-on: [ubuntu-latest, arc-runner-set-docker-pingcap]
     strategy:
       fail-fast: true
       matrix:
