@@ -40,22 +40,18 @@ jobs:
           - 'test_scale_core_tls'
           - 'test_scale_tools_tls'
           - 'test_scale_tiproxy'
-    env:
-      working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
     steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Set up Go 1.24
         uses: actions/setup-go@v4
         with:
           go-version: 1.24.x
         id: go
 
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          path: go/src/github.com/${{ github.repository }}
       - name: Build build_integration_test
-        working-directory: ${{ env.working-directory }}
         run: |
           export GOPATH=${GITHUB_WORKSPACE}/go
           export PATH=$PATH:$GOPATH/bin
@@ -73,9 +69,8 @@ jobs:
           make build_integration_test
 
       - name: Build the docker-compose stack
-        working-directory: ${{ env.working-directory }}
         # with --dev the first run will fail for unknow reason, just retry it and will success now..
-        run: TIUP_CLUSTER_ROOT=${{ env.working-directory }} ./docker/up.sh --daemon
+        run: ./docker/up.sh --daemon
 
       - name: Check running containers
         run: |
@@ -85,7 +80,6 @@ jobs:
 
       - name: Run test suite
         id: test
-        working-directory: ${{ env.working-directory }}
         run: |
           # ensuere docker ssh is ready
           sleep 5
@@ -94,17 +88,13 @@ jobs:
           docker exec tiup-cluster-control bash /tiup-cluster/tests/tiup-cluster/run.sh ${{ matrix.cases }}
 
       - name: Collect component log
-        working-directory: ${{ env.working-directory }}
         if: ${{ failure() }}
         # if: always()
         run: |
           docker exec tiup-cluster-control bash /tiup-cluster/tests/tiup-cluster/script/pull_log.sh /tiup-cluster/logs
-          ls ${{ env.working-directory }}
 
       - name: Detect error log
-        working-directory: ${{ env.working-directory }}
         if: ${{ failure() }}
-        # if: always()
         run: |
           bash ./tests/tiup-cluster/script/detect_error.sh ./logs/
 
@@ -115,10 +105,9 @@ jobs:
         with:
           overwrite: true
           name: cluster_logs
-          path: ${{ env.working-directory }}/logs/
+          path: ./logs
 
       - name: Output cluster debug log
-        working-directory: ${{ env.working-directory }}
         if: ${{ failure() }}
         # if: always()
         run: |
@@ -126,11 +115,10 @@ jobs:
           docker ps
           df -h
           free -h
-          find ${{ env.working-directory }}/logs -type f -exec sh -c 'echo "{}" && cat {} && echo "\n"' \; || true
+          find ./logs -type f -exec sh -c 'echo "{}" && cat {} && echo "\n"' \; || true
 
       - name: Upload coverage to Codecov
-        working-directory: ${{ env.working-directory }}
         run: |
           curl -Os https://uploader.codecov.io/latest/linux/codecov
           chmod +x codecov
-          ./codecov -F cluster -s ${{ env.working-directory }}/tests/tiup-cluster/cover -f '*.out'
+          ./codecov -F cluster -s ./tests/tiup-cluster/cover -f '*.out'
