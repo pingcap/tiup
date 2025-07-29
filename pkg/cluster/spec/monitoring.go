@@ -155,6 +155,12 @@ func (c *MonitorComponent) Instances() []Instance {
 
 	for _, rs := range servers {
 		s := rs
+		ports := []int{
+			s.Port,
+		}
+		if mopts := c.GetMonitoredOptions(); mopts != nil {
+			ports = append(ports, mopts.BlackboxExporterPort, mopts.NodeExporterPort)
+		}
 		mi := &MonitorInstance{BaseInstance{
 			InstanceSpec: s,
 			Name:         c.Name(),
@@ -165,12 +171,7 @@ func (c *MonitorComponent) Instances() []Instance {
 			SSHP:         s.SSHPort,
 			NumaNode:     s.NumaNode,
 			NumaCores:    "",
-
-			Ports: []int{
-				c.GetMonitoredOptions().BlackboxExporterPort,
-				c.GetMonitoredOptions().NodeExporterPort,
-				s.Port,
-			},
+			Ports: ports,
 			Dirs: []string{
 				s.DeployDir,
 				s.DataDir,
