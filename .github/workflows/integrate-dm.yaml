@@ -30,8 +30,6 @@ on:
 
 jobs:
   dm:
-    runs-on:
-      labels: arc-runner-set-docker-pingcap
     strategy:
       fail-fast: true
       matrix:
