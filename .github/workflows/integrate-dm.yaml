@@ -71,7 +71,7 @@ jobs:
       - name: Build the docker-compose stack
         # with --dev the first run will fail for unknow reason, just retry it and will success now..
         run: |
-          ./docker/up.sh --daemon --compose ./docker-compose.dm.yml
+          TIUP_CLUSTER_ROOT=$(pwd) ./docker/up.sh --daemon --compose ./docker-compose.dm.yml
 
       - name: Check running containers
         run: |

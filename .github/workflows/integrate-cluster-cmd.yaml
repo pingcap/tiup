@@ -67,7 +67,7 @@ jobs:
           make build_integration_test tiup
 
       - name: Build the docker-compose stack
-        run: ./docker/up.sh --daemon
+        run: TIUP_CLUSTER_ROOT=$(pwd) ./docker/up.sh --daemon
 
       - name: Check running containers
         run: |
