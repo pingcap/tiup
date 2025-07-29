@@ -24,10 +24,6 @@ exists() {
     type "$1" > /dev/null 2>&1
 }
 
-
-bb=$(dirname $(realpath $0))
-TIUP_CLUSTER_ROOT=${TIUP_CLUSTER_ROOT:-"$bb/../.."}
-
 # Change directory to the source directory of this script. Taken from:
 # https://stackoverflow.com/a/246128/3858681
 pushd "$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
@@ -197,13 +193,14 @@ if [[ "${INCLUDE_PROXY_NODES}" -eq 1 ]]; then
     proxy_prefix=${PROXY_SUBNET%.*}
 fi
 
-python -c "from jinja2 import Template; print(Template(open('docker-compose.yml.tpl').read()).render(nodes=$NODES, ipprefix='$ipprefix', ssh_proxy=$ssh_proxy, proxy_prefix='$proxy_prefix', tiup_cluster_root='$TIUP_CLUSTER_ROOT'))" > docker-compose.yml
+python -c "from jinja2 import Template; print(Template(open('docker-compose.yml.tpl').read()).render(nodes=$NODES, ipprefix='$ipprefix', ssh_proxy=$ssh_proxy, proxy_prefix='$proxy_prefix'))" > docker-compose.yml
 sed "s/__IPPREFIX__/$ipprefix/g" docker-compose.dm.yml.tpl > docker-compose.dm.yml
 sed -i '/TIUP_TEST_IP_PREFIX/d' ./secret/control.env
 echo "TIUP_TEST_IP_PREFIX=$ipprefix" >> ./secret/control.env
 
 INFO "Running \`docker-compose build\`"
-cp -a ${TIUP_CLUSTER_ROOT}/* ./control/ || true
+CURDIR=$(dirname $0)
+cp -a "$CURDIR/../*" ./control/ || true
 docker compose -f docker-compose.yml ${COMPOSE} build
 
 INFO "Running \`docker-compose up\`"
