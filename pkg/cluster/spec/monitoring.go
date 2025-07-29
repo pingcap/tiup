@@ -153,8 +153,8 @@ func (c *MonitorComponent) Instances() []Instance {
 	servers := c.BaseTopo().Monitors
 	ins := make([]Instance, 0, len(servers))
 
-	for _, s := range servers {
-		s := s
+	for _, rs := range servers {
+		s := rs
 		mi := &MonitorInstance{BaseInstance{
 			InstanceSpec: s,
 			Name:         c.Name(),
