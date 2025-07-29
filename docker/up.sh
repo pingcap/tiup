@@ -200,7 +200,7 @@ echo "TIUP_TEST_IP_PREFIX=$ipprefix" >> ./secret/control.env
 
 INFO "Running \`docker-compose build\`"
 CURDIR=$(dirname $0)
-cp -a "$CURDIR/../*" ./control/ || true
+cp -a $CURDIR/../* ./control/ || true
 docker compose -f docker-compose.yml ${COMPOSE} build
 
 INFO "Running \`docker-compose up\`"
