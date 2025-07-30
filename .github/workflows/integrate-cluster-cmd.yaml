@@ -40,24 +40,18 @@ jobs:
           - 'test_upgrade'
           - 'test_upgrade_tls'
           - 'test_tikv_cdc'
-    env:
-      working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
     steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Set up Go 1.24
         uses: actions/setup-go@v4
         with:
           go-version: 1.24.x
         id: go
-
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          path: go/src/github.com/${{ github.repository }}
       - name: Build build_integration_test
-        working-directory: ${{ env.working-directory }}
         run: |
-          export GOPATH=${GITHUB_WORKSPACE}/go
           export PATH=$PATH:$GOPATH/bin
           sudo apt-get update
           sudo apt-get install -y build-essential python-is-python3 python3-pip ca-certificates curl
@@ -73,8 +67,7 @@ jobs:
           make build_integration_test tiup
 
       - name: Build the docker-compose stack
-        working-directory: ${{ env.working-directory }}
-        run: TIUP_CLUSTER_ROOT=${{ env.working-directory }} ./docker/up.sh --daemon
+        run: TIUP_CLUSTER_ROOT=$(pwd) ./docker/up.sh --daemon
 
       - name: Check running containers
         run: |
@@ -84,7 +77,6 @@ jobs:
 
       - name: Run test suite
         id: test
-        working-directory: ${{ env.working-directory }}
         run: |
           # ensuere docker ssh is ready
           sleep 3
@@ -93,15 +85,12 @@ jobs:
           docker exec tiup-cluster-control bash /tiup-cluster/tests/tiup-cluster/run.sh ${{ matrix.cases }}
 
       - name: Collect component log
-        working-directory: ${{ env.working-directory }}
         if: ${{ failure() }}
         # if: always()
         run: |
           docker exec tiup-cluster-control bash /tiup-cluster/tests/tiup-cluster/script/pull_log.sh /tiup-cluster/logs
-          ls ${{ env.working-directory }}
 
       - name: Detect error log
-        working-directory: ${{ env.working-directory }}
         if: ${{ failure() }}
         # if: always()
         run: |
@@ -114,10 +103,9 @@ jobs:
         with:
           overwrite: true
           name: component_logs
-          path: ${{ env.working-directory }}/logs/
+          path: ./logs
 
       - name: Output cluster debug log
-        working-directory: ${{ env.working-directory }}
         if: ${{ failure() }}
         # if: always()
         run: |
@@ -125,18 +113,17 @@ jobs:
           docker ps
           df -h
           free -h
-          find ${{ env.working-directory }}/logs -type f -exec sh -c 'echo "{}" && cat {} && echo "\n"' \; || true
+          find ./logs -type f -exec sh -c 'echo "{}" && cat {} && echo "\n"' \; || true
 
       - name: Upload coverage to Codecov
-        working-directory: ${{ env.working-directory }}
         run: |
           curl -Os https://uploader.codecov.io/latest/linux/codecov
           chmod +x codecov
-          ./codecov -F cluster -s ${{ env.working-directory }}/tests/tiup-cluster/cover -f '*.out'
+          ./codecov -F cluster -s ./tests/tiup-cluster/cover -f '*.out'
 
-      #- name: Setup tmate session
-      #  uses: mxschmitt/action-tmate@v3
-      #  if: ${{ failure() }}
-      #  with:
-      #    limit-access-to-actor: true
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ failure() }}
+        with:
+          limit-access-to-actor: true
 

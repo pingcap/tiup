@@ -42,25 +42,20 @@ jobs:
       matrix:
         cases:
           - "test_tiup"
-    env:
-      working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
     steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Set up Go 1.24
         uses: actions/setup-go@v4
         with:
           go-version: 1.24.x
         id: go
 
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          path: go/src/github.com/${{ github.repository }}
 
       - name: Build build_tiup_test
-        working-directory: ${{ env.working-directory }}
         run: |
-          export GOPATH=${GITHUB_WORKSPACE}/go
           export PATH=$PATH:$GOPATH/bin
           sudo apt update
           sudo apt-get install -y build-essential
@@ -68,30 +63,24 @@ jobs:
 
       - name: Run test suite
         id: test
-        working-directory: ${{ env.working-directory }}
         run: |
-          export PATH=$PATH:${{ env.working-directory }}/bin/
+          export PATH=$PATH:$PWD/bin
           echo $PATH
-          bash ${{ env.working-directory }}/tests/tiup/${{ matrix.cases }}.sh
+          bash ./tests/tiup/${{ matrix.cases }}.sh
 
       - name: Upload coverage to Codecov
-        working-directory: ${{ env.working-directory }}
         run: |
           curl -Os https://uploader.codecov.io/latest/linux/codecov
           chmod +x codecov
-          ./codecov -F tiup -s ${{ env.working-directory }}/tests/tiup/cover -f '*.out'
+          ./codecov -F tiup -s ./tests/tiup/cover -f '*.out'
 
   unit-test:
     runs-on: ubuntu-latest
-    env:
-      working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
     steps:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v3
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-          path: go/src/github.com/${{ github.repository }}
-
       - name: Set up Go 1.24
         uses: actions/setup-go@v4
         with:
@@ -99,15 +88,12 @@ jobs:
         id: go
 
       - name: make unit-test
-        working-directory: ${{ env.working-directory }}
         run: |
-          export GOPATH=${GITHUB_WORKSPACE}/go
           export PATH=$PATH:$GOPATH/bin
           make check
           make test
 
       - name: Upload coverage to Codecov
-        working-directory: ${{ env.working-directory }}
         run: |
           curl -Os https://uploader.codecov.io/latest/linux/codecov
           chmod +x codecov

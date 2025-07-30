@@ -38,24 +38,19 @@ jobs:
       matrix:
         cases:
           - "test_playground"
-    env:
-      working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
     steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Set up Go 1.24
         uses: actions/setup-go@v4
         with:
           go-version: 1.24.x
         id: go
 
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          path: go/src/github.com/${{ github.repository }}
       - name: Build build_tiup_playground_test
-        working-directory: ${{ env.working-directory }}
         run: |
-          export GOPATH=${GITHUB_WORKSPACE}/go
           export PATH=$PATH:$GOPATH/bin
           sudo apt update
           sudo apt-get install -y build-essential psmisc
@@ -63,38 +58,32 @@ jobs:
 
       - name: Run test suite
         id: test
-        working-directory: ${{ env.working-directory }}
         run: |
-          export PATH=$PATH:${{ env.working-directory }}/bin/
-          bash ${{ env.working-directory }}/tests/tiup-playground/${{ matrix.cases }}.sh
+          export PATH=$PATH:$PWD/bin/
+          bash ./tests/tiup-playground/${{ matrix.cases }}.sh
 
       - name: Collect component log
-        working-directory: ${{ env.working-directory }}
         if: ${{ failure() }}
-        # if: always()
         run: |
           # ignore the rocksdb
-          find ${{ env.working-directory }}/tests/tiup-playground/_tmp/home/data -type f -name "*.log" | grep -vE '/data/(raft|db|region-meta)/' | xargs tar czvf ${{ env.working-directory }}/playground.logs.tar.gz
+          find ./tests/tiup-playground/_tmp/home/data -type f -name "*.log" | grep -vE '/data/(raft|db|region-meta)/' | xargs cp {} ./logs
 
       - name: Upload component log
         if: ${{ failure() }}
-        # if: always()
         uses: actions/upload-artifact@v4
         with:
           overwrite: true
           name: playground_logs
-          path: ${{ env.working-directory }}/playground.logs.tar.gz
+          path: ./logs
 
       - name: Output playground debug log
-        working-directory: ${{ env.working-directory }}
         if: ${{ failure() }}
         # if: always()
         run: |
-          for f in $(find ${{ env.working-directory }}/tests/tiup-playground/_tmp/home/data -type f -name "*.log" | grep -vE '/data/(raft|db|region-meta)/'); do echo "${f}" && cat "${f}"; done
+          for f in $(find ./tests/tiup-playground/_tmp/home/data -type f -name "*.log" | grep -vE '/data/(raft|db|region-meta)/'); do echo "${f}" && cat "${f}"; done
 
       - name: Upload coverage to Codecov
-        working-directory: ${{ env.working-directory }}
         run: |
           curl -Os https://uploader.codecov.io/latest/linux/codecov
           chmod +x codecov
-          ./codecov -F playground -s ${{ env.working-directory }}/tests/tiup-playground/cover -f '*.out'
+          ./codecov -F playground -s ./tests/tiup-playground/cover -f '*.out'

@@ -17,7 +17,8 @@ mkdir -p ~/.tiup/bin && cp -f ./root.json ~/.tiup/bin/
 tiup-dm --yes deploy $name $version $topo -i ~/.ssh/id_rsa
 
 # topology doesn't contains the section `monitored` will not deploy node_exporter, blackbox_exporter
-tiup-dm exec $name -N $ipprefix.101 --command "ls /etc/systemd/system/{node,blackbox}_exporter-*.service" || export has_exporter=1
+has_exporter=0
+tiup-dm exec $name -N $ipprefix.101 --command "ls /etc/systemd/system/{node,blackbox}_exporter-*.service" || has_exporter=1
 if [[ $has_exporter -eq 0 ]]; then
   echo "monitoring agents should not be deployed for dm cluster if \"monitored\" section is not set."
   exit 1;
