@@ -55,6 +55,9 @@ func TestLocalRuleDirs(t *testing.T) {
 	assert.Equal(t, len(ints), 1)
 	promInstance := ints[0].(*MonitorInstance)
 
+	assert.Contains(t, promInstance.Ports, topo.GetMonitoredOptions().NodeExporterPort)
+	assert.Contains(t, promInstance.Ports, topo.GetMonitoredOptions().BlackboxExporterPort)
+
 	user, err := user.Current()
 	assert.Nil(t, err)
 	e, err := executor.New(executor.SSHTypeNone, false, executor.SSHConfig{Host: "127.0.0.1", User: user.Username})
@@ -252,4 +255,152 @@ func TestGetRetention(t *testing.T) {
 
 	val = getRetention("999d")
 	assert.EqualValues(t, "999d", val)
+}
+
+// TestHandleRemoteWrite verifies that remote write configurations are properly handled
+func TestHandleRemoteWrite(t *testing.T) {
+	// Create spec and monitoring instances
+	spec := &PrometheusSpec{
+		Host:                "192.168.1.10",
+		Port:                9090,
+		PromRemoteWriteToVM: true,
+	}
+	monitoring := &PrometheusSpec{
+		Host:   "192.168.1.20",
+		NgPort: 12020,
+	}
+
+	// Set up expected remote write URL
+	expectedURL := fmt.Sprintf("http://%s/api/v1/write", utils.JoinHostPort(monitoring.Host, monitoring.NgPort))
+
+	monitorInstance := &MonitorInstance{
+		BaseInstance: BaseInstance{
+			InstanceSpec: spec,
+			Host:         spec.Host,
+			Port:         spec.Port,
+			SSHP:         22,
+		},
+	}
+
+	// Execute handleRemoteWrite
+	monitorInstance.handleRemoteWrite(spec, monitoring)
+
+	// Check remote write config was added
+	assert.Len(t, spec.RemoteConfig.RemoteWrite, 1)
+	assert.Equal(t, expectedURL, spec.RemoteConfig.RemoteWrite[0]["url"])
+
+	// Add the same remote write URL again
+	monitorInstance.handleRemoteWrite(spec, monitoring)
+
+	// Check that no duplicate remote write config was added
+	assert.Len(t, spec.RemoteConfig.RemoteWrite, 1)
+	assert.Equal(t, expectedURL, spec.RemoteConfig.RemoteWrite[0]["url"])
+}
+
+// TestPromRemoteWriteToVM tests remote write configuration
+func TestPromRemoteWriteToVM(t *testing.T) {
+	// Create a PrometheusSpec with PromRemoteWriteToVM
+	spec := PrometheusSpec{
+		Host:                "127.0.0.1",
+		Port:                9090,
+		PromRemoteWriteToVM: true,
+	}
+
+	// Validate field is accessible
+	assert.True(t, spec.PromRemoteWriteToVM)
+
+	// Test setting field
+	spec.PromRemoteWriteToVM = false
+	assert.False(t, spec.PromRemoteWriteToVM)
+}
+
+// TestVMRemoteWriteYAMLBackwardsCompatibility tests loading YAML with and without PromRemoteWriteToVM field
+func TestVMRemoteWriteYAMLBackwardsCompatibility(t *testing.T) {
+	// Old YAML without PromRemoteWriteToVM
+	oldYAML := `
+host: 127.0.0.1
+port: 9090
+ng_port: 12020
+`
+
+	// New YAML with PromRemoteWriteToVM
+	newYAML := `
+host: 127.0.0.1
+port: 9090
+ng_port: 12020
+prom_remote_write_to_vm: true
+`
+
+	// Test unmarshaling old YAML
+	var oldSpec PrometheusSpec
+	err := yaml.Unmarshal([]byte(oldYAML), &oldSpec)
+	assert.NoError(t, err)
+
+	// Default value should be false
+	assert.False(t, oldSpec.PromRemoteWriteToVM)
+
+	// Test unmarshaling new YAML
+	var newSpec PrometheusSpec
+	err = yaml.Unmarshal([]byte(newYAML), &newSpec)
+	assert.NoError(t, err)
+
+	// New value should match what's in the YAML
+	assert.True(t, newSpec.PromRemoteWriteToVM)
+}
+
+// TestHandleRemoteWriteDisabled tests that VM remote write configuration is removed when PromRemoteWriteToVM is false
+func TestHandleRemoteWriteDisabled(t *testing.T) {
+	// Create spec with existing remote write config and PromRemoteWriteToVM=false
+	spec := &PrometheusSpec{
+		Host:                "192.168.1.10",
+		Port:                9090,
+		PromRemoteWriteToVM: false,
+	}
+	monitoring := &PrometheusSpec{
+		Host:   "192.168.1.20",
+		NgPort: 12020,
+	}
+
+	// Add VM remote write URL
+	vmURL := fmt.Sprintf("http://%s/api/v1/write", utils.JoinHostPort(monitoring.Host, monitoring.NgPort))
+	spec.RemoteConfig.RemoteWrite = []map[string]any{
+		{"url": vmURL},
+	}
+
+	// Add another remote write URL that should be preserved
+	otherURL := "http://some-other-target:9090/api/v1/write"
+	spec.RemoteConfig.RemoteWrite = append(spec.RemoteConfig.RemoteWrite, map[string]any{
+		"url": otherURL,
+	})
+
+	monitorInstance := &MonitorInstance{
+		BaseInstance: BaseInstance{
+			InstanceSpec: spec,
+			Host:         spec.Host,
+			Port:         spec.Port,
+			SSHP:         22,
+		},
+	}
+
+	// Execute handleRemoteWrite with PromRemoteWriteToVM=false
+	monitorInstance.handleRemoteWrite(spec, monitoring)
+
+	// Check that VM remote write config was removed but other config was preserved
+	assert.Len(t, spec.RemoteConfig.RemoteWrite, 1)
+	assert.Equal(t, otherURL, spec.RemoteConfig.RemoteWrite[0]["url"])
+
+	// Test with no remote write configs
+	spec.RemoteConfig.RemoteWrite = nil
+	monitorInstance.handleRemoteWrite(spec, monitoring)
+
+	// No remote write configs should still be nil/empty
+	assert.Empty(t, spec.RemoteConfig.RemoteWrite)
+
+	// Now test with PromRemoteWriteToVM toggled back to true
+	spec.PromRemoteWriteToVM = true
+	monitorInstance.handleRemoteWrite(spec, monitoring)
+
+	// VM remote write config should be added back
+	assert.Len(t, spec.RemoteConfig.RemoteWrite, 1)
+	assert.Equal(t, vmURL, spec.RemoteConfig.RemoteWrite[0]["url"])
 }

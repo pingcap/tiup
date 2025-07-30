@@ -26,6 +26,11 @@ func TiDBSupportSecureBoot(version string) bool {
 	return semver.Compare(version, "v5.3.0") >= 0 || strings.Contains(version, "nightly")
 }
 
+// TiDBSupportTiproxy return if given version of TiDB support tiproxy
+func TiDBSupportTiproxy(version string) bool {
+	return semver.Compare(version, "v6.4.0") >= 0 || strings.Contains(version, "nightly")
+}
+
 // TiDBSupportUpgradeAPI return if given version of TiDB support upgrade API
 func TiDBSupportUpgradeAPI(version string) bool {
 	return semver.Compare(version, "v7.4.0") >= 0 ||
@@ -94,15 +99,14 @@ func TiFlashPlaygroundNewStartMode(version string) bool {
 	return semver.Compare(version, "v7.1.0") >= 0 || strings.Contains(version, "nightly")
 }
 
-// TiDBSupportDisagg returns true if the given version of TiDB and TiFlash supports
-// disaggregated mode.
-func TiDBSupportDisagg(version string) bool {
-	return semver.Compare(version, "v7.0.0") >= 0 || strings.Contains(version, "nightly")
+// PDSupportMicroservices returns true if the given version of PD supports microservices.
+func PDSupportMicroservices(version string) bool {
+	return semver.Compare(version, "v7.3.0") >= 0 || strings.Contains(version, "nightly")
 }
 
-// PDSupportMicroServices returns true if the given version of PD supports micro services.
-func PDSupportMicroServices(version string) bool {
-	return semver.Compare(version, "v7.3.0") >= 0 || strings.Contains(version, "nightly")
+// PDSupportMicroservicesWithName return if the given version of PD supports microservices with name.
+func PDSupportMicroservicesWithName(version string) bool {
+	return semver.Compare(version, "v8.3.0") >= 0 || strings.Contains(version, "nightly")
 }
 
 // TiCDCSupportConfigFile return if given version of TiCDC support config file

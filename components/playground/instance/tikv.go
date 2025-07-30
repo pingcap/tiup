@@ -18,34 +18,39 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
-	tiupexec "github.com/pingcap/tiup/pkg/exec"
+	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // TiKVInstance represent a running tikv-server
 type TiKVInstance struct {
 	instance
-	pds []*PDInstance
+	shOpt SharedOptions
+	pds   []*PDInstance
+	tsos  []*PDInstance
 	Process
 }
 
 // NewTiKVInstance return a TiKVInstance
-func NewTiKVInstance(binPath string, dir, host, configPath string, id int, port int, pds []*PDInstance) *TiKVInstance {
+func NewTiKVInstance(shOpt SharedOptions, binPath string, dir, host, configPath string, id int, port int, pds []*PDInstance, tsos []*PDInstance) *TiKVInstance {
 	if port <= 0 {
 		port = 20160
 	}
 	return &TiKVInstance{
+		shOpt: shOpt,
 		instance: instance{
 			BinPath:    binPath,
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
-			Port:       utils.MustGetFreePort(host, port),
-			StatusPort: utils.MustGetFreePort(host, 20180),
+			Port:       utils.MustGetFreePort(host, port, shOpt.PortOffset),
+			StatusPort: utils.MustGetFreePort(host, 20180, shOpt.PortOffset),
 			ConfigPath: configPath,
 		},
-		pds: pds,
+		pds:  pds,
+		tsos: tsos,
 	}
 }
 
@@ -55,7 +60,7 @@ func (inst *TiKVInstance) Addr() string {
 }
 
 // Start calls set inst.cmd and Start
-func (inst *TiKVInstance) Start(ctx context.Context, version utils.Version) error {
+func (inst *TiKVInstance) Start(ctx context.Context) error {
 	configPath := filepath.Join(inst.Dir, "tikv.toml")
 	if err := prepareConfig(
 		configPath,
@@ -63,6 +68,23 @@ func (inst *TiKVInstance) Start(ctx context.Context, version utils.Version) erro
 		inst.getConfig(),
 	); err != nil {
 		return err
+	}
+
+	// Need to check tso status
+	if inst.shOpt.PDMode == "ms" {
+		var tsoEnds []string
+		for _, pd := range inst.tsos {
+			tsoEnds = append(tsoEnds, fmt.Sprintf("%s:%d", AdvertiseHost(pd.Host), pd.StatusPort))
+		}
+		pdcli := api.NewPDClient(ctx,
+			tsoEnds, 10*time.Second, nil,
+		)
+		if err := pdcli.CheckTSOHealth(&utils.RetryOption{
+			Delay:   time.Second * 5,
+			Timeout: time.Second * 300,
+		}); err != nil {
+			return err
+		}
 	}
 
 	endpoints := pdEndpoints(inst.pds, true)
@@ -77,10 +99,6 @@ func (inst *TiKVInstance) Start(ctx context.Context, version utils.Version) erro
 	}
 
 	envs := []string{"MALLOC_CONF=prof:true,prof_active:false"}
-	var err error
-	if inst.BinPath, err = tiupexec.PrepareBinary("tikv", version, inst.BinPath); err != nil {
-		return err
-	}
 	inst.Process = &process{cmd: PrepareCommand(ctx, inst.BinPath, args, envs, inst.Dir)}
 
 	logIfErr(inst.Process.SetOutputFile(inst.LogFile()))

@@ -9,6 +9,7 @@ export RUST_BACKTRACE=1
 
 export TZ=${TZ:-/etc/localtime}
 export LD_LIBRARY_PATH={{.DeployDir}}/bin/tiflash:$LD_LIBRARY_PATH
+export MALLOC_CONF="prof:true,prof_active:false"
 
 {{- if .RequiredCPUFlags }}
 if [ -f "/proc/cpuinfo" ]; then

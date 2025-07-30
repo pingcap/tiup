@@ -16,7 +16,6 @@ package main
 import (
 	"bufio"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -26,23 +25,15 @@ import (
 
 	ui "github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
+	"github.com/pingcap/tiup/pkg/environment"
+	"github.com/pingcap/tiup/pkg/localdata"
+	"github.com/pingcap/tiup/pkg/repository"
 	gops "github.com/shirou/gopsutil/process"
 	"github.com/spf13/cobra"
 	_ "github.com/xo/usql/drivers/mysql"
 	"github.com/xo/usql/env"
 	"github.com/xo/usql/handler"
 	"github.com/xo/usql/rline"
-)
-
-const (
-	// EnvNameHome represents the environment name of tiup home directory
-	EnvNameHome = "TIUP_HOME"
-	// EnvNameInstanceDataDir represents the working directory of specific instance
-	EnvNameInstanceDataDir = "TIUP_INSTANCE_DATA_DIR"
-	// DataParentDir represent the parent directory of all running instances
-	DataParentDir = "data"
-	// MetaFilename represents the process meta file name
-	MetaFilename = "tiup_process_meta"
 )
 
 func main() {
@@ -61,6 +52,11 @@ func execute() error {
 			if len(args) > 0 {
 				target = args[0]
 			}
+			env, err := environment.InitEnv(repository.Options{}, repository.MirrorOptions{})
+			if err != nil {
+				return err
+			}
+			environment.SetGlobalEnv(env)
 			return connect(target)
 		},
 	}
@@ -69,9 +65,9 @@ func execute() error {
 }
 
 func connect(target string) error {
-	tiupHome := os.Getenv(EnvNameHome)
+	tiupHome := os.Getenv(localdata.EnvNameHome)
 	if tiupHome == "" {
-		return fmt.Errorf("env variable %s not set, are you running client out of tiup?", EnvNameHome)
+		return fmt.Errorf("env variable %s not set, are you running client out of tiup?", localdata.EnvNameHome)
 	}
 	endpoints, err := scanEndpoint(tiupHome)
 	if err != nil {
@@ -103,7 +99,7 @@ func connect(target string) error {
 	if err != nil {
 		return fmt.Errorf("can't open history file: %s", err.Error())
 	}
-	h := handler.New(l, u, os.Getenv(EnvNameInstanceDataDir), true)
+	h := handler.New(l, u, os.Getenv(localdata.EnvNameInstanceDataDir), true)
 	if err = h.Open(context.TODO(), ep.dsn); err != nil {
 		return fmt.Errorf("can't open connection to %s: %s", ep.dsn, err.Error())
 	}
@@ -116,7 +112,7 @@ func connect(target string) error {
 func scanEndpoint(tiupHome string) ([]*endpoint, error) {
 	endpoints := []*endpoint{}
 
-	files, err := os.ReadDir(path.Join(tiupHome, DataParentDir))
+	files, err := os.ReadDir(path.Join(tiupHome, localdata.DataParentDir))
 	if err != nil {
 		return nil, err
 	}
@@ -125,39 +121,18 @@ func scanEndpoint(tiupHome string) ([]*endpoint, error) {
 		if !isInstanceAlive(tiupHome, file.Name()) {
 			continue
 		}
-		endpoints = append(endpoints, readDsn(path.Join(tiupHome, DataParentDir, file.Name()), file.Name())...)
+		endpoints = append(endpoints, readDsn(path.Join(tiupHome, localdata.DataParentDir, file.Name()), file.Name())...)
 	}
 	return endpoints, nil
 }
 
 func isInstanceAlive(tiupHome, instance string) bool {
-	metaFile := path.Join(tiupHome, DataParentDir, instance, MetaFilename)
-
-	// If the path doesn't contain the meta file, which means startup interrupted
-	_, err := os.Stat(metaFile)
-	if os.IsNotExist(err) {
-		return false
-	}
-
-	file, err := os.Open(metaFile)
+	s, err := environment.GlobalEnv().Profile().ReadMetaFile(instance)
 	if err != nil {
 		return false
 	}
-	defer file.Close()
-	var process map[string]any
-	if err := json.NewDecoder(file).Decode(&process); err != nil {
-		return false
-	}
-
-	if v, ok := process["pid"]; !ok {
-		return false
-	} else if pid, ok := v.(float64); !ok {
-		return false
-	} else if exist, err := gops.PidExists(int32(pid)); err != nil {
-		return false
-	} else {
-		return exist
-	}
+	exist, _ := gops.PidExists(int32(s.Pid))
+	return exist
 }
 
 func readDsn(dir, component string) []*endpoint {
@@ -187,7 +162,7 @@ func selectEndpoint(endpoints []*endpoint) *endpoint {
 	defer ui.Close()
 
 	l := widgets.NewList()
-	l.Title = "Choose a endpoint to connect"
+	l.Title = "Choose an endpoint to connect"
 
 	ml := 0
 	for _, ep := range endpoints {
@@ -202,10 +177,7 @@ func selectEndpoint(endpoints []*endpoint) *endpoint {
 	l.TextStyle = ui.NewStyle(ui.ColorWhite)
 	l.SelectedRowStyle = ui.NewStyle(ui.ColorGreen)
 	l.WrapText = false
-	size := 16
-	if len(endpoints) < size {
-		size = len(endpoints)
-	}
+	size := min(len(endpoints), 16)
 	l.SetRect(0, 0, 80, size+2)
 
 	ui.Render(l)

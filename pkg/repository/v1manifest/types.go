@@ -23,7 +23,7 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-// Manifest representation for ser/de.
+// Manifest representation for set/de.
 type Manifest struct {
 	// Signatures value
 	Signatures []Signature `json:"signatures"`
@@ -31,7 +31,7 @@ type Manifest struct {
 	Signed ValidManifest `json:"signed"`
 }
 
-// RawManifest representation for ser/de.
+// RawManifest representation for set/de.
 type RawManifest struct {
 	// Signatures value
 	Signatures []Signature `json:"signatures"`
@@ -266,16 +266,25 @@ func (manifest *Component) LatestVersion(platform string) string {
 		return ""
 	}
 
-	var latest string
+	var last string
+	var lastStable string
 	for v := range versions {
 		if utils.Version(v).IsNightly() {
 			continue
 		}
-		if latest == "" || semver.Compare(v, latest) > 0 {
-			latest = v
+
+		if last == "" || semver.Compare(last, v) < 0 {
+			last = v
+		}
+		if semver.Prerelease(v) == "" && (lastStable == "" || semver.Compare(lastStable, v) < 0) {
+			lastStable = v
 		}
 	}
-	return latest
+
+	if lastStable == "" {
+		return last
+	}
+	return lastStable
 }
 
 // VersionListWithYanked return all versions include yanked versions
@@ -297,7 +306,7 @@ func (manifest *Component) VersionListWithYanked(platform string) map[string]Ver
 // ErrLoadManifest is an empty object of LoadManifestError, useful for type check
 var ErrLoadManifest = &LoadManifestError{}
 
-// LoadManifestError is the error type used when loading manifest failes
+// LoadManifestError is the error type used when loading manifest fails
 type LoadManifestError struct {
 	manifest string // manifest name
 	err      error  // wrapped error

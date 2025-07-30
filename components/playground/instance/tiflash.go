@@ -21,7 +21,6 @@ import (
 	"strings"
 
 	"github.com/pingcap/errors"
-	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/tidbver"
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -39,54 +38,50 @@ const (
 	TiFlashRoleDisaggCompute TiFlashRole = "compute"
 )
 
-// DisaggOptions contains configs to run TiFlash in disaggregated mode.
-type DisaggOptions struct {
-	S3Endpoint string `yaml:"s3_endpoint"`
-	Bucket     string `yaml:"bucket"`
-	AccessKey  string `yaml:"access_key"`
-	SecretKey  string `yaml:"secret_key"`
-}
-
 // TiFlashInstance represent a running TiFlash
 type TiFlashInstance struct {
 	instance
-	Role            TiFlashRole
-	DisaggOpts      DisaggOptions
-	TCPPort         int
-	ServicePort     int
-	ProxyPort       int
-	ProxyStatusPort int
+	Role TiFlashRole // Used in wait routine, so it is public
+
+	shOpt           SharedOptions
+	tcpPort         int
+	servicePort     int
+	proxyPort       int
+	proxyStatusPort int
 	pds             []*PDInstance
 	dbs             []*TiDBInstance
 	Process
 }
 
 // NewTiFlashInstance return a TiFlashInstance
-func NewTiFlashInstance(role TiFlashRole, disaggOptions DisaggOptions, binPath, dir, host, configPath string, id int, pds []*PDInstance, dbs []*TiDBInstance, version string) *TiFlashInstance {
+func NewTiFlashInstance(role TiFlashRole, shOpt SharedOptions, binPath, dir, host, configPath string, id int, pds []*PDInstance, dbs []*TiDBInstance, version string) *TiFlashInstance {
 	if role != TiFlashRoleNormal && role != TiFlashRoleDisaggWrite && role != TiFlashRoleDisaggCompute {
 		panic(fmt.Sprintf("Unknown TiFlash role %s", role))
+	}
+	if (role == TiFlashRoleDisaggCompute || role == TiFlashRoleDisaggWrite) && shOpt.Mode != "tidb-cse" && shOpt.Mode != "tiflash-disagg" {
+		panic(fmt.Sprintf("Unsupported disagg role in mode %s", shOpt.Mode))
 	}
 
 	httpPort := 8123
 	if !tidbver.TiFlashNotNeedHTTPPortConfig(version) {
-		httpPort = utils.MustGetFreePort(host, httpPort)
+		httpPort = utils.MustGetFreePort(host, httpPort, shOpt.PortOffset)
 	}
 	return &TiFlashInstance{
+		shOpt: shOpt,
 		instance: instance{
 			BinPath:    binPath,
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
 			Port:       httpPort,
-			StatusPort: utils.MustGetFreePort(host, 8234),
+			StatusPort: utils.MustGetFreePort(host, 8234, shOpt.PortOffset),
 			ConfigPath: configPath,
 		},
 		Role:            role,
-		DisaggOpts:      disaggOptions,
-		TCPPort:         utils.MustGetFreePort(host, 9100), // 9000 for default object store port
-		ServicePort:     utils.MustGetFreePort(host, 3930),
-		ProxyPort:       utils.MustGetFreePort(host, 20170),
-		ProxyStatusPort: utils.MustGetFreePort(host, 20292),
+		tcpPort:         utils.MustGetFreePort(host, 9100, shOpt.PortOffset), // 9000 for default object store port
+		servicePort:     utils.MustGetFreePort(host, 3930, shOpt.PortOffset),
+		proxyPort:       utils.MustGetFreePort(host, 20170, shOpt.PortOffset),
+		proxyStatusPort: utils.MustGetFreePort(host, 20292, shOpt.PortOffset),
 		pds:             pds,
 		dbs:             dbs,
 	}
@@ -94,20 +89,20 @@ func NewTiFlashInstance(role TiFlashRole, disaggOptions DisaggOptions, binPath, 
 
 // Addr return the address of tiflash
 func (inst *TiFlashInstance) Addr() string {
-	return utils.JoinHostPort(AdvertiseHost(inst.Host), inst.ServicePort)
+	return utils.JoinHostPort(AdvertiseHost(inst.Host), inst.servicePort)
 }
 
 // StatusAddrs implements Instance interface.
 func (inst *TiFlashInstance) StatusAddrs() (addrs []string) {
 	addrs = append(addrs, utils.JoinHostPort(inst.Host, inst.StatusPort))
-	addrs = append(addrs, utils.JoinHostPort(inst.Host, inst.ProxyStatusPort))
+	addrs = append(addrs, utils.JoinHostPort(inst.Host, inst.proxyStatusPort))
 	return
 }
 
 // Start calls set inst.cmd and Start
-func (inst *TiFlashInstance) Start(ctx context.Context, version utils.Version) error {
-	if !tidbver.TiFlashPlaygroundNewStartMode(version.String()) {
-		return inst.startOld(ctx, version)
+func (inst *TiFlashInstance) Start(ctx context.Context) error {
+	if !tidbver.TiFlashPlaygroundNewStartMode(inst.Version.String()) {
+		return inst.startOld(ctx, inst.Version)
 	}
 
 	proxyConfigPath := filepath.Join(inst.Dir, "tiflash_proxy.toml")
@@ -141,11 +136,11 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version utils.Version) e
 		{"logger.log", inst.LogFile()},
 		{"logger.errorlog", filepath.Join(inst.Dir, "tiflash_error.log")},
 		{"status.metrics_port", fmt.Sprintf("%d", inst.StatusPort)},
-		{"flash.service_addr", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.ServicePort)},
+		{"flash.service_addr", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.servicePort)},
 		{"raft.pd_addr", strings.Join(endpoints, ",")},
-		{"flash.proxy.addr", utils.JoinHostPort(inst.Host, inst.ProxyPort)},
-		{"flash.proxy.advertise-addr", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.ProxyPort)},
-		{"flash.proxy.status-addr", utils.JoinHostPort(inst.Host, inst.ProxyStatusPort)},
+		{"flash.proxy.addr", utils.JoinHostPort(inst.Host, inst.proxyPort)},
+		{"flash.proxy.advertise-addr", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.proxyPort)},
+		{"flash.proxy.status-addr", utils.JoinHostPort(inst.Host, inst.proxyStatusPort)},
 		{"flash.proxy.data-dir", filepath.Join(inst.Dir, "proxy_data")},
 		{"flash.proxy.log-file", filepath.Join(inst.Dir, "tiflash_tikv.log")},
 	}
@@ -153,7 +148,6 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version utils.Version) e
 	if err != nil {
 		return errors.Trace(err)
 	}
-	fmt.Println("userConfig", userConfig)
 	for _, arg := range runtimeConfig {
 		// if user has set the config, skip it
 		if !isKeyPresentInMap(userConfig, arg[0]) {
@@ -161,9 +155,6 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version utils.Version) e
 		}
 	}
 
-	if inst.BinPath, err = tiupexec.PrepareBinary("tiflash", version, inst.BinPath); err != nil {
-		return err
-	}
 	inst.Process = &process{cmd: PrepareCommand(ctx, inst.BinPath, args, nil, inst.Dir)}
 
 	logIfErr(inst.Process.SetOutputFile(inst.LogFile()))
@@ -205,5 +196,5 @@ func (inst *TiFlashInstance) Cmd() *exec.Cmd {
 
 // StoreAddr return the store address of TiFlash
 func (inst *TiFlashInstance) StoreAddr() string {
-	return utils.JoinHostPort(AdvertiseHost(inst.Host), inst.ServicePort)
+	return utils.JoinHostPort(AdvertiseHost(inst.Host), inst.servicePort)
 }

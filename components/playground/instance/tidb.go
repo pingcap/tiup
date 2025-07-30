@@ -20,42 +20,43 @@ import (
 	"strconv"
 	"strings"
 
-	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // TiDBInstance represent a running tidb-server
 type TiDBInstance struct {
 	instance
-	pds []*PDInstance
+	shOpt SharedOptions
+	pds   []*PDInstance
 	Process
-	enableBinlog bool
-	isDisaggMode bool
+	tiproxyCertDir string
+	enableBinlog   bool
 }
 
 // NewTiDBInstance return a TiDBInstance
-func NewTiDBInstance(binPath string, dir, host, configPath string, id, port int, pds []*PDInstance, enableBinlog bool, isDisaggMode bool) *TiDBInstance {
+func NewTiDBInstance(shOpt SharedOptions, binPath string, dir, host, configPath string, id, port int, pds []*PDInstance, tiproxyCertDir string, enableBinlog bool) *TiDBInstance {
 	if port <= 0 {
 		port = 4000
 	}
 	return &TiDBInstance{
+		shOpt: shOpt,
 		instance: instance{
 			BinPath:    binPath,
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
-			Port:       utils.MustGetFreePort(host, port),
-			StatusPort: utils.MustGetFreePort("0.0.0.0", 10080),
+			Port:       utils.MustGetFreePort(host, port, shOpt.PortOffset),
+			StatusPort: utils.MustGetFreePort("0.0.0.0", 10080, shOpt.PortOffset),
 			ConfigPath: configPath,
 		},
-		pds:          pds,
-		enableBinlog: enableBinlog,
-		isDisaggMode: isDisaggMode,
+		tiproxyCertDir: tiproxyCertDir,
+		pds:            pds,
+		enableBinlog:   enableBinlog,
 	}
 }
 
 // Start calls set inst.cmd and Start
-func (inst *TiDBInstance) Start(ctx context.Context, version utils.Version) error {
+func (inst *TiDBInstance) Start(ctx context.Context) error {
 	configPath := filepath.Join(inst.Dir, "tidb.toml")
 	if err := prepareConfig(
 		configPath,
@@ -80,10 +81,6 @@ func (inst *TiDBInstance) Start(ctx context.Context, version utils.Version) erro
 		args = append(args, "--enable-binlog=true")
 	}
 
-	var err error
-	if inst.BinPath, err = tiupexec.PrepareBinary("tidb", version, inst.BinPath); err != nil {
-		return err
-	}
 	inst.Process = &process{cmd: PrepareCommand(ctx, inst.BinPath, args, nil, inst.Dir)}
 
 	logIfErr(inst.Process.SetOutputFile(inst.LogFile()))

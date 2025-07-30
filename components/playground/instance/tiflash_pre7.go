@@ -26,7 +26,6 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -92,10 +91,6 @@ func (inst *TiFlashInstance) startOld(ctx context.Context, version utils.Version
 		return err
 	}
 
-	if inst.BinPath, err = tiupexec.PrepareBinary("tiflash", version, inst.BinPath); err != nil {
-		return err
-	}
-
 	dirPath := filepath.Dir(inst.BinPath)
 	clusterManagerPath := getFlashClusterPath(dirPath)
 	if err = inst.checkConfigOld(wd, clusterManagerPath, version, tidbStatusAddrs, endpoints); err != nil {
@@ -146,12 +141,12 @@ func (inst *TiFlashInstance) checkConfigOld(deployDir, clusterManagerPath string
 	}()
 
 	// Write default config to buffer
-	if err := writeTiFlashConfigOld(flashBuf, version, inst.TCPPort, inst.Port, inst.ServicePort, inst.StatusPort,
+	if err := writeTiFlashConfigOld(flashBuf, version, inst.tcpPort, inst.Port, inst.servicePort, inst.StatusPort,
 		inst.Host, deployDir, clusterManagerPath, tidbStatusAddrs, endpoints); err != nil {
 		return errors.Trace(err)
 	}
 	if err := writeTiFlashProxyConfigOld(proxyBuf, version, inst.Host, deployDir,
-		inst.ServicePort, inst.ProxyPort, inst.ProxyStatusPort); err != nil {
+		inst.servicePort, inst.proxyPort, inst.proxyStatusPort); err != nil {
 		return errors.Trace(err)
 	}
 

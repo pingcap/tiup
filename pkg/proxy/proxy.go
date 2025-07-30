@@ -49,11 +49,7 @@ func MaybeStartProxy(
 		return err
 	}
 
-	httpPort, err := utils.GetFreePort("127.0.0.1", 12345)
-	if err != nil {
-		return err
-	}
-
+	httpPort := utils.MustGetFreePort("127.0.0.1", 12345, 0)
 	addr := fmt.Sprintf("127.0.0.1:%d", httpPort)
 
 	// TODO: Using environment variables to share data may not be a good idea
@@ -69,7 +65,7 @@ func MaybeStartProxy(
 		),
 	}
 
-	logger.Infof(color.HiGreenString("Start HTTP inner proxy %s", httpProxy.Addr))
+	logger.Infof("%s", color.HiGreenString("Start HTTP inner proxy %s", httpProxy.Addr))
 	go func() {
 		if err := httpProxy.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Errorf("Failed to listen HTTP proxy: %v", err)
@@ -85,7 +81,7 @@ func MaybeStartProxy(
 	)
 	tcpProxy.Store(p)
 
-	logger.Infof(color.HiGreenString("Start TCP inner proxy %s", p.endpoint))
+	logger.Infof("%s", color.HiGreenString("Start TCP inner proxy %s", p.endpoint))
 
 	return nil
 }

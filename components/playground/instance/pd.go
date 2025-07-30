@@ -20,7 +20,7 @@ import (
 	"strings"
 
 	"github.com/pingcap/errors"
-	tiupexec "github.com/pingcap/tiup/pkg/exec"
+	"github.com/pingcap/tiup/pkg/tidbver"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -36,37 +36,39 @@ const (
 	PDRoleTSO PDRole = "tso"
 	// PDRoleScheduling is the role of PD scheduling
 	PDRoleScheduling PDRole = "scheduling"
-	// PDRoleResourceManager is the role of PD resource manager
-	PDRoleResourceManager PDRole = "resource_manager"
 )
 
 // PDInstance represent a running pd-server
 type PDInstance struct {
 	instance
-	Role          PDRole
+	shOpt         SharedOptions
+	role          PDRole
 	initEndpoints []*PDInstance
 	joinEndpoints []*PDInstance
 	pds           []*PDInstance
 	Process
+	kvIsSingleReplica bool
 }
 
 // NewPDInstance return a PDInstance
-func NewPDInstance(role PDRole, binPath, dir, host, configPath string, id int, pds []*PDInstance, port int) *PDInstance {
+func NewPDInstance(role PDRole, shOpt SharedOptions, binPath, dir, host, configPath string, id int, pds []*PDInstance, port int, kvIsSingleReplica bool) *PDInstance {
 	if port <= 0 {
 		port = 2379
 	}
 	return &PDInstance{
+		shOpt: shOpt,
 		instance: instance{
 			BinPath:    binPath,
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
-			Port:       utils.MustGetFreePort(host, 2380),
-			StatusPort: utils.MustGetFreePort(host, port),
+			Port:       utils.MustGetFreePort(host, 2380, shOpt.PortOffset),
+			StatusPort: utils.MustGetFreePort(host, port, shOpt.PortOffset),
 			ConfigPath: configPath,
 		},
-		Role: role,
-		pds:  pds,
+		role:              role,
+		pds:               pds,
+		kvIsSingleReplica: kvIsSingleReplica,
 	}
 }
 
@@ -84,11 +86,18 @@ func (inst *PDInstance) InitCluster(pds []*PDInstance) *PDInstance {
 
 // Name return the name of pd.
 func (inst *PDInstance) Name() string {
-	return fmt.Sprintf("pd-%d", inst.ID)
+	switch inst.role {
+	case PDRoleTSO:
+		return fmt.Sprintf("tso-%d", inst.ID)
+	case PDRoleScheduling:
+		return fmt.Sprintf("scheduling-%d", inst.ID)
+	default:
+		return fmt.Sprintf("pd-%d", inst.ID)
+	}
 }
 
 // Start calls set inst.cmd and Start
-func (inst *PDInstance) Start(ctx context.Context, version utils.Version) error {
+func (inst *PDInstance) Start(ctx context.Context) error {
 	configPath := filepath.Join(inst.Dir, "pd.toml")
 	if err := prepareConfig(
 		configPath,
@@ -100,9 +109,9 @@ func (inst *PDInstance) Start(ctx context.Context, version utils.Version) error 
 
 	uid := inst.Name()
 	var args []string
-	switch inst.Role {
+	switch inst.role {
 	case PDRoleNormal, PDRoleAPI:
-		if inst.Role == PDRoleAPI {
+		if inst.role == PDRoleAPI {
 			args = []string{"services", "api"}
 		}
 		args = append(args, []string{
@@ -115,7 +124,6 @@ func (inst *PDInstance) Start(ctx context.Context, version utils.Version) error 
 			fmt.Sprintf("--advertise-client-urls=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.StatusPort)),
 			fmt.Sprintf("--log-file=%s", inst.LogFile()),
 		}...)
-
 		switch {
 		case len(inst.initEndpoints) > 0:
 			endpoints := make([]string, 0)
@@ -142,9 +150,10 @@ func (inst *PDInstance) Start(ctx context.Context, version utils.Version) error 
 			fmt.Sprintf("--advertise-listen-addr=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.StatusPort)),
 			fmt.Sprintf("--backend-endpoints=%s", strings.Join(endpoints, ",")),
 			fmt.Sprintf("--log-file=%s", inst.LogFile()),
+			fmt.Sprintf("--config=%s", configPath),
 		}
-		if inst.ConfigPath != "" {
-			args = append(args, fmt.Sprintf("--config=%s", inst.ConfigPath))
+		if tidbver.PDSupportMicroservicesWithName(inst.Version.String()) {
+			args = append(args, fmt.Sprintf("--name=%s", uid))
 		}
 	case PDRoleScheduling:
 		endpoints := pdEndpoints(inst.pds, true)
@@ -155,29 +164,13 @@ func (inst *PDInstance) Start(ctx context.Context, version utils.Version) error 
 			fmt.Sprintf("--advertise-listen-addr=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.StatusPort)),
 			fmt.Sprintf("--backend-endpoints=%s", strings.Join(endpoints, ",")),
 			fmt.Sprintf("--log-file=%s", inst.LogFile()),
+			fmt.Sprintf("--config=%s", configPath),
 		}
-		if inst.ConfigPath != "" {
-			args = append(args, fmt.Sprintf("--config=%s", inst.ConfigPath))
-		}
-	case PDRoleResourceManager:
-		endpoints := pdEndpoints(inst.pds, true)
-		args = []string{
-			"services",
-			"resource-manager",
-			fmt.Sprintf("--listen-addr=http://%s", utils.JoinHostPort(inst.Host, inst.StatusPort)),
-			fmt.Sprintf("--advertise-listen-addr=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.StatusPort)),
-			fmt.Sprintf("--backend-endpoints=%s", strings.Join(endpoints, ",")),
-			fmt.Sprintf("--log-file=%s", inst.LogFile()),
-		}
-		if inst.ConfigPath != "" {
-			args = append(args, fmt.Sprintf("--config=%s", inst.ConfigPath))
+		if tidbver.PDSupportMicroservicesWithName(inst.Version.String()) {
+			args = append(args, fmt.Sprintf("--name=%s", uid))
 		}
 	}
 
-	var err error
-	if inst.BinPath, err = tiupexec.PrepareBinary("pd", version, inst.BinPath); err != nil {
-		return err
-	}
 	inst.Process = &process{cmd: PrepareCommand(ctx, inst.BinPath, args, nil, inst.Dir)}
 
 	logIfErr(inst.Process.SetOutputFile(inst.LogFile()))
@@ -186,15 +179,18 @@ func (inst *PDInstance) Start(ctx context.Context, version utils.Version) error 
 
 // Component return the component name.
 func (inst *PDInstance) Component() string {
-	if inst.Role == PDRoleNormal {
+	if inst.role == PDRoleNormal || inst.role == PDRoleAPI {
 		return "pd"
 	}
-	return fmt.Sprintf("pd %s", inst.Role)
+	return string(inst.role)
 }
 
 // LogFile return the log file.
 func (inst *PDInstance) LogFile() string {
-	return filepath.Join(inst.Dir, fmt.Sprintf("%s.log", string(inst.Role)))
+	if inst.role == PDRoleNormal || inst.role == PDRoleAPI {
+		return filepath.Join(inst.Dir, "pd.log")
+	}
+	return filepath.Join(inst.Dir, fmt.Sprintf("%s.log", string(inst.role)))
 }
 
 // Addr return the listen address of PD

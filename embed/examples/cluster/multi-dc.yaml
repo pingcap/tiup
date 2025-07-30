@@ -259,6 +259,16 @@ tiflash_servers:
     # data_dir: /tidb-data/tiflash-9000
     # # TiFlash Server log file storage directory.
     # log_dir: /tidb-deploy/tiflash-9000/log
+    # # The following configs are used to overwrite the `server_configs.tiflash` values.
+    # config:
+    #   logger.level: info
+    # # The following configs are used to overwrite the `server_configs.tiflash-learner` values.
+    learner_config:
+      server.labels:
+        zone: bj
+        dc: bja
+        rack: rack1
+        host: tiflash-host1
   - host: 10.0.1.25
     # ssh_port: 22
     # tcp_port: 9000
@@ -269,6 +279,16 @@ tiflash_servers:
     # deploy_dir: /tidb-deploy/tiflash-9000
     # data_dir: /tidb-data/tiflash-9000
     # log_dir: /tidb-deploy/tiflash-9000/log
+    # # The following configs are used to overwrite the `server_configs.tiflash` values.
+    # config:
+    #   logger.level: info
+    # # The following configs are used to overwrite the `server_configs.tiflash-learner` values.
+    learner_config:
+      server.labels:
+        zone: bj
+        dc: bjb
+        rack: rack1
+        host: tiflash-host2
 
 # # Server configs are used to specify the configuration of Prometheus Server.  
 monitoring_servers:

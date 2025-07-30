@@ -21,6 +21,8 @@ import (
 
 	"golang.org/x/mod/semver"
 
+	"slices"
+
 	"github.com/pingcap/errors"
 )
 
@@ -154,7 +156,7 @@ func NewConstraint(raw string) (*Constraint, error) {
 		c.min.Prerelease = []string{}
 	}
 
-	c.max.Prerelease = append([]string(nil), c.min.Prerelease...)
+	c.max.Prerelease = slices.Clone(c.min.Prerelease)
 
 	if constraint := result["constraint"]; constraint == "~" {
 		// ~x.y.z -> >=x.y.z <x.(y+1).0

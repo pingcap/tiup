@@ -159,6 +159,11 @@ func checkSysInfo(opt *CheckOptions, sysInfo *sysinfo.SysInfo) []*CheckResult {
 	return results
 }
 
+// Try to keep this in sync with
+// https://docs.pingcap.com/tidb/stable/hardware-and-software-requirements#os-and-platform-requirements
+//
+// This information is in most cases based on the `ID` (Vendor) and `VERSION_ID` (Release) of /etc/os-release
+// See https://github.com/AstroProfundis/sysinfo/blob/tiup/os.go for details.
 func checkOSInfo(opt *CheckOptions, osInfo *sysinfo.OS) *CheckResult {
 	result := &CheckResult{
 		Name: CheckNameOSVer,
@@ -175,17 +180,31 @@ func checkOSInfo(opt *CheckOptions, osInfo *sysinfo.OS) *CheckResult {
 			return result
 		}
 	case "amzn":
+		// https://aws.amazon.com/linux/amazon-linux-2023/
+		if osInfo.Version == "2023" {
+			return result
+		}
+
 		// Amazon Linux 2 is based on CentOS 7 and is recommended for
 		// AWS Graviton 2 (ARM64) deployments.
+		// https://aws.amazon.com/amazon-linux-2/
 		if ver, _ := strconv.ParseFloat(osInfo.Version, 64); ver < 2 || ver >= 3 {
-			result.Err = fmt.Errorf("%s %s not supported, use version 2 please",
+			result.Err = fmt.Errorf("%s %s not supported, use Amazon Linux 2 or Amazon Linux 2023 please",
 				osInfo.Name, osInfo.Release)
 			return result
 		}
-	case "centos", "redhat", "rhel", "ol":
-		// check version
-		if ver, _ := strconv.ParseFloat(osInfo.Version, 64); ver < 7 {
-			result.Err = fmt.Errorf("%s %s not supported, use version 8 please",
+	case "centos":
+		// CentOS Linux is EOL
+		// CentOS Stream 9 and newer is still fine
+		if ver, _ := strconv.ParseFloat(osInfo.Version, 64); ver < 9 {
+			result.Err = fmt.Errorf("%s %s not supported, use version 9 or higher",
+				osInfo.Name, osInfo.Release)
+			return result
+		}
+	case "redhat", "rhel", "ol":
+		// RHEL 8.4 or newer 8.x versions are supported
+		if ver, _ := strconv.ParseFloat(osInfo.Version, 64); ver < 8.4 || ver >= 9 {
+			result.Err = fmt.Errorf("%s %s not supported, use version 8.4 or a later 8.x version please",
 				osInfo.Name, osInfo.Release)
 			return result
 		}
@@ -198,22 +217,22 @@ func checkOSInfo(opt *CheckOptions, osInfo *sysinfo.OS) *CheckResult {
 		}
 	case "debian":
 		// debian support is not fully tested, but we suppose it should work
-		msg := "debian support is not fully tested, be careful"
+		msg := "Debian support is not fully tested, be careful"
 		result.Err = fmt.Errorf("%s (%s)", result.Msg, msg)
 		result.Warn = true
-		if ver, _ := strconv.ParseFloat(osInfo.Version, 64); ver < 9 {
-			result.Err = fmt.Errorf("%s %s not supported, use version 9 or higher (%s)",
+		if ver, _ := strconv.ParseFloat(osInfo.Version, 64); ver < 10 {
+			result.Err = fmt.Errorf("%s %s not supported, use version 10 or higher (%s)",
 				osInfo.Name, osInfo.Release, msg)
 			result.Warn = false
 			return result
 		}
 	case "ubuntu":
 		// ubuntu support is not fully tested, but we suppose it should work
-		msg := "ubuntu support is not fully tested, be careful"
+		msg := "Ubuntu support is not fully tested, be careful"
 		result.Err = fmt.Errorf("%s (%s)", result.Msg, msg)
 		result.Warn = true
-		if ver, _ := strconv.ParseFloat(osInfo.Version, 64); ver < 18.04 {
-			result.Err = fmt.Errorf("%s %s not supported, use version 18.04 or higher (%s)",
+		if ver, _ := strconv.ParseFloat(osInfo.Version, 64); ver < 20.04 {
+			result.Err = fmt.Errorf("%s %s not supported, use version 20.04 or higher (%s)",
 				osInfo.Name, osInfo.Release, msg)
 			result.Warn = false
 			return result
@@ -221,7 +240,7 @@ func checkOSInfo(opt *CheckOptions, osInfo *sysinfo.OS) *CheckResult {
 	case "openEuler":
 		return result
 	default:
-		result.Err = fmt.Errorf("os vendor %s not supported", osInfo.Vendor)
+		result.Err = fmt.Errorf("OS vendor %s not supported", osInfo.Vendor)
 		return result
 	}
 
@@ -450,7 +469,7 @@ func CheckKernelParameters(opt *CheckOptions, p []byte) []*CheckResult {
 			if val < 32768 {
 				results = append(results, &CheckResult{
 					Name: CheckNameSysctl,
-					Err:  fmt.Errorf("net.core.somaxconn = %d, should be greater than 32768", val),
+					Err:  fmt.Errorf("net.core.somaxconn = %d, should 32768 or greater", val),
 					Msg:  "net.core.somaxconn = 32768",
 				})
 			}
@@ -629,7 +648,7 @@ func CheckPartitions(opt *CheckOptions, host string, topo *spec.Specification, r
 	flt := flatPartitions(insightInfo.Partitions)
 	parts := sortPartitions(flt)
 
-	// check if multiple instances are using the same partition as data storeage
+	// check if multiple instances are using the same partition as data storage
 	type storePartitionInfo struct {
 		comp string
 		path string

@@ -52,7 +52,6 @@ The repository can be used either online or offline.
 It also provides some useful utilities to help managing keys, users and versions
 of components or the repository itself.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			teleCommand = cmd.CommandPath()
 			if len(args) == 0 {
 				return cmd.Help()
 			}
@@ -89,7 +88,6 @@ func newMirrorSignCmd() *cobra.Command {
 		Short: "Add signatures to a manifest file",
 		Long:  fmt.Sprintf("Add signatures to a manifest file; if no key file is specified, ~/.tiup/keys/%s will be used", localdata.DefaultPrivateKeyName),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			teleCommand = cmd.CommandPath()
 			env := environment.GlobalEnv()
 			if len(args) < 1 {
 				return cmd.Help()
@@ -151,7 +149,6 @@ func newMirrorShowCmd() *cobra.Command {
 		Short: "Show mirror address",
 		Long:  `Show current mirror address`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			teleCommand = cmd.CommandPath()
 			fmt.Println(environment.Mirror())
 			return nil
 		},
@@ -163,8 +160,9 @@ func newMirrorShowCmd() *cobra.Command {
 // the `mirror set` sub command
 func newMirrorSetCmd() *cobra.Command {
 	var (
-		root  string
-		reset bool
+		root   string
+		reset  bool
+		silent bool
 	)
 	cmd := &cobra.Command{
 		Use:   "set <mirror-addr>",
@@ -173,7 +171,6 @@ func newMirrorSetCmd() *cobra.Command {
 directory. Relative paths will not be expanded, so absolute paths are recommended.
 The root manifest in $TIUP_HOME will be replaced with the one in given repository automatically.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			teleCommand = cmd.CommandPath()
 			if !reset && len(args) != 1 {
 				return cmd.Help()
 			}
@@ -198,12 +195,15 @@ The root manifest in $TIUP_HOME will be replaced with the one in given repositor
 				log.Errorf("Failed to set mirror: %s\n", err.Error())
 				return err
 			}
-			fmt.Printf("Successfully set mirror to %s\n", addr)
+			if !silent {
+				fmt.Printf("Successfully set mirror to %s\n", addr)
+			}
 			return nil
 		},
 	}
 	cmd.Flags().StringVarP(&root, "root", "r", root, "Specify the path of `root.json`")
 	cmd.Flags().BoolVar(&reset, "reset", false, "Reset mirror to use the default address.")
+	cmd.Flags().BoolVar(&silent, "silent", false, "Skip non-warning messages.")
 
 	return cmd
 }
@@ -218,7 +218,6 @@ func newMirrorGrantCmd() *cobra.Command {
 		Short: "grant a new owner",
 		Long:  "grant a new owner to current mirror",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			teleCommand = cmd.CommandPath()
 			if len(args) < 1 {
 				return cmd.Help()
 			}
@@ -229,7 +228,7 @@ func newMirrorGrantCmd() *cobra.Command {
 				name = id
 			}
 
-			// the privPath can point to a public key becase the Public method of KeyInfo works on both priv and pub keys
+			// the privPath can point to a public key because the Public method of KeyInfo works on both priv and pub keys
 			privKey, err := loadPrivKey(privPath)
 			if err != nil {
 				return err
@@ -271,7 +270,6 @@ func newMirrorModifyCmd() *cobra.Command {
 		Short: "Modify published component",
 		Long:  "Modify component attributes (hidden, standalone, yanked)",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			teleCommand = cmd.CommandPath()
 			if len(args) != 1 {
 				return cmd.Help()
 			}
@@ -348,7 +346,6 @@ func newMirrorRenewCmd() *cobra.Command {
 		Short: "Renew the manifest of a published component.",
 		Long:  "Renew the manifest of a published component, bump version and extend its expire time.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			teleCommand = cmd.CommandPath()
 			if len(args) != 1 {
 				return cmd.Help()
 			}
@@ -364,7 +361,11 @@ func newMirrorRenewCmd() *cobra.Command {
 				if !v1manifest.IsExpirationError(perrs.Cause(err)) {
 					return err
 				}
-				fmt.Println(err)
+				fmt.Printf("Ignoring expiration error: %s", err)
+			}
+
+			if m == nil {
+				return errors.New("got nil manifest")
 			}
 
 			if days > 0 {
@@ -396,7 +397,6 @@ func newTransferOwnerCmd() *cobra.Command {
 		Short: "Transfer component to another owner",
 		Long:  "Transfer component to another owner, this must be done on the server.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			teleCommand = cmd.CommandPath()
 			if len(args) != 2 {
 				return cmd.Help()
 			}
@@ -449,8 +449,6 @@ func newMirrorRotateCmd() *cobra.Command {
 		Short: "Rotate root.json",
 		Long:  "Rotate root.json make it possible to modify root.json",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			teleCommand = cmd.CommandPath()
-
 			e, err := environment.InitEnv(repoOpts, repository.MirrorOptions{KeyDir: keyDir})
 			if err != nil {
 				if errors.Is(perrs.Cause(err), v1manifest.ErrLoadManifest) {
@@ -594,7 +592,6 @@ func newMirrorPublishCmd() *cobra.Command {
 		Short: "Publish a component",
 		Long:  "Publish a component to the repository",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			teleCommand = cmd.CommandPath()
 			if len(args) != 4 {
 				return cmd.Help()
 			}
@@ -733,7 +730,6 @@ func newMirrorGenkeyCmd() *cobra.Command {
 		Short: "Generate a new key pair",
 		Long:  `Generate a new key pair that can be used to sign components.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			teleCommand = cmd.CommandPath()
 			env := environment.GlobalEnv()
 			privPath := env.Profile().Path(localdata.KeyInfoParentDir, name+".json")
 			keyDir := filepath.Dir(privPath)
@@ -818,7 +814,7 @@ func newMirrorGenkeyCmd() *cobra.Command {
 // the `mirror init` sub command
 func newMirrorInitCmd() *cobra.Command {
 	var (
-		keyDir string // Directory to write genreated key files
+		keyDir string // Directory to write generated key files
 	)
 	cmd := &cobra.Command{
 		Use:   "init <path>",
@@ -827,7 +823,6 @@ func newMirrorInitCmd() *cobra.Command {
 The specified path must be an empty directory.
 If the path does not exist, a new directory will be created.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			teleCommand = cmd.CommandPath()
 			if len(args) != 1 {
 				return cmd.Help()
 			}
@@ -882,7 +877,6 @@ func newMirrorMergeCmd() *cobra.Command {
 	tiup mirror merge tidb-community-v4.0.1 tidb-community-v4.0.2		# merge v4.0.1 and v4.0.2 into current mirror`,
 		Short: "Merge two or more offline mirror",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			teleCommand = cmd.CommandPath()
 			if len(args) < 1 {
 				return cmd.Help()
 			}
@@ -920,7 +914,7 @@ func newMirrorCloneCmd() *cobra.Command {
 	var (
 		options     = repository.CloneOptions{Components: map[string]*[]string{}}
 		components  []string
-		repo        *repository.V1Repository
+		repo        repository.Repository
 		initialized bool
 	)
 
@@ -951,7 +945,7 @@ func newMirrorCloneCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "clone <target-dir> [global version]",
 		Example: `  tiup mirror clone /path/to/local --arch amd64,arm64 --os linux,darwin    # Specify the architectures and OSs
-  tiup mirror clone /path/to/local --os linux v6.1.0 v5.4.0              # Specify multiple versions 
+  tiup mirror clone /path/to/local --os linux v6.1.0 v5.4.0              # Specify multiple versions
   tiup mirror clone /path/to/local --full                                # Build a full local mirror
   tiup mirror clone /path/to/local --tikv v4  --prefix                   # Specify the version via prefix
   tiup mirror clone /path/to/local --tidb all --pd all                   # Download all version for specific component`,
@@ -962,7 +956,6 @@ func newMirrorCloneCmd() *cobra.Command {
 			return initMirrorCloneExtraArgs(cmd)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			teleCommand = cmd.CommandPath()
 			cmd.DisableFlagParsing = false
 			err := cmd.ParseFlags(args)
 			if err != nil {

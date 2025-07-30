@@ -28,7 +28,6 @@ func newUnlinkCmd() *cobra.Command {
 		Short: "Unlink component binary to $TIUP_HOME/bin/",
 		Long:  `[experimental] Unlink component binary in $TIUP_HOME/bin/`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			teleCommand = cmd.CommandPath()
 			env := environment.GlobalEnv()
 			if len(args) != 1 {
 				return cmd.Help()

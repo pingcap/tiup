@@ -23,6 +23,8 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
+	tiupexec "github.com/pingcap/tiup/pkg/exec"
+	"github.com/pingcap/tiup/pkg/tui/colorstr"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -37,6 +39,26 @@ type Config struct {
 	Version    string `yaml:"version"`
 }
 
+// SharedOptions contains some commonly used, tunable options for most components.
+// Unlike Config, these options are shared for all instances of all components.
+type SharedOptions struct {
+	/// Whether or not to tune the cluster in order to run faster (instead of easier to debug).
+	HighPerf           bool       `yaml:"high_perf"`
+	CSE                CSEOptions `yaml:"cse"` // Only available when mode == tidb-cse or tiflash-disagg
+	PDMode             string     `yaml:"pd_mode"`
+	Mode               string     `yaml:"mode"`
+	PortOffset         int        `yaml:"port_offset"`
+	EnableTiKVColumnar bool       `yaml:"enable_tikv_columnar"` // Only available when mode == tidb-cse
+}
+
+// CSEOptions contains configs to run TiDB cluster in CSE mode.
+type CSEOptions struct {
+	S3Endpoint string `yaml:"s3_endpoint"`
+	Bucket     string `yaml:"bucket"`
+	AccessKey  string `yaml:"access_key"`
+	SecretKey  string `yaml:"secret_key"`
+}
+
 type instance struct {
 	ID         int
 	Dir        string
@@ -45,6 +67,7 @@ type instance struct {
 	StatusPort int // client port for PD
 	ConfigPath string
 	BinPath    string
+	Version    utils.Version
 }
 
 // MetricAddr will be used by prometheus scrape_configs.
@@ -58,7 +81,7 @@ type Instance interface {
 	Pid() int
 	// Start the instance process.
 	// Will kill the process once the context is done.
-	Start(ctx context.Context, version utils.Version) error
+	Start(ctx context.Context) error
 	// Component Return the component name.
 	Component() string
 	// LogFile return the log file name
@@ -70,6 +93,8 @@ type Instance interface {
 	// Wait Should only call this if the instance is started successfully.
 	// The implementation should be safe to call Wait multi times.
 	Wait() error
+	// PrepareBinary use given binpath or download from tiup mirrors.
+	PrepareBinary(binaryName string, componentName string, version utils.Version) error
 }
 
 func (inst *instance) MetricAddr() (r MetricAddr) {
@@ -77,6 +102,22 @@ func (inst *instance) MetricAddr() (r MetricAddr) {
 		r.Targets = append(r.Targets, utils.JoinHostPort(inst.Host, inst.StatusPort))
 	}
 	return
+}
+
+func (inst *instance) PrepareBinary(binaryName string, componentName string, version utils.Version) error {
+	instanceBinPath, err := tiupexec.PrepareBinary(binaryName, version, inst.BinPath)
+	if err != nil {
+		return err
+	}
+	// distinguish whether the instance is started by specific binary path.
+	if inst.BinPath == "" {
+		colorstr.Printf("[dark_gray]Start %s instance: %s[reset]\n", componentName, version)
+	} else {
+		colorstr.Printf("[dark_gray]Start %s instance: %s[reset]\n", componentName, instanceBinPath)
+	}
+	inst.Version = version
+	inst.BinPath = instanceBinPath
+	return nil
 }
 
 // CompVersion return the format to run specified version of a component.
@@ -115,7 +156,7 @@ func logIfErr(err error) {
 func pdEndpoints(pds []*PDInstance, isHTTP bool) []string {
 	var endpoints []string
 	for _, pd := range pds {
-		if pd.Role == PDRoleTSO || pd.Role == PDRoleScheduling || pd.Role == PDRoleResourceManager {
+		if pd.role == PDRoleTSO || pd.role == PDRoleScheduling {
 			continue
 		}
 		if isHTTP {

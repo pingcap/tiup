@@ -19,6 +19,7 @@ GOARCH  := $(if $(GOARCH),$(GOARCH),$(shell go env GOARCH))
 GOENV   := GO111MODULE=on CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH)
 GO      := $(GOENV) go
 GOBUILD := $(GO) build $(BUILD_FLAGS)
+GOINSTALL := $(GO) install
 GOTEST  := GO111MODULE=on CGO_ENABLED=1 go test -p 3
 SHELL   := /usr/bin/env bash
 
@@ -34,8 +35,8 @@ LDFLAGS += $(EXTRA_LDFLAGS)
 
 FILES   := $$(find . -name "*.go")
 
-FAILPOINT_ENABLE  := $$(tools/bin/failpoint-ctl enable)
-FAILPOINT_DISABLE := $$(tools/bin/failpoint-ctl disable)
+FAILPOINT_ENABLE  := $$(go tool github.com/pingcap/failpoint/failpoint-ctl enable)
+FAILPOINT_DISABLE := $$(go tool github.com/pingcap/failpoint/failpoint-ctl disable)
 
 default: check build
 	@# Target: run the checks and then build.
@@ -83,12 +84,12 @@ check: fmt lint tidy check-static vet
 
 check-static: tools/bin/golangci-lint
 	@# Target: run the golangci-lint static check tool
-	tools/bin/golangci-lint run --config tools/check/golangci.yaml ./... --deadline=3m --fix
+	tools/bin/golangci-lint run --config tools/check/golangci.yaml ./... --timeout=3m --fix
 
-lint: tools/bin/revive
+lint:
 	@# Target: run the lint checker revive
 	@echo "linting"
-	@tools/bin/revive -formatter friendly -config tools/check/revive.toml $(FILES)
+	@go tool github.com/mgechev/revive -formatter friendly -config tools/check/revive.toml $(FILES)
 
 vet:
 	@# Target: run the go vet tool
@@ -125,17 +126,13 @@ race: failpoint-enable
 	TIUP_HOME=$(shell pwd)/tests/tiup $(GOTEST) -race ./...  || { $(FAILPOINT_DISABLE); exit 1; }
 	@$(FAILPOINT_DISABLE)
 
-failpoint-enable: tools/bin/failpoint-ctl
+failpoint-enable:
 	@# Target: enable failpoint
 	@$(FAILPOINT_ENABLE)
 
-failpoint-disable: tools/bin/failpoint-ctl
+failpoint-disable:
 	@# Target: disable failpoint
 	@$(FAILPOINT_DISABLE)
-
-tools/bin/failpoint-ctl: go.mod
-	@# Target: build the failpoint-ctl utility
-	$(GO) build -o $@ github.com/pingcap/failpoint/failpoint-ctl
 
 fmt:
 	@# Target: run the go formatter utility
@@ -144,11 +141,6 @@ fmt:
 	@echo "goimports (if installed)"
 	$(shell goimports -w $(FILES) 2>/dev/null)
 
-tools/bin/revive: tools/check/go.mod
-	@# Target: build revive utility
-	cd tools/check; \
-	$(GO) build -o ../bin/revive github.com/mgechev/revive
-
 tools/bin/golangci-lint:
-	@# Target: pull in specific version of golangci-lint (v1.54.1)
-	curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ./tools/bin v1.54.1
+	@# Target: pull in specific version of golangci-lint (v1.64.8)
+	curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ./tools/bin v1.64.8

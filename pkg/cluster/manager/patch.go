@@ -63,7 +63,7 @@ func (m *Manager) Patch(name string, packagePath string, opt operator.Options, o
 
 	if !skipConfirm {
 		if err := tui.PromptForConfirmOrAbortError(
-			fmt.Sprintf("Will patch the cluster %s with package path is %s, nodes: %s, roles: %s.\nDo you want to continue? [y/N]:",
+			"%s", fmt.Sprintf("Will patch the cluster %s with package path is %s, nodes: %s, roles: %s.\nDo you want to continue? [y/N]:",
 				color.HiYellowString(name),
 				color.HiYellowString(packagePath),
 				color.HiRedString(strings.Join(opt.Nodes, ",")),
@@ -235,7 +235,7 @@ func instancesToPatch(topo spec.Topology, options operator.Options) ([]spec.Inst
 	}
 
 	if len(instances) == 0 {
-		return nil, fmt.Errorf("no instance found on specifid role(%v) and nodes(%v)", options.Roles, options.Nodes)
+		return nil, fmt.Errorf("no instance found on specified role(%v) and nodes(%v)", options.Roles, options.Nodes)
 	}
 
 	return instances, nil

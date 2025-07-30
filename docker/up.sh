@@ -6,7 +6,7 @@
 set -o errexit
 set -o pipefail
 set -o nounset
-# set -o xtrace
+set -o xtrace
 
 ERROR() {
     echo -e "\e[101m\e[97m[ERROR]\e[49m\e[39m" "$@"
@@ -24,15 +24,12 @@ exists() {
     type "$1" > /dev/null 2>&1
 }
 
-TIUP_CLUSTER_ROOT=${TIUP_CLUSTER_ROOT:-""}
-
 # Change directory to the source directory of this script. Taken from:
 # https://stackoverflow.com/a/246128/3858681
 pushd "$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 HELP=0
 INIT_ONLY=0
-DEV=""
 COMPOSE=${COMPOSE:-""}
 SUBNET=${SUBNET:-"172.19.0.0/24"}
 PROXY_SUBNET=${PROXY_SUBNET:-"172.19.1.0/24"}
@@ -52,16 +49,6 @@ do
             ;;
         --init-only)
             INIT_ONLY=1
-            shift # past argument
-            ;;
-        --dev)
-            if [ ! "$TIUP_CLUSTER_ROOT" ]; then
-                TIUP_CLUSTER_ROOT="$(cd ../ && pwd)"
-                export TIUP_CLUSTER_ROOT
-                INFO "TIUP_CLUSTER_ROOT is not set, defaulting to: $TIUP_CLUSTER_ROOT"
-            fi
-            INFO "Running docker-compose with dev config"
-            DEV="-f docker-compose.dev.yml"
             shift # past argument
             ;;
         --compose)
@@ -111,13 +98,12 @@ if [ "${HELP}" -eq 1 ]; then
     echo "  --help                                                Display this message"
     echo "  --init-only                                           Initializes ssh-keys, but does not call docker-compose"
     echo "  --daemon                                              Runs docker-compose in the background"
-    echo "  --dev                                                 Mounts dir at host's TIUP_CLUSTER_ROOT to /tiup-cluster on tiup-cluster-control container, syncing files for development"
     echo "  --compose PATH                                        Path to an additional docker-compose yml config."
     echo "  --subnet SUBNET                                       Subnet in 24 bit netmask"
     echo "  --nodes NODES                                         Start how much nodes"
     echo "  --ssh-proxy                                           Start with ssh proxy nodes"
     echo "  --proxy-subnet PROXY_SUBNET                           Proxy subnet in 24 bit netmask"
-    echo "To provide multiple additional docker-compose args, set the COMPOSE var directly, with the -f flag. Ex: COMPOSE=\"-f FILE_PATH_HERE -f ANOTHER_PATH\" ./up.sh --dev"
+    echo "To provide multiple additional docker-compose args, set the COMPOSE var directly, with the -f flag. Ex: COMPOSE=\"-f FILE_PATH_HERE -f ANOTHER_PATH\" ./up.sh'"
     exit 0
 fi
 
@@ -147,20 +133,6 @@ fi
 # Make sure folders referenced in control Dockerfile exist and don't contain leftover files
 rm -rf ./control/tiup-cluster
 mkdir -p ./control/tiup-cluster/tiup-cluster
-# Copy the tiup-cluster directory if we're not mounting the TIUP_CLUSTER_ROOT
-if [ -z "${DEV}" ]; then
-    # Dockerfile does not allow `ADD ..`. So we need to copy it here in setup.
-    INFO "Copying .. to control/tiup-cluster"
-    (
-        # TODO support exclude-ignore, check version of tar support this.
-        # https://www.gnu.org/software/tar/manual/html_section/tar_48.html#IDX408
-        # (cd ..; tar --exclude=./docker --exclude=./.git --exclude-ignore=.gitignore -cf - .)  | tar Cxf ./control/tiup-cluster -
-        (cd ..; tar --exclude=./docker --exclude=./.git -cf - .)  | tar Cxf ./control/tiup-cluster -
-    )
-else
-    INFO "Build tiup-cluster in $TIUP_CLUSTER_ROOT"
-    (cd "${TIUP_CLUSTER_ROOT}";make failpoint-enable;GOOS=linux GOARCH=amd64 make tiup cluster dm;make failpoint-disable)
-fi
 
 if [ "${INIT_ONLY}" -eq 1 ]; then
     exit 0
@@ -182,16 +154,11 @@ exists python ||
 exists docker ||
     { ERROR "Please install docker (https://docs.docker.com/engine/installation/)";
       exit 1; }
-exists docker-compose ||
-    { ERROR "Please install docker-compose (https://docs.docker.com/compose/install/)";
-      exit 1; }
 
 exists pip ||
-    {
-        INFO "Install pip from https://bootstrap.pypa.io/get-pip.py";
-        curl -sSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py || exit 1;
-    }
-pip install -U jinja2
+    { ERROR "Please install pip (https://docs.docker.com/engine/installation/)";
+      exit 1; }
+pip3 install -U jinja2
 
 exist_network=$(docker network ls | awk '{if($2 == "tiops") print $1}')
 if [[ "$exist_network" == "" ]]; then
@@ -232,18 +199,18 @@ sed -i '/TIUP_TEST_IP_PREFIX/d' ./secret/control.env
 echo "TIUP_TEST_IP_PREFIX=$ipprefix" >> ./secret/control.env
 
 INFO "Running \`docker-compose build\`"
-# shellcheck disable=SC2086
-docker-compose -f docker-compose.yml ${COMPOSE} ${DEV} build
+cp -a ${TIUP_CLUSTER_ROOT}/* ./control/ || true
+docker compose -f docker-compose.yml ${COMPOSE} build
 
 INFO "Running \`docker-compose up\`"
 if [ "${RUN_AS_DAEMON}" -eq 1 ]; then
     # shellcheck disable=SC2086
-    docker-compose -f docker-compose.yml ${COMPOSE} ${DEV} up -d
+    docker compose -f docker-compose.yml ${COMPOSE} up -d
     INFO "All containers started, run \`docker ps\` to view"
 else
     INFO "Please run \`docker exec -it tiup-cluster-control bash\` in another terminal to proceed"
     # shellcheck disable=SC2086
-    docker-compose -f docker-compose.yml ${COMPOSE} ${DEV} up
+    docker compose -f docker-compose.yml ${COMPOSE} up
 fi
 
 popd

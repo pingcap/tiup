@@ -21,7 +21,6 @@ import (
 	"strings"
 	"time"
 
-	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -35,14 +34,14 @@ type Pump struct {
 var _ Instance = &Pump{}
 
 // NewPump create a Pump instance.
-func NewPump(binPath string, dir, host, configPath string, id int, pds []*PDInstance) *Pump {
+func NewPump(shOpt SharedOptions, binPath string, dir, host, configPath string, id int, pds []*PDInstance) *Pump {
 	pump := &Pump{
 		instance: instance{
 			BinPath:    binPath,
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
-			Port:       utils.MustGetFreePort(host, 8249),
+			Port:       utils.MustGetFreePort(host, 8249, shOpt.PortOffset),
 			ConfigPath: configPath,
 		},
 		pds: pds,
@@ -89,7 +88,7 @@ func (p *Pump) Addr() string {
 }
 
 // Start implements Instance interface.
-func (p *Pump) Start(ctx context.Context, version utils.Version) error {
+func (p *Pump) Start(ctx context.Context) error {
 	endpoints := pdEndpoints(p.pds, true)
 
 	args := []string{
@@ -103,10 +102,6 @@ func (p *Pump) Start(ctx context.Context, version utils.Version) error {
 		args = append(args, fmt.Sprintf("--config=%s", p.ConfigPath))
 	}
 
-	var err error
-	if p.BinPath, err = tiupexec.PrepareBinary("pump", version, p.BinPath); err != nil {
-		return err
-	}
 	p.Process = &process{cmd: PrepareCommand(ctx, p.BinPath, args, nil, p.Dir)}
 
 	logIfErr(p.Process.SetOutputFile(p.LogFile()))

@@ -41,6 +41,7 @@ Flags:
       --drainer int              Drainer instance number
       --drainer.binpath string   Drainer instance binary path
       --drainer.config string    Drainer instance configuration file
+      --grafana.port int         grafana port. If not provided, grafana will use 3000 as its port. (default 3000)
   -h, --help                     help for tiup
       --host string              Playground cluster host
       --kv int                   TiKV instance number
@@ -54,7 +55,7 @@ Flags:
       --pump int                 Pump instance number
       --pump.binpath string      Pump instance binary path
       --pump.config string       Pump instance configuration file
-  -T, --tag string               Specify a tag for playground
+  -T, --tag string               Specify a tag for playground, data dir of this tag will not be removed after exit
       --ticdc int                TiCDC instance number
       --ticdc.binpath string     TiCDC instance binary path
       --ticdc.config string      TiCDC instance configuration file

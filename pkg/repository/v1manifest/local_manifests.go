@@ -292,6 +292,7 @@ type MockManifests struct {
 	Saved     []string
 	Installed map[string]MockInstalled
 	Ks        *KeyStore
+	RootDir   string
 }
 
 // MockInstalled is used by MockManifests to remember what was installed for a component.
@@ -401,6 +402,9 @@ func (ms *MockManifests) KeyStore() *KeyStore {
 
 // TargetRootDir implements LocalManifests.
 func (ms *MockManifests) TargetRootDir() string {
+	if ms.RootDir != "" {
+		return ms.RootDir
+	}
 	return "/tmp/mock"
 }
 

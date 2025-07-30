@@ -17,10 +17,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
@@ -52,10 +54,10 @@ func (m *Manager) DestroyCluster(name string, gOpt operator.Options, destroyOpt 
 	}
 
 	if !skipConfirm {
-		m.logger.Warnf(color.HiRedString(tui.ASCIIArtWarning))
+		m.logger.Warnf("%s", color.HiRedString(tui.ASCIIArtWarning))
 		if err := tui.PromptForAnswerOrAbortError(
 			"Yes, I know my cluster and data will be deleted.",
-			fmt.Sprintf("This operation will destroy %s %s cluster %s and its data.",
+			"%s", fmt.Sprintf("This operation will destroy %s %s cluster %s and its data.",
 				m.sysName,
 				color.HiYellowString(base.Version),
 				color.HiYellowString(name),
@@ -150,16 +152,11 @@ func (m *Manager) DestroyTombstone(
 		return err
 	}
 
-	// Destroy ignore error and force exec
-	gOpt.IgnoreConfigCheck = true
-	gOpt.Force = true
-	regenConfigTasks, _ := buildInitConfigTasks(m, name, topo, base, gOpt, nodes)
-
 	t := b.
 		Func("FindTomestoneNodes", func(ctx context.Context) (err error) {
 			if !skipConfirm {
 				err = tui.PromptForConfirmOrAbortError(
-					fmt.Sprintf("%s\nDo you confirm this action? [y/N]:",
+					"%s", fmt.Sprintf("%s\nDo you confirm this action? [y/N]:",
 						color.HiYellowString("Will destroy these nodes: %v", nodes)),
 				)
 				if err != nil {
@@ -172,9 +169,46 @@ func (m *Manager) DestroyTombstone(
 		ClusterOperate(cluster, operator.DestroyTombstoneOperation, gOpt, tlsCfg).
 		UpdateMeta(name, clusterMeta, nodes).
 		UpdateTopology(name, m.specManager.Path(name), clusterMeta, nodes).
+		Build()
+
+	if err := t.Execute(ctx); err != nil {
+		if errorx.Cast(err) != nil {
+			// FIXME: Map possible task errors and give suggestions.
+			return err
+		}
+		return perrs.Trace(err)
+	}
+
+	// Destroy ignore error and force exec
+	gOpt.IgnoreConfigCheck = true
+	gOpt.Force = true
+	// get new metadata
+	metadata, err = m.meta(name)
+	if err != nil &&
+		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
+		return err
+	}
+	topo = metadata.GetTopology()
+	base = metadata.GetBaseMeta()
+
+	b, err = m.sshTaskBuilder(name, topo, base.User, gOpt)
+	if err != nil {
+		return err
+	}
+
+	regenConfigTasks, _ := buildInitConfigTasks(m, name, topo, base, gOpt, nodes)
+	t = b.
 		ParallelStep("+ Refresh instance configs", gOpt.Force, regenConfigTasks...).
 		ParallelStep("+ Reload prometheus and grafana", gOpt.Force,
-			buildReloadPromAndGrafanaTasks(metadata.GetTopology(), m.logger, gOpt)...).
+			buildReloadPromAndGrafanaTasks(topo, m.logger, gOpt)...).
+		Func("RemoveTomestoneNodesInPD", func(ctx context.Context) (err error) {
+			pdEndpoints := make([]string, 0)
+			for _, pd := range cluster.PDServers {
+				pdEndpoints = append(pdEndpoints, fmt.Sprintf("%s:%d", pd.Host, pd.ClientPort))
+			}
+			pdAPI := api.NewPDClient(ctx, pdEndpoints, time.Second*time.Duration(gOpt.APITimeout), tlsCfg)
+			return pdAPI.RemoveTombstone()
+		}).
 		Build()
 
 	if err := t.Execute(ctx); err != nil {

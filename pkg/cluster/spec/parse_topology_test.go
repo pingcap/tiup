@@ -540,6 +540,37 @@ tiflash_servers:
 	})
 }
 
+func (s *topoSuite) TestMergeComponentVersions(c *check.C) {
+	// test component version overwrite
+	with2TempFile(`
+component_versions:
+  tidb: v8.0.0
+  tikv: v8.0.0
+tidb_servers:
+  - host: 172.16.5.139
+`, `
+component_versions:
+  tikv: v8.1.0
+  pd: v8.0.0
+tidb_servers:
+  - host: 172.16.5.134
+`, func(base, scale string) {
+		baseTopo := Specification{}
+		c.Assert(ParseTopologyYaml(base, &baseTopo), check.IsNil)
+
+		scaleTopo := baseTopo.NewPart()
+		c.Assert(ParseTopologyYaml(scale, scaleTopo), check.IsNil)
+
+		mergedTopo := baseTopo.MergeTopo(scaleTopo)
+		c.Assert(mergedTopo.Validate(), check.IsNil)
+
+		c.Assert(scaleTopo.(*Specification).ComponentVersions, check.Equals, mergedTopo.(*Specification).ComponentVersions)
+		c.Assert(scaleTopo.(*Specification).ComponentVersions.TiDB, check.Equals, "v8.0.0")
+		c.Assert(scaleTopo.(*Specification).ComponentVersions.TiKV, check.Equals, "v8.1.0")
+		c.Assert(scaleTopo.(*Specification).ComponentVersions.PD, check.Equals, "v8.0.0")
+	})
+}
+
 func (s *topoSuite) TestFixRelativePath(c *check.C) {
 	// base test
 	topo := Specification{

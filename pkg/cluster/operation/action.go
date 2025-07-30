@@ -427,7 +427,7 @@ func systemctl(ctx context.Context, executor ctxt.Executor, service string, acti
 		fmt.Println(string(stdout))
 	}
 	if len(stderr) > 0 && !bytes.Contains(stderr, []byte("Created symlink ")) && !bytes.Contains(stderr, []byte("Removed symlink ")) {
-		logger.Errorf(string(stderr))
+		logger.Errorf("%s", string(stderr))
 	}
 	if len(stderr) > 0 && action == "stop" {
 		// ignore "unit not loaded" error, as this means the unit is not
@@ -435,10 +435,10 @@ func systemctl(ctx context.Context, executor ctxt.Executor, service string, acti
 		// NOTE: there will be a potential bug if the unit name is set
 		// wrong and the real unit still remains started.
 		if bytes.Contains(stderr, []byte(" not loaded.")) {
-			logger.Warnf(string(stderr))
+			logger.Warnf("%s", string(stderr))
 			return nil // reset the error to avoid exiting
 		}
-		logger.Errorf(string(stderr))
+		logger.Errorf("%s", string(stderr))
 	}
 	return err
 }
@@ -640,7 +640,7 @@ func StopComponent(ctx context.Context,
 	return errg.Wait()
 }
 
-// toFailedActionError formats the errror msg for failed action
+// toFailedActionError formats the error msg for failed action
 func toFailedActionError(err error, action string, host, service, logDir string) error {
 	return errors.Annotatef(err,
 		"failed to %s: %s %s, please check the instance's log(%s) for more detail.",

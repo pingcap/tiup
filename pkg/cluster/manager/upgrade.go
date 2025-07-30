@@ -43,7 +43,7 @@ func (m *Manager) Upgrade(name string, clusterVersion string, componentVersions 
 	if !skipConfirm && strings.ToLower(opt.DisplayMode) != "json" {
 		for _, v := range componentVersions {
 			if v != "" {
-				m.logger.Warnf(color.YellowString("tiup-cluster does not provide compatibility guarantees or version checks for different component versions. Please be aware of the risks or use it with the assistance of PingCAP support."))
+				m.logger.Warnf("%s", color.YellowString("tiup-cluster does not provide compatibility guarantees or version checks for different component versions. Please be aware of the risks or use it with the assistance of PingCAP support."))
 				err := tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: ")
 				if err != nil {
 					return err
@@ -85,7 +85,7 @@ func (m *Manager) Upgrade(name string, clusterVersion string, componentVersions 
 		if !ignoreVersionCheck {
 			return err
 		}
-		m.logger.Warnf(color.RedString("There is no guarantee that the cluster can be downgraded. Be careful before you continue."))
+		m.logger.Warnf("%s", color.RedString("There is no guarantee that the cluster can be downgraded. Be careful before you continue."))
 	}
 
 	compVersionMsg := ""
@@ -137,12 +137,11 @@ This operation will upgrade %s %s cluster %s to %s:%s`,
 
 	hasImported := false
 	for _, comp := range components {
-		compName := comp.Name()
 		version := comp.CalculateVersion(clusterVersion)
 
 		for _, inst := range comp.Instances() {
 			// Download component from repository
-			key := fmt.Sprintf("%s-%s-%s-%s", compName, version, inst.OS(), inst.Arch())
+			key := fmt.Sprintf("%s-%s-%s-%s", inst.ComponentSource(), version, inst.OS(), inst.Arch())
 			if _, found := uniqueComps[key]; !found {
 				uniqueComps[key] = struct{}{}
 				t := task.NewBuilder(m.logger).

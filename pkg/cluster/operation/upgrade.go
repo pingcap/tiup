@@ -131,17 +131,19 @@ func Upgrade(
 			if instance.IgnoreMonitorAgent() {
 				noAgentHosts.Insert(instance.GetManageHost())
 			}
+
+			// Usage within the switch statement
 			switch component.Name() {
-			case spec.ComponentPD:
-				// defer PD leader to be upgraded after others
-				isLeader, err := instance.(*spec.PDInstance).IsLeader(ctx, topo, int(options.APITimeout), tlsCfg)
+			case spec.ComponentPD, spec.ComponentTSO, spec.ComponentScheduling:
+				// defer PD related leader/primary to be upgraded after others
+				isLeader, err := checkAndDeferPDLeader(ctx, topo, int(options.APITimeout), tlsCfg, instance)
 				if err != nil {
-					logger.Warnf("cannot found pd leader, ignore: %s", err)
+					logger.Warnf("cannot found pd related leader/primary, ignore: %s, instance: %s", err, instance.ID())
 					return err
 				}
 				if isLeader {
 					deferInstances = append(deferInstances, instance)
-					logger.Debugf("Deferred upgrading of PD leader %s", instance.ID())
+					logger.Debugf("Upgrading deferred instance %s...", instance.ID())
 					continue
 				}
 			case spec.ComponentCDC:
@@ -218,6 +220,22 @@ func Upgrade(
 	return RestartMonitored(ctx, uniqueHosts.Slice(), noAgentHosts, topo.GetMonitoredOptions(), options.OptTimeout, systemdMode)
 }
 
+// checkAndDeferPDLeader checks the PD related leader/primary instance's status and defers its upgrade if necessary.
+func checkAndDeferPDLeader(ctx context.Context, topo spec.Topology, apiTimeout int, tlsCfg *tls.Config, instance spec.Instance) (isLeader bool, err error) {
+	switch instance.ComponentName() {
+	case spec.ComponentPD:
+		isLeader, err = instance.(*spec.PDInstance).IsLeader(ctx, topo, apiTimeout, tlsCfg)
+	case spec.ComponentScheduling:
+		isLeader, err = instance.(*spec.SchedulingInstance).IsPrimary(ctx, topo, tlsCfg)
+	case spec.ComponentTSO:
+		isLeader, err = instance.(*spec.TSOInstance).IsPrimary(ctx, topo, tlsCfg)
+	}
+	if err != nil {
+		return false, err
+	}
+	return isLeader, nil
+}
+
 func upgradeInstance(
 	ctx context.Context,
 	topo spec.Topology,
@@ -242,7 +260,12 @@ func upgradeInstance(
 		rollingInstance, isRollingInstance = instance.(spec.RollingUpdateInstance)
 	}
 
-	err = executeSSHCommand(ctx, "Executing pre-upgrade command", instance.GetManageHost(), options.SSHCustomScripts.BeforeRestartInstance.Command())
+	err = executeSSHCommand(ctx, "Executing pre-upgrade command", instance.GetManageHost(),
+		fmt.Sprintf(`export NODE="%s";export ROLE="%s";%s`,
+			instance.ID(),
+			instance.Role(),
+			options.SSHCustomScripts.BeforeRestartInstance.Command()),
+	)
 	if err != nil {
 		return err
 	}
@@ -265,7 +288,12 @@ func upgradeInstance(
 		}
 	}
 
-	err = executeSSHCommand(ctx, "Executing post-upgrade command", instance.GetManageHost(), options.SSHCustomScripts.AfterRestartInstance.Command())
+	err = executeSSHCommand(ctx, "Executing post-upgrade command", instance.GetManageHost(),
+		fmt.Sprintf(`export NODE="%s";export ROLE="%s"; %s`,
+			instance.ID(),
+			instance.Role(),
+			options.SSHCustomScripts.AfterRestartInstance.Command()),
+	)
 	if err != nil {
 		return err
 	}
@@ -330,19 +358,13 @@ func increaseScheduleLimit(ctx context.Context, pc *api.PDClient) (
 
 	// increase values
 	if currLeaderScheduleLimit < leaderScheduleLimitThreshold {
-		newLimit := currLeaderScheduleLimit + leaderScheduleLimitOffset
-		if newLimit > leaderScheduleLimitThreshold {
-			newLimit = leaderScheduleLimitThreshold
-		}
+		newLimit := min(currLeaderScheduleLimit+leaderScheduleLimitOffset, leaderScheduleLimitThreshold)
 		if err := pc.SetReplicationConfig("leader-schedule-limit", newLimit); err != nil {
 			return currLeaderScheduleLimit, currRegionScheduleLimit, err
 		}
 	}
 	if currRegionScheduleLimit < regionScheduleLimitThreshold {
-		newLimit := currRegionScheduleLimit + regionScheduleLimitOffset
-		if newLimit > regionScheduleLimitThreshold {
-			newLimit = regionScheduleLimitThreshold
-		}
+		newLimit := min(currRegionScheduleLimit+regionScheduleLimitOffset, regionScheduleLimitThreshold)
 		if err := pc.SetReplicationConfig("region-schedule-limit", newLimit); err != nil {
 			// try to revert leader scheduler limit by our best effort, does not make sense
 			// to handle this error again

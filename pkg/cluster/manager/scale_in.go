@@ -70,10 +70,10 @@ func (m *Manager) ScaleIn(
 
 	if !skipConfirm {
 		if force {
-			m.logger.Warnf(color.HiRedString(tui.ASCIIArtWarning))
+			m.logger.Warnf("%s", color.HiRedString(tui.ASCIIArtWarning))
 			if err := tui.PromptForAnswerOrAbortError(
 				"Yes, I know my data might be lost.",
-				color.HiRedString("Forcing scale in is unsafe and may result in data loss for stateful components.\n"+
+				"%s", color.HiRedString("Forcing scale in is unsafe and may result in data loss for stateful components.\n"+
 					"DO NOT use `--force` if you have any component in ")+
 					color.YellowString("Pending Offline")+color.HiRedString(" status.\n")+
 					color.HiRedString("The process is irreversible and could NOT be cancelled.\n")+
@@ -100,14 +100,6 @@ func (m *Manager) ScaleIn(
 
 	// Regenerate configuration
 	gOpt.IgnoreConfigCheck = true
-	regenConfigTasks, hasImported := buildInitConfigTasks(m, name, topo, base, gOpt, nodes)
-
-	// handle dir scheme changes
-	if hasImported {
-		if err := spec.HandleImportPathMigration(name); err != nil {
-			return err
-		}
-	}
 
 	tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
 	if err != nil {
@@ -118,20 +110,53 @@ func (m *Manager) ScaleIn(
 	if err != nil {
 		return err
 	}
-
 	scale(b, metadata, tlsCfg)
+	ctx := ctxt.New(
+		context.Background(),
+		gOpt.Concurrency,
+		m.logger,
+	)
 
+	if err := b.Build().Execute(ctx); err != nil {
+		if errorx.Cast(err) != nil {
+			// FIXME: Map possible task errors and give suggestions.
+			return err
+		}
+		return perrs.Trace(err)
+	}
+
+	// get new metadata
+	metadata, err = m.meta(name)
+	if err != nil &&
+		!errors.Is(perrs.Cause(err), meta.ErrValidate) &&
+		!errors.Is(perrs.Cause(err), spec.ErrMultipleTiSparkMaster) &&
+		!errors.Is(perrs.Cause(err), spec.ErrMultipleTisparkWorker) &&
+		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
+		// ignore conflict check error, node may be deployed by former version
+		// that lack of some certain conflict checks
+		return err
+	}
+
+	topo = metadata.GetTopology()
+	base = metadata.GetBaseMeta()
+
+	regenConfigTasks, hasImported := buildInitConfigTasks(m, name, topo, base, gOpt, nodes)
+	// handle dir scheme changes
+	if hasImported {
+		if err := spec.HandleImportPathMigration(name); err != nil {
+			return err
+		}
+	}
+	b, err = m.sshTaskBuilder(name, topo, base.User, gOpt)
+	if err != nil {
+		return err
+	}
 	t := b.
 		ParallelStep("+ Refresh instance configs", force, regenConfigTasks...).
 		ParallelStep("+ Reload prometheus and grafana", gOpt.Force,
 			buildReloadPromAndGrafanaTasks(metadata.GetTopology(), m.logger, gOpt, nodes...)...).
 		Build()
 
-	ctx := ctxt.New(
-		context.Background(),
-		gOpt.Concurrency,
-		m.logger,
-	)
 	if err := t.Execute(ctx); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
@@ -159,7 +184,7 @@ func checkAsyncComps(topo spec.Topology, nodes []string) error {
 	})
 
 	if len(delAsyncOfflineComps.Slice()) > 0 {
-		return tui.PromptForConfirmOrAbortError(fmt.Sprintf(
+		return tui.PromptForConfirmOrAbortError("%s", fmt.Sprintf(
 			"%s\nDo you want to continue? [y/N]:", color.YellowString(
 				"The component `%s` will become tombstone, maybe exists in several minutes or hours, after that you can use the prune command to clean it",
 				delAsyncOfflineComps.Slice())))

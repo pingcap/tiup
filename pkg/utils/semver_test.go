@@ -1,14 +1,12 @@
 package utils
 
 import (
-	. "github.com/pingcap/check"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
-var _ = Suite(&TestSemverSuite{})
-
-type TestSemverSuite struct{}
-
-func (s *TestSemverSuite) TestSemverc(c *C) {
+func TestSemverc(t *testing.T) {
 	cases := [][]any{
 		{"v0.0.1", "v0.0.1", true},
 		{"0.0.1", "v0.0.1", true},
@@ -20,21 +18,21 @@ func (s *TestSemverSuite) TestSemverc(c *C) {
 
 	for _, cas := range cases {
 		v, e := FmtVer(cas[0].(string))
-		c.Assert(v, Equals, cas[1].(string))
-		c.Assert(e == nil, Equals, cas[2].(bool))
+		require.Equal(t, cas[1].(string), v)
+		require.Equal(t, cas[2].(bool), e == nil)
 	}
 }
 
-func (s *TestSemverSuite) TestVersion(c *C) {
-	c.Assert(Version("").IsValid(), IsFalse)
-	c.Assert(Version("v3.0.").IsValid(), IsFalse)
-	c.Assert(Version("").IsEmpty(), IsTrue)
-	c.Assert(Version("").IsNightly(), IsFalse)
-	c.Assert(Version("nightly").IsNightly(), IsTrue)
-	c.Assert(Version("v1.2.3").String(), Equals, "v1.2.3")
+func TestVersion(t *testing.T) {
+	require.False(t, Version("").IsValid())
+	require.False(t, Version("v3.0.").IsValid())
+	require.True(t, Version("").IsEmpty())
+	require.False(t, Version("").IsNightly())
+	require.True(t, Version("nightly").IsNightly())
+	require.Equal(t, "v1.2.3", Version("v1.2.3").String())
 }
 
-func (s *TestSemverSuite) TestConstraint(c *C) {
+func TestConstraint(t *testing.T) {
 	cases := []struct {
 		constraint string
 		version    string
@@ -79,7 +77,7 @@ func (s *TestSemverSuite) TestConstraint(c *C) {
 	}
 	for _, cas := range cases {
 		cons, err := NewConstraint(cas.constraint)
-		c.Assert(err, IsNil)
-		c.Assert(cons.Check(cas.version), Equals, cas.match)
+		require.NoError(t, err)
+		require.Equal(t, cas.match, cons.Check(cas.version))
 	}
 }

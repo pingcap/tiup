@@ -15,6 +15,7 @@ package instance
 
 import (
 	"context"
+	"encoding/pem"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -22,7 +23,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	tiupexec "github.com/pingcap/tiup/pkg/exec"
+	"github.com/pingcap/tiup/pkg/crypto"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -35,8 +36,39 @@ type TiProxy struct {
 
 var _ Instance = &TiProxy{}
 
+// GenTiProxySessionCerts will create a self-signed certs for TiProxy session migration. NOTE that this cert is directly used by TiDB.
+func GenTiProxySessionCerts(dir string) error {
+	if _, err := os.Stat(filepath.Join(dir, "tiproxy.crt")); err == nil {
+		return nil
+	}
+
+	ca, err := crypto.NewCA("tiproxy")
+	if err != nil {
+		return err
+	}
+	privKey, err := crypto.NewKeyPair(crypto.KeyTypeRSA, crypto.KeySchemeRSASSAPSSSHA256)
+	if err != nil {
+		return err
+	}
+	csr, err := privKey.CSR("tiproxy", "tiproxy", nil, nil)
+	if err != nil {
+		return err
+	}
+	cert, err := ca.Sign(csr)
+	if err != nil {
+		return err
+	}
+	if err := utils.SaveFileWithBackup(filepath.Join(dir, "tiproxy.key"), privKey.Pem(), ""); err != nil {
+		return err
+	}
+	return utils.SaveFileWithBackup(filepath.Join(dir, "tiproxy.crt"), pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: cert,
+	}), "")
+}
+
 // NewTiProxy create a TiProxy instance.
-func NewTiProxy(binPath string, dir, host, configPath string, id int, port int, pds []*PDInstance) *TiProxy {
+func NewTiProxy(shOpt SharedOptions, binPath string, dir, host, configPath string, id int, port int, pds []*PDInstance) *TiProxy {
 	if port <= 0 {
 		port = 6000
 	}
@@ -46,8 +78,8 @@ func NewTiProxy(binPath string, dir, host, configPath string, id int, port int, 
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
-			Port:       utils.MustGetFreePort(host, port),
-			StatusPort: utils.MustGetFreePort(host, 3080),
+			Port:       utils.MustGetFreePort(host, port, shOpt.PortOffset),
+			StatusPort: utils.MustGetFreePort(host, 3080, shOpt.PortOffset),
 			ConfigPath: configPath,
 		},
 		pds: pds,
@@ -65,7 +97,7 @@ func (c *TiProxy) MetricAddr() (r MetricAddr) {
 }
 
 // Start implements Instance interface.
-func (c *TiProxy) Start(ctx context.Context, version utils.Version) error {
+func (c *TiProxy) Start(ctx context.Context) error {
 	endpoints := pdEndpoints(c.pds, false)
 
 	configPath := filepath.Join(c.Dir, "config", "proxy.toml")
@@ -92,6 +124,7 @@ func (c *TiProxy) Start(ctx context.Context, version utils.Version) error {
 	if err := enc.Encode(spec.MergeConfig(userConfig, map[string]any{
 		"proxy.pd-addrs":        strings.Join(endpoints, ","),
 		"proxy.addr":            utils.JoinHostPort(c.Host, c.Port),
+		"proxy.advertise-addr":  AdvertiseHost(c.Host),
 		"api.addr":              utils.JoinHostPort(c.Host, c.StatusPort),
 		"log.log-file.filename": c.LogFile(),
 	})); err != nil {
@@ -100,10 +133,6 @@ func (c *TiProxy) Start(ctx context.Context, version utils.Version) error {
 
 	args := []string{
 		fmt.Sprintf("--config=%s", configPath),
-	}
-
-	if c.BinPath, err = tiupexec.PrepareBinary("tiproxy", version, c.BinPath); err != nil {
-		return err
 	}
 
 	c.Process = &process{cmd: PrepareCommand(ctx, c.BinPath, args, nil, c.Dir)}

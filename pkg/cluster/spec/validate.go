@@ -247,7 +247,7 @@ func CheckClusterDirOverlap(entries []DirEntry) error {
 				}
 
 				// overlap is allowed in the case one side is data dir of a monitor instance,
-				// as the *_exporter don't need data dir, the field is only kept for compatiability
+				// as the *_exporter don't need data dir, the field is only kept for compatibility
 				// with legacy tidb-ansible deployments.
 				if (strings.HasPrefix(d1.dirKind, "monitor data directory")) ||
 					(strings.HasPrefix(d2.dirKind, "monitor data directory")) {
@@ -935,6 +935,8 @@ func (s *Specification) validateTLSEnabled() error {
 	for _, c := range compList {
 		switch c.Name() {
 		case ComponentPD,
+			ComponentTSO,
+			ComponentScheduling,
 			ComponentTiDB,
 			ComponentTiKV,
 			ComponentTiFlash,
@@ -978,6 +980,38 @@ func (s *Specification) validatePDNames() error {
 			return errors.Errorf("component pd_servers.name is not supported duplicated, the name %s is duplicated", pd.Name)
 		}
 		pdNames.Insert(pd.Name)
+	}
+	return nil
+}
+
+func (s *Specification) validateTSONames() error {
+	// check tso server name
+	tsoNames := set.NewStringSet()
+	for _, tso := range s.TSOServers {
+		if tso.Name == "" {
+			continue
+		}
+
+		if tsoNames.Exist(tso.Name) {
+			return errors.Errorf("component tso_servers.name is not supported duplicated, the name %s is duplicated", tso.Name)
+		}
+		tsoNames.Insert(tso.Name)
+	}
+	return nil
+}
+
+func (s *Specification) validateSchedulingNames() error {
+	// check scheduling server name
+	schedulingNames := set.NewStringSet()
+	for _, scheduling := range s.SchedulingServers {
+		if scheduling.Name == "" {
+			continue
+		}
+
+		if schedulingNames.Exist(scheduling.Name) {
+			return errors.Errorf("component scheduling_servers.name is not supported duplicated, the name %s is duplicated", scheduling.Name)
+		}
+		schedulingNames.Insert(scheduling.Name)
 	}
 	return nil
 }
@@ -1061,6 +1095,8 @@ func (s *Specification) Validate() error {
 		s.dirConflictsDetect,
 		s.validateUserGroup,
 		s.validatePDNames,
+		s.validateTSONames,
+		s.validateSchedulingNames,
 		s.validateTiSparkSpec,
 		s.validateTiFlashConfigs,
 		s.validateMonitorAgent,

@@ -53,7 +53,6 @@ components or versions which have not been installed.
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			teleCommand = cmd.CommandPath()
 			env := environment.GlobalEnv()
 			switch len(args) {
 			case 0:
@@ -86,7 +85,7 @@ func (lr *listResult) print() {
 	if lr == nil {
 		return
 	}
-	fmt.Printf(lr.header)
+	fmt.Printf("%s", lr.header)
 	tui.PrintTable(lr.cmpTable, true)
 }
 
@@ -111,7 +110,7 @@ func showComponentList(env *environment.Environment, opt listOptions) (*listResu
 	}
 
 	index := v1manifest.Index{}
-	_, exists, err := env.V1Repository().Local().LoadManifest(&index)
+	_, exists, err := env.V1Repository().LocalLoadManifest(&index)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +136,7 @@ func showComponentList(env *environment.Environment, opt listOptions) (*listResu
 		}
 
 		filename := v1manifest.ComponentManifestFilename(id)
-		manifest, err := env.V1Repository().Local().LoadComponentManifest(&comp, filename)
+		manifest, err := env.V1Repository().LocalLoadComponentManifest(&comp, filename)
 		if err != nil {
 			return nil, err
 		}

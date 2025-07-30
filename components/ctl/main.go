@@ -8,6 +8,8 @@ import (
 	"path"
 	"strings"
 
+	"slices"
+
 	"github.com/fatih/color"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/utils"
@@ -48,7 +50,7 @@ func execute() error {
 			if ignoreVersion {
 				for i, arg := range transparentParams {
 					if arg == "--ignore-version" {
-						transparentParams = append(transparentParams[:i], transparentParams[i+1:]...)
+						transparentParams = slices.Delete(transparentParams, i, i+1)
 					}
 				}
 			} else if os.Getenv(localdata.EnvNameUserInputVersion) == "" {

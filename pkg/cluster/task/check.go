@@ -41,7 +41,7 @@ var (
 )
 
 // place the check utilities are stored
-const (
+var (
 	CheckToolsPathDir = "/tmp/tiup"
 )
 
@@ -188,6 +188,19 @@ func (c *CheckSys) runFIO(ctx context.Context) (outRR []byte, outRW []byte, outL
 	testWd := filepath.Join(checkDir, "tiup-fio-test")
 	fioBin := filepath.Join(CheckToolsPathDir, "bin", "fio")
 
+	notExistDir := testWd
+	for {
+		parent := filepath.Dir(notExistDir)
+		if len(parent) <= 1 {
+			break
+		}
+		results := operator.CheckDirIsExist(ctx, e, parent)
+		if len(results) > 0 {
+			break
+		}
+		notExistDir = parent
+	}
+
 	var stderr []byte
 
 	// rand read
@@ -309,7 +322,7 @@ func (c *CheckSys) runFIO(ctx context.Context) (outRR []byte, outRW []byte, outL
 	// cleanup
 	_, stderr, err = e.Execute(
 		ctx,
-		fmt.Sprintf("rm -rf %s", testWd),
+		fmt.Sprintf("rm -rf %s", notExistDir),
 		false,
 	)
 	if err != nil {

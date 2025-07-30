@@ -113,7 +113,7 @@ dm                 pingcap    Data Migration Platform manager
 dm-master          pingcap    dm-master component of Data Migration Platform
 dm-worker          pingcap    dm-worker component of Data Migration Platform
 dmctl              pingcap    dmctl component of Data Migration Platform
-drainer            pingcap    The drainer componet of TiDB binlog service
+drainer            pingcap    The drainer component of TiDB binlog service
 dumpling           pingcap    Dumpling is a CLI tool that helps you dump MySQL/TiDB data
 errdoc             pingcap    Document about TiDB errors
 grafana            pingcap    Grafana is the open source analytics & monitoring solution for every database
@@ -124,7 +124,7 @@ pd                 pingcap    PD is the abbreviation for Placement Driver. It is
 pd-recover         pingcap    PD Recover is a disaster recovery tool of PD, used to recover the PD cluster which cannot start or provide services normally
 playground         pingcap    Bootstrap a local TiDB cluster for fun
 prometheus         pingcap    The Prometheus monitoring system and time series database
-pump               pingcap    The pump componet of TiDB binlog service
+pump               pingcap    The pump component of TiDB binlog service
 pushgateway        pingcap    Push acceptor for ephemeral and batch jobs
 server             pingcap    TiUP publish/cache server
 spark              pingcap    Spark is a fast and general cluster computing system for Big Data

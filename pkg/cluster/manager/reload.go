@@ -59,7 +59,7 @@ func (m *Manager) Reload(name string, gOpt operator.Options, skipRestart, skipCo
 
 	if !skipConfirm {
 		if err := tui.PromptForConfirmOrAbortError(
-			fmt.Sprintf("Will reload the cluster %s with restart policy is %s, nodes: %s, roles: %s.\nDo you want to continue? [y/N]:",
+			"%s", fmt.Sprintf("Will reload the cluster %s with restart policy is %s, nodes: %s, roles: %s.\nDo you want to continue? [y/N]:",
 				color.HiYellowString(name),
 				color.HiRedString(fmt.Sprintf("%v", !skipRestart)),
 				color.HiRedString(strings.Join(gOpt.Nodes, ",")),
@@ -117,6 +117,13 @@ func (m *Manager) Reload(name string, gOpt operator.Options, skipRestart, skipCo
 	if len(monitorConfigTasks) > 0 {
 		b.ParallelStep("+ Refresh monitor configs", gOpt.Force, monitorConfigTasks...)
 	}
+
+	// Save the updated topology back to file after configs are refreshed
+	// This ensures any modifications made during InitConfig (like handleRemoteWrite) are persisted
+	b.Func("Save updated topology", func(ctx context.Context) error {
+		// Save metadata back to file
+		return m.specManager.SaveMeta(name, metadata)
+	})
 
 	if !skipRestart {
 		tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))

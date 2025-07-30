@@ -153,7 +153,7 @@ func (c *TiSparkMasterComponent) CalculateVersion(clusterVersion string) string 
 
 // SetVersion implements Component interface.
 func (c *TiSparkMasterComponent) SetVersion(version string) {
-	// should never be calles
+	// should never be calls
 }
 
 // Instances implements Component interface.
@@ -208,7 +208,7 @@ func (i *TiSparkMasterInstance) GetCustomFields() map[string]any {
 	return v.Interface().(map[string]any)
 }
 
-// GetCustomEnvs get custom spark envionment variables of the instance
+// GetCustomEnvs get custom spark environment variables of the instance
 func (i *TiSparkMasterInstance) GetCustomEnvs() map[string]string {
 	v := reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("SparkEnvs")
 	if !v.IsValid() {
@@ -266,6 +266,15 @@ func (i *TiSparkMasterInstance) InitConfig(
 	if _, _, err := e.Execute(ctx, cmd, sudo); err != nil {
 		return errors.Annotatef(err, "execute: %s", cmd)
 	}
+
+	// restorecon restores SELinux Contexts
+	// Check with: ls -lZ /path/to/file
+	// If the context is wrong systemctl will complain about a missing unit file
+	// Note that we won't check for errors here because:
+	// - We don't support SELinux in Enforcing mode
+	// - restorecon might not be available (Ubuntu doesn't install SELinux tools by default)
+	cmd = fmt.Sprintf("restorecon %s%s-%d.service", systemdDir, comp, port)
+	e.Execute(ctx, cmd, sudo) //nolint
 
 	// transfer default config
 	pdList := topo.GetPDList()

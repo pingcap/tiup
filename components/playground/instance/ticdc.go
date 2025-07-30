@@ -19,7 +19,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/tidbver"
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -34,7 +33,7 @@ type TiCDC struct {
 var _ Instance = &TiCDC{}
 
 // NewTiCDC create a TiCDC instance.
-func NewTiCDC(binPath string, dir, host, configPath string, id int, port int, pds []*PDInstance) *TiCDC {
+func NewTiCDC(shOpt SharedOptions, binPath string, dir, host, configPath string, id int, port int, pds []*PDInstance) *TiCDC {
 	if port <= 0 {
 		port = 8300
 	}
@@ -44,7 +43,7 @@ func NewTiCDC(binPath string, dir, host, configPath string, id int, port int, pd
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
-			Port:       utils.MustGetFreePort(host, port),
+			Port:       utils.MustGetFreePort(host, port, shOpt.PortOffset),
 			ConfigPath: configPath,
 		},
 		pds: pds,
@@ -54,7 +53,7 @@ func NewTiCDC(binPath string, dir, host, configPath string, id int, port int, pd
 }
 
 // Start implements Instance interface.
-func (c *TiCDC) Start(ctx context.Context, version utils.Version) error {
+func (c *TiCDC) Start(ctx context.Context) error {
 	endpoints := pdEndpoints(c.pds, true)
 
 	args := []string{
@@ -64,7 +63,7 @@ func (c *TiCDC) Start(ctx context.Context, version utils.Version) error {
 		fmt.Sprintf("--pd=%s", strings.Join(endpoints, ",")),
 		fmt.Sprintf("--log-file=%s", c.LogFile()),
 	}
-	clusterVersion := string(version)
+	clusterVersion := string(c.Version)
 	if tidbver.TiCDCSupportConfigFile(clusterVersion) {
 		if c.ConfigPath != "" {
 			args = append(args, fmt.Sprintf("--config=%s", c.ConfigPath))
@@ -76,10 +75,6 @@ func (c *TiCDC) Start(ctx context.Context, version utils.Version) error {
 		}
 	}
 
-	var err error
-	if c.BinPath, err = tiupexec.PrepareBinary("cdc", version, c.BinPath); err != nil {
-		return err
-	}
 	c.Process = &process{cmd: PrepareCommand(ctx, c.BinPath, args, nil, c.Dir)}
 
 	logIfErr(c.Process.SetOutputFile(c.LogFile()))

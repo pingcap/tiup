@@ -49,7 +49,7 @@ func newReplayCmd() *cobra.Command {
 
 			if !skipConfirm {
 				if err := tui.PromptForConfirmOrAbortError(
-					fmt.Sprintf("Will replay the command `tiup dm %s`\nDo you want to continue? [y/N]: ", strings.Join(args[1:], " ")),
+					"%s", fmt.Sprintf("Will replay the command `tiup dm %s`\nDo you want to continue? [y/N]: ", strings.Join(args[1:], " ")),
 				); err != nil {
 					return err
 				}

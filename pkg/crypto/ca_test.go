@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"testing"
 
+	"slices"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -48,12 +50,7 @@ func TestNewCA(t *testing.T) {
 			x509.ExtKeyUsageServerAuth,
 		} {
 			if func(a x509.ExtKeyUsage, s []x509.ExtKeyUsage) bool {
-				for _, u := range s {
-					if u == a {
-						return true
-					}
-				}
-				return false
+				return slices.Contains(s, a)
 			}(usage, cert.ExtKeyUsage) {
 				continue
 			}
@@ -111,12 +108,7 @@ func TestCASign(t *testing.T) {
 			x509.ExtKeyUsageServerAuth,
 		} {
 			if func(a x509.ExtKeyUsage, s []x509.ExtKeyUsage) bool {
-				for _, u := range s {
-					if u == a {
-						return true
-					}
-				}
-				return false
+				return slices.Contains(s, a)
 			}(usage, cert.ExtKeyUsage) {
 				continue
 			}

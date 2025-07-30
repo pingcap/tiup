@@ -16,6 +16,7 @@ package config
 import (
 	"bytes"
 	"path"
+	"strings"
 	"text/template"
 
 	"github.com/pingcap/tiup/embed"
@@ -34,6 +35,8 @@ type PrometheusConfig struct {
 	TiProxyStatusAddrs        []string
 	TiKVStatusAddrs           []string
 	PDAddrs                   []string
+	TSOAddrs                  []string
+	SchedulingAddrs           []string
 	TiFlashStatusAddrs        []string
 	TiFlashLearnerStatusAddrs []string
 	PumpAddrs                 []string
@@ -95,6 +98,18 @@ func (c *PrometheusConfig) AddTiKV(ip string, port uint64) *PrometheusConfig {
 // AddPD add a PD address
 func (c *PrometheusConfig) AddPD(ip string, port uint64) *PrometheusConfig {
 	c.PDAddrs = append(c.PDAddrs, utils.JoinHostPort(ip, int(port)))
+	return c
+}
+
+// AddTSO add a TSO address
+func (c *PrometheusConfig) AddTSO(ip string, port uint64) *PrometheusConfig {
+	c.TSOAddrs = append(c.TSOAddrs, utils.JoinHostPort(ip, int(port)))
+	return c
+}
+
+// AddScheduling add a scheduling address
+func (c *PrometheusConfig) AddScheduling(ip string, port uint64) *PrometheusConfig {
+	c.SchedulingAddrs = append(c.SchedulingAddrs, utils.JoinHostPort(ip, int(port)))
 	return c
 }
 
@@ -213,6 +228,40 @@ func (c *PrometheusConfig) Config() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	return c.ConfigWithTemplate(string(tpl))
+}
+
+// ConfigWithAgentMode generate the config file data with agent mode enabled/disabled.
+// In agent mode, we need to exclude rule_files section which is not supported.
+func (c *PrometheusConfig) ConfigWithAgentMode(enableAgent bool) ([]byte, error) {
+	fp := path.Join("templates", "config", "prometheus.yml.tpl")
+	tpl, err := embed.ReadTemplate(fp)
+	if err != nil {
+		return nil, err
+	}
+
+	// If agent mode is enabled, remove rule_files section from the template
+	if enableAgent {
+		// Remove the rule_files section which isn't allowed in agent mode
+		// This is a simple string manipulation to remove the section - a more robust approach
+		// would be to create a dedicated template for agent mode
+		tplContent := string(tpl)
+		ruleSectionStart := "rule_files:"
+		startIndex := strings.Index(tplContent, ruleSectionStart)
+
+		if startIndex >= 0 {
+			// Find the end of the rule_files section (next section with same indentation)
+			scrapeConfigsSection := "scrape_configs:"
+			endIndex := strings.Index(tplContent[startIndex:], scrapeConfigsSection)
+
+			if endIndex >= 0 {
+				// Build a new template without the rule_files section
+				newTemplate := tplContent[:startIndex] + tplContent[startIndex+endIndex:]
+				return c.ConfigWithTemplate(newTemplate)
+			}
+		}
+	}
+
 	return c.ConfigWithTemplate(string(tpl))
 }
 

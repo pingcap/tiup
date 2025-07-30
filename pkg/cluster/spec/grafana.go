@@ -14,16 +14,21 @@
 package spec
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"time"
 
+	"text/template"
+
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/embed"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/config"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
@@ -34,27 +39,28 @@ import (
 
 // GrafanaSpec represents the Grafana topology specification in topology.yaml
 type GrafanaSpec struct {
-	Host            string               `yaml:"host"`
-	ManageHost      string               `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
-	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported        bool                 `yaml:"imported,omitempty"`
-	Patched         bool                 `yaml:"patched,omitempty"`
-	IgnoreExporter  bool                 `yaml:"ignore_exporter,omitempty"`
-	Port            int                  `yaml:"port" default:"3000"`
-	DeployDir       string               `yaml:"deploy_dir,omitempty"`
-	Config          map[string]string    `yaml:"config,omitempty" validate:"config:ignore"`
-	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
-	Arch            string               `yaml:"arch,omitempty"`
-	OS              string               `yaml:"os,omitempty"`
-	DashboardDir    string               `yaml:"dashboard_dir,omitempty" validate:"dashboard_dir:editable"`
-	Username        string               `yaml:"username,omitempty" default:"admin" validate:"username:editable"`
-	Password        string               `yaml:"password,omitempty" default:"admin" validate:"password:editable"`
-	AnonymousEnable bool                 `yaml:"anonymous_enable" default:"false" validate:"anonymous_enable:editable"`
-	RootURL         string               `yaml:"root_url" validate:"root_url:editable"`
-	Domain          string               `yaml:"domain" validate:"domain:editable"`
-	DefaultTheme    string               `yaml:"default_theme,omitempty" validate:"default_theme:editable"`
-	OrgName         string               `yaml:"org_name,omitempty" validate:"org_name:editable"`
-	OrgRole         string               `yaml:"org_role,omitempty" validate:"org_role:editable"`
+	Host              string               `yaml:"host"`
+	ManageHost        string               `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
+	SSHPort           int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
+	Imported          bool                 `yaml:"imported,omitempty"`
+	Patched           bool                 `yaml:"patched,omitempty"`
+	IgnoreExporter    bool                 `yaml:"ignore_exporter,omitempty"`
+	Port              int                  `yaml:"port" default:"3000"`
+	DeployDir         string               `yaml:"deploy_dir,omitempty"`
+	Config            map[string]string    `yaml:"config,omitempty" validate:"config:ignore"`
+	ResourceControl   meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
+	Arch              string               `yaml:"arch,omitempty"`
+	OS                string               `yaml:"os,omitempty"`
+	DashboardDir      string               `yaml:"dashboard_dir,omitempty" validate:"dashboard_dir:editable"`
+	Username          string               `yaml:"username,omitempty" default:"admin" validate:"username:editable"`
+	Password          string               `yaml:"password,omitempty" default:"admin" validate:"password:editable"`
+	AnonymousEnable   bool                 `yaml:"anonymous_enable" default:"false" validate:"anonymous_enable:editable"`
+	RootURL           string               `yaml:"root_url" validate:"root_url:editable"`
+	Domain            string               `yaml:"domain" validate:"domain:editable"`
+	DefaultTheme      string               `yaml:"default_theme,omitempty" validate:"default_theme:editable"`
+	OrgName           string               `yaml:"org_name,omitempty" validate:"org_name:editable"`
+	OrgRole           string               `yaml:"org_role,omitempty" validate:"org_role:editable"`
+	UseVMAsDatasource bool                 `yaml:"use_vm_as_datasource,omitempty" validate:"use_vm_as_datasource:editable"`
 }
 
 // Role returns the component role of the instance
@@ -260,6 +266,10 @@ func (i *GrafanaInstance) InitConfig(
 		return err
 	}
 
+	// Get the grafana spec
+	spec = i.InstanceSpec.(*GrafanaSpec)
+
+	// Get monitors
 	topo := reflect.ValueOf(i.topo)
 	if topo.Kind() == reflect.Ptr {
 		topo = topo.Elem()
@@ -273,14 +283,60 @@ func (i *GrafanaInstance) InitConfig(
 	if len(monitors) == 0 {
 		return errors.New("no prometheus found in topology")
 	}
-	fp = filepath.Join(paths.Cache, fmt.Sprintf("datasource_%s.yml", i.GetHost()))
-	datasourceCfg := &config.DatasourceConfig{
-		ClusterName: clusterName,
-		URL:         fmt.Sprintf("http://%s", utils.JoinHostPort(monitors[0].Host, monitors[0].Port)),
+
+	// Create datasources configuration
+	datasources := make([]*config.DatasourceConfig, 0)
+
+	// Determine which datasource is default based on Grafana spec
+	vmIsDefault := spec.UseVMAsDatasource && monitors[0].PromRemoteWriteToVM
+	promIsDefault := !vmIsDefault
+
+	// Add Prometheus datasource
+	promDatasource := config.NewDatasourceConfig(
+		clusterName,
+		// not support tls
+		fmt.Sprintf("http://%s", utils.JoinHostPort(monitors[0].Host, monitors[0].Port)),
+	).WithIsDefault(promIsDefault)
+	datasources = append(datasources, promDatasource)
+
+	// Add VM datasource if enabled
+	if monitors[0].PromRemoteWriteToVM && monitors[0].NgPort > 0 {
+		vmDatasource := config.NewDatasourceConfig(
+			fmt.Sprintf("%s-vm", clusterName),
+			// not support tls
+			fmt.Sprintf("http://%s", utils.JoinHostPort(monitors[0].Host, monitors[0].NgPort)),
+		).WithIsDefault(vmIsDefault)
+		datasources = append(datasources, vmDatasource)
 	}
-	if err := datasourceCfg.ConfigToFile(fp); err != nil {
+
+	// Write datasources configuration
+	fp = filepath.Join(paths.Cache, fmt.Sprintf("datasource_%s.yml", i.GetHost()))
+	content := bytes.NewBuffer(nil)
+
+	// Create a map to hold all datasources
+	datasourceMap := map[string]any{
+		"Datasources": datasources,
+	}
+
+	// Create a template for the datasource configuration
+	tpl, err := embed.ReadTemplate(path.Join("templates", "config", "datasource.yml.tpl"))
+	if err != nil {
 		return err
 	}
+
+	tmpl, err := template.New("Datasource").Parse(string(tpl))
+	if err != nil {
+		return err
+	}
+
+	if err := tmpl.Execute(content, datasourceMap); err != nil {
+		return err
+	}
+
+	if err := utils.WriteFile(fp, content.Bytes(), 0644); err != nil {
+		return err
+	}
+
 	dst = filepath.Join(paths.Deploy, "provisioning", "datasources", "datasource.yml")
 	return i.TransferLocalConfigFile(ctx, e, fp, dst)
 }
@@ -308,7 +364,24 @@ func (i *GrafanaInstance) initDashboards(ctx context.Context, e ctxt.Executor, s
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}
 
-	// Deal with the cluster name
+	// Get the monitor component to check if VM is the default datasource
+	topo := reflect.ValueOf(i.topo)
+	if topo.Kind() == reflect.Ptr {
+		topo = topo.Elem()
+	}
+	val := topo.FieldByName("Monitors")
+	if (val == reflect.Value{}) {
+		return errors.Errorf("field Monitors not found in topology: %v", topo)
+	}
+
+	// Determine which datasource to use in dashboards
+	datasourceName := clusterName
+	monitors := val.Interface().([]*PrometheusSpec)
+	if len(monitors) > 0 && monitors[0].PromRemoteWriteToVM && monitors[0].NgPort > 0 && (spec.UseVMAsDatasource) {
+		datasourceName = fmt.Sprintf("%s-vm", clusterName)
+	}
+
+	// Deal with the cluster name and datasource
 	for _, cmd := range []string{
 		`find %s -type f -exec sed -i 's/\${DS_.*-CLUSTER}/%s/g' {} \;`,
 		`find %s -type f -exec sed -i 's/DS_.*-CLUSTER/%s/g' {} \;`,
@@ -317,7 +390,7 @@ func (i *GrafanaInstance) initDashboards(ctx context.Context, e ctxt.Executor, s
 		`find %s -type f -exec sed -i 's/test-cluster/%s/g' {} \;`,
 		`find %s -type f -exec sed -i 's/Test-Cluster/%s/g' {} \;`,
 	} {
-		cmd := fmt.Sprintf(cmd, dashboardsDir, clusterName)
+		cmd := fmt.Sprintf(cmd, dashboardsDir, datasourceName)
 		_, stderr, err := e.Execute(ctx, cmd, false)
 		if err != nil {
 			return errors.Annotatef(err, "stderr: %s", string(stderr))

@@ -39,7 +39,10 @@ import (
 const (
 	ComponentTiDB             = "tidb"
 	ComponentTiKV             = "tikv"
+	ComponentTiKVWorker       = "tikv-worker"
 	ComponentPD               = "pd"
+	ComponentTSO              = "tso"
+	ComponentScheduling       = "scheduling"
 	ComponentTiFlash          = "tiflash"
 	ComponentTiProxy          = "tiproxy"
 	ComponentGrafana          = "grafana"
@@ -221,6 +224,15 @@ func (i *BaseInstance) InitConfig(ctx context.Context, e ctxt.Executor, opt Glob
 	if _, _, err := e.Execute(ctx, cmd, sudo); err != nil {
 		return errors.Annotatef(err, "execute: %s", cmd)
 	}
+
+	// restorecon restores SELinux Contexts
+	// Check with: ls -lZ /path/to/file
+	// If the context is wrong systemctl will complain about a missing unit file
+	// Note that we won't check for errors here because:
+	// - We don't support SELinux in Enforcing mode
+	// - restorecon might not be available (Ubuntu doesn't install SELinux tools by default)
+	cmd = fmt.Sprintf("restorecon %s%s-%d.service", systemdDir, comp, port)
+	e.Execute(ctx, cmd, sudo) //nolint
 
 	// doesn't work
 	if _, err := i.setTLSConfig(ctx, false, nil, paths); err != nil {

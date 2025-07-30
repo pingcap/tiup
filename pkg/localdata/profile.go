@@ -27,6 +27,8 @@ import (
 	"sort"
 	"strings"
 
+	"slices"
+
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/mod/semver"
@@ -116,9 +118,7 @@ func (p *Profile) ComponentInstalledPath(component string, version utils.Version
 	return filepath.Join(p.Path(ComponentParentDir), component, installedVersion.String()), nil
 }
 
-// SaveTo saves file to the profile directory, path is relative to the
-// profile directory of current user
-func (p *Profile) SaveTo(path string, data []byte, perm os.FileMode) error {
+func (p *Profile) saveTo(path string, data []byte, perm os.FileMode) error {
 	fullPath := filepath.Join(p.root, path)
 	// create sub directory if needed
 	if err := utils.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
@@ -127,13 +127,14 @@ func (p *Profile) SaveTo(path string, data []byte, perm os.FileMode) error {
 	return utils.WriteFile(fullPath, data, perm)
 }
 
-// WriteJSON writes struct to a file (in the profile directory) in JSON format
-func (p *Profile) WriteJSON(path string, data any) error {
+// WriteMetaFile writes process meta to instance/MetaFilename.
+func (p *Profile) WriteMetaFile(instance string, data *Process) error {
+	metaFile := filepath.Join(DataParentDir, instance, MetaFilename)
 	jsonData, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
 		return errors.Trace(err)
 	}
-	return p.SaveTo(path, jsonData, 0644)
+	return p.saveTo(metaFile, jsonData, 0644)
 }
 
 // readJSON read file and unmarshal to target `data`
@@ -214,10 +215,8 @@ func (p *Profile) VersionIsInstalled(component, version string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	for _, v := range installed {
-		if v == version {
-			return true, nil
-		}
+	if slices.Contains(installed, version) {
+		return true, nil
 	}
 	return false, nil
 }
@@ -275,9 +274,9 @@ func (p *Profile) ResetMirror(addr, root string) error {
 
 	// Only cache remote mirror
 	if strings.HasPrefix(addr, "http") && root != localRoot {
-		if strings.HasPrefix(root, "http") {
-			fmt.Printf("WARN: adding root certificate via internet: %s\n", root)
-			fmt.Printf("You can revoke this by remove %s\n", localRoot)
+		if strings.HasPrefix(root, "http") && !strings.HasPrefix(root, "https") {
+			fmt.Printf("WARN: Trusting component distribution key via insecure Internet: %s\n", root)
+			fmt.Printf("      To revoke TiUP's trust, remove this file: %s\n", localRoot)
 		}
 		_ = utils.Copy(p.Path("bin", "root.json"), localRoot)
 	}

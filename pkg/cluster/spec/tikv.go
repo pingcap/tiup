@@ -475,17 +475,17 @@ func addr(spec *TiKVSpec) string {
 func genLeaderCounter(topo *Specification, tlsCfg *tls.Config) func(string) (int, error) {
 	return func(id string) (int, error) {
 		statusAddress := ""
-		foundIds := []string{}
+		foundIDs := []string{}
 		for _, kv := range topo.TiKVServers {
 			kvid := utils.JoinHostPort(kv.Host, kv.Port)
 			if id == kvid {
 				statusAddress = utils.JoinHostPort(kv.GetManageHost(), kv.StatusPort)
 				break
 			}
-			foundIds = append(foundIds, kvid)
+			foundIDs = append(foundIDs, kvid)
 		}
 		if statusAddress == "" {
-			return 0, fmt.Errorf("TiKV instance with ID %s not found, found %s", id, strings.Join(foundIds, ","))
+			return 0, fmt.Errorf("TiKV instance with ID %s not found, found %s", id, strings.Join(foundIDs, ","))
 		}
 
 		transport := makeTransport(tlsCfg)
@@ -532,7 +532,7 @@ func genLeaderCounter(topo *Specification, tlsCfg *tls.Config) func(string) (int
 func makeTransport(tlsCfg *tls.Config) *http.Transport {
 	// Start with the DefaultTransport for sane defaults.
 	transport := http.DefaultTransport.(*http.Transport).Clone()
-	// Conservatively disable HTTP keep-alives as this program will only
+	// Conservatively disable HTTP keep-alive as this program will only
 	// ever need a single HTTP request.
 	transport.DisableKeepAlives = true
 	// Timeout early if the server doesn't even return the headers.

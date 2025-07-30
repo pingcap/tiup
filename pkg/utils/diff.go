@@ -20,7 +20,7 @@ import (
 	"strings"
 
 	"github.com/pingcap/tiup/pkg/set"
-	"github.com/r3labs/diff/v2"
+	"github.com/r3labs/diff/v3"
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
 

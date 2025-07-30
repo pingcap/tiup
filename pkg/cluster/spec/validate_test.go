@@ -692,7 +692,7 @@ pump_servers:
 	err = CheckClusterDirConflict(clsList, "topo", &topo4)
 	c.Assert(err, IsNil)
 
-	// component with reletive dir has no dir conflic
+	// component with relative dir has no dir conflic
 	err = yaml.Unmarshal([]byte(`
 monitored:
   node_exporter_port: 9102
