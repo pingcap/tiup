@@ -45,7 +45,7 @@ type CloneOptions struct {
 }
 
 // CloneMirror clones a local mirror from the remote repository
-func CloneMirror(repo *V1Repository,
+func CloneMirror(repo Repository,
 	components []string,
 	targetDir string,
 	selectedVersions []string,
@@ -243,7 +243,7 @@ func CloneMirror(repo *V1Repository,
 	return install.WriteLocalInstallScript(filepath.Join(targetDir, "local_install.sh"))
 }
 
-func cloneComponents(repo *V1Repository,
+func cloneComponents(repo Repository,
 	components, selectedVersions []string,
 	targetDir, tmpDir string,
 	options CloneOptions) (map[string]*v1manifest.Component, error) {
@@ -360,7 +360,7 @@ func cloneComponents(repo *V1Repository,
 	return compManifests, nil
 }
 
-func download(targetDir, tmpDir string, repo *V1Repository, item *v1manifest.VersionItem) error {
+func download(targetDir, tmpDir string, repo Repository, item *v1manifest.VersionItem) error {
 	validate := func(dir string) error {
 		hashes, n, err := ru.HashFile(path.Join(dir, item.URL))
 		if err != nil {

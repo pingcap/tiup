@@ -4,7 +4,7 @@ global:
 
 server_configs:
   tikv:
-    storage.reserve-space: 1K
+    storage.reserve-space: 5M
     storage.api-version: 2
     storage.enable-ttl: true
   kvcdc:

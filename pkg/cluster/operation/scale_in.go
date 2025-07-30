@@ -21,6 +21,8 @@ import (
 	"strings"
 	"time"
 
+	"slices"
+
 	"github.com/fatih/color"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
@@ -31,7 +33,6 @@ import (
 	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/sync/errgroup"
-	"slices"
 )
 
 // TODO: We can make drainer not async.
