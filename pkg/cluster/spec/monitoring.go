@@ -171,7 +171,7 @@ func (c *MonitorComponent) Instances() []Instance {
 			SSHP:         s.SSHPort,
 			NumaNode:     s.NumaNode,
 			NumaCores:    "",
-			Ports: ports,
+			Ports:        ports,
 			Dirs: []string{
 				s.DeployDir,
 				s.DataDir,
