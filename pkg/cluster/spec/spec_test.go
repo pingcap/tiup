@@ -904,7 +904,7 @@ tiflash_servers:
 
 func (s *metaSuiteTopo) TestYAMLAnchor(c *C) {
 	topo := Specification{}
-	err := yaml.Unmarshal([]byte(`
+	decoder := yaml.NewDecoder(bytes.NewReader([]byte(`
 global:
   custom:
     tidb_spec: &tidb_spec
@@ -915,7 +915,10 @@ tidb_servers:
   - <<: *tidb_spec
     host: 172.16.5.138
     deploy_dir: "fake-deploy"
-`), &topo)
+`)))
+	decoder.KnownFields(true)
+	err = decoder.Decode(&topo)
+
 	c.Assert(err, IsNil)
 	c.Assert(topo.TiDBServers[0].Host, Equals, "172.16.5.138")
 	c.Assert(topo.TiDBServers[0].DeployDir, Equals, "fake-deploy")
@@ -924,7 +927,7 @@ tidb_servers:
 
 func (s *metaSuiteTopo) TestYAMLAnchorWithUndeclared(c *C) {
 	topo := Specification{}
-	err := yaml.Unmarshal([]byte(`
+	decoder := yaml.NewDecoder(bytes.NewReader([]byte(`
 global:
   custom:
     tidb_spec: &tidb_spec
@@ -935,7 +938,9 @@ global:
 tidb_servers:
   - <<: *tidb_spec
     host: 172.16.5.138
-`), &topo)
+`)))
+	decoder.KnownFields(true)
+	err = decoder.Decode(&topo)
 	c.Assert(err, NotNil)
 	c.Assert(strings.Contains(err.Error(), "not found"), IsTrue)
 }

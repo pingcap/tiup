@@ -113,7 +113,9 @@ func (m *Manager) editTopo(origTopo spec.Topology, data []byte, opt EditConfigOp
 	}
 
 	newTopo := m.specManager.NewMetadata().GetTopology()
-	err = yaml.Unmarshal(newData, newTopo)
+	decoder := yaml.NewDecoder(bytes.NewReader(newData))
+	decoder.KnownFields(true)
+	err = decoder.Decode(newTopo)
 	if err != nil {
 		fmt.Print(color.RedString("New topology could not be saved: "))
 		m.logger.Infof("Failed to parse topology file: %v", err)

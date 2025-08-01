@@ -14,6 +14,7 @@
 package spec
 
 import (
+	"bytes"
 	"os"
 	"path"
 	"reflect"
@@ -86,7 +87,9 @@ func ParseTopologyYaml(file string, out Topology, ignoreGlobal ...bool) error {
 		yamlFile, _ = yaml.Marshal(newTopo)
 	}
 
-	if err = yaml.Unmarshal(yamlFile, out); err != nil {
+	decoder := yaml.NewDecoder(bytes.NewReader(yamlFile))
+	decoder.KnownFields(true)
+	if err = decoder.Decode(out); err != nil {
 		return ErrTopologyParseFailed.
 			Wrap(err, "Failed to parse topology file %s", file).
 			WithProperty(tui.SuggestionFromTemplate(`
