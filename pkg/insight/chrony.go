@@ -23,6 +23,7 @@ import (
 	"strings"
 )
 
+// ChronyStat is holding the chrony statistics
 type ChronyStat struct {
 	ReferenceID    string  `json:"referenceid,omitempty"`
 	Stratum        int     `json:"stratum,omitempty"`
@@ -39,6 +40,7 @@ type ChronyStat struct {
 	LeapStatus     string  `json:"leap_status,omitempty"`
 }
 
+//revive:disable:get-return
 func (cs *ChronyStat) getChronyInfo() {
 	// try common locations first, then search PATH, this could cover some
 	// contitions when PATH is not correctly set on calling `collector`
@@ -69,7 +71,7 @@ func (cs *ChronyStat) getChronyInfo() {
 	// set default sync status to none
 	cs.LeapStatus = "none"
 
-	output := strings.FieldsFunc(out.String(), multi_split)
+	output := strings.FieldsFunc(out.String(), multiSplit)
 	for _, kv := range output {
 		tmp := strings.Split(strings.TrimSpace(kv), " : ")
 		switch {
@@ -137,3 +139,5 @@ func (cs *ChronyStat) getChronyInfo() {
 		}
 	}
 }
+
+//revive:enable:get-return

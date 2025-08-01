@@ -15,6 +15,7 @@ package insight
 
 import "github.com/vishvananda/netlink"
 
+// Socket is a network socket
 type Socket struct {
 	Family     uint8  `json:"family"`
 	State      uint8  `json:"state"`
@@ -24,7 +25,7 @@ type Socket struct {
 	DestPort   uint16 `json:"dest_port"`
 }
 
-func (info *InsightInfo) collectSockets() error {
+func (info *Info) collectSockets() error {
 	sockets, err := GetIPV4Sockets(netlink.TCP_ESTABLISHED)
 	info.Sockets = sockets
 	return err

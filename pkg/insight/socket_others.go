@@ -16,6 +16,7 @@
 
 package insight
 
+// GetIPV4Sockets is getting sockets from states
 func GetIPV4Sockets(states ...uint8) ([]Socket, error) {
 	return nil, nil
 }

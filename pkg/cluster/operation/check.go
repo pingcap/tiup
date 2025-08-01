@@ -104,7 +104,7 @@ func (c CheckResult) Passed() bool {
 // CheckSystemInfo performs checks with basic system info
 func CheckSystemInfo(opt *CheckOptions, rawData []byte) []*CheckResult {
 	var results []*CheckResult
-	var insightInfo insight.InsightInfo
+	var insightInfo insight.Info
 	if err := json.Unmarshal(rawData, &insightInfo); err != nil {
 		return append(results, &CheckResult{
 			Name: CheckNameGeneral,
@@ -637,7 +637,7 @@ func CheckListeningPort(opt *CheckOptions, host string, topo *spec.Specification
 // CheckPartitions checks partition info of data directories
 func CheckPartitions(opt *CheckOptions, host string, topo *spec.Specification, rawData []byte) []*CheckResult {
 	var results []*CheckResult
-	var insightInfo insight.InsightInfo
+	var insightInfo insight.Info
 	if err := json.Unmarshal(rawData, &insightInfo); err != nil {
 		return append(results, &CheckResult{
 			Name: CheckNameDisks,
@@ -978,7 +978,7 @@ func CheckDirIsExist(ctx context.Context, e ctxt.Executor, path string) []*Check
 // CheckTimeZone performs checks if time zone is the same
 func CheckTimeZone(ctx context.Context, topo *spec.Specification, host string, rawData []byte) []*CheckResult {
 	var results []*CheckResult
-	var insightInfo, pd0insightInfo insight.InsightInfo
+	var insightInfo, pd0insightInfo insight.Info
 	if err := json.Unmarshal(rawData, &insightInfo); err != nil {
 		return append(results, &CheckResult{
 			Name: CheckNameTimeZone,

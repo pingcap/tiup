@@ -40,6 +40,7 @@ const (
 	devMapperPath = "/dev/mapper"
 )
 
+// GetPartitionStats is getting disk partition statistics
 func GetPartitionStats() []BlockDev {
 	partStats := make([]BlockDev, 0)
 	if dirSysBlk, err := os.Lstat(sysBlockPath); err == nil &&

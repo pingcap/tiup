@@ -18,6 +18,7 @@ var (
 	procPath = "/proc"
 )
 
+// GetProcPath is getting the proc path
 func GetProcPath(paths ...string) string {
 	switch len(paths) {
 	case 0:
@@ -30,6 +31,7 @@ func GetProcPath(paths ...string) string {
 	}
 }
 
+// GetSysUptime gets the system uptime
 func GetSysUptime() (float64, float64, error) {
 	contents, err := ioutil.ReadFile(GetProcPath("uptime"))
 	if err != nil {

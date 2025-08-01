@@ -14,6 +14,7 @@ import (
 	"strings"
 )
 
+// TimeStat is holding the NTP time statistics
 type TimeStat struct {
 	Ver       string  `json:"version,omitempty"`
 	Sync      string  `json:"sync,omitempty"`
@@ -33,6 +34,7 @@ type TimeStat struct {
 	Status    string  `json:"status,omitempty"`
 }
 
+//revive:disable:get-return
 func (ts *TimeStat) getNTPInfo() {
 	// try common locations first, then search PATH, this could cover some
 	// contitions when PATH is not correctly set on calling `collector`
@@ -62,7 +64,7 @@ func (ts *TimeStat) getNTPInfo() {
 	// set default sync status to none
 	ts.Sync = "none"
 
-	output := strings.FieldsFunc(out.String(), multi_split)
+	output := strings.FieldsFunc(out.String(), multiSplit)
 	for _, kv := range output {
 		tmp := strings.Split(strings.TrimSpace(kv), "=")
 		switch {
@@ -141,7 +143,9 @@ func (ts *TimeStat) getNTPInfo() {
 	}
 }
 
-func multi_split(r rune) bool {
+//revive:enable:get-return
+
+func multiSplit(r rune) bool {
 	switch r {
 	case ',':
 		return true

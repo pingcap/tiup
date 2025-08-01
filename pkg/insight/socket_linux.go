@@ -21,6 +21,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+// GetIPV4Sockets is getting sockets from states
 func GetIPV4Sockets(states ...uint8) ([]Socket, error) {
 	netSockets, err := netlink.SocketDiagTCP(unix.AF_INET)
 	if err != nil {

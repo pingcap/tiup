@@ -34,6 +34,7 @@ const facilityMask = 0xf8
 // Severity is part of the log priority
 type Severity int
 
+//revive:disable
 const (
 	// From /usr/include/sys/syslog.h.
 	// These are the same on Linux, BSD, and OS X.
@@ -47,6 +48,8 @@ const (
 	LOG_DEBUG
 )
 
+//revive:enable
+
 // String implements the string interface
 func (p Severity) String() string {
 	return []string{
@@ -58,6 +61,7 @@ func (p Severity) String() string {
 // Facility is part of the log priority
 type Facility int
 
+//revive:disable
 const (
 	// From /usr/include/sys/syslog.h.
 	// These are the same up to LOG_FTP on Linux, BSD, and OS X.
@@ -86,6 +90,8 @@ const (
 	LOG_LOCAL6
 	LOG_LOCAL7
 )
+
+//revive:enable
 
 // String implements the string interface
 func (p Facility) String() string {

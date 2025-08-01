@@ -31,6 +31,7 @@ type RlimitUsage struct {
 	Used     uint64 `json:"used"`
 }
 
+// GetProcessStats gets processlist statistics
 func GetProcessStats(pidList []string) []ProcessStat {
 	if pidList != nil {
 		return getProcStatsByPIDList(pidList)
@@ -155,6 +156,7 @@ func getRlimitUsage(proc *process.Process) []RlimitUsage {
 	return result
 }
 
+//revive:disable:get-return
 func (proc_stat *ProcessStat) getProcessStat(proc *process.Process) {
 	proc_stat.Pid = proc.Pid
 	proc_stat.Name, _ = proc.Name()
@@ -166,6 +168,8 @@ func (proc_stat *ProcessStat) getProcessStat(proc *process.Process) {
 	proc_stat.Memory, _ = proc.MemoryInfo()
 	proc_stat.Rlimit = getRlimitUsage(proc)
 }
+
+//revive:enable:get-return
 
 func getProcessByPID(pid int) (*process.Process, error) {
 	procList, err := process.Processes()

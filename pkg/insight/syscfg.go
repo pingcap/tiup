@@ -35,10 +35,13 @@ type SecLimitField struct {
 	Value  int    `json:"value"`
 }
 
+//revive:disable:get-return
 func (c *SysCfg) getSysCfg() {
 	c.SysCtl = collectSysctl()
 	c.SecLimit = collectSecLimit()
 }
+
+//revive:enable:get-return
 
 func collectSysctl() map[string]string {
 	msg, err := sysctl.GetAll()

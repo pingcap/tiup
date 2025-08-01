@@ -17,7 +17,7 @@ import (
 	"github.com/pingcap/tiup/pkg/kmsg"
 )
 
-func (info *InsightInfo) collectDmsg() error {
+func (info *Info) collectDmsg() error {
 	msg, err := kmsg.Read()
 	info.DMesg = msg
 	return err

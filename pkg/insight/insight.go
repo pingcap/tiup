@@ -37,8 +37,8 @@ type Meta struct {
 	PDVer     []PDMeta   `json:"pd"`
 }
 
-// InsightInfo are information gathered from the system
-type InsightInfo struct {
+// Info are information gathered from the system
+type Info struct {
 	Meta       Meta            `json:"meta"`
 	SysInfo    sysinfo.SysInfo `json:"sysinfo,omitempty"`
 	NTP        TimeStat        `json:"ntp,omitempty"`
@@ -51,6 +51,7 @@ type InsightInfo struct {
 	Sockets    []Socket        `json:"sockets,omitempty"`
 }
 
+// Options sets options for info collection
 type Options struct {
 	Pid    string
 	Proc   bool
@@ -58,7 +59,10 @@ type Options struct {
 	Dmesg  bool // collect kernel logs or not
 }
 
-func (info *InsightInfo) GetInfo(opts Options) {
+// GetInfo collects Info
+//
+//revive:disable:get-return
+func (info *Info) GetInfo(opts Options) {
 	var pidList []string
 	if len(opts.Pid) > 0 {
 		pidList = strings.Split(opts.Pid, ",")
@@ -68,23 +72,23 @@ func (info *InsightInfo) GetInfo(opts Options) {
 	if opts.Proc {
 		info.ProcStats = GetProcessStats(pidList)
 		return
-	} else {
-		info.SysInfo.GetSysInfo()
-		info.NTP.getNTPInfo()
-		info.ChronyStat.getChronyInfo()
-		info.Partitions = GetPartitionStats()
-		switch runtime.GOOS {
-		case "android",
-			"darwin",
-			"dragonfly",
-			"freebsd",
-			"linux",
-			"netbsd",
-			"openbsd":
-			info.EpollExcl = checkEpollExclusive()
-		default:
-			info.EpollExcl = false
-		}
+	}
+
+	info.SysInfo.GetSysInfo()
+	info.NTP.getNTPInfo()
+	info.ChronyStat.getChronyInfo()
+	info.Partitions = GetPartitionStats()
+	switch runtime.GOOS {
+	case "android",
+		"darwin",
+		"dragonfly",
+		"freebsd",
+		"linux",
+		"netbsd",
+		"openbsd":
+		info.EpollExcl = checkEpollExclusive()
+	default:
+		info.EpollExcl = false
 	}
 
 	if opts.Syscfg {
@@ -121,3 +125,5 @@ func (meta *Meta) getMeta(pidList []string) {
 	}
 	*/
 }
+
+//revive:enable:get-return
