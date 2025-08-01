@@ -2,15 +2,12 @@ package utils
 
 import (
 	"regexp"
+	"testing"
 
-	. "github.com/pingcap/check"
+	"github.com/stretchr/testify/require"
 )
 
-var _ = Suite(&TestRegexpSuite{})
-
-type TestRegexpSuite struct{}
-
-func (s *TestRegexpSuite) TestMatchGroups(c *C) {
+func TestMatchGroups(t *testing.T) {
 	cases := []struct {
 		re       string
 		str      string
@@ -28,8 +25,6 @@ func (s *TestRegexpSuite) TestMatchGroups(c *C) {
 	}
 
 	for _, cas := range cases {
-		c.Assert(
-			MatchGroups(regexp.MustCompile(cas.re), cas.str),
-			DeepEquals, cas.expected)
+		require.Equal(t, cas.expected, MatchGroups(regexp.MustCompile(cas.re), cas.str))
 	}
 }

@@ -15,14 +15,12 @@ package command
 
 import (
 	"context"
-	"os"
 	"path"
 
 	"github.com/pingcap/tiup/pkg/cluster/manager"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
-	"github.com/pingcap/tiup/pkg/telemetry"
 	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
@@ -56,14 +54,8 @@ func newDeploy() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clusterReport.ID = scrubClusterName(clusterName)
-			teleCommand = append(teleCommand, scrubClusterName(clusterName))
-			teleCommand = append(teleCommand, version)
 
 			topoFile := args[2]
-			if data, err := os.ReadFile(topoFile); err == nil {
-				teleTopology = string(data)
-			}
 
 			return cm.Deploy(clusterName, version, topoFile, opt, postDeployHook, skipConfirm, gOpt)
 		},
@@ -88,18 +80,6 @@ func newDeploy() *cobra.Command {
 }
 
 func postDeployHook(builder *task.Builder, topo spec.Topology, gOpt operator.Options) {
-	nodeInfoTask := task.NewBuilder(builder.Logger).Func("Check status", func(ctx context.Context) error {
-		var err error
-		teleNodeInfos, err = operator.GetNodeInfo(ctx, topo)
-		_ = err
-		// intend to never return error
-		return nil
-	}).BuildAsStep("Check status").SetHidden(true)
-
-	if telemetry.Enabled() {
-		builder.ParallelStep("+ Check status", false, nodeInfoTask)
-	}
-
 	enableTask := task.NewBuilder(builder.Logger).Func("Setting service auto start on boot", func(ctx context.Context) error {
 		return operator.Enable(ctx, topo, operator.Options{}, true)
 	}).BuildAsStep("Enable service").SetHidden(true)

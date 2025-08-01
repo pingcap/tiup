@@ -8,11 +8,12 @@ import (
 	"path"
 	"strings"
 
+	"slices"
+
 	"github.com/fatih/color"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
-	"slices"
 )
 
 func main() {

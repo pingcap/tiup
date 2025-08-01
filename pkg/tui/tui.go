@@ -38,6 +38,7 @@ func PrintTable(rows [][]string, header bool) {
 	// Print the table
 	t := table.NewWriter()
 	t.SetOutputMirror(os.Stdout)
+	t.SuppressTrailingSpaces()
 	if header {
 		addRow(t, rows[0], true)
 		border := make([]string, len(rows[0]))
@@ -75,8 +76,7 @@ func PrintTable(rows [][]string, header bool) {
 			Header: text.FormatDefault,
 		},
 		Options: table.Options{
-			SeparateColumns:             true,
-			DoNotFillSpaceWhenEndOfLine: true,
+			SeparateColumns: true,
 		},
 	})
 	t.Render()

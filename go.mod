@@ -27,7 +27,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.0
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
-	github.com/jedib0t/go-pretty/v6 v6.5.8
+	github.com/jedib0t/go-pretty/v6 v6.6.7
 	github.com/jeremywohl/flatten v1.0.1
 	github.com/joomcode/errorx v1.1.0
 	github.com/mattn/go-runewidth v0.0.16
