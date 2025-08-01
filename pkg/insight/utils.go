@@ -1,12 +1,12 @@
 package insight
 
 import (
-	"io/ioutil"
+	"os"
 	"strconv"
 	"strings"
 )
 
-// Version infomation
+// Version information
 var (
 	// GitBranch is initialized during make
 	GitBranch = "Not Provided"
@@ -33,7 +33,7 @@ func GetProcPath(paths ...string) string {
 
 // GetSysUptime gets the system uptime
 func GetSysUptime() (float64, float64, error) {
-	contents, err := ioutil.ReadFile(GetProcPath("uptime"))
+	contents, err := os.ReadFile(GetProcPath("uptime"))
 	if err != nil {
 		return 0, 0, err
 	}

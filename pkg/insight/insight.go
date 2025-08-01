@@ -25,16 +25,13 @@ import (
 
 // Meta are information about insight itself
 type Meta struct {
-	Timestamp time.Time  `json:"timestamp"`
-	UPTime    float64    `json:"uptime,omitempty"`
-	IdleTime  float64    `json:"idle_time,omitempty"`
-	SiVer     string     `json:"sysinfo_ver"`
-	GitBranch string     `json:"git_branch"`
-	GitCommit string     `json:"git_commit"`
-	GoVersion string     `json:"go_version"`
-	TiDBVer   []TiDBMeta `json:"tidb"`
-	TiKVVer   []TiKVMeta `json:"tikv"`
-	PDVer     []PDMeta   `json:"pd"`
+	Timestamp time.Time `json:"timestamp"`
+	UPTime    float64   `json:"uptime,omitempty"`
+	IdleTime  float64   `json:"idle_time,omitempty"`
+	SiVer     string    `json:"sysinfo_ver"`
+	GitBranch string    `json:"git_branch"`
+	GitCommit string    `json:"git_commit"`
+	GoVersion string    `json:"go_version"`
 }
 
 // Info are information gathered from the system
@@ -113,17 +110,6 @@ func (meta *Meta) getMeta(pidList []string) {
 	meta.GitBranch = GitBranch
 	meta.GitCommit = GitCommit
 	meta.GoVersion = fmt.Sprintf("%s %s/%s", runtime.Version(), runtime.GOOS, runtime.GOARCH)
-	/* not needed for `tiup cluster check`
-	if len(pidList) > 0 {
-		meta.TiDBVer = getTiDBVersionByPIDList(pidList)
-		meta.TiKVVer = getTiKVVersionByPIDList(pidList)
-		meta.PDVer = getPDVersionByPIDList(pidList)
-	} else {
-		meta.TiDBVer = getTiDBVersionByName()
-		meta.TiKVVer = getTiKVVersionByName()
-		meta.PDVer = getPDVersionByName()
-	}
-	*/
 }
 
 //revive:enable:get-return

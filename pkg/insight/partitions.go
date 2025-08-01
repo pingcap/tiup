@@ -3,7 +3,6 @@
 package insight
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 	"strconv"
@@ -162,7 +161,7 @@ func getUUIDs() map[string]string {
 	return diskByUUID
 }
 
-// matchUUIDs pair UUIDs and their other device infomation by names
+// matchUUIDs pair UUIDs and their other device information by names
 func matchUUIDs(devs []BlockDev, diskByUUID map[string]string) {
 	if len(devs) < 1 || diskByUUID == nil {
 		return
@@ -182,7 +181,7 @@ func matchUUIDs(devs []BlockDev, diskByUUID map[string]string) {
 
 // checkMounts get meta info of mount points and put them in a map to device names
 func checkMounts() map[string]MountInfo {
-	raw, err := ioutil.ReadFile(GetProcPath("mounts"))
+	raw, err := os.ReadFile(GetProcPath("mounts"))
 	if err != nil {
 		return nil
 	}
@@ -209,7 +208,7 @@ func checkMounts() map[string]MountInfo {
 	// check for swap partitions
 	// note: swap file is not supported yet, as virtual block devices
 	// are excluded from final result
-	if swaps, err := ioutil.ReadFile(GetProcPath("swaps")); err == nil {
+	if swaps, err := os.ReadFile(GetProcPath("swaps")); err == nil {
 		swapLines := strings.Split(string(swaps), "\n")
 		for i, line := range swapLines {
 			// skip table headers and empty line
@@ -232,7 +231,7 @@ func checkMounts() map[string]MountInfo {
 	return mountPoints
 }
 
-// matchMounts pair mount point meta and their other device infomation by names
+// matchMounts pair mount point meta and their other device information by names
 func matchMounts(devs []BlockDev, mountPoints map[string]MountInfo) {
 	if len(devs) < 1 || mountPoints == nil {
 		return

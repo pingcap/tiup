@@ -92,21 +92,21 @@ func (cs *ChronyStat) getChronyInfo() {
 				log.Fatal(err)
 			}
 			// second -> millisecond
-			cs.LastOffset = cs.LastOffset * 1000
+			cs.LastOffset *= 1000
 		case strings.HasPrefix(tmp[0], "RMS offset"):
 			cs.RMSOffset, err = strconv.ParseFloat(strings.Split(tmp[1], " ")[0], 64)
 			if err != nil {
 				log.Fatal(err)
 			}
 			// second -> millisecond
-			cs.RMSOffset = cs.RMSOffset * 1000
+			cs.RMSOffset *= 1000
 		case strings.HasPrefix(tmp[0], "Frequency"):
 			cs.Frequency, err = strconv.ParseFloat(strings.Split(tmp[1], " ")[0], 64)
 			if err != nil {
 				log.Fatal(err)
 			}
 			// second -> millisecond
-			cs.Frequency = cs.Frequency * 1000
+			cs.Frequency *= 1000
 		case strings.HasPrefix(tmp[0], "Residual freq"):
 			cs.ResidualFreq = tmp[1]
 		case strings.HasPrefix(tmp[0], "Skew"):
@@ -117,20 +117,20 @@ func (cs *ChronyStat) getChronyInfo() {
 				log.Fatal(err)
 			}
 			// second -> millisecond
-			cs.RootDelay = cs.RootDelay * 1000
+			cs.RootDelay *= 1000
 		case strings.HasPrefix(tmp[0], "Root dispersion"):
 			cs.RootDispersion, err = strconv.ParseFloat(strings.Split(tmp[1], " ")[0], 64)
 			if err != nil {
 				log.Fatal(err)
 			}
 			// second -> millisecond
-			cs.RootDispersion = cs.RootDispersion * 1000
+			cs.RootDispersion *= 1000
 		case strings.HasPrefix(tmp[0], "Update interval"):
 			cs.UpdateInterval, err = strconv.ParseFloat(strings.Split(tmp[1], " ")[0], 64)
 			if err != nil {
 				log.Fatal(err)
 			}
-			cs.UpdateInterval = cs.UpdateInterval * 1000
+			cs.UpdateInterval *= 1000
 		case strings.HasPrefix(tmp[0], "Leap status"):
 			// none,  normal, close
 			cs.LeapStatus = strings.ToLower(tmp[1])
