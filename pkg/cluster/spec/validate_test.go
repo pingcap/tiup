@@ -346,7 +346,9 @@ func (s *metaSuiteTopo) TestCountDir2(c *C) {
 	meta := ClusterMeta{}
 	yamlFile, err := os.ReadFile(file)
 	c.Assert(err, IsNil)
-	err = yaml.Unmarshal(yamlFile, &meta)
+	decoder := yaml.NewDecoder(yamlFile)
+	decoder.KnownFields(true)
+	err = decoder.Decode(&meta)
 	c.Assert(err, IsNil)
 	topo := meta.Topology
 
