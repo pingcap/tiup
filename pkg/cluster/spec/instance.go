@@ -197,6 +197,8 @@ func (i *BaseInstance) InitConfig(ctx context.Context, e ctxt.Executor, opt Glob
 		WithMemoryLimit(resource.MemoryLimit).
 		WithCPUQuota(resource.CPUQuota).
 		WithLimitCORE(resource.LimitCORE).
+		WithTimeoutStartSec(resource.TimeoutStartSec).
+		WithTimeoutStopSec(resource.TimeoutStopSec).
 		WithIOReadBandwidthMax(resource.IOReadBandwidthMax).
 		WithIOWriteBandwidthMax(resource.IOWriteBandwidthMax).
 		WithSystemdMode(string(systemdMode))

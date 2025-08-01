@@ -21,4 +21,6 @@ type ResourceControl struct {
 	IOReadBandwidthMax  string `yaml:"io_read_bandwidth_max,omitempty" validate:"io_read_bandwidth_max:editable"`
 	IOWriteBandwidthMax string `yaml:"io_write_bandwidth_max,omitempty" validate:"io_write_bandwidth_max:editable"`
 	LimitCORE           string `yaml:"limit_core,omitempty" validate:"limit_core:editable"`
+	TimeoutStopSec      string `yaml:"timeout_stop_sec,omitempty" validate:"timeout_stop_sec:editable"`
+	TimeoutStartSec     string `yaml:"timeout_start_sec,omitempty" validate:"timeout_start_sec:editable"`
 }

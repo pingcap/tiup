@@ -33,6 +33,8 @@ type Config struct {
 	LimitCORE           string
 	DeployDir           string
 	DisableSendSigkill  bool
+	TimeoutStopSec      string
+	TimeoutStartSec     string
 	GrantCapNetRaw      bool
 	// Takes one of no, on-success, on-failure, on-abnormal, on-watchdog, on-abort, or always.
 	// The Template set as always if this is not set.
@@ -82,6 +84,18 @@ func (c *Config) WithLimitCORE(core string) *Config {
 // WithSystemdMode set the SystemdMode field of Config
 func (c *Config) WithSystemdMode(mode string) *Config {
 	c.SystemdMode = mode
+	return c
+}
+
+// WithTimeoutStopSec set the TimeoutStopSec field of Config
+func (c *Config) WithTimeoutStopSec(sec string) *Config {
+	c.TimeoutStopSec = sec
+	return c
+}
+
+// WithTimeoutStartSec set the TimeoutStartSec field of Config
+func (c *Config) WithTimeoutStartSec(sec string) *Config {
+	c.TimeoutStartSec = sec
 	return c
 }
 

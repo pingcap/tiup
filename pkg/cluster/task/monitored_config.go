@@ -106,6 +106,9 @@ func (m *MonitoredConfig) syncMonitoredSystemConfig(ctx context.Context, exec ct
 	systemCfg := system.NewConfig(comp, m.deployUser, m.paths.Deploy).
 		WithMemoryLimit(resource.MemoryLimit).
 		WithCPUQuota(resource.CPUQuota).
+		WithLimitCORE(resource.LimitCORE).
+		WithTimeoutStartSec(resource.TimeoutStartSec).
+		WithTimeoutStopSec(resource.TimeoutStopSec).
 		WithIOReadBandwidthMax(resource.IOReadBandwidthMax).
 		WithIOWriteBandwidthMax(resource.IOWriteBandwidthMax).
 		WithSystemdMode(string(systemdMode))
