@@ -13,7 +13,6 @@ package utils
 import (
 	"testing"
 
-	. "github.com/pingcap/check"
 	"gopkg.in/yaml.v3"
 
 	"github.com/stretchr/testify/require"

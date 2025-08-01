@@ -14,6 +14,7 @@
 package spec
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -346,7 +347,7 @@ func (s *metaSuiteTopo) TestCountDir2(c *C) {
 	meta := ClusterMeta{}
 	yamlFile, err := os.ReadFile(file)
 	c.Assert(err, IsNil)
-	decoder := yaml.NewDecoder(yamlFile)
+	decoder := yaml.NewDecoder(bytes.NewReader(yamlFile))
 	decoder.KnownFields(true)
 	err = decoder.Decode(&meta)
 	c.Assert(err, IsNil)

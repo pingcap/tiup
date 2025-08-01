@@ -917,7 +917,7 @@ tidb_servers:
     deploy_dir: "fake-deploy"
 `)))
 	decoder.KnownFields(true)
-	err = decoder.Decode(&topo)
+	err := decoder.Decode(&topo)
 
 	c.Assert(err, IsNil)
 	c.Assert(topo.TiDBServers[0].Host, Equals, "172.16.5.138")
@@ -940,7 +940,7 @@ tidb_servers:
     host: 172.16.5.138
 `)))
 	decoder.KnownFields(true)
-	err = decoder.Decode(&topo)
+	err := decoder.Decode(&topo)
 	c.Assert(err, NotNil)
 	c.Assert(strings.Contains(err.Error(), "not found"), IsTrue)
 }
