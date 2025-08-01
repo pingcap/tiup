@@ -17,18 +17,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/pingcap/check"
+	"github.com/stretchr/testify/require"
 )
 
-var _ = check.Suite(&setTestSuite{})
-
-type setTestSuite struct{}
-
-func TestNewStringSet(t *testing.T) {
-	check.TestingT(t)
-}
-
-func (s *setTestSuite) TestStringSet(c *check.C) {
+func TestStringSet(t *testing.T) {
 	set := NewStringSet()
 	vals := []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "10"}
 	for i := range vals {
@@ -39,30 +31,30 @@ func (s *setTestSuite) TestStringSet(c *check.C) {
 		set.Insert(vals[i])
 	}
 
-	c.Assert(len(set), check.Equals, len(vals))
+	require.Equal(t, len(vals), len(set))
 	for i := range vals {
-		c.Assert(set.Exist(vals[i]), check.IsTrue)
+		require.True(t, set.Exist(vals[i]))
 	}
 
-	c.Assert(set.Exist("11"), check.IsFalse)
+	require.False(t, set.Exist("11"))
 
 	set = NewStringSet("1", "2", "3", "4", "5", "6")
 	for i := 1; i < 7; i++ {
-		c.Assert(set.Exist(fmt.Sprintf("%d", i)), check.IsTrue)
+		require.True(t, set.Exist(fmt.Sprintf("%d", i)))
 	}
-	c.Assert(set.Exist("7"), check.IsFalse)
+	require.False(t, set.Exist("7"))
 
 	s1 := NewStringSet("1", "2", "3")
 	s2 := NewStringSet("4", "2", "3")
 	s3 := s1.Intersection(s2)
-	c.Assert(s3, check.DeepEquals, NewStringSet("2", "3"))
+	require.Equal(t, NewStringSet("2", "3"), s3)
 
 	s4 := NewStringSet("4", "5", "3")
-	c.Assert(s3.Intersection(s4), check.DeepEquals, NewStringSet("3"))
+	require.Equal(t, NewStringSet("3"), s3.Intersection(s4))
 
 	s5 := NewStringSet("4", "5")
-	c.Assert(s3.Intersection(s5), check.DeepEquals, NewStringSet())
+	require.Equal(t, NewStringSet(), s3.Intersection(s5))
 
 	s6 := NewStringSet()
-	c.Assert(s3.Intersection(s6), check.DeepEquals, NewStringSet())
+	require.Equal(t, NewStringSet(), s3.Intersection(s6))
 }

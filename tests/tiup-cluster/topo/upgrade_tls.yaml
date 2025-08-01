@@ -6,7 +6,7 @@ server_configs:
     binlog.enable: true
     binlog.ignore-error: false
   tikv:
-    storage.reserve-space: 1K
+    storage.reserve-space: 5M
   pump:
     storage.stop-write-at-available-space: 1 mib
 
