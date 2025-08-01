@@ -65,15 +65,19 @@ func NewTiCIWorkerInstance(shOpt SharedOptions, baseDir, host string, id int, pd
 func NewTiCIInstanceWithRole(shOpt SharedOptions, baseDir, host string, id int, pds []*PDInstance,
 	ticiDir, configDir string, role TiCIRole) *TiCIInstance {
 	var componentSuffix string
-	var defaultPort int
+	var defaultPort, defaultStatusPort int
 
 	switch role {
 	case TiCIRoleMeta:
+		// MetaServer default port
 		componentSuffix = "meta"
-		defaultPort = 8500 // MetaServer default port
+		defaultPort = 8500
+		defaultStatusPort = 8501
 	case TiCIRoleWorker:
+		// WorkerNode default port
 		componentSuffix = "worker"
-		defaultPort = 8501 // WorkerNode default port
+		defaultPort = 8510
+		defaultStatusPort = 8511
 	default:
 		panic("invalid TiCI role")
 	}
@@ -87,7 +91,7 @@ func NewTiCIInstanceWithRole(shOpt SharedOptions, baseDir, host string, id int, 
 			Dir:        dir,
 			Host:       host,
 			Port:       utils.MustGetFreePort(host, defaultPort, shOpt.PortOffset),
-			StatusPort: utils.MustGetFreePort(host, defaultPort+1, shOpt.PortOffset),
+			StatusPort: utils.MustGetFreePort(host, defaultStatusPort, shOpt.PortOffset),
 			ConfigPath: configDir,
 		},
 		pds:       pds,
@@ -123,9 +127,9 @@ func (t *TiCIInstance) startMetaServer(ctx context.Context) error {
 	args := []string{}
 
 	// Use default or provided config path
-	metaConfigPath := filepath.Join(t.ticiDir, "ci", "test-meta-config.toml")
+	metaConfigPath := filepath.Join(t.ticiDir, "ci", "test-meta.toml")
 	if t.configDir != "" {
-		metaConfigPath = filepath.Join(t.configDir, "test-meta-config.toml")
+		metaConfigPath = filepath.Join(t.configDir, "test-meta.toml")
 	}
 	args = append(args, fmt.Sprintf("--config=%s", metaConfigPath))
 
@@ -144,9 +148,9 @@ func (t *TiCIInstance) startWorkerNode(ctx context.Context) error {
 	args := []string{}
 
 	// Use default or provided config path
-	workerConfigPath := filepath.Join(t.ticiDir, "ci", "test-writer.toml")
+	workerConfigPath := filepath.Join(t.ticiDir, "ci", "test-worker.toml")
 	if t.configDir != "" {
-		workerConfigPath = filepath.Join(t.configDir, "test-writer.toml")
+		workerConfigPath = filepath.Join(t.configDir, "test-worker.toml")
 	}
 	args = append(args, fmt.Sprintf("--config=%s", workerConfigPath))
 
