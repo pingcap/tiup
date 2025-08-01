@@ -756,11 +756,11 @@ func TestRelativePathDetect(t *testing.T) {
   - host: 1.1.1.1
     %s: %s
 `, server, field, p)
-      if expectNil {
-        require.Nil(t, yaml.Unmarshal([]byte(content), &topo5))
-      } else {
-        require.NotNil(t, yaml.Unmarshal([]byte(content), &topo5))
-      }
+			if expectNil {
+				require.Nil(t, yaml.Unmarshal([]byte(content), &topo5))
+			} else {
+				require.NotNil(t, yaml.Unmarshal([]byte(content), &topo5))
+			}
 		}
 	}
 }
@@ -909,24 +909,22 @@ global:
   user: "test1"
   ssh_port: 220
   deploy_dir: "test-deploy"
-  data_dir: "/test-data"
-tikv_servers:
+tiflash_servers:
   - host: 172.19.0.104
-    data_dir: "data-1"
-pd_servers:
-  - host: 172.19.0.104
-    data_dir: "data-2"
-  - host: 172.19.0.105
+    data_dir: /data1 # this is ignored
+    config:
+      # test with these paths
+      storage.main.dir: [ /home/tidb/birdstorm/data1,/home/tidb/birdstorm/data3]
 `), &topo)
 	require.NoError(t, err)
-	// if per-instance data_dir is set, the global data_dir is ignored, and if it
-	// is a relative path, it will be under the instance's deploy_dir
-	cnt = topo.CountDir("172.19.0.104", "/test-deploy/pd-2379")
-	require.Equal(t, 3, cnt)
-	cnt = topo.CountDir("172.19.0.104", "")
-	require.Equal(t, 0, cnt)
-	cnt = topo.CountDir("172.19.0.105", "/test-data")
+	cnt = topo.CountDir("172.19.0.104", "/home/tidb/birdstorm/data1")
 	require.Equal(t, 1, cnt)
+	cnt = topo.CountDir("172.19.0.104", "/home/tidb/birdstorm/data2")
+	require.Equal(t, 0, cnt)
+	cnt = topo.CountDir("172.19.0.104", "/home/tidb/birdstorm/data3")
+	require.Equal(t, 1, cnt)
+	cnt = topo.CountDir("172.19.0.104", "/home/tidb/birdstorm")
+	require.Equal(t, 2, cnt)
 }
 
 func TestDirectoryConflictsWithMultiDir(t *testing.T) {
