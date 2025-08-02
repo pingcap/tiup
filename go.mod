@@ -32,7 +32,6 @@ require (
 	github.com/mattn/go-runewidth v0.0.16
 	github.com/minio/minio-go/v7 v7.0.52
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db
-	github.com/otiai10/copy v1.9.0
 	github.com/pingcap/errors v0.11.5-0.20250523034308-74f78ae071ee
 	github.com/pingcap/failpoint v0.0.0-20240528011301-b51a646c7c86
 	github.com/pingcap/fn v1.0.0
