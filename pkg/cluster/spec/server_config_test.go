@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 func TestMerge(t *testing.T) {
@@ -129,15 +129,15 @@ func TestFoldMap(t *testing.T) {
 
 func TestEncodeRemoteCfg(t *testing.T) {
 	yamlData := []byte(`remote_write:
-- queue_config:
-    batch_send_deadline: 5m
-    capacity: 100000
-    max_samples_per_send: 10000
-    max_shards: 300
-  url: http://127.0.0.1:/8086/write
+    - queue_config:
+        batch_send_deadline: 5m
+        capacity: 100000
+        max_samples_per_send: 10000
+        max_shards: 300
+      url: http://127.0.0.1:/8086/write
 remote_read:
-- url: http://127.0.0.1:/8086/read
-- url: http://127.0.0.1:/8087/read
+    - url: http://127.0.0.1:/8086/read
+    - url: http://127.0.0.1:/8087/read
 `)
 
 	bs, err := encodeRemoteCfg2Yaml(Remote{

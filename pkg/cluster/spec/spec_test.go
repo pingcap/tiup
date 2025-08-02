@@ -25,7 +25,7 @@ import (
 	"github.com/pingcap/tiup/pkg/tidbver"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 func TestDefaultDataDir(t *testing.T) {
@@ -892,7 +892,7 @@ tiflash_servers:
 
 func TestYAMLAnchor(t *testing.T) {
 	topo := Specification{}
-	err := yaml.UnmarshalStrict([]byte(`
+	decoder := yaml.NewDecoder(bytes.NewReader([]byte(`
 global:
   custom:
     tidb_spec: &tidb_spec
@@ -903,7 +903,9 @@ tidb_servers:
   - <<: *tidb_spec
     host: 172.16.5.138
     deploy_dir: "fake-deploy"
-`), &topo)
+`)))
+	decoder.KnownFields(true)
+	err := decoder.Decode(&topo)
 	require.NoError(t, err)
 	require.Equal(t, "172.16.5.138", topo.TiDBServers[0].Host)
 	require.Equal(t, "fake-deploy", topo.TiDBServers[0].DeployDir)
@@ -912,7 +914,7 @@ tidb_servers:
 
 func TestYAMLAnchorWithUndeclared(t *testing.T) {
 	topo := Specification{}
-	err := yaml.UnmarshalStrict([]byte(`
+	decoder := yaml.NewDecoder(bytes.NewReader([]byte(`
 global:
   custom:
     tidb_spec: &tidb_spec
@@ -923,7 +925,9 @@ global:
 tidb_servers:
   - <<: *tidb_spec
     host: 172.16.5.138
-`), &topo)
+`)))
+	decoder.KnownFields(true)
+	err := decoder.Decode(&topo)
 	require.Error(t, err)
 	require.True(t, strings.Contains(err.Error(), "not found"))
 }
