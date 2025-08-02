@@ -10,7 +10,6 @@ require (
 	github.com/AstroProfundis/sysinfo v0.0.0-20240112160158-ed54df16e9ce
 	github.com/BurntSushi/toml v1.5.0
 	github.com/ScaleFT/sshkeys v1.2.0
-	github.com/alecthomas/assert v1.0.0
 	github.com/appleboy/easyssh-proxy v1.3.10-0.20211209134747-6671f69d85f5
 	github.com/asaskevich/EventBus v0.0.0-20200907212545-49d423059eef
 	github.com/cavaliergopher/grab/v3 v3.0.1
@@ -74,8 +73,6 @@ require (
 	github.com/GoogleCloudPlatform/grpc-gcp-go/grpcgcp v1.5.0 // indirect
 	github.com/VividCortex/ewma v1.2.0 // indirect
 	github.com/alecthomas/chroma v0.9.4 // indirect
-	github.com/alecthomas/colour v0.1.0 // indirect
-	github.com/alecthomas/repr v0.2.0 // indirect
 	github.com/apache/arrow/go/v15 v15.0.2 // indirect
 	github.com/apache/thrift v0.17.0 // indirect
 	github.com/benbjohnson/clock v1.3.0 // indirect
