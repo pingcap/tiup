@@ -21,8 +21,9 @@ import (
 
 	"golang.org/x/mod/semver"
 
-	"github.com/pingcap/errors"
 	"slices"
+
+	"github.com/pingcap/errors"
 )
 
 // NightlyVersionAlias represents latest build of master branch.

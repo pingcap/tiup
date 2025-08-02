@@ -54,20 +54,6 @@ var (
 	cm       *manager.Manager
 )
 
-func getParentNames(cmd *cobra.Command) []string {
-	if cmd == nil {
-		return nil
-	}
-
-	p := cmd.Parent()
-	// always use 'cluster' as the root command name
-	if cmd.Parent() == nil {
-		return []string{"cluster"}
-	}
-
-	return append(getParentNames(p), cmd.Name())
-}
-
 func init() {
 	logger.InitGlobalLogger()
 
@@ -149,7 +135,7 @@ func init() {
 	rootCmd.PersistentFlags().Uint64Var(&gOpt.OptTimeout, "wait-timeout", 120, "Timeout in seconds to wait for an operation to complete, ignored for operations that don't fit.")
 	rootCmd.PersistentFlags().BoolVarP(&skipConfirm, "yes", "y", false, "Skip all confirmations and assumes 'yes'")
 	rootCmd.PersistentFlags().BoolVar(&gOpt.NativeSSH, "native-ssh", gOpt.NativeSSH, "(EXPERIMENTAL) Use the native SSH client installed on local system instead of the built-in one.")
-	rootCmd.PersistentFlags().StringVar((*string)(&gOpt.SSHType), "ssh", "", "(EXPERIMENTAL) The executor type: 'builtin', 'system', 'none'.")
+	rootCmd.PersistentFlags().StringVar((*string)(&gOpt.SSHType), "ssh", "", "(EXPERIMENTAL) The executor type: 'builtin', 'system', 'none' (default \"builtin\").")
 	rootCmd.PersistentFlags().IntVarP(&gOpt.Concurrency, "concurrency", "c", 5, "max number of parallel tasks allowed")
 	rootCmd.PersistentFlags().StringVar(&gOpt.DisplayMode, "format", "default", "(EXPERIMENTAL) The format of output, available values are [default, json]")
 	rootCmd.PersistentFlags().StringVar(&gOpt.SSHProxyHost, "ssh-proxy-host", "", "The SSH proxy host used to connect to remote host.")

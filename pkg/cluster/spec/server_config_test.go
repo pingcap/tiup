@@ -2,17 +2,13 @@ package spec
 
 import (
 	"bytes"
+	"testing"
 
-	"github.com/pingcap/check"
+	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
 )
 
-type configSuite struct {
-}
-
-var _ = check.Suite(&configSuite{})
-
-func (s *configSuite) TestMerge(c *check.C) {
+func TestMerge(t *testing.T) {
 	yamlData := []byte(`
 server_configs:
   tidb:
@@ -22,21 +18,21 @@ server_configs:
 	topo := new(Specification)
 
 	err := yaml.Unmarshal(yamlData, topo)
-	c.Assert(err, check.IsNil)
+	require.NoError(t, err)
 
 	yamlData, err = yaml.Marshal(topo)
-	c.Assert(err, check.IsNil)
+	require.NoError(t, err)
 	decimal := bytes.Contains(yamlData, []byte("0.0"))
-	c.Assert(decimal, check.IsTrue)
+	require.True(t, decimal)
 
 	get, err := Merge2Toml("tidb", topo.ServerConfigs.TiDB, nil)
-	c.Assert(err, check.IsNil)
+	require.NoError(t, err)
 
 	decimal = bytes.Contains(get, []byte("0.0"))
-	c.Assert(decimal, check.IsTrue)
+	require.True(t, decimal)
 }
 
-func (s *configSuite) TestGetValueFromPath(c *check.C) {
+func TestGetValueFromPath(t *testing.T) {
 	yamlData := []byte(`
 server_configs:
   tidb:
@@ -53,16 +49,16 @@ server_configs:
 	topo := new(Specification)
 
 	err := yaml.Unmarshal(yamlData, topo)
-	c.Assert(err, check.IsNil)
+	require.NoError(t, err)
 
-	c.Assert(GetValueFromPath(topo.ServerConfigs.TiDB, "a.b.c.d"), check.Equals, 1)
-	c.Assert(GetValueFromPath(topo.ServerConfigs.TiDB, "a.b.c.e"), check.Equals, 3)
-	c.Assert(GetValueFromPath(topo.ServerConfigs.TiDB, "a.b.c.f"), check.Equals, 4)
-	c.Assert(GetValueFromPath(topo.ServerConfigs.TiDB, "h.i.j.k"), check.DeepEquals, []any{1, 2, 4})
-	c.Assert(GetValueFromPath(topo.ServerConfigs.TiDB, "e.f"), check.Equals, true)
+	require.Equal(t, 1, GetValueFromPath(topo.ServerConfigs.TiDB, "a.b.c.d"))
+	require.Equal(t, 3, GetValueFromPath(topo.ServerConfigs.TiDB, "a.b.c.e"))
+	require.Equal(t, 4, GetValueFromPath(topo.ServerConfigs.TiDB, "a.b.c.f"))
+	require.Equal(t, []any{1, 2, 4}, GetValueFromPath(topo.ServerConfigs.TiDB, "h.i.j.k"))
+	require.Equal(t, true, GetValueFromPath(topo.ServerConfigs.TiDB, "e.f"))
 }
 
-func (s *configSuite) TestFlattenMap(c *check.C) {
+func TestFlattenMap(t *testing.T) {
 	var (
 		m map[string]any
 		r map[string]any
@@ -81,15 +77,15 @@ func (s *configSuite) TestFlattenMap(c *check.C) {
 		"j": []int{6, 7},
 	}
 	r = FlattenMap(m)
-	c.Assert(r["a"], check.Equals, 1)
-	c.Assert(r["b.c"], check.Equals, 2)
-	c.Assert(r["d.e"], check.Equals, 3)
-	c.Assert(r["f.g.h"], check.Equals, 4)
-	c.Assert(r["f.g.i"], check.Equals, 5)
-	c.Assert(r["j"], check.DeepEquals, []int{6, 7})
+	require.Equal(t, 1, r["a"])
+	require.Equal(t, 2, r["b.c"])
+	require.Equal(t, 3, r["d.e"])
+	require.Equal(t, 4, r["f.g.h"])
+	require.Equal(t, 5, r["f.g.i"])
+	require.Equal(t, []int{6, 7}, r["j"])
 }
 
-func (s *configSuite) TestFoldMap(c *check.C) {
+func TestFoldMap(t *testing.T) {
 	var (
 		m map[string]any
 		r map[string]any
@@ -109,7 +105,7 @@ func (s *configSuite) TestFoldMap(c *check.C) {
 	}
 
 	r = FoldMap(m)
-	c.Assert(r, check.DeepEquals, map[string]any{
+	require.Equal(t, map[string]any{
 		"a": 1,
 		"b": map[string]any{
 			"c": 2,
@@ -128,10 +124,10 @@ func (s *configSuite) TestFoldMap(c *check.C) {
 			},
 			"l": 6,
 		},
-	})
+	}, r)
 }
 
-func (s *configSuite) TestEncodeRemoteCfg(c *check.C) {
+func TestEncodeRemoteCfg(t *testing.T) {
 	yamlData := []byte(`remote_write:
 - queue_config:
     batch_send_deadline: 5m
@@ -166,6 +162,6 @@ remote_read:
 		},
 	})
 
-	c.Assert(err, check.IsNil)
-	c.Assert(bs, check.BytesEquals, yamlData)
+	require.NoError(t, err)
+	require.Equal(t, yamlData, bs)
 }

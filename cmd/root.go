@@ -35,11 +35,10 @@ import (
 )
 
 var (
-	rootCmd       *cobra.Command
-	repoOpts      repository.Options
-	reportEnabled bool // is telemetry report enabled
-	eventUUID     = uuid.New().String()
-	log           = logprinter.NewLogger("") // use default logger
+	rootCmd   *cobra.Command
+	repoOpts  repository.Options
+	eventUUID = uuid.New().String()
+	log       = logprinter.NewLogger("") // use default logger
 )
 
 // arguments
