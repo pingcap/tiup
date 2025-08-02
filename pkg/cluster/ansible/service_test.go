@@ -14,8 +14,10 @@
 package ansible
 
 import (
-	"github.com/pingcap/check"
+	"testing"
+
 	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/stretchr/testify/require"
 )
 
 var tiflashConfig = `
@@ -38,18 +40,13 @@ update_rule_interval = 5
 config = "/data1/test-cluster/leiysky-ansible-test-deploy/conf/tiflash-learner.toml"
 `
 
-type parseSuite struct {
-}
-
-var _ = check.Suite(&parseSuite{})
-
-func (s *parseSuite) TestParseTiflashConfigFromFileData(c *check.C) {
-	spec := new(spec.TiFlashSpec)
+func TestParseTiflashConfigFromFileData(t *testing.T) {
+	specObj := new(spec.TiFlashSpec)
 	data := []byte(tiflashConfig)
 
-	err := parseTiflashConfigFromFileData(spec, data)
-	c.Assert(err, check.IsNil)
+	err := parseTiflashConfigFromFileData(specObj, data)
+	require.NoError(t, err)
 
-	c.Assert(spec.DataDir, check.Equals, "/data1/test-cluster/leiysky-ansible-test-deploy/tiflash/data/db")
-	c.Assert(spec.TmpDir, check.Equals, "/data1/test-cluster/leiysky-ansible-test-deploy/tiflash/data/db/tmp")
+	require.Equal(t, "/data1/test-cluster/leiysky-ansible-test-deploy/tiflash/data/db", specObj.DataDir)
+	require.Equal(t, "/data1/test-cluster/leiysky-ansible-test-deploy/tiflash/data/db/tmp", specObj.TmpDir)
 }

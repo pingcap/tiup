@@ -14,79 +14,66 @@
 package spec
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/pingcap/check"
+	"github.com/stretchr/testify/require"
 )
 
-func TestUtils(t *testing.T) {
-	check.TestingT(t)
-}
-
-type topoSuite struct{}
-
-var _ = check.Suite(&topoSuite{})
-
-func withTempFile(content string, fn func(string)) {
+func withTempFile(t *testing.T, content string, fn func(string)) {
 	file, err := os.CreateTemp("/tmp", "topology-test")
-	if err != nil {
-		panic(fmt.Sprintf("create temp file: %s", err))
-	}
+	require.NoError(t, err)
 	defer os.Remove(file.Name())
 
 	_, err = file.WriteString(content)
-	if err != nil {
-		panic(fmt.Sprintf("write temp file: %s", err))
-	}
+	require.NoError(t, err)
 	file.Close()
 
 	fn(file.Name())
 }
 
-func with2TempFile(content1, content2 string, fn func(string, string)) {
-	withTempFile(content1, func(file1 string) {
-		withTempFile(content2, func(file2 string) {
+func with2TempFile(t *testing.T, content1, content2 string, fn func(string, string)) {
+	withTempFile(t, content1, func(file1 string) {
+		withTempFile(t, content2, func(file2 string) {
 			fn(file1, file2)
 		})
 	})
 }
 
-func (s *topoSuite) TestParseTopologyYaml(c *check.C) {
+func TestParseTopologyYaml(t *testing.T) {
 	file := filepath.Join("testdata", "topology_err.yaml")
 	topo := Specification{}
 	err := ParseTopologyYaml(file, &topo)
-	c.Assert(err, check.IsNil)
+	require.NoError(t, err)
 }
 
-func (s *topoSuite) TestParseTopologyYamlIgnoreGlobal(c *check.C) {
+func TestParseTopologyYamlIgnoreGlobal(t *testing.T) {
 	file := filepath.Join("testdata", "topology_err.yaml")
 	topo := Specification{}
 	err := ParseTopologyYaml(file, &topo, true)
 	if topo.GlobalOptions.DeployDir == "/tidb/deploy" {
-		c.Error("Can not ignore global variables")
+		t.Error("Can not ignore global variables")
 	}
-	c.Assert(err, check.IsNil)
+	require.NoError(t, err)
 }
 
-func (s *topoSuite) TestRelativePath(c *check.C) {
+func TestRelativePath(t *testing.T) {
 	// test relative path
-	withTempFile(`
+	withTempFile(t, `
 tikv_servers:
   - host: 172.16.5.140
     deploy_dir: my-deploy
 `, func(file string) {
 		topo := Specification{}
 		err := ParseTopologyYaml(file, &topo)
-		c.Assert(err, check.IsNil)
+		require.NoError(t, err)
 		ExpandRelativeDir(&topo)
-		c.Assert(topo.TiKVServers[0].DeployDir, check.Equals, "/home/tidb/my-deploy")
+		require.Equal(t, "/home/tidb/my-deploy", topo.TiKVServers[0].DeployDir)
 	})
 
 	// test data dir & log dir
-	withTempFile(`
+	withTempFile(t, `
 tikv_servers:
   - host: 172.16.5.140
     deploy_dir: my-deploy
@@ -95,15 +82,15 @@ tikv_servers:
 `, func(file string) {
 		topo := Specification{}
 		err := ParseTopologyYaml(file, &topo)
-		c.Assert(err, check.IsNil)
+		require.NoError(t, err)
 		ExpandRelativeDir(&topo)
-		c.Assert(topo.TiKVServers[0].DeployDir, check.Equals, "/home/tidb/my-deploy")
-		c.Assert(topo.TiKVServers[0].DataDir, check.Equals, "/home/tidb/my-deploy/my-data")
-		c.Assert(topo.TiKVServers[0].LogDir, check.Equals, "/home/tidb/my-deploy/my-log")
+		require.Equal(t, "/home/tidb/my-deploy", topo.TiKVServers[0].DeployDir)
+		require.Equal(t, "/home/tidb/my-deploy/my-data", topo.TiKVServers[0].DataDir)
+		require.Equal(t, "/home/tidb/my-deploy/my-log", topo.TiKVServers[0].LogDir)
 	})
 
 	// test global options, case 1
-	withTempFile(`
+	withTempFile(t, `
 global:
   deploy_dir: my-deploy
 
@@ -112,17 +99,17 @@ tikv_servers:
 `, func(file string) {
 		topo := Specification{}
 		err := ParseTopologyYaml(file, &topo)
-		c.Assert(err, check.IsNil)
+		require.NoError(t, err)
 		ExpandRelativeDir(&topo)
-		c.Assert(topo.GlobalOptions.DeployDir, check.Equals, "my-deploy")
-		c.Assert(topo.GlobalOptions.DataDir, check.Equals, "data")
+		require.Equal(t, "my-deploy", topo.GlobalOptions.DeployDir)
+		require.Equal(t, "data", topo.GlobalOptions.DataDir)
 
-		c.Assert(topo.TiKVServers[0].DeployDir, check.Equals, "/home/tidb/my-deploy/tikv-20160")
-		c.Assert(topo.TiKVServers[0].DataDir, check.Equals, "/home/tidb/my-deploy/tikv-20160/data")
+		require.Equal(t, "/home/tidb/my-deploy/tikv-20160", topo.TiKVServers[0].DeployDir)
+		require.Equal(t, "/home/tidb/my-deploy/tikv-20160/data", topo.TiKVServers[0].DataDir)
 	})
 
 	// test global options, case 2
-	withTempFile(`
+	withTempFile(t, `
 global:
   deploy_dir: my-deploy
 
@@ -136,20 +123,20 @@ tikv_servers:
 `, func(file string) {
 		topo := Specification{}
 		err := ParseTopologyYaml(file, &topo)
-		c.Assert(err, check.IsNil)
+		require.NoError(t, err)
 		ExpandRelativeDir(&topo)
-		c.Assert(topo.GlobalOptions.DeployDir, check.Equals, "my-deploy")
-		c.Assert(topo.GlobalOptions.DataDir, check.Equals, "data")
+		require.Equal(t, "my-deploy", topo.GlobalOptions.DeployDir)
+		require.Equal(t, "data", topo.GlobalOptions.DataDir)
 
-		c.Assert(topo.TiKVServers[0].DeployDir, check.Equals, "/home/tidb/my-deploy/tikv-20160")
-		c.Assert(topo.TiKVServers[0].DataDir, check.Equals, "/home/tidb/my-deploy/tikv-20160/data")
+		require.Equal(t, "/home/tidb/my-deploy/tikv-20160", topo.TiKVServers[0].DeployDir)
+		require.Equal(t, "/home/tidb/my-deploy/tikv-20160/data", topo.TiKVServers[0].DataDir)
 
-		c.Assert(topo.TiKVServers[1].DeployDir, check.Equals, "/home/tidb/my-deploy/tikv-20161")
-		c.Assert(topo.TiKVServers[1].DataDir, check.Equals, "/home/tidb/my-deploy/tikv-20161/data")
+		require.Equal(t, "/home/tidb/my-deploy/tikv-20161", topo.TiKVServers[1].DeployDir)
+		require.Equal(t, "/home/tidb/my-deploy/tikv-20161/data", topo.TiKVServers[1].DataDir)
 	})
 
 	// test global options, case 3
-	withTempFile(`
+	withTempFile(t, `
 global:
   deploy_dir: my-deploy
 
@@ -165,31 +152,31 @@ tikv_servers:
 `, func(file string) {
 		topo := Specification{}
 		err := ParseTopologyYaml(file, &topo)
-		c.Assert(err, check.IsNil)
+		require.NoError(t, err)
 
-		c.Assert(topo.MonitoredOptions.DeployDir, check.Equals, "my-deploy/monitor-9100")
-		c.Assert(topo.MonitoredOptions.DataDir, check.Equals, "data/monitor-9100")
-		c.Assert(topo.MonitoredOptions.LogDir, check.Equals, "my-deploy/monitor-9100/log")
+		require.Equal(t, "my-deploy/monitor-9100", topo.MonitoredOptions.DeployDir)
+		require.Equal(t, "data/monitor-9100", topo.MonitoredOptions.DataDir)
+		require.Equal(t, "my-deploy/monitor-9100/log", topo.MonitoredOptions.LogDir)
 
 		ExpandRelativeDir(&topo)
-		c.Assert(topo.GlobalOptions.DeployDir, check.Equals, "my-deploy")
-		c.Assert(topo.GlobalOptions.DataDir, check.Equals, "data")
+		require.Equal(t, "my-deploy", topo.GlobalOptions.DeployDir)
+		require.Equal(t, "data", topo.GlobalOptions.DataDir)
 
-		c.Assert(topo.MonitoredOptions.DeployDir, check.Equals, "/home/tidb/my-deploy/monitor-9100")
-		c.Assert(topo.MonitoredOptions.DataDir, check.Equals, "/home/tidb/my-deploy/monitor-9100/data/monitor-9100")
-		c.Assert(topo.MonitoredOptions.LogDir, check.Equals, "/home/tidb/my-deploy/monitor-9100/my-deploy/monitor-9100/log")
+		require.Equal(t, "/home/tidb/my-deploy/monitor-9100", topo.MonitoredOptions.DeployDir)
+		require.Equal(t, "/home/tidb/my-deploy/monitor-9100/data/monitor-9100", topo.MonitoredOptions.DataDir)
+		require.Equal(t, "/home/tidb/my-deploy/monitor-9100/my-deploy/monitor-9100/log", topo.MonitoredOptions.LogDir)
 
-		c.Assert(topo.TiKVServers[0].DeployDir, check.Equals, "/home/tidb/my-deploy/tikv-20160")
-		c.Assert(topo.TiKVServers[0].DataDir, check.Equals, "/home/tidb/my-deploy/tikv-20160/my-data")
-		c.Assert(topo.TiKVServers[0].LogDir, check.Equals, "/home/tidb/my-deploy/tikv-20160/my-log")
+		require.Equal(t, "/home/tidb/my-deploy/tikv-20160", topo.TiKVServers[0].DeployDir)
+		require.Equal(t, "/home/tidb/my-deploy/tikv-20160/my-data", topo.TiKVServers[0].DataDir)
+		require.Equal(t, "/home/tidb/my-deploy/tikv-20160/my-log", topo.TiKVServers[0].LogDir)
 
-		c.Assert(topo.TiKVServers[1].DeployDir, check.Equals, "/home/tidb/my-deploy/tikv-20161")
-		c.Assert(topo.TiKVServers[1].DataDir, check.Equals, "/home/tidb/my-deploy/tikv-20161/data")
-		c.Assert(topo.TiKVServers[1].LogDir, check.Equals, "/home/tidb/my-deploy/tikv-20161/log")
+		require.Equal(t, "/home/tidb/my-deploy/tikv-20161", topo.TiKVServers[1].DeployDir)
+		require.Equal(t, "/home/tidb/my-deploy/tikv-20161/data", topo.TiKVServers[1].DataDir)
+		require.Equal(t, "/home/tidb/my-deploy/tikv-20161/log", topo.TiKVServers[1].LogDir)
 	})
 
 	// test global options, case 4
-	withTempFile(`
+	withTempFile(t, `
 global:
   data_dir: my-global-data
   log_dir: my-global-log
@@ -206,43 +193,43 @@ tikv_servers:
 `, func(file string) {
 		topo := Specification{}
 		err := ParseTopologyYaml(file, &topo)
-		c.Assert(err, check.IsNil)
+		require.NoError(t, err)
 		ExpandRelativeDir(&topo)
-		c.Assert(topo.GlobalOptions.DeployDir, check.Equals, "deploy")
-		c.Assert(topo.GlobalOptions.DataDir, check.Equals, "my-global-data")
-		c.Assert(topo.GlobalOptions.LogDir, check.Equals, "my-global-log")
+		require.Equal(t, "deploy", topo.GlobalOptions.DeployDir)
+		require.Equal(t, "my-global-data", topo.GlobalOptions.DataDir)
+		require.Equal(t, "my-global-log", topo.GlobalOptions.LogDir)
 
-		c.Assert(topo.MonitoredOptions.DeployDir, check.Equals, "/home/tidb/deploy/monitor-9100")
-		c.Assert(topo.MonitoredOptions.DataDir, check.Equals, "/home/tidb/deploy/monitor-9100/my-global-data/monitor-9100")
-		c.Assert(topo.MonitoredOptions.LogDir, check.Equals, "/home/tidb/deploy/monitor-9100/deploy/monitor-9100/log")
+		require.Equal(t, "/home/tidb/deploy/monitor-9100", topo.MonitoredOptions.DeployDir)
+		require.Equal(t, "/home/tidb/deploy/monitor-9100/my-global-data/monitor-9100", topo.MonitoredOptions.DataDir)
+		require.Equal(t, "/home/tidb/deploy/monitor-9100/deploy/monitor-9100/log", topo.MonitoredOptions.LogDir)
 
-		c.Assert(topo.TiKVServers[0].DeployDir, check.Equals, "/home/tidb/deploy/tikv-20160")
-		c.Assert(topo.TiKVServers[0].DataDir, check.Equals, "/home/tidb/deploy/tikv-20160/my-local-data")
-		c.Assert(topo.TiKVServers[0].LogDir, check.Equals, "/home/tidb/deploy/tikv-20160/my-local-log")
+		require.Equal(t, "/home/tidb/deploy/tikv-20160", topo.TiKVServers[0].DeployDir)
+		require.Equal(t, "/home/tidb/deploy/tikv-20160/my-local-data", topo.TiKVServers[0].DataDir)
+		require.Equal(t, "/home/tidb/deploy/tikv-20160/my-local-log", topo.TiKVServers[0].LogDir)
 
-		c.Assert(topo.TiKVServers[1].DeployDir, check.Equals, "/home/tidb/deploy/tikv-20161")
-		c.Assert(topo.TiKVServers[1].DataDir, check.Equals, "/home/tidb/deploy/tikv-20161/my-global-data")
-		c.Assert(topo.TiKVServers[1].LogDir, check.Equals, "/home/tidb/deploy/tikv-20161/my-global-log")
+		require.Equal(t, "/home/tidb/deploy/tikv-20161", topo.TiKVServers[1].DeployDir)
+		require.Equal(t, "/home/tidb/deploy/tikv-20161/my-global-data", topo.TiKVServers[1].DataDir)
+		require.Equal(t, "/home/tidb/deploy/tikv-20161/my-global-log", topo.TiKVServers[1].LogDir)
 	})
 
 	// test multiple dir, case 5
-	withTempFile(`
+	withTempFile(t, `
 tiflash_servers:
   - host: 172.16.5.140
     data_dir: /path/to/my-first-data,my-second-data
 `, func(file string) {
 		topo := Specification{}
 		err := ParseTopologyYaml(file, &topo)
-		c.Assert(err, check.IsNil)
+		require.NoError(t, err)
 		ExpandRelativeDir(&topo)
 
-		c.Assert(topo.TiFlashServers[0].DeployDir, check.Equals, "/home/tidb/deploy/tiflash-9000")
-		c.Assert(topo.TiFlashServers[0].DataDir, check.Equals, "/path/to/my-first-data,/home/tidb/deploy/tiflash-9000/my-second-data")
-		c.Assert(topo.TiFlashServers[0].LogDir, check.Equals, "/home/tidb/deploy/tiflash-9000/log")
+		require.Equal(t, "/home/tidb/deploy/tiflash-9000", topo.TiFlashServers[0].DeployDir)
+		require.Equal(t, "/path/to/my-first-data,/home/tidb/deploy/tiflash-9000/my-second-data", topo.TiFlashServers[0].DataDir)
+		require.Equal(t, "/home/tidb/deploy/tiflash-9000/log", topo.TiFlashServers[0].LogDir)
 	})
 
 	// test global options, case 6
-	withTempFile(`
+	withTempFile(t, `
 global:
   user: test
   data_dir: my-global-data
@@ -261,25 +248,25 @@ tikv_servers:
 `, func(file string) {
 		topo := Specification{}
 		err := ParseTopologyYaml(file, &topo)
-		c.Assert(err, check.IsNil)
+		require.NoError(t, err)
 		ExpandRelativeDir(&topo)
-		c.Assert(topo.GlobalOptions.DeployDir, check.Equals, "deploy")
-		c.Assert(topo.GlobalOptions.DataDir, check.Equals, "my-global-data")
-		c.Assert(topo.GlobalOptions.LogDir, check.Equals, "my-global-log")
+		require.Equal(t, "deploy", topo.GlobalOptions.DeployDir)
+		require.Equal(t, "my-global-data", topo.GlobalOptions.DataDir)
+		require.Equal(t, "my-global-log", topo.GlobalOptions.LogDir)
 
-		c.Assert(topo.TiKVServers[0].DeployDir, check.Equals, "/home/test/my-local-deploy")
-		c.Assert(topo.TiKVServers[0].DataDir, check.Equals, "/home/test/my-local-deploy/my-local-data")
-		c.Assert(topo.TiKVServers[0].LogDir, check.Equals, "/home/test/my-local-deploy/my-local-log")
+		require.Equal(t, "/home/test/my-local-deploy", topo.TiKVServers[0].DeployDir)
+		require.Equal(t, "/home/test/my-local-deploy/my-local-data", topo.TiKVServers[0].DataDir)
+		require.Equal(t, "/home/test/my-local-deploy/my-local-log", topo.TiKVServers[0].LogDir)
 
-		c.Assert(topo.TiKVServers[1].DeployDir, check.Equals, "/home/test/deploy/tikv-20161")
-		c.Assert(topo.TiKVServers[1].DataDir, check.Equals, "/home/test/deploy/tikv-20161/my-global-data")
-		c.Assert(topo.TiKVServers[1].LogDir, check.Equals, "/home/test/deploy/tikv-20161/my-global-log")
+		require.Equal(t, "/home/test/deploy/tikv-20161", topo.TiKVServers[1].DeployDir)
+		require.Equal(t, "/home/test/deploy/tikv-20161/my-global-data", topo.TiKVServers[1].DataDir)
+		require.Equal(t, "/home/test/deploy/tikv-20161/my-global-log", topo.TiKVServers[1].LogDir)
 	})
 }
 
-func (s *topoSuite) TestTiFlashStorage(c *check.C) {
+func TestTiFlashStorage(t *testing.T) {
 	// test tiflash storage section, 'storage.main.dir' should not be defined in server_configs
-	withTempFile(`
+	withTempFile(t, `
 server_configs:
   tiflash:
     storage.main.dir: [/data1/tiflash]
@@ -288,11 +275,11 @@ tiflash_servers:
 `, func(file string) {
 		topo := Specification{}
 		err := ParseTopologyYaml(file, &topo)
-		c.Assert(err, check.NotNil)
+		require.Error(t, err)
 	})
 
 	// test tiflash storage section, 'storage.latest.dir' should not be defined in server_configs
-	withTempFile(`
+	withTempFile(t, `
 server_configs:
   tiflash:
     storage.latest.dir: [/data1/tiflash]
@@ -301,12 +288,12 @@ tiflash_servers:
 `, func(file string) {
 		topo := Specification{}
 		err := ParseTopologyYaml(file, &topo)
-		c.Assert(err, check.NotNil)
+		require.Error(t, err)
 	})
 
 	// test tiflash storage section defined data dir
-	// test for depreacated setting, for backward compatibility
-	withTempFile(`
+	// test for deprecated setting, for backward compatibility
+	withTempFile(t, `
 tiflash_servers:
   - host: 172.16.5.140
     data_dir: /ssd0/tiflash
@@ -314,16 +301,16 @@ tiflash_servers:
 `, func(file string) {
 		topo := Specification{}
 		err := ParseTopologyYaml(file, &topo)
-		c.Assert(err, check.IsNil)
+		require.NoError(t, err)
 		ExpandRelativeDir(&topo)
 
-		c.Assert(topo.TiFlashServers[0].DeployDir, check.Equals, "/home/tidb/deploy/tiflash-9000")
-		c.Assert(topo.TiFlashServers[0].DataDir, check.Equals, "/ssd0/tiflash")
-		c.Assert(topo.TiFlashServers[0].LogDir, check.Equals, "/home/tidb/deploy/tiflash-9000/log")
+		require.Equal(t, "/home/tidb/deploy/tiflash-9000", topo.TiFlashServers[0].DeployDir)
+		require.Equal(t, "/ssd0/tiflash", topo.TiFlashServers[0].DataDir)
+		require.Equal(t, "/home/tidb/deploy/tiflash-9000/log", topo.TiFlashServers[0].LogDir)
 	})
 
 	// test tiflash storage section defined data dir
-	withTempFile(`
+	withTempFile(t, `
 tiflash_servers:
   - host: 172.16.5.140
     data_dir: /ssd0/tiflash,/ssd1/tiflash,/ssd2/tiflash
@@ -333,16 +320,16 @@ tiflash_servers:
 `, func(file string) {
 		topo := Specification{}
 		err := ParseTopologyYaml(file, &topo)
-		c.Assert(err, check.IsNil)
+		require.NoError(t, err)
 		ExpandRelativeDir(&topo)
 
-		c.Assert(topo.TiFlashServers[0].DeployDir, check.Equals, "/home/tidb/deploy/tiflash-9000")
-		c.Assert(topo.TiFlashServers[0].DataDir, check.Equals, "/ssd0/tiflash,/ssd1/tiflash,/ssd2/tiflash")
-		c.Assert(topo.TiFlashServers[0].LogDir, check.Equals, "/home/tidb/deploy/tiflash-9000/log")
+		require.Equal(t, "/home/tidb/deploy/tiflash-9000", topo.TiFlashServers[0].DeployDir)
+		require.Equal(t, "/ssd0/tiflash,/ssd1/tiflash,/ssd2/tiflash", topo.TiFlashServers[0].DataDir)
+		require.Equal(t, "/home/tidb/deploy/tiflash-9000/log", topo.TiFlashServers[0].LogDir)
 	})
 
 	// test tiflash storage section defined data dir, "data_dir" will be ignored
-	withTempFile(`
+	withTempFile(t, `
 tiflash_servers:
   - host: 172.16.5.140
     # if storage.main.dir is defined, data_dir will be ignored
@@ -352,19 +339,19 @@ tiflash_servers:
 `, func(file string) {
 		topo := Specification{}
 		err := ParseTopologyYaml(file, &topo)
-		c.Assert(err, check.IsNil)
+		require.NoError(t, err)
 		ExpandRelativeDir(&topo)
 
-		c.Assert(topo.TiFlashServers[0].DeployDir, check.Equals, "/home/tidb/deploy/tiflash-9000")
-		c.Assert(topo.TiFlashServers[0].DataDir, check.Equals, "/ssd0/tiflash,/ssd1/tiflash,/ssd2/tiflash")
-		c.Assert(topo.TiFlashServers[0].LogDir, check.Equals, "/home/tidb/deploy/tiflash-9000/log")
+		require.Equal(t, "/home/tidb/deploy/tiflash-9000", topo.TiFlashServers[0].DeployDir)
+		require.Equal(t, "/ssd0/tiflash,/ssd1/tiflash,/ssd2/tiflash", topo.TiFlashServers[0].DataDir)
+		require.Equal(t, "/home/tidb/deploy/tiflash-9000/log", topo.TiFlashServers[0].LogDir)
 	})
 
 	// test tiflash storage section defined data dir
 	// if storage.latest.dir is not empty, the first path in
 	// storage.latest.dir will be the first path in 'DataDir'
 	// DataDir is the union set of storage.latest.dir and storage.main.dir
-	withTempFile(`
+	withTempFile(t, `
 tiflash_servers:
   - host: 172.16.5.140
     data_dir: /ssd0/tiflash
@@ -374,16 +361,16 @@ tiflash_servers:
 `, func(file string) {
 		topo := Specification{}
 		err := ParseTopologyYaml(file, &topo)
-		c.Assert(err, check.IsNil)
+		require.NoError(t, err)
 		ExpandRelativeDir(&topo)
 
-		c.Assert(topo.TiFlashServers[0].DeployDir, check.Equals, "/home/tidb/deploy/tiflash-9000")
-		c.Assert(topo.TiFlashServers[0].DataDir, check.Equals, "/ssd0/tiflash,/hdd0/tiflash,/hdd1/tiflash,/hdd2/tiflash,/ssd1/tiflash,/ssd2/tiflash")
-		c.Assert(topo.TiFlashServers[0].LogDir, check.Equals, "/home/tidb/deploy/tiflash-9000/log")
+		require.Equal(t, "/home/tidb/deploy/tiflash-9000", topo.TiFlashServers[0].DeployDir)
+		require.Equal(t, "/ssd0/tiflash,/hdd0/tiflash,/hdd1/tiflash,/hdd2/tiflash,/ssd1/tiflash,/ssd2/tiflash", topo.TiFlashServers[0].DataDir)
+		require.Equal(t, "/home/tidb/deploy/tiflash-9000/log", topo.TiFlashServers[0].LogDir)
 	})
 
 	// test if there is only one path in storage.main.dir
-	withTempFile(`
+	withTempFile(t, `
 tiflash_servers:
   - host: 172.16.5.140
     data_dir: /hhd0/tiflash
@@ -392,17 +379,17 @@ tiflash_servers:
 `, func(file string) {
 		topo := Specification{}
 		err := ParseTopologyYaml(file, &topo)
-		c.Assert(err, check.IsNil)
+		require.NoError(t, err)
 		ExpandRelativeDir(&topo)
 
-		c.Assert(topo.TiFlashServers[0].DeployDir, check.Equals, "/home/tidb/deploy/tiflash-9000")
-		c.Assert(topo.TiFlashServers[0].DataDir, check.Equals, "/ssd0/tiflash")
-		c.Assert(topo.TiFlashServers[0].LogDir, check.Equals, "/home/tidb/deploy/tiflash-9000/log")
+		require.Equal(t, "/home/tidb/deploy/tiflash-9000", topo.TiFlashServers[0].DeployDir)
+		require.Equal(t, "/ssd0/tiflash", topo.TiFlashServers[0].DataDir)
+		require.Equal(t, "/home/tidb/deploy/tiflash-9000/log", topo.TiFlashServers[0].LogDir)
 	})
 
 	// test tiflash storage.latest section defined data dir
 	// should always define storage.main.dir if 'storage.latest' is defined
-	withTempFile(`
+	withTempFile(t, `
 tiflash_servers:
   - host: 172.16.5.140
     data_dir: /ssd0/tiflash
@@ -412,12 +399,12 @@ tiflash_servers:
 `, func(file string) {
 		topo := Specification{}
 		err := ParseTopologyYaml(file, &topo)
-		c.Assert(err, check.NotNil)
+		require.Error(t, err)
 	})
 
 	// test tiflash storage.raft section defined data dir
 	// should always define storage.main.dir if 'storage.raft' is defined
-	withTempFile(`
+	withTempFile(t, `
 tiflash_servers:
   - host: 172.16.5.140
     data_dir: /ssd0/tiflash
@@ -427,12 +414,12 @@ tiflash_servers:
 `, func(file string) {
 		topo := Specification{}
 		err := ParseTopologyYaml(file, &topo)
-		c.Assert(err, check.NotNil)
+		require.Error(t, err)
 	})
 
 	// test tiflash storage.remote section defined data dir
 	// should be fine even when `storage.main.dir` is not defined.
-	withTempFile(`
+	withTempFile(t, `
 tiflash_servers:
   - host: 172.16.5.140
     data_dir: /ssd0/tiflash
@@ -441,12 +428,12 @@ tiflash_servers:
 `, func(file string) {
 		topo := Specification{}
 		err := ParseTopologyYaml(file, &topo)
-		c.Assert(err, check.IsNil)
+		require.NoError(t, err)
 	})
 
 	// test tiflash storage section defined data dir
 	// storage.main.dir should always use absolute path
-	withTempFile(`
+	withTempFile(t, `
 tiflash_servers:
   - host: 172.16.5.140
     data_dir: /ssd0/tiflash
@@ -456,7 +443,7 @@ tiflash_servers:
 `, func(file string) {
 		topo := Specification{}
 		err := ParseTopologyYaml(file, &topo)
-		c.Assert(err, check.NotNil)
+		require.Error(t, err)
 	})
 }
 
@@ -479,9 +466,9 @@ func merge4test(base, scale string) (*Specification, error) {
 	return mergedTopo.(*Specification), nil
 }
 
-func (s *topoSuite) TestTopologyMerge(c *check.C) {
+func TestTopologyMerge(t *testing.T) {
 	// base test
-	with2TempFile(`
+	with2TempFile(t, `
 tiflash_servers:
   - host: 172.16.5.140
 `, `
@@ -489,19 +476,19 @@ tiflash_servers:
   - host: 172.16.5.139
 `, func(base, scale string) {
 		topo, err := merge4test(base, scale)
-		c.Assert(err, check.IsNil)
+		require.NoError(t, err)
 		ExpandRelativeDir(topo)
 		ExpandRelativeDir(topo) // should be idempotent
 
-		c.Assert(topo.TiFlashServers[0].DeployDir, check.Equals, "/home/tidb/deploy/tiflash-9000")
-		c.Assert(topo.TiFlashServers[0].DataDir, check.Equals, "/home/tidb/deploy/tiflash-9000/data")
+		require.Equal(t, "/home/tidb/deploy/tiflash-9000", topo.TiFlashServers[0].DeployDir)
+		require.Equal(t, "/home/tidb/deploy/tiflash-9000/data", topo.TiFlashServers[0].DataDir)
 
-		c.Assert(topo.TiFlashServers[1].DeployDir, check.Equals, "/home/tidb/deploy/tiflash-9000")
-		c.Assert(topo.TiFlashServers[1].DataDir, check.Equals, "/home/tidb/deploy/tiflash-9000/data")
+		require.Equal(t, "/home/tidb/deploy/tiflash-9000", topo.TiFlashServers[1].DeployDir)
+		require.Equal(t, "/home/tidb/deploy/tiflash-9000/data", topo.TiFlashServers[1].DataDir)
 	})
 
 	// test global option overwrite
-	with2TempFile(`
+	with2TempFile(t, `
 global:
   user: test
   deploy_dir: /my-global-deploy
@@ -520,29 +507,29 @@ tiflash_servers:
   - host: 172.16.5.134
 `, func(base, scale string) {
 		topo, err := merge4test(base, scale)
-		c.Assert(err, check.IsNil)
+		require.NoError(t, err)
 
 		ExpandRelativeDir(topo)
 
-		c.Assert(topo.TiFlashServers[0].DeployDir, check.Equals, "/my-global-deploy/tiflash-9000")
-		c.Assert(topo.TiFlashServers[0].DataDir, check.Equals, "/my-global-deploy/tiflash-9000/my-local-data-tiflash")
-		c.Assert(topo.TiFlashServers[0].LogDir, check.Equals, "/my-global-deploy/tiflash-9000/my-local-log-tiflash")
+		require.Equal(t, "/my-global-deploy/tiflash-9000", topo.TiFlashServers[0].DeployDir)
+		require.Equal(t, "/my-global-deploy/tiflash-9000/my-local-data-tiflash", topo.TiFlashServers[0].DataDir)
+		require.Equal(t, "/my-global-deploy/tiflash-9000/my-local-log-tiflash", topo.TiFlashServers[0].LogDir)
 
-		c.Assert(topo.TiFlashServers[1].DeployDir, check.Equals, "/home/test/flash-deploy")
-		c.Assert(topo.TiFlashServers[1].DataDir, check.Equals, "/home/test/flash-deploy/data")
-		c.Assert(topo.TiFlashServers[3].DeployDir, check.Equals, "/home/test/flash-deploy")
-		c.Assert(topo.TiFlashServers[3].DataDir, check.Equals, "/home/test/flash-deploy/data")
+		require.Equal(t, "/home/test/flash-deploy", topo.TiFlashServers[1].DeployDir)
+		require.Equal(t, "/home/test/flash-deploy/data", topo.TiFlashServers[1].DataDir)
+		require.Equal(t, "/home/test/flash-deploy", topo.TiFlashServers[3].DeployDir)
+		require.Equal(t, "/home/test/flash-deploy/data", topo.TiFlashServers[3].DataDir)
 
-		c.Assert(topo.TiFlashServers[2].DeployDir, check.Equals, "/my-global-deploy/tiflash-9000")
-		c.Assert(topo.TiFlashServers[2].DataDir, check.Equals, "/my-global-deploy/tiflash-9000/data")
-		c.Assert(topo.TiFlashServers[4].DeployDir, check.Equals, "/my-global-deploy/tiflash-9000")
-		c.Assert(topo.TiFlashServers[4].DataDir, check.Equals, "/my-global-deploy/tiflash-9000/data")
+		require.Equal(t, "/my-global-deploy/tiflash-9000", topo.TiFlashServers[2].DeployDir)
+		require.Equal(t, "/my-global-deploy/tiflash-9000/data", topo.TiFlashServers[2].DataDir)
+		require.Equal(t, "/my-global-deploy/tiflash-9000", topo.TiFlashServers[4].DeployDir)
+		require.Equal(t, "/my-global-deploy/tiflash-9000/data", topo.TiFlashServers[4].DataDir)
 	})
 }
 
-func (s *topoSuite) TestMergeComponentVersions(c *check.C) {
+func TestMergeComponentVersions(t *testing.T) {
 	// test component version overwrite
-	with2TempFile(`
+	with2TempFile(t, `
 component_versions:
   tidb: v8.0.0
   tikv: v8.0.0
@@ -556,22 +543,22 @@ tidb_servers:
   - host: 172.16.5.134
 `, func(base, scale string) {
 		baseTopo := Specification{}
-		c.Assert(ParseTopologyYaml(base, &baseTopo), check.IsNil)
+		require.NoError(t, ParseTopologyYaml(base, &baseTopo))
 
 		scaleTopo := baseTopo.NewPart()
-		c.Assert(ParseTopologyYaml(scale, scaleTopo), check.IsNil)
+		require.NoError(t, ParseTopologyYaml(scale, scaleTopo))
 
 		mergedTopo := baseTopo.MergeTopo(scaleTopo)
-		c.Assert(mergedTopo.Validate(), check.IsNil)
+		require.NoError(t, mergedTopo.Validate())
 
-		c.Assert(scaleTopo.(*Specification).ComponentVersions, check.Equals, mergedTopo.(*Specification).ComponentVersions)
-		c.Assert(scaleTopo.(*Specification).ComponentVersions.TiDB, check.Equals, "v8.0.0")
-		c.Assert(scaleTopo.(*Specification).ComponentVersions.TiKV, check.Equals, "v8.1.0")
-		c.Assert(scaleTopo.(*Specification).ComponentVersions.PD, check.Equals, "v8.0.0")
+		require.Equal(t, scaleTopo.(*Specification).ComponentVersions, mergedTopo.(*Specification).ComponentVersions)
+		require.Equal(t, "v8.0.0", scaleTopo.(*Specification).ComponentVersions.TiDB)
+		require.Equal(t, "v8.1.0", scaleTopo.(*Specification).ComponentVersions.TiKV)
+		require.Equal(t, "v8.0.0", scaleTopo.(*Specification).ComponentVersions.PD)
 	})
 }
 
-func (s *topoSuite) TestFixRelativePath(c *check.C) {
+func TestFixRelativePath(t *testing.T) {
 	// base test
 	topo := Specification{
 		TiKVServers: []*TiKVSpec{
@@ -581,7 +568,7 @@ func (s *topoSuite) TestFixRelativePath(c *check.C) {
 		},
 	}
 	expandRelativePath("tidb", &topo)
-	c.Assert(topo.TiKVServers[0].DeployDir, check.Equals, "/home/tidb/my-deploy")
+	require.Equal(t, "/home/tidb/my-deploy", topo.TiKVServers[0].DeployDir)
 
 	// test data dir & log dir
 	topo = Specification{
@@ -594,9 +581,9 @@ func (s *topoSuite) TestFixRelativePath(c *check.C) {
 		},
 	}
 	expandRelativePath("tidb", &topo)
-	c.Assert(topo.TiKVServers[0].DeployDir, check.Equals, "/home/tidb/my-deploy")
-	c.Assert(topo.TiKVServers[0].DataDir, check.Equals, "/home/tidb/my-deploy/my-data")
-	c.Assert(topo.TiKVServers[0].LogDir, check.Equals, "/home/tidb/my-deploy/my-log")
+	require.Equal(t, "/home/tidb/my-deploy", topo.TiKVServers[0].DeployDir)
+	require.Equal(t, "/home/tidb/my-deploy/my-data", topo.TiKVServers[0].DataDir)
+	require.Equal(t, "/home/tidb/my-deploy/my-log", topo.TiKVServers[0].LogDir)
 
 	// test global options
 	topo = Specification{
@@ -610,10 +597,10 @@ func (s *topoSuite) TestFixRelativePath(c *check.C) {
 		},
 	}
 	expandRelativePath("tidb", &topo)
-	c.Assert(topo.GlobalOptions.DeployDir, check.Equals, "my-deploy")
-	c.Assert(topo.GlobalOptions.DataDir, check.Equals, "my-data")
-	c.Assert(topo.GlobalOptions.LogDir, check.Equals, "my-log")
-	c.Assert(topo.TiKVServers[0].DeployDir, check.Equals, "")
-	c.Assert(topo.TiKVServers[0].DataDir, check.Equals, "")
-	c.Assert(topo.TiKVServers[0].LogDir, check.Equals, "")
+	require.Equal(t, "my-deploy", topo.GlobalOptions.DeployDir)
+	require.Equal(t, "my-data", topo.GlobalOptions.DataDir)
+	require.Equal(t, "my-log", topo.GlobalOptions.LogDir)
+	require.Equal(t, "", topo.TiKVServers[0].DeployDir)
+	require.Equal(t, "", topo.TiKVServers[0].DataDir)
+	require.Equal(t, "", topo.TiKVServers[0].LogDir)
 }

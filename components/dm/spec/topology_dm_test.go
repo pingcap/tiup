@@ -14,20 +14,13 @@
 package spec
 
 import (
-	"fmt"
 	"os"
 	"testing"
 
-	. "github.com/pingcap/check"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
-
-type metaSuiteDM struct {
-}
-
-var _ = Suite(&metaSuiteDM{})
 
 func TestDefaultDataDir(t *testing.T) {
 	// Test with without global DataDir.
@@ -35,25 +28,25 @@ func TestDefaultDataDir(t *testing.T) {
 	topo.Masters = append(topo.Masters, &MasterSpec{Host: "1.1.1.1", Port: 1111})
 	topo.Workers = append(topo.Workers, &WorkerSpec{Host: "1.1.2.1", Port: 2221})
 	data, err := yaml.Marshal(topo)
-	assert.Nil(t, err)
+	require.NoError(t, err)
 
 	// Check default value.
 	topo = new(Specification)
 	err = yaml.Unmarshal(data, topo)
-	assert.Nil(t, err)
-	assert.Equal(t, "data", topo.GlobalOptions.DataDir)
-	assert.Equal(t, "data", topo.Masters[0].DataDir)
-	assert.Equal(t, "data", topo.Workers[0].DataDir)
+	require.NoError(t, err)
+	require.Equal(t, "data", topo.GlobalOptions.DataDir)
+	require.Equal(t, "data", topo.Masters[0].DataDir)
+	require.Equal(t, "data", topo.Workers[0].DataDir)
 
 	// Can keep the default value.
 	data, err = yaml.Marshal(topo)
-	assert.Nil(t, err)
+	require.NoError(t, err)
 	topo = new(Specification)
 	err = yaml.Unmarshal(data, topo)
-	assert.Nil(t, err)
-	assert.Equal(t, "data", topo.GlobalOptions.DataDir)
-	assert.Equal(t, "data", topo.Masters[0].DataDir)
-	assert.Equal(t, "data", topo.Workers[0].DataDir)
+	require.NoError(t, err)
+	require.Equal(t, "data", topo.GlobalOptions.DataDir)
+	require.Equal(t, "data", topo.Masters[0].DataDir)
+	require.Equal(t, "data", topo.Workers[0].DataDir)
 
 	// Test with global DataDir.
 	topo = new(Specification)
@@ -63,17 +56,16 @@ func TestDefaultDataDir(t *testing.T) {
 	topo.Workers = append(topo.Workers, &WorkerSpec{Host: "1.1.2.1", Port: 2221})
 	topo.Workers = append(topo.Workers, &WorkerSpec{Host: "1.1.2.2", Port: 2222, DataDir: "/my_data"})
 	data, err = yaml.Marshal(topo)
-	assert.Nil(t, err)
+	require.NoError(t, err)
 
 	topo = new(Specification)
 	err = yaml.Unmarshal(data, topo)
-
-	assert.Nil(t, err)
-	assert.Equal(t, "/gloable_data", topo.GlobalOptions.DataDir)
-	assert.Equal(t, "/gloable_data/dm-master-1111", topo.Masters[0].DataDir)
-	assert.Equal(t, "/my_data", topo.Masters[1].DataDir)
-	assert.Equal(t, "/gloable_data/dm-worker-2221", topo.Workers[0].DataDir)
-	assert.Equal(t, "/my_data", topo.Workers[1].DataDir)
+	require.NoError(t, err)
+	require.Equal(t, "/gloable_data", topo.GlobalOptions.DataDir)
+	require.Equal(t, "/gloable_data/dm-master-1111", topo.Masters[0].DataDir)
+	require.Equal(t, "/my_data", topo.Masters[1].DataDir)
+	require.Equal(t, "/gloable_data/dm-worker-2221", topo.Workers[0].DataDir)
+	require.Equal(t, "/my_data", topo.Workers[1].DataDir)
 }
 
 func TestGlobalOptions(t *testing.T) {
@@ -91,16 +83,16 @@ worker_servers:
   - host: 172.16.5.53
     data_dir: "worker-data"
 `), &topo)
-	assert.Nil(t, err)
-	assert.Equal(t, "test1", topo.GlobalOptions.User)
+	require.NoError(t, err)
+	require.Equal(t, "test1", topo.GlobalOptions.User)
 
-	assert.Equal(t, 220, topo.GlobalOptions.SSHPort)
-	assert.Equal(t, 220, topo.Masters[0].SSHPort)
-	assert.Equal(t, "master-deploy", topo.Masters[0].DeployDir)
+	require.Equal(t, 220, topo.GlobalOptions.SSHPort)
+	require.Equal(t, 220, topo.Masters[0].SSHPort)
+	require.Equal(t, "master-deploy", topo.Masters[0].DeployDir)
 
-	assert.Equal(t, 220, topo.Workers[0].SSHPort)
-	assert.Equal(t, "test-deploy/dm-worker-8262", topo.Workers[0].DeployDir)
-	assert.Equal(t, "worker-data", topo.Workers[0].DataDir)
+	require.Equal(t, 220, topo.Workers[0].SSHPort)
+	require.Equal(t, "test-deploy/dm-worker-8262", topo.Workers[0].DeployDir)
+	require.Equal(t, "worker-data", topo.Workers[0].DataDir)
 }
 
 func TestDirectoryConflicts(t *testing.T) {
@@ -118,8 +110,8 @@ worker_servers:
   - host: 172.16.5.138
     data_dir: "/test-1"
 `), &topo)
-	assert.NotNil(t, err)
-	assert.Equal(t, "directory conflict for '/test-1' between 'master_servers:172.16.5.138.deploy_dir' and 'worker_servers:172.16.5.138.data_dir'", err.Error())
+	require.Error(t, err)
+	require.Equal(t, "directory conflict for '/test-1' between 'master_servers:172.16.5.138.deploy_dir' and 'worker_servers:172.16.5.138.data_dir'", err.Error())
 
 	err = yaml.Unmarshal([]byte(`
 global:
@@ -134,7 +126,7 @@ worker_servers:
   - host: 172.16.5.138
     data_dir: "test-1"
 `), &topo)
-	assert.Nil(t, err)
+	require.NoError(t, err)
 }
 
 func TestPortConflicts(t *testing.T) {
@@ -152,8 +144,8 @@ worker_servers:
   - host: 172.16.5.138
     port: 1234
 `), &topo)
-	assert.NotNil(t, err)
-	assert.Equal(t, "port conflict for '1234' between 'master_servers:172.16.5.138.peer_port,omitempty' and 'worker_servers:172.16.5.138.port,omitempty'", err.Error())
+	require.Error(t, err)
+	require.Equal(t, "port conflict for '1234' between 'master_servers:172.16.5.138.peer_port,omitempty' and 'worker_servers:172.16.5.138.port,omitempty'", err.Error())
 }
 
 func TestPlatformConflicts(t *testing.T) {
@@ -170,7 +162,7 @@ worker_servers:
   - host: 172.16.5.138
     arch: "aarch64"
 `), &topo)
-	assert.Nil(t, err)
+	require.NoError(t, err)
 
 	// different arch defined for the same host
 	topo = Specification{}
@@ -186,8 +178,8 @@ worker_servers:
     arch: "amd64"
     os: "linux"
 `), &topo)
-	assert.NotNil(t, err)
-	assert.Equal(t, "platform mismatch for '172.16.5.138' between 'master_servers:linux/arm64' and 'worker_servers:linux/amd64'", err.Error())
+	require.Error(t, err)
+	require.Equal(t, "platform mismatch for '172.16.5.138' between 'master_servers:linux/arm64' and 'worker_servers:linux/amd64'", err.Error())
 
 	// different os defined for the same host
 	topo = Specification{}
@@ -204,8 +196,8 @@ worker_servers:
     os: "linux"
     arch: "aarch64"
 `), &topo)
-	assert.NotNil(t, err)
-	assert.Equal(t, "platform mismatch for '172.16.5.138' between 'master_servers:darwin/arm64' and 'worker_servers:linux/arm64'", err.Error())
+	require.Error(t, err)
+	require.Equal(t, "platform mismatch for '172.16.5.138' between 'master_servers:darwin/arm64' and 'worker_servers:linux/arm64'", err.Error())
 }
 
 func TestCountDir(t *testing.T) {
@@ -224,11 +216,11 @@ worker_servers:
   - host: 172.16.5.53
     data_dir: "test-1"
 `), &topo)
-	assert.Nil(t, err)
+	require.NoError(t, err)
 	cnt := topo.CountDir("172.16.5.53", "test-deploy/dm-worker-8262")
-	assert.Equal(t, 3, cnt)
+	require.Equal(t, 3, cnt)
 	cnt = topo.CountDir("172.16.5.138", "/test-data/data")
-	assert.Equal(t, 0, cnt) // should not match partial path
+	require.Equal(t, 0, cnt) // should not match partial path
 
 	err = yaml.Unmarshal([]byte(`
 global:
@@ -243,15 +235,15 @@ worker_servers:
   - host: 172.16.5.138
     data_dir: "/test-data/data-2"
 `), &topo)
-	assert.Nil(t, err)
+	require.NoError(t, err)
 	cnt = topo.CountDir("172.16.5.138", "/test-deploy/dm-worker-8262")
-	assert.Equal(t, 2, cnt)
+	require.Equal(t, 2, cnt)
 	cnt = topo.CountDir("172.16.5.138", "")
-	assert.Equal(t, 2, cnt)
+	require.Equal(t, 2, cnt)
 	cnt = topo.CountDir("172.16.5.138", "test-data")
-	assert.Equal(t, 0, cnt)
+	require.Equal(t, 0, cnt)
 	cnt = topo.CountDir("172.16.5.138", "/test-data")
-	assert.Equal(t, 2, cnt)
+	require.Equal(t, 2, cnt)
 
 	err = yaml.Unmarshal([]byte(`
 global:
@@ -267,36 +259,32 @@ worker_servers:
     data_dir: "data-2"
   - host: 172.16.5.53
 `), &topo)
-	assert.Nil(t, err)
+	require.NoError(t, err)
 	// if per-instance data_dir is set, the global data_dir is ignored, and if it
 	// is a relative path, it will be under the instance's deploy_dir
 	cnt = topo.CountDir("172.16.5.138", "/test-deploy/dm-worker-8262")
-	assert.Equal(t, 3, cnt)
+	require.Equal(t, 3, cnt)
 	cnt = topo.CountDir("172.16.5.138", "")
-	assert.Equal(t, 0, cnt)
+	require.Equal(t, 0, cnt)
 	cnt = topo.CountDir("172.16.5.53", "/test-data")
-	assert.Equal(t, 1, cnt)
+	require.Equal(t, 1, cnt)
 }
 
-func withTempFile(content string, fn func(string)) {
+func withTempFile(t *testing.T, content string, fn func(string)) {
 	file, err := os.CreateTemp("/tmp", "topology-test")
-	if err != nil {
-		panic(fmt.Sprintf("create temp file: %s", err))
-	}
+	require.NoError(t, err)
 	defer os.Remove(file.Name())
 
 	_, err = file.WriteString(content)
-	if err != nil {
-		panic(fmt.Sprintf("write temp file: %s", err))
-	}
+	require.NoError(t, err)
 	file.Close()
 
 	fn(file.Name())
 }
 
-func with2TempFile(content1, content2 string, fn func(string, string)) {
-	withTempFile(content1, func(file1 string) {
-		withTempFile(content2, func(file2 string) {
+func with2TempFile(t *testing.T, content1, content2 string, fn func(string, string)) {
+	withTempFile(t, content1, func(file1 string) {
+		withTempFile(t, content2, func(file2 string) {
 			fn(file1, file2)
 		})
 	})
@@ -323,7 +311,7 @@ func merge4test(base, scale string) (*Specification, error) {
 
 func TestRelativePath(t *testing.T) {
 	// base test
-	withTempFile(`
+	withTempFile(t, `
 master_servers:
   - host: 172.16.5.140
 worker_servers:
@@ -331,14 +319,14 @@ worker_servers:
 `, func(file string) {
 		topo := Specification{}
 		err := spec.ParseTopologyYaml(file, &topo)
-		assert.Nil(t, err)
+		require.NoError(t, err)
 		spec.ExpandRelativeDir(&topo)
-		assert.Equal(t, "/home/tidb/deploy/dm-master-8261", topo.Masters[0].DeployDir)
-		assert.Equal(t, "/home/tidb/deploy/dm-worker-8262", topo.Workers[0].DeployDir)
+		require.Equal(t, "/home/tidb/deploy/dm-master-8261", topo.Masters[0].DeployDir)
+		require.Equal(t, "/home/tidb/deploy/dm-worker-8262", topo.Workers[0].DeployDir)
 	})
 
 	// test data dir & log dir
-	withTempFile(`
+	withTempFile(t, `
 master_servers:
   - host: 172.16.5.140
     deploy_dir: my-deploy
@@ -347,16 +335,16 @@ master_servers:
 `, func(file string) {
 		topo := Specification{}
 		err := spec.ParseTopologyYaml(file, &topo)
-		assert.Nil(t, err)
+		require.NoError(t, err)
 		spec.ExpandRelativeDir(&topo)
 
-		assert.Equal(t, "/home/tidb/my-deploy", topo.Masters[0].DeployDir)
-		assert.Equal(t, "/home/tidb/my-deploy/my-data", topo.Masters[0].DataDir)
-		assert.Equal(t, "/home/tidb/my-deploy/my-log", topo.Masters[0].LogDir)
+		require.Equal(t, "/home/tidb/my-deploy", topo.Masters[0].DeployDir)
+		require.Equal(t, "/home/tidb/my-deploy/my-data", topo.Masters[0].DataDir)
+		require.Equal(t, "/home/tidb/my-deploy/my-log", topo.Masters[0].LogDir)
 	})
 
 	// test global options, case 1
-	withTempFile(`
+	withTempFile(t, `
 global:
   deploy_dir: my-deploy
 master_servers:
@@ -364,16 +352,16 @@ master_servers:
 `, func(file string) {
 		topo := Specification{}
 		err := spec.ParseTopologyYaml(file, &topo)
-		assert.Nil(t, err)
+		require.NoError(t, err)
 		spec.ExpandRelativeDir(&topo)
 
-		assert.Equal(t, "/home/tidb/my-deploy/dm-master-8261", topo.Masters[0].DeployDir)
-		assert.Equal(t, "/home/tidb/my-deploy/dm-master-8261/data", topo.Masters[0].DataDir)
-		assert.Equal(t, "", topo.Masters[0].LogDir)
+		require.Equal(t, "/home/tidb/my-deploy/dm-master-8261", topo.Masters[0].DeployDir)
+		require.Equal(t, "/home/tidb/my-deploy/dm-master-8261/data", topo.Masters[0].DataDir)
+		require.Equal(t, "", topo.Masters[0].LogDir)
 	})
 
 	// test global options, case 2
-	withTempFile(`
+	withTempFile(t, `
 global:
   deploy_dir: my-deploy
 master_servers:
@@ -386,21 +374,21 @@ worker_servers:
 `, func(file string) {
 		topo := Specification{}
 		err := spec.ParseTopologyYaml(file, &topo)
-		assert.Nil(t, err)
+		require.NoError(t, err)
 		spec.ExpandRelativeDir(&topo)
 
-		assert.Equal(t, "my-deploy", topo.GlobalOptions.DeployDir)
-		assert.Equal(t, "data", topo.GlobalOptions.DataDir)
+		require.Equal(t, "my-deploy", topo.GlobalOptions.DeployDir)
+		require.Equal(t, "data", topo.GlobalOptions.DataDir)
 
-		assert.Equal(t, "/home/tidb/my-deploy/dm-worker-20160", topo.Workers[0].DeployDir)
-		assert.Equal(t, "/home/tidb/my-deploy/dm-worker-20160/data", topo.Workers[0].DataDir)
+		require.Equal(t, "/home/tidb/my-deploy/dm-worker-20160", topo.Workers[0].DeployDir)
+		require.Equal(t, "/home/tidb/my-deploy/dm-worker-20160/data", topo.Workers[0].DataDir)
 
-		assert.Equal(t, "/home/tidb/my-deploy/dm-worker-20161", topo.Workers[1].DeployDir)
-		assert.Equal(t, "/home/tidb/my-deploy/dm-worker-20161/data", topo.Workers[1].DataDir)
+		require.Equal(t, "/home/tidb/my-deploy/dm-worker-20161", topo.Workers[1].DeployDir)
+		require.Equal(t, "/home/tidb/my-deploy/dm-worker-20161/data", topo.Workers[1].DataDir)
 	})
 
 	// test global options, case 3
-	withTempFile(`
+	withTempFile(t, `
 global:
   deploy_dir: my-deploy
 master_servers:
@@ -415,23 +403,23 @@ worker_servers:
 `, func(file string) {
 		topo := Specification{}
 		err := spec.ParseTopologyYaml(file, &topo)
-		assert.Nil(t, err)
+		require.NoError(t, err)
 		spec.ExpandRelativeDir(&topo)
 
-		assert.Equal(t, "my-deploy", topo.GlobalOptions.DeployDir)
-		assert.Equal(t, "data", topo.GlobalOptions.DataDir)
+		require.Equal(t, "my-deploy", topo.GlobalOptions.DeployDir)
+		require.Equal(t, "data", topo.GlobalOptions.DataDir)
 
-		assert.Equal(t, "/home/tidb/my-deploy/dm-worker-20160", topo.Workers[0].DeployDir)
-		assert.Equal(t, "/home/tidb/my-deploy/dm-worker-20160/my-data", topo.Workers[0].DataDir)
-		assert.Equal(t, "/home/tidb/my-deploy/dm-worker-20160/my-log", topo.Workers[0].LogDir)
+		require.Equal(t, "/home/tidb/my-deploy/dm-worker-20160", topo.Workers[0].DeployDir)
+		require.Equal(t, "/home/tidb/my-deploy/dm-worker-20160/my-data", topo.Workers[0].DataDir)
+		require.Equal(t, "/home/tidb/my-deploy/dm-worker-20160/my-log", topo.Workers[0].LogDir)
 
-		assert.Equal(t, "/home/tidb/my-deploy/dm-worker-20161", topo.Workers[1].DeployDir)
-		assert.Equal(t, "/home/tidb/my-deploy/dm-worker-20161/data", topo.Workers[1].DataDir)
-		assert.Equal(t, "", topo.Workers[1].LogDir)
+		require.Equal(t, "/home/tidb/my-deploy/dm-worker-20161", topo.Workers[1].DeployDir)
+		require.Equal(t, "/home/tidb/my-deploy/dm-worker-20161/data", topo.Workers[1].DataDir)
+		require.Equal(t, "", topo.Workers[1].LogDir)
 	})
 
 	// test global options, case 4
-	withTempFile(`
+	withTempFile(t, `
 global:
   data_dir: my-global-data
   log_dir: my-global-log
@@ -447,26 +435,26 @@ worker_servers:
 `, func(file string) {
 		topo := Specification{}
 		err := spec.ParseTopologyYaml(file, &topo)
-		assert.Nil(t, err)
+		require.NoError(t, err)
 		spec.ExpandRelativeDir(&topo)
 
-		assert.Equal(t, "deploy", topo.GlobalOptions.DeployDir)
-		assert.Equal(t, "my-global-data", topo.GlobalOptions.DataDir)
-		assert.Equal(t, "my-global-log", topo.GlobalOptions.LogDir)
+		require.Equal(t, "deploy", topo.GlobalOptions.DeployDir)
+		require.Equal(t, "my-global-data", topo.GlobalOptions.DataDir)
+		require.Equal(t, "my-global-log", topo.GlobalOptions.LogDir)
 
-		assert.Equal(t, "/home/tidb/deploy/dm-worker-20160", topo.Workers[0].DeployDir)
-		assert.Equal(t, "/home/tidb/deploy/dm-worker-20160/my-local-data", topo.Workers[0].DataDir)
-		assert.Equal(t, "/home/tidb/deploy/dm-worker-20160/my-local-log", topo.Workers[0].LogDir)
+		require.Equal(t, "/home/tidb/deploy/dm-worker-20160", topo.Workers[0].DeployDir)
+		require.Equal(t, "/home/tidb/deploy/dm-worker-20160/my-local-data", topo.Workers[0].DataDir)
+		require.Equal(t, "/home/tidb/deploy/dm-worker-20160/my-local-log", topo.Workers[0].LogDir)
 
-		assert.Equal(t, "/home/tidb/deploy/dm-worker-20161", topo.Workers[1].DeployDir)
-		assert.Equal(t, "/home/tidb/deploy/dm-worker-20161/my-global-data", topo.Workers[1].DataDir)
-		assert.Equal(t, "/home/tidb/deploy/dm-worker-20161/my-global-log", topo.Workers[1].LogDir)
+		require.Equal(t, "/home/tidb/deploy/dm-worker-20161", topo.Workers[1].DeployDir)
+		require.Equal(t, "/home/tidb/deploy/dm-worker-20161/my-global-data", topo.Workers[1].DataDir)
+		require.Equal(t, "/home/tidb/deploy/dm-worker-20161/my-global-log", topo.Workers[1].LogDir)
 	})
 }
 
 func TestTopologyMerge(t *testing.T) {
 	// base test
-	with2TempFile(`
+	with2TempFile(t, `
 master_servers:
   - host: 172.16.5.140
 worker_servers:
@@ -476,20 +464,20 @@ worker_servers:
   - host: 172.16.5.139
 `, func(base, scale string) {
 		topo, err := merge4test(base, scale)
-		assert.Nil(t, err)
+		require.NoError(t, err)
 		spec.ExpandRelativeDir(topo)
 
-		assert.Equal(t, "/home/tidb/deploy/dm-worker-8262", topo.Workers[0].DeployDir)
-		assert.Equal(t, "/home/tidb/deploy/dm-worker-8262/data", topo.Workers[0].DataDir)
-		assert.Equal(t, "", topo.Workers[0].LogDir)
+		require.Equal(t, "/home/tidb/deploy/dm-worker-8262", topo.Workers[0].DeployDir)
+		require.Equal(t, "/home/tidb/deploy/dm-worker-8262/data", topo.Workers[0].DataDir)
+		require.Equal(t, "", topo.Workers[0].LogDir)
 
-		assert.Equal(t, "/home/tidb/deploy/dm-worker-8262", topo.Workers[1].DeployDir)
-		assert.Equal(t, "/home/tidb/deploy/dm-worker-8262/data", topo.Workers[1].DataDir)
-		assert.Equal(t, "", topo.Workers[1].LogDir)
+		require.Equal(t, "/home/tidb/deploy/dm-worker-8262", topo.Workers[1].DeployDir)
+		require.Equal(t, "/home/tidb/deploy/dm-worker-8262/data", topo.Workers[1].DataDir)
+		require.Equal(t, "", topo.Workers[1].LogDir)
 	})
 
 	// test global option overwrite
-	with2TempFile(`
+	with2TempFile(t, `
 global:
   user: test
   deploy_dir: /my-global-deploy
@@ -509,28 +497,28 @@ worker_servers:
   - host: 172.16.5.134
 `, func(base, scale string) {
 		topo, err := merge4test(base, scale)
-		assert.Nil(t, err)
+		require.NoError(t, err)
 
 		spec.ExpandRelativeDir(topo)
 
-		assert.Equal(t, "/my-global-deploy/dm-worker-8262", topo.Workers[0].DeployDir)
-		assert.Equal(t, "/my-global-deploy/dm-worker-8262/my-local-data", topo.Workers[0].DataDir)
-		assert.Equal(t, "/my-global-deploy/dm-worker-8262/my-local-log", topo.Workers[0].LogDir)
+		require.Equal(t, "/my-global-deploy/dm-worker-8262", topo.Workers[0].DeployDir)
+		require.Equal(t, "/my-global-deploy/dm-worker-8262/my-local-data", topo.Workers[0].DataDir)
+		require.Equal(t, "/my-global-deploy/dm-worker-8262/my-local-log", topo.Workers[0].LogDir)
 
-		assert.Equal(t, "/home/test/flash-deploy", topo.Workers[1].DeployDir)
-		assert.Equal(t, "/home/test/flash-deploy/data", topo.Workers[1].DataDir)
-		assert.Equal(t, "/home/test/flash-deploy", topo.Workers[3].DeployDir)
-		assert.Equal(t, "/home/test/flash-deploy/data", topo.Workers[3].DataDir)
+		require.Equal(t, "/home/test/flash-deploy", topo.Workers[1].DeployDir)
+		require.Equal(t, "/home/test/flash-deploy/data", topo.Workers[1].DataDir)
+		require.Equal(t, "/home/test/flash-deploy", topo.Workers[3].DeployDir)
+		require.Equal(t, "/home/test/flash-deploy/data", topo.Workers[3].DataDir)
 
-		assert.Equal(t, "/my-global-deploy/dm-worker-8262", topo.Workers[2].DeployDir)
-		assert.Equal(t, "/my-global-deploy/dm-worker-8262/data", topo.Workers[2].DataDir)
-		assert.Equal(t, "/my-global-deploy/dm-worker-8262", topo.Workers[4].DeployDir)
-		assert.Equal(t, "/my-global-deploy/dm-worker-8262/data", topo.Workers[4].DataDir)
+		require.Equal(t, "/my-global-deploy/dm-worker-8262", topo.Workers[2].DeployDir)
+		require.Equal(t, "/my-global-deploy/dm-worker-8262/data", topo.Workers[2].DataDir)
+		require.Equal(t, "/my-global-deploy/dm-worker-8262", topo.Workers[4].DeployDir)
+		require.Equal(t, "/my-global-deploy/dm-worker-8262/data", topo.Workers[4].DataDir)
 	})
 }
 
 func TestMonitorLogDir(t *testing.T) {
-	withTempFile(`
+	withTempFile(t, `
 monitored:
   node_exporter_port: 39100
   blackbox_exporter_port: 39115
@@ -539,10 +527,10 @@ monitored:
 `, func(file string) {
 		topo := Specification{}
 		err := spec.ParseTopologyYaml(file, &topo)
-		assert.Nil(t, err)
-		assert.Equal(t, 39100, topo.MonitoredOptions.NodeExporterPort)
-		assert.Equal(t, 39115, topo.MonitoredOptions.BlackboxExporterPort)
-		assert.Equal(t, "test-deploy/log", topo.MonitoredOptions.LogDir)
-		assert.Equal(t, "test-deploy", topo.MonitoredOptions.DeployDir)
+		require.NoError(t, err)
+		require.Equal(t, 39100, topo.MonitoredOptions.NodeExporterPort)
+		require.Equal(t, 39115, topo.MonitoredOptions.BlackboxExporterPort)
+		require.Equal(t, "test-deploy/log", topo.MonitoredOptions.LogDir)
+		require.Equal(t, "test-deploy", topo.MonitoredOptions.DeployDir)
 	})
 }
