@@ -134,7 +134,7 @@ func (t *TiCIInstance) startMetaServer(ctx context.Context) error {
 	args = append(args, fmt.Sprintf("--config=%s", metaConfigPath))
 
 	// MetaServer binary path
-	metaBinPath := filepath.Join(t.ticiDir, "target", "debug", "meta_service_server")
+	metaBinPath := filepath.Join(t.ticiDir, "meta_service_server")
 	t.process = &process{cmd: PrepareCommand(ctx, metaBinPath, args, nil, t.ticiDir)}
 
 	// Set up logging
@@ -155,7 +155,7 @@ func (t *TiCIInstance) startWorkerNode(ctx context.Context) error {
 	args = append(args, fmt.Sprintf("--config=%s", workerConfigPath))
 
 	// WorkerNode binary path
-	workerBinPath := filepath.Join(t.ticiDir, "target", "debug", "worker_node_server")
+	workerBinPath := filepath.Join(t.ticiDir, "worker_node_server")
 	t.process = &process{cmd: PrepareCommand(ctx, workerBinPath, args, nil, t.ticiDir)}
 
 	// Set up logging
