@@ -127,7 +127,7 @@ func (t *TiCIInstance) startMetaServer(ctx context.Context) error {
 	args := []string{}
 
 	// Use default or provided config path
-	metaConfigPath := filepath.Join(t.ticiDir, "ci", "test-meta.toml")
+	metaConfigPath := filepath.Join(t.ticiDir, "../../ci", "test-meta.toml")
 	if t.configDir != "" {
 		metaConfigPath = filepath.Join(t.configDir, "test-meta.toml")
 	}
@@ -148,7 +148,7 @@ func (t *TiCIInstance) startWorkerNode(ctx context.Context) error {
 	args := []string{}
 
 	// Use default or provided config path
-	workerConfigPath := filepath.Join(t.ticiDir, "ci", "test-worker.toml")
+	workerConfigPath := filepath.Join(t.ticiDir, "../../ci", "test-worker.toml")
 	if t.configDir != "" {
 		workerConfigPath = filepath.Join(t.configDir, "test-worker.toml")
 	}
