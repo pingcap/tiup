@@ -4,8 +4,6 @@ go 1.24
 
 toolchain go1.24.1
 
-replace github.com/jedib0t/go-pretty/v6 => github.com/nexustar/go-pretty/v6 v6.5.8-tiup
-
 require (
 	github.com/AstroProfundis/sysinfo v0.0.0-20240112160158-ed54df16e9ce
 	github.com/BurntSushi/toml v1.5.0
