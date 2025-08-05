@@ -29,7 +29,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/otiai10/copy"
 	"github.com/pingcap/errors"
 )
 
@@ -77,7 +76,7 @@ func IsExecBinary(path string) bool {
 	if err != nil {
 		return false
 	}
-	return !info.IsDir() && info.Mode()&0111 == 0111
+	return !info.IsDir() && info.Mode()&0o111 == 0o111
 }
 
 // IsSubDir returns if sub is a sub directory of parent
@@ -151,7 +150,7 @@ func Untar(reader io.Reader, to string) error {
 
 	decFile := func(hdr *tar.Header) error {
 		file := path.Join(to, hdr.Name)
-		err := MkdirAll(filepath.Dir(file), 0755)
+		err := MkdirAll(filepath.Dir(file), 0o755)
 		if err != nil {
 			return err
 		}
@@ -193,14 +192,14 @@ func Untar(reader io.Reader, to string) error {
 
 // Copy copies a file or directory from src to dst
 func Copy(src, dst string) error {
-	// check if src is a directory
 	fi, err := os.Stat(src)
 	if err != nil {
 		return err
 	}
 	if fi.IsDir() {
-		// use copy.Copy to copy a directory
-		return copy.Copy(src, dst)
+		// use os.CopyFS to copy a directory
+		srcFS := os.DirFS(src)
+		return os.CopyFS(dst, srcFS)
 	}
 
 	// for regular files
@@ -356,13 +355,13 @@ func SaveFileWithBackup(path string, data []byte, backupDir string) error {
 		} else {
 			backupPath = filepath.Join(dir, backupName)
 		}
-		err = os.WriteFile(backupPath, backupData, 0644)
+		err = os.WriteFile(backupPath, backupData, 0o644)
 		if err != nil {
 			return errors.AddStack(err)
 		}
 	}
 
-	err = os.WriteFile(path, data, 0644)
+	err = os.WriteFile(path, data, 0o644)
 	if err != nil {
 		return errors.AddStack(err)
 	}
@@ -424,7 +423,7 @@ func MkdirAll(path string, minPerm os.FileMode) error {
 func WriteFile(name string, data []byte, perm os.FileMode) error {
 	fi, err := os.Stat(filepath.Dir(name))
 	if err == nil {
-		perm |= (fi.Mode().Perm() & 0666)
+		perm |= (fi.Mode().Perm() & 0o666)
 	}
 	return os.WriteFile(name, data, perm)
 }
