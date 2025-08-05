@@ -37,9 +37,9 @@ type Meta struct {
 // Info are information gathered from the system
 type Info struct {
 	Meta       Meta            `json:"meta"`
-	SysInfo    sysinfo.SysInfo `json:"sysinfo,omitempty"`
-	NTP        TimeStat        `json:"ntp,omitempty"`
-	ChronyStat ChronyStat      `json:"chrony,omitempty"`
+	SysInfo    sysinfo.SysInfo `json:"sysinfo"`
+	NTP        TimeStat        `json:"ntp"`
+	ChronyStat ChronyStat      `json:"chrony"`
 	Partitions []BlockDev      `json:"partitions,omitempty"`
 	ProcStats  []ProcessStat   `json:"proc_stats,omitempty"`
 	EpollExcl  bool            `json:"epoll_exclusive,omitempty"`

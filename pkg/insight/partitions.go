@@ -16,7 +16,7 @@ import (
 type BlockDev struct {
 	Name       string     `json:"name,omitempty"`
 	Partition  bool       `json:"partition,omitempty"`
-	Mount      MountInfo  `json:"mount,omitempty"`
+	Mount      MountInfo  `json:"mount"`
 	UUID       string     `json:"uuid,omitempty"`
 	Sectors    uint64     `json:"sectors,omitempty"`
 	Size       uint64     `json:"size,omitempty"`
@@ -168,7 +168,7 @@ func matchUUIDs(devs []BlockDev, diskByUUID map[string]string) {
 	}
 
 	// match devs to their UUIDs
-	for i := 0; i < len(devs); i++ {
+	for i := range devs {
 		devs[i].UUID = diskByUUID[devs[i].Name]
 
 		// sub devices
@@ -253,7 +253,7 @@ func matchMounts(devs []BlockDev, mountPoints map[string]MountInfo) {
 		}
 	}
 
-	for i := 0; i < len(devs); i++ {
+	for i := range devs {
 		// find mount point info of mapped devices
 		devName := devs[i].Name
 		if mapperName, ok := devMapperNames[devName]; ok {
