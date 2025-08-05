@@ -437,7 +437,6 @@ func scaleInCDC(
 	if len(instances) == len(cluster.CDCServers) {
 		g, _ := errgroup.WithContext(ctx)
 		for _, ins := range instances {
-			ins := ins
 			instCount[ins.GetManageHost()]++
 			destroyNode := instCount[ins.GetManageHost()] == 0
 			g.Go(func() error {

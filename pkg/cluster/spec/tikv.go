@@ -204,7 +204,6 @@ func (c *TiKVComponent) SetVersion(version string) {
 func (c *TiKVComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.TiKVServers))
 	for _, s := range c.Topology.TiKVServers {
-		s := s
 		ins = append(ins, &TiKVInstance{BaseInstance{
 			InstanceSpec: s,
 			Name:         c.Name(),

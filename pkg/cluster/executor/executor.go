@@ -173,7 +173,7 @@ func FindSSHAuthorizedKeysFile(ctx context.Context, exec ctxt.Executor) string {
 	sshAuthorizedKeys := defaultSSHAuthorizedKeys
 	cmd := "grep -Ev '^\\s*#|^\\s*$' /etc/ssh/sshd_config"
 	stdout, _, _ := exec.Execute(ctx, cmd, true) // error ignored as we have default value
-	for _, line := range strings.Split(string(stdout), "\n") {
+	for line := range strings.SplitSeq(string(stdout), "\n") {
 		if !strings.Contains(line, "AuthorizedKeysFile") {
 			continue
 		}

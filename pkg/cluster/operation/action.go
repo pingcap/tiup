@@ -315,7 +315,6 @@ func systemctlMonitor(ctx context.Context, hosts []string, noAgentHosts set.Stri
 
 		errg, _ := errgroup.WithContext(ctx)
 		for _, host := range hosts {
-			host := host
 			if noAgentHosts.Exist(host) {
 				logger.Debugf("Ignored %s component %s for %s", action, comp, host)
 				continue
@@ -460,8 +459,6 @@ func EnableComponent(ctx context.Context, instances []spec.Instance, noAgentHost
 	errg, _ := errgroup.WithContext(ctx)
 
 	for _, ins := range instances {
-		ins := ins
-
 		// skip certain instances
 		switch name {
 		case spec.ComponentNodeExporter,
@@ -514,7 +511,6 @@ func StartComponent(ctx context.Context, instances []spec.Instance, noAgentHosts
 	errg, _ := errgroup.WithContext(ctx)
 
 	for _, ins := range instances {
-		ins := ins
 		switch name {
 		case spec.ComponentNodeExporter,
 			spec.ComponentBlackboxExporter:
@@ -586,7 +582,6 @@ func StopComponent(ctx context.Context,
 	errg, _ := errgroup.WithContext(ctx)
 
 	for _, ins := range instances {
-		ins := ins
 		switch name {
 		case spec.ComponentNodeExporter,
 			spec.ComponentBlackboxExporter:

@@ -54,7 +54,7 @@ func validateExpandable(fromField, toField any) bool {
 		return false
 	}
 	tidyPaths := func(arr []string) []string {
-		for i := 0; i < len(arr); i++ {
+		for i := range arr {
 			arr[i] = strings.TrimSuffix(strings.TrimSpace(arr[i]), "/")
 		}
 		return arr

@@ -203,7 +203,7 @@ func Abs(user, path string) string {
 // MultiDirAbs returns the absolute path for multi-dir separated by comma
 func MultiDirAbs(user, paths string) []string {
 	var dirs []string
-	for _, path := range strings.Split(paths, ",") {
+	for path := range strings.SplitSeq(paths, ",") {
 		path = strings.TrimSpace(path)
 		if path == "" {
 			continue
