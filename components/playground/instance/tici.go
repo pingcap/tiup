@@ -127,7 +127,7 @@ func (t *TiCIInstance) startMetaServer(ctx context.Context) error {
 	args := []string{}
 
 	// Use default or provided config path
-	metaConfigPath := filepath.Join(t.ticiDir, "ci", "test-meta.toml")
+	metaConfigPath := filepath.Join(t.ticiDir, "../../ci", "test-meta.toml")
 	if t.configDir != "" {
 		metaConfigPath = filepath.Join(t.configDir, "test-meta.toml")
 	}
@@ -148,7 +148,7 @@ func (t *TiCIInstance) startWorkerNode(ctx context.Context) error {
 	args := []string{}
 
 	// Use default or provided config path
-	workerConfigPath := filepath.Join(t.ticiDir, "ci", "test-worker.toml")
+	workerConfigPath := filepath.Join(t.ticiDir, "../../ci", "test-worker.toml")
 	if t.configDir != "" {
 		workerConfigPath = filepath.Join(t.configDir, "test-worker.toml")
 	}
@@ -241,7 +241,12 @@ func (t *TiCIInstance) WorkerAddr() string {
 func (t *TiCIInstance) PrepareBinary(component, name string, version utils.Version) error {
 	// TiCI uses external binaries, no preparation needed
 	// But we output the startup message to match other components
-	_, _ = colorstr.Printf("[dark_gray]Start %s instance: %s[reset]\n", component, t.ticiDir)
+	switch component {
+	case "tici-worker":
+		_, _ = colorstr.Printf("[dark_gray]Start %s instance: %s[reset]\n", component, fmt.Sprintf("%s/worker_node_service", t.ticiDir))
+	case "tici-meta":
+		_, _ = colorstr.Printf("[dark_gray]Start %s instance: %s[reset]\n", component, fmt.Sprintf("%s/meta_service_server", t.ticiDir))
+	}
 	return nil
 }
 

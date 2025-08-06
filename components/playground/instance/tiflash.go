@@ -144,7 +144,7 @@ func (inst *TiFlashInstance) Start(ctx context.Context) error {
 		{"flash.proxy.data-dir", filepath.Join(inst.Dir, "proxy_data")},
 		{"flash.proxy.log-file", filepath.Join(inst.Dir, "tiflash_tikv.log")},
 	}
-	userConfig, err := unmarshalConfig(configPath)
+	userConfig, err := UnmarshalConfig(configPath)
 	if err != nil {
 		return errors.Trace(err)
 	}
