@@ -1,0 +1,5 @@
+tiup (1.16.3+20250909~e769cc5c) unstable; urgency=medium
+
+  * Initial native packaging
+
+ -- Otto Kekäläinen <otto@debian.org>  Wed, 19 Mar 2025 23:31:49 +0000
