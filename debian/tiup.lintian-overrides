@@ -1,0 +1,20 @@
+# All of these spelling errors are inherited from dependencies and not issues in
+# this TiUP package itself:
+# grep -r -i -w -E 'hexidecimal|octects|userA|wtH|ment'
+#   golang.org/x/crypto@v0.23.0/cryptobyte/asn1.go:		b.err = fmt.Errorf("cryptobyte: high-tag number identifier octects not supported: 0x%x", tag)
+#   golang.org/x/net@v0.25.0/html/testdata/webkit/tests1.dat:<?COM--MENT?>
+#   golang.org/x/net@v0.25.0/webdav/internal/xml/marshal_test.go:		Directive("DOCTYPE doc [ <!ELEMENT doc '>'> <!-- com>ment --> ]"),
+#   golang.org/x/text@v0.15.0/unicode/runenames/tables9.0.0.go:	"MENT-WALLPLANE BEND LARGESIGNWRITING MOVEMENT-WALLPLANE CORNER SMALLSIGN" +
+#   github.com/gorilla/mux@v1.8.0/doc.go:		amw.tokenUsers["aaaaaaaa"] = "userA"
+#   github.com/gorilla/mux@v1.8.0/README.md:	amw.tokenUsers["aaaaaaaa"] = "userA"
+#   github.com/gorilla/mux@v1.8.0/example_authentication_middleware_test.go:	amw.tokenUsers["aaaaaaaa"] = "userA"
+#   github.com/!burnt!sushi/toml@v1.2.1/lex.go:			lx.errorf("not a hexidecimal number: '%s%c'", lx.current(), r)
+#   google.golang.org/genproto@v0.0.0-20240401170217-c3f982113cda/googleapis/genomics/v1/references.pb.go:	// checksum is computed by sorting all lower case hexidecimal string
+#   google.golang.org/genproto@v0.0.0-20240401170217-c3f982113cda/googleapis/devtools/containeranalysis/v1beta1/attestation/attestation.pb.go:	// 160-bit fingerprint, expressed as a 40 character hexidecimal string. See
+tiup: spelling-error-in-binary hexidecimal hexadecimal [usr/bin/*]
+tiup: spelling-error-in-binary ment meant [usr/bin/*]
+tiup: spelling-error-in-binary octects octets [usr/bin/*]
+tiup: spelling-error-in-binary userA users [usr/bin/*]
+tiup: spelling-error-in-binary wtH with [usr/bin/*]
+# Prevent Lintian from nagging about typos in this file itself
+spelling-in-override-comment spelling-error-in-binary * [usr/share/lintian/overrides/tiup:*]

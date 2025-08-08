@@ -1,0 +1,96 @@
+Source: tiup
+Section: golang
+Priority: optional
+Maintainer: Debian Go Packaging Team <team+pkg-go@tracker.debian.org>
+Uploaders:
+ Otto Kekäläinen <otto@debian.org>,
+Build-Depends:
+ debhelper-compat (= 13),
+ dh-golang,
+ dh-sequence-golang,
+ golang-any,
+ golang-etcd-server-dev,
+ golang-github-alecthomas-chroma-dev,
+ golang-github-appleboy-easyssh-proxy-dev,
+ golang-github-asaskevich-eventbus-dev,
+ golang-github-astroprofundis-sysinfo-dev,
+ golang-github-cavaliergopher-grab-dev,
+ golang-github-cheggaaa-pb.v3-dev,
+ golang-github-creasty-defaults-dev,
+ golang-github-dchest-bcrypt-pbkdf-dev,
+ golang-github-docker-go-units-dev,
+ golang-github-fatih-color-dev,
+ golang-github-gibson042-canonicaljson-go-dev,
+ golang-github-gizak-termui-dev,
+ golang-github-go-git-go-billy-dev,
+ golang-github-go-sql-driver-mysql-dev,
+ golang-github-gofrs-flock-dev,
+ golang-github-gohxs-readline-dev,
+ golang-github-golang-protobuf-1-5-dev,
+ golang-github-google-shlex-dev,
+ golang-github-google-uuid-dev,
+ golang-github-gorilla-mux-dev,
+ golang-github-jedib0t-go-pretty-dev,
+ golang-github-jeremywohl-flatten-dev,
+ golang-github-joomcode-errorx-dev,
+ golang-github-lorenzosaino-go-sysctl-dev,
+ golang-github-mattn-go-runewidth-dev,
+ golang-github-mattn-go-sixel-dev,
+ golang-github-minio-minio-go-v7-dev,
+ golang-github-mitchellh-colorstring-dev,
+ golang-github-pingcap-errors-dev,
+ golang-github-pingcap-failpoint-dev,
+ golang-github-pingcap-fn-dev,
+ golang-github-pingcap-kvproto-dev,
+ golang-github-pkg-errors-dev,
+ golang-github-prometheus-client-model-dev,
+ golang-github-prometheus-common-dev,
+ golang-github-prometheus-prom2json-dev,
+ golang-github-r3labs-diff-dev,
+ golang-github-relex-aini-dev,
+ golang-github-scaleft-sshkeys-dev,
+ golang-github-sergi-go-diff-dev,
+ golang-github-sethvargo-go-password-dev,
+ golang-github-shirou-gopsutil-dev,
+ golang-github-spf13-cobra-dev,
+ golang-github-spf13-pflag-dev,
+ golang-github-stretchr-testify-dev,
+ golang-github-vishvananda-netlink-dev,
+ golang-github-xo-dburl-dev,
+ golang-github-xo-tblfmt-dev,
+ golang-github-xo-terminfo-dev,
+ golang-github-xo-usql-dev,
+ golang-go.uber-atomic-dev,
+ golang-go.uber-zap-dev,
+ golang-golang-x-crypto-dev,
+ golang-golang-x-mod-dev,
+ golang-golang-x-sync-dev,
+ golang-golang-x-sys-dev,
+ golang-golang-x-term-dev,
+ golang-google-grpc-dev,
+ golang-gopkg-ini.v1-dev,
+ golang-gopkg-vmihailenco-msgpack.v2-dev,
+ golang-gopkg-yaml.v3-dev,
+ golang-sslmate-src-go-pkcs12-dev,
+ golang-toml-dev,
+Testsuite: autopkgtest-pkg-go
+Standards-Version: 4.7.2
+Vcs-Browser: https://salsa.debian.org/go-team/packages/tiup
+Vcs-Git: https://salsa.debian.org/go-team/packages/tiup.git
+Homepage: https://github.com/pingcap/tiup
+XS-Go-Import-Path: github.com/pingcap/tiup
+
+Package: tiup
+Section: utils
+Architecture: any
+Depends:
+ ${misc:Depends},
+ ${shlibs:Depends},
+Static-Built-Using:
+ ${misc:Static-Built-Using},
+Description: Component manager for TiDB
+ TiUP is a tool designed to manage TiDB components, providing an easy way to
+ install, update, and maintain various components of the TiDB ecosystem. It
+ simplifies the process of setting up and managing TiDB clusters, making it
+ accessible for both developers and administrators. With TiUP, you can quickly
+ deploy and scale TiDB clusters, ensuring high availability and performance.
