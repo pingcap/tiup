@@ -5,23 +5,15 @@ package insight
 
 import (
 	"log"
-	"os"
-	"strconv"
-	"strings"
 
 	"github.com/shirou/gopsutil/process"
 )
 
 func getProcStartTime(proc *process.Process) (float64, error) {
-	statPath := GetProcPath(strconv.Itoa(int(proc.Pid)), "stat")
-	contents, err := os.ReadFile(statPath)
+	createTimeMs, err := proc.CreateTime()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(err) // Matches existing error handling behavior
 		return 0, err
 	}
-	fields := strings.Fields(string(contents))
-	if startTime, err := strconv.ParseFloat(fields[21], 64); err == nil {
-		return startTime / float64(process.ClockTicks), err
-	}
-	return 0, err
+	return float64(createTimeMs) / 1000.0, nil // Convert milliseconds to seconds
 }
