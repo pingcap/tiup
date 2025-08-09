@@ -334,7 +334,7 @@ This operation will upgrade %s %s cluster %s (with a concurrency of %d) to %s:%s
 					}()
 					select {
 					case <-time.After(restartTimeout):
-						fmt.Printf("\nTimeout, continueing\n")
+						fmt.Printf("\nTimeout, continuing\n")
 					case <-ch:
 					}
 				}
