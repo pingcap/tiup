@@ -19,7 +19,7 @@ func (inst *PDInstance) getConfig() map[string]any {
 	config["schedule.low-space-ratio"] = 1.0
 
 	if inst.kvIsSingleReplica {
-		config["replication.max-replica"] = 1
+		config["replication.max-replicas"] = 1
 	}
 
 	if inst.shOpt.Mode == "tidb-cse" {
