@@ -63,8 +63,8 @@ jobs:
         working-directory: ${{ env.working-directory }}
         if: github.event_name != 'release'
         run: |
+          BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
           if [ "$BRANCH_NAME" != "master" ]; then
-            BRANCH_NAME=$(echo $GITHUB_REF | sed 's|refs/heads/||; s|/|_|g')
             STAGING_VER=$(git describe --tags | sed 's/-[0-9]*-[^-]*$//')-$BRANCH_NAME
           else
             STAGING_VER=$(git describe --tags | sed 's/-[^-]*$//' | sed -r 's/(-[^-]*$)/-nightly\1/')
