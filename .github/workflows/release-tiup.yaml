@@ -4,22 +4,24 @@ name: release-tiup
 on:
   push:
     branches:
-      - ci/gh-*
-      - release-*
-      - master
+      # - ci/gh-*
+      # - release-*
+      - feature/*
+      # - master
     paths-ignore:
-      - '**.html'
-      - '**.md'
-      - 'CNAME'
-      - 'LICENSE'
-      - 'doc/**'
-      - 'embed/templates/examples/**'
-  release:
-    types:
-      - published
+      - "**.html"
+      - "**.md"
+      - "CNAME"
+      - "LICENSE"
+      - "doc/**"
+      - "embed/templates/examples/**"
+  # release:
+  #   types:
+  #     - published
   workflow_dispatch:
     inputs:
       git-ref:
+        default: feature/fts
         description: git ref
         required: true
 
@@ -41,10 +43,10 @@ jobs:
     env:
       working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
     steps:
-      - name: Set up Go 1.21
+      - name: Set up Go 1.24
         uses: actions/setup-go@v4
         with:
-          go-version: 1.21.x
+          go-version: 1.24.x
         id: go
 
       - name: Check out code into the Go module directory
@@ -59,7 +61,8 @@ jobs:
         working-directory: ${{ env.working-directory }}
         if: github.event_name != 'release'
         run: |
-          STAGING_VER=`git describe --tags | sed 's/-[^-]*$//' | sed -r 's/(-[^-]*$)/-nightly\1/'`
+          BRANCH_NAME=$(echo $GITHUB_REF | sed 's|refs/heads/||; s|/|_|g')
+          STAGING_VER=$(git describe --tags | sed 's/-[^-]*$//')-$BRANCH_NAME
           echo ::set-output name=STAGING::$STAGING_VER
 
       - name: Get git ref and commit
@@ -148,7 +151,7 @@ jobs:
       - name: Publish packages
         working-directory: ${{ env.working-directory }}
         env:
-          TIUP_MIRRORS: ${{ secrets.TIUP_SERVER_PROD }}
+          TIUP_MIRRORS: ${{ secrets.TIUP_SERVER_STAGING }}
           TIUP_HOME: ${{ steps.packaging.outputs.TIUP_HOME }}
           TIUP_BIN: ${{ steps.packaging.outputs.TIUP_BIN }}
           REL_VER: ${{ steps.build_tiup.outputs.REL_VER }}
@@ -211,7 +214,7 @@ jobs:
           sed -i 's/version.*/version "${{ needs.release.outputs.REL_VER }}"/g'  Formula/tiup.rb
           sed -i 's/tag:.*/tag:      "${{ needs.release.outputs.REL_VER }}"/g'  Formula/tiup.rb
           cat Formula/tiup.rb
-          
+
       - name: Push new homebrew
         uses: actions-js/push@master
         continue-on-error: true
