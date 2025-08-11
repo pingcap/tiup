@@ -895,13 +895,11 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 		ins = inst
 		p.tikvCdcs = append(p.tikvCdcs, inst)
 	case "tici-meta":
-		inst := instance.NewTiCIInstanceWithRole(p.bootOptions.ShOpt, p.dataDir, host, id, p.pds,
-			cfg.BinPath, cfg.ConfigPath, instance.TiCIRoleMeta)
+		inst := instance.NewTiCIMetaInstance(p.bootOptions.ShOpt, p.dataDir, host, id, p.pds, cfg.BinPath, cfg.ConfigPath)
 		ins = inst
 		p.ticis = append(p.ticis, inst)
 	case "tici-worker":
-		inst := instance.NewTiCIInstanceWithRole(p.bootOptions.ShOpt, p.dataDir, host, id, p.pds,
-			cfg.BinPath, cfg.ConfigPath, instance.TiCIRoleWorker)
+		inst := instance.NewTiCIWorkerInstance(p.bootOptions.ShOpt, p.dataDir, host, id, p.pds, cfg.BinPath, cfg.ConfigPath)
 		ins = inst
 		p.ticis = append(p.ticis, inst)
 	case spec.ComponentPump:
@@ -1328,11 +1326,22 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		}
 
 		// Wait for TiCDC to be ready
-		time.Sleep(8 * time.Second)
+		time.Sleep(15 * time.Second)
 
 		// Create changefeed
 		fmt.Println("Creating changefeed...")
-		if err := p.createChangefeed(); err != nil {
+		ticiMetaConfigPath := filepath.Join(options.TiCIMeta.BinPath, "../../ci", "test-meta.toml")
+		if options.TiCIMeta.ConfigPath != "" {
+			ticiMetaConfigPath = filepath.Join(options.TiCIMeta.ConfigPath, "test-meta.toml")
+		}
+		// read the configuration file
+		ticiMetaConfig, err := instance.UnmarshalConfig(ticiMetaConfigPath)
+		if err != nil {
+			return err
+		}
+		bucket := ticiMetaConfig["s3"].(map[string]any)["bucket"].(string)
+		prefix := ticiMetaConfig["s3"].(map[string]any)["prefix"].(string)
+		if err := p.createChangefeed(bucket, prefix); err != nil {
 			fmt.Println(color.RedString("Failed to create changefeed: %s", err))
 		} else {
 			fmt.Println("Changefeed created successfully.")
@@ -1902,7 +1911,7 @@ func parseMysqlVersion(versionOutput string) (vMaj int, vMin int, vPatch int, er
 }
 
 // createChangefeed creates a changefeed using tiup cdc cli
-func (p *Playground) createChangefeed() error {
+func (p *Playground) createChangefeed(bucket, prefix string) error {
 	if len(p.ticdcs) == 0 {
 		return fmt.Errorf("no TiCDC instances available")
 	}
@@ -1911,7 +1920,7 @@ func (p *Playground) createChangefeed() error {
 	cdcAddr := fmt.Sprintf("http://%s", p.ticdcs[0].Addr())
 
 	// Prepare changefeed creation command
-	sinkURI := "s3://logbucket/storage_test?protocol=canal-json&access-key=minioadmin&secret-access-key=minioadmin&endpoint=http://127.0.0.1:9000&enable-tidb-extension=true&output-row-key=true"
+	sinkURI := fmt.Sprintf("s3://%s/%s/cdc?protocol=canal-json&access-key=minioadmin&secret-access-key=minioadmin&endpoint=http://127.0.0.1:9000&enable-tidb-extension=true&output-row-key=true", bucket, prefix)
 
 	cmd := exec.Command("tiup", "cdc", "cli", "changefeed", "create",
 		fmt.Sprintf("--server=%s", cdcAddr),

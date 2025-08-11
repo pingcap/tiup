@@ -76,7 +76,7 @@ func PrintTable(rows [][]string, header bool) {
 			Header: text.FormatDefault,
 		},
 		Options: table.Options{
-			SeparateColumns:             true,
+			SeparateColumns: true,
 		},
 	})
 	t.Render()
