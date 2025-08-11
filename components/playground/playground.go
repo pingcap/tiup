@@ -895,13 +895,11 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 		ins = inst
 		p.tikvCdcs = append(p.tikvCdcs, inst)
 	case "tici-meta":
-		inst := instance.NewTiCIInstanceWithRole(p.bootOptions.ShOpt, p.dataDir, host, id, p.pds,
-			cfg.BinPath, cfg.ConfigPath, instance.TiCIRoleMeta)
+		inst := instance.NewTiCIMetaInstance(p.bootOptions.ShOpt, p.dataDir, host, id, p.pds, cfg.BinPath, cfg.ConfigPath)
 		ins = inst
 		p.ticis = append(p.ticis, inst)
 	case "tici-worker":
-		inst := instance.NewTiCIInstanceWithRole(p.bootOptions.ShOpt, p.dataDir, host, id, p.pds,
-			cfg.BinPath, cfg.ConfigPath, instance.TiCIRoleWorker)
+		inst := instance.NewTiCIWorkerInstance(p.bootOptions.ShOpt, p.dataDir, host, id, p.pds, cfg.BinPath, cfg.ConfigPath)
 		ins = inst
 		p.ticis = append(p.ticis, inst)
 	case spec.ComponentPump:
@@ -1332,9 +1330,9 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 		// Create changefeed
 		fmt.Println("Creating changefeed...")
-		ticiMetaConfigPath := filepath.Join(options.TiCIMeta.BinPath, "../../", "ci", "test-meta.toml")
+		ticiMetaConfigPath := filepath.Join(options.TiCIMeta.BinPath, "../../ci", "test-meta.toml")
 		if options.TiCIMeta.ConfigPath != "" {
-			ticiMetaConfigPath = options.TiCIMeta.ConfigPath
+			ticiMetaConfigPath = filepath.Join(options.TiCIMeta.ConfigPath, "test-meta.toml")
 		}
 		// read the configuration file
 		ticiMetaConfig, err := instance.UnmarshalConfig(ticiMetaConfigPath)
