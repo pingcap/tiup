@@ -38,10 +38,8 @@ type TiCIInstance struct {
 	instance
 
 	// TiCI specific fields
-	pds       []*PDInstance
-	ticiDir   string   // TiCI project directory
-	configDir string   // Configuration directory
-	role      TiCIRole // Instance role (meta or worker)
+	pds  []*PDInstance
+	role TiCIRole // Instance role (meta or worker)
 
 	// Process - only one process per instance
 	process *process
@@ -51,21 +49,22 @@ var _ Instance = &TiCIInstance{}
 
 // NewTiCIMetaInstance creates a TiCI MetaServer instance
 func NewTiCIMetaInstance(shOpt SharedOptions, baseDir, host string, id int, pds []*PDInstance,
-	ticiDir, configDir string) *TiCIInstance {
-	return NewTiCIInstanceWithRole(shOpt, baseDir, host, id, pds, ticiDir, configDir, TiCIRoleMeta)
+	ticiBinaryDir, configDir string) *TiCIInstance {
+	return NewTiCIInstanceWithRole(shOpt, baseDir, host, id, pds, ticiBinaryDir, configDir, TiCIRoleMeta)
 }
 
 // NewTiCIWorkerInstance creates a TiCI WorkerNode instance
 func NewTiCIWorkerInstance(shOpt SharedOptions, baseDir, host string, id int, pds []*PDInstance,
-	ticiDir, configDir string) *TiCIInstance {
-	return NewTiCIInstanceWithRole(shOpt, baseDir, host, id, pds, ticiDir, configDir, TiCIRoleWorker)
+	ticiBinaryDir, configDir string) *TiCIInstance {
+	return NewTiCIInstanceWithRole(shOpt, baseDir, host, id, pds, ticiBinaryDir, configDir, TiCIRoleWorker)
 }
 
 // NewTiCIInstanceWithRole creates a TiCI instance with specified role
 func NewTiCIInstanceWithRole(shOpt SharedOptions, baseDir, host string, id int, pds []*PDInstance,
-	ticiDir, configDir string, role TiCIRole) *TiCIInstance {
+	ticiBinaryDir, configDir string, role TiCIRole) *TiCIInstance {
 	var componentSuffix string
 	var defaultPort, defaultStatusPort int
+	var configPath, binPath string
 
 	switch role {
 	case TiCIRoleMeta:
@@ -73,11 +72,23 @@ func NewTiCIInstanceWithRole(shOpt SharedOptions, baseDir, host string, id int, 
 		componentSuffix = "meta"
 		defaultPort = 8500
 		defaultStatusPort = 8501
+		if configDir != "" {
+			configPath = filepath.Join(configDir, "test-meta.toml")
+		} else {
+			configPath = filepath.Join(ticiBinaryDir, "../../ci", "test-meta.toml")
+		}
+		binPath = filepath.Join(ticiBinaryDir, "meta_service_server")
 	case TiCIRoleWorker:
 		// WorkerNode default port
 		componentSuffix = "worker"
 		defaultPort = 8510
 		defaultStatusPort = 8511
+		if configDir != "" {
+			configPath = filepath.Join(configDir, "test-worker.toml")
+		} else {
+			configPath = filepath.Join(ticiBinaryDir, "../../ci", "test-worker.toml")
+		}
+		binPath = filepath.Join(ticiBinaryDir, "worker_node_server")
 	default:
 		panic("invalid TiCI role")
 	}
@@ -86,18 +97,16 @@ func NewTiCIInstanceWithRole(shOpt SharedOptions, baseDir, host string, id int, 
 
 	tici := &TiCIInstance{
 		instance: instance{
-			BinPath:    ticiDir, // TiCI project directory
+			BinPath:    binPath,
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
 			Port:       utils.MustGetFreePort(host, defaultPort, shOpt.PortOffset),
 			StatusPort: utils.MustGetFreePort(host, defaultStatusPort, shOpt.PortOffset),
-			ConfigPath: configDir,
+			ConfigPath: configPath,
 		},
-		pds:       pds,
-		ticiDir:   ticiDir,
-		configDir: configDir,
-		role:      role,
+		pds:  pds,
+		role: role,
 	}
 
 	return tici
@@ -113,54 +122,19 @@ func (t *TiCIInstance) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to create directory %s: %v", t.Dir, err)
 	}
 
-	switch t.role {
-	case TiCIRoleMeta:
-		return t.startMetaServer(ctx)
-	case TiCIRoleWorker:
-		return t.startWorkerNode(ctx)
-	default:
-		return fmt.Errorf("invalid TiCI role: %v", t.role)
-	}
+	return t.startInstance(ctx)
 }
 
-func (t *TiCIInstance) startMetaServer(ctx context.Context) error {
+func (t *TiCIInstance) startInstance(ctx context.Context) error {
 	args := []string{}
 
-	// Use default or provided config path
-	metaConfigPath := filepath.Join(t.ticiDir, "ci", "test-meta.toml")
-	if t.configDir != "" {
-		metaConfigPath = filepath.Join(t.configDir, "test-meta.toml")
-	}
-	args = append(args, fmt.Sprintf("--config=%s", metaConfigPath))
+	// Set the config path
+	args = append(args, fmt.Sprintf("--config=%s", t.ConfigPath))
 
-	// MetaServer binary path
-	metaBinPath := filepath.Join(t.ticiDir, "meta_service_server")
-	t.process = &process{cmd: PrepareCommand(ctx, metaBinPath, args, nil, t.ticiDir)}
+	t.process = &process{cmd: PrepareCommand(ctx, t.BinPath, args, nil, t.Dir)}
 
 	// Set up logging
-	logFile := filepath.Join(t.Dir, "tici-meta.log")
-	logIfErr(t.process.SetOutputFile(logFile))
-
-	return t.process.Start()
-}
-
-func (t *TiCIInstance) startWorkerNode(ctx context.Context) error {
-	args := []string{}
-
-	// Use default or provided config path
-	workerConfigPath := filepath.Join(t.ticiDir, "ci", "test-worker.toml")
-	if t.configDir != "" {
-		workerConfigPath = filepath.Join(t.configDir, "test-worker.toml")
-	}
-	args = append(args, fmt.Sprintf("--config=%s", workerConfigPath))
-
-	// WorkerNode binary path
-	workerBinPath := filepath.Join(t.ticiDir, "worker_node_server")
-	t.process = &process{cmd: PrepareCommand(ctx, workerBinPath, args, nil, t.ticiDir)}
-
-	// Set up logging
-	logFile := filepath.Join(t.Dir, "tici-worker.log")
-	logIfErr(t.process.SetOutputFile(logFile))
+	logIfErr(t.process.SetOutputFile(t.LogFile()))
 
 	return t.process.Start()
 }
@@ -241,7 +215,7 @@ func (t *TiCIInstance) WorkerAddr() string {
 func (t *TiCIInstance) PrepareBinary(component, name string, version utils.Version) error {
 	// TiCI uses external binaries, no preparation needed
 	// But we output the startup message to match other components
-	_, _ = colorstr.Printf("[dark_gray]Start %s instance: %s[reset]\n", component, t.ticiDir)
+	_, _ = colorstr.Printf("[dark_gray]Start %s instance: %s[reset]\n", component, t.BinPath)
 	return nil
 }
 
