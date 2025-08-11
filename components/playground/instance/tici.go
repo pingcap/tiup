@@ -122,10 +122,10 @@ func (t *TiCIInstance) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to create directory %s: %v", t.Dir, err)
 	}
 
-	return t.start(ctx)
+	return t.startInstance(ctx)
 }
 
-func (t *TiCIInstance) start(ctx context.Context) error {
+func (t *TiCIInstance) startInstance(ctx context.Context) error {
 	args := []string{}
 
 	// Set the config path
