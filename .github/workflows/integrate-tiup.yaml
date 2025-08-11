@@ -9,6 +9,7 @@ on:
     branches:
       - master
       - release-*
+      - feature/*
     paths-ignore:
       - '**.html'
       - '**.md'
