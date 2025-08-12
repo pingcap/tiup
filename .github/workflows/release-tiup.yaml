@@ -8,12 +8,12 @@ on:
       - release-*
       - master
     paths-ignore:
-      - "**.html"
-      - "**.md"
-      - "CNAME"
-      - "LICENSE"
-      - "doc/**"
-      - "embed/templates/examples/**"
+      - '**.html'
+      - '**.md'
+      - 'CNAME'
+      - 'LICENSE'
+      - 'doc/**'
+      - 'embed/templates/examples/**'
   release:
     types:
       - published
