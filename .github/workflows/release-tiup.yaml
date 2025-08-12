@@ -8,12 +8,12 @@ on:
       - release-*
       - master
     paths-ignore:
-      - '**.html'
-      - '**.md'
-      - 'CNAME'
-      - 'LICENSE'
-      - 'doc/**'
-      - 'embed/templates/examples/**'
+      - "**.html"
+      - "**.md"
+      - "CNAME"
+      - "LICENSE"
+      - "doc/**"
+      - "embed/templates/examples/**"
   release:
     types:
       - published
@@ -65,7 +65,7 @@ jobs:
         run: |
           BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
           if [ "$BRANCH_NAME" != "master" ]; then
-            STAGING_VER=$(git describe --tags | sed 's/-[0-9]*-[^-]*$//')-$BRANCH_NAME
+            STAGING_VER=$(git describe --tags | sed 's/-[0-9]*-[^-]*$//')-$(echo $BRANCH_NAME | sed 's|/|.|g')
           else
             STAGING_VER=$(git describe --tags | sed 's/-[^-]*$//' | sed -r 's/(-[^-]*$)/-nightly\1/')
           fi
