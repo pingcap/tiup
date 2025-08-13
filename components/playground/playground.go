@@ -530,18 +530,7 @@ func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) 
 	if component == "tikv_worker" {
 		component = "tikv"
 	}
-	if component == "tici-meta" || component == "tici-worker" {
-		// TiCI is a custom component that doesn't need version resolution
-		// But we still need to call PrepareBinary to show startup message
-		if err := inst.PrepareBinary(component, inst.Component(), utils.Version("")); err != nil {
-			return err
-		}
-		if err = inst.Start(ctx); err != nil {
-			return err
-		}
-		p.addWaitInstance(inst)
-		return nil
-	}
+
 	if version, err = environment.GlobalEnv().V1Repository().ResolveComponentVersion(component, boundVersion); err != nil {
 		return err
 	}
@@ -894,12 +883,12 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 		inst := instance.NewTiKVCDC(p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds)
 		ins = inst
 		p.tikvCdcs = append(p.tikvCdcs, inst)
-	case "tici-meta":
-		inst := instance.NewTiCIMetaInstance(p.bootOptions.ShOpt, p.dataDir, host, id, p.pds, cfg.BinPath, cfg.ConfigPath)
+	case spec.ComponentTiCIMeta:
+		inst := instance.NewTiCIMetaInstance(p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, p.tidbs)
 		ins = inst
 		p.ticis = append(p.ticis, inst)
-	case "tici-worker":
-		inst := instance.NewTiCIWorkerInstance(p.bootOptions.ShOpt, p.dataDir, host, id, p.pds, cfg.BinPath, cfg.ConfigPath)
+	case spec.ComponentTiCIWorker:
+		inst := instance.NewTiCIWorkerInstance(p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, p.tidbs)
 		ins = inst
 		p.ticis = append(p.ticis, inst)
 	case spec.ComponentPump:
@@ -1081,6 +1070,15 @@ func (p *Playground) waitAllDMMasterUp() {
 }
 
 func (p *Playground) bindVersion(comp string, version string) (bindVersion string) {
+	if version == utils.FTSVersionAlias {
+		bindVersion = utils.NightlyVersionAlias
+		if comp == spec.ComponentTiFlash || comp == spec.ComponentTiDB {
+			bindVersion = utils.FTSVersionAlias
+		} else {
+			bindVersion = utils.NightlyVersionAlias
+		}
+		return
+	}
 	bindVersion = version
 	switch comp {
 	case spec.ComponentTiKVCDC:
@@ -1330,20 +1328,22 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 		// Create changefeed
 		fmt.Println("Creating changefeed...")
-		ticiMetaConfigPath := filepath.Join(options.TiCIMeta.BinPath, "../../ci", "test-meta.toml")
+		var endpoint, accessKey, secretKey, bucket, prefix string
 		if options.TiCIMeta.ConfigPath != "" {
-			ticiMetaConfigPath = filepath.Join(options.TiCIMeta.ConfigPath, "test-meta.toml")
+			ticiMetaConfigPath := filepath.Join(options.TiCIMeta.ConfigPath, "test-meta.toml")
+			// read the configuration file
+			ticiMetaConfig, err := instance.UnmarshalConfig(ticiMetaConfigPath)
+			if err != nil {
+				return err
+			}
+			bucket = ticiMetaConfig["s3"].(map[string]any)["bucket"].(string)
+			prefix = ticiMetaConfig["s3"].(map[string]any)["prefix"].(string)
+			endpoint = ticiMetaConfig["s3"].(map[string]any)["endpoint"].(string)
+			accessKey = ticiMetaConfig["s3"].(map[string]any)["access_key"].(string)
+			secretKey = ticiMetaConfig["s3"].(map[string]any)["secret_key"].(string)
+		} else {
+			endpoint, accessKey, secretKey, bucket, prefix = instance.GetDefaultTiCIMetaS3Config()
 		}
-		// read the configuration file
-		ticiMetaConfig, err := instance.UnmarshalConfig(ticiMetaConfigPath)
-		if err != nil {
-			return err
-		}
-		bucket := ticiMetaConfig["s3"].(map[string]any)["bucket"].(string)
-		prefix := ticiMetaConfig["s3"].(map[string]any)["prefix"].(string)
-		endpoint := ticiMetaConfig["s3"].(map[string]any)["endpoint"].(string)
-		accessKey := ticiMetaConfig["s3"].(map[string]any)["access_key"].(string)
-		secretKey := ticiMetaConfig["s3"].(map[string]any)["secret_key"].(string)
 		if err := p.createChangefeed(bucket, prefix, endpoint, accessKey, secretKey); err != nil {
 			fmt.Println(color.RedString("Failed to create changefeed: %s", err))
 		} else {
@@ -1362,7 +1362,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 		// Create and start TiCI MetaServer instances first
 		for i := 0; i < options.TiCIMeta.Num; i++ {
-			inst, err := p.addInstance("tici-meta", instance.PDRoleNormal, instance.TiFlashRoleNormal, options.TiCIMeta)
+			inst, err := p.addInstance(spec.ComponentTiCIMeta, instance.PDRoleNormal, instance.TiFlashRoleNormal, options.TiCIMeta)
 			if err != nil {
 				fmt.Println(color.RedString("TiCI MetaServer %d failed to create: %s", i, err))
 				continue
@@ -1381,7 +1381,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 		// Create and start TiCI WorkerNode instances
 		for i := 0; i < options.TiCIWorker.Num; i++ {
-			inst, err := p.addInstance("tici-worker", instance.PDRoleNormal, instance.TiFlashRoleNormal, options.TiCIWorker)
+			inst, err := p.addInstance(spec.ComponentTiCIWorker, instance.PDRoleNormal, instance.TiFlashRoleNormal, options.TiCIWorker)
 			if err != nil {
 				fmt.Println(color.RedString("TiCI WorkerNode %d failed to create: %s", i, err))
 				continue
@@ -1398,12 +1398,12 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 	if options.Monitor {
 		var err error
 
-		p.monitor, monitorInfo, err = p.bootMonitor(ctx, env)
+		p.monitor, monitorInfo, err = p.bootMonitor(ctx)
 		if err != nil {
 			return err
 		}
 
-		p.ngmonitoring, err = p.bootNGMonitoring(ctx, env)
+		p.ngmonitoring, err = p.bootNGMonitoring(ctx)
 		if err != nil {
 			return err
 		}
@@ -1696,14 +1696,16 @@ func (p *Playground) renderSDFile() error {
 
 // return not error iff the Cmd is started successfully.
 // user must and can safely wait the Cmd
-func (p *Playground) bootMonitor(ctx context.Context, env *environment.Environment) (*monitor, *MonitorInfo, error) {
+func (p *Playground) bootMonitor(ctx context.Context) (*monitor, *MonitorInfo, error) {
 	options := p.bootOptions
 	monitorInfo := &MonitorInfo{}
+	component := "prometheus"
+	boundVersion := p.bindVersion(component, p.bootOptions.Version)
 
 	dataDir := p.dataDir
-	promDir := filepath.Join(dataDir, "prometheus")
+	promDir := filepath.Join(dataDir, component)
 
-	monitor, err := newMonitor(ctx, options.ShOpt, options.Version, options.Host, promDir)
+	monitor, err := newMonitor(ctx, options.ShOpt, boundVersion, options.Host, promDir)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1741,13 +1743,14 @@ func (p *Playground) bootMonitor(ctx context.Context, env *environment.Environme
 
 // return not error iff the Cmd is started successfully.
 // user must and can safely wait the Cmd
-func (p *Playground) bootNGMonitoring(ctx context.Context, env *environment.Environment) (*ngMonitoring, error) {
+func (p *Playground) bootNGMonitoring(ctx context.Context) (*ngMonitoring, error) {
 	options := p.bootOptions
-
+	component := "prometheus"
+	boundVersion := p.bindVersion(component, options.Version)
 	dataDir := p.dataDir
-	promDir := filepath.Join(dataDir, "prometheus")
+	promDir := filepath.Join(dataDir, component)
 
-	ngm, err := newNGMonitoring(ctx, options.ShOpt, options.Version, options.Host, promDir, p.pds)
+	ngm, err := newNGMonitoring(ctx, options.ShOpt, boundVersion, options.Host, promDir, p.pds)
 	if err != nil {
 		return nil, err
 	}
@@ -1779,10 +1782,11 @@ func (p *Playground) bootNGMonitoring(ctx context.Context, env *environment.Envi
 func (p *Playground) bootGrafana(ctx context.Context, env *environment.Environment, monitorInfo *MonitorInfo) (*grafana, error) {
 	// set up grafana
 	options := p.bootOptions
-	if err := installIfMissing("grafana", options.Version); err != nil {
+	boundVersion := p.bindVersion("grafana", options.Version)
+	if err := installIfMissing("grafana", boundVersion); err != nil {
 		return nil, err
 	}
-	installPath, err := env.Profile().ComponentInstalledPath("grafana", utils.Version(options.Version))
+	installPath, err := env.Profile().ComponentInstalledPath("grafana", utils.Version(boundVersion))
 	if err != nil {
 		return nil, err
 	}
@@ -1824,7 +1828,7 @@ func (p *Playground) bootGrafana(ctx context.Context, env *environment.Environme
 		return nil, err
 	}
 
-	grafana := newGrafana(options.Version, options.Host, options.GrafanaPort)
+	grafana := newGrafana(boundVersion, options.Host, options.GrafanaPort)
 	// fmt.Println("Start Grafana instance...")
 	err = grafana.start(ctx, grafanaDir, options.ShOpt.PortOffset, "http://"+utils.JoinHostPort(monitorInfo.IP, monitorInfo.Port))
 	if err != nil {

@@ -239,7 +239,7 @@ func (env *Environment) SelectInstalledVersion(component string, ver utils.Versi
 // DownloadComponentIfMissing downloads the specific version of a component if it is missing
 func (env *Environment) DownloadComponentIfMissing(component string, ver utils.Version) (utils.Version, error) {
 	var err error
-	if ver.String() == utils.NightlyVersionAlias {
+	if ver.IsNightly() {
 		if ver, _, err = env.v1Repo.LatestNightlyVersion(component); err != nil {
 			return "", err
 		}
