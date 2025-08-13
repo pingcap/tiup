@@ -1341,7 +1341,10 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		}
 		bucket := ticiMetaConfig["s3"].(map[string]any)["bucket"].(string)
 		prefix := ticiMetaConfig["s3"].(map[string]any)["prefix"].(string)
-		if err := p.createChangefeed(bucket, prefix); err != nil {
+		endpoint := ticiMetaConfig["s3"].(map[string]any)["endpoint"].(string)
+		accessKey := ticiMetaConfig["s3"].(map[string]any)["access_key"].(string)
+		secretKey := ticiMetaConfig["s3"].(map[string]any)["secret_key"].(string)
+		if err := p.createChangefeed(bucket, prefix, endpoint, accessKey, secretKey); err != nil {
 			fmt.Println(color.RedString("Failed to create changefeed: %s", err))
 		} else {
 			fmt.Println("Changefeed created successfully.")
@@ -1911,7 +1914,7 @@ func parseMysqlVersion(versionOutput string) (vMaj int, vMin int, vPatch int, er
 }
 
 // createChangefeed creates a changefeed using tiup cdc cli
-func (p *Playground) createChangefeed(bucket, prefix string) error {
+func (p *Playground) createChangefeed(bucket, prefix, endpoint, accessKey, secretKey string) error {
 	if len(p.ticdcs) == 0 {
 		return fmt.Errorf("no TiCDC instances available")
 	}
@@ -1920,7 +1923,7 @@ func (p *Playground) createChangefeed(bucket, prefix string) error {
 	cdcAddr := fmt.Sprintf("http://%s", p.ticdcs[0].Addr())
 
 	// Prepare changefeed creation command
-	sinkURI := fmt.Sprintf("s3://%s/%s/cdc?protocol=canal-json&access-key=minioadmin&secret-access-key=minioadmin&endpoint=http://127.0.0.1:9000&enable-tidb-extension=true&output-row-key=true", bucket, prefix)
+	sinkURI := fmt.Sprintf("s3://%s/%s/cdc?protocol=canal-json&access-key=%s&secret-access-key=%s&endpoint=%s&enable-tidb-extension=true&output-row-key=true", bucket, prefix, accessKey, secretKey, endpoint)
 
 	cmd := exec.Command("tiup", "cdc", "cli", "changefeed", "create",
 		fmt.Sprintf("--server=%s", cdcAddr),
