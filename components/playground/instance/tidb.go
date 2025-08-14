@@ -101,3 +101,8 @@ func (inst *TiDBInstance) LogFile() string {
 func (inst *TiDBInstance) Addr() string {
 	return utils.JoinHostPort(AdvertiseHost(inst.Host), inst.Port)
 }
+
+// DSN returns the Data Source Name for connecting to TiDB.
+func (inst *TiDBInstance) DSN() string {
+	return fmt.Sprintf("mysql://root@%s", inst.Addr())
+}
