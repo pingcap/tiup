@@ -14,10 +14,11 @@
 package command
 
 import (
+	"slices"
+
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/spf13/cobra"
-	"slices"
 )
 
 func newReloadCmd() *cobra.Command {
@@ -35,8 +36,6 @@ func newReloadCmd() *cobra.Command {
 			}
 
 			clusterName := args[0]
-			clusterReport.ID = scrubClusterName(clusterName)
-			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
 			return cm.Reload(clusterName, gOpt, skipRestart, skipConfirm)
 		},

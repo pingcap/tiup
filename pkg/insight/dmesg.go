@@ -1,4 +1,4 @@
-// Copyright 2020 PingCAP, Inc.
+// Copyright 2021 PingCAP, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,23 +11,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package telemetry
+package insight
 
 import (
-	"context"
+	"github.com/pingcap/tiup/pkg/kmsg"
 )
 
-// FillNodeInfo fill HardwareInfo and Os info.
-func FillNodeInfo(ctx context.Context, info *NodeInfo) (err error) {
-	info.Hardware, err = GetHardwareInfo(ctx)
-	if err != nil {
-		return
-	}
-
-	info.Os, err = GetOSInfo(ctx)
-	if err != nil {
-		return
-	}
-
-	return nil
+func (info *Info) collectDmsg() error {
+	msg, err := kmsg.Read()
+	info.DMesg = msg
+	return err
 }

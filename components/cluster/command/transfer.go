@@ -39,8 +39,6 @@ func newPullCmd() *cobra.Command {
 			clusterName := args[0]
 			opt.Remote = args[1]
 			opt.Local = args[2]
-			clusterReport.ID = scrubClusterName(clusterName)
-			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
 			return cm.Transfer(clusterName, opt, gOpt)
 		},
@@ -68,8 +66,6 @@ func newPushCmd() *cobra.Command {
 			clusterName := args[0]
 			opt.Local = args[1]
 			opt.Remote = args[2]
-			clusterReport.ID = scrubClusterName(clusterName)
-			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
 			return cm.Transfer(clusterName, opt, gOpt)
 		},

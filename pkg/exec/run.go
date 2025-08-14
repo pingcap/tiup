@@ -14,7 +14,6 @@
 package exec
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -28,7 +27,6 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
-	"github.com/pingcap/tiup/pkg/telemetry"
 	"github.com/pingcap/tiup/pkg/tui/colorstr"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/version"
@@ -90,7 +88,9 @@ func RunComponent(env *environment.Environment, tag, spec, binPath string, args 
 		return errors.Annotatef(err, "Failed to start component `%s`", component)
 	}
 	// If the process has been launched, we must save the process info to meta directory
-	saveProcessInfo(params, c)
+	if err := saveProcessInfo(params, c); err != nil {
+		fmt.Fprintf(os.Stderr, "Error saving process info %s\n", err.Error())
+	}
 
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
@@ -143,11 +143,6 @@ func PrepareCommand(p *PrepareCommandParams) (*exec.Cmd, error) {
 		return nil, err
 	}
 
-	teleMeta, _, err := telemetry.GetMeta(env)
-	if err != nil {
-		return nil, err
-	}
-
 	tiupWd, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -159,9 +154,6 @@ func PrepareCommand(p *PrepareCommandParams) (*exec.Cmd, error) {
 		fmt.Sprintf("%s=%s", localdata.EnvNameTiUPVersion, version.NewTiUPVersion().SemVer()),
 		fmt.Sprintf("%s=%s", localdata.EnvNameComponentDataDir, sd),
 		fmt.Sprintf("%s=%s", localdata.EnvNameComponentInstallDir, installPath),
-		fmt.Sprintf("%s=%s", localdata.EnvNameTelemetryStatus, teleMeta.Status),
-		fmt.Sprintf("%s=%s", localdata.EnvNameTelemetryUUID, teleMeta.UUID),
-		fmt.Sprintf("%s=%s", localdata.EnvNameTelemetrySecret, teleMeta.Secret),
 		// to be removed in TiUP 2.0
 		fmt.Sprintf("%s=%s", localdata.EnvNameWorkDir, tiupWd),
 		fmt.Sprintf("%s=%s", localdata.EnvTag, p.Tag),
@@ -258,7 +250,7 @@ func PrepareBinary(component string, version utils.Version, binPath string) (str
 	return binPath, nil
 }
 
-func saveProcessInfo(p *PrepareCommandParams, c *exec.Cmd) {
+func saveProcessInfo(p *PrepareCommandParams, c *exec.Cmd) error {
 	info := &localdata.Process{
 		Component:   p.Component,
 		CreatedTime: time.Now().Format(time.RFC3339),
@@ -269,12 +261,5 @@ func saveProcessInfo(p *PrepareCommandParams, c *exec.Cmd) {
 		Env:         c.Env,
 		Cmd:         c,
 	}
-	metaFile := filepath.Join(info.Dir, localdata.MetaFilename)
-	file, err := os.OpenFile(metaFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.ModePerm)
-	if err == nil {
-		defer file.Close()
-		encoder := json.NewEncoder(file)
-		encoder.SetIndent("", "    ")
-		_ = encoder.Encode(info)
-	}
+	return environment.GlobalEnv().Profile().WriteMetaFile(info.Dir, info)
 }

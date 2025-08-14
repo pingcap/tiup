@@ -1071,7 +1071,6 @@ func (p *Playground) waitAllDMMasterUp() {
 
 func (p *Playground) bindVersion(comp string, version string) (bindVersion string) {
 	if version == utils.FTSVersionAlias {
-		bindVersion = utils.NightlyVersionAlias
 		if comp == spec.ComponentTiFlash || comp == spec.ComponentTiDB {
 			bindVersion = utils.FTSVersionAlias
 		} else {
@@ -1929,7 +1928,7 @@ func (p *Playground) createChangefeed(bucket, prefix, endpoint, accessKey, secre
 	// Prepare changefeed creation command
 	sinkURI := fmt.Sprintf("s3://%s/%s/cdc?protocol=canal-json&access-key=%s&secret-access-key=%s&endpoint=%s&enable-tidb-extension=true&output-row-key=true", bucket, prefix, accessKey, secretKey, endpoint)
 
-	cmd := exec.Command("tiup", "cdc", "cli", "changefeed", "create",
+	cmd := exec.Command("tiup", "cdc:nigtly", "cli", "changefeed", "create",
 		fmt.Sprintf("--server=%s", cdcAddr),
 		fmt.Sprintf("--sink-uri=%s", sinkURI),
 	)

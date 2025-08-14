@@ -18,8 +18,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"slices"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewCA(t *testing.T) {

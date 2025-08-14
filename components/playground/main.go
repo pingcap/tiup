@@ -15,7 +15,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -32,7 +31,6 @@ import (
 
 	"github.com/fatih/color"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/google/uuid"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/playground/instance"
 	"github.com/pingcap/tiup/pkg/cluster/api"
@@ -41,7 +39,6 @@ import (
 	"github.com/pingcap/tiup/pkg/localdata"
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/repository"
-	"github.com/pingcap/tiup/pkg/telemetry"
 	"github.com/pingcap/tiup/pkg/tui/colorstr"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/version"
@@ -50,7 +47,6 @@ import (
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.uber.org/zap"
 	"golang.org/x/mod/semver"
-	"gopkg.in/yaml.v3"
 )
 
 // BootOptions is the topology and options used to start a playground cluster
@@ -81,21 +77,18 @@ type BootOptions struct {
 }
 
 var (
-	reportEnabled    bool // is telemetry report enabled
-	teleReport       *telemetry.Report
-	playgroundReport *telemetry.PlaygroundReport
-	options          = &BootOptions{}
-	tag              string
-	deleteWhenExit   bool
-	tiupDataDir      string
-	dataDir          string
-	log              = logprinter.NewLogger("")
+	options        = &BootOptions{}
+	tag            string
+	deleteWhenExit bool
+	tiupDataDir    string
+	dataDir        string
+	log            = logprinter.NewLogger("")
 )
 
 func installIfMissing(component, version string) error {
 	env := environment.GlobalEnv()
 
-	installed, err := env.V1Repository().Local().ComponentInstalled(component, version)
+	installed, err := env.V1Repository().LocalComponentInstalled(component, version)
 	if err != nil {
 		return err
 	}
@@ -156,21 +149,6 @@ Examples:
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			teleReport = new(telemetry.Report)
-			playgroundReport = new(telemetry.PlaygroundReport)
-			teleReport.EventDetail = &telemetry.Report_Playground{Playground: playgroundReport}
-			reportEnabled = telemetry.Enabled()
-			if reportEnabled {
-				eventUUID := os.Getenv(localdata.EnvNameTelemetryEventUUID)
-				if eventUUID == "" {
-					eventUUID = uuid.New().String()
-				}
-				teleReport.InstallationUUID = telemetry.GetUUID()
-				teleReport.EventUUID = eventUUID
-				teleReport.EventUnixTimestamp = time.Now().Unix()
-				teleReport.Version = telemetry.TiUPMeta()
-			}
-
 			if len(args) > 0 {
 				options.Version = args[0]
 			}
@@ -567,7 +545,7 @@ func getAbsolutePath(path string) (string, error) {
 }
 
 func dumpPort(fname string, port int) error {
-	return utils.WriteFile(fname, []byte(strconv.Itoa(port)), 0644)
+	return utils.WriteFile(fname, []byte(strconv.Itoa(port)), 0o644)
 }
 
 func loadPort(dir string) (port int, err error) {
@@ -588,7 +566,7 @@ func dumpDSN(fname string, dbs []*instance.TiDBInstance, tdbs []*instance.TiProx
 	for _, tdb := range tdbs {
 		dsn = append(dsn, tdb.DSN())
 	}
-	_ = utils.WriteFile(fname, []byte(strings.Join(dsn, "\n")), 0644)
+	_ = utils.WriteFile(fname, []byte(strings.Join(dsn, "\n")), 0o644)
 }
 
 func newEtcdClient(endpoint string) (*clientv3.Client, error) {
@@ -610,7 +588,6 @@ func newEtcdClient(endpoint string) (*clientv3.Client, error) {
 }
 
 func main() {
-	start := time.Now()
 	code := 0
 	err := execute()
 	if err != nil {
@@ -618,50 +595,6 @@ func main() {
 		code = 1
 	}
 	removeData()
-
-	if reportEnabled {
-		f := func() {
-			defer func() {
-				if r := recover(); r != nil {
-					if environment.DebugMode {
-						log.Debugf("Recovered in telemetry report: %v", r)
-					}
-				}
-			}()
-
-			playgroundReport.ExitCode = int32(code)
-			if optBytes, err := yaml.Marshal(options); err == nil && len(optBytes) > 0 {
-				if data, err := telemetry.ScrubYaml(
-					optBytes,
-					map[string]struct{}{
-						"host":        {},
-						"config_path": {},
-						"bin_path":    {},
-					}, // fields to hash
-					map[string]struct{}{}, // fields to omit
-					telemetry.GetSecret(),
-				); err == nil {
-					playgroundReport.Topology = (string(data))
-				}
-			}
-			playgroundReport.TakeMilliseconds = uint64(time.Since(start).Milliseconds())
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
-			tele := telemetry.NewTelemetry()
-			err := tele.Report(ctx, teleReport)
-			if environment.DebugMode {
-				if err != nil {
-					log.Infof("report failed: %v", err)
-				}
-				fmt.Printf("report: %s\n", teleReport.String())
-				if data, err := json.Marshal(teleReport); err == nil {
-					log.Debugf("report: %s\n", string(data))
-				}
-			}
-			cancel()
-		}
-
-		f()
-	}
 
 	if code != 0 {
 		os.Exit(code)
