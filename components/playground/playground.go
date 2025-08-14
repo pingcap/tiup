@@ -1071,7 +1071,6 @@ func (p *Playground) waitAllDMMasterUp() {
 
 func (p *Playground) bindVersion(comp string, version string) (bindVersion string) {
 	if version == utils.FTSVersionAlias {
-		bindVersion = utils.NightlyVersionAlias
 		if comp == spec.ComponentTiFlash || comp == spec.ComponentTiDB {
 			bindVersion = utils.FTSVersionAlias
 		} else {
