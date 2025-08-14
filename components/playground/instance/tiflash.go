@@ -48,6 +48,7 @@ type TiFlashInstance struct {
 	servicePort     int
 	proxyPort       int
 	proxyStatusPort int
+	ticReaderPort   int
 	pds             []*PDInstance
 	dbs             []*TiDBInstance
 	Process
@@ -66,7 +67,7 @@ func NewTiFlashInstance(role TiFlashRole, shOpt SharedOptions, binPath, dir, hos
 	if !tidbver.TiFlashNotNeedHTTPPortConfig(version) {
 		httpPort = utils.MustGetFreePort(host, httpPort, shOpt.PortOffset)
 	}
-	return &TiFlashInstance{
+	instance := &TiFlashInstance{
 		shOpt: shOpt,
 		instance: instance{
 			BinPath:    binPath,
@@ -82,9 +83,14 @@ func NewTiFlashInstance(role TiFlashRole, shOpt SharedOptions, binPath, dir, hos
 		servicePort:     utils.MustGetFreePort(host, 3930, shOpt.PortOffset),
 		proxyPort:       utils.MustGetFreePort(host, 20170, shOpt.PortOffset),
 		proxyStatusPort: utils.MustGetFreePort(host, 20292, shOpt.PortOffset),
+		ticReaderPort:   utils.MustGetFreePort(host, 8520, shOpt.PortOffset),
 		pds:             pds,
 		dbs:             dbs,
 	}
+	if version == utils.FTSVersionAlias {
+		instance.ticReaderPort = utils.MustGetFreePort(host, 8520, shOpt.PortOffset)
+	}
+	return instance
 }
 
 // Addr return the address of tiflash
@@ -115,11 +121,13 @@ func (inst *TiFlashInstance) Start(ctx context.Context) error {
 	}
 
 	configPath := filepath.Join(inst.Dir, "tiflash.toml")
-	if err := prepareConfig(
-		configPath,
-		inst.ConfigPath,
-		inst.getConfig(),
-	); err != nil {
+	var config map[string]any
+	if inst.Version.IsFTS() {
+		config = inst.getTiCIReaderConfig()
+	} else {
+		config = inst.getConfig()
+	}
+	if err := prepareConfig(configPath, inst.ConfigPath, config); err != nil {
 		return err
 	}
 

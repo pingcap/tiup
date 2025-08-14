@@ -32,6 +32,9 @@ const NightlyVersionAlias = "nightly"
 // LatestVersionAlias represents the latest build (excluding nightly versions).
 const LatestVersionAlias = "latest"
 
+// FTSVersionAlias represents the version alias for TiDB FTS feature branch.
+const FTSVersionAlias = "v9.0.0-feature.fts"
+
 // FmtVer converts a version string to SemVer format, if the string is not a valid
 // SemVer and fails to parse and convert it, an error is raised.
 func FmtVer(ver string) (string, error) {
@@ -74,6 +77,11 @@ func (v Version) IsEmpty() bool {
 // IsNightly returns true if the version is nightly
 func (v Version) IsNightly() bool {
 	return strings.Contains(string(v), NightlyVersionAlias)
+}
+
+// IsFTS returns true if the version is a TiDB FTS feature branch
+func (v Version) IsFTS() bool {
+	return strings.Contains(string(v), FTSVersionAlias)
 }
 
 // String implements the fmt.Stringer interface

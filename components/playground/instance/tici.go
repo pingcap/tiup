@@ -17,9 +17,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
-	"syscall"
 
-	"github.com/pingcap/tiup/pkg/tui/colorstr"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -36,64 +34,49 @@ const (
 // TiCIInstance represents a TiCI service instance (either MetaServer or WorkerNode)
 type TiCIInstance struct {
 	instance
+	Process
 
 	// TiCI specific fields
 	pds  []*PDInstance
+	dbs  []*TiDBInstance
 	role TiCIRole // Instance role (meta or worker)
-
-	// Process - only one process per instance
-	process *process
 }
 
 var _ Instance = &TiCIInstance{}
 
 // NewTiCIMetaInstance creates a TiCI MetaServer instance
-func NewTiCIMetaInstance(shOpt SharedOptions, baseDir, host string, id int, pds []*PDInstance,
-	ticiBinaryDir, configDir string) *TiCIInstance {
-	return NewTiCIInstanceWithRole(shOpt, baseDir, host, id, pds, ticiBinaryDir, configDir, TiCIRoleMeta)
+func NewTiCIMetaInstance(shOpt SharedOptions, binPath string, dir, host, configPath string, id int, pds []*PDInstance, dbs []*TiDBInstance) *TiCIInstance {
+	return NewTiCIInstanceWithRole(shOpt, binPath, dir, host, configPath, id, pds, dbs, TiCIRoleMeta)
 }
 
 // NewTiCIWorkerInstance creates a TiCI WorkerNode instance
-func NewTiCIWorkerInstance(shOpt SharedOptions, baseDir, host string, id int, pds []*PDInstance,
-	ticiBinaryDir, configDir string) *TiCIInstance {
-	return NewTiCIInstanceWithRole(shOpt, baseDir, host, id, pds, ticiBinaryDir, configDir, TiCIRoleWorker)
+func NewTiCIWorkerInstance(shOpt SharedOptions, binPath string, dir, host, configPath string, id int, pds []*PDInstance, dbs []*TiDBInstance) *TiCIInstance {
+	return NewTiCIInstanceWithRole(shOpt, binPath, dir, host, configPath, id, pds, dbs, TiCIRoleWorker)
 }
 
 // NewTiCIInstanceWithRole creates a TiCI instance with specified role
-func NewTiCIInstanceWithRole(shOpt SharedOptions, baseDir, host string, id int, pds []*PDInstance,
-	ticiBinaryDir, configDir string, role TiCIRole) *TiCIInstance {
-	var componentSuffix string
+func NewTiCIInstanceWithRole(shOpt SharedOptions, binPath string, dir, host, configPath string, id int, pds []*PDInstance, dbs []*TiDBInstance, role TiCIRole) *TiCIInstance {
 	var defaultPort, defaultStatusPort int
-	var configPath, binPath string
+	var configFilePath string
 
 	switch role {
 	case TiCIRoleMeta:
 		// MetaServer default port
-		componentSuffix = "meta"
 		defaultPort = 8500
 		defaultStatusPort = 8501
-		if configDir != "" {
-			configPath = filepath.Join(configDir, "test-meta.toml")
-		} else {
-			configPath = filepath.Join(ticiBinaryDir, "../../ci", "test-meta.toml")
+		if configPath != "" {
+			configFilePath = filepath.Join(configPath, "test-meta.toml")
 		}
-		binPath = filepath.Join(ticiBinaryDir, "meta_service_server")
 	case TiCIRoleWorker:
 		// WorkerNode default port
-		componentSuffix = "worker"
 		defaultPort = 8510
 		defaultStatusPort = 8511
-		if configDir != "" {
-			configPath = filepath.Join(configDir, "test-worker.toml")
-		} else {
-			configPath = filepath.Join(ticiBinaryDir, "../../ci", "test-worker.toml")
+		if configPath != "" {
+			configFilePath = filepath.Join(configPath, "test-worker.toml")
 		}
-		binPath = filepath.Join(ticiBinaryDir, "worker_node_server")
 	default:
 		panic("invalid TiCI role")
 	}
-
-	dir := filepath.Join(baseDir, fmt.Sprintf("tici-%s-%d", componentSuffix, id))
 
 	tici := &TiCIInstance{
 		instance: instance{
@@ -103,9 +86,10 @@ func NewTiCIInstanceWithRole(shOpt SharedOptions, baseDir, host string, id int, 
 			Host:       host,
 			Port:       utils.MustGetFreePort(host, defaultPort, shOpt.PortOffset),
 			StatusPort: utils.MustGetFreePort(host, defaultStatusPort, shOpt.PortOffset),
-			ConfigPath: configPath,
+			ConfigPath: configFilePath,
 		},
 		pds:  pds,
+		dbs:  dbs,
 		role: role,
 	}
 
@@ -113,59 +97,39 @@ func NewTiCIInstanceWithRole(shOpt SharedOptions, baseDir, host string, id int, 
 }
 
 // Start implements Instance interface - starts the appropriate process
-func (t *TiCIInstance) Start(ctx context.Context) error {
-	if t.process != nil {
-		return fmt.Errorf("TiCI instance already started")
+func (inst *TiCIInstance) Start(ctx context.Context) error {
+	configPath := filepath.Join(inst.Dir, fmt.Sprintf("%s.toml", inst.Component()))
+	if err := prepareConfig(
+		configPath,
+		inst.ConfigPath,
+		inst.getConfig(),
+	); err != nil {
+		return err
 	}
 
-	if err := utils.MkdirAll(t.Dir, 0755); err != nil {
-		return fmt.Errorf("failed to create directory %s: %v", t.Dir, err)
+	args := []string{
+		fmt.Sprintf("--config=%s", configPath),
 	}
+	inst.Process = &process{cmd: PrepareCommand(ctx, inst.BinPath, args, nil, inst.Dir)}
 
-	return t.startInstance(ctx)
+	logIfErr(inst.Process.SetOutputFile(inst.LogFile()))
+	return inst.Process.Start()
 }
 
-func (t *TiCIInstance) startInstance(ctx context.Context) error {
-	args := []string{}
-
-	// Set the config path
-	args = append(args, fmt.Sprintf("--config=%s", t.ConfigPath))
-
-	t.process = &process{cmd: PrepareCommand(ctx, t.BinPath, args, nil, t.Dir)}
-
-	// Set up logging
-	logIfErr(t.process.SetOutputFile(t.LogFile()))
-
-	return t.process.Start()
-}
-
-// Wait implements Instance interface
-func (t *TiCIInstance) Wait() error {
-	if t.process != nil {
-		return t.process.Wait()
+func (inst *TiCIInstance) getConfig() map[string]any {
+	switch inst.role {
+	case TiCIRoleMeta:
+		return inst.getMetaConfig()
+	case TiCIRoleWorker:
+		return inst.getWorkerConfig()
+	default:
+		return nil // Should not happen
 	}
-	return nil
 }
 
-// Pid implements Instance interface
-func (t *TiCIInstance) Pid() int {
-	if t.process != nil && t.process.Cmd() != nil && t.process.Cmd().Process != nil {
-		return t.process.Cmd().Process.Pid
-	}
-	return 0
-}
-
-// Uptime implements Instance interface
-func (t *TiCIInstance) Uptime() string {
-	if t.process != nil {
-		return t.process.Uptime()
-	}
-	return "N/A"
-}
-
-// Component implements Instance interface
-func (t *TiCIInstance) Component() string {
-	switch t.role {
+// Component implements Process interface
+func (inst *TiCIInstance) Component() string {
+	switch inst.role {
 	case TiCIRoleMeta:
 		return "tici-meta"
 	case TiCIRoleWorker:
@@ -175,53 +139,24 @@ func (t *TiCIInstance) Component() string {
 	}
 }
 
-// LogFile implements Instance interface
-func (t *TiCIInstance) LogFile() string {
-	switch t.role {
+// LogFile implements Process interface
+func (inst *TiCIInstance) LogFile() string {
+	switch inst.role {
 	case TiCIRoleMeta:
-		return filepath.Join(t.Dir, "tici-meta.log")
+		return filepath.Join(inst.Dir, "tici-meta.log")
 	case TiCIRoleWorker:
-		return filepath.Join(t.Dir, "tici-worker.log")
+		return filepath.Join(inst.Dir, "tici-worker.log")
 	default:
-		return filepath.Join(t.Dir, "tici.log")
+		return filepath.Join(inst.Dir, "tici.log")
 	}
 }
 
-// Cmd returns the process command
-func (t *TiCIInstance) Cmd() any {
-	if t.process != nil {
-		return t.process.Cmd()
-	}
-	return nil
+// Addr returns the address for connecting to the TiCI instance.
+func (inst *TiCIInstance) Addr() string {
+	return utils.JoinHostPort(AdvertiseHost(inst.Host), inst.Port)
 }
 
-// MetaAddr returns the MetaServer address (only valid for MetaServer instances)
-func (t *TiCIInstance) MetaAddr() string {
-	if t.role == TiCIRoleMeta {
-		return utils.JoinHostPort(AdvertiseHost(t.Host), t.Port)
-	}
-	return ""
-}
-
-// WorkerAddr returns the WorkerNode address (only valid for WorkerNode instances)
-func (t *TiCIInstance) WorkerAddr() string {
-	if t.role == TiCIRoleWorker {
-		return utils.JoinHostPort(AdvertiseHost(t.Host), t.Port)
-	}
-	return ""
-}
-
-// PrepareBinary is a no-op for TiCI since it uses external binaries
-func (t *TiCIInstance) PrepareBinary(component, name string, version utils.Version) error {
-	// TiCI uses external binaries, no preparation needed
-	// But we output the startup message to match other components
-	_, _ = colorstr.Printf("[dark_gray]Start %s instance: %s[reset]\n", component, t.BinPath)
-	return nil
-}
-
-// Terminate terminates the process gracefully
-func (t *TiCIInstance) Terminate(sig syscall.Signal) {
-	if t.process != nil && t.process.Cmd() != nil && t.process.Cmd().Process != nil {
-		_ = syscall.Kill(t.process.Cmd().Process.Pid, sig)
-	}
+// StatusAddr returns the status address for the TiCI instance.
+func (inst *TiCIInstance) StatusAddr() string {
+	return utils.JoinHostPort(AdvertiseHost(inst.Host), inst.StatusPort)
 }

@@ -146,6 +146,11 @@ func (c *TiProxy) Addr() string {
 	return utils.JoinHostPort(AdvertiseHost(c.Host), c.Port)
 }
 
+// DSN returns the Data Source Name for connecting to TiProxy.
+func (c *TiProxy) DSN() string {
+	return fmt.Sprintf("mysql://root@%s", c.Addr())
+}
+
 // Component return component name.
 func (c *TiProxy) Component() string {
 	return "tiproxy"
