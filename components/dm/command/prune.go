@@ -99,7 +99,6 @@ func clearOutDatedEtcdInfo(clusterName string, metadata *spec.Metadata, opt oper
 	var wg sync.WaitGroup
 
 	for _, master := range mastersToDelete {
-		master := master
 		wg.Add(1)
 		go func() {
 			errCh <- dmMasterClient.OfflineMaster(master, nil)
@@ -107,7 +106,6 @@ func clearOutDatedEtcdInfo(clusterName string, metadata *spec.Metadata, opt oper
 		}()
 	}
 	for _, worker := range workersToDelete {
-		worker := worker
 		wg.Add(1)
 		go func() {
 			errCh <- dmMasterClient.OfflineWorker(worker, nil)

@@ -130,7 +130,6 @@ func (c *TiKVCDCComponent) SetVersion(version string) {
 func (c *TiKVCDCComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.TiKVCDCServers))
 	for _, s := range c.Topology.TiKVCDCServers {
-		s := s
 		instance := &TiKVCDCInstance{BaseInstance{
 			InstanceSpec: s,
 			Name:         c.Name(),

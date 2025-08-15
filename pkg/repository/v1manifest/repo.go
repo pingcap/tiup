@@ -144,7 +144,7 @@ func SaveKeyInfo(key *KeyInfo, ty, dir string) (string, error) {
 
 // GenAndSaveKeys generate private keys to keys param and save key file to dir
 func GenAndSaveKeys(keys map[string][]*KeyInfo, ty string, num int, dir string) error {
-	for i := 0; i < num; i++ {
+	for range num {
 		k, err := GenKeyInfo()
 		if err != nil {
 			return err

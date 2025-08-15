@@ -157,7 +157,6 @@ func (c *TiProxyComponent) SetVersion(version string) {
 func (c *TiProxyComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.TiProxyServers))
 	for _, s := range c.Topology.TiProxyServers {
-		s := s
 		instance := &TiProxyInstance{BaseInstance{
 			InstanceSpec: s,
 			Name:         c.Name(),

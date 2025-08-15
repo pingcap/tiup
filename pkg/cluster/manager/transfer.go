@@ -132,7 +132,7 @@ func renderInstanceSpec(t string, inst spec.Instance) ([]string, error) {
 	result := make([]string, 0)
 	switch inst.ComponentName() {
 	case spec.ComponentTiFlash:
-		for _, d := range strings.Split(inst.DataDir(), ",") {
+		for d := range strings.SplitSeq(inst.DataDir(), ",") {
 			tfs, ok := inst.(*spec.TiFlashInstance).InstanceSpec.(*spec.TiFlashSpec)
 			if !ok {
 				return result, perrs.Errorf("instance type mismatch for %v", inst)

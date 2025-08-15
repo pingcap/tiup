@@ -132,7 +132,6 @@ func (c *CDCComponent) SetVersion(version string) {
 func (c *CDCComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.CDCServers))
 	for _, s := range c.Topology.CDCServers {
-		s := s
 		instance := &CDCInstance{BaseInstance{
 			InstanceSpec: s,
 			Name:         c.Name(),

@@ -47,8 +47,8 @@ func GetServiceStatus(ctx context.Context, e ctxt.Executor, name string, scope s
 	// ignore error since stopped service returns exit code 3
 	stdout, _, _ := systemd.Execute(ctx, e)
 
-	lines := strings.Split(string(stdout), "\n")
-	for _, line := range lines {
+	lines := strings.SplitSeq(string(stdout), "\n")
+	for line := range lines {
 		words := strings.Split(strings.TrimSpace(line), " ")
 		if len(words) >= 2 {
 			switch words[0] {

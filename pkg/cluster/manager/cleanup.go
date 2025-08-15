@@ -218,13 +218,13 @@ func (c *cleanupFiles) instanceCleanupFiles(topo spec.Topology) {
 			tlsPath := set.NewStringSet()
 
 			if c.cleanupData && len(ins.DataDir()) > 0 {
-				for _, dataDir := range strings.Split(ins.DataDir(), ",") {
+				for dataDir := range strings.SplitSeq(ins.DataDir(), ",") {
 					dataPaths.Insert(path.Join(dataDir, "*"))
 				}
 			}
 
 			if c.cleanupLog && len(ins.LogDir()) > 0 {
-				for _, logDir := range strings.Split(ins.LogDir(), ",") {
+				for logDir := range strings.SplitSeq(ins.LogDir(), ",") {
 					// need to judge the audit log of tidb server
 					if ins.ComponentName() == spec.ComponentTiDB {
 						logPaths.Insert(path.Join(logDir, "tidb?[!audit]*.log"))
@@ -236,7 +236,7 @@ func (c *cleanupFiles) instanceCleanupFiles(topo spec.Topology) {
 			}
 
 			if c.cleanupAuditLog && ins.ComponentName() == spec.ComponentTiDB {
-				for _, logDir := range strings.Split(ins.LogDir(), ",") {
+				for logDir := range strings.SplitSeq(ins.LogDir(), ",") {
 					logPaths.Insert(path.Join(logDir, "tidb-audit*.log"))
 				}
 			}

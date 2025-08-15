@@ -54,7 +54,7 @@ func TestOutputAuditLog(t *testing.T) {
 	resetDir()
 
 	var g errgroup.Group
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		g.Go(func() error { return OutputAuditLog(dir, "", []byte("audit log")) })
 	}
 	err := g.Wait()

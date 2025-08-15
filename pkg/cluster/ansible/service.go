@@ -61,9 +61,9 @@ func parseDirs(ctx context.Context, user string, ins spec.InstanceSpec, sshTimeo
 	case spec.ComponentTiDB:
 		// parse dirs
 		newIns := ins.(*spec.TiDBSpec)
-		for _, line := range strings.Split(stdout, "\n") {
-			if strings.HasPrefix(line, "DEPLOY_DIR=") {
-				newIns.DeployDir = strings.TrimPrefix(line, "DEPLOY_DIR=")
+		for line := range strings.SplitSeq(stdout, "\n") {
+			if after, ok := strings.CutPrefix(line, "DEPLOY_DIR="); ok {
+				newIns.DeployDir = after
 				continue
 			}
 			if strings.Contains(line, "--log-file=") {
@@ -78,7 +78,7 @@ func parseDirs(ctx context.Context, user string, ins spec.InstanceSpec, sshTimeo
 	case spec.ComponentTiKV:
 		// parse dirs
 		newIns := ins.(*spec.TiKVSpec)
-		for _, line := range strings.Split(stdout, "\n") {
+		for line := range strings.SplitSeq(stdout, "\n") {
 			if strings.HasPrefix(line, "cd \"") {
 				newIns.DeployDir = strings.Trim(strings.Split(line, " ")[1], "\"")
 				continue
@@ -100,9 +100,9 @@ func parseDirs(ctx context.Context, user string, ins spec.InstanceSpec, sshTimeo
 	case spec.ComponentPD:
 		// parse dirs
 		newIns := ins.(*spec.PDSpec)
-		for _, line := range strings.Split(stdout, "\n") {
-			if strings.HasPrefix(line, "DEPLOY_DIR=") {
-				newIns.DeployDir = strings.TrimPrefix(line, "DEPLOY_DIR=")
+		for line := range strings.SplitSeq(stdout, "\n") {
+			if after, ok := strings.CutPrefix(line, "DEPLOY_DIR="); ok {
+				newIns.DeployDir = after
 				continue
 			}
 			if strings.Contains(line, "--name") {
@@ -129,7 +129,7 @@ func parseDirs(ctx context.Context, user string, ins spec.InstanceSpec, sshTimeo
 	case spec.ComponentTiFlash:
 		// parse dirs
 		newIns := ins.(*spec.TiFlashSpec)
-		for _, line := range strings.Split(stdout, "\n") {
+		for line := range strings.SplitSeq(stdout, "\n") {
 			if strings.HasPrefix(line, "cd \"") {
 				newIns.DeployDir = strings.Trim(strings.Split(line, " ")[1], "\"")
 				continue
@@ -154,9 +154,9 @@ func parseDirs(ctx context.Context, user string, ins spec.InstanceSpec, sshTimeo
 	case spec.ComponentPump:
 		// parse dirs
 		newIns := ins.(*spec.PumpSpec)
-		for _, line := range strings.Split(stdout, "\n") {
-			if strings.HasPrefix(line, "DEPLOY_DIR=") {
-				newIns.DeployDir = strings.TrimPrefix(line, "DEPLOY_DIR=")
+		for line := range strings.SplitSeq(stdout, "\n") {
+			if after, ok := strings.CutPrefix(line, "DEPLOY_DIR="); ok {
+				newIns.DeployDir = after
 				continue
 			}
 			if strings.Contains(line, "--data-dir") {
@@ -177,9 +177,9 @@ func parseDirs(ctx context.Context, user string, ins spec.InstanceSpec, sshTimeo
 	case spec.ComponentDrainer:
 		// parse dirs
 		newIns := ins.(*spec.DrainerSpec)
-		for _, line := range strings.Split(stdout, "\n") {
-			if strings.HasPrefix(line, "DEPLOY_DIR=") {
-				newIns.DeployDir = strings.TrimPrefix(line, "DEPLOY_DIR=")
+		for line := range strings.SplitSeq(stdout, "\n") {
+			if after, ok := strings.CutPrefix(line, "DEPLOY_DIR="); ok {
+				newIns.DeployDir = after
 				continue
 			}
 			if strings.Contains(line, "--data-dir") {
@@ -206,9 +206,9 @@ func parseDirs(ctx context.Context, user string, ins spec.InstanceSpec, sshTimeo
 	case spec.ComponentPrometheus:
 		// parse dirs
 		newIns := ins.(*spec.PrometheusSpec)
-		for _, line := range strings.Split(stdout, "\n") {
-			if strings.HasPrefix(line, "DEPLOY_DIR=") {
-				newIns.DeployDir = strings.TrimPrefix(line, "DEPLOY_DIR=")
+		for line := range strings.SplitSeq(stdout, "\n") {
+			if after, ok := strings.CutPrefix(line, "DEPLOY_DIR="); ok {
+				newIns.DeployDir = after
 				continue
 			}
 			if strings.Contains(line, "exec > >(tee -i -a") {
@@ -229,9 +229,9 @@ func parseDirs(ctx context.Context, user string, ins spec.InstanceSpec, sshTimeo
 	case spec.ComponentAlertmanager:
 		// parse dirs
 		newIns := ins.(*spec.AlertmanagerSpec)
-		for _, line := range strings.Split(stdout, "\n") {
-			if strings.HasPrefix(line, "DEPLOY_DIR=") {
-				newIns.DeployDir = strings.TrimPrefix(line, "DEPLOY_DIR=")
+		for line := range strings.SplitSeq(stdout, "\n") {
+			if after, ok := strings.CutPrefix(line, "DEPLOY_DIR="); ok {
+				newIns.DeployDir = after
 				continue
 			}
 			if strings.Contains(line, "exec > >(tee -i -a") {
@@ -252,9 +252,9 @@ func parseDirs(ctx context.Context, user string, ins spec.InstanceSpec, sshTimeo
 	case spec.ComponentGrafana:
 		// parse dirs
 		newIns := ins.(*spec.GrafanaSpec)
-		for _, line := range strings.Split(stdout, "\n") {
-			if strings.HasPrefix(line, "DEPLOY_DIR=") {
-				newIns.DeployDir = strings.TrimPrefix(line, "DEPLOY_DIR=")
+		for line := range strings.SplitSeq(stdout, "\n") {
+			if after, ok := strings.CutPrefix(line, "DEPLOY_DIR="); ok {
+				newIns.DeployDir = after
 				continue
 			}
 		}
