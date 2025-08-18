@@ -148,14 +148,7 @@ func (inst *TiCIInstance) Component() string {
 
 // LogFile implements Process interface
 func (inst *TiCIInstance) LogFile() string {
-	switch inst.role {
-	case TiCIRoleMeta:
-		return filepath.Join(inst.Dir, "tici-meta.log")
-	case TiCIRoleWorker:
-		return filepath.Join(inst.Dir, "tici-worker.log")
-	default:
-		return filepath.Join(inst.Dir, "tici.log")
-	}
+	return fmt.Sprintf("%s.log", inst.Component())
 }
 
 // Addr returns the address for connecting to the TiCI instance.
