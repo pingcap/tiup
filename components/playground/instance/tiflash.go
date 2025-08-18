@@ -92,10 +92,10 @@ func (inst *TiFlashInstance) Addr() string {
 	return utils.JoinHostPort(AdvertiseHost(inst.Host), inst.servicePort)
 }
 
-// StatusAddrs implements Instance interface.
-func (inst *TiFlashInstance) StatusAddrs() (addrs []string) {
-	addrs = append(addrs, utils.JoinHostPort(inst.Host, inst.StatusPort))
-	addrs = append(addrs, utils.JoinHostPort(inst.Host, inst.proxyStatusPort))
+// MetricAddr implements Instance interface.
+func (inst *TiFlashInstance) MetricAddr() (r MetricAddr) {
+	r.Targets = append(r.Targets, utils.JoinHostPort(inst.Host, inst.StatusPort))
+	r.Targets = append(r.Targets, utils.JoinHostPort(inst.Host, inst.proxyStatusPort))
 	return
 }
 
