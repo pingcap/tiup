@@ -58,6 +58,7 @@ func NewTiCIWorkerInstance(shOpt SharedOptions, binPath string, dir, host, confi
 func NewTiCIInstanceWithRole(shOpt SharedOptions, binPath string, dir, host, configPath string, id int, pds []*PDInstance, dbs []*TiDBInstance, role TiCIRole) *TiCIInstance {
 	var defaultPort, defaultStatusPort int
 	var configFilePath string
+	var binFilePath string
 
 	switch role {
 	case TiCIRoleMeta:
@@ -67,6 +68,9 @@ func NewTiCIInstanceWithRole(shOpt SharedOptions, binPath string, dir, host, con
 		if configPath != "" {
 			configFilePath = filepath.Join(configPath, "test-meta.toml")
 		}
+		if binPath != "" {
+			binFilePath = filepath.Join(binPath, "meta_service_server")
+		}
 	case TiCIRoleWorker:
 		// WorkerNode default port
 		defaultPort = 8510
@@ -74,13 +78,16 @@ func NewTiCIInstanceWithRole(shOpt SharedOptions, binPath string, dir, host, con
 		if configPath != "" {
 			configFilePath = filepath.Join(configPath, "test-worker.toml")
 		}
+		if binPath != "" {
+			binFilePath = filepath.Join(binPath, "worker_node_server")
+		}
 	default:
 		panic("invalid TiCI role")
 	}
 
 	tici := &TiCIInstance{
 		instance: instance{
-			BinPath:    binPath,
+			BinPath:    binFilePath,
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
@@ -141,14 +148,7 @@ func (inst *TiCIInstance) Component() string {
 
 // LogFile implements Process interface
 func (inst *TiCIInstance) LogFile() string {
-	switch inst.role {
-	case TiCIRoleMeta:
-		return filepath.Join(inst.Dir, "tici-meta.log")
-	case TiCIRoleWorker:
-		return filepath.Join(inst.Dir, "tici-worker.log")
-	default:
-		return filepath.Join(inst.Dir, "tici.log")
-	}
+	return fmt.Sprintf("%s.log", inst.Component())
 }
 
 // Addr returns the address for connecting to the TiCI instance.
