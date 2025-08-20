@@ -12,7 +12,7 @@ func TestMerge(t *testing.T) {
 	yamlData := []byte(`
 server_configs:
   tidb:
-    performance.feedback-probability: 0.0
+    performance.feedback-probability: 12.0
 `)
 
 	topo := new(Specification)
@@ -22,13 +22,13 @@ server_configs:
 
 	yamlData, err = yaml.Marshal(topo)
 	require.NoError(t, err)
-	decimal := bytes.Contains(yamlData, []byte("0.0"))
+	decimal := bytes.Contains(yamlData, []byte("12"))
 	require.True(t, decimal)
 
 	get, err := Merge2Toml("tidb", topo.ServerConfigs.TiDB, nil)
 	require.NoError(t, err)
 
-	decimal = bytes.Contains(get, []byte("0.0"))
+	decimal = bytes.Contains(get, []byte("12.0"))
 	require.True(t, decimal)
 }
 
