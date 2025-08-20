@@ -13,8 +13,9 @@ package utils
 import (
 	"testing"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v2"
 )
 
 type sampleDataMeta struct {

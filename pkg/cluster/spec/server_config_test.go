@@ -5,14 +5,14 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 func TestMerge(t *testing.T) {
 	yamlData := []byte(`
 server_configs:
   tidb:
-    performance.feedback-probability: 0.0
+    performance.feedback-probability: 12.0
 `)
 
 	topo := new(Specification)
@@ -22,13 +22,13 @@ server_configs:
 
 	yamlData, err = yaml.Marshal(topo)
 	require.NoError(t, err)
-	decimal := bytes.Contains(yamlData, []byte("0.0"))
+	decimal := bytes.Contains(yamlData, []byte("12"))
 	require.True(t, decimal)
 
 	get, err := Merge2Toml("tidb", topo.ServerConfigs.TiDB, nil)
 	require.NoError(t, err)
 
-	decimal = bytes.Contains(get, []byte("0.0"))
+	decimal = bytes.Contains(get, []byte("12.0"))
 	require.True(t, decimal)
 }
 
@@ -129,15 +129,15 @@ func TestFoldMap(t *testing.T) {
 
 func TestEncodeRemoteCfg(t *testing.T) {
 	yamlData := []byte(`remote_write:
-- queue_config:
-    batch_send_deadline: 5m
-    capacity: 100000
-    max_samples_per_send: 10000
-    max_shards: 300
-  url: http://127.0.0.1:/8086/write
+    - queue_config:
+        batch_send_deadline: 5m
+        capacity: 100000
+        max_samples_per_send: 10000
+        max_shards: 300
+      url: http://127.0.0.1:/8086/write
 remote_read:
-- url: http://127.0.0.1:/8086/read
-- url: http://127.0.0.1:/8087/read
+    - url: http://127.0.0.1:/8086/read
+    - url: http://127.0.0.1:/8087/read
 `)
 
 	bs, err := encodeRemoteCfg2Yaml(Remote{

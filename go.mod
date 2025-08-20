@@ -4,8 +4,6 @@ go 1.24
 
 toolchain go1.24.1
 
-replace gopkg.in/yaml.v2 => github.com/july2993/yaml v0.0.0-20200423062752-adcfa5abe2ed
-
 require (
 	github.com/AstroProfundis/sysinfo v0.0.0-20240112160158-ed54df16e9ce
 	github.com/BurntSushi/toml v1.5.0
@@ -62,7 +60,6 @@ require (
 	google.golang.org/grpc v1.67.3
 	google.golang.org/protobuf v1.36.1
 	gopkg.in/ini.v1 v1.67.0
-	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 	software.sslmate.com/src/go-pkcs12 v0.2.0
 )
