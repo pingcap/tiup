@@ -77,7 +77,6 @@ func data(topo *spec.Specification, tcpProxy *proxy.TCPProxy) error {
 	errg, _ := errgroup.WithContext(context.Background())
 
 	for _, spec := range topo.TiDBServers {
-		spec := spec
 		endpoint := utils.JoinHostPort(spec.Host, spec.Port)
 		errg.Go(func() error {
 			if tcpProxy != nil {
@@ -112,7 +111,6 @@ func writable(topo *spec.Specification, tcpProxy *proxy.TCPProxy) error {
 	errg, _ := errgroup.WithContext(context.Background())
 
 	for _, spec := range topo.TiDBServers {
-		spec := spec
 		endpoint := utils.JoinHostPort(spec.Host, spec.Port)
 		errg.Go(func() error {
 			if tcpProxy != nil {

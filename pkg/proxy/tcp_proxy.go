@@ -153,7 +153,6 @@ func (p *TCPProxy) forward(localConn io.ReadWriter, endpoints []string) {
 	var remoteConn net.Conn
 OUTER_LOOP:
 	for _, endpoint := range endpoints {
-		endpoint := endpoint
 		errC := make(chan error, 1)
 		go func() {
 			var err error

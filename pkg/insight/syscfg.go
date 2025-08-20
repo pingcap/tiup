@@ -61,7 +61,7 @@ func collectSecLimit() []SecLimitField {
 		return result
 	}
 
-	for _, line := range strings.Split(string(data), "\n") {
+	for line := range strings.SplitSeq(string(data), "\n") {
 		line = strings.TrimSpace(line)
 		if !strings.HasPrefix(line, "#") {
 			fields := strings.Fields(line)

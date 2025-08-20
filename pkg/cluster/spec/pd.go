@@ -178,7 +178,6 @@ func (c *PDComponent) SetVersion(version string) {
 func (c *PDComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.PDServers))
 	for _, s := range c.Topology.PDServers {
-		s := s
 		ins = append(ins, &PDInstance{
 			Name: s.Name,
 			BaseInstance: BaseInstance{

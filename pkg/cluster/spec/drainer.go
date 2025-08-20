@@ -153,7 +153,6 @@ func (c *DrainerComponent) SetVersion(version string) {
 func (c *DrainerComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.Drainers))
 	for _, s := range c.Topology.Drainers {
-		s := s
 		ins = append(ins, &DrainerInstance{BaseInstance{
 			InstanceSpec: s,
 			Name:         c.Name(),

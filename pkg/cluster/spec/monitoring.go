@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -290,11 +291,8 @@ func (i *MonitorInstance) InitConfig(
 
 	// Check if agent mode is enabled in additional arguments
 	if !cfg.EnablePromAgentMode {
-		for _, arg := range spec.AdditionalArgs {
-			if arg == "--enable-feature=agent" {
-				cfg.EnablePromAgentMode = true
-				break
-			}
+		if slices.Contains(spec.AdditionalArgs, "--enable-feature=agent") {
+			cfg.EnablePromAgentMode = true
 		}
 	}
 

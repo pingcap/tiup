@@ -21,7 +21,7 @@ func ExampleSingleBar() {
 
 	go func() {
 		time.Sleep(time.Second)
-		for i := 0; i < n; i++ {
+		for i := range n {
 			b.UpdateDisplay(&progress.DisplayProps{
 				Prefix: "Prefix" + strconv.Itoa(i),
 				Suffix: "Suffix" + strconv.Itoa(i),
@@ -55,7 +55,7 @@ func ExampleSingleBar_err() {
 
 	go func() {
 		time.Sleep(time.Second)
-		for i := 0; i < n; i++ {
+		for i := range n {
 			b.UpdateDisplay(&progress.DisplayProps{
 				Prefix: "Prefix" + strconv.Itoa(i),
 				Suffix: "Suffix" + strconv.Itoa(i),

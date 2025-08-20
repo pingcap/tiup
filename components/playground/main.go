@@ -430,7 +430,7 @@ func tryConnect(addr string, timeoutSec int) error {
 // checkDB check if the addr is connectable by getting a connection from sql.DB. timeout <=0 means no timeout
 func checkDB(dbAddr string, timeout int) bool {
 	if timeout > 0 {
-		for i := 0; i < timeout; i++ {
+		for range timeout {
 			if tryConnect(dbAddr, timeout) == nil {
 				return true
 			}
@@ -449,7 +449,7 @@ func checkDB(dbAddr string, timeout int) bool {
 // checkStoreStatus uses pd client to check whether a store is up. timeout <= 0 means no timeout
 func checkStoreStatus(pdClient *api.PDClient, storeAddr string, timeout int) bool {
 	if timeout > 0 {
-		for i := 0; i < timeout; i++ {
+		for range timeout {
 			if up, err := pdClient.IsUp(storeAddr); err == nil && up {
 				return true
 			}
@@ -467,7 +467,7 @@ func checkStoreStatus(pdClient *api.PDClient, storeAddr string, timeout int) boo
 
 func checkDMMasterStatus(dmMasterClient *api.DMMasterClient, dmMasterAddr string, timeout int) bool {
 	if timeout > 0 {
-		for i := 0; i < timeout; i++ {
+		for range timeout {
 			if _, isActive, _, err := dmMasterClient.GetMaster(dmMasterAddr); err == nil && isActive {
 				return true
 			}

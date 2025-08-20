@@ -113,7 +113,7 @@ type DirEntry struct {
 }
 
 func appendEntries(name string, topo Topology, inst Instance, dirAccessor DirAccessor, targets []DirEntry) []DirEntry {
-	for _, dir := range strings.Split(fixDir(topo)(dirAccessor.accessor(inst, topo)), ",") {
+	for dir := range strings.SplitSeq(fixDir(topo)(dirAccessor.accessor(inst, topo)), ",") {
 		targets = append(targets, DirEntry{
 			clusterName: name,
 			dirKind:     dirAccessor.dirKind,
@@ -769,7 +769,7 @@ func (s *Specification) dirConflictsDetect() error {
 
 				// `yaml:"data_dir,omitempty"`
 				tp := strings.Split(compSpec.Type().Field(j).Tag.Get("yaml"), ",")[0]
-				for _, dir := range strings.Split(compSpec.Field(j).String(), ",") {
+				for dir := range strings.SplitSeq(compSpec.Field(j).String(), ",") {
 					dir = strings.TrimSpace(dir)
 					item := usedDir{
 						host: host,
@@ -861,7 +861,7 @@ func (s *Specification) CountDir(targetHost, dirPrefix string) int {
 						addHostDir(host, deployDir, dir)
 						continue
 					}
-					for _, dataDir := range strings.Split(dir, ",") {
+					for dataDir := range strings.SplitSeq(dir, ",") {
 						dataDir = strings.TrimSpace(dataDir)
 						if dataDir != "" {
 							addHostDir(host, deployDir, dataDir)
