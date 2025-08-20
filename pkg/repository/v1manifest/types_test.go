@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/alecthomas/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestComponentList(t *testing.T) {
@@ -30,16 +30,16 @@ func TestComponentList(t *testing.T) {
 	}
 
 	list := manifest.ComponentList()
-	assert.Equal(t, len(list), 1)
+	require.Equal(t, len(list), 1)
 	_, ok := list["comp1"]
-	assert.True(t, ok)
+	require.True(t, ok)
 
 	list = manifest.ComponentListWithYanked()
-	assert.Equal(t, len(list), 2)
+	require.Equal(t, len(list), 2)
 	_, ok = list["comp1"]
-	assert.True(t, ok)
+	require.True(t, ok)
 	_, ok = list["comp2"]
-	assert.True(t, ok)
+	require.True(t, ok)
 }
 
 func TestVersionList(t *testing.T) {
@@ -57,21 +57,21 @@ func TestVersionList(t *testing.T) {
 	}
 
 	versions := manifest.VersionList("linux/amd64")
-	assert.Equal(t, len(versions), 1)
+	require.Equal(t, len(versions), 1)
 	_, ok := versions["v1.0.0"]
-	assert.True(t, ok)
+	require.True(t, ok)
 
 	versions = manifest.VersionListWithYanked("linux/amd64")
-	assert.Equal(t, len(versions), 2)
+	require.Equal(t, len(versions), 2)
 	_, ok = versions["v1.0.0"]
-	assert.True(t, ok)
+	require.True(t, ok)
 	_, ok = versions["v1.1.1"]
-	assert.True(t, ok)
+	require.True(t, ok)
 
 	versions = manifest.VersionList("windows/amd64")
-	assert.Equal(t, len(versions), 1)
+	require.Equal(t, len(versions), 1)
 	_, ok = versions["v1.0.0"]
-	assert.True(t, ok)
+	require.True(t, ok)
 
 	manifest = &Component{
 		Platforms: map[string]map[string]VersionItem{
@@ -83,7 +83,7 @@ func TestVersionList(t *testing.T) {
 	}
 
 	versions = manifest.VersionList("windows/amd64")
-	assert.Equal(t, len(versions), 0)
+	require.Equal(t, len(versions), 0)
 }
 
 func TestLoadManifestError(t *testing.T) {
@@ -92,30 +92,30 @@ func TestLoadManifestError(t *testing.T) {
 		err:      fmt.Errorf("dummy error"),
 	}
 	// identical errors are equal
-	assert.True(t, errors.Is(err0, err0))
-	assert.True(t, errors.Is(ErrLoadManifest, ErrLoadManifest))
-	assert.True(t, errors.Is(ErrLoadManifest, &LoadManifestError{}))
-	assert.True(t, errors.Is(&LoadManifestError{}, ErrLoadManifest))
+	require.True(t, errors.Is(err0, err0))
+	require.True(t, errors.Is(ErrLoadManifest, ErrLoadManifest))
+	require.True(t, errors.Is(ErrLoadManifest, &LoadManifestError{}))
+	require.True(t, errors.Is(&LoadManifestError{}, ErrLoadManifest))
 	// not equal for different error types
-	assert.False(t, errors.Is(err0, errors.New("")))
+	require.False(t, errors.Is(err0, errors.New("")))
 	// default Value matches any error
-	assert.True(t, errors.Is(err0, ErrLoadManifest))
+	require.True(t, errors.Is(err0, ErrLoadManifest))
 	// error with values are not matching default ones
-	assert.False(t, errors.Is(ErrLoadManifest, err0))
+	require.False(t, errors.Is(ErrLoadManifest, err0))
 
 	err1 := &LoadManifestError{
 		manifest: "root.json",
 		err:      fmt.Errorf("dummy error 2"),
 	}
-	assert.True(t, errors.Is(err1, ErrLoadManifest))
+	require.True(t, errors.Is(err1, ErrLoadManifest))
 	// errors with different errors are different
-	assert.False(t, errors.Is(err0, err1))
-	assert.False(t, errors.Is(err1, err0))
+	require.False(t, errors.Is(err0, err1))
+	require.False(t, errors.Is(err1, err0))
 
 	err2 := &LoadManifestError{
 		manifest: "root.json",
 	}
 	// nil errors can be match with any error, but not vise vera
-	assert.True(t, errors.Is(err1, err2))
-	assert.False(t, errors.Is(err2, err1))
+	require.True(t, errors.Is(err1, err2))
+	require.False(t, errors.Is(err2, err1))
 }

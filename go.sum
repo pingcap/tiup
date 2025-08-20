@@ -56,14 +56,8 @@ github.com/VividCortex/ewma v1.2.0 h1:f58SaIzcDXrSy3kWaHNvuJgJ3Nmz59Zji6XoJR/q1o
 github.com/VividCortex/ewma v1.2.0/go.mod h1:nz4BbCtbLyFDeC9SUHbtcT5644juEuWfUAUnGx7j5l4=
 github.com/VoltDB/voltdb-client-go v1.0.8 h1:Xhf4LREQumXaRSUixMt1eWea6+0dz/Yo9mkqyEULbj8=
 github.com/VoltDB/voltdb-client-go v1.0.8/go.mod h1:mMhb5zwkT46Ef3NvkFqt+kX0j+ltQ2Sdqj9+ICq+Yto=
-github.com/alecthomas/assert v1.0.0 h1:3XmGh/PSuLzDbK3W2gUbRXwgW5lqPkuqvRgeQ30FI5o=
-github.com/alecthomas/assert v1.0.0/go.mod h1:va/d2JC+M7F6s+80kl/R3G7FUiW6JzUO+hPhLyJ36ZY=
 github.com/alecthomas/chroma v0.9.4 h1:YL7sOAE3p8HS96T9km7RgvmsZIctqbK1qJ0b7hzed44=
 github.com/alecthomas/chroma v0.9.4/go.mod h1:jtJATyUxlIORhUOFNA9NZDWGAQ8wpxQQqNSB4rjA/1s=
-github.com/alecthomas/colour v0.1.0 h1:nOE9rJm6dsZ66RGWYSFrXw461ZIt9A6+nHgL7FRrDUk=
-github.com/alecthomas/colour v0.1.0/go.mod h1:QO9JBoKquHd+jz9nshCh40fOfO+JzsoXy8qTHF68zU0=
-github.com/alecthomas/repr v0.2.0 h1:HAzS41CIzNW5syS8Mf9UwXhNH1J9aix/BvDRf1Ml2Yk=
-github.com/alecthomas/repr v0.2.0/go.mod h1:Fr0507jx4eOXV7AlPV6AVZLYrLIuIeSOWtW57eE/O/4=
 github.com/alexbrainman/odbc v0.0.0-20210605012845-39f8520b0d5f h1:qJp6jWdG+PBNCDtIwRpspahMaZ3hlfde/25ExBORKso=
 github.com/alexbrainman/odbc v0.0.0-20210605012845-39f8520b0d5f/go.mod h1:c5eyz5amZqTKvY3ipqerFO/74a/8CYmXOahSr40c+Ww=
 github.com/amsokol/ignite-go-client v0.12.2 h1:q4Mr+UUiKVnR7ykjR1YARVS5jp+ZU6ekCIs0V4WgFDo=
