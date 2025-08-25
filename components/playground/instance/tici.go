@@ -148,7 +148,7 @@ func (inst *TiCIInstance) Component() string {
 
 // LogFile implements Process interface
 func (inst *TiCIInstance) LogFile() string {
-	return fmt.Sprintf("%s.log", inst.Component())
+	return filepath.Join(inst.Dir, fmt.Sprintf("%s.log", inst.Component()))
 }
 
 // Addr returns the address for connecting to the TiCI instance.
