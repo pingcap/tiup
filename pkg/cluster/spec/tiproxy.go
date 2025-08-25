@@ -328,19 +328,19 @@ func (i *TiProxyInstance) setTLSConfig(ctx context.Context, enableTLS bool, conf
 	return configs, nil
 }
 
-var _ RollingUpdateInstance = &TiProxyInstance{}
-
 // GetAddr return the address of this TiProxy instance
 func (i *TiProxyInstance) GetAddr() string {
 	return utils.JoinHostPort(i.GetHost(), i.GetPort())
 }
 
+var _ RollingUpdateInstance = &TiProxyInstance{}
+
 // PreRestart implements RollingUpdateInstance interface.
-func (i *TiProxyInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config) error {
+func (i *TiProxyInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config, updcfg *UpdateConfig) error {
 	return nil
 }
 
 // PostRestart implements RollingUpdateInstance interface.
-func (i *TiProxyInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tls.Config) error {
+func (i *TiProxyInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tls.Config, updcfg *UpdateConfig) error {
 	return nil
 }

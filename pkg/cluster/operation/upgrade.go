@@ -58,6 +58,11 @@ func Upgrade(
 	noAgentHosts := set.NewStringSet()
 	uniqueHosts := set.NewStringSet()
 
+	updcfg := &spec.UpdateConfig{
+		CurrentVersion: currentVersion,
+		TargetVersion:  targetVersion,
+	}
+
 	var cdcOpenAPIClient *api.CDCOpenAPIClient // client for cdc openapi, only used when upgrade cdc
 
 	for _, component := range components {
@@ -153,7 +158,7 @@ func Upgrade(
 					logger.Debugf("rolling upgrade cdc not supported, upgrade by force, "+
 						"addr: %s, version: %s", address, currentVersion)
 					options.Force = true
-					if err := upgradeInstance(ctx, topo, instance, options, tlsCfg); err != nil {
+					if err := upgradeInstance(ctx, topo, instance, options, tlsCfg, updcfg); err != nil {
 						options.Force = false
 						return err
 					}
@@ -171,7 +176,7 @@ func Upgrade(
 					// After the previous status check, we know that the cdc instance should be `Up`, but know it cannot be found by address
 					// perhaps since the specified version of cdc does not support open api, or the instance just crashed right away
 					logger.Debugf("upgrade cdc, cannot found the capture by address: %s", address)
-					if err := upgradeInstance(ctx, topo, instance, options, tlsCfg); err != nil {
+					if err := upgradeInstance(ctx, topo, instance, options, tlsCfg, updcfg); err != nil {
 						return err
 					}
 					continue
@@ -186,7 +191,7 @@ func Upgrade(
 				// do nothing, kept for future usage with other components
 			}
 
-			if err := upgradeInstance(ctx, topo, instance, options, tlsCfg); err != nil {
+			if err := upgradeInstance(ctx, topo, instance, options, tlsCfg, updcfg); err != nil {
 				return err
 			}
 		}
@@ -194,7 +199,7 @@ func Upgrade(
 		// process deferred instances
 		for _, instance := range deferInstances {
 			logger.Debugf("Upgrading deferred instance %s...", instance.ID())
-			if err := upgradeInstance(ctx, topo, instance, options, tlsCfg); err != nil {
+			if err := upgradeInstance(ctx, topo, instance, options, tlsCfg, updcfg); err != nil {
 				return err
 			}
 		}
@@ -242,6 +247,7 @@ func upgradeInstance(
 	instance spec.Instance,
 	options Options,
 	tlsCfg *tls.Config,
+	updcfg *spec.UpdateConfig,
 ) (err error) {
 	// insert checkpoint
 	point := checkpoint.Acquire(ctx, upgradePoint, map[string]any{"instance": instance.ID()})
@@ -271,7 +277,7 @@ func upgradeInstance(
 	}
 
 	if isRollingInstance {
-		err := rollingInstance.PreRestart(ctx, topo, int(options.APITimeout), tlsCfg)
+		err := rollingInstance.PreRestart(ctx, topo, int(options.APITimeout), tlsCfg, updcfg)
 		if err != nil && !options.Force {
 			return err
 		}
@@ -282,7 +288,7 @@ func upgradeInstance(
 	}
 
 	if isRollingInstance {
-		err := rollingInstance.PostRestart(ctx, topo, tlsCfg)
+		err := rollingInstance.PostRestart(ctx, topo, tlsCfg, updcfg)
 		if err != nil && !options.Force {
 			return err
 		}

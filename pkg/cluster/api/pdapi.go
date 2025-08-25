@@ -141,6 +141,7 @@ var (
 	pdRemoveTombstone    = "pd/api/v1/stores/remove-tombstone"
 	pdRegionsCheckURI    = "pd/api/v1/regions/check"
 	pdServicePrimaryURI  = "pd/api/v2/ms/primary"
+	pdReadyURI           = "pd/api/v2/ready"
 	tsoHealthPrefix      = "tso/api/v1/health"
 )
 
@@ -1132,6 +1133,20 @@ func (tc *TSOClient) CheckHealth() error {
 	}
 
 	return nil
+}
+
+// CheckReady use the new api to test if PD has loaded all regions.
+func (pc *PDClient) CheckReady() error {
+	endpoints := pc.getEndpoints(pdReadyURI)
+
+	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
+		body, err := pc.httpClient.Get(pc.ctx, endpoint)
+		if err != nil {
+			return body, err
+		}
+		return body, nil
+	})
+	return err
 }
 
 // SchedulingClient is an HTTP client of the scheduling server

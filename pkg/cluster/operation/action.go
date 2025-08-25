@@ -142,7 +142,7 @@ func Start(
 					// checkpoint must be in a new context
 					nctx := checkpoint.NewContext(ctx)
 					errg.Go(func() error {
-						err := rIns.PostRestart(nctx, cluster, tlsCfg)
+						err := rIns.PostRestart(nctx, cluster, tlsCfg, nil)
 						if err != nil && !options.Force {
 							return err
 						}
@@ -602,7 +602,7 @@ func StopComponent(ctx context.Context,
 				if !ok {
 					panic("cdc should support rolling upgrade, but not")
 				}
-				err := cdc.PreRestart(nctx, topo, int(options.APITimeout), tlsCfg)
+				err := cdc.PreRestart(nctx, topo, int(options.APITimeout), tlsCfg, nil)
 				if err != nil {
 					// this should never hit, since all errors swallowed to trigger hard stop.
 					return err
@@ -623,7 +623,7 @@ func StopComponent(ctx context.Context,
 			if evictLeader {
 				rIns, ok := ins.(spec.RollingUpdateInstance)
 				if ok {
-					err := rIns.PreRestart(nctx, topo, int(options.APITimeout), tlsCfg)
+					err := rIns.PreRestart(nctx, topo, int(options.APITimeout), tlsCfg, nil)
 					if err != nil {
 						return err
 					}
