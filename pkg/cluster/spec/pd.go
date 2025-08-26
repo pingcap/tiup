@@ -451,7 +451,7 @@ func (i *PDInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutSe
 			return err
 		}
 
-		var oldPriority int32 = 0
+		var oldPriority int32
 		if m := slices.IndexFunc(members.Members, func(j *pdpb.Member) bool {
 			return i.Name == j.Name
 		}); m != -1 && members.Members[m].LeaderPriority != 0 {
