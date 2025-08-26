@@ -39,6 +39,9 @@ var (
 	increaseLimitPoint = checkpoint.Register()
 )
 
+// UpgradeWaitFunc is the function that is called after an instance has been upgraded
+type UpgradeWaitFunc func()
+
 // Upgrade the cluster. (actually, it's rolling restart)
 func Upgrade(
 	ctx context.Context,
@@ -47,6 +50,7 @@ func Upgrade(
 	tlsCfg *tls.Config,
 	currentVersion string,
 	targetVersion string,
+	waitFunc UpgradeWaitFunc,
 ) error {
 	roleFilter := set.NewStringSet(options.Roles...)
 	nodeFilter := set.NewStringSet(options.Nodes...)
@@ -194,6 +198,8 @@ func Upgrade(
 			if err := upgradeInstance(ctx, topo, instance, options, tlsCfg, updcfg); err != nil {
 				return err
 			}
+
+			waitFunc()
 		}
 
 		// process deferred instances
