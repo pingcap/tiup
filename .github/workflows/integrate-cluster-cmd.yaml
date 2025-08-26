@@ -121,9 +121,9 @@ jobs:
           chmod +x codecov
           ./codecov -F cluster -s ./tests/tiup-cluster/cover -f '*.out'
 
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-        if: ${{ failure() }}
-        with:
-          limit-access-to-actor: true
+#      - name: Setup tmate session
+#        uses: mxschmitt/action-tmate@v3
+#        if: ${{ failure() }}
+#        with:
+#          limit-access-to-actor: true
 
