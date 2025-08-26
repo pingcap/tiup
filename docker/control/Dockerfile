@@ -5,7 +5,6 @@ COPY . /tiup-cluster/
 
 # tiup-cluster dependencies
  RUN apt-get -y -q update && \
-     apt-get -y -q install software-properties-common && \
      apt-get install -qqy \
          dos2unix \
          default-mysql-client \
