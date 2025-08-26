@@ -134,6 +134,7 @@ var (
 	pdLeaderURI          = "pd/api/v1/leader"
 	pdLeaderTransferURI  = "pd/api/v1/leader/transfer"
 	pdMembersURI         = "pd/api/v1/members"
+	pdMemberPriorityURI  = "pd/api/v1/members/name/%s"
 	pdSchedulersURI      = "pd/api/v1/schedulers"
 	pdStoreURI           = "pd/api/v1/store"
 	pdStoresURI          = "pd/api/v1/stores"
@@ -1033,6 +1034,17 @@ func (pc *PDClient) GetServicePrimary(service string) (string, error) {
 		return body, json.Unmarshal(body, &primary)
 	})
 	return primary, err
+}
+
+// SetLeaderPriority sets priority config value of PD member.
+func (pc *PDClient) SetLeaderPriority(name string, value int32) error {
+	data := map[string]any{"leader-priority": value}
+	body, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	pc.l().Debugf("setting leader_priority for %s: %d", name, value)
+	return pc.updateConfig(fmt.Sprintf(pdMemberPriorityURI, name), bytes.NewBuffer(body))
 }
 
 const (
