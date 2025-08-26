@@ -19,10 +19,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/pingcap/errors"
+	"github.com/pingcap/kvproto/pkg/pdpb"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
@@ -444,8 +446,29 @@ func (i *PDInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutSe
 		return err
 	}
 	if len(tidbTopo.PDServers) > 1 && isLeader {
+		members, err := pdClient.GetMembers()
+		if err != nil {
+			return err
+		}
+
+		var oldPriority int32
+		if m := slices.IndexFunc(members.Members, func(j *pdpb.Member) bool {
+			return i.Name == j.Name
+		}); m != -1 && members.Members[m].LeaderPriority != 0 {
+			oldPriority = members.Members[m].LeaderPriority
+		}
+
+		if oldPriority != 0 {
+			if err := pdClient.SetLeaderPriority(i.Name, 0); err != nil {
+				return errors.Annotatef(err, "failed to clear PD leader priority[%d] %s", oldPriority, i.GetHost())
+			}
+		}
 		if err := pdClient.EvictPDLeader(timeoutOpt); err != nil {
 			return errors.Annotatef(err, "failed to evict PD leader %s", i.GetHost())
+		}
+
+		if err := pdClient.SetLeaderPriority(i.Name, oldPriority); err != nil {
+			return errors.Annotatef(err, "failed to recover PD leader priority[%d] %s", oldPriority, i.GetHost())
 		}
 	}
 
