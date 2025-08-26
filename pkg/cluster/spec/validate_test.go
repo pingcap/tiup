@@ -14,6 +14,7 @@
 package spec
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -23,7 +24,7 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 func TestDirectoryConflicts1(t *testing.T) {
@@ -347,7 +348,9 @@ func TestCountDir2(t *testing.T) {
 	meta := ClusterMeta{}
 	yamlFile, err := os.ReadFile(file)
 	require.NoError(t, err)
-	err = yaml.UnmarshalStrict(yamlFile, &meta)
+	decoder := yaml.NewDecoder(bytes.NewReader(yamlFile))
+	decoder.KnownFields(true)
+	err = decoder.Decode(&meta)
 	require.NoError(t, err)
 	topo := meta.Topology
 

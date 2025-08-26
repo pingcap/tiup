@@ -307,7 +307,7 @@ func ScaleInCluster(
 			// actually, it must be the pd leader at the moment, so the `PreRestart` always triggered.
 			rollingInstance, ok := instance.(spec.RollingUpdateInstance)
 			if ok {
-				if err := rollingInstance.PreRestart(ctx, cluster, int(options.APITimeout), tlsCfg); err != nil {
+				if err := rollingInstance.PreRestart(ctx, cluster, int(options.APITimeout), tlsCfg, nil); err != nil {
 					return errors.Trace(err)
 				}
 			}

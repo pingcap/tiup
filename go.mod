@@ -4,13 +4,10 @@ go 1.24
 
 toolchain go1.24.1
 
-replace gopkg.in/yaml.v2 => github.com/july2993/yaml v0.0.0-20200423062752-adcfa5abe2ed
-
 require (
 	github.com/AstroProfundis/sysinfo v0.0.0-20240112160158-ed54df16e9ce
 	github.com/BurntSushi/toml v1.5.0
 	github.com/ScaleFT/sshkeys v1.2.0
-	github.com/alecthomas/assert v1.0.0
 	github.com/appleboy/easyssh-proxy v1.3.10-0.20211209134747-6671f69d85f5
 	github.com/asaskevich/EventBus v0.0.0-20200907212545-49d423059eef
 	github.com/cavaliergopher/grab/v3 v3.0.1
@@ -32,7 +29,6 @@ require (
 	github.com/mattn/go-runewidth v0.0.16
 	github.com/minio/minio-go/v7 v7.0.52
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db
-	github.com/otiai10/copy v1.9.0
 	github.com/pingcap/errors v0.11.5-0.20250523034308-74f78ae071ee
 	github.com/pingcap/failpoint v0.0.0-20240528011301-b51a646c7c86
 	github.com/pingcap/fn v1.0.0
@@ -64,7 +60,6 @@ require (
 	google.golang.org/grpc v1.67.3
 	google.golang.org/protobuf v1.36.1
 	gopkg.in/ini.v1 v1.67.0
-	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 	software.sslmate.com/src/go-pkcs12 v0.2.0
 )
@@ -75,8 +70,6 @@ require (
 	cloud.google.com/go/spanner v1.73.0 // indirect
 	github.com/VividCortex/ewma v1.2.0 // indirect
 	github.com/alecthomas/chroma v0.9.4 // indirect
-	github.com/alecthomas/colour v0.1.0 // indirect
-	github.com/alecthomas/repr v0.2.0 // indirect
 	github.com/apache/thrift v0.17.0 // indirect
 	github.com/benbjohnson/clock v1.3.0 // indirect
 	github.com/chavacava/garif v0.1.0 // indirect

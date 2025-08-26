@@ -109,6 +109,11 @@ func PDSupportMicroservicesWithName(version string) bool {
 	return semver.Compare(version, "v8.3.0") >= 0 || strings.Contains(version, "nightly")
 }
 
+// PDSupportReadyAPI return if the given version of PD supports new ready api for checking initial region loading.
+func PDSupportReadyAPI(version string) bool {
+	return semver.Compare(version, "v8.5.2") >= 0 || strings.Contains(version, "nightly")
+}
+
 // TiCDCSupportConfigFile return if given version of TiCDC support config file
 func TiCDCSupportConfigFile(version string) bool {
 	// config support since v4.0.13, ignore v5.0.0-rc

@@ -353,11 +353,11 @@ func (i *TSOInstance) ScaleConfig(
 var _ RollingUpdateInstance = &TSOInstance{}
 
 // PreRestart implements RollingUpdateInstance interface.
-func (i *TSOInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config) error {
+func (i *TSOInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config, updcfg *UpdateConfig) error {
 	return nil
 }
 
 // PostRestart implements RollingUpdateInstance interface.
-func (i *TSOInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tls.Config) error {
+func (i *TSOInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tls.Config, updcfg *UpdateConfig) error {
 	return nil
 }

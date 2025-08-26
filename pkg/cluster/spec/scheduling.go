@@ -353,11 +353,11 @@ func (i *SchedulingInstance) ScaleConfig(
 var _ RollingUpdateInstance = &SchedulingInstance{}
 
 // PreRestart implements RollingUpdateInstance interface.
-func (i *SchedulingInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config) error {
+func (i *SchedulingInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config, updcfg *UpdateConfig) error {
 	return nil
 }
 
 // PostRestart implements RollingUpdateInstance interface.
-func (i *SchedulingInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tls.Config) error {
+func (i *SchedulingInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tls.Config, updcfg *UpdateConfig) error {
 	return nil
 }
