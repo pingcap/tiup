@@ -27,6 +27,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/tidbver"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -426,7 +427,7 @@ func (i *PDInstance) checkLeader(pdClient *api.PDClient) (bool, error) {
 }
 
 // PreRestart implements RollingUpdateInstance interface.
-func (i *PDInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config) error {
+func (i *PDInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config, updcfg *UpdateConfig) error {
 	timeoutOpt := &utils.RetryOption{
 		Timeout: time.Second * time.Duration(apiTimeoutSeconds),
 		Delay:   time.Second * 2,
@@ -452,7 +453,7 @@ func (i *PDInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutSe
 }
 
 // PostRestart implements RollingUpdateInstance interface.
-func (i *PDInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tls.Config) error {
+func (i *PDInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tls.Config, updcfg *UpdateConfig) error {
 	// When restarting the next PD, if the PD has not been fully started and has become the target of
 	// the transfer leader, this may cause the PD service to be unavailable for about 10 seconds.
 
@@ -466,6 +467,12 @@ func (i *PDInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tls
 
 	if err := utils.Retry(pdClient.CheckHealth, timeoutOpt); err != nil {
 		return errors.Annotatef(err, "failed to start PD peer %s", i.GetHost())
+	}
+
+	if updcfg.TargetVersion != "" && tidbver.PDSupportReadyAPI(updcfg.TargetVersion) {
+		if err := utils.Retry(pdClient.CheckReady, timeoutOpt); err != nil {
+			return errors.Annotatef(err, "failed to wait PD load all regions %s", i.GetHost())
+		}
 	}
 
 	return nil
