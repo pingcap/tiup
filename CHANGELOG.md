@@ -1,5 +1,32 @@
 TiUP Changelog
 
+## [1.16.3] 2025-08-26
+
+### New Features
+
+- `tiup-cluster` now supports victoria metrics (#2520, #2530, #2532, @nolouch)
+- `tiup-cluster` could specify start/stop timeout for service (#2568, @xhebox)
+- `tiup-cluster` added `--restart-timeout` for intervals between rolling restart (#2513, @dveeden)
+- `tiup-playground` supports tikv-worker and --tikv.columnar in tidb-cse mode (#2536, @breezewish)
+
+### Fixes
+
+- Fix `tiup-playground` build for 32-bit platforms (#2528, @dveeden)
+- tiup will now exclude pre-release version from version list (#2550, @xhebox)
+- `tiup-cluster` check will also verify monitoring ports (#2563, @xhebox)
+- `tiup-cluster` has better compatibility with SELinux (#2501, @dveeden)
+- Fix wrong description of `tiup-cluster --ssh` (#2380, @xhebox)
+- Fix a config typo of PD for `tiup-playground` (#2578, @rleungx)
+- Fix missing tiflash-proxy metrics for `tiup-playground` (#2587, @Lloyd-Pottiger)
+- `tiup-cluster` will check if PD has loaded all regions after restart for v8.5.2 and above (#2592, @xhebox)
+- `tiup-cluster` will clear leader_priority to prevent failure of leader eviction (#2593, @xhebox)
+
+### Improvements
+
+- `tiup-playground` added `--perf` for high performance testing usage, for tiflash only (#2535, @breezewish)
+- `tiup-clusterr` added example for tiflash and tiflash-proxy config for minimal.yaml and multi-dc.yaml (#2551, @JaySon-Huang)
+- Lots of code cleanup work (#2525, #2518, #2547, #2549, #2540, #2552, #2560, #2557, #2559, #2555, #2556, #2561, #2562, #2564, #2542, #2553, #2566, #2569, #2571, #2576, #2579, #2582, #2577, #2570, #2558, @dveeden, @xhebox, @wuhuizuo, @Lloyd-Pottiger)
+
 ## [1.16.2] 2025-04-02
 
 ### New Features
