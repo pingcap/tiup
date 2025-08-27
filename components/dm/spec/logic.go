@@ -91,7 +91,6 @@ func (c *DMMasterComponent) SetVersion(version string) {
 func (c *DMMasterComponent) Instances() []Instance {
 	ins := make([]Instance, 0)
 	for _, s := range c.Topology.Masters {
-		s := s
 		ins = append(ins, &MasterInstance{
 			Name: s.Name,
 			BaseInstance: spec.BaseInstance{
@@ -315,7 +314,6 @@ func (c *DMWorkerComponent) SetVersion(version string) {
 func (c *DMWorkerComponent) Instances() []Instance {
 	ins := make([]Instance, 0)
 	for _, s := range c.Topology.Workers {
-		s := s
 		ins = append(ins, &WorkerInstance{
 			Name: s.Name,
 			BaseInstance: spec.BaseInstance{

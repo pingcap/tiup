@@ -171,7 +171,6 @@ func (c *SchedulingComponent) SetVersion(version string) {
 func (c *SchedulingComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.SchedulingServers))
 	for _, s := range c.Topology.SchedulingServers {
-		s := s
 		ins = append(ins, &SchedulingInstance{
 			BaseInstance: BaseInstance{
 				InstanceSpec: s,

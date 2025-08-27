@@ -134,7 +134,6 @@ func (c *DashboardComponent) SetVersion(version string) {
 func (c *DashboardComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.Drainers))
 	for _, s := range c.Topology.DashboardServers {
-		s := s
 		ins = append(ins, &DashboardInstance{BaseInstance{
 			InstanceSpec: s,
 			Name:         c.Name(),

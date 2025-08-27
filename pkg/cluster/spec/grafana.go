@@ -139,7 +139,6 @@ func (c *GrafanaComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(servers))
 
 	for _, s := range servers {
-		s := s
 		ins = append(ins, &GrafanaInstance{
 			BaseInstance: BaseInstance{
 				InstanceSpec: s,

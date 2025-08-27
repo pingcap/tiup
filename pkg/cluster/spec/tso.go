@@ -171,7 +171,6 @@ func (c *TSOComponent) SetVersion(version string) {
 func (c *TSOComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.TSOServers))
 	for _, s := range c.Topology.TSOServers {
-		s := s
 		ins = append(ins, &TSOInstance{
 			BaseInstance: BaseInstance{
 				InstanceSpec: s,
