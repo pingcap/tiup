@@ -199,7 +199,9 @@ func Upgrade(
 				return err
 			}
 
-			waitFunc()
+			if waitFunc != nil {
+				waitFunc()
+			}
 		}
 
 		// process deferred instances
