@@ -109,7 +109,7 @@ func TestSaveFileWithBackup(t *testing.T) {
 	dir := t.TempDir()
 	name := "meta.yaml"
 
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		err := SaveFileWithBackup(filepath.Join(dir, name), []byte(strconv.Itoa(i)), "")
 		require.NoError(t, err)
 	}
@@ -136,7 +136,7 @@ func TestSaveFileWithBackup(t *testing.T) {
 	// test with specify backup dir
 	dir = t.TempDir()
 	backupDir := t.TempDir()
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		err := SaveFileWithBackup(filepath.Join(dir, name), []byte(strconv.Itoa(i)), backupDir)
 		require.NoError(t, err)
 	}
@@ -170,7 +170,7 @@ func TestConcurrentSaveFileWithBackup(t *testing.T) {
 	data := []byte("concurrent-save-file-with-backup")
 
 	var wg sync.WaitGroup
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()

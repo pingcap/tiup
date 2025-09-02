@@ -152,7 +152,6 @@ func (c *PumpComponent) SetVersion(version string) {
 func (c *PumpComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.PumpServers))
 	for _, s := range c.Topology.PumpServers {
-		s := s
 		ins = append(ins, &PumpInstance{BaseInstance{
 			InstanceSpec: s,
 			Name:         c.Name(),

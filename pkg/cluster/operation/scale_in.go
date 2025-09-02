@@ -307,7 +307,7 @@ func ScaleInCluster(
 			// actually, it must be the pd leader at the moment, so the `PreRestart` always triggered.
 			rollingInstance, ok := instance.(spec.RollingUpdateInstance)
 			if ok {
-				if err := rollingInstance.PreRestart(ctx, cluster, int(options.APITimeout), tlsCfg); err != nil {
+				if err := rollingInstance.PreRestart(ctx, cluster, int(options.APITimeout), tlsCfg, nil); err != nil {
 					return errors.Trace(err)
 				}
 			}
@@ -437,7 +437,6 @@ func scaleInCDC(
 	if len(instances) == len(cluster.CDCServers) {
 		g, _ := errgroup.WithContext(ctx)
 		for _, ins := range instances {
-			ins := ins
 			instCount[ins.GetManageHost()]++
 			destroyNode := instCount[ins.GetManageHost()] == 0
 			g.Go(func() error {

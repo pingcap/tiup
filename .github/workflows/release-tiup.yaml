@@ -22,6 +22,10 @@ on:
       git-ref:
         description: git ref
         required: true
+      staging-mirror:
+        description: Publish to staging mirror
+        required: false
+        type: boolean
 
 jobs:
   release:
@@ -59,7 +63,12 @@ jobs:
         working-directory: ${{ env.working-directory }}
         if: github.event_name != 'release'
         run: |
-          STAGING_VER=`git describe --tags | sed 's/-[^-]*$//' | sed -r 's/(-[^-]*$)/-nightly\1/'`
+          BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
+          if [ "$BRANCH_NAME" != "master" ]; then
+            STAGING_VER=$(git describe --tags | sed 's/-[0-9]*-[^-]*$//')-$(echo $BRANCH_NAME | sed 's|/|.|g')
+          else
+            STAGING_VER=$(git describe --tags | sed 's/-[^-]*$//' | sed -r 's/(-[^-]*$)/-nightly\1/')
+          fi
           echo ::set-output name=STAGING::$STAGING_VER
 
       - name: Get git ref and commit
@@ -148,7 +157,7 @@ jobs:
       - name: Publish packages
         working-directory: ${{ env.working-directory }}
         env:
-          TIUP_MIRRORS: ${{ secrets.TIUP_SERVER_PROD }}
+          TIUP_MIRRORS: ${{ github.event.inputs.staging-mirror == 'true' && secrets.TIUP_SERVER_STAGING || secrets.TIUP_SERVER_PROD }}
           TIUP_HOME: ${{ steps.packaging.outputs.TIUP_HOME }}
           TIUP_BIN: ${{ steps.packaging.outputs.TIUP_BIN }}
           REL_VER: ${{ steps.build_tiup.outputs.REL_VER }}
@@ -211,7 +220,7 @@ jobs:
           sed -i 's/version.*/version "${{ needs.release.outputs.REL_VER }}"/g'  Formula/tiup.rb
           sed -i 's/tag:.*/tag:      "${{ needs.release.outputs.REL_VER }}"/g'  Formula/tiup.rb
           cat Formula/tiup.rb
-          
+
       - name: Push new homebrew
         uses: actions-js/push@master
         continue-on-error: true
