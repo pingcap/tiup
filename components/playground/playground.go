@@ -62,21 +62,23 @@ type Playground struct {
 	bootOptions *BootOptions
 	port        int
 
-	pds              []*instance.PDInstance
-	tsos             []*instance.PDInstance
-	schedulings      []*instance.PDInstance
-	tikvs            []*instance.TiKVInstance
-	tikvWorkers      []*instance.TiKVWorkerInstance
-	tidbs            []*instance.TiDBInstance
-	tiflashs         []*instance.TiFlashInstance
-	tiproxys         []*instance.TiProxy
-	ticdcs           []*instance.TiCDC
-	tikvCdcs         []*instance.TiKVCDC
-	pumps            []*instance.Pump
-	drainers         []*instance.Drainer
-	dmMasters        []*instance.DMMaster
-	dmWorkers        []*instance.DMWorker
-	startedInstances []instance.Instance
+	pds               []*instance.PDInstance
+	tsos              []*instance.PDInstance
+	schedulings       []*instance.PDInstance
+	routers           []*instance.PDInstance
+	admissionControls []*instance.PDInstance
+	tikvs             []*instance.TiKVInstance
+	tikvWorkers       []*instance.TiKVWorkerInstance
+	tidbs             []*instance.TiDBInstance
+	tiflashs          []*instance.TiFlashInstance
+	tiproxys          []*instance.TiProxy
+	ticdcs            []*instance.TiCDC
+	tikvCdcs          []*instance.TiKVCDC
+	pumps             []*instance.Pump
+	drainers          []*instance.Drainer
+	dmMasters         []*instance.DMMaster
+	dmWorkers         []*instance.DMWorker
+	startedInstances  []instance.Instance
 
 	idAlloc        map[string]int
 	instanceWaiter errgroup.Group
@@ -306,6 +308,18 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 				p.schedulings = slices.Delete(p.schedulings, i, i+1)
 			}
 		}
+	case spec.ComponentRouter:
+		for i := 0; i < len(p.routers); i++ {
+			if p.routers[i].Pid() == pid {
+				p.routers = slices.Delete(p.routers, i, i+1)
+			}
+		}
+	case spec.ComponentAdmissionControl:
+		for i := 0; i < len(p.admissionControls); i++ {
+			if p.admissionControls[i].Pid() == pid {
+				p.admissionControls = slices.Delete(p.admissionControls, i, i+1)
+			}
+		}
 	case spec.ComponentTiKV:
 		for i := 0; i < len(p.tikvs); i++ {
 			if p.tikvs[i].Pid() == pid {
@@ -480,6 +494,10 @@ func (p *Playground) sanitizeComponentConfig(cid string, cfg *instance.Config) e
 		return p.sanitizeConfig(p.bootOptions.TSO, cfg)
 	case spec.ComponentScheduling:
 		return p.sanitizeConfig(p.bootOptions.Scheduling, cfg)
+	case spec.ComponentRouter:
+		return p.sanitizeConfig(p.bootOptions.Router, cfg)
+	case spec.ComponentAdmissionControl:
+		return p.sanitizeConfig(p.bootOptions.AdmissionControl, cfg)
 	case spec.ComponentTiKV:
 		return p.sanitizeConfig(p.bootOptions.TiKV, cfg)
 	case spec.ComponentTiKVWorker:
@@ -690,6 +708,20 @@ func (p *Playground) WalkInstances(fn func(componentID string, ins instance.Inst
 		}
 	}
 
+	for _, ins := range p.routers {
+		err := fn(spec.ComponentRouter, ins)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, ins := range p.admissionControls {
+		err := fn(spec.ComponentAdmissionControl, ins)
+		if err != nil {
+			return err
+		}
+	}
+
 	for _, ins := range p.tikvs {
 		err := fn(spec.ComponentTiKV, ins)
 		if err != nil {
@@ -823,6 +855,10 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 			p.tsos = append(p.tsos, inst)
 		} else if pdRole == instance.PDRoleScheduling {
 			p.schedulings = append(p.schedulings, inst)
+		} else if pdRole == instance.PDRoleRouter {
+			p.routers = append(p.routers, inst)
+		} else if pdRole == instance.PDRoleAdmissionControl {
+			p.admissionControls = append(p.admissionControls, inst)
 		}
 	case spec.ComponentTSO:
 		inst := instance.NewPDInstance(instance.PDRoleTSO, p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, cfg.Port, p.bootOptions.TiKV.Num == 1)
@@ -832,6 +868,14 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 		inst := instance.NewPDInstance(instance.PDRoleScheduling, p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, cfg.Port, p.bootOptions.TiKV.Num == 1)
 		ins = inst
 		p.schedulings = append(p.schedulings, inst)
+	case spec.ComponentRouter:
+		inst := instance.NewPDInstance(instance.PDRoleRouter, p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, cfg.Port, p.bootOptions.TiKV.Num == 1)
+		ins = inst
+		p.routers = append(p.routers, inst)
+	case spec.ComponentAdmissionControl:
+		inst := instance.NewPDInstance(instance.PDRoleAdmissionControl, p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, cfg.Port, p.bootOptions.TiKV.Num == 1)
+		ins = inst
+		p.admissionControls = append(p.admissionControls, inst)
 	case spec.ComponentTiDB:
 		inst := instance.NewTiDBInstance(p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, dataDir, p.enableBinlog())
 		ins = inst
@@ -1060,6 +1104,8 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		&options.PD,
 		&options.TSO,
 		&options.Scheduling,
+		&options.Router,
+		&options.AdmissionControl,
 		&options.TiProxy,
 		&options.TiDB,
 		&options.TiKV,
@@ -1202,7 +1248,9 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		instances = append([]InstancePair{
 			{spec.ComponentPD, instance.PDRoleAPI, instance.TiFlashRoleNormal, options.PD},
 			{spec.ComponentPD, instance.PDRoleTSO, instance.TiFlashRoleNormal, options.TSO},
-			{spec.ComponentPD, instance.PDRoleScheduling, instance.TiFlashRoleNormal, options.Scheduling}},
+			{spec.ComponentPD, instance.PDRoleScheduling, instance.TiFlashRoleNormal, options.Scheduling},
+			{spec.ComponentPD, instance.PDRoleRouter, instance.TiFlashRoleNormal, options.Router},
+			{spec.ComponentPD, instance.PDRoleAdmissionControl, instance.TiFlashRoleNormal, options.AdmissionControl}},
 			instances...,
 		)
 	}
@@ -1331,9 +1379,11 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 	if p.bootOptions.ShOpt.Mode == "tikv-slim" {
 		if p.bootOptions.ShOpt.PDMode == "ms" {
 			var (
-				tsoAddr        []string
-				apiAddr        []string
-				schedulingAddr []string
+				tsoAddr              []string
+				apiAddr              []string
+				schedulingAddr       []string
+				routerAddr           []string
+				admissionControlAddr []string
 			)
 			for _, api := range p.pds {
 				apiAddr = append(apiAddr, api.Addr())
@@ -1344,6 +1394,12 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			for _, scheduling := range p.schedulings {
 				schedulingAddr = append(schedulingAddr, scheduling.Addr())
 			}
+			for _, router := range p.routers {
+				routerAddr = append(routerAddr, router.Addr())
+			}
+			for _, admissionControl := range p.admissionControls {
+				admissionControlAddr = append(admissionControlAddr, admissionControl.Addr())
+			}
 
 			fmt.Printf("PD API Endpoints:   ")
 			colorCmd.Printf("%s\n", strings.Join(apiAddr, ","))
@@ -1351,6 +1407,10 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			colorCmd.Printf("%s\n", strings.Join(tsoAddr, ","))
 			fmt.Printf("PD Scheduling Endpoints:   ")
 			colorCmd.Printf("%s\n", strings.Join(schedulingAddr, ","))
+			fmt.Printf("PD Router Endpoints:   ")
+			colorCmd.Printf("%s\n", strings.Join(routerAddr, ","))
+			fmt.Printf("PD Admission Control Endpoints:   ")
+			colorCmd.Printf("%s\n", strings.Join(admissionControlAddr, ","))
 		} else {
 			var pdAddrs []string
 			for _, pd := range p.pds {
@@ -1507,6 +1567,16 @@ func (p *Playground) terminate(sig syscall.Signal) {
 		}
 	}
 	for _, inst := range p.schedulings {
+		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
+			kill(inst.Component(), inst.Pid(), inst.Wait)
+		}
+	}
+	for _, inst := range p.routers {
+		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
+			kill(inst.Component(), inst.Pid(), inst.Wait)
+		}
+	}
+	for _, inst := range p.admissionControls {
 		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
 			kill(inst.Component(), inst.Pid(), inst.Wait)
 		}

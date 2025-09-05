@@ -43,6 +43,8 @@ const (
 	ComponentPD               = "pd"
 	ComponentTSO              = "tso"
 	ComponentScheduling       = "scheduling"
+	ComponentRouter           = "router"
+	ComponentAdmissionControl = "admission-control"
 	ComponentTiFlash          = "tiflash"
 	ComponentTiProxy          = "tiproxy"
 	ComponentGrafana          = "grafana"
@@ -82,7 +84,7 @@ type Component interface {
 // UpdateConfig is used to control behavior pre/post hook of instances.
 type UpdateConfig struct {
 	CurrentVersion string
-	TargetVersion string
+	TargetVersion  string
 }
 
 // RollingUpdateInstance represent a instance need to transfer state when restart.
