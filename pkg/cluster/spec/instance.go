@@ -43,6 +43,8 @@ const (
 	ComponentPD               = "pd"
 	ComponentTSO              = "tso"
 	ComponentScheduling       = "scheduling"
+	ComponentRouter           = "router"
+	ComponentResourceManager  = "resource-manager"
 	ComponentTiFlash          = "tiflash"
 	ComponentTiProxy          = "tiproxy"
 	ComponentGrafana          = "grafana"

@@ -53,6 +53,8 @@ func buildCommands(tp CommandType, opt *BootOptions) (cmds []Command) {
 		{"pd", opt.PD},
 		{"tso", opt.TSO},
 		{"scheduling", opt.Scheduling},
+		{"router", opt.Router},
+		{"resource-manager", opt.ResourceManager},
 		{"tikv", opt.TiKV},
 		{"pump", opt.Pump},
 		{"tiflash", opt.TiFlash},
@@ -104,6 +106,8 @@ func newScaleOut() *cobra.Command {
 	cmd.Flags().IntVarP(&opt.PD.Num, "pd", "", opt.PD.Num, "PD instance number")
 	cmd.Flags().IntVarP(&opt.TSO.Num, "tso", "", opt.TSO.Num, "TSO instance number")
 	cmd.Flags().IntVarP(&opt.Scheduling.Num, "scheduling", "", opt.Scheduling.Num, "Scheduling instance number")
+	cmd.Flags().IntVarP(&opt.Router.Num, "router", "", opt.Router.Num, "Router instance number")
+	cmd.Flags().IntVarP(&opt.ResourceManager.Num, "resource-manager", "", opt.ResourceManager.Num, "Resource manager instance number")
 	cmd.Flags().IntVarP(&opt.TiFlash.Num, "tiflash", "", opt.TiFlash.Num, "TiFlash instance number")
 	cmd.Flags().IntVarP(&opt.TiProxy.Num, "tiproxy", "", opt.TiProxy.Num, "TiProxy instance number")
 	cmd.Flags().IntVarP(&opt.TiCDC.Num, "ticdc", "", opt.TiCDC.Num, "TiCDC instance number")
@@ -114,6 +118,8 @@ func newScaleOut() *cobra.Command {
 	cmd.Flags().StringVarP(&opt.PD.Host, "pd.host", "", opt.PD.Host, "Playground PD host. If not provided, PD will still use `host` flag as its host")
 	cmd.Flags().StringVarP(&opt.TSO.Host, "tso.host", "", opt.TSO.Host, "Playground TSO host. If not provided, TSO will still use `host` flag as its host")
 	cmd.Flags().StringVarP(&opt.Scheduling.Host, "scheduling.host", "", opt.Scheduling.Host, "Playground Scheduling host. If not provided, Scheduling will still use `host` flag as its host")
+	cmd.Flags().StringVarP(&opt.Router.Host, "router.host", "", opt.Router.Host, "Playground Router host. If not provided, Router will still use `host` flag as its host")
+	cmd.Flags().StringVarP(&opt.ResourceManager.Host, "resource-manager.host", "", opt.ResourceManager.Host, "Playground Resource manager host. If not provided, Resource manager will still use `host` flag as its host")
 	cmd.Flags().StringVarP(&opt.TiProxy.Host, "tiproxy.host", "", opt.PD.Host, "Playground TiProxy host. If not provided, TiProxy will still use `host` flag as its host")
 	cmd.Flags().IntVarP(&opt.DMMaster.Num, "dm-master", "", opt.DMMaster.Num, "DM-master instance number")
 	cmd.Flags().IntVarP(&opt.DMWorker.Num, "dm-worker", "", opt.DMWorker.Num, "DM-worker instance number")
@@ -123,6 +129,8 @@ func newScaleOut() *cobra.Command {
 	cmd.Flags().StringVarP(&opt.PD.ConfigPath, "pd.config", "", opt.PD.ConfigPath, "PD instance configuration file")
 	cmd.Flags().StringVarP(&opt.TSO.ConfigPath, "tso.config", "", opt.TSO.ConfigPath, "TSO instance configuration file")
 	cmd.Flags().StringVarP(&opt.Scheduling.ConfigPath, "scheduling.config", "", opt.Scheduling.ConfigPath, "Scheduling instance configuration file")
+	cmd.Flags().StringVarP(&opt.Router.ConfigPath, "router.config", "", opt.Router.ConfigPath, "Router instance configuration file")
+	cmd.Flags().StringVarP(&opt.ResourceManager.ConfigPath, "resource-manager.config", "", opt.ResourceManager.ConfigPath, "Resource manager instance configuration file")
 	cmd.Flags().StringVarP(&opt.TiFlash.ConfigPath, "tiflash.config", "", opt.TiFlash.ConfigPath, "TiFlash instance configuration file")
 	cmd.Flags().StringVarP(&opt.TiProxy.ConfigPath, "tiproxy.config", "", opt.TiProxy.ConfigPath, "TiProxy instance configuration file")
 	cmd.Flags().StringVarP(&opt.Pump.ConfigPath, "pump.config", "", opt.Pump.ConfigPath, "Pump instance configuration file")
@@ -135,6 +143,8 @@ func newScaleOut() *cobra.Command {
 	cmd.Flags().StringVarP(&opt.PD.BinPath, "pd.binpath", "", opt.PD.BinPath, "PD instance binary path")
 	cmd.Flags().StringVarP(&opt.TSO.BinPath, "tso.binpath", "", opt.TSO.BinPath, "TSO instance binary path")
 	cmd.Flags().StringVarP(&opt.Scheduling.BinPath, "scheduling.binpath", "", opt.Scheduling.BinPath, "Scheduling instance binary path")
+	cmd.Flags().StringVarP(&opt.Router.BinPath, "router.binpath", "", opt.Router.BinPath, "Router instance binary path")
+	cmd.Flags().StringVarP(&opt.ResourceManager.BinPath, "resource-manager.binpath", "", opt.ResourceManager.BinPath, "Resource manager instance binary path")
 	cmd.Flags().StringVarP(&opt.TiFlash.BinPath, "tiflash.binpath", "", opt.TiFlash.BinPath, "TiFlash instance binary path")
 	cmd.Flags().StringVarP(&opt.TiProxy.BinPath, "tiproxy.binpath", "", opt.TiProxy.BinPath, "TiProxy instance binary path")
 	cmd.Flags().StringVarP(&opt.TiCDC.BinPath, "ticdc.binpath", "", opt.TiCDC.BinPath, "TiCDC instance binary path")

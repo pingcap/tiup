@@ -36,6 +36,10 @@ const (
 	PDRoleTSO PDRole = "tso"
 	// PDRoleScheduling is the role of PD scheduling
 	PDRoleScheduling PDRole = "scheduling"
+	// PDRoleRouter is the role of PD router
+	PDRoleRouter PDRole = "router"
+	// PDRoleResourceManager is the role of PD resource manager
+	PDRoleResourceManager PDRole = "resource manager"
 )
 
 // PDInstance represent a running pd-server
@@ -160,6 +164,35 @@ func (inst *PDInstance) Start(ctx context.Context) error {
 		args = []string{
 			"services",
 			"scheduling",
+			fmt.Sprintf("--listen-addr=http://%s", utils.JoinHostPort(inst.Host, inst.StatusPort)),
+			fmt.Sprintf("--advertise-listen-addr=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.StatusPort)),
+			fmt.Sprintf("--backend-endpoints=%s", strings.Join(endpoints, ",")),
+			fmt.Sprintf("--log-file=%s", inst.LogFile()),
+			fmt.Sprintf("--config=%s", configPath),
+		}
+		if tidbver.PDSupportMicroservicesWithName(inst.Version.String()) {
+			args = append(args, fmt.Sprintf("--name=%s", uid))
+		}
+
+	case PDRoleRouter:
+		endpoints := pdEndpoints(inst.pds, true)
+		args = []string{
+			"services",
+			"router",
+			fmt.Sprintf("--listen-addr=http://%s", utils.JoinHostPort(inst.Host, inst.StatusPort)),
+			fmt.Sprintf("--advertise-listen-addr=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.StatusPort)),
+			fmt.Sprintf("--backend-endpoints=%s", strings.Join(endpoints, ",")),
+			fmt.Sprintf("--log-file=%s", inst.LogFile()),
+			fmt.Sprintf("--config=%s", configPath),
+		}
+		if tidbver.PDSupportMicroservicesWithName(inst.Version.String()) {
+			args = append(args, fmt.Sprintf("--name=%s", uid))
+		}
+	case PDRoleResourceManager:
+		endpoints := pdEndpoints(inst.pds, true)
+		args = []string{
+			"services",
+			"resource-manager",
 			fmt.Sprintf("--listen-addr=http://%s", utils.JoinHostPort(inst.Host, inst.StatusPort)),
 			fmt.Sprintf("--advertise-listen-addr=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.StatusPort)),
 			fmt.Sprintf("--backend-endpoints=%s", strings.Join(endpoints, ",")),
