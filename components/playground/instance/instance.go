@@ -157,7 +157,7 @@ func pdEndpoints(pds []*PDInstance, isHTTP bool) []string {
 	var endpoints []string
 	for _, pd := range pds {
 		if pd.role == PDRoleTSO || pd.role == PDRoleScheduling ||
-			pd.role == PDRoleRouter || pd.role == PDRoleAdmissionControl {
+			pd.role == PDRoleRouter || pd.role == PDRoleResourceManager {
 			continue
 		}
 		if isHTTP {

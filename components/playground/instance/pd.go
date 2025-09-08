@@ -38,8 +38,8 @@ const (
 	PDRoleScheduling PDRole = "scheduling"
 	// PDRoleRouter is the role of PD router
 	PDRoleRouter PDRole = "router"
-	// PDRoleAdmissionControl is the role of PD admission control
-	PDRoleAdmissionControl PDRole = "admission control"
+	// PDRoleResourceManager is the role of PD resource manager
+	PDRoleResourceManager PDRole = "resource manager"
 )
 
 // PDInstance represent a running pd-server
@@ -188,11 +188,11 @@ func (inst *PDInstance) Start(ctx context.Context) error {
 		if tidbver.PDSupportMicroservicesWithName(inst.Version.String()) {
 			args = append(args, fmt.Sprintf("--name=%s", uid))
 		}
-	case PDRoleAdmissionControl:
+	case PDRoleResourceManager:
 		endpoints := pdEndpoints(inst.pds, true)
 		args = []string{
 			"services",
-			"admission-control",
+			"resource-manager",
 			fmt.Sprintf("--listen-addr=http://%s", utils.JoinHostPort(inst.Host, inst.StatusPort)),
 			fmt.Sprintf("--advertise-listen-addr=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.StatusPort)),
 			fmt.Sprintf("--backend-endpoints=%s", strings.Join(endpoints, ",")),

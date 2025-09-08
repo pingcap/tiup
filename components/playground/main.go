@@ -51,29 +51,29 @@ import (
 
 // BootOptions is the topology and options used to start a playground cluster
 type BootOptions struct {
-	ShOpt            instance.SharedOptions `yaml:"shared_opt"`
-	Version          string                 `yaml:"version"`
-	PD               instance.Config        `yaml:"pd"`                // will change to api when pd_mode == ms
-	TSO              instance.Config        `yaml:"tso"`               // Only available when pd_mode == ms
-	Scheduling       instance.Config        `yaml:"scheduling"`        // Only available when pd_mode == ms
-	Router           instance.Config        `yaml:"router"`            // Only available when pd_mode == ms
-	AdmissionControl instance.Config        `yaml:"admission_control"` // Only available when pd_mode == ms
-	TiProxy          instance.Config        `yaml:"tiproxy"`
-	TiDB             instance.Config        `yaml:"tidb"`
-	TiKV             instance.Config        `yaml:"tikv"`
-	TiFlash          instance.Config        `yaml:"tiflash"`         // ignored when ShOpt.Mode == tidb-cse or tiflash-disagg
-	TiFlashWrite     instance.Config        `yaml:"tiflash_write"`   // Only available when ShOpt.Mode == tidb-cse or tiflash-disagg
-	TiFlashCompute   instance.Config        `yaml:"tiflash_compute"` // Only available when ShOpt.Mode == tidb-cse or tiflash-disagg
-	TiCDC            instance.Config        `yaml:"ticdc"`
-	TiKVCDC          instance.Config        `yaml:"tikv_cdc"`
-	TiKVWorker       instance.Config        `yaml:"tikv_worker"` // Only available when ShOpt.Mode == tidb-cse
-	Pump             instance.Config        `yaml:"pump"`
-	Drainer          instance.Config        `yaml:"drainer"`
-	Host             string                 `yaml:"host"`
-	Monitor          bool                   `yaml:"monitor"`
-	GrafanaPort      int                    `yaml:"grafana_port"`
-	DMMaster         instance.Config        `yaml:"dm_master"`
-	DMWorker         instance.Config        `yaml:"dm_worker"`
+	ShOpt           instance.SharedOptions `yaml:"shared_opt"`
+	Version         string                 `yaml:"version"`
+	PD              instance.Config        `yaml:"pd"`               // will change to api when pd_mode == ms
+	TSO             instance.Config        `yaml:"tso"`              // Only available when pd_mode == ms
+	Scheduling      instance.Config        `yaml:"scheduling"`       // Only available when pd_mode == ms
+	Router          instance.Config        `yaml:"router"`           // Only available when pd_mode == ms
+	ResourceManager instance.Config        `yaml:"resource_manager"` // Only available when pd_mode == ms
+	TiProxy         instance.Config        `yaml:"tiproxy"`
+	TiDB            instance.Config        `yaml:"tidb"`
+	TiKV            instance.Config        `yaml:"tikv"`
+	TiFlash         instance.Config        `yaml:"tiflash"`         // ignored when ShOpt.Mode == tidb-cse or tiflash-disagg
+	TiFlashWrite    instance.Config        `yaml:"tiflash_write"`   // Only available when ShOpt.Mode == tidb-cse or tiflash-disagg
+	TiFlashCompute  instance.Config        `yaml:"tiflash_compute"` // Only available when ShOpt.Mode == tidb-cse or tiflash-disagg
+	TiCDC           instance.Config        `yaml:"ticdc"`
+	TiKVCDC         instance.Config        `yaml:"tikv_cdc"`
+	TiKVWorker      instance.Config        `yaml:"tikv_worker"` // Only available when ShOpt.Mode == tidb-cse
+	Pump            instance.Config        `yaml:"pump"`
+	Drainer         instance.Config        `yaml:"drainer"`
+	Host            string                 `yaml:"host"`
+	Monitor         bool                   `yaml:"monitor"`
+	GrafanaPort     int                    `yaml:"grafana_port"`
+	DMMaster        instance.Config        `yaml:"dm_master"`
+	DMWorker        instance.Config        `yaml:"dm_worker"`
 }
 
 var (
@@ -279,7 +279,7 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 	rootCmd.Flags().IntVar(&options.TSO.Num, "tso", 0, "TSO instance number")
 	rootCmd.Flags().IntVar(&options.Scheduling.Num, "scheduling", 0, "Scheduling instance number")
 	rootCmd.Flags().IntVar(&options.Router.Num, "router", 0, "Router instance number")
-	rootCmd.Flags().IntVar(&options.AdmissionControl.Num, "admission-control", 0, "Admission Control instance number")
+	rootCmd.Flags().IntVar(&options.ResourceManager.Num, "resource-manager", 0, "Resource Manager instance number")
 	rootCmd.Flags().IntVar(&options.TiProxy.Num, "tiproxy", 0, "TiProxy instance number")
 	rootCmd.Flags().IntVar(&options.TiFlash.Num, "tiflash", 0, "TiFlash instance number, when --mode=tidb-cse or --mode=tiflash-disagg this will set instance number for both Write Node and Compute Node")
 	rootCmd.Flags().IntVar(&options.TiFlashWrite.Num, "tiflash.write", 0, "TiFlash Write instance number, available when --mode=tidb-cse or --mode=tiflash-disagg, take precedence over --tiflash")
@@ -320,7 +320,7 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 	rootCmd.Flags().StringVar(&options.TSO.ConfigPath, "tso.config", "", "TSO instance configuration file")
 	rootCmd.Flags().StringVar(&options.Scheduling.ConfigPath, "scheduling.config", "", "Scheduling instance configuration file")
 	rootCmd.Flags().StringVar(&options.Router.ConfigPath, "router.config", "", "Router instance configuration file")
-	rootCmd.Flags().StringVar(&options.AdmissionControl.ConfigPath, "admission-control.config", "", "Admission Control instance configuration file")
+	rootCmd.Flags().StringVar(&options.ResourceManager.ConfigPath, "resource-manager.config", "", "Resource Manager instance configuration file")
 	rootCmd.Flags().StringVar(&options.TiProxy.ConfigPath, "tiproxy.config", "", "TiProxy instance configuration file")
 	rootCmd.Flags().StringVar(&options.TiFlash.ConfigPath, "tiflash.config", "", "TiFlash instance configuration file, when --mode=tidb-cse or --mode=tiflash-disagg this will set config file for both Write Node and Compute Node")
 	rootCmd.Flags().StringVar(&options.TiFlashWrite.ConfigPath, "tiflash.write.config", "", "TiFlash Write instance configuration file, available when --mode=tidb-cse or --mode=tiflash-disagg, take precedence over --tiflash.config")
@@ -339,7 +339,7 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 	rootCmd.Flags().StringVar(&options.TSO.BinPath, "tso.binpath", "", "TSO instance binary path")
 	rootCmd.Flags().StringVar(&options.Scheduling.BinPath, "scheduling.binpath", "", "Scheduling instance binary path")
 	rootCmd.Flags().StringVar(&options.Router.BinPath, "router.binpath", "", "Router instance binary path")
-	rootCmd.Flags().StringVar(&options.AdmissionControl.BinPath, "admission-control.binpath", "", "Admission Control instance binary path")
+	rootCmd.Flags().StringVar(&options.ResourceManager.BinPath, "resource-manager.binpath", "", "Resource Manager instance binary path")
 	rootCmd.Flags().StringVar(&options.TiProxy.BinPath, "tiproxy.binpath", "", "TiProxy instance binary path")
 	rootCmd.Flags().StringVar(&options.TiProxy.Version, "tiproxy.version", "", "TiProxy instance version")
 	rootCmd.Flags().StringVar(&options.TiFlash.BinPath, "tiflash.binpath", "", "TiFlash instance binary path, when --mode=tidb-cse or --mode=tiflash-disagg this will set binary path for both Write Node and Compute Node")
@@ -422,9 +422,9 @@ func populateDefaultOpt(flagSet *pflag.FlagSet) error {
 		defaultInt(&options.Router.Num, "router", 1)
 		defaultStr(&options.Router.BinPath, "router.binpath", options.PD.BinPath)
 		defaultStr(&options.Router.ConfigPath, "router.config", options.PD.ConfigPath)
-		defaultInt(&options.AdmissionControl.Num, "admission-control", 1)
-		defaultStr(&options.AdmissionControl.BinPath, "admission-control.binpath", options.PD.BinPath)
-		defaultStr(&options.AdmissionControl.ConfigPath, "admission-control.config", options.PD.ConfigPath)
+		defaultInt(&options.ResourceManager.Num, "resource-manager", 1)
+		defaultStr(&options.ResourceManager.BinPath, "resource-manager.binpath", options.PD.BinPath)
+		defaultStr(&options.ResourceManager.ConfigPath, "resource-manager.config", options.PD.ConfigPath)
 	default:
 		return errors.Errorf("Unknown --pd.mode %s", options.ShOpt.PDMode)
 	}
