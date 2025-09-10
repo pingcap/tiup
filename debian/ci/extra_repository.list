@@ -1,0 +1,11 @@
+# These packages are still in the NEW queue
+# (https://ftp-master.debian.org/new.html) and not yet in Debian. Meanwhile, get
+# them from a the PPA they were uploaded to in parallel to the official Debian
+# upload.
+# - golang-github-asaskevich-eventbus
+# - golang-github-dchest-bcrypt-pbkdf
+# - golang-github-gohxs-readline
+# - golang-github-jeremywohl-flatten
+# - golang-github-lorenzosaino-go-sysctl
+# - golang-github-pingcap-kvproto
+deb [trusted=yes] https://ppa.launchpadcontent.net/otto/tidb/ubuntu questing main
