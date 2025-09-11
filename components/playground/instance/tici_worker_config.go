@@ -31,11 +31,7 @@ func (inst *TiCIInstance) getWorkerConfig() map[string]any {
 	config["frag_writer.index_flush_interval"] = "5s"
 	config["frag_writer.index_flush_size_limit"] = "5MB"
 
-	// server config
-	config["server.grpc_address"] = warpAddr(inst.Addr())
-	config["server.status_addr"] = warpAddr(inst.StatusAddr())
-	config["server.heartbeat_interval"] = "3s"
-	config["server.pd_addr"] = warpAddr(inst.pds[0].Addr())
+	config["heartbeat_interval"] = "3s"
 
 	return config
 }

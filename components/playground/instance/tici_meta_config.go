@@ -13,14 +13,6 @@
 
 package instance
 
-import (
-	"fmt"
-)
-
-func warpAddr(addr string) string {
-	return fmt.Sprintf("http://%s", addr)
-}
-
 func (inst *TiCIInstance) getMetaConfig() map[string]any {
 	config := make(map[string]any)
 	tidbServers := make([]string, 0, len(inst.dbs))
@@ -28,12 +20,7 @@ func (inst *TiCIInstance) getMetaConfig() map[string]any {
 		tidbServers = append(tidbServers, db.DSN())
 	}
 	config["tidb_servers"] = tidbServers
-	config["pd_addr"] = warpAddr(inst.pds[0].Addr())
 	config["cert_path"] = ""
-	config["addr"] = warpAddr(inst.Addr())
-	config["advertise_addr"] = warpAddr(inst.Addr())
-	config["status_addr"] = warpAddr(inst.StatusAddr())
-	config["advertise_status_addr"] = warpAddr(inst.StatusAddr())
 
 	// reader pool config
 	config["reader_pool.ttl_seconds"] = 9
@@ -52,8 +39,6 @@ func (inst *TiCIInstance) getMetaConfig() map[string]any {
 	config["s3.prefix"] = prefix
 
 	// shard config
-	config["shard.compaction_fragments"] = 10
-	config["shard.compaction_datafiles"] = 300
 	config["shard.max_size"] = "1024MB"
 	config["shard.split_threshold"] = 0.75
 
