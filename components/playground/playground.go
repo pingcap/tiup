@@ -530,6 +530,9 @@ func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) 
 	if component == "tikv_worker" {
 		component = "tikv"
 	}
+	if component == "tici-meta" || component == "tici-worker" {
+		component = "tici"
+	}
 
 	if version, err = environment.GlobalEnv().V1Repository().ResolveComponentVersion(component, boundVersion); err != nil {
 		return err
