@@ -57,43 +57,29 @@ func NewTiCIWorkerInstance(shOpt SharedOptions, binPath string, dir, host, confi
 // NewTiCIInstanceWithRole creates a TiCI instance with specified role
 func NewTiCIInstanceWithRole(shOpt SharedOptions, binPath string, dir, host, configPath string, id int, pds []*PDInstance, dbs []*TiDBInstance, role TiCIRole) *TiCIInstance {
 	var defaultPort, defaultStatusPort int
-	var configFilePath string
-	var binFilePath string
 
 	switch role {
 	case TiCIRoleMeta:
 		// MetaServer default port
 		defaultPort = 8500
 		defaultStatusPort = 8501
-		if configPath != "" {
-			configFilePath = filepath.Join(configPath, "test-meta.toml")
-		}
-		if binPath != "" {
-			binFilePath = filepath.Join(binPath, "meta_service_server")
-		}
 	case TiCIRoleWorker:
 		// WorkerNode default port
 		defaultPort = 8510
 		defaultStatusPort = 8511
-		if configPath != "" {
-			configFilePath = filepath.Join(configPath, "test-worker.toml")
-		}
-		if binPath != "" {
-			binFilePath = filepath.Join(binPath, "worker_node_server")
-		}
 	default:
 		panic("invalid TiCI role")
 	}
 
 	tici := &TiCIInstance{
 		instance: instance{
-			BinPath:    binFilePath,
+			BinPath:    binPath,
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
 			Port:       utils.MustGetFreePort(host, defaultPort, shOpt.PortOffset),
 			StatusPort: utils.MustGetFreePort(host, defaultStatusPort, shOpt.PortOffset),
-			ConfigPath: configFilePath,
+			ConfigPath: configPath,
 		},
 		pds:  pds,
 		dbs:  dbs,
@@ -115,6 +101,12 @@ func (inst *TiCIInstance) Start(ctx context.Context) error {
 	}
 
 	args := []string{
+		inst.roleString(),
+		fmt.Sprintf("--host=%s", inst.Host),
+		fmt.Sprintf("--port=%d", inst.Port),
+		fmt.Sprintf("--status-port=%d", inst.StatusPort),
+		fmt.Sprintf("--advertise-host=%s", AdvertiseHost(inst.Host)),
+		fmt.Sprintf("--pd-addr=%s", fmt.Sprintf("http://%s", inst.pds[0].Addr())),
 		fmt.Sprintf("--config=%s", configPath),
 	}
 	inst.Process = &process{cmd: PrepareCommand(ctx, inst.BinPath, args, nil, inst.Dir)}
@@ -134,16 +126,20 @@ func (inst *TiCIInstance) getConfig() map[string]any {
 	}
 }
 
-// Component implements Process interface
-func (inst *TiCIInstance) Component() string {
+func (inst *TiCIInstance) roleString() string {
 	switch inst.role {
 	case TiCIRoleMeta:
-		return "tici-meta"
+		return "meta"
 	case TiCIRoleWorker:
-		return "tici-worker"
+		return "worker"
 	default:
-		return "tici"
+		return ""
 	}
+}
+
+// Component implements Process interface
+func (inst *TiCIInstance) Component() string {
+	return fmt.Sprintf("tici-%s", inst.roleString())
 }
 
 // LogFile implements Process interface

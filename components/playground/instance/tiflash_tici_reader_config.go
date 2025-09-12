@@ -16,6 +16,7 @@ package instance
 import "github.com/pingcap/tiup/pkg/utils"
 
 func (inst *TiFlashInstance) getTiCIReaderConfig() map[string]any {
+	host := AdvertiseHost(inst.Host)
 	config := make(map[string]any)
 
 	config["tici.enable"] = true
@@ -27,7 +28,7 @@ func (inst *TiFlashInstance) getTiCIReaderConfig() map[string]any {
 	config["tici.s3.use_path_style"] = true
 
 	// Reader node config
-	config["tici.reader_node.addr"] = utils.JoinHostPort(inst.Host, inst.ticReaderPort)
+	config["tici.reader_node.addr"] = utils.JoinHostPort(host, inst.ticReaderPort)
 	config["tici.reader_node.heartbeat_interval"] = "3s"
 	config["tici.reader_node.max_heartbeat_retries"] = 3
 
@@ -36,7 +37,7 @@ func (inst *TiFlashInstance) getTiCIReaderConfig() map[string]any {
 	config["tici.frag_reader.doc_store_cache_size"] = "16MB"
 
 	// TiFlash config
-	config["flash.service_addr"] = utils.JoinHostPort(inst.Host, inst.servicePort)
+	config["flash.service_addr"] = utils.JoinHostPort(host, inst.servicePort)
 
 	config["raft.pd_addr"] = inst.pds[0].Addr()
 
