@@ -2,10 +2,7 @@
 # (https://ftp-master.debian.org/new.html) and not yet in Debian. Meanwhile, get
 # them from a the PPA they were uploaded to in parallel to the official Debian
 # upload.
-# - golang-github-asaskevich-eventbus
-# - golang-github-dchest-bcrypt-pbkdf
-# - golang-github-gohxs-readline
-# - golang-github-jeremywohl-flatten
-# - golang-github-lorenzosaino-go-sysctl
-# - golang-github-pingcap-kvproto
+# - golang-github-appleboy-easyssh-proxy-dev
+# - golang-github-pingcap-failpoint
+# - usql (and potentially also golang-github-gohxs-readline)
 deb [trusted=yes] https://ppa.launchpadcontent.net/otto/tidb/ubuntu questing main
