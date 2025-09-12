@@ -57,23 +57,16 @@ func NewTiCIWorkerInstance(shOpt SharedOptions, binPath string, dir, host, confi
 // NewTiCIInstanceWithRole creates a TiCI instance with specified role
 func NewTiCIInstanceWithRole(shOpt SharedOptions, binPath string, dir, host, configPath string, id int, pds []*PDInstance, dbs []*TiDBInstance, role TiCIRole) *TiCIInstance {
 	var defaultPort, defaultStatusPort int
-	var configFilePath string
 
 	switch role {
 	case TiCIRoleMeta:
 		// MetaServer default port
 		defaultPort = 8500
 		defaultStatusPort = 8501
-		if configPath != "" {
-			configFilePath = filepath.Join(configPath, "test-meta.toml")
-		}
 	case TiCIRoleWorker:
 		// WorkerNode default port
 		defaultPort = 8510
 		defaultStatusPort = 8511
-		if configPath != "" {
-			configFilePath = filepath.Join(configPath, "test-worker.toml")
-		}
 	default:
 		panic("invalid TiCI role")
 	}
@@ -86,7 +79,7 @@ func NewTiCIInstanceWithRole(shOpt SharedOptions, binPath string, dir, host, con
 			Host:       host,
 			Port:       utils.MustGetFreePort(host, defaultPort, shOpt.PortOffset),
 			StatusPort: utils.MustGetFreePort(host, defaultStatusPort, shOpt.PortOffset),
-			ConfigPath: configFilePath,
+			ConfigPath: configPath,
 		},
 		pds:  pds,
 		dbs:  dbs,

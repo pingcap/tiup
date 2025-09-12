@@ -1332,9 +1332,8 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		fmt.Println("Creating changefeed...")
 		var endpoint, accessKey, secretKey, bucket, prefix string
 		if options.TiCIMeta.ConfigPath != "" {
-			ticiMetaConfigPath := filepath.Join(options.TiCIMeta.ConfigPath, "test-meta.toml")
 			// read the configuration file
-			ticiMetaConfig, err := instance.UnmarshalConfig(ticiMetaConfigPath)
+			ticiMetaConfig, err := instance.UnmarshalConfig(options.TiCIMeta.ConfigPath)
 			if err != nil {
 				return err
 			}
@@ -1346,7 +1345,18 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		} else {
 			endpoint, accessKey, secretKey, bucket, prefix = instance.GetDefaultTiCIMetaS3Config()
 		}
-		if err := p.createChangefeed(bucket, prefix, endpoint, accessKey, secretKey); err != nil {
+		var flushInterval = "5s"
+		if options.TiCIWorker.ConfigPath != "" {
+			// read the configuration file
+			ticiWorkerConfig, err := instance.UnmarshalConfig(options.TiCIWorker.ConfigPath)
+			if err != nil {
+				return err
+			}
+			if val, ok := ticiWorkerConfig["cdc_s3_flush_interval"].(string); ok {
+				flushInterval = val
+			}
+		}
+		if err := p.createChangefeed(bucket, prefix, endpoint, accessKey, secretKey, flushInterval); err != nil {
 			fmt.Println(color.RedString("Failed to create changefeed: %s", err))
 		} else {
 			fmt.Println("Changefeed created successfully.")
@@ -1920,7 +1930,7 @@ func parseMysqlVersion(versionOutput string) (vMaj int, vMin int, vPatch int, er
 }
 
 // createChangefeed creates a changefeed using tiup cdc cli
-func (p *Playground) createChangefeed(bucket, prefix, endpoint, accessKey, secretKey string) error {
+func (p *Playground) createChangefeed(bucket, prefix, endpoint, accessKey, secretKey, flushInterval string) error {
 	if len(p.ticdcs) == 0 {
 		return fmt.Errorf("no TiCDC instances available")
 	}
@@ -1929,7 +1939,7 @@ func (p *Playground) createChangefeed(bucket, prefix, endpoint, accessKey, secre
 	cdcAddr := fmt.Sprintf("http://%s", p.ticdcs[0].Addr())
 
 	// Prepare changefeed creation command
-	sinkURI := fmt.Sprintf("s3://%s/%s/cdc?protocol=canal-json&access-key=%s&secret-access-key=%s&endpoint=%s&enable-tidb-extension=true&output-row-key=true", bucket, prefix, accessKey, secretKey, endpoint)
+	sinkURI := fmt.Sprintf("s3://%s/%s/cdc?protocol=canal-json&access-key=%s&secret-access-key=%s&endpoint=%s&enable-tidb-extension=true&output-row-key=true&flush-interval=%s", bucket, prefix, accessKey, secretKey, endpoint, flushInterval)
 
 	cmd := exec.Command("tiup", "cdc:nightly", "cli", "changefeed", "create",
 		fmt.Sprintf("--server=%s", cdcAddr),
