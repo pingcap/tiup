@@ -338,6 +338,30 @@ func (c *CDCOpenAPIClient) l() *logprinter.Logger {
 	return c.ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 }
 
+// CreateChangefeed create a changefeed
+func (c *CDCOpenAPIClient) CreateChangefeed(bucket, prefix, endpoint, accessKey, secretKey, flushInterval string) error {
+	api := "api/v1/changefeeds"
+	// client should only have address to the target cdc server, not all cdc servers.
+	endpoints := c.getEndpoints(api)
+	sinkURI := fmt.Sprintf("s3://%s/%s/cdc?protocol=canal-json&access-key=%s&secret-access-key=%s&endpoint=%s&enable-tidb-extension=true&output-row-key=true&flush-interval=%s", bucket, prefix, accessKey, secretKey, endpoint, flushInterval)
+
+	err := utils.Retry(func() error {
+		cfg := map[string]any{
+			"sink_uri": sinkURI,
+		}
+		body, err := json.Marshal(cfg)
+		if err != nil {
+			return err
+		}
+		_, err = c.client.Post(c.ctx, endpoints[0], bytes.NewReader(body))
+		return errors.Wrap(err, fmt.Sprintf("failed to create changefeed with sinkURI %s", sinkURI))
+	}, utils.RetryOption{
+		Timeout: 10 * time.Second,
+	})
+
+	return err
+}
+
 // Liveness is the liveness status of a capture.
 type Liveness int32
 

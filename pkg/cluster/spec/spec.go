@@ -132,6 +132,8 @@ type (
 		Drainer        map[string]any    `yaml:"drainer"`
 		CDC            map[string]any    `yaml:"cdc"`
 		TiKVCDC        map[string]any    `yaml:"kvcdc"`
+		TiCIMeta       map[string]any    `yaml:"tici_meta"`
+		TiCIWorker     map[string]any    `yaml:"tici_worker"`
 		Grafana        map[string]string `yaml:"grafana"`
 	}
 
@@ -149,6 +151,8 @@ type (
 		CDC          string `yaml:"cdc,omitempty"`
 		TiKVCDC      string `yaml:"kvcdc,omitempty"`
 		TiProxy      string `yaml:"tiproxy,omitempty"`
+		TiCIMeta     string `yaml:"tici_meta,omitempty"`
+		TiCIWorker   string `yaml:"tici_worker,omitempty"`
 		Prometheus   string `yaml:"prometheus,omitempty"`
 		Grafana      string `yaml:"grafana,omitempty"`
 		AlertManager string `yaml:"alertmanager,omitempty"`
@@ -168,6 +172,7 @@ type (
 		Drainer   string `yaml:"drainer,omitempty" validate:"drainer:editable"`
 		CDC       string `yaml:"cdc,omitempty" validate:"cdc:editable"`
 		TiKVCDC   string `yaml:"kvcdc,omitempty" validate:"kvcdc:editable"`
+		TiCI      string `yaml:"tici,omitempty" validate:"tici_meta:editable"`
 	}
 
 	// Specification represents the specification of topology.yaml
@@ -189,6 +194,8 @@ type (
 		Drainers          []*DrainerSpec       `yaml:"drainer_servers,omitempty"`
 		CDCServers        []*CDCSpec           `yaml:"cdc_servers,omitempty"`
 		TiKVCDCServers    []*TiKVCDCSpec       `yaml:"kvcdc_servers,omitempty"`
+		TiCIMetaServers   []*TiCIMetaSpec      `yaml:"tici_meta_servers,omitempty"`
+		TiCIWorkerServers []*TiCIWorkerSpec    `yaml:"tici_worker_servers,omitempty"`
 		TiSparkMasters    []*TiSparkMasterSpec `yaml:"tispark_masters,omitempty"`
 		TiSparkWorkers    []*TiSparkWorkerSpec `yaml:"tispark_workers,omitempty"`
 		Monitors          []*PrometheusSpec    `yaml:"monitoring_servers"`
@@ -575,6 +582,8 @@ func (s *Specification) Merge(that Topology) Topology {
 		Drainers:          append(s.Drainers, spec.Drainers...),
 		CDCServers:        append(s.CDCServers, spec.CDCServers...),
 		TiKVCDCServers:    append(s.TiKVCDCServers, spec.TiKVCDCServers...),
+		TiCIMetaServers:   append(s.TiCIMetaServers, spec.TiCIMetaServers...),
+		TiCIWorkerServers: append(s.TiCIWorkerServers, spec.TiCIWorkerServers...),
 		TiSparkMasters:    append(s.TiSparkMasters, spec.TiSparkMasters...),
 		TiSparkWorkers:    append(s.TiSparkWorkers, spec.TiSparkWorkers...),
 		Monitors:          append(s.Monitors, spec.Monitors...),
@@ -598,6 +607,8 @@ func (v *ComponentVersions) Merge(that ComponentVersions) ComponentVersions {
 		Drainer:      utils.Ternary(that.Drainer != "", that.Drainer, v.Drainer).(string),
 		CDC:          utils.Ternary(that.CDC != "", that.CDC, v.CDC).(string),
 		TiKVCDC:      utils.Ternary(that.TiKVCDC != "", that.TiKVCDC, v.TiKVCDC).(string),
+		TiCIMeta:     utils.Ternary(that.TiCIMeta != "", that.TiCIMeta, v.TiCIMeta).(string),
+		TiCIWorker:   utils.Ternary(that.TiCIWorker != "", that.TiCIWorker, v.TiCIWorker).(string),
 		Grafana:      utils.Ternary(that.Grafana != "", that.Grafana, v.Grafana).(string),
 		Prometheus:   utils.Ternary(that.Prometheus != "", that.Prometheus, v.Prometheus).(string),
 		AlertManager: utils.Ternary(that.AlertManager != "", that.AlertManager, v.AlertManager).(string),
@@ -811,7 +822,7 @@ func (s *Specification) ComponentsByStopOrder() (comps []Component) {
 
 // ComponentsByStartOrder return component in the order need to start.
 func (s *Specification) ComponentsByStartOrder() (comps []Component) {
-	// "pd", "tso", "scheduling", "dashboard", "tiproxy", "tikv", "pump", "tidb", "tiflash", "drainer", "cdc", "tikv-cdc", "prometheus", "grafana", "alertmanager"
+	// "pd", "tso", "scheduling", "dashboard", "tiproxy", "tikv", "pump", "tidb", "cdc", "tici-meta", "tici-worker", "tiflash", "drainer", "tikv-cdc", "prometheus", "grafana", "alertmanager"
 	comps = append(comps, &PDComponent{s})
 	comps = append(comps, &TSOComponent{s})
 	comps = append(comps, &SchedulingComponent{s})
@@ -820,9 +831,11 @@ func (s *Specification) ComponentsByStartOrder() (comps []Component) {
 	comps = append(comps, &TiKVComponent{s})
 	comps = append(comps, &PumpComponent{s})
 	comps = append(comps, &TiDBComponent{s})
+	comps = append(comps, &CDCComponent{s})
+	comps = append(comps, &TiCIMetaComponent{s})
+	comps = append(comps, &TiCIWorkerComponent{s})
 	comps = append(comps, &TiFlashComponent{s})
 	comps = append(comps, &DrainerComponent{s})
-	comps = append(comps, &CDCComponent{s})
 	comps = append(comps, &TiKVCDCComponent{s})
 	comps = append(comps, &MonitorComponent{s})
 	comps = append(comps, &GrafanaComponent{s})
@@ -837,11 +850,13 @@ func (s *Specification) ComponentsByUpdateOrder(curVer string) (comps []Componen
 	// Ref: https://github.com/pingcap/tiup/issues/2166
 	cdcUpgradeBeforePDTiKVTiDB := tidbver.TiCDCUpgradeBeforePDTiKVTiDB(curVer)
 
-	// "tiflash", <"cdc">, "pd", "tso", "scheduling", "dashboard", "tiproxy", "tikv", "pump", "tidb", "drainer", <"cdc>", "prometheus", "grafana", "alertmanager"
+	// "tiflash", "tici-worker", "tici-meta", <"cdc">, "pd", "tso", "scheduling", "dashboard", "tiproxy", "tikv", "pump", "tidb", "drainer", <"cdc>", "prometheus", "grafana", "alertmanager"
 	comps = append(comps, &TiFlashComponent{s})
 	if cdcUpgradeBeforePDTiKVTiDB {
 		comps = append(comps, &CDCComponent{s})
 	}
+	comps = append(comps, &TiCIWorkerComponent{s})
+	comps = append(comps, &TiCIMetaComponent{s})
 	comps = append(comps, &PDComponent{s})
 	comps = append(comps, &TSOComponent{s})
 	comps = append(comps, &SchedulingComponent{s})

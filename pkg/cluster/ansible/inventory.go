@@ -346,6 +346,9 @@ func parseGroupVars(ctx context.Context, dir, ansCfgFile string, clsMeta *spec.C
 			if statusPort, ok := grpVars["metrics_port"]; ok {
 				tmpIns.StatusPort, _ = strconv.Atoi(statusPort)
 			}
+			if ticiReaderNodePort, ok := grpVars["tici_reader_node_port"]; ok {
+				tmpIns.TiCIReaderNodePort, _ = strconv.Atoi(ticiReaderNodePort)
+			}
 
 			// apply values from the host
 			if tcpPort, ok := srv.Vars["tcp_port"]; ok {
@@ -367,6 +370,9 @@ func parseGroupVars(ctx context.Context, dir, ansCfgFile string, clsMeta *spec.C
 			}
 			if statusPort, ok := srv.Vars["metrics_port"]; ok {
 				tmpIns.StatusPort, _ = strconv.Atoi(statusPort)
+			}
+			if ticiReaderNodePort, ok := srv.Vars["tici_reader_node_port"]; ok {
+				tmpIns.TiCIReaderNodePort, _ = strconv.Atoi(ticiReaderNodePort)
 			}
 			if dataDir, ok := srv.Vars["data_dir"]; ok {
 				tmpIns.DataDir = strings.Trim(dataDir, "\"")

@@ -29,6 +29,8 @@ topology:
     drainer: {}
     cdc: {}
     kvcdc: {}
+    tici_meta: {}
+    tici_worker: {}
     grafana: {}
   tidb_servers:
     - host: 172.16.1.218

@@ -34,6 +34,8 @@ func TestDefaultDataDir(t *testing.T) {
 	topo.TiKVServers = append(topo.TiKVServers, &TiKVSpec{Host: "1.1.1.1", Port: 22})
 	topo.CDCServers = append(topo.CDCServers, &CDCSpec{Host: "2.3.3.3", Port: 22})
 	topo.TiKVCDCServers = append(topo.TiKVCDCServers, &TiKVCDCSpec{Host: "3.3.3.3", Port: 22})
+	topo.TiCIMetaServers = append(topo.TiCIMetaServers, &TiCIMetaSpec{Host: "4.4.4.4", Port: 22})
+	topo.TiCIWorkerServers = append(topo.TiCIWorkerServers, &TiCIWorkerSpec{Host: "5.5.5.5", Port: 22})
 	data, err := yaml.Marshal(topo)
 	require.NoError(t, err)
 
@@ -45,6 +47,8 @@ func TestDefaultDataDir(t *testing.T) {
 	require.Equal(t, "data", topo.TiKVServers[0].DataDir)
 	require.Equal(t, "data", topo.CDCServers[0].DataDir)
 	require.Equal(t, "data", topo.TiKVCDCServers[0].DataDir)
+	require.Equal(t, "data", topo.TiCIMetaServers[0].DataDir)
+	require.Equal(t, "data", topo.TiCIWorkerServers[0].DataDir)
 
 	// Can keep the default value.
 	data, err = yaml.Marshal(topo)
@@ -56,6 +60,8 @@ func TestDefaultDataDir(t *testing.T) {
 	require.Equal(t, "data", topo.TiKVServers[0].DataDir)
 	require.Equal(t, "data", topo.CDCServers[0].DataDir)
 	require.Equal(t, "data", topo.TiKVCDCServers[0].DataDir)
+	require.Equal(t, "data", topo.TiCIMetaServers[0].DataDir)
+	require.Equal(t, "data", topo.TiCIWorkerServers[0].DataDir)
 
 	// Test with global DataDir.
 	topo = new(Specification)
@@ -66,6 +72,8 @@ func TestDefaultDataDir(t *testing.T) {
 	topo.CDCServers = append(topo.CDCServers, &CDCSpec{Host: "2.3.3.4", Port: 22, DataDir: "/cdc_data"})
 	topo.TiKVCDCServers = append(topo.TiKVCDCServers, &TiKVCDCSpec{Host: "3.3.3.3", Port: 22})
 	topo.TiKVCDCServers = append(topo.TiKVCDCServers, &TiKVCDCSpec{Host: "3.3.3.4", Port: 22, DataDir: "/tikv-cdc_data"})
+	topo.TiCIMetaServers = append(topo.TiCIMetaServers, &TiCIMetaSpec{Host: "4.4.4.4", Port: 22, DataDir: "/tici-meta-data"})
+	topo.TiCIWorkerServers = append(topo.TiCIWorkerServers, &TiCIWorkerSpec{Host: "5.5.5.5", Port: 22, DataDir: "/tici-worker-data"})
 	data, err = yaml.Marshal(topo)
 	require.NoError(t, err)
 
@@ -81,6 +89,8 @@ func TestDefaultDataDir(t *testing.T) {
 
 	require.Equal(t, "/global_data/tikv-cdc-22", topo.TiKVCDCServers[0].DataDir)
 	require.Equal(t, "/tikv-cdc_data", topo.TiKVCDCServers[1].DataDir)
+	require.Equal(t, "/tici-meta-data", topo.TiCIMetaServers[0].DataDir)
+	require.Equal(t, "/tici-worker-data", topo.TiCIWorkerServers[0].DataDir)
 }
 
 func TestGlobalOptions(t *testing.T) {
@@ -103,6 +113,12 @@ cdc_servers:
 kvcdc_servers:
   - host: 172.16.5.244
     data_dir: "tikv-cdc-data"
+tici_meta_servers:
+  - host: 172.16.5.255
+    data_dir: "tici-meta-data"
+tici_worker_servers:
+  - host: 172.16.5.256
+    data_dir: "tici-worker-data"
 `), &topo)
 	require.NoError(t, err)
 	require.Equal(t, "test1", topo.GlobalOptions.User)
@@ -121,6 +137,14 @@ kvcdc_servers:
 	require.Equal(t, 220, topo.TiKVCDCServers[0].SSHPort)
 	require.Equal(t, "test-deploy/tikv-cdc-8600", topo.TiKVCDCServers[0].DeployDir)
 	require.Equal(t, "tikv-cdc-data", topo.TiKVCDCServers[0].DataDir)
+
+	require.Equal(t, 220, topo.TiCIMetaServers[0].SSHPort)
+	require.Equal(t, "test-deploy/tici-meta-8500", topo.TiCIMetaServers[0].DeployDir)
+	require.Equal(t, "tici-meta-data", topo.TiCIMetaServers[0].DataDir)
+
+	require.Equal(t, 220, topo.TiCIWorkerServers[0].SSHPort)
+	require.Equal(t, "test-deploy/tici-worker-8510", topo.TiCIWorkerServers[0].DeployDir)
+	require.Equal(t, "tici-worker-data", topo.TiCIWorkerServers[0].DataDir)
 }
 
 func TestDataDirAbsolute(t *testing.T) {
@@ -144,6 +168,16 @@ kvcdc_servers:
     data_dir: "tikv-cdc-data"
   - host: 172.16.5.245
     port: 33333
+tici_meta_servers:
+  - host: 172.16.5.254
+    data_dir: "/tici-meta-data"
+  - host: 172.16.5.255
+    port: 8530
+tici_worker_servers:
+  - host: 172.16.5.264
+    data_dir: "/tici-worker-data"
+  - host: 172.16.5.265
+    port: 8550
 `), &topo)
 	require.NoError(t, err)
 
@@ -155,6 +189,11 @@ kvcdc_servers:
 
 	require.Equal(t, "tikv-cdc-data", topo.TiKVCDCServers[0].DataDir)
 	require.Equal(t, "/test-data/tikv-cdc-33333", topo.TiKVCDCServers[1].DataDir)
+
+	require.Equal(t, "/tici-meta-data", topo.TiCIMetaServers[0].DataDir)
+	require.Equal(t, "/test-data/tici-meta-8530", topo.TiCIMetaServers[1].DataDir)
+	require.Equal(t, "/tici-worker-data", topo.TiCIWorkerServers[0].DataDir)
+	require.Equal(t, "/test-data/tici-worker-8550", topo.TiCIWorkerServers[1].DataDir)
 }
 
 func TestGlobalConfig(t *testing.T) {
@@ -201,6 +240,18 @@ kvcdc_servers:
     port: 8601
     config:
       log-level: "debug"
+
+tici_meta_servers:
+  - host: 172.16.5.254
+  - host: 172.16.5.255
+    config:
+      reader_pool.ttl_seconds: 9
+
+tici_worker_servers:
+  - host: 172.16.5.256
+  - host: 172.16.5.257
+    config:
+      heartbeat_interval: "10s"
 `), &topo)
 	require.NoError(t, err)
 	require.Equal(t, map[string]any{
@@ -283,6 +334,28 @@ kvcdc_servers:
 		"log-level": "debug",
 	}
 	got = FoldMap(topo.TiKVCDCServers[1].Config)
+	require.Equal(t, expected, got)
+
+	expected = map[string]any{}
+	got = FoldMap(topo.TiCIMetaServers[0].Config)
+	require.Equal(t, expected, got)
+
+	expected = map[string]any{
+		"reader_pool": map[string]any{
+			"ttl_seconds": 9,
+		},
+	}
+	got = FoldMap(topo.TiCIMetaServers[1].Config)
+	require.Equal(t, expected, got)
+
+	expected = map[string]any{}
+	got = FoldMap(topo.TiCIWorkerServers[0].Config)
+	require.Equal(t, expected, got)
+
+	expected = map[string]any{
+		"heartbeat_interval": "10s",
+	}
+	got = FoldMap(topo.TiCIWorkerServers[1].Config)
 	require.Equal(t, expected, got)
 }
 

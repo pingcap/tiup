@@ -1,0 +1,453 @@
+# # Global variables are applied to all deployments and used as the default value of
+# # the deployments if a specific deployment value is missing.
+global:
+  # # The user who runs the tidb cluster.
+  user: "tidb"
+  # # group is used to specify the group name the user belong to,if it's not the same as user.
+  # group: "tidb"
+  # # SSH port of servers in the managed cluster.
+  # # systemd_mode is used to select whether to use sudo permissions. When its value is set to user, there is no need to add global.user to sudoers. The default value is system.
+  # systemd_mode: "system"
+  ssh_port: 22
+  # # Storage directory for cluster deployment files, startup scripts, and configuration files.
+  deploy_dir: "/tidb-deploy"
+  # # TiDB Cluster data storage directory
+  data_dir: "/tidb-data"
+  # # default listen_host for all components
+  listen_host: 0.0.0.0
+  # # Supported values: "amd64", "arm64" (default: "amd64")
+  arch: "amd64"
+  # # Resource Control is used to limit the resource of an instance.
+  # # See: https://www.freedesktop.org/software/systemd/man/systemd.resource-control.html
+  # # Supports using instance-level `resource_control` to override global `resource_control`.
+  # resource_control:
+  #   # See: https://www.freedesktop.org/software/systemd/man/systemd.resource-control.html#MemoryLimit=bytes
+  #   memory_limit: "2G"
+  #   # See: https://www.freedesktop.org/software/systemd/man/systemd.resource-control.html#CPUQuota=
+  #   # The percentage specifies how much CPU time the unit shall get at maximum, relative to the total CPU time available on one CPU. Use values > 100% for allotting CPU time on more than one CPU.
+  #   # Example: CPUQuota=200% ensures that the executed processes will never get more than two CPU time.
+  #   cpu_quota: "200%"
+  #   # See: https://www.freedesktop.org/software/systemd/man/systemd.resource-control.html#IOReadBandwidthMax=device%20bytes
+  #   io_read_bandwidth_max: "/dev/disk/by-path/pci-0000:00:1f.2-scsi-0:0:0:0 100M"
+  #   io_write_bandwidth_max: "/dev/disk/by-path/pci-0000:00:1f.2-scsi-0:0:0:0 100M"
+
+# # Monitored variables are applied to all the machines.
+monitored:
+  # # The communication port for reporting system information of each node in the TiDB cluster.
+  node_exporter_port: 9100
+  # # Blackbox_exporter communication port, used for TiDB cluster port monitoring.
+  blackbox_exporter_port: 9115
+  # # Storage directory for deployment files, startup scripts, and configuration files of monitoring components.
+  # deploy_dir: "/tidb-deploy/monitored-9100"
+  # # Data storage directory of monitoring components.
+  # data_dir: "/tidb-data/monitored-9100"
+  # # Log storage directory of the monitoring component.
+  # log_dir: "/tidb-deploy/monitored-9100/log"
+
+# # Server configs are used to specify the runtime configuration of TiDB components.
+# # All configuration items can be found in TiDB docs:
+# # - TiDB: https://docs.pingcap.com/tidb/stable/tidb-configuration-file
+# # - TiKV: https://docs.pingcap.com/tidb/stable/tikv-configuration-file
+# # - PD: https://docs.pingcap.com/tidb/stable/pd-configuration-file
+# # - TiFlash: https://docs.pingcap.com/tidb/stable/tiflash-configuration
+# #
+# # All configuration items use points to represent the hierarchy, e.g:
+# #   readpool.storage.use-unified-pool
+# #           ^       ^
+# # - example: https://github.com/pingcap/tiup/blob/master/embed/examples/cluster/topology.example.yaml
+# # You can overwrite this configuration via the instance-level `config` field.
+server_configs:
+  cdc:
+    newarch: true
+
+# # Component versions are used to specify the version of each component in the TiDB cluster.
+component_versions:
+  tidb: v9.0.0-feature.fts
+  tiflash: v9.0.0-feature.fts
+  tici_meta: nightly
+  tici_worker: nightly
+
+# # Server configs are used to specify the configuration of PD Servers.
+pd_servers:
+  # # The ip address of the PD Server.
+  - host: 10.0.1.11
+    # # SSH port of the server.
+    # ssh_port: 22
+    # # PD Server name
+    # name: "pd-1"
+    # # communication port for TiDB Servers to connect.
+    # client_port: 2379
+    # # communication port among PD Server nodes.
+    # peer_port: 2380
+    # # PD Server deployment file, startup script, configuration file storage directory.
+    # deploy_dir: "/tidb-deploy/pd-2379"
+    # # PD Server data storage directory.
+    # data_dir: "/tidb-data/pd-2379"
+    # # PD Server log file storage directory.
+    # log_dir: "/tidb-deploy/pd-2379/log"
+    # # numa node bindings.
+    # numa_node: "0,1"
+    # # The following configs are used to overwrite the `server_configs.pd` values.
+    # config:
+    #   schedule.max-merge-region-size: 20
+    #   schedule.max-merge-region-keys: 200000
+  - host: 10.0.1.12
+    # ssh_port: 22
+    # name: "pd-1"
+    # client_port: 2379
+    # peer_port: 2380
+    # deploy_dir: "/tidb-deploy/pd-2379"
+    # data_dir: "/tidb-data/pd-2379"
+    # log_dir: "/tidb-deploy/pd-2379/log"
+    # numa_node: "0,1"
+    # config:
+    #   schedule.max-merge-region-size: 20
+    #   schedule.max-merge-region-keys: 200000
+  - host: 10.0.1.13
+    # ssh_port: 22
+    # name: "pd-1"
+    # client_port: 2379
+    # peer_port: 2380
+    # deploy_dir: "/tidb-deploy/pd-2379"
+    # data_dir: "/tidb-data/pd-2379"
+    # log_dir: "/tidb-deploy/pd-2379/log"
+    # numa_node: "0,1"
+    # config:
+    #   schedule.max-merge-region-size: 20
+    #   schedule.max-merge-region-keys: 200000
+
+# # Server configs are used to specify the configuration of TiDB Servers.
+tidb_servers:
+  # # The ip address of the TiDB Server.
+  - host: 10.0.1.14
+    # # SSH port of the server.
+    # ssh_port: 22
+    # # Access the TiDB cluster port.
+    port: 4000
+    # # TiDB Server status information reporting port.
+    status_port: 10080
+    # # TiDB Server deployment file, startup script, configuration file storage directory.
+    deploy_dir: "/tidb-deploy/tidb-4000"
+    # # TiDB Server log file storage directory.
+    log_dir: "/tidb-deploy/tidb-4000/log"
+    # numa_node: "0" # suggest numa node bindings.
+  - host: 10.0.1.14
+    # ssh_port: 22
+    port: 4001
+    status_port: 10081
+    deploy_dir: "/tidb-deploy/tidb-4001"
+    log_dir: "/tidb-deploy/tidb-4001/log"
+    # numa_node: "1" # suggest numa node bindings.   
+  - host: 10.0.1.15
+    # ssh_port: 22
+    port: 4000
+    status_port: 10080
+    deploy_dir: "/tidb-deploy/tidb-4000"
+    log_dir: "/tidb-deploy/tidb-4000/log"
+    # numa_node: "0" # suggest numa node bindings.
+  - host: 10.0.1.15
+    # ssh_port: 22
+    port: 4001
+    status_port: 10081
+    deploy_dir: "/tidb-deploy/tidb-4001"
+    log_dir: "/tidb-deploy/tidb-4001/log"
+    # numa_node: "1" # suggest numa node bindings.  
+
+# # Server configs are used to specify the configuration of TiKV Servers.
+tikv_servers:
+  # # The ip address of the TiKV Server.
+  - host: 10.0.1.16
+    # # SSH port of the server.
+    # ssh_port: 22
+    # # TiKV Server communication port.
+    port: 20160
+    # # Communication port for reporting TiKV Server status.
+    status_port: 20180
+    # # TiKV Server deployment file, startup script, configuration file storage directory.
+    deploy_dir: "/data1/tidb-deploy/tikv-20160"
+    # # TiKV Server data storage directory.
+    data_dir: "/data1/tidb-data/tikv-20160"
+    # # TiKV Server log file storage directory.
+    log_dir: "/data1/tidb-deploy/tikv-20160/log"
+    # numa_node: "0"
+    # # The following configs are used to overwrite the `server_configs.tikv` values.
+    # config:
+    #   log.level: warn
+  - host: 10.0.1.16
+    # ssh_port: 22
+    port: 20161
+    status_port: 20181
+    deploy_dir: "/data2/tidb-deploy/tikv-20161"
+    data_dir: "/data2/tidb-data/tikv-20161"
+    log_dir: "/data2/tidb-deploy/tikv-20161/log"
+    # numa_node: "1"
+    # config:
+    #   log.level: warn
+  - host: 10.0.1.17
+    # ssh_port: 22
+    port: 20160
+    status_port: 20180
+    deploy_dir: "/data1/tidb-deploy/tikv-20160"
+    data_dir: "/data1/tidb-data/tikv-20160"
+    log_dir: "/data1/tidb-deploy/tikv-20160/log"
+    # numa_node: "0"
+    # config:
+    #   log.level: warn
+  - host: 10.0.1.17
+    # ssh_port: 22
+    port: 20161
+    status_port: 20181
+    deploy_dir: "/data2/tidb-deploy/tikv-20161"
+    data_dir: "/data2/tidb-data/tikv-20161"
+    log_dir: "/data2/tidb-deploy/tikv-20161/log"
+    # numa_node: "1"
+    # config:
+    #   log.level: warn
+  - host: 10.0.1.18
+    # ssh_port: 22
+    port: 20160
+    status_port: 20180
+    deploy_dir: "/data1/tidb-deploy/tikv-20160"
+    data_dir: "/data1/tidb-data/tikv-20160"
+    log_dir: "/data1/tidb-deploy/tikv-20160/log"
+    # numa_node: "0"
+    # config:
+    #   log.level: warn
+  - host: 10.0.1.18
+    # ssh_port: 22
+    port: 20161
+    status_port: 20181
+    deploy_dir: "/data2/tidb-deploy/tikv-20161"
+    data_dir: "/data2/tidb-data/tikv-20161"
+    log_dir: "/data2/tidb-deploy/tikv-20161/log"
+    # numa_node: "1"
+    # config:
+    #   log.level: warn
+
+# # Server configs are used to specify the configuration of TiFlash Servers.
+tiflash_servers:
+  # # The ip address of the TiFlash Server.
+  - host: 10.0.1.19
+    # # SSH port of the server.
+    # ssh_port: 22
+    # # TiFlash TCP Service port.
+    # # Since 7.1.0, it is not actually listened, and only being used as part of the instance identity.
+    tcp_port: 9000
+    # # TiFlash raft service and coprocessor service listening address.
+    flash_service_port: 3930
+    # # TiFlash Proxy service port.
+    flash_proxy_port: 20170
+    # # Prometheus pulls TiFlash Proxy metrics port.
+    flash_proxy_status_port: 20292
+    # # Prometheus pulls the TiFlash metrics port.
+    metrics_port: 8234
+    # # TiFlash Server deployment file, startup script, configuration file storage directory.
+    deploy_dir: /data1/tidb-deploy/tiflash-9000
+    ## With cluster version >= v4.0.9 and you want to deploy a multi-disk TiFlash node, it is recommended to
+    ## check config.storage.* for details. The data_dir will be ignored if you defined those configurations.
+    ## Setting data_dir to a ','-joined string is still supported but deprecated.
+    ## Check https://docs.pingcap.com/tidb/stable/tiflash-configuration#multi-disk-deployment for more details.
+    # # TiFlash Server data storage directory.
+    data_dir: /data1/tidb-data/tiflash-9000
+    # # TiFlash Server log file storage directory.
+    log_dir: /data1/tidb-deploy/tiflash-9000/log
+    # # The following configs are used to overwrite the `server_configs.tiflash` values.
+    # config:
+      # logger.level: info
+    # # The following configs are used to overwrite the `server_configs.tiflash-learner` values.
+    # learner_config:
+    #   log.level: info
+  - host: 10.0.1.19
+    # ssh_port: 22
+    tcp_port: 9001
+    flash_service_port: 3931
+    flash_proxy_port: 20171
+    flash_proxy_status_port: 20293
+    metrics_port: 8235
+    deploy_dir: /data2/tidb-deploy/tiflash-9001
+    data_dir: /data2/tidb-data/tiflash-9001
+    log_dir: /data2/tidb-deploy/tiflash-9001/log
+    # config:
+      # logger.level: info
+  - host: 10.0.1.20
+    # ssh_port: 22
+    tcp_port: 9000
+    flash_service_port: 3930
+    flash_proxy_port: 20170
+    flash_proxy_status_port: 20292
+    metrics_port: 8234
+    deploy_dir: /data1/tidb-deploy/tiflash-9000
+    data_dir: /data1/tidb-data/tiflash-9000
+    log_dir: /data1/tidb-deploy/tiflash-9000/log
+    # config:
+      # logger.level: info
+  - host: 10.0.1.20
+    # ssh_port: 22
+    tcp_port: 9001
+    flash_service_port: 3931
+    flash_proxy_port: 20171
+    flash_proxy_status_port: 20293
+    metrics_port: 8235
+    deploy_dir: /data2/tidb-deploy/tiflash-9001
+    data_dir: /data2/tidb-data/tiflash-9001
+    log_dir: /data2/tidb-deploy/tiflash-9001/log
+    # config:
+      # logger.level: info
+
+# # Server configs are used to specify the configuration of TiKV-CDC Servers.
+# kvcdc_servers:
+  # - host: 10.0.1.20
+    # # SSH port of the server.
+    # ssh_port: 22
+    # # TiKV-CDC Server communication port.
+    # port: 8600
+    # # TiKV-CDC Server data storage directory.
+    # data_dir: "/data1/tidb-data/tikv-cdc-8600"
+    # # TiKV-CDC Server log file storage directory.
+    # log_dir: "/data1/tidb-deploy/tikv-cdc-8600/log"
+  # - host: 10.0.1.21
+    # data_dir: "/data1/tidb-data/tikv-cdc-8600"
+    # log_dir: "/data1/tidb-deploy/tikv-cdc-8600/log"
+
+# # Server configs are used to specify the configuration of TiCDC Servers.  
+cdc_servers:
+ - host: 10.0.1.20
+    # # SSH port of the server.
+    # ssh_port: 22
+    # # TiCDC Server communication port.
+    # port: 8300
+    # # TiCDC Server data storage directory.
+    # data_dir: "/data1/tidb-deploy/cdc-8300"
+    # # TiCDC Server log file storage directory.
+    # log_dir: "/data1/tidb-deploy/cdc-8300/log"
+    # # TiCDC Server deployment file, startup script, configuration file storage directory.
+    # deploy_dir: "/data1/tidb-deploy/cdc-8300"
+    # gc-ttl: 86400 # 24h
+    # tz: "System"
+    # numa_node: "0,1"
+    # config:
+    #   log.level: warn
+    # ticdc_cluster_id: "default"
+  # - host: 10.0.1.21
+    # ssh_port: 22
+    # port: 8301
+    # data_dir: "/data2/tidb-deploy/cdc-8301"
+    # log_dir: "/data2/tidb-deploy/cdc-8301/log"
+    # deploy_dir: "/data2/tidb-deploy/cdc-8301"
+
+# # Server configs are used to specify the configuration of TiCI Meta Servers.
+tici_meta_servers:
+  - host: 10.0.1.21
+  # # SSH port of the server.
+    # ssh_port: 22
+    # # TiCI Meta Server communication port.
+    # port: 8500
+    # # TiCI Meta Server data storage directory.
+    # data_dir: "/data1/tidb-deploy/tici-meta-8500"
+    # # TiCI Meta Server log file storage directory.
+    # log_dir: "/data1/tidb-deploy/tici-meta-8500/log"
+    # # TiCI Meta Server deployment file, startup script, configuration file storage directory.
+    # deploy_dir: "/data1/tidb-deploy/tici-meta-8500"
+    # numa_node: "0,1"
+    # config:
+    #   log.level: warn
+  # - host: 10.0.1.22
+    # ssh_port: 22
+    # port: 8503
+    # data_dir: "/data2/tidb-deploy/tici-meta-8503"
+    # log_dir: "/data2/tidb-deploy/tici-meta-8503/log"
+    # deploy_dir: "/data2/tidb-deploy/tici-meta-8503"
+
+# # Server configs are used to specify the configuration of TiCI Worker Servers.
+tici_worker_servers:
+  - host: 10.0.1.23
+    # # SSH port of the server.
+    # ssh_port: 22
+    # # TiCI Worker Server communication port.
+    # port: 8510
+    # # TiCI Worker Server data storage directory.
+    # data_dir: "/data1/tidb-deploy/tici-worker-8510"
+    # # TiCI Worker Server log file storage directory.
+    # log_dir: "/data1/tidb-deploy/tici-worker-8510/log"
+    # # TiCI Worker Server deployment file, startup script, configuration file storage directory.
+    # deploy_dir: "/data1/tidb-deploy/tici-worker-8510"
+    # numa_node: "0,1"
+    # config:
+    #   log.level: warn
+  # - host:
+    # ssh_port: 22
+    # port: 8513
+    # data_dir: "/data2/tidb-deploy/tici-worker-8513"
+    # log_dir: "/data2/tidb-deploy/tici-worker-8513/log"
+    # deploy_dir: "/data2/tidb-deploy/tici-worker-8513"
+    
+# # Server configs are used to specify the configuration of TiDB Dashboard Servers. Available from v6.5.0
+# tidb_dashboard_servers:
+  # # The ip address of the PD Server.
+#  - host: 10.0.1.11
+    # # SSH port of the server.
+    # ssh_port: 22
+    # # port of TiDB Dashboard
+    # port: 12333
+    # # TiDB Dashboard deployment file, startup script, configuration file storage directory.
+    # deploy_dir: "/tidb-deploy/tidb-dashboard-12333"
+    # # PD Server data storage directory.
+    # data_dir: "/tidb-data/tidb-dashboard-12333"
+    # # PD Server log file storage directory.
+    # log_dir: "/tidb-deploy/tidb-dashboard-12333/log"
+    # # numa node bindings.
+    # numa_node: "0,1"   
+    
+# # Server configs are used to specify the configuration of Prometheus Server.  
+monitoring_servers:
+  # # The ip address of the Monitoring Server.
+  - host: 10.0.1.21
+    # # SSH port of the server.
+    # ssh_port: 22
+    # # Prometheus Service communication port.
+    # port: 9090
+    # # ng-monitoring servive communication port
+    # ng_port: 12020
+    # # Prometheus deployment file, startup script, configuration file storage directory.
+    # deploy_dir: "/tidb-deploy/prometheus-8249"
+    # # Prometheus data storage directory.
+    # data_dir: "/tidb-data/prometheus-8249"
+    # # Prometheus log file storage directory.
+    # log_dir: "/tidb-deploy/prometheus-8249/log"
+    # prometheus rule dir on TiUP machine
+    # rule_dir: /home/tidb/prometheus_rule
+    # scrape_interval: 15s
+    # scrape_timeout: 10s
+# # Server configs are used to specify the configuration of Grafana Servers.  
+grafana_servers:
+  # # The ip address of the Grafana Server.
+  - host: 10.0.1.21
+    # # Grafana Web monitoring service client (browser) access port
+    # port: 3000
+    # # Grafana deployment file, startup script, configuration file storage directory.
+    # deploy_dir: /tidb-deploy/grafana-3000
+    # grafana dashboard dir on TiUP machine
+    # dashboard_dir: /home/tidb/dashboards
+    # config:
+    #   log.file.level: warning
+
+# # Server configs are used to specify the configuration of Alertmanager Servers.  
+alertmanager_servers:
+  # # The ip address of the Alertmanager Server.
+  - host: 10.0.1.21
+    # # SSH port of the server.
+    # ssh_port: 22
+    # Alertmanager web service listen host.
+    # listen_host: 0.0.0.0
+    # # Alertmanager web service port.
+    # web_port: 9093
+    # # Alertmanager communication port.
+    # cluster_port: 9094
+    # # Alertmanager deployment file, startup script, configuration file storage directory.
+    # deploy_dir: "/tidb-deploy/alertmanager-9093"
+    # # Alertmanager data storage directory.
+    # data_dir: "/tidb-data/alertmanager-9093"
+    # # Alertmanager log file storage directory.
+    # log_dir: "/tidb-deploy/alertmanager-9093/log"
+    # # Alertmanager config file storage directory.
+    # config_file: "/tidb-deploy/alertmanager-9093/bin/alertmanager/alertmanager.yml"

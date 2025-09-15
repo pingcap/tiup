@@ -1316,10 +1316,12 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			if err != nil {
 				return err
 			}
-			if output, err := utils.CreateChangefeed(fmt.Sprintf("http://%s", p.ticdcs[0].Addr()), s3Config.Bucket, s3Config.Prefix, s3Config.Endpoint, s3Config.AccessKey, s3Config.SecretKey, flushInterval); err != nil {
+			cdcClient := api.NewCDCOpenAPIClient(ctx, []string{p.ticdcs[0].Addr()}, 10*time.Second, nil)
+			if err := cdcClient.CreateChangefeed(s3Config.Bucket, s3Config.Prefix, s3Config.Endpoint, s3Config.AccessKey, s3Config.SecretKey, flushInterval); err != nil {
 				fmt.Println(color.RedString("Failed to create changefeed: %s", err))
+				return err
 			} else {
-				fmt.Println("Changefeed created:", output)
+				fmt.Println("Changefeed created")
 			}
 			hasChangefeedCreated = true
 		}

@@ -125,6 +125,8 @@ server_configs:
     drainer: {}
     cdc: {}
     kvcdc: {}
+    tici_meta: {}
+    tici_worker: {}
     grafana: {}
 tidb_servers: []
 tikv_servers: []

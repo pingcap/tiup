@@ -1,0 +1,52 @@
+global:
+  user: "tidb"
+  ssh_port: 22
+  deploy_dir: "/DATA/disk3/qiuyang/tidb-deploy"
+  data_dir: "/DATA/disk3/qiuyang/tidb-data"
+  listen_host: 0.0.0.0
+  arch: "amd64"
+
+server_configs:
+  cdc:
+    newarch: true
+
+component_versions:
+  tidb: v9.0.0-feature.fts
+  tiflash: v9.0.0-feature.fts
+  tici_meta: nightly
+  tici_worker: nightly
+
+pd_servers:
+  - host: 127.0.0.1
+    client_port: 2379
+    peer_port: 2380
+
+tidb_servers:
+  - host: 127.0.0.1
+    port: 4000
+    status_port: 10080
+
+tikv_servers:
+  - host: 127.0.0.1
+    port: 20160
+    status_port: 20180
+
+cdc_servers:
+  - host: 127.0.0.1
+
+tici_meta_servers:
+  - host: 127.0.0.1
+
+tici_worker_servers:
+  - host: 127.0.0.1
+
+tiflash_servers:
+  - host: 127.0.0.1
+
+monitoring_servers:
+  - host: 127.0.0.1
+    port: 9095
+
+grafana_servers:
+  - host: 127.0.0.1
+    port: 3005

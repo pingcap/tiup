@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -255,6 +256,7 @@ func (i *MonitorInstance) handleRemoteWrite(spec *PrometheusSpec, monitoring *Pr
 }
 
 // InitConfig implement Instance interface
+// revive:disable:cognitive-complexity
 func (i *MonitorInstance) InitConfig(
 	ctx context.Context,
 	e ctxt.Executor,
@@ -290,11 +292,8 @@ func (i *MonitorInstance) InitConfig(
 
 	// Check if agent mode is enabled in additional arguments
 	if !cfg.EnablePromAgentMode {
-		for _, arg := range spec.AdditionalArgs {
-			if arg == "--enable-feature=agent" {
-				cfg.EnablePromAgentMode = true
-				break
-			}
+		if slices.Contains(spec.AdditionalArgs, "--enable-feature=agent") {
+			cfg.EnablePromAgentMode = true
 		}
 	}
 
@@ -402,6 +401,20 @@ func (i *MonitorInstance) InitConfig(
 			tikvCdc := servers.Index(i).Interface().(*TiKVCDCSpec)
 			uniqueHosts.Insert(tikvCdc.Host)
 			cfig.AddTiKVCDC(tikvCdc.Host, uint64(tikvCdc.Port))
+		}
+	}
+	if servers, found := topoHasField("TiCIMetaServers"); found {
+		for i := 0; i < servers.Len(); i++ {
+			ticiMeta := servers.Index(i).Interface().(*TiCIMetaSpec)
+			uniqueHosts.Insert(ticiMeta.Host)
+			cfig.AddTiCIMeta(ticiMeta.Host, uint64(ticiMeta.Port))
+		}
+	}
+	if servers, found := topoHasField("TiCIWorkerServers"); found {
+		for i := 0; i < servers.Len(); i++ {
+			ticiWorker := servers.Index(i).Interface().(*TiCIWorkerSpec)
+			uniqueHosts.Insert(ticiWorker.Host)
+			cfig.AddTiCIWorker(ticiWorker.Host, uint64(ticiWorker.Port))
 		}
 	}
 	if servers, found := topoHasField("Monitors"); found {
@@ -555,6 +568,8 @@ func (i *MonitorInstance) InitConfig(
 
 	return checkConfig(ctx, e, i.ComponentName(), i.ComponentSource(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".yml", paths)
 }
+
+// revive:enable:cognitive-complexity
 
 // setTLSConfig set TLS Config to support enable/disable TLS
 func (i *MonitorInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error) {
