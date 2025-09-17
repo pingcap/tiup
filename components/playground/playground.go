@@ -265,6 +265,7 @@ func (p *Playground) killTiFlashIfTombstone(inst *instance.TiFlashInstance) {
 	}
 }
 
+// revive:disable:cognitive-complexity
 func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 	var cid string
 	var inst instance.Instance
@@ -436,6 +437,8 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 
 	return nil
 }
+
+// revive:enable:cognitive-complexity
 
 func (p *Playground) handleScaleInDMWorker(pid int) error {
 	for i := 0; i < len(p.dmWorkers); i++ {
