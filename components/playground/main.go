@@ -346,8 +346,7 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 	rootCmd.Flags().StringVar(&options.TiFlashCompute.BinPath, "tiflash.compute.binpath", "", "TiFlash Compute instance binary path, available when --mode=tidb-cse or --mode=tiflash-disagg, take precedence over --tiflash.binpath")
 	rootCmd.Flags().StringVar(&options.TiCDC.BinPath, "ticdc.binpath", "", "TiCDC instance binary path")
 	rootCmd.Flags().StringVar(&options.TiKVCDC.BinPath, "kvcdc.binpath", "", "TiKV-CDC instance binary path")
-	rootCmd.Flags().StringVar(&options.TiCIMeta.BinPath, "tici.meta.binpath", "", "TiCI-Meta instance binary path")
-	rootCmd.Flags().StringVar(&options.TiCIWorker.BinPath, "tici.worker.binpath", "", "TiCI-Worker instance binary path")
+	rootCmd.Flags().StringVar(&options.TiCIMeta.BinPath, "tici.binpath", "", "TiCI-Meta/Worker instance binary path")
 	rootCmd.Flags().StringVar(&options.Pump.BinPath, "pump.binpath", "", "Pump instance binary path")
 	rootCmd.Flags().StringVar(&options.Drainer.BinPath, "drainer.binpath", "", "Drainer instance binary path")
 	rootCmd.Flags().StringVar(&options.DMMaster.BinPath, "dm-master.binpath", "", "DM-master instance binary path")
@@ -422,6 +421,11 @@ func populateDefaultOpt(flagSet *pflag.FlagSet) error {
 		defaultStr(&options.Scheduling.ConfigPath, "scheduling.config", options.PD.ConfigPath)
 	default:
 		return errors.Errorf("Unknown --pd.mode %s", options.ShOpt.PDMode)
+	}
+
+	// Worker instances inherit binpath from meta
+	if options.TiCIWorker.Num > 0 && options.TiCIWorker.BinPath == "" {
+		options.TiCIWorker.BinPath = options.TiCIMeta.BinPath
 	}
 
 	return nil
