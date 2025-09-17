@@ -1585,12 +1585,12 @@ func (p *Playground) terminate(sig syscall.Signal) {
 			kill(inst.Component(), inst.Pid(), inst.Wait)
 		}
 	}
-	for _, inst := range p.ticiMetas {
+	for _, inst := range p.ticiWorkers {
 		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
 			kill(inst.Component(), inst.Pid(), inst.Wait)
 		}
 	}
-	for _, inst := range p.ticiWorkers {
+	for _, inst := range p.ticiMetas {
 		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
 			kill(inst.Component(), inst.Pid(), inst.Wait)
 		}
