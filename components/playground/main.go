@@ -448,10 +448,10 @@ func populateDefaultOpt(flagSet *pflag.FlagSet) error {
 		defaultInt(&options.Scheduling.Num, "scheduling", 1)
 		defaultStr(&options.Scheduling.BinPath, "scheduling.binpath", options.PD.BinPath)
 		defaultStr(&options.Scheduling.ConfigPath, "scheduling.config", options.PD.ConfigPath)
-		defaultInt(&options.Router.Num, "router", 1)
+		defaultInt(&options.Router.Num, "router", 0)
 		defaultStr(&options.Router.BinPath, "router.binpath", options.PD.BinPath)
 		defaultStr(&options.Router.ConfigPath, "router.config", options.PD.ConfigPath)
-		defaultInt(&options.ResourceManager.Num, "resource-manager", 1)
+		defaultInt(&options.ResourceManager.Num, "resource-manager", 0)
 		defaultStr(&options.ResourceManager.BinPath, "resource-manager.binpath", options.PD.BinPath)
 		defaultStr(&options.ResourceManager.ConfigPath, "resource-manager.config", options.PD.ConfigPath)
 	default:
