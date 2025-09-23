@@ -530,7 +530,7 @@ func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) 
 	var err error
 	boundVersion := p.bindVersion(inst.Component(), p.bootOptions.Version)
 	component := inst.Component()
-	if component == "tso" || component == "scheduling" {
+	if component == "tso" || component == "scheduling" || component == "router" || component == "resource-manager" {
 		component = string(instance.PDRoleNormal)
 	}
 	if component == "tikv_worker" {
