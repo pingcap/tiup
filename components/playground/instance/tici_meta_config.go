@@ -20,28 +20,6 @@ func (inst *TiCIInstance) getMetaConfig() map[string]any {
 		tidbServers = append(tidbServers, db.DSN())
 	}
 	config["tidb_servers"] = tidbServers
-	config["cert_path"] = ""
-
-	// reader pool config
-	config["reader_pool.ttl_seconds"] = 9
-	config["reader_pool.cleanup_interval_seconds"] = 1
-	config["reader_pool.scheduling_strategy"] = "round_robin"
-
-	// S3 config
-	// TODO: make it configurable
-	endpoint, ak, sk, bucket, prefix := GetDefaultTiCIMetaS3Config()
-	config["s3.endpoint"] = endpoint
-	config["s3.region"] = "us_east_1"
-	config["s3.access_key"] = ak
-	config["s3.secret_key"] = sk
-	config["s3.use_path_style"] = false
-	config["s3.bucket"] = bucket
-	config["s3.prefix"] = prefix
-
-	// shard config
-	config["shard.max_size"] = "1024MB"
-	config["shard.split_threshold"] = 0.75
-
 	return config
 }
 

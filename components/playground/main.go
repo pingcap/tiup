@@ -347,7 +347,7 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 	rootCmd.Flags().StringVar(&options.TiCDC.BinPath, "ticdc.binpath", "", "TiCDC instance binary path")
 	rootCmd.Flags().StringVar(&options.TiKVCDC.BinPath, "kvcdc.binpath", "", "TiKV-CDC instance binary path")
 	rootCmd.Flags().StringVar(&options.TiCIMeta.BinPath, "tici.binpath", "", "TiCI-Meta/Worker instance binary path")
-	rootCmd.Flags().StringVar(&options.TiCIWorker.BinPath, "tici.binpath", "", "TiCI-Worker instance binary path")
+	rootCmd.Flags().StringVar(&options.TiCIWorker.BinPath, "tici.worker.binpath", "", "TiCI-Worker instance binary path")
 	rootCmd.Flags().StringVar(&options.Pump.BinPath, "pump.binpath", "", "Pump instance binary path")
 	rootCmd.Flags().StringVar(&options.Drainer.BinPath, "drainer.binpath", "", "Drainer instance binary path")
 	rootCmd.Flags().StringVar(&options.DMMaster.BinPath, "dm-master.binpath", "", "DM-master instance binary path")
