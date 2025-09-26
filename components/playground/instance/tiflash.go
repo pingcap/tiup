@@ -151,7 +151,7 @@ func (inst *TiFlashInstance) Start(ctx context.Context) error {
 		runtimeConfig = append(runtimeConfig, []string{"tici.reader_node.addr", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.ticReaderPort)})
 	}
 
-	userConfig, err := UnmarshalConfig(configPath)
+	userConfig, err := unmarshalConfig(configPath)
 	if err != nil {
 		return errors.Trace(err)
 	}

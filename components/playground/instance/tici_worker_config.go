@@ -17,3 +17,22 @@ func (inst *TiCIInstance) getWorkerConfig() map[string]any {
 	config := make(map[string]any)
 	return config
 }
+
+// GetCDCS3FlushIntervalFromFile reads the CDC S3 flush interval from the given config file path
+func GetCDCS3FlushIntervalFromFile(configPath string) (string, error) {
+	defaultInterval := "5s"
+	if configPath == "" {
+		return defaultInterval, nil
+	}
+	// read the configuration file
+	ticiWorkerConfig, err := unmarshalConfig(configPath)
+	if err != nil {
+		return "", err
+	}
+	if _, ok := ticiWorkerConfig["cdc_s3_flush_interval"]; ok {
+		if val, ok := ticiWorkerConfig["cdc_s3_flush_interval"].(string); ok {
+			return val, nil
+		}
+	}
+	return defaultInterval, nil
+}

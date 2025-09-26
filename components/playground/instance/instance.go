@@ -176,7 +176,7 @@ func prepareConfig(outputConfigPath string, userConfigPath string, preDefinedCon
 		return err
 	}
 
-	userConfig, err := UnmarshalConfig(userConfigPath)
+	userConfig, err := unmarshalConfig(userConfigPath)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -194,8 +194,8 @@ func prepareConfig(outputConfigPath string, userConfigPath string, preDefinedCon
 	return enc.Encode(spec.MergeConfig(preDefinedConfig, userConfig))
 }
 
-// UnmarshalConfig reads a TOML config file and returns the parsed content as a map.
-func UnmarshalConfig(path string) (map[string]any, error) {
+// unmarshalConfig reads a TOML config file and returns the parsed content as a map.
+func unmarshalConfig(path string) (map[string]any, error) {
 	if path == "" {
 		return nil, nil
 	}

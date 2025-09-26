@@ -154,13 +154,13 @@ func (inst *TiFlashInstance) checkConfigOld(deployDir, clusterManagerPath string
 		return
 	}
 
-	cfg, err := UnmarshalConfig(inst.ConfigPath)
+	cfg, err := unmarshalConfig(inst.ConfigPath)
 	if err != nil {
 		return errors.Trace(err)
 	}
 	proxyPath := getTiFlashProxyConfigPathOld(cfg)
 	if proxyPath != "" {
-		proxyCfg, err := UnmarshalConfig(proxyPath)
+		proxyCfg, err := unmarshalConfig(proxyPath)
 		if err != nil {
 			return errors.Trace(err)
 		}

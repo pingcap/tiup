@@ -1308,33 +1308,15 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			time.Sleep(time.Second * 10)
 
 			fmt.Println("Creating changefeed...")
-			var endpoint, accessKey, secretKey, bucket, prefix string
-			if options.TiCIMeta.ConfigPath != "" {
-				// read the configuration file
-				ticiMetaConfig, err := instance.UnmarshalConfig(options.TiCIMeta.ConfigPath)
-				if err != nil {
-					return err
-				}
-				bucket = ticiMetaConfig["s3"].(map[string]any)["bucket"].(string)
-				prefix = ticiMetaConfig["s3"].(map[string]any)["prefix"].(string)
-				endpoint = ticiMetaConfig["s3"].(map[string]any)["endpoint"].(string)
-				accessKey = ticiMetaConfig["s3"].(map[string]any)["access_key"].(string)
-				secretKey = ticiMetaConfig["s3"].(map[string]any)["secret_key"].(string)
-			} else {
-				endpoint, accessKey, secretKey, bucket, prefix = instance.GetDefaultTiCIMetaS3Config()
+			s3Config, err := instance.GetTiCIS3ConfigFromFile(options.TiCIMeta.ConfigPath)
+			if err != nil {
+				return err
 			}
-			var flushInterval = "5s"
-			if options.TiCIWorker.ConfigPath != "" {
-				// read the configuration file
-				ticiWorkerConfig, err := instance.UnmarshalConfig(options.TiCIWorker.ConfigPath)
-				if err != nil {
-					return err
-				}
-				if val, ok := ticiWorkerConfig["cdc_s3_flush_interval"].(string); ok {
-					flushInterval = val
-				}
+			flushInterval, err := instance.GetCDCS3FlushIntervalFromFile(options.TiCIWorker.ConfigPath)
+			if err != nil {
+				return err
 			}
-			if output, err := utils.CreateChangefeed(fmt.Sprintf("http://%s", p.ticdcs[0].Addr()), bucket, prefix, endpoint, accessKey, secretKey, flushInterval); err != nil {
+			if output, err := utils.CreateChangefeed(fmt.Sprintf("http://%s", p.ticdcs[0].Addr()), s3Config.Bucket, s3Config.Prefix, s3Config.Endpoint, s3Config.AccessKey, s3Config.SecretKey, flushInterval); err != nil {
 				fmt.Println(color.RedString("Failed to create changefeed: %s", err))
 			} else {
 				fmt.Println("Changefeed created:", output)

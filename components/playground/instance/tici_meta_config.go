@@ -23,7 +23,53 @@ func (inst *TiCIInstance) getMetaConfig() map[string]any {
 	return config
 }
 
-// GetDefaultTiCIMetaS3Config returns the default S3 configuration for TiCI Meta Service
-func GetDefaultTiCIMetaS3Config() (string, string, string, string, string) {
-	return "http://localhost:9000", "minioadmin", "minioadmin", "logbucket", "storage_test"
+// TiCIS3Config represents the S3 configuration for TiCI
+type TiCIS3Config struct {
+	Endpoint  string
+	AccessKey string
+	SecretKey string
+	Bucket    string
+	Prefix    string
+}
+
+func getDefaultTiCIMetaS3Config() *TiCIS3Config {
+	return &TiCIS3Config{
+		Endpoint:  "http://localhost:9000",
+		AccessKey: "minioadmin",
+		SecretKey: "minioadmin",
+		Bucket:    "ticidefaultbucket",
+		Prefix:    "tici_default_prefix",
+	}
+}
+
+// GetTiCIS3ConfigFromFile reads the S3 configuration from the given config file path
+func GetTiCIS3ConfigFromFile(configPath string) (*TiCIS3Config, error) {
+	defaultConfig := getDefaultTiCIMetaS3Config()
+	if configPath == "" {
+		return defaultConfig, nil
+	}
+	// read the configuration file
+	ticiMetaConfig, err := unmarshalConfig(configPath)
+	if err != nil {
+		return nil, err
+	}
+	s3, ok := ticiMetaConfig["s3"].(map[string]any)
+	if ok {
+		if v, ok := s3["endpoint"].(string); ok {
+			defaultConfig.Endpoint = v
+		}
+		if v, ok := s3["access_key"].(string); ok {
+			defaultConfig.AccessKey = v
+		}
+		if v, ok := s3["secret_key"].(string); ok {
+			defaultConfig.SecretKey = v
+		}
+		if v, ok := s3["bucket"].(string); ok {
+			defaultConfig.Bucket = v
+		}
+		if v, ok := s3["prefix"].(string); ok {
+			defaultConfig.Prefix = v
+		}
+	}
+	return defaultConfig, nil
 }
