@@ -19,7 +19,7 @@ func (inst *TiCIInstance) getMetaConfig() map[string]any {
 	for _, db := range inst.dbs {
 		tidbServers = append(tidbServers, db.DSN())
 	}
-	config["tidb_servers"] = tidbServers
+	config["tidb_server.tidb_servers"] = tidbServers
 	config["cert_path"] = ""
 
 	// reader pool config
