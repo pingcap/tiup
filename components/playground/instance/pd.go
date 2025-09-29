@@ -42,7 +42,6 @@ const (
 type PDInstance struct {
 	instance
 	shOpt             SharedOptions
-	role              PDRole
 	initEndpoints     []*PDInstance
 	joinEndpoints     []*PDInstance
 	pds               []*PDInstance
@@ -63,11 +62,11 @@ func NewPDInstance(role PDRole, shOpt SharedOptions, binPath, dir, host, configP
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
+			Role:       role,
 			Port:       utils.MustGetFreePort(host, 2380, shOpt.PortOffset),
 			StatusPort: utils.MustGetFreePort(host, port, shOpt.PortOffset),
 			ConfigPath: configPath,
 		},
-		role:              role,
 		pds:               pds,
 		kvIsSingleReplica: kvIsSingleReplica,
 	}
@@ -87,7 +86,7 @@ func (inst *PDInstance) InitCluster(pds []*PDInstance) *PDInstance {
 
 // Name return the name of pd.
 func (inst *PDInstance) Name() string {
-	switch inst.role {
+	switch inst.Role {
 	case PDRoleTSO:
 		return fmt.Sprintf("tso-%d", inst.ID)
 	case PDRoleScheduling:
@@ -110,9 +109,9 @@ func (inst *PDInstance) Start(ctx context.Context) error {
 
 	uid := inst.Name()
 	var args []string
-	switch inst.role {
+	switch inst.Role {
 	case PDRoleNormal, PDRoleAPI:
-		if inst.role == PDRoleAPI {
+		if inst.Role == PDRoleAPI {
 			args = []string{"services", "api"}
 		}
 		args = append(args, []string{
@@ -182,10 +181,10 @@ func (inst *PDInstance) Component() string {
 
 // LogFile return the log file.
 func (inst *PDInstance) LogFile() string {
-	if inst.role == PDRoleNormal || inst.role == PDRoleAPI {
+	if inst.Role == PDRoleNormal || inst.Role == PDRoleAPI {
 		return filepath.Join(inst.Dir, "pd.log")
 	}
-	return filepath.Join(inst.Dir, fmt.Sprintf("%s.log", string(inst.role)))
+	return filepath.Join(inst.Dir, fmt.Sprintf("%s.log", string(inst.Role)))
 }
 
 // Addr return the listen address of PD
