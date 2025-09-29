@@ -470,6 +470,9 @@ func newMirrorRotateCmd() *cobra.Command {
 
 			return environment.GlobalEnv().V1Repository().Mirror().Rotate(manifest)
 		},
+		PostRunE: func(cmd *cobra.Command, args []string) error {
+			return environment.GlobalEnv().Close()
+		},
 	}
 	cmd.Flags().StringVarP(&addr, "addr", "", addr, "listen address:port when starting the temp server for rotating")
 	cmd.Flags().StringVarP(&keyDir, "key-dir", "", keyDir, "specify the directory where stores the private keys")

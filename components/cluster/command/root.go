@@ -123,7 +123,7 @@ func init() {
 		},
 		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
 			proxy.MaybeStopProxy()
-			return tiupmeta.GlobalEnv().V1Repository().Mirror().Close()
+			return tiupmeta.GlobalEnv().Close()
 		},
 	}
 

@@ -251,6 +251,9 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 
 			return nil
 		},
+		PostRunE: func(cmd *cobra.Command, args []string) error {
+			return environment.GlobalEnv().Close()
+		},
 	}
 
 	rootCmd.Flags().StringVar(&options.ShOpt.Mode, "mode", "tidb", "TiUP playground mode: 'tidb', 'tidb-cse', 'tiflash-disagg', 'tikv-slim'")

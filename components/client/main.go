@@ -59,6 +59,9 @@ func execute() error {
 			environment.SetGlobalEnv(env)
 			return connect(target)
 		},
+		PostRunE: func(cmd *cobra.Command, args []string) error {
+			return environment.GlobalEnv().Close()
+		},
 	}
 
 	return rootCmd.Execute()
