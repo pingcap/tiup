@@ -420,7 +420,7 @@ func (l *httpMirror) Publish(manifest *v1manifest.Manifest, info model.Component
 		defer resp.Body.Close()
 
 		if resp.StatusCode >= 300 {
-			return errors.Errorf("error on uplaod tarball, server returns %d", resp.StatusCode)
+			return errors.Errorf("error on upload tarball, server returns %d", resp.StatusCode)
 		}
 	}
 
