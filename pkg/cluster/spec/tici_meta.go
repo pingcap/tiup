@@ -235,8 +235,8 @@ func (i *TiCIMetaInstance) PrepareStart(ctx context.Context, tlsCfg *tls.Config)
 		bucket        = "ticidefaultbucket"
 		prefix        = "tici_default_prefix"
 		endpoint      = "http://localhost:9000"
-		accessKey     = "minioadmin"
-		secretKey     = "minioadmin"
+		accessKey     = ""
+		secretKey     = ""
 		flushInterval = "5s" // make it configurable later
 	)
 	if v, ok := spec.Config["s3.bucket"].(string); ok {

@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/pingcap/errors"
@@ -343,7 +344,18 @@ func (c *CDCOpenAPIClient) CreateChangefeed(bucket, prefix, endpoint, accessKey,
 	api := "api/v1/changefeeds"
 	// client should only have address to the target cdc server, not all cdc servers.
 	endpoints := c.getEndpoints(api)
-	sinkURI := fmt.Sprintf("s3://%s/%s/cdc?protocol=canal-json&access-key=%s&secret-access-key=%s&endpoint=%s&enable-tidb-extension=true&output-row-key=true&flush-interval=%s", bucket, prefix, accessKey, secretKey, endpoint, flushInterval)
+	options := []string{}
+	options = append(options, "protocol=canal-json")
+	options = append(options, "enable-tidb-extension=true")
+	options = append(options, "output-row-key=true")
+	if accessKey != "" && secretKey != "" {
+		options = append(options, fmt.Sprintf("access-key=%s", accessKey))
+		options = append(options, fmt.Sprintf("secret-access-key=%s", secretKey))
+	}
+	options = append(options, fmt.Sprintf("endpoint=%s", endpoint))
+	options = append(options, fmt.Sprintf("flush-interval=%s", flushInterval))
+
+	sinkURI := fmt.Sprintf("s3://%s/%s/cdc?%s", bucket, prefix, strings.Join(options, "&"))
 
 	err := utils.Retry(func() error {
 		cfg := map[string]any{
