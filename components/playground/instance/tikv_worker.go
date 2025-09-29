@@ -37,8 +37,9 @@ type TiKVWorkerInstance struct {
 	instance
 	shOpt SharedOptions
 	pds   []*PDInstance
-	Process
 }
+
+var _ Instance = &TiKVWorkerInstance{}
 
 // NewTiKVWorkerInstance creates a new TiKVWorker instance.
 func NewTiKVWorkerInstance(shOpt SharedOptions, binPath string, dir, host, configPath string, id int, port int, pds []*PDInstance) *TiKVWorkerInstance {
@@ -53,6 +54,7 @@ func NewTiKVWorkerInstance(shOpt SharedOptions, binPath string, dir, host, confi
 			Dir:        dir,
 			Host:       host,
 			Port:       utils.MustGetFreePort(host, port, shOpt.PortOffset),
+			Role:       "tikv_worker",
 			ConfigPath: configPath,
 		},
 		pds: pds,
@@ -90,20 +92,17 @@ func (inst *TiKVWorkerInstance) Start(ctx context.Context) error {
 		fmt.Sprintf("--config=%s", configPath),
 	}
 
-	inst.Process = &process{cmd: PrepareCommand(ctx, inst.BinPath, args, nil, inst.Dir)}
-
-	logIfErr(inst.Process.SetOutputFile(inst.LogFile()))
-	return inst.Process.Start()
-}
-
-// Component return the component name.
-func (inst *TiKVWorkerInstance) Component() string {
-	return "tikv_worker"
+	return inst.PrepareProcess(ctx, inst.BinPath, args, nil, inst.Dir)
 }
 
 // LogFile return the log file name.
 func (inst *TiKVWorkerInstance) LogFile() string {
 	return filepath.Join(inst.Dir, "tikv_worker.log")
+}
+
+// Component return the binary name.
+func (inst *TiKVWorkerInstance) Component() string {
+	return "tikv"
 }
 
 func (inst *TiKVWorkerInstance) getConfig() map[string]any {

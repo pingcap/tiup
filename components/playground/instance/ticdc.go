@@ -27,7 +27,6 @@ import (
 type TiCDC struct {
 	instance
 	pds []*PDInstance
-	Process
 }
 
 var _ Instance = &TiCDC{}
@@ -43,6 +42,7 @@ func NewTiCDC(shOpt SharedOptions, binPath string, dir, host, configPath string,
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
+			Role:       "cdc",
 			Port:       utils.MustGetFreePort(host, port, shOpt.PortOffset),
 			ConfigPath: configPath,
 		},
@@ -75,15 +75,7 @@ func (c *TiCDC) Start(ctx context.Context) error {
 		}
 	}
 
-	c.Process = &process{cmd: PrepareCommand(ctx, c.BinPath, args, nil, c.Dir)}
-
-	logIfErr(c.Process.SetOutputFile(c.LogFile()))
-	return c.Process.Start()
-}
-
-// Component return component name.
-func (c *TiCDC) Component() string {
-	return "cdc"
+	return c.PrepareProcess(ctx, c.BinPath, args, nil, c.Dir)
 }
 
 // LogFile return the log file.

@@ -26,12 +26,13 @@ import (
 // TiDBInstance represent a running tidb-server
 type TiDBInstance struct {
 	instance
-	shOpt SharedOptions
-	pds   []*PDInstance
-	Process
+	shOpt          SharedOptions
+	pds            []*PDInstance
 	tiproxyCertDir string
 	enableBinlog   bool
 }
+
+var _ Instance = &TiDBInstance{}
 
 // NewTiDBInstance return a TiDBInstance
 func NewTiDBInstance(shOpt SharedOptions, binPath string, dir, host, configPath string, id, port int, pds []*PDInstance, tiproxyCertDir string, enableBinlog bool) *TiDBInstance {
@@ -45,6 +46,7 @@ func NewTiDBInstance(shOpt SharedOptions, binPath string, dir, host, configPath 
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
+			Role:       "tidb",
 			Port:       utils.MustGetFreePort(host, port, shOpt.PortOffset),
 			StatusPort: utils.MustGetFreePort("0.0.0.0", 10080, shOpt.PortOffset),
 			ConfigPath: configPath,
@@ -81,15 +83,7 @@ func (inst *TiDBInstance) Start(ctx context.Context) error {
 		args = append(args, "--enable-binlog=true")
 	}
 
-	inst.Process = &process{cmd: PrepareCommand(ctx, inst.BinPath, args, nil, inst.Dir)}
-
-	logIfErr(inst.Process.SetOutputFile(inst.LogFile()))
-	return inst.Process.Start()
-}
-
-// Component return the component name.
-func (inst *TiDBInstance) Component() string {
-	return "tidb"
+	return inst.PrepareProcess(ctx, inst.BinPath, args, nil, inst.Dir)
 }
 
 // LogFile return the log file name.

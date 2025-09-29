@@ -69,9 +69,9 @@ type Playground struct {
 	tikvWorkers      []*instance.TiKVWorkerInstance
 	tidbs            []*instance.TiDBInstance
 	tiflashs         []*instance.TiFlashInstance
-	tiproxys         []*instance.TiProxy
+	tiproxys         []*instance.TiProxyInstance
 	ticdcs           []*instance.TiCDC
-	tikvCdcs         []*instance.TiKVCDC
+	tikvCdcs         []*instance.TiKVCDCInstance
 	pumps            []*instance.Pump
 	drainers         []*instance.Drainer
 	dmMasters        []*instance.DMMaster
@@ -116,7 +116,7 @@ func (p *Playground) handleDisplay(r io.Writer) (err error) {
 	td := utils.NewTableDisplayer(r, []string{"Pid", "Role", "Uptime"})
 
 	err = p.WalkInstances(func(componentID string, ins instance.Instance) error {
-		td.AddRow(strconv.Itoa(ins.Pid()), componentID, ins.Uptime())
+		td.AddRow(strconv.Itoa(ins.Process().Pid()), componentID, ins.Process().Uptime())
 		return nil
 	})
 
@@ -176,7 +176,7 @@ func (p *Playground) killKVIfTombstone(inst *instance.TiKVInstance) {
 			for i, e := range p.tikvs {
 				if e == inst {
 					fmt.Printf("stop tombstone tikv %s\n", inst.Addr())
-					err = syscall.Kill(inst.Pid(), syscall.SIGQUIT)
+					err = syscall.Kill(inst.Process().Pid(), syscall.SIGQUIT)
 					if err != nil {
 						fmt.Println(err)
 					}
@@ -249,7 +249,7 @@ func (p *Playground) killTiFlashIfTombstone(inst *instance.TiFlashInstance) {
 			for i, e := range p.tiflashs {
 				if e == inst {
 					fmt.Printf("stop tombstone tiflash %s\n", inst.Addr())
-					err = syscall.Kill(inst.Pid(), syscall.SIGQUIT)
+					err = syscall.Kill(inst.Process().Pid(), syscall.SIGQUIT)
 					if err != nil {
 						fmt.Println(err)
 					}
@@ -267,7 +267,7 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 	var cid string
 	var inst instance.Instance
 	err := p.WalkInstances(func(wcid string, winst instance.Instance) error {
-		if winst.Pid() == pid {
+		if winst.Process().Pid() == pid {
 			cid = wcid
 			inst = winst
 		}
@@ -285,7 +285,7 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 	switch cid {
 	case spec.ComponentPD:
 		for i := 0; i < len(p.pds); i++ {
-			if p.pds[i].Pid() == pid {
+			if p.pds[i].Process().Pid() == pid {
 				inst := p.pds[i]
 				err := p.pdClient().DelPD(inst.Name(), timeoutOpt)
 				if err != nil {
@@ -296,19 +296,19 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 		}
 	case spec.ComponentTSO:
 		for i := 0; i < len(p.tsos); i++ {
-			if p.tsos[i].Pid() == pid {
+			if p.tsos[i].Process().Pid() == pid {
 				p.tsos = slices.Delete(p.tsos, i, i+1)
 			}
 		}
 	case spec.ComponentScheduling:
 		for i := 0; i < len(p.schedulings); i++ {
-			if p.schedulings[i].Pid() == pid {
+			if p.schedulings[i].Process().Pid() == pid {
 				p.schedulings = slices.Delete(p.schedulings, i, i+1)
 			}
 		}
 	case spec.ComponentTiKV:
 		for i := 0; i < len(p.tikvs); i++ {
-			if p.tikvs[i].Pid() == pid {
+			if p.tikvs[i].Process().Pid() == pid {
 				inst := p.tikvs[i]
 				err := p.pdClient().DelStore(inst.Addr(), timeoutOpt)
 				if err != nil {
@@ -322,31 +322,31 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 		}
 	case spec.ComponentTiDB:
 		for i := 0; i < len(p.tidbs); i++ {
-			if p.tidbs[i].Pid() == pid {
+			if p.tidbs[i].Process().Pid() == pid {
 				p.tidbs = slices.Delete(p.tidbs, i, i+1)
 			}
 		}
 	case spec.ComponentCDC:
 		for i := 0; i < len(p.ticdcs); i++ {
-			if p.ticdcs[i].Pid() == pid {
+			if p.ticdcs[i].Process().Pid() == pid {
 				p.ticdcs = slices.Delete(p.ticdcs, i, i+1)
 			}
 		}
 	case spec.ComponentTiProxy:
 		for i := 0; i < len(p.tiproxys); i++ {
-			if p.tiproxys[i].Pid() == pid {
+			if p.tiproxys[i].Process().Pid() == pid {
 				p.tiproxys = slices.Delete(p.tiproxys, i, i+1)
 			}
 		}
 	case spec.ComponentTiKVCDC:
 		for i := 0; i < len(p.tikvCdcs); i++ {
-			if p.tikvCdcs[i].Pid() == pid {
+			if p.tikvCdcs[i].Process().Pid() == pid {
 				p.tikvCdcs = slices.Delete(p.tikvCdcs, i, i+1)
 			}
 		}
 	case spec.ComponentTiFlash:
 		for i := 0; i < len(p.tiflashs); i++ {
-			if p.tiflashs[i].Pid() == pid {
+			if p.tiflashs[i].Process().Pid() == pid {
 				inst := p.tiflashs[i]
 				err := p.pdClient().DelStore(inst.Addr(), timeoutOpt)
 				if err != nil {
@@ -360,7 +360,7 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 		}
 	case spec.ComponentPump:
 		for i := 0; i < len(p.pumps); i++ {
-			if p.pumps[i].Pid() == pid {
+			if p.pumps[i].Process().Pid() == pid {
 				inst := p.pumps[i]
 
 				c, err := p.binlogClient()
@@ -379,7 +379,7 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 		}
 	case spec.ComponentDrainer:
 		for i := 0; i < len(p.drainers); i++ {
-			if p.drainers[i].Pid() == pid {
+			if p.drainers[i].Process().Pid() == pid {
 				inst := p.drainers[i]
 
 				c, err := p.binlogClient()
@@ -423,7 +423,7 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 
 func (p *Playground) handleScaleInDMWorker(pid int) error {
 	for i := 0; i < len(p.dmWorkers); i++ {
-		if p.dmWorkers[i].Pid() == pid {
+		if p.dmWorkers[i].Process().Pid() == pid {
 			inst := p.dmWorkers[i]
 
 			c := p.dmMasterClient()
@@ -439,7 +439,7 @@ func (p *Playground) handleScaleInDMWorker(pid int) error {
 
 func (p *Playground) handleScaleInDMMaster(pid int) error {
 	for i := 0; i < len(p.dmMasters); i++ {
-		if p.dmMasters[i].Pid() == pid {
+		if p.dmMasters[i].Process().Pid() == pid {
 			inst := p.dmMasters[i]
 
 			c := p.dmMasterClient()
@@ -512,12 +512,6 @@ func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) 
 	var err error
 	boundVersion := p.bindVersion(inst.Component(), p.bootOptions.Version)
 	component := inst.Component()
-	if component == "tso" || component == "scheduling" {
-		component = string(instance.PDRoleNormal)
-	}
-	if component == "tikv_worker" {
-		component = "tikv"
-	}
 	if version, err = environment.GlobalEnv().V1Repository().ResolveComponentVersion(component, boundVersion); err != nil {
 		return err
 	}
@@ -529,6 +523,15 @@ func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) 
 	if err = inst.Start(ctx); err != nil {
 		return err
 	}
+
+	if err := inst.Process().SetOutputFile(inst.LogFile()); err != nil {
+		return err
+	}
+
+	if err := inst.Process().Start(); err != nil {
+		return err
+	}
+
 	p.addWaitInstance(inst)
 	return nil
 }
@@ -538,7 +541,7 @@ func (p *Playground) addWaitInstance(inst instance.Instance) {
 	p.instanceWaiter.Go(func() error {
 		err := inst.Wait()
 		if err != nil && atomic.LoadInt32(&p.curSig) == 0 {
-			fmt.Print(color.RedString("%s quit: %s\n", inst.Component(), err.Error()))
+			fmt.Print(color.RedString("%s quit: %s\n", inst.Name(), err.Error()))
 			if lines, _ := utils.TailN(inst.LogFile(), 10); len(lines) > 0 {
 				for _, line := range lines {
 					fmt.Println(line)
@@ -546,7 +549,7 @@ func (p *Playground) addWaitInstance(inst instance.Instance) {
 				fmt.Print(color.YellowString("...\ncheck detail log from: %s\n", inst.LogFile()))
 			}
 		} else {
-			fmt.Printf("%s quit\n", inst.Component())
+			fmt.Printf("%s quit\n", inst.Name())
 		}
 		return err
 	})
@@ -559,7 +562,7 @@ func (p *Playground) handleScaleOut(w io.Writer, cmd *Command) error {
 		return err
 	}
 	// TODO: Support scale-out in CSE mode
-	inst, err := p.addInstance(cmd.ComponentID, instance.PDRoleNormal, instance.TiFlashRoleNormal, cmd.Config)
+	inst, err := p.addInstance(cmd.ComponentID, instance.PDRoleNormal, cmd.Config)
 	if err != nil {
 		return err
 	}
@@ -773,7 +776,7 @@ func (p *Playground) enableBinlog() bool {
 	return p.bootOptions.Pump.Num > 0
 }
 
-func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tiflashRole instance.TiFlashRole, cfg instance.Config) (ins instance.Instance, err error) {
+func (p *Playground) addInstance(componentID string, role string, cfg instance.Config) (ins instance.Instance, err error) {
 	if cfg.BinPath != "" {
 		cfg.BinPath, err = getAbsolutePath(cfg.BinPath)
 		if err != nil {
@@ -792,9 +795,9 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 
 	id := p.allocID(componentID)
 	dir := filepath.Join(dataDir, fmt.Sprintf("%s-%d", componentID, id))
-	if componentID == string(instance.PDRoleNormal) && (pdRole != instance.PDRoleNormal && pdRole != instance.PDRoleAPI) {
-		id = p.allocID(string(pdRole))
-		dir = filepath.Join(dataDir, fmt.Sprintf("%s-%d", pdRole, id))
+	if componentID == instance.PDRoleNormal && (role != instance.PDRoleNormal && role != instance.PDRoleAPI) {
+		id = p.allocID(role)
+		dir = filepath.Join(dataDir, fmt.Sprintf("%s-%d", role, id))
 	}
 	if err = utils.MkdirAll(dir, 0755); err != nil {
 		return nil, err
@@ -807,9 +810,9 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 
 	switch componentID {
 	case spec.ComponentPD:
-		inst := instance.NewPDInstance(pdRole, p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, cfg.Port, p.bootOptions.TiKV.Num == 1)
+		inst := instance.NewPDInstance(role, p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, cfg.Port, p.bootOptions.TiKV.Num == 1)
 		ins = inst
-		if pdRole == instance.PDRoleNormal || pdRole == instance.PDRoleAPI {
+		if role == instance.PDRoleNormal || role == instance.PDRoleAPI {
 			if p.booted {
 				inst.Join(p.pds)
 				p.pds = append(p.pds, inst)
@@ -819,9 +822,9 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 					pd.InitCluster(p.pds)
 				}
 			}
-		} else if pdRole == instance.PDRoleTSO {
+		} else if role == instance.PDRoleTSO {
 			p.tsos = append(p.tsos, inst)
-		} else if pdRole == instance.PDRoleScheduling {
+		} else if role == instance.PDRoleScheduling {
 			p.schedulings = append(p.schedulings, inst)
 		}
 	case spec.ComponentTSO:
@@ -845,7 +848,7 @@ func (p *Playground) addInstance(componentID string, pdRole instance.PDRole, tif
 		ins = inst
 		p.tikvWorkers = append(p.tikvWorkers, inst)
 	case spec.ComponentTiFlash:
-		inst := instance.NewTiFlashInstance(tiflashRole, p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, p.tidbs, cfg.Version)
+		inst := instance.NewTiFlashInstance(role, p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, p.tidbs, cfg.Version)
 		ins = inst
 		p.tiflashs = append(p.tiflashs, inst)
 	case spec.ComponentTiProxy:
@@ -929,7 +932,7 @@ func (p *Playground) waitAllDBUp() ([]string, []string) {
 			wg.Add(1)
 			prefix := "- TiProxy: " + db.Addr()
 			bar := bars.AddBar(prefix)
-			go func(dbInst *instance.TiProxy) {
+			go func(dbInst *instance.TiProxyInstance) {
 				defer wg.Done()
 				if s := checkDB(dbInst.Addr(), options.TiProxy.UpTimeout); s {
 					{
@@ -986,7 +989,7 @@ func (p *Playground) waitAllTiFlashUp() {
 				displayResult := &progress.DisplayProps{
 					Prefix: prefix,
 				}
-				if cmd := flashInst.Cmd(); cmd == nil {
+				if cmd := flashInst.Process().Cmd(); cmd == nil {
 					displayResult.Mode = progress.ModeError
 					displayResult.Suffix = "initialize command failed"
 				} else if state := cmd.ProcessState; state != nil && state.Exited() {
@@ -1020,7 +1023,7 @@ func (p *Playground) waitAllDMMasterUp() {
 				displayResult := &progress.DisplayProps{
 					Prefix: prefix,
 				}
-				if cmd := masterInst.Cmd(); cmd == nil {
+				if cmd := masterInst.Process().Cmd(); cmd == nil {
 					displayResult.Mode = progress.ModeError
 					displayResult.Suffix = "initialize command failed"
 				} else if state := cmd.ProcessState; state != nil && state.Exited() {
@@ -1111,27 +1114,32 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 	}
 
 	type InstancePair struct {
-		comp        string
-		pdRole      instance.PDRole
-		tiflashRole instance.TiFlashRole
+		comp string
+		role string
 		instance.Config
 	}
 
 	instances := []InstancePair{
-		{spec.ComponentTiProxy, "", "", options.TiProxy},
-		{spec.ComponentTiKV, "", "", options.TiKV},
-		{spec.ComponentPump, "", "", options.Pump},
-		{spec.ComponentTiDB, "", "", options.TiDB},
-		{spec.ComponentCDC, "", "", options.TiCDC},
-		{spec.ComponentTiKVCDC, "", "", options.TiKVCDC},
-		{spec.ComponentDrainer, "", "", options.Drainer},
-		{spec.ComponentDMMaster, "", "", options.DMMaster},
-		{spec.ComponentDMWorker, "", "", options.DMWorker},
+		{spec.ComponentTiProxy, "", options.TiProxy},
+		{spec.ComponentTiKV, "", options.TiKV},
+		{spec.ComponentPump, "", options.Pump},
+		{spec.ComponentTiDB, "", options.TiDB},
+		{spec.ComponentCDC, "", options.TiCDC},
+		{spec.ComponentTiKVCDC, "", options.TiKVCDC},
+		{spec.ComponentDrainer, "", options.Drainer},
+		{spec.ComponentDMMaster, "", options.DMMaster},
+		{spec.ComponentDMWorker, "", options.DMWorker},
+	}
+
+	if options.ShOpt.Mode == "tidb-nextgen" {
+		instances = append(instances,
+			InstancePair{spec.ComponentTiKVWorker, "", options.TiKVWorker},
+		)
 	}
 
 	if options.ShOpt.Mode == "tidb" {
 		instances = append(instances,
-			InstancePair{spec.ComponentTiFlash, instance.PDRoleNormal, instance.TiFlashRoleNormal, options.TiFlash},
+			InstancePair{spec.ComponentTiFlash, instance.TiFlashRoleNormal, options.TiFlash},
 		)
 	} else if options.ShOpt.Mode == "tidb-cse" || options.ShOpt.Mode == "tiflash-disagg" {
 		if !tidbver.TiFlashPlaygroundNewStartMode(options.Version) {
@@ -1179,8 +1187,8 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 		instances = append(
 			instances,
-			InstancePair{spec.ComponentTiFlash, instance.PDRoleNormal, instance.TiFlashRoleDisaggWrite, options.TiFlashWrite},
-			InstancePair{spec.ComponentTiFlash, instance.PDRoleNormal, instance.TiFlashRoleDisaggCompute, options.TiFlashCompute},
+			InstancePair{spec.ComponentTiFlash, instance.TiFlashRoleDisaggWrite, options.TiFlashWrite},
+			InstancePair{spec.ComponentTiFlash, instance.TiFlashRoleDisaggCompute, options.TiFlashCompute},
 		)
 	}
 
@@ -1192,7 +1200,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 	}
 
 	if options.ShOpt.PDMode == "pd" {
-		instances = append([]InstancePair{{spec.ComponentPD, instance.PDRoleNormal, instance.TiFlashRoleNormal, options.PD}},
+		instances = append([]InstancePair{{spec.ComponentPD, instance.PDRoleNormal, options.PD}},
 			instances...,
 		)
 	} else if options.ShOpt.PDMode == "ms" {
@@ -1200,16 +1208,16 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			return fmt.Errorf("PD cluster doesn't support microservices mode in version %s", options.Version)
 		}
 		instances = append([]InstancePair{
-			{spec.ComponentPD, instance.PDRoleAPI, instance.TiFlashRoleNormal, options.PD},
-			{spec.ComponentPD, instance.PDRoleTSO, instance.TiFlashRoleNormal, options.TSO},
-			{spec.ComponentPD, instance.PDRoleScheduling, instance.TiFlashRoleNormal, options.Scheduling}},
+			{spec.ComponentPD, instance.PDRoleAPI, options.PD},
+			{spec.ComponentPD, instance.PDRoleTSO, options.TSO},
+			{spec.ComponentPD, instance.PDRoleScheduling, options.Scheduling}},
 			instances...,
 		)
 	}
 
 	for _, inst := range instances {
 		for i := 0; i < inst.Num; i++ {
-			_, err := p.addInstance(inst.comp, inst.pdRole, inst.tiflashRole, inst.Config)
+			_, err := p.addInstance(inst.comp, inst.role, inst.Config)
 			if err != nil {
 				return err
 			}
@@ -1443,77 +1451,77 @@ func (p *Playground) terminate(sig syscall.Signal) {
 		go kill("grafana", p.grafana.cmd.Process.Pid, p.grafana.wait)
 	}
 	for _, inst := range p.tikvWorkers {
-		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
-			kill(inst.Component(), inst.Pid(), inst.Wait)
+		if inst.Process() != nil && inst.Process().Cmd() != nil && inst.Process().Cmd().Process != nil {
+			kill(inst.Name(), inst.Process().Pid(), inst.Wait)
 		}
 	}
 
 	for _, inst := range p.dmWorkers {
-		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
-			kill(inst.Component(), inst.Pid(), inst.Wait)
+		if inst.Process() != nil && inst.Process().Cmd() != nil && inst.Process().Cmd().Process != nil {
+			kill(inst.Name(), inst.Process().Pid(), inst.Wait)
 		}
 	}
 
 	for _, inst := range p.dmMasters {
-		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
-			kill(inst.Component(), inst.Pid(), inst.Wait)
+		if inst.Process() != nil && inst.Process().Cmd() != nil && inst.Process().Cmd().Process != nil {
+			kill(inst.Name(), inst.Process().Pid(), inst.Wait)
 		}
 	}
 
 	for _, inst := range p.tiflashs {
-		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
-			kill(inst.Component(), inst.Pid(), inst.Wait)
+		if inst.Process() != nil && inst.Process().Cmd() != nil && inst.Process().Cmd().Process != nil {
+			kill(inst.Name(), inst.Process().Pid(), inst.Wait)
 		}
 	}
 	for _, inst := range p.ticdcs {
-		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
-			kill(inst.Component(), inst.Pid(), inst.Wait)
+		if inst.Process() != nil && inst.Process().Cmd() != nil && inst.Process().Cmd().Process != nil {
+			kill(inst.Name(), inst.Process().Pid(), inst.Wait)
 		}
 	}
 	for _, inst := range p.tikvCdcs {
-		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
-			kill(inst.Component(), inst.Pid(), inst.Wait)
+		if inst.Process() != nil && inst.Process().Cmd() != nil && inst.Process().Cmd().Process != nil {
+			kill(inst.Name(), inst.Process().Pid(), inst.Wait)
 		}
 	}
 	for _, inst := range p.drainers {
-		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
-			kill(inst.Component(), inst.Pid(), inst.Wait)
+		if inst.Process() != nil && inst.Process().Cmd() != nil && inst.Process().Cmd().Process != nil {
+			kill(inst.Name(), inst.Process().Pid(), inst.Wait)
 		}
 	}
 	// tidb must exit earlier then pd
 	for _, inst := range p.tidbs {
-		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
-			kill(inst.Component(), inst.Pid(), inst.Wait)
+		if inst.Process() != nil && inst.Process().Cmd() != nil && inst.Process().Cmd().Process != nil {
+			kill(inst.Name(), inst.Process().Pid(), inst.Wait)
 		}
 	}
 	for _, inst := range p.pumps {
-		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
-			kill(inst.Component(), inst.Pid(), inst.Wait)
+		if inst.Process() != nil && inst.Process().Cmd() != nil && inst.Process().Cmd().Process != nil {
+			kill(inst.Name(), inst.Process().Pid(), inst.Wait)
 		}
 	}
 	for _, inst := range p.tikvs {
-		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
-			kill(inst.Component(), inst.Pid(), inst.Wait)
+		if inst.Process() != nil && inst.Process().Cmd() != nil && inst.Process().Cmd().Process != nil {
+			kill(inst.Name(), inst.Process().Pid(), inst.Wait)
 		}
 	}
 	for _, inst := range p.pds {
-		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
-			kill(inst.Component(), inst.Pid(), inst.Wait)
+		if inst.Process() != nil && inst.Process().Cmd() != nil && inst.Process().Cmd().Process != nil {
+			kill(inst.Name(), inst.Process().Pid(), inst.Wait)
 		}
 	}
 	for _, inst := range p.tsos {
-		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
-			kill(inst.Component(), inst.Pid(), inst.Wait)
+		if inst.Process() != nil && inst.Process().Cmd() != nil && inst.Process().Cmd().Process != nil {
+			kill(inst.Name(), inst.Process().Pid(), inst.Wait)
 		}
 	}
 	for _, inst := range p.schedulings {
-		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
-			kill(inst.Component(), inst.Pid(), inst.Wait)
+		if inst.Process() != nil && inst.Process().Cmd() != nil && inst.Process().Cmd().Process != nil {
+			kill(inst.Name(), inst.Process().Pid(), inst.Wait)
 		}
 	}
 	for _, inst := range p.tiproxys {
-		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
-			kill(inst.Component(), inst.Pid(), inst.Wait)
+		if inst.Process() != nil && inst.Process().Cmd() != nil && inst.Process().Cmd().Process != nil {
+			kill(inst.Name(), inst.Process().Pid(), inst.Wait)
 		}
 	}
 }

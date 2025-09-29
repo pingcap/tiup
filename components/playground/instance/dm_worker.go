@@ -12,8 +12,6 @@ import (
 // DMWorker represent a DM worker instance.
 type DMWorker struct {
 	instance
-	Process
-
 	masters []*DMMaster
 }
 
@@ -30,6 +28,7 @@ func NewDMWorker(shOpt SharedOptions, binPath string, dir, host, configPath stri
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
+			Role:       "dm-worker",
 			Port:       utils.MustGetFreePort(host, port, shOpt.PortOffset),
 			ConfigPath: configPath,
 		},
@@ -46,11 +45,6 @@ func (w *DMWorker) MasterAddrs() []string {
 	return addrs
 }
 
-// Name return the name of the instance.
-func (w *DMWorker) Name() string {
-	return fmt.Sprintf("dm-worker-%d", w.ID)
-}
-
 // Start starts the instance.
 func (w *DMWorker) Start(ctx context.Context) error {
 	args := []string{
@@ -65,16 +59,7 @@ func (w *DMWorker) Start(ctx context.Context) error {
 		args = append(args, fmt.Sprintf("--config=%s", w.ConfigPath))
 	}
 
-	w.Process = &process{cmd: PrepareCommand(ctx, w.BinPath, args, nil, w.Dir)}
-
-	logIfErr(w.Process.SetOutputFile(w.LogFile()))
-
-	return w.Process.Start()
-}
-
-// Component return the component of the instance.
-func (w *DMWorker) Component() string {
-	return "dm-worker"
+	return w.PrepareProcess(ctx, w.BinPath, args, nil, w.Dir)
 }
 
 // LogFile return the log file of the instance.
