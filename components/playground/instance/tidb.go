@@ -23,6 +23,16 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
+// TiDBRole is the role of TiDB.
+type TiDBRole = string
+
+const (
+	// TiDBRoleDefault is the default role of TiDB
+	TiDBRoleDefault TiDBRole = "tidb"
+	// TiDBRoleSystem is the nextgen role of TiDB
+	TiDBRoleSystem TiDBRole = "tidb_system"
+)
+
 // TiDBInstance represent a running tidb-server
 type TiDBInstance struct {
 	instance
@@ -35,9 +45,13 @@ type TiDBInstance struct {
 var _ Instance = &TiDBInstance{}
 
 // NewTiDBInstance return a TiDBInstance
-func NewTiDBInstance(shOpt SharedOptions, binPath string, dir, host, configPath string, id, port int, pds []*PDInstance, tiproxyCertDir string, enableBinlog bool) *TiDBInstance {
+func NewTiDBInstance(shOpt SharedOptions, binPath string, dir, host, configPath string, id, port int, pds []*PDInstance, tiproxyCertDir string, enableBinlog bool, role string) *TiDBInstance {
 	if port <= 0 {
-		port = 4000
+		if role == TiDBRoleSystem {
+			port = 3000
+		} else {
+			port = 4000
+		}
 	}
 	return &TiDBInstance{
 		shOpt: shOpt,
@@ -46,10 +60,10 @@ func NewTiDBInstance(shOpt SharedOptions, binPath string, dir, host, configPath 
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
-			Role:       "tidb",
 			Port:       utils.MustGetFreePort(host, port, shOpt.PortOffset),
 			StatusPort: utils.MustGetFreePort("0.0.0.0", 10080, shOpt.PortOffset),
 			ConfigPath: configPath,
+			role:       role,
 		},
 		tiproxyCertDir: tiproxyCertDir,
 		pds:            pds,
@@ -84,6 +98,11 @@ func (inst *TiDBInstance) Start(ctx context.Context) error {
 	}
 
 	return inst.PrepareProcess(ctx, inst.BinPath, args, nil, inst.Dir)
+}
+
+// Component returns the package name.
+func (inst *TiDBInstance) Component() string {
+	return "tidb"
 }
 
 // LogFile return the log file name.

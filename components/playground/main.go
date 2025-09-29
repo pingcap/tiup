@@ -58,6 +58,7 @@ type BootOptions struct {
 	Scheduling     instance.Config        `yaml:"scheduling"` // Only available when pd_mode == ms
 	TiProxy        instance.Config        `yaml:"tiproxy"`
 	TiDB           instance.Config        `yaml:"tidb"`
+	TiDBSystem     instance.Config        `yaml:"tidb.system"`
 	TiKV           instance.Config        `yaml:"tikv"`
 	TiFlash        instance.Config        `yaml:"tiflash"`         // ignored when ShOpt.Mode == tidb-cse or tiflash-disagg
 	TiFlashWrite   instance.Config        `yaml:"tiflash_write"`   // Only available when ShOpt.Mode == tidb-cse or tiflash-disagg
@@ -256,12 +257,12 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 		},
 	}
 
-	rootCmd.Flags().StringVar(&options.ShOpt.Mode, "mode", "tidb", "TiUP playground mode: 'tidb', 'tidb-cse', 'tiflash-disagg', 'tikv-slim'")
+	rootCmd.Flags().StringVar(&options.ShOpt.Mode, "mode", "tidb", "TiUP playground mode: 'tidb', 'tidb-cse', 'tidb-nextgen', 'tiflash-disagg', 'tikv-slim'")
 	rootCmd.Flags().StringVar(&options.ShOpt.PDMode, "pd.mode", "pd", "PD mode: 'pd', 'ms'")
-	rootCmd.Flags().StringVar(&options.ShOpt.CSE.S3Endpoint, "cse.s3_endpoint", "http://127.0.0.1:9000", "Object store URL for --mode=tidb-cse or --mode=tiflash-disagg")
-	rootCmd.Flags().StringVar(&options.ShOpt.CSE.Bucket, "cse.bucket", "tiflash", "Object store bucket for --mode=tidb-cse or --mode=tiflash-disagg")
-	rootCmd.Flags().StringVar(&options.ShOpt.CSE.AccessKey, "cse.access_key", "minioadmin", "Object store access key for --mode=tidb-cse or --mode=tiflash-disagg")
-	rootCmd.Flags().StringVar(&options.ShOpt.CSE.SecretKey, "cse.secret_key", "minioadmin", "Object store secret key for --mode=tidb-cse or --mode=tiflash-disagg")
+	rootCmd.Flags().StringVar(&options.ShOpt.CSE.S3Endpoint, "cse.s3_endpoint", "http://127.0.0.1:9000", "Object store URL for --mode= tidb-cse, --mode==tiflash-disagg, --mode=tidb-nextgen")
+	rootCmd.Flags().StringVar(&options.ShOpt.CSE.Bucket, "cse.bucket", "tiflash", "Object store bucket for --mode=tidb-cse, --mode=tiflash-disagg, --mode=tidb-nextgen")
+	rootCmd.Flags().StringVar(&options.ShOpt.CSE.AccessKey, "cse.access_key", "minioadmin", "Object store access key for --mode=tidb-cse, --mode=tiflash-disagg, --mode=tidb-nextgen")
+	rootCmd.Flags().StringVar(&options.ShOpt.CSE.SecretKey, "cse.secret_key", "minioadmin", "Object store secret key for --mode=tidb-cse, --mode=tiflash-disagg, --mode=tidb-nextgen")
 	rootCmd.Flags().BoolVar(&options.ShOpt.HighPerf, "perf", false, "Tune default config for better performance instead of debug troubleshooting")
 	rootCmd.Flags().BoolVar(&options.ShOpt.EnableTiKVColumnar, "tikv.columnar", false, "Enable TiKV columnar storage engine, only available when --mode=tidb-cse")
 
@@ -275,6 +276,7 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 	// NOTE: Do not set default values if they may be changed in different modes.
 
 	rootCmd.Flags().IntVar(&options.TiDB.Num, "db", 0, "TiDB instance number")
+	rootCmd.Flags().IntVar(&options.TiDBSystem.Num, "db.system", 0, "TiDB system instance number")
 	rootCmd.Flags().IntVar(&options.TiKV.Num, "kv", 0, "TiKV instance number")
 	rootCmd.Flags().IntVar(&options.PD.Num, "pd", 0, "PD instance number")
 	rootCmd.Flags().IntVar(&options.TSO.Num, "tso", 0, "TSO instance number")
@@ -289,7 +291,7 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 	rootCmd.Flags().IntVar(&options.Drainer.Num, "drainer", 0, "Drainer instance number")
 	rootCmd.Flags().IntVar(&options.DMMaster.Num, "dm-master", 0, "DM-master instance number")
 	rootCmd.Flags().IntVar(&options.DMWorker.Num, "dm-worker", 0, "DM-worker instance number")
-	rootCmd.Flags().IntVar(&options.TiKVWorker.Num, "tikv.worker", 0, "TiKV worker instance number, only available when --mode=tidb-cse. Could be 0 or 1.")
+	rootCmd.Flags().IntVar(&options.TiKVWorker.Num, "tikv.worker", 0, "TiKV worker instance number, only available when --mode=tidb-cse or --mode=tidb-nextgen. Could be 0 or 1.")
 
 	rootCmd.Flags().IntVar(&options.TiDB.UpTimeout, "db.timeout", 60, "TiDB max wait time in seconds for starting, 0 means no limit")
 	rootCmd.Flags().IntVar(&options.TiFlash.UpTimeout, "tiflash.timeout", 120, "TiFlash max wait time in seconds for starting, 0 means no limit")
@@ -298,6 +300,8 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 	rootCmd.Flags().StringVar(&options.Host, "host", "127.0.0.1", "Playground cluster host")
 	rootCmd.Flags().StringVar(&options.TiDB.Host, "db.host", "", "Playground TiDB host. If not provided, TiDB will still use `host` flag as its host")
 	rootCmd.Flags().IntVar(&options.TiDB.Port, "db.port", 0, "Playground TiDB port. If not provided, TiDB will use 4000 as its port. Or 6000 if TiProxy is enabled.")
+	rootCmd.Flags().StringVar(&options.TiDBSystem.Host, "db.system.host", "", "Playground TiDB system host. If not provided, TiDB will still use `host` flag as its host")
+	rootCmd.Flags().IntVar(&options.TiDBSystem.Port, "db.system.port", 0, "Playground TiDB system port. If not provided, TiDB will use 4000 as its port. Or 6000 if TiProxy is enabled.")
 	rootCmd.Flags().StringVar(&options.PD.Host, "pd.host", "", "Playground PD host. If not provided, PD will still use `host` flag as its host")
 	rootCmd.Flags().IntVar(&options.PD.Port, "pd.port", 0, "Playground PD port. If not provided, PD will use 2379 as its port")
 	rootCmd.Flags().StringVar(&options.TiKV.Host, "kv.host", "", "Playground TiKV host. If not provided, TiKV will still use `host` flag as its host")
@@ -314,6 +318,7 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 	rootCmd.Flags().IntVar(&options.TiKVWorker.Port, "tikv.worker.port", 19000, "TiKV worker instance port")
 
 	rootCmd.Flags().StringVar(&options.TiDB.ConfigPath, "db.config", "", "TiDB instance configuration file")
+	rootCmd.Flags().StringVar(&options.TiDBSystem.ConfigPath, "db.system.config", "", "TiDB system instance configuration file")
 	rootCmd.Flags().StringVar(&options.TiKV.ConfigPath, "kv.config", "", "TiKV instance configuration file")
 	rootCmd.Flags().StringVar(&options.PD.ConfigPath, "pd.config", "", "PD instance configuration file")
 	rootCmd.Flags().StringVar(&options.TSO.ConfigPath, "tso.config", "", "TSO instance configuration file")
@@ -331,6 +336,7 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 	rootCmd.Flags().StringVar(&options.TiKVWorker.ConfigPath, "tikv.worker.config", "", "TiKV worker instance configuration file")
 
 	rootCmd.Flags().StringVar(&options.TiDB.BinPath, "db.binpath", "", "TiDB instance binary path")
+	rootCmd.Flags().StringVar(&options.TiDBSystem.BinPath, "db.system.binpath", "", "TiDB system instance binary path, if not specified, same as `db.binpath`")
 	rootCmd.Flags().StringVar(&options.TiKV.BinPath, "kv.binpath", "", "TiKV instance binary path")
 	rootCmd.Flags().StringVar(&options.PD.BinPath, "pd.binpath", "", "PD instance binary path")
 	rootCmd.Flags().StringVar(&options.TSO.BinPath, "tso.binpath", "", "TSO instance binary path")
@@ -380,6 +386,11 @@ func populateDefaultOpt(flagSet *pflag.FlagSet) error {
 		defaultInt(&options.TiDB.Num, "db", 1)
 		defaultInt(&options.TiKV.Num, "kv", 1)
 		defaultInt(&options.TiFlash.Num, "tiflash", 1)
+	case "tidb-nextgen":
+		defaultInt(&options.TiDB.Num, "db", 1)
+		defaultInt(&options.TiDBSystem.Num, "db.system", 1)
+		defaultInt(&options.TiKV.Num, "kv", 1)
+		defaultStr(&options.TiDBSystem.BinPath, "db.system.binpath", options.TiDB.BinPath)
 	case "tikv-slim":
 		defaultInt(&options.TiKV.Num, "kv", 1)
 	case "tidb-cse", "tiflash-disagg":
@@ -394,11 +405,15 @@ func populateDefaultOpt(flagSet *pflag.FlagSet) error {
 		defaultStr(&options.TiFlashCompute.BinPath, "tiflash.compute.binpath", options.TiFlash.BinPath)
 		defaultStr(&options.TiFlashCompute.ConfigPath, "tiflash.compute.config", options.TiFlash.ConfigPath)
 		options.TiFlashCompute.UpTimeout = options.TiFlash.UpTimeout
+	default:
+		return errors.Errorf("Unknown --mode %s", options.ShOpt.Mode)
+	}
+
+	switch options.ShOpt.Mode {
+	case "tidb-nextgen", "tidb-cse", "tiflash-disagg":
 		// Note: if a path of `tikv-server` is specified, the real resolved path of tikv-worker will become `tikv-worker` in the same directory.
 		defaultInt(&options.TiKVWorker.Num, "tikv.worker", 1)
 		defaultStr(&options.TiKVWorker.BinPath, "tikv.worker.binpath", options.TiKV.BinPath)
-	default:
-		return errors.Errorf("Unknown --mode %s", options.ShOpt.Mode)
 	}
 
 	switch options.ShOpt.PDMode {

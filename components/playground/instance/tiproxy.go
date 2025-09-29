@@ -79,8 +79,8 @@ func NewTiProxy(shOpt SharedOptions, binPath string, dir, host, configPath strin
 			Host:       host,
 			Port:       utils.MustGetFreePort(host, port, shOpt.PortOffset),
 			StatusPort: utils.MustGetFreePort(host, 3080, shOpt.PortOffset),
-			Role:       "tiproxy",
 			ConfigPath: configPath,
+			role:       "tiproxy",
 		},
 		pds: pds,
 	}
