@@ -119,7 +119,12 @@ func (env *Environment) Profile() *localdata.Profile {
 
 // Close release resource of env.
 func (env *Environment) Close() error {
-	// no need for v1manifest
+	repo := env.V1Repository()
+	if repo != nil {
+		if err := repo.Mirror().Close(); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

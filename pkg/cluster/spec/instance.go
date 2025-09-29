@@ -82,7 +82,7 @@ type Component interface {
 // UpdateConfig is used to control behavior pre/post hook of instances.
 type UpdateConfig struct {
 	CurrentVersion string
-	TargetVersion string
+	TargetVersion  string
 }
 
 // RollingUpdateInstance represent a instance need to transfer state when restart.

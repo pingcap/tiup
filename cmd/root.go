@@ -164,6 +164,9 @@ the latest stable version will be downloaded from the repository.`,
 
 			return tiupexec.RunComponent(env, tag, componentSpec, binPath, args)
 		},
+		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
+			return environment.GlobalEnv().Close()
+		},
 		SilenceUsage: true,
 		// implement auto completion for tiup components
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
