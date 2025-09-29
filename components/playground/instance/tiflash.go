@@ -121,12 +121,7 @@ func (inst *TiFlashInstance) Start(ctx context.Context) error {
 	}
 
 	configPath := filepath.Join(inst.Dir, "tiflash.toml")
-	var config map[string]any
-	if inst.Version.IsFTS() {
-		config = inst.getTiCIReaderConfig()
-	} else {
-		config = inst.getConfig()
-	}
+	config := inst.getConfig()
 	if err := prepareConfig(configPath, inst.ConfigPath, config); err != nil {
 		return err
 	}
@@ -152,7 +147,11 @@ func (inst *TiFlashInstance) Start(ctx context.Context) error {
 		{"flash.proxy.data-dir", filepath.Join(inst.Dir, "proxy_data")},
 		{"flash.proxy.log-file", filepath.Join(inst.Dir, "tiflash_tikv.log")},
 	}
-	userConfig, err := UnmarshalConfig(configPath)
+	if inst.Version.IsFTS() {
+		runtimeConfig = append(runtimeConfig, []string{"tici.reader_node.addr", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.ticReaderPort)})
+	}
+
+	userConfig, err := unmarshalConfig(configPath)
 	if err != nil {
 		return errors.Trace(err)
 	}

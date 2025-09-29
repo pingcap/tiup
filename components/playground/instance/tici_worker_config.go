@@ -15,23 +15,24 @@ package instance
 
 func (inst *TiCIInstance) getWorkerConfig() map[string]any {
 	config := make(map[string]any)
-
-	// S3 config
-	// TODO: make it configurable
-	config["s3.endpoint"] = "http://localhost:9000"
-	config["s3.region"] = "us_east_1"
-	config["s3.access_key"] = "minioadmin"
-	config["s3.secret_key"] = "minioadmin"
-	config["s3.use_path_style"] = true
-
-	// fragment writer config
-	config["frag_writer.local_data_path"] = "fragments"
-	config["frag_writer.index_num_threads"] = 4
-	config["frag_writer.index_mem_budget"] = "255MB"
-	config["frag_writer.index_flush_interval"] = "5s"
-	config["frag_writer.index_flush_size_limit"] = "5MB"
-
-	config["heartbeat_interval"] = "3s"
-
 	return config
+}
+
+// GetCDCS3FlushIntervalFromFile reads the CDC S3 flush interval from the given config file path
+func GetCDCS3FlushIntervalFromFile(configPath string) (string, error) {
+	defaultInterval := "5s"
+	if configPath == "" {
+		return defaultInterval, nil
+	}
+	// read the configuration file
+	ticiWorkerConfig, err := unmarshalConfig(configPath)
+	if err != nil {
+		return "", err
+	}
+	if _, ok := ticiWorkerConfig["cdc_s3_flush_interval"]; ok {
+		if val, ok := ticiWorkerConfig["cdc_s3_flush_interval"].(string); ok {
+			return val, nil
+		}
+	}
+	return defaultInterval, nil
 }

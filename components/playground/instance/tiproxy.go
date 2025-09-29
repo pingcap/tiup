@@ -106,7 +106,7 @@ func (c *TiProxy) Start(ctx context.Context) error {
 		return err
 	}
 
-	userConfig, err := UnmarshalConfig(c.ConfigPath)
+	userConfig, err := unmarshalConfig(c.ConfigPath)
 	if err != nil {
 		return err
 	}

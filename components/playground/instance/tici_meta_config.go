@@ -20,32 +20,57 @@ func (inst *TiCIInstance) getMetaConfig() map[string]any {
 		tidbServers = append(tidbServers, db.DSN())
 	}
 	config["tidb_server.tidb_servers"] = tidbServers
-	config["cert_path"] = ""
-
-	// reader pool config
-	config["reader_pool.ttl_seconds"] = 9
-	config["reader_pool.cleanup_interval_seconds"] = 1
-	config["reader_pool.scheduling_strategy"] = "round_robin"
-
-	// S3 config
-	// TODO: make it configurable
-	endpoint, ak, sk, bucket, prefix := GetDefaultTiCIMetaS3Config()
-	config["s3.endpoint"] = endpoint
-	config["s3.region"] = "us_east_1"
-	config["s3.access_key"] = ak
-	config["s3.secret_key"] = sk
-	config["s3.use_path_style"] = false
-	config["s3.bucket"] = bucket
-	config["s3.prefix"] = prefix
-
-	// shard config
-	config["shard.max_size"] = "1024MB"
-	config["shard.split_threshold"] = 0.75
-
 	return config
 }
 
-// GetDefaultTiCIMetaS3Config returns the default S3 configuration for TiCI Meta Service
-func GetDefaultTiCIMetaS3Config() (string, string, string, string, string) {
-	return "http://localhost:9000", "minioadmin", "minioadmin", "logbucket", "storage_test"
+
+// TiCIS3Config represents the S3 configuration for TiCI
+type TiCIS3Config struct {
+	Endpoint  string
+	AccessKey string
+	SecretKey string
+	Bucket    string
+	Prefix    string
+}
+
+func getDefaultTiCIMetaS3Config() *TiCIS3Config {
+	return &TiCIS3Config{
+		Endpoint:  "http://localhost:9000",
+		AccessKey: "minioadmin",
+		SecretKey: "minioadmin",
+		Bucket:    "ticidefaultbucket",
+		Prefix:    "tici_default_prefix",
+	}
+}
+
+// GetTiCIS3ConfigFromFile reads the S3 configuration from the given config file path
+func GetTiCIS3ConfigFromFile(configPath string) (*TiCIS3Config, error) {
+	defaultConfig := getDefaultTiCIMetaS3Config()
+	if configPath == "" {
+		return defaultConfig, nil
+	}
+	// read the configuration file
+	ticiMetaConfig, err := unmarshalConfig(configPath)
+	if err != nil {
+		return nil, err
+	}
+	s3, ok := ticiMetaConfig["s3"].(map[string]any)
+	if ok {
+		if v, ok := s3["endpoint"].(string); ok {
+			defaultConfig.Endpoint = v
+		}
+		if v, ok := s3["access_key"].(string); ok {
+			defaultConfig.AccessKey = v
+		}
+		if v, ok := s3["secret_key"].(string); ok {
+			defaultConfig.SecretKey = v
+		}
+		if v, ok := s3["bucket"].(string); ok {
+			defaultConfig.Bucket = v
+		}
+		if v, ok := s3["prefix"].(string); ok {
+			defaultConfig.Prefix = v
+		}
+	}
+	return defaultConfig, nil
 }
