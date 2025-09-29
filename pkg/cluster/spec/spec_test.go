@@ -47,7 +47,6 @@ func TestDefaultDataDir(t *testing.T) {
 	require.Equal(t, "data", topo.TiKVServers[0].DataDir)
 	require.Equal(t, "data", topo.CDCServers[0].DataDir)
 	require.Equal(t, "data", topo.TiKVCDCServers[0].DataDir)
-	require.Equal(t, "data", topo.TiCIMetaServers[0].DataDir)
 	require.Equal(t, "data", topo.TiCIWorkerServers[0].DataDir)
 
 	// Can keep the default value.
@@ -60,7 +59,6 @@ func TestDefaultDataDir(t *testing.T) {
 	require.Equal(t, "data", topo.TiKVServers[0].DataDir)
 	require.Equal(t, "data", topo.CDCServers[0].DataDir)
 	require.Equal(t, "data", topo.TiKVCDCServers[0].DataDir)
-	require.Equal(t, "data", topo.TiCIMetaServers[0].DataDir)
 	require.Equal(t, "data", topo.TiCIWorkerServers[0].DataDir)
 
 	// Test with global DataDir.
@@ -72,7 +70,6 @@ func TestDefaultDataDir(t *testing.T) {
 	topo.CDCServers = append(topo.CDCServers, &CDCSpec{Host: "2.3.3.4", Port: 22, DataDir: "/cdc_data"})
 	topo.TiKVCDCServers = append(topo.TiKVCDCServers, &TiKVCDCSpec{Host: "3.3.3.3", Port: 22})
 	topo.TiKVCDCServers = append(topo.TiKVCDCServers, &TiKVCDCSpec{Host: "3.3.3.4", Port: 22, DataDir: "/tikv-cdc_data"})
-	topo.TiCIMetaServers = append(topo.TiCIMetaServers, &TiCIMetaSpec{Host: "4.4.4.4", Port: 22, DataDir: "/tici-meta-data"})
 	topo.TiCIWorkerServers = append(topo.TiCIWorkerServers, &TiCIWorkerSpec{Host: "5.5.5.5", Port: 22, DataDir: "/tici-worker-data"})
 	data, err = yaml.Marshal(topo)
 	require.NoError(t, err)
@@ -89,7 +86,6 @@ func TestDefaultDataDir(t *testing.T) {
 
 	require.Equal(t, "/global_data/tikv-cdc-22", topo.TiKVCDCServers[0].DataDir)
 	require.Equal(t, "/tikv-cdc_data", topo.TiKVCDCServers[1].DataDir)
-	require.Equal(t, "/tici-meta-data", topo.TiCIMetaServers[0].DataDir)
 	require.Equal(t, "/tici-worker-data", topo.TiCIWorkerServers[0].DataDir)
 }
 
@@ -115,7 +111,6 @@ kvcdc_servers:
     data_dir: "tikv-cdc-data"
 tici_meta_servers:
   - host: 172.16.5.255
-    data_dir: "tici-meta-data"
 tici_worker_servers:
   - host: 172.16.5.256
     data_dir: "tici-worker-data"
@@ -140,7 +135,6 @@ tici_worker_servers:
 
 	require.Equal(t, 220, topo.TiCIMetaServers[0].SSHPort)
 	require.Equal(t, "test-deploy/tici-meta-8500", topo.TiCIMetaServers[0].DeployDir)
-	require.Equal(t, "tici-meta-data", topo.TiCIMetaServers[0].DataDir)
 
 	require.Equal(t, 220, topo.TiCIWorkerServers[0].SSHPort)
 	require.Equal(t, "test-deploy/tici-worker-8510", topo.TiCIWorkerServers[0].DeployDir)
@@ -170,7 +164,6 @@ kvcdc_servers:
     port: 33333
 tici_meta_servers:
   - host: 172.16.5.254
-    data_dir: "/tici-meta-data"
   - host: 172.16.5.255
     port: 8530
 tici_worker_servers:
@@ -190,8 +183,6 @@ tici_worker_servers:
 	require.Equal(t, "tikv-cdc-data", topo.TiKVCDCServers[0].DataDir)
 	require.Equal(t, "/test-data/tikv-cdc-33333", topo.TiKVCDCServers[1].DataDir)
 
-	require.Equal(t, "/tici-meta-data", topo.TiCIMetaServers[0].DataDir)
-	require.Equal(t, "/test-data/tici-meta-8530", topo.TiCIMetaServers[1].DataDir)
 	require.Equal(t, "/tici-worker-data", topo.TiCIWorkerServers[0].DataDir)
 	require.Equal(t, "/test-data/tici-worker-8550", topo.TiCIWorkerServers[1].DataDir)
 }

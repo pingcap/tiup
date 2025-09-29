@@ -18,6 +18,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
@@ -182,14 +183,16 @@ func (i *TiCIWorkerInstance) InitConfig(
 	spec := i.InstanceSpec.(*TiCIWorkerSpec)
 
 	// Generate PD endpoints for TiCI Worker
-	// currently TiCI Worker only supports single PD
-	pd := utils.JoinHostPort(topo.PDServers[0].Host, topo.PDServers[0].ClientPort)
+	pds := []string{}
+	for _, pdspec := range topo.PDServers {
+		pds = append(pds, utils.JoinHostPort(pdspec.Host, pdspec.ClientPort))
+	}
 
 	cfg := &scripts.TiCIWorkerScript{
 		Port:          spec.Port,
 		StatusPort:    spec.StatusPort,
 		ListenHost:    i.GetListenHost(),
-		PD:            pd,
+		PD:            strings.Join(pds, ","),
 		AdvertiseHost: utils.Ternary(spec.AdvertiseHost != "", spec.AdvertiseHost, spec.Host).(string),
 
 		DeployDir: paths.Deploy,
@@ -214,6 +217,9 @@ func (i *TiCIWorkerInstance) InitConfig(
 	}
 
 	globalConfig := topo.ServerConfigs.TiCIWorker
+	if v, ok := spec.Config["frag_writer.local_data_path"].(string); !ok || v == "" {
+		spec.Config["frag_writer.local_data_path"] = filepath.Join(spec.DataDir, "fragments")
+	}
 	if err := i.MergeServerConfig(ctx, e, globalConfig, spec.Config, paths); err != nil {
 		return err
 	}

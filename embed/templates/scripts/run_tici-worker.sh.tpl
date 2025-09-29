@@ -21,5 +21,5 @@ exec env GODEBUG=madvdontneed=1 bin/tici-server \
     --advertise-host="{{.AdvertiseHost}}" \
     --pd-addr="{{.PD}}" \
     --config=conf/tici-worker.toml \
-    1>> "{{.LogDir}}/tici-worker.log" \
+    --log-file="{{.LogDir}}/tici-worker.log" \
     2>> "{{.LogDir}}/tici-worker_stderr.log"

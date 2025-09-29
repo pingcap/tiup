@@ -18,6 +18,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/pingcap/errors"
@@ -41,7 +42,6 @@ type TiCIMetaSpec struct {
 	Port            int                  `yaml:"port" default:"8500"`
 	StatusPort      int                  `yaml:"status_port" default:"8501"`
 	DeployDir       string               `yaml:"deploy_dir,omitempty"`
-	DataDir         string               `yaml:"data_dir,omitempty"`
 	LogDir          string               `yaml:"log_dir,omitempty"`
 	Source          string               `yaml:"source,omitempty" validate:"source:editable"`
 	NumaNode        string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
@@ -183,14 +183,16 @@ func (i *TiCIMetaInstance) InitConfig(
 	spec := i.InstanceSpec.(*TiCIMetaSpec)
 
 	// Generate PD endpoints for TiCI Meta
-	// currently TiCI Meta only supports single PD
-	pd := utils.JoinHostPort(topo.PDServers[0].Host, topo.PDServers[0].ClientPort)
+	pds := []string{}
+	for _, pdspec := range topo.PDServers {
+		pds = append(pds, utils.JoinHostPort(pdspec.Host, pdspec.ClientPort))
+	}
 
 	cfg := &scripts.TiCIMetaScript{
 		Port:          spec.Port,
 		StatusPort:    spec.StatusPort,
 		ListenHost:    i.GetListenHost(),
-		PD:            pd,
+		PD:            strings.Join(pds, ","),
 		AdvertiseHost: utils.Ternary(spec.AdvertiseHost != "", spec.AdvertiseHost, spec.Host).(string),
 
 		DeployDir: paths.Deploy,
