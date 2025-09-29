@@ -100,6 +100,7 @@ func (inst *TiKVWorkerInstance) LogFile() string {
 	return filepath.Join(inst.Dir, "tikv_worker.log")
 }
 
+// Component return the binary name.
 func (inst *TiKVWorkerInstance) Component() string {
 	return "tikv"
 }

@@ -173,16 +173,10 @@ func AdvertiseHost(listen string) string {
 	return listen
 }
 
-func logIfErr(err error) {
-	if err != nil {
-		fmt.Println(err)
-	}
-}
-
 func pdEndpoints(pds []*PDInstance, isHTTP bool) []string {
 	var endpoints []string
 	for _, pd := range pds {
-		if pd.role == PDRoleTSO || pd.role == PDRoleScheduling {
+		if pd.Role == PDRoleTSO || pd.Role == PDRoleScheduling {
 			continue
 		}
 		if isHTTP {
