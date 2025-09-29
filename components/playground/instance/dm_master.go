@@ -12,7 +12,6 @@ import (
 // DMMaster represent a DM master instance.
 type DMMaster struct {
 	instance
-	Process
 	initEndpoints []*DMMaster
 }
 
@@ -29,17 +28,13 @@ func NewDMMaster(shOpt SharedOptions, binPath string, dir, host, configPath stri
 			ID:      id,
 			Dir:     dir,
 			Host:    host,
+			Role:    "dm-master",
 			Port:    utils.MustGetFreePort(host, 8291, shOpt.PortOffset),
 			// Similar like PD's client port, here use StatusPort for Master Port.
 			StatusPort: utils.MustGetFreePort(host, port, shOpt.PortOffset),
 			ConfigPath: configPath,
 		},
 	}
-}
-
-// Name return the name of the instance.
-func (m *DMMaster) Name() string {
-	return fmt.Sprintf("dm-master-%d", m.ID)
 }
 
 // Start starts the instance.
@@ -63,20 +58,12 @@ func (m *DMMaster) Start(ctx context.Context) error {
 		args = append(args, fmt.Sprintf("--config=%s", m.ConfigPath))
 	}
 
-	m.Process = &process{cmd: PrepareCommand(ctx, m.BinPath, args, nil, m.Dir)}
-
-	logIfErr(m.Process.SetOutputFile(m.LogFile()))
-	return m.Process.Start()
+	return m.PrepareProcess(ctx, m.BinPath, args, nil, m.Dir)
 }
 
 // SetInitEndpoints set the initial endpoints for the DM master.
 func (m *DMMaster) SetInitEndpoints(endpoints []*DMMaster) {
 	m.initEndpoints = endpoints
-}
-
-// Component return the component of the instance.
-func (m *DMMaster) Component() string {
-	return "dm-master"
 }
 
 // LogFile return the log file path of the instance.

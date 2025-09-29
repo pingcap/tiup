@@ -63,11 +63,13 @@ type instance struct {
 	ID         int
 	Dir        string
 	Host       string
+	Role       string
 	Port       int
 	StatusPort int // client port for PD
 	ConfigPath string
 	BinPath    string
 	Version    utils.Version
+	proc       Process
 }
 
 // MetricAddr will be used by prometheus scrape_configs.
@@ -78,23 +80,47 @@ type MetricAddr struct {
 
 // Instance represent running component
 type Instance interface {
-	Pid() int
 	// Start the instance process.
 	// Will kill the process once the context is done.
 	Start(ctx context.Context) error
-	// Component Return the component name.
+	// Name Return the display name.
+	Name() string
+	// Component Return the binary name.
 	Component() string
 	// LogFile return the log file name
 	LogFile() string
-	// Uptime show uptime.
-	Uptime() string
 	// MetricAddr return the address to pull metrics.
 	MetricAddr() MetricAddr
 	// Wait Should only call this if the instance is started successfully.
 	// The implementation should be safe to call Wait multi times.
 	Wait() error
+	// Proc return the underlying process.
+	Process() Process
 	// PrepareBinary use given binpath or download from tiup mirrors.
 	PrepareBinary(binaryName string, componentName string, version utils.Version) error
+	// PrepareProcess construct the process used later.
+	PrepareProcess(ctx context.Context, binPath string, args, envs []string, workDir string) error
+}
+
+func (inst *instance) Name() string {
+	return fmt.Sprintf("%s-%d", inst.Role, inst.ID)
+}
+
+func (inst *instance) Component() string {
+	return inst.Role
+}
+
+func (inst *instance) Wait() error {
+	return inst.proc.Wait()
+}
+
+func (inst *instance) PrepareProcess(ctx context.Context, binPath string, args, envs []string, workDir string) error {
+	inst.proc = &process{cmd: PrepareCommand(ctx, binPath, args, envs, workDir)}
+	return nil
+}
+
+func (inst *instance) Process() Process {
+	return inst.proc
 }
 
 func (inst *instance) MetricAddr() (r MetricAddr) {

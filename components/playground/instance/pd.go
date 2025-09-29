@@ -25,7 +25,7 @@ import (
 )
 
 // PDRole is the role of PD.
-type PDRole string
+type PDRole = string
 
 const (
 	// PDRoleNormal is the default role of PD
@@ -41,14 +41,15 @@ const (
 // PDInstance represent a running pd-server
 type PDInstance struct {
 	instance
-	shOpt         SharedOptions
-	role          PDRole
-	initEndpoints []*PDInstance
-	joinEndpoints []*PDInstance
-	pds           []*PDInstance
-	Process
+	shOpt             SharedOptions
+	role              PDRole
+	initEndpoints     []*PDInstance
+	joinEndpoints     []*PDInstance
+	pds               []*PDInstance
 	kvIsSingleReplica bool
 }
+
+var _ Instance = &PDInstance{}
 
 // NewPDInstance return a PDInstance
 func NewPDInstance(role PDRole, shOpt SharedOptions, binPath, dir, host, configPath string, id int, pds []*PDInstance, port int, kvIsSingleReplica bool) *PDInstance {
@@ -171,18 +172,12 @@ func (inst *PDInstance) Start(ctx context.Context) error {
 		}
 	}
 
-	inst.Process = &process{cmd: PrepareCommand(ctx, inst.BinPath, args, nil, inst.Dir)}
-
-	logIfErr(inst.Process.SetOutputFile(inst.LogFile()))
-	return inst.Process.Start()
+	return inst.PrepareProcess(ctx, inst.BinPath, args, nil, inst.Dir)
 }
 
 // Component return the component name.
 func (inst *PDInstance) Component() string {
-	if inst.role == PDRoleNormal || inst.role == PDRoleAPI {
-		return "pd"
-	}
-	return string(inst.role)
+	return PDRoleNormal
 }
 
 // LogFile return the log file.

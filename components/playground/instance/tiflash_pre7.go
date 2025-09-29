@@ -104,10 +104,8 @@ func (inst *TiFlashInstance) startOld(ctx context.Context, version utils.Version
 	envs := []string{
 		fmt.Sprintf("LD_LIBRARY_PATH=%s:$LD_LIBRARY_PATH", dirPath),
 	}
-	inst.Process = &process{cmd: PrepareCommand(ctx, inst.BinPath, args, envs, inst.Dir)}
 
-	logIfErr(inst.Process.SetOutputFile(inst.LogFile()))
-	return inst.Process.Start()
+	return inst.PrepareProcess(ctx, inst.BinPath, args, envs, inst.Dir)
 }
 
 // checkConfigOld is for < 7.1.0. Not maintained any more. Do not introduce new features.

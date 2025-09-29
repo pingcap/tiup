@@ -22,23 +22,23 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
-// TiKVCDC represent a TiKV-CDC instance.
-type TiKVCDC struct {
+// TiKVCDCInstance represent a TiKV-CDC instance.
+type TiKVCDCInstance struct {
 	instance
 	pds []*PDInstance
-	Process
 }
 
-var _ Instance = &TiKVCDC{}
+var _ Instance = &TiKVCDCInstance{}
 
 // NewTiKVCDC create a TiKVCDC instance.
-func NewTiKVCDC(shOpt SharedOptions, binPath string, dir, host, configPath string, id int, pds []*PDInstance) *TiKVCDC {
-	tikvCdc := &TiKVCDC{
+func NewTiKVCDC(shOpt SharedOptions, binPath string, dir, host, configPath string, id int, pds []*PDInstance) *TiKVCDCInstance {
+	tikvCdc := &TiKVCDCInstance{
 		instance: instance{
 			BinPath:    binPath,
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
+			Role:       "tikv-cdc",
 			Port:       utils.MustGetFreePort(host, 8600, shOpt.PortOffset),
 			ConfigPath: configPath,
 		},
@@ -49,7 +49,7 @@ func NewTiKVCDC(shOpt SharedOptions, binPath string, dir, host, configPath strin
 }
 
 // Start implements Instance interface.
-func (c *TiKVCDC) Start(ctx context.Context) error {
+func (c *TiKVCDCInstance) Start(ctx context.Context) error {
 	endpoints := pdEndpoints(c.pds, true)
 
 	args := []string{
@@ -64,18 +64,10 @@ func (c *TiKVCDC) Start(ctx context.Context) error {
 		args = append(args, fmt.Sprintf("--config=%s", c.ConfigPath))
 	}
 
-	c.Process = &process{cmd: PrepareCommand(ctx, c.BinPath, args, nil, c.Dir)}
-
-	logIfErr(c.Process.SetOutputFile(c.LogFile()))
-	return c.Process.Start()
-}
-
-// Component return component name.
-func (c *TiKVCDC) Component() string {
-	return "tikv-cdc"
+	return c.PrepareProcess(ctx, c.BinPath, args, nil, c.Dir)
 }
 
 // LogFile return the log file.
-func (c *TiKVCDC) LogFile() string {
+func (c *TiKVCDCInstance) LogFile() string {
 	return filepath.Join(c.Dir, "tikv_cdc.log")
 }

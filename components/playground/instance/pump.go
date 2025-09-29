@@ -28,7 +28,6 @@ import (
 type Pump struct {
 	instance
 	pds []*PDInstance
-	Process
 }
 
 var _ Instance = &Pump{}
@@ -41,6 +40,7 @@ func NewPump(shOpt SharedOptions, binPath string, dir, host, configPath string, 
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
+			Role:       "pump",
 			Port:       utils.MustGetFreePort(host, 8249, shOpt.PortOffset),
 			ConfigPath: configPath,
 		},
@@ -48,11 +48,6 @@ func NewPump(shOpt SharedOptions, binPath string, dir, host, configPath string, 
 	}
 	pump.StatusPort = pump.Port
 	return pump
-}
-
-// NodeID return the node id of pump.
-func (p *Pump) NodeID() string {
-	return fmt.Sprintf("pump_%d", p.ID)
 }
 
 // Ready return nil when pump is ready to serve.
@@ -92,7 +87,7 @@ func (p *Pump) Start(ctx context.Context) error {
 	endpoints := pdEndpoints(p.pds, true)
 
 	args := []string{
-		fmt.Sprintf("--node-id=%s", p.NodeID()),
+		fmt.Sprintf("--node-id=%s", p.Name()),
 		fmt.Sprintf("--addr=%s", utils.JoinHostPort(p.Host, p.Port)),
 		fmt.Sprintf("--advertise-addr=%s", utils.JoinHostPort(AdvertiseHost(p.Host), p.Port)),
 		fmt.Sprintf("--pd-urls=%s", strings.Join(endpoints, ",")),
@@ -102,15 +97,7 @@ func (p *Pump) Start(ctx context.Context) error {
 		args = append(args, fmt.Sprintf("--config=%s", p.ConfigPath))
 	}
 
-	p.Process = &process{cmd: PrepareCommand(ctx, p.BinPath, args, nil, p.Dir)}
-
-	logIfErr(p.Process.SetOutputFile(p.LogFile()))
-	return p.Process.Start()
-}
-
-// Component return component name.
-func (p *Pump) Component() string {
-	return "pump"
+	return p.PrepareProcess(ctx, p.BinPath, args, nil, p.Dir)
 }
 
 // LogFile return the log file.
