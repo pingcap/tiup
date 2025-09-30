@@ -23,6 +23,7 @@ func (inst *TiCIInstance) getMetaConfig() map[string]any {
 	return config
 }
 
+
 // TiCIS3Config represents the S3 configuration for TiCI
 type TiCIS3Config struct {
 	Endpoint  string
