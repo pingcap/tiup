@@ -56,6 +56,9 @@ type PrometheusConfig struct {
 	DMMasterAddrs []string
 	DMWorkerAddrs []string
 
+	TiCIMetaAddrs   []string
+	TiCIWorkerAddrs []string
+
 	LocalRules   []string
 	RemoteConfig string
 }
@@ -146,6 +149,18 @@ func (c *PrometheusConfig) AddCDC(ip string, port uint64) *PrometheusConfig {
 // AddTiKVCDC add a tikv-cdc address
 func (c *PrometheusConfig) AddTiKVCDC(ip string, port uint64) *PrometheusConfig {
 	c.TiKVCDCAddrs = append(c.TiKVCDCAddrs, utils.JoinHostPort(ip, int(port)))
+	return c
+}
+
+// AddTiCIMeta add a tici-meta address
+func (c *PrometheusConfig) AddTiCIMeta(ip string, port uint64) *PrometheusConfig {
+	c.TiCIMetaAddrs = append(c.TiCIMetaAddrs, utils.JoinHostPort(ip, int(port)))
+	return c
+}
+
+// AddTiCIWorker add a tici-worker address
+func (c *PrometheusConfig) AddTiCIWorker(ip string, port uint64) *PrometheusConfig {
+	c.TiCIWorkerAddrs = append(c.TiCIWorkerAddrs, utils.JoinHostPort(ip, int(port)))
 	return c
 }
 

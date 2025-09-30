@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/pingcap/errors"
@@ -336,6 +337,41 @@ func isHealthy(client *CDCOpenAPIClient) error {
 
 func (c *CDCOpenAPIClient) l() *logprinter.Logger {
 	return c.ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
+}
+
+// CreateChangefeed create a changefeed
+func (c *CDCOpenAPIClient) CreateChangefeed(bucket, prefix, endpoint, accessKey, secretKey, flushInterval string) error {
+	api := "api/v1/changefeeds"
+	// client should only have address to the target cdc server, not all cdc servers.
+	endpoints := c.getEndpoints(api)
+	options := []string{}
+	options = append(options, "protocol=canal-json")
+	options = append(options, "enable-tidb-extension=true")
+	options = append(options, "output-row-key=true")
+	if accessKey != "" && secretKey != "" {
+		options = append(options, fmt.Sprintf("access-key=%s", accessKey))
+		options = append(options, fmt.Sprintf("secret-access-key=%s", secretKey))
+	}
+	options = append(options, fmt.Sprintf("endpoint=%s", endpoint))
+	options = append(options, fmt.Sprintf("flush-interval=%s", flushInterval))
+
+	sinkURI := fmt.Sprintf("s3://%s/%s/cdc?%s", bucket, prefix, strings.Join(options, "&"))
+
+	err := utils.Retry(func() error {
+		cfg := map[string]any{
+			"sink_uri": sinkURI,
+		}
+		body, err := json.Marshal(cfg)
+		if err != nil {
+			return err
+		}
+		_, err = c.client.Post(c.ctx, endpoints[0], bytes.NewReader(body))
+		return errors.Wrap(err, fmt.Sprintf("failed to create changefeed with sinkURI %s", sinkURI))
+	}, utils.RetryOption{
+		Timeout: 10 * time.Second,
+	})
+
+	return err
 }
 
 // Liveness is the liveness status of a capture.

@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -100,14 +101,20 @@ func (inst *TiCIInstance) Start(ctx context.Context) error {
 		return err
 	}
 
+	pds := []string{}
+	for _, pdspec := range inst.pds {
+		pds = append(pds, pdspec.Addr())
+	}
+
 	args := []string{
 		inst.roleString(),
 		fmt.Sprintf("--host=%s", inst.Host),
 		fmt.Sprintf("--port=%d", inst.Port),
 		fmt.Sprintf("--status-port=%d", inst.StatusPort),
 		fmt.Sprintf("--advertise-host=%s", AdvertiseHost(inst.Host)),
-		fmt.Sprintf("--pd-addr=%s", fmt.Sprintf("http://%s", inst.pds[0].Addr())),
+		fmt.Sprintf("--pd-addr=%s", strings.Join(pds, ",")),
 		fmt.Sprintf("--config=%s", configPath),
+		fmt.Sprintf("--log-file=%s", inst.LogFile()),
 	}
 	inst.Process = &process{cmd: PrepareCommand(ctx, inst.BinPath, args, nil, inst.Dir)}
 

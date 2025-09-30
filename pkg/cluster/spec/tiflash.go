@@ -52,6 +52,7 @@ type TiFlashSpec struct {
 	FlashProxyPort       int                  `yaml:"flash_proxy_port" default:"20170"`
 	FlashProxyStatusPort int                  `yaml:"flash_proxy_status_port" default:"20292"`
 	StatusPort           int                  `yaml:"metrics_port" default:"8234"`
+	TiCIReaderNodePort   int                  `yaml:"tici_reader_node_port" default:"8520"`
 	DeployDir            string               `yaml:"deploy_dir,omitempty"`
 	DataDir              string               `yaml:"data_dir,omitempty" validate:"data_dir:expandable"`
 	LogDir               string               `yaml:"log_dir,omitempty"`
@@ -330,6 +331,10 @@ func (c *TiFlashComponent) Instances() []Instance {
 			},
 			Component: c,
 		}, c.Topology}
+		// for FTS version, we need to expose tici_reader_node_port
+		if c.Topology.ComponentVersions.TiFlash == utils.FTSVersionAlias {
+			tiflashInstance.Ports = append(tiflashInstance.Ports, s.TiCIReaderNodePort)
+		}
 		// For 7.1.0 or later, TiFlash HTTP service is removed, so we don't need to set http_port
 		if !tidbver.TiFlashNotNeedHTTPPortConfig(c.Topology.ComponentVersions.TiFlash) {
 			tiflashInstance.Ports = append(tiflashInstance.Ports, s.HTTPPort)
@@ -541,6 +546,10 @@ func (i *TiFlashInstance) initTiFlashConfig(ctx context.Context, version string,
 		daemonConfig = `application.runAsDaemon: true`
 		markCacheSize = `mark_cache_size: 5368709120`
 	}
+	var ticiConfig string
+	if version == utils.FTSVersionAlias {
+		ticiConfig = fmt.Sprintf(`tici.reader_node.addr: "%s"`, utils.JoinHostPort(spec.Host, spec.TiCIReaderNodePort))
+	}
 
 	err = yaml.Unmarshal(fmt.Appendf(nil, `
 server_configs:
@@ -569,6 +578,7 @@ server_configs:
     raft.pd_addr: "%[9]s"
     %[12]s
     %[14]s
+    %[15]s
 `,
 		pathConfig,
 		paths.Log,
@@ -584,6 +594,7 @@ server_configs:
 		deprecatedUsersConfig,
 		daemonConfig,
 		markCacheSize,
+		ticiConfig,
 	), &topo)
 
 	if err != nil {
