@@ -25,7 +25,6 @@ Build-Depends:
  golang-github-go-git-go-billy-dev,
  golang-github-go-sql-driver-mysql-dev,
  golang-github-gofrs-flock-dev,
- golang-github-gohxs-readline-dev,
  golang-github-golang-protobuf-1-5-dev,
  golang-github-google-shlex-dev,
  golang-github-google-uuid-dev,
