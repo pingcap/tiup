@@ -15,13 +15,11 @@ package main
 
 import (
 	"bufio"
-	"context"
 	"fmt"
-	"io"
 	"log"
 	"os"
-	"os/user"
 	"path"
+	"regexp"
 
 	ui "github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
@@ -30,10 +28,6 @@ import (
 	"github.com/pingcap/tiup/pkg/repository"
 	gops "github.com/shirou/gopsutil/process"
 	"github.com/spf13/cobra"
-	_ "github.com/xo/usql/drivers/mysql"
-	"github.com/xo/usql/env"
-	"github.com/xo/usql/handler"
-	"github.com/xo/usql/rline"
 )
 
 func main() {
@@ -94,20 +88,11 @@ func connect(target string) error {
 			return fmt.Errorf("specified instance %s not found, maybe it's not alive now, execute `tiup status` to see instance list", target)
 		}
 	}
-	u, err := user.Current()
-	if err != nil {
-		return fmt.Errorf("can't get current user: %s", err.Error())
-	}
-	l, err := rline.New(false, "", env.HistoryFile(u))
-	if err != nil {
-		return fmt.Errorf("can't open history file: %s", err.Error())
-	}
-	h := handler.New(l, u, os.Getenv(localdata.EnvNameInstanceDataDir), true)
-	if err = h.Open(context.TODO(), ep.dsn); err != nil {
-		return fmt.Errorf("can't open connection to %s: %s", ep.dsn, err.Error())
-	}
-	if err = h.Run(); err != io.EOF {
-		return err
+	fmt.Printf("MySQL Shell:  mysqlsh %s\n", ep.dsn)
+	r := regexp.MustCompile(`^mysql://([a-z]+)@(.+):(\d+)`)
+	m := r.FindStringSubmatch(ep.dsn)
+	if m != nil {
+		fmt.Printf("MySQL Client: mysql -u %s -h %s -P %s\n", m[1], m[2], m[3])
 	}
 	return nil
 }
@@ -132,6 +117,9 @@ func scanEndpoint(tiupHome string) ([]*endpoint, error) {
 func isInstanceAlive(tiupHome, instance string) bool {
 	s, err := environment.GlobalEnv().Profile().ReadMetaFile(instance)
 	if err != nil {
+		return false
+	}
+	if s == nil {
 		return false
 	}
 	exist, _ := gops.PidExists(int32(s.Pid))
@@ -188,7 +176,7 @@ func selectEndpoint(endpoints []*endpoint) *endpoint {
 	uiEvents := ui.PollEvents()
 	for {
 		e := <-uiEvents
-		_ = os.WriteFile("/tmp/log", []byte(e.ID+"\n"), 0664)
+		_ = os.WriteFile("/tmp/log", []byte(e.ID+"\n"), 0o664)
 		switch e.ID {
 		case "q", "<C-c>":
 			return nil
