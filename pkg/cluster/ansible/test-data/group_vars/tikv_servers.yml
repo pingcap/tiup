@@ -1,9 +1,0 @@
----
-dummy:
-
-tikv_port: 20160
-tikv_status_port: 20180
-
-tikv_data_dir: "{{ deploy_dir }}/tikv_data"
-tikv_log_dir: "{{ deploy_dir }}/log"
-tikv_cert_dir: "{{ deploy_dir }}/conf/ssl"
