@@ -173,6 +173,11 @@ func PrepareCommand(p *PrepareCommandParams) (*exec.Cmd, error) {
 }
 
 func cmdCheckUpdate(component string, version utils.Version) {
+	// Skip online check in binaries installed by a package manager
+	if environment.IsPackagedBuild {
+		return
+	}
+
 	const (
 		slowTimeout   = 1 * time.Second // Timeout to display checking message
 		cancelTimeout = 2 * time.Second // Timeout to cancel the check
