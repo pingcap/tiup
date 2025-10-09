@@ -217,6 +217,14 @@ func (i *TiCIMetaInstance) InitConfig(
 	}
 
 	globalConfig := topo.ServerConfigs.TiCIMeta
+
+	// Add the TiDB servers to the config
+	tidbs := []string{}
+	for _, s := range topo.TiDBServers {
+		tidbs = append(tidbs, fmt.Sprintf("mysql://root@%s", utils.JoinHostPort(s.Host, s.Port)))
+	}
+	spec.Config["tidb_server.dsns"] = tidbs
+
 	if err := i.MergeServerConfig(ctx, e, globalConfig, spec.Config, paths); err != nil {
 		return err
 	}
