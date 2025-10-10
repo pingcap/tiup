@@ -55,5 +55,10 @@ exec bin/prometheus/prometheus \
 {{- end}}
 {{- end}}
 {{- if not .EnablePromAgentMode}}
-    --storage.tsdb.retention="{{.Retention}}"
+{{- if .RetentionSize}}
+    --storage.tsdb.retention.size="{{.RetentionSize}}"
+{{- end}}
+{{- if .RetentionTime}}
+    --storage.tsdb.retention.time="{{.RetentionTime}}"
+{{- end}}
 {{- end}}

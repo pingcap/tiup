@@ -54,7 +54,9 @@ type PrometheusSpec struct {
 	RemoteConfig          Remote                 `yaml:"remote_config,omitempty" validate:"remote_config:ignore"`
 	ExternalAlertmanagers []ExternalAlertmanager `yaml:"external_alertmanagers" validate:"external_alertmanagers:ignore"`
 	PushgatewayAddrs      []string               `yaml:"pushgateway_addrs,omitempty" validate:"pushgateway_addrs:ignore"`
-	Retention             string                 `yaml:"storage_retention,omitempty" validate:"storage_retention:editable"`
+	Retention             string                 `yaml:"storage_retention,omitempty" validate:"storage_retention:editable"` // deprecated
+	RetentionSize         string                 `yaml:"storage_retention_size,omitempty" validate:"storage_retention_size:editable"`
+	RetentionTime         string                 `yaml:"storage_retention_time,omitempty" validate:"storage_retention_time:editable"`
 	ResourceControl       meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
 	Arch                  string                 `yaml:"arch,omitempty"`
 	OS                    string                 `yaml:"os,omitempty"`
@@ -270,7 +272,6 @@ func (i *MonitorInstance) InitConfig(
 	cfg := &scripts.PrometheusScript{
 		Port:                spec.Port,
 		WebExternalURL:      fmt.Sprintf("http://%s", utils.JoinHostPort(spec.Host, spec.Port)),
-		Retention:           getRetention(spec.Retention),
 		EnableNG:            spec.NgPort > 0,
 		EnablePromAgentMode: spec.EnablePromAgentMode, // Get from spec directly
 
@@ -282,6 +283,13 @@ func (i *MonitorInstance) InitConfig(
 
 		AdditionalArgs: spec.AdditionalArgs,
 	}
+	// Set retention policy
+	if spec.RetentionTime == "" {
+		cfg.RetentionTime = getRetentionTime(spec.Retention)
+	} else {
+		cfg.RetentionTime = getRetentionTime(spec.RetentionTime)
+	}
+	cfg.RetentionSize = getRetentionSize(spec.RetentionSize)
 
 	// Check if agent mode is enabled in additional arguments
 	if !cfg.EnablePromAgentMode {
@@ -675,7 +683,17 @@ func mergeAdditionalScrapeConf(source string, addition map[string]any) error {
 	return utils.WriteFile(source, bytes, 0644)
 }
 
-func getRetention(retention string) string {
+func getRetentionSize(retention string) string {
+	retention = strings.ToUpper(strings.TrimSpace(retention))
+	valid, _ := regexp.MatchString("^[1-9]\\d*(B|KB|MB|GB|TB|PB|EB)$", retention)
+	if retention == "" || !valid {
+		return ""
+	}
+	return retention
+}
+
+func getRetentionTime(retention string) string {
+	retention = strings.TrimSpace(retention)
 	valid, _ := regexp.MatchString("^[1-9]\\d*d$", retention)
 	if retention == "" || !valid {
 		return "30d"

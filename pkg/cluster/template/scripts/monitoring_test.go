@@ -32,7 +32,8 @@ func TestPrometheusScriptWithAgentMode(t *testing.T) {
 	script := &PrometheusScript{
 		Port:                9090,
 		WebExternalURL:      "http://localhost:9090",
-		Retention:           "30d",
+		RetentionTime:       "30d",
+		RetentionSize:       "100GB",
 		EnableNG:            false,
 		EnablePromAgentMode: true,
 		DeployDir:           "/deploy",
