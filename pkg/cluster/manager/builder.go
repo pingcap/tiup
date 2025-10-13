@@ -689,6 +689,7 @@ func buildInitConfigTasks(
 					Log:    logDir,
 					Cache:  m.specManager.Path(name, spec.TempConfigPath),
 				},
+				spec.InstanceOpt{},
 			).
 			BuildAsStep(fmt.Sprintf("  - Generate config %s -> %s", compName, instance.ID()))
 		tasks = append(tasks, t)

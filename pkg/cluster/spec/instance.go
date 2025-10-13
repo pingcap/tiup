@@ -97,8 +97,8 @@ type Instance interface {
 	InstanceSpec
 	ID() string
 	Ready(context.Context, ctxt.Executor, uint64, *tls.Config) error
-	InitConfig(ctx context.Context, e ctxt.Executor, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error
-	ScaleConfig(ctx context.Context, e ctxt.Executor, topo Topology, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error
+	InitConfig(ctx context.Context, e ctxt.Executor, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths, opt InstanceOpt) error
+	ScaleConfig(ctx context.Context, e ctxt.Executor, topo Topology, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths, opt InstanceOpt) error
 	PrepareStart(ctx context.Context, tlsCfg *tls.Config) error
 	ComponentName() string
 	ComponentSource() string
@@ -149,6 +149,10 @@ func PortStopped(ctx context.Context, e ctxt.Executor, port int, timeout uint64)
 	return w.Execute(ctx, e)
 }
 
+type InstanceOpt struct {
+	CheckCDCNewArch bool
+}
+
 // BaseInstance implements some method of Instance interface..
 type BaseInstance struct {
 	InstanceSpec
@@ -168,7 +172,8 @@ type BaseInstance struct {
 	StatusFn func(ctx context.Context, timeout time.Duration, tlsCfg *tls.Config, pdHosts ...string) string
 	UptimeFn func(ctx context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration
 
-	Component Component
+	Component   Component
+	InstanceOpt InstanceOpt
 }
 
 // Ready implements Instance interface

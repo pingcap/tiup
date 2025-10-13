@@ -203,6 +203,7 @@ func (i *TiProxyInstance) ScaleConfig(
 	clusterVersion,
 	user string,
 	paths meta.DirPaths,
+	opt InstanceOpt,
 ) error {
 	s := i.topo
 	defer func() {
@@ -210,7 +211,7 @@ func (i *TiProxyInstance) ScaleConfig(
 	}()
 	i.topo = mustBeClusterTopo(topo)
 
-	return i.InitConfig(ctx, e, clusterName, clusterVersion, user, paths)
+	return i.InitConfig(ctx, e, clusterName, clusterVersion, user, paths, opt)
 }
 
 func (i *TiProxyInstance) checkConfig(
@@ -245,6 +246,7 @@ func (i *TiProxyInstance) InitConfig(
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
+	opt InstanceOpt,
 ) error {
 	topo := i.topo.(*Specification)
 	if err := i.BaseInstance.InitConfig(ctx, e, topo.GlobalOptions, deployUser, paths); err != nil {

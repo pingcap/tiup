@@ -178,6 +178,7 @@ func (i *DashboardInstance) ScaleConfig(
 	clusterVersion,
 	user string,
 	paths meta.DirPaths,
+	opt InstanceOpt,
 ) error {
 	s := i.topo
 	defer func() {
@@ -185,7 +186,7 @@ func (i *DashboardInstance) ScaleConfig(
 	}()
 	i.topo = mustBeClusterTopo(topo)
 
-	return i.InitConfig(ctx, e, clusterName, clusterVersion, user, paths)
+	return i.InitConfig(ctx, e, clusterName, clusterVersion, user, paths, opt)
 }
 
 // InitConfig implements Instance interface.
@@ -196,6 +197,7 @@ func (i *DashboardInstance) InitConfig(
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
+	opt InstanceOpt,
 ) error {
 	topo := i.topo.(*Specification)
 	if err := i.BaseInstance.InitConfig(ctx, e, topo.GlobalOptions, deployUser, paths); err != nil {

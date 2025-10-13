@@ -38,6 +38,10 @@ import (
 	"golang.org/x/mod/semver"
 )
 
+const (
+	CDCNewArchVersion = "v9.0.0"
+)
+
 func (m *Manager) upgradePrecheck(name string, componentVersions map[string]string, opt operator.Options, skipConfirm bool) error {
 	if !skipConfirm && strings.ToLower(opt.DisplayMode) != "json" {
 		for _, v := range componentVersions {
@@ -86,9 +90,9 @@ func (m *Manager) Upgrade(name string, clusterVersion string, componentVersions 
 		uniqueComps = map[string]struct{}{}
 	)
 
-	if err := versionCompare(base.Version, clusterVersion); err != nil {
+	if versionCompare(base.Version, clusterVersion) == 1 {
 		if !ignoreVersionCheck {
-			return err
+			return perrs.Errorf("please specify a higher or equle version than %s", base.Version)
 		}
 		m.logger.Warnf("%s", color.RedString("There is no guarantee that the cluster can be downgraded. Be careful before you continue."))
 	}
@@ -143,8 +147,8 @@ This operation will upgrade %s %s cluster %s (with a concurrency of %d) to %s:%s
 
 	hasImported := false
 	for _, comp := range components {
+		oldver := comp.CalculateVersion(base.Version)
 		version := comp.CalculateVersion(clusterVersion)
-
 		for _, inst := range comp.Instances() {
 			// Download component from repository
 			key := fmt.Sprintf("%s-%s-%s-%s", inst.ComponentSource(), version, inst.OS(), inst.Arch())
@@ -217,6 +221,10 @@ This operation will upgrade %s %s cluster %s (with a concurrency of %d) to %s:%s
 				}
 			}
 
+			checkCDCNewArch := false
+			if versionCompare(oldver, CDCNewArchVersion) == -1 && versionCompare(CDCNewArchVersion, clusterVersion) > -1 {
+				checkCDCNewArch = true
+			}
 			tb.InitConfig(
 				name,
 				clusterVersion,
@@ -230,6 +238,7 @@ This operation will upgrade %s %s cluster %s (with a concurrency of %d) to %s:%s
 					Log:    logDir,
 					Cache:  m.specManager.Path(name, spec.TempConfigPath),
 				},
+				spec.InstanceOpt{CheckCDCNewArch: checkCDCNewArch},
 			)
 			copyCompTasks = append(copyCompTasks, tb.Build())
 		}
@@ -372,18 +381,16 @@ This operation will upgrade %s %s cluster %s (with a concurrency of %d) to %s:%s
 	return nil
 }
 
-func versionCompare(curVersion, newVersion string) error {
+// versionCompare returns an integer comparing two versions according to semantic version precedence.
+// The result will be 0 if curVersion == newVersion, -1 if curVersion < newVersion, or +1 if curVersion > newVersion.
+func versionCompare(curVersion, newVersion string) int {
+	if newVersion == curVersion {
+		return 0
+	}
 	// Can always upgrade to 'nightly' event the current version is 'nightly'
 	if newVersion == utils.NightlyVersionAlias {
-		return nil
+		return -1
 	}
 
-	switch semver.Compare(curVersion, newVersion) {
-	case -1, 0:
-		return nil
-	case 1:
-		return perrs.Errorf("please specify a higher or equle version than %s", curVersion)
-	default:
-		return perrs.Errorf("unreachable")
-	}
+	return semver.Compare(curVersion, newVersion)
 }

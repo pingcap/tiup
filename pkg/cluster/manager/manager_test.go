@@ -23,19 +23,18 @@ import (
 )
 
 func TestVersionCompare(t *testing.T) {
-	var err error
 
-	err = versionCompare("v4.0.0", "v4.0.1")
-	assert.Nil(t, err)
+	res := versionCompare("v4.0.0", "v4.0.1")
+	assert.Equal(t, res, -1)
 
-	err = versionCompare("v4.0.1", "v4.0.0")
-	assert.NotNil(t, err)
+	res = versionCompare("v4.0.1", "v4.0.0")
+	assert.Equal(t, res, 1)
 
-	err = versionCompare("v4.0.0", "nightly")
-	assert.Nil(t, err)
+	res = versionCompare("v4.0.0", "nightly")
+	assert.Equal(t, res, -1)
 
-	err = versionCompare("nightly", "nightly")
-	assert.Nil(t, err)
+	res = versionCompare("nightly", "nightly")
+	assert.Equal(t, res, 0)
 }
 
 func TestValidateNewTopo(t *testing.T) {
