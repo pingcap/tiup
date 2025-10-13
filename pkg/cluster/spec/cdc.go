@@ -211,8 +211,6 @@ func (i *CDCInstance) InitConfig(
 	spec := i.InstanceSpec.(*CDCSpec)
 	globalConfig := topo.ServerConfigs.CDC
 	instanceConfig := spec.Config
-	// clusterVersion v9.0
-	// version v9.0.0.beta.1
 	version := i.CalculateVersion(clusterVersion)
 
 	if !tidbver.TiCDCSupportConfigFile(version) {

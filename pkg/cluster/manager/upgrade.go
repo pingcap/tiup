@@ -39,7 +39,7 @@ import (
 )
 
 const (
-	CDCNewArchVersion = "v9.0.0"
+	cdcNewArchVersion = "v9.0.0"
 )
 
 func (m *Manager) upgradePrecheck(name string, componentVersions map[string]string, opt operator.Options, skipConfirm bool) error {
@@ -222,7 +222,7 @@ This operation will upgrade %s %s cluster %s (with a concurrency of %d) to %s:%s
 			}
 
 			checkCDCNewArch := false
-			if versionCompare(oldver, CDCNewArchVersion) == -1 && versionCompare(CDCNewArchVersion, clusterVersion) > -1 {
+			if versionCompare(oldver, cdcNewArchVersion) == -1 && versionCompare(cdcNewArchVersion, clusterVersion) > -1 {
 				checkCDCNewArch = true
 			}
 			tb.InitConfig(

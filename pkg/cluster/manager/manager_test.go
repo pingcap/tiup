@@ -23,7 +23,6 @@ import (
 )
 
 func TestVersionCompare(t *testing.T) {
-
 	res := versionCompare("v4.0.0", "v4.0.1")
 	assert.Equal(t, res, -1)
 
