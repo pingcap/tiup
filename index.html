@@ -1,113 +1,586 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-    <link href="https://cdn.jsdelivr.net/npm/mini.css@3.0.1/dist/mini-default.css" rel="stylesheet">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta charset="UTF-8" />
-    <title>TiUP</title>
-</head>
-
-<body>
-<div class="container">
-    <br/>
-    <div class="row">
-        <div class="col-sm-12 col-md-12 col-lg-10 col-lg-offset-1">
-            <h2>TiUP</h2>
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>TiUP - TiDB Component Manager</title>
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Lato:wght@400;500;700&amp;display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "media",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#137fec",
+              "primary-dark": "#38bdf8",
+              "background-light": "#ffffff",
+              "background-dark": "#0a0a0a",
+              "text-light": "#334155",
+              "text-dark": "#f8fafc",
+            },
+            fontFamily: {
+              display: ["Lato"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+              lg: "0.75rem",
+              xl: "1rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        font-family: "Lato", sans-serif;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark font-display"
+  >
+    <div class="flex flex-col min-h-screen">
+      <main class="flex-grow">
+        <div class="container mx-auto px-5 lg:px-10">
+          <div
+            class="pt-5 md:pt-20 border-l border-r border-blue-200/40 dark:border-slate-700/40"
+          ></div>
         </div>
-    </div>
-    <div class="row">
-        <div class="col-sm-12 col-md-10 col-lg-offset-1">
-            <p>
-                <b>TiUP</b> is a component manager for <a href="https://github.com/pingcap/tidb">TiDB</a>
-            </p>
-
-            <p>Run the following in your terminal, and follow the instructions:</p>
-            <p><br /></p>
-            <pre><code>curl --proto '=https' --tlsv1.2 -sSf https://tiup-mirrors.pingcap.com/install.sh | sh</code></pre>
-            <br />
-
-            <p>After installation, start a local cluster:</p>
-            <pre><code>tiup playground</code></pre>
-            <br />
-
-            <p>This tool only supports Linux, macOS, and Windows WSL (for now)</p>
-            <p>Need help? Read the document(<a href="https://docs.pingcap.com/tidb/stable/production-deployment-using-tiup">English</a>/<a href="https://docs.pingcap.com/zh/tidb/stable/production-deployment-using-tiup">Chinese</a>) or <a href="https://github.com/pingcap/tiup/issues/new">file a GitHub issue</a></p>
-        </div>
-    </div>
-    <br/>
-    <div class="row" id="component-list-title">
-    </div>
-    <div class="row">
-        <div class="col-10 col-sm-10 col-md-10 col-lg-10 col-lg-offset-1">
-            <div class="row" id="component-list">
+        <section
+          class="border-b border-t border-blue-200/40 dark:border-slate-700/40"
+        >
+          <div class="container mx-auto px-5 lg:px-10">
+            <div
+              class="p-5 md:p-20 border-l border-r border-blue-200/40 dark:border-slate-700/40"
+            >
+              <h1
+                class="flex items-center gap-4 text-4xl sm:text-5xl md:text-6xl font-bold tracking-tighter"
+              >
+                <svg
+                  class="h-12 w-12 sm:h-16 sm:w-16 md:h-20 md:w-20 dark:hidden"
+                  fill="none"
+                  viewBox="0 0 48 48"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <defs>
+                    <linearGradient
+                      id="logo-gradient-hero-light"
+                      x1="0%"
+                      y1="0%"
+                      x2="100%"
+                      y2="100%"
+                    >
+                      <stop
+                        offset="0%"
+                        style="stop-color: #5aa5f2; stop-opacity: 1"
+                      />
+                      <stop
+                        offset="100%"
+                        style="stop-color: #137fec; stop-opacity: 1"
+                      />
+                    </linearGradient>
+                  </defs>
+                  <path
+                    d="M44 4H30.6666V17.3334H17.3334V30.6666H4V44H44V4Z"
+                    fill="url(#logo-gradient-hero-light)"
+                  ></path>
+                </svg>
+                <svg
+                  class="h-12 w-12 sm:h-16 sm:w-16 md:h-20 md:w-20 hidden dark:block"
+                  fill="none"
+                  viewBox="0 0 48 48"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <defs>
+                    <linearGradient
+                      id="logo-gradient-hero-dark"
+                      x1="0%"
+                      y1="0%"
+                      x2="100%"
+                      y2="100%"
+                    >
+                      <stop
+                        offset="0%"
+                        style="stop-color: #7dd3fc; stop-opacity: 1"
+                      />
+                      <stop
+                        offset="100%"
+                        style="stop-color: #38bdf8; stop-opacity: 1"
+                      />
+                    </linearGradient>
+                  </defs>
+                  <path
+                    d="M44 4H30.6666V17.3334H17.3334V30.6666H4V44H44V4Z"
+                    fill="url(#logo-gradient-hero-dark)"
+                  ></path>
+                </svg>
+                <span
+                  class="bg-gradient-to-br to-text-light from-slate-400 dark:to-text-dark dark:from-slate-400 bg-clip-text text-transparent pr-2"
+                  >TiUP</span
+                >
+              </h1>
+              <h2
+                class="mt-4 max-w-2xl text-xl sm:text-2xl text-slate-600 dark:text-slate-300 flex flex-wrap items-center gap-2"
+              >
+                <span>a component manager for</span>
+                <a
+                  href="https://github.com/pingcap/tidb"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="inline-flex items-center gap-1 text-primary dark:text-primary-dark hover:text-blue-600 dark:hover:text-blue-300 transition-colors underline decoration-primary/30 dark:decoration-primary-dark/30 hover:decoration-primary dark:hover:decoration-primary-dark"
+                  ><svg
+                    class="w-7 h-7"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 134.81 150.45"
+                  >
+                    <polygon
+                      fill="#dc150b"
+                      stroke-width="0"
+                      points="67.41 16.85 16.85 46.04 16.85 104.42 67.41 133.6 117.96 104.42 117.96 46.04 67.41 16.85"
+                    />
+                    <polygon
+                      fill="#fff"
+                      stroke-width="0"
+                      points="50.55 104.42 50.55 65.5 33.7 75.23 33.7 55.77 67.41 36.31 84.26 46.04 67.41 55.77 67.41 114.14 50.55 104.42"
+                    />
+                    <polygon
+                      fill="#fff"
+                      stroke-width="0"
+                      points="84.26 104.42 84.26 65.5 101.11 55.77 101.11 94.69 84.26 104.42"
+                    /></svg
+                  >TiDB<svg
+                    class="w-4 h-4"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M15 3h6v6" />
+                    <path d="M10 14 21 3" />
+                    <path
+                      d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
+                    /></svg
+                ></a>
+              </h2>
+              <div
+                class="mt-8 flex items-center gap-6 text-slate-400 dark:text-slate-500"
+              >
+                <p class="text-sm">Available on:</p>
+                <div class="flex items-center gap-1.5">
+                  <svg
+                    class="w-5 h-5"
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M12.504 0c-.155 0-.315.008-.48.021-4.226.333-3.105 4.807-3.17 6.298-.076 1.092-.3 1.953-1.05 3.02-.885 1.051-2.127 2.75-2.716 4.521-.278.832-.41 1.684-.287 2.489a.424.424 0 00-.11.135c-.26.268-.45.6-.663.839-.199.199-.485.267-.797.4-.313.136-.658.269-.864.68-.09.189-.136.394-.132.602 0 .199.027.4.055.536.058.399.116.728.04.97-.249.68-.28 1.145-.106 1.484.174.334.535.47.94.601.81.2 1.91.135 2.774.6.926.466 1.866.67 2.616.47.526-.116.97-.464 1.208-.946.587-.003 1.23-.269 2.26-.334.699-.058 1.574.267 2.577.2.025.134.063.198.114.333l.003.003c.391.778 1.113 1.132 1.884 1.071.771-.06 1.592-.536 2.257-1.306.631-.765 1.683-1.084 2.378-1.503.348-.199.629-.469.649-.853.023-.4-.2-.811-.714-1.376v-.097l-.003-.003c-.17-.2-.25-.535-.338-.926-.085-.401-.182-.786-.492-1.046h-.003c-.059-.054-.123-.067-.188-.135a.357.357 0 00-.19-.064c.431-1.278.264-2.55-.173-3.694-.533-1.41-1.465-2.638-2.175-3.483-.796-1.005-1.576-1.957-1.56-3.368.026-2.152.236-6.133-3.544-6.139zm.529 3.405h.013c.213 0 .396.062.584.198.19.135.33.332.438.533.105.259.158.459.166.724 0-.02.006-.04.006-.06v.105a.086.086 0 01-.004-.021l-.004-.024a1.807 1.807 0 01-.15.706.953.953 0 01-.213.335.71.71 0 00-.088-.042c-.104-.045-.198-.064-.284-.133a1.312 1.312 0 00-.22-.066c.05-.06.146-.133.183-.198.053-.128.082-.264.088-.402v-.02a1.21 1.21 0 00-.061-.4c-.045-.134-.101-.2-.183-.333-.084-.066-.167-.132-.267-.132h-.016c-.093 0-.176.03-.262.132a.8.8 0 00-.205.334 1.18 1.18 0 00-.09.4v.019c.002.089.008.179.02.267-.193-.067-.438-.135-.607-.202a1.635 1.635 0 01-.018-.2v-.02a1.772 1.772 0 01.15-.768c.082-.22.232-.406.43-.533a.985.985 0 01.594-.2zm-2.962.059h.036c.142 0 .27.048.399.135.146.129.264.288.344.465.09.199.14.4.153.667v.004c.007.134.006.2-.002.266v.08c-.03.007-.056.018-.083.024-.152.055-.274.135-.393.2.012-.09.013-.18.003-.267v-.015c-.012-.133-.04-.2-.082-.333a.613.613 0 00-.166-.267.248.248 0 00-.183-.064h-.021c-.071.006-.13.04-.186.132a.552.552 0 00-.12.27.944.944 0 00-.023.33v.015c.012.135.037.2.08.334.046.134.098.2.166.268.01.009.02.018.034.024-.07.057-.117.07-.176.136a.304.304 0 01-.131.068 2.62 2.62 0 01-.275-.402 1.772 1.772 0 01-.155-.667 1.759 1.759 0 01.08-.668 1.43 1.43 0 01.283-.535c.128-.133.26-.2.418-.2zm1.37 1.706c.332 0 .733.065 1.216.399.293.2.523.269 1.052.468h.003c.255.136.405.266.478.399v-.131a.571.571 0 01.016.47c-.123.31-.516.643-1.063.842v.002c-.268.135-.501.333-.775.465-.276.135-.588.292-1.012.267a1.139 1.139 0 01-.448-.067 3.566 3.566 0 01-.322-.198c-.195-.135-.363-.332-.612-.465v-.005h-.005c-.4-.246-.616-.512-.686-.71-.07-.268-.005-.47.193-.6.224-.135.38-.271.483-.336.104-.074.143-.102.176-.131h.002v-.003c.169-.202.436-.47.839-.601.139-.036.294-.065.466-.065zm2.8 2.142c.358 1.417 1.196 3.475 1.735 4.473.286.534.855 1.659 1.102 3.024.156-.005.33.018.513.064.646-1.671-.546-3.467-1.089-3.966-.22-.2-.232-.335-.123-.335.59.534 1.365 1.572 1.646 2.757.13.535.16 1.104.021 1.67.067.028.135.06.205.067 1.032.534 1.413.938 1.23 1.537v-.043c-.06-.003-.12 0-.18 0h-.016c.151-.467-.182-.825-1.065-1.224-.915-.4-1.646-.336-1.77.465-.008.043-.013.066-.018.135-.068.023-.139.053-.209.064-.43.268-.662.669-.793 1.187-.13.533-.17 1.156-.205 1.869v.003c-.02.334-.17.838-.319 1.35-1.5 1.072-3.58 1.538-5.348.334a2.645 2.645 0 00-.402-.533 1.45 1.45 0 00-.275-.333c.182 0 .338-.03.465-.067a.615.615 0 00.314-.334c.108-.267 0-.697-.345-1.163-.345-.467-.931-.995-1.788-1.521-.63-.4-.986-.87-1.15-1.396-.165-.534-.143-1.085-.015-1.645.245-1.07.873-2.11 1.274-2.763.107-.065.037.135-.408.974-.396.751-1.14 2.497-.122 3.854a8.123 8.123 0 01.647-2.876c.564-1.278 1.743-3.504 1.836-5.268.048.036.217.135.289.202.218.133.38.333.59.465.21.201.477.335.876.335.039.003.075.006.11.006.412 0 .73-.134.997-.268.29-.134.52-.334.74-.4h.005c.467-.135.835-.402 1.044-.7zm2.185 8.958c.037.6.343 1.245.882 1.377.588.134 1.434-.333 1.791-.765l.211-.01c.315-.007.577.01.847.268l.003.003c.208.199.305.53.391.876.085.4.154.78.409 1.066.486.527.645.906.636 1.14l.003-.007v.018l-.003-.012c-.015.262-.185.396-.498.595-.63.401-1.746.712-2.457 1.57-.618.737-1.37 1.14-2.036 1.191-.664.053-1.237-.2-1.574-.898l-.005-.003c-.21-.4-.12-1.025.056-1.69.176-.668.428-1.344.463-1.897.037-.714.076-1.335.195-1.814.12-.465.308-.797.641-.984l.045-.022zm-10.814.049h.01c.053 0 .105.005.157.014.376.055.706.333 1.023.752l.91 1.664.003.003c.243.533.754 1.064 1.189 1.637.434.598.77 1.131.729 1.57v.006c-.057.744-.48 1.148-1.125 1.294-.645.135-1.52.002-2.395-.464-.968-.536-2.118-.469-2.857-.602-.369-.066-.61-.2-.723-.4-.11-.2-.113-.602.123-1.23v-.004l.002-.003c.117-.334.03-.752-.027-1.118-.055-.401-.083-.71.043-.94.16-.334.396-.4.69-.533.294-.135.64-.202.915-.47h.002v-.002c.256-.268.445-.601.668-.838.19-.201.38-.336.663-.336zm7.159-9.074c-.435.201-.945.535-1.488.535-.542 0-.97-.267-1.28-.466-.154-.134-.28-.268-.373-.335-.164-.134-.144-.333-.074-.333.109.016.129.134.199.2.096.066.215.2.36.333.292.2.68.467 1.167.467.485 0 1.053-.267 1.398-.466.195-.135.445-.334.648-.467.156-.136.149-.267.279-.267.128.016.034.134-.147.332a8.097 8.097 0 01-.69.468zm-1.082-1.583V5.64c-.006-.02.013-.042.029-.05.074-.043.18-.027.26.004.063 0 .16.067.15.135-.006.049-.085.066-.135.066-.055 0-.092-.043-.141-.068-.052-.018-.146-.008-.163-.065zm-.551 0c-.02.058-.113.049-.166.066-.047.025-.086.068-.14.068-.05 0-.13-.02-.136-.068-.01-.066.088-.133.15-.133.08-.031.184-.047.259-.005.019.009.036.03.03.05v.02h.003z"
+                    />
+                  </svg>
+                  <span class="text-sm">Linux</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <svg
+                    class="w-5 h-5"
+                    fill="currentColor"
+                    viewBox="0 0 128 128"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M97.905 67.885c.174 18.8 16.494 25.057 16.674 25.137-.138.44-2.607 8.916-8.597 17.669-5.178 7.568-10.553 15.108-19.018 15.266-8.318.152-10.993-4.934-20.504-4.934-9.508 0-12.479 4.776-20.354 5.086-8.172.31-14.395-8.185-19.616-15.724C15.822 94.961 7.669 66.8 18.616 47.791c5.438-9.44 15.158-15.417 25.707-15.571 8.024-.153 15.598 5.398 20.503 5.398 4.902 0 14.106-6.676 23.782-5.696 4.051.169 15.421 1.636 22.722 12.324-.587.365-13.566 7.921-13.425 23.639M82.272 21.719c4.338-5.251 7.258-12.563 6.462-19.836-6.254.251-13.816 4.167-18.301 9.416-4.02 4.647-7.54 12.087-6.591 19.216 6.971.54 14.091-3.542 18.43-8.796"
+                    />
+                  </svg>
+                  <span class="text-sm">macOS</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <svg
+                    class="w-5 h-5"
+                    fill="currentColor"
+                    viewBox="0 0 448 512"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M0 93.7l183.6-25.3 0 177.4-183.6 0 0-152.1zM0 418.3l183.6 25.3 0-175.2-183.6 0 0 149.9zm203.8 28l244.2 33.7 0-211.6-244.2 0 0 177.9zm0-380.6l0 180.1 244.2 0 0-213.8-244.2 33.7z"
+                    />
+                  </svg>
+                  <span class="text-sm">Windows WSL</span>
+                </div>
+              </div>
+              <div class="my-10 md:my-20 max-w-3xl space-y-10">
+                <div>
+                  <div class="flex items-center gap-3 mb-5">
+                    <span
+                      class="flex-shrink-0 w-8 h-8 bg-primary dark:bg-primary-dark text-white rounded-full flex items-center justify-center font-bold text-sm"
+                      >1</span
+                    >
+                    <p
+                      class="text-left text-base text-text-light dark:text-text-dark"
+                    >
+                      Install TiUP
+                    </p>
+                  </div>
+                  <div
+                    class="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-slate-50 dark:bg-slate-800 p-4"
+                  >
+                    <div class="flex items-start gap-4 flex-grow">
+                      <span
+                        class="text-slate-500 dark:text-slate-400 font-mono text-sm select-none flex-shrink-0 leading-6"
+                        >$</span
+                      >
+                      <code
+                        class="flex-grow text-left text-sm sm:text-base font-mono text-text-light dark:text-text-dark leading-6"
+                        data-command="curl --proto '=https' --tlsv1.2 -sSf https://tiup-mirrors.pingcap.com/install.sh | sh"
+                        >curl --proto '=https' --tlsv1.2 -sSf
+                        https://tiup-mirrors.pingcap.com/install.sh | sh</code
+                      >
+                    </div>
+                    <div class="relative">
+                      <button
+                        class="copy-btn w-10 h-10 sm:w-auto sm:h-auto text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400 font-bold sm:px-4 sm:py-3 text-sm transition-colors flex-shrink-0 flex items-center justify-center relative"
+                        onclick="copyCommand(this)"
+                      >
+                        <svg
+                          class="clipboard-icon w-5 h-5 transition-opacity duration-200"
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          <rect
+                            width="8"
+                            height="4"
+                            x="8"
+                            y="2"
+                            rx="1"
+                            ry="1"
+                          />
+                          <path
+                            d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"
+                          />
+                        </svg>
+                        <svg
+                          class="clipboard-check-icon w-5 h-5 absolute opacity-0 transition-opacity duration-200 text-green-500"
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          <path d="M20 6 9 17l-5-5" />
+                        </svg>
+                      </button>
+                      <div
+                        class="select-none copy-tooltip absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-4 py-2.5 bg-white dark:bg-slate-900 text-text-light dark:text-text-dark text-sm font-medium rounded shadow-lg opacity-0 pointer-events-none transition-opacity duration-200"
+                      >
+                        Copied!
+                        <div
+                          class="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1 border-8 border-transparent border-t-white dark:border-t-slate-900"
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <div class="flex items-center gap-3 mb-5">
+                    <span
+                      class="flex-shrink-0 w-8 h-8 bg-primary dark:bg-primary-dark text-white rounded-full flex items-center justify-center font-bold text-sm"
+                      >2</span
+                    >
+                    <p
+                      class="text-left text-base text-text-light dark:text-text-dark"
+                    >
+                      Start a local TiDB Cluster
+                    </p>
+                  </div>
+                  <div
+                    class="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-slate-50 dark:bg-slate-800 p-4"
+                  >
+                    <div class="flex items-start gap-4 flex-grow">
+                      <span
+                        class="text-slate-500 dark:text-slate-400 font-mono text-sm select-none flex-shrink-0 leading-6"
+                        >$</span
+                      >
+                      <code
+                        class="flex-grow text-left text-sm sm:text-base font-mono text-text-light dark:text-text-dark leading-6"
+                        data-command="tiup playground"
+                        >tiup playground</code
+                      >
+                    </div>
+                    <div class="relative">
+                      <button
+                        class="copy-btn w-10 h-10 sm:w-auto sm:h-auto text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400 font-bold sm:px-4 sm:py-3 text-sm transition-colors flex-shrink-0 flex items-center justify-center relative"
+                        onclick="copyCommand(this)"
+                      >
+                        <svg
+                          class="clipboard-icon w-5 h-5 transition-opacity duration-200"
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          <rect
+                            width="8"
+                            height="4"
+                            x="8"
+                            y="2"
+                            rx="1"
+                            ry="1"
+                          />
+                          <path
+                            d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"
+                          />
+                        </svg>
+                        <svg
+                          class="clipboard-check-icon w-5 h-5 absolute opacity-0 transition-opacity duration-200 text-green-500"
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          <path d="M20 6 9 17l-5-5" />
+                        </svg>
+                      </button>
+                      <div
+                        class="select-none copy-tooltip absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-4 py-2.5 bg-white dark:bg-slate-900 text-text-light dark:text-text-dark text-sm font-medium rounded shadow-lg opacity-0 pointer-events-none transition-opacity duration-200"
+                      >
+                        Copied!
+                        <div
+                          class="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1 border-8 border-transparent border-t-white dark:border-t-slate-900"
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="mt-8">
+                <a
+                  href="https://docs.pingcap.com/tidb/stable/production-deployment-using-tiup"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="inline-flex items-center gap-2 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-6 py-3 text-sm font-medium hover:bg-primary dark:hover:bg-primary-dark hover:text-white transition-colors"
+                >
+                  Documentation
+                  <svg
+                    class="w-4 h-4"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M5 12h14" />
+                    <path d="m12 5 7 7-7 7" />
+                  </svg>
+                </a>
+              </div>
             </div>
+          </div>
+        </section>
+        <section class="border-b border-blue-200/40 dark:border-slate-700/40">
+          <div class="container mx-auto px-5 lg:px-10">
+            <div
+              class="p-5 md:p-20 border-l border-r border-blue-200/40 dark:border-slate-700/40"
+            >
+              <div class="md:mb-12 pb-5">
+                <h2 class="text-xl tracking-tight">All Components</h2>
+              </div>
+              <div class="md:-mx-10">
+                <div
+                  id="components-grid"
+                  class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 border-l border-t border-blue-200/40 dark:border-slate-700/40"
+                >
+                  <!-- Components will be loaded dynamically -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+      <footer>
+        <div class="container mx-auto px-5 lg:px-10">
+          <div
+            class="p-5 md:p-20 border-l border-r border-blue-200/40 dark:border-slate-700/40"
+          >
+            <div
+              class="flex flex-col md:flex-row justify-between items-center gap-8"
+            >
+              <div class="flex items-center gap-2">
+                <p class="text-sm text-slate-500 dark:text-slate-400">
+                  © 2025 PingCAP. All Rights Reserved.
+                </p>
+              </div>
+              <div class="flex gap-4">
+                <a
+                  class="text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-primary-dark transition-colors"
+                  href="https://x.com/PingCAP"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <svg
+                    fill="currentColor"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"
+                    ></path>
+                  </svg>
+                </a>
+                <a
+                  class="text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-primary-dark transition-colors"
+                  href="https://github.com/pingcap"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <svg
+                    fill="currentColor"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"
+                    ></path>
+                  </svg>
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
+      </footer>
     </div>
-</div>
-</body>
+    <script>
+      function copyCommand(button) {
+        // Find the code element in the same parent container
+        const codeElement =
+          button.parentElement.parentElement.querySelector("code");
+        const command = codeElement.getAttribute("data-command");
 
-<script>
-    function ensure_component_list_title() {
-        let container = document.querySelector('#component-list-title');
-        if(container.children.length > 0) {
-            return
-        }
+        // Copy to clipboard
+        navigator.clipboard
+          .writeText(command)
+          .then(() => {
+            // Get the icon elements
+            const clipboardIcon = button.querySelector(".clipboard-icon");
+            const clipboardCheckIcon = button.querySelector(
+              ".clipboard-check-icon"
+            );
 
-        let div = document.createElement("div")
-        div.className = "col-sm-12 col-md-12 col-lg-10 col-lg-offset-1"
-        let h3 = document.createElement("h2")
-        h3.textContent = "Component List"
-        div.appendChild(h3)
+            // Get the tooltip element
+            const tooltip = button.parentElement.querySelector(".copy-tooltip");
 
-        container.appendChild(div)
-    }
+            // Toggle icons with fade transition
+            clipboardIcon.classList.add("opacity-0");
+            clipboardCheckIcon.classList.remove("opacity-0");
+            clipboardCheckIcon.classList.add("opacity-100");
 
-    function insert_component(name, desc) {
-        ensure_component_list_title();
+            // Show tooltip
+            tooltip.classList.remove("opacity-0");
+            tooltip.classList.add("opacity-100");
 
-        let container = document.querySelector('#component-list');
-        let div = document.createElement("div")
-        div.className = "col-6 col-sm-6 col-md-4 col-lg-3"
+            // Reset after 2 seconds
+            setTimeout(() => {
+              clipboardIcon.classList.remove("opacity-0");
+              clipboardCheckIcon.classList.remove("opacity-100");
+              clipboardCheckIcon.classList.add("opacity-0");
+              tooltip.classList.remove("opacity-100");
+              tooltip.classList.add("opacity-0");
+            }, 2000);
+          })
+          .catch((err) => {
+            console.error("Failed to copy:", err);
+          });
+      }
 
-        let h3 = document.createElement("h3")
-        h3.textContent = name
-        div.appendChild(h3)
+      function insert_component(id, description) {
+        const grid = document.getElementById("components-grid");
+        const componentCard = document.createElement("div");
+        componentCard.className =
+          "bg-background-light dark:bg-background-dark p-10 border-r border-b border-blue-200/40 dark:border-slate-700/40 flex flex-col gap-2 opacity-0 transition-opacity duration-500";
 
-        let p = document.createElement("p")
-        p.textContent = desc
-        div.appendChild(p)
+        componentCard.innerHTML = `
+          <div>
+            <h3 class="text-base text-text-light dark:text-text-dark">${id}</h3>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-6">${description}</p>
+          </div>
+        `;
 
-        container.appendChild(div)
-    }
+        grid.appendChild(componentCard);
 
-    (async function(){
-        let meta = await fetch("https://tiup-mirrors.pingcap.com/snapshot.json")
-            .then(resp => resp.json())
-            .then(data => data.signed.meta);
-        
-        let idx = meta["/index.json"].version;
-        let components = await fetch(`https://tiup-mirrors.pingcap.com/${idx}.index.json`)
-            .then(resp => resp.json())
-            .then(data => data.signed.components);
+        // Trigger fade-in animation
+        setTimeout(() => {
+          componentCard.classList.remove("opacity-0");
+          componentCard.classList.add("opacity-100");
+        }, 10);
+      }
 
-        for(let key in meta) {
+      (async function () {
+        try {
+          let meta = await fetch(
+            "https://tiup-mirrors.pingcap.com/snapshot.json"
+          )
+            .then((resp) => resp.json())
+            .then((data) => data.signed.meta);
+
+          let idx = meta["/index.json"].version;
+          let components = await fetch(
+            `https://tiup-mirrors.pingcap.com/${idx}.index.json`
+          )
+            .then((resp) => resp.json())
+            .then((data) => data.signed.components);
+
+          for (let key in meta) {
             let black_list = ["root.json", "index.json", "tiup.json"];
-            if(black_list.indexOf(key.substring(1)) != -1) {
-                continue
+            if (black_list.indexOf(key.substring(1)) != -1) {
+              continue;
             }
 
             let file = meta[key].version + "." + key.substring(1);
-            let component = await fetch("https://tiup-mirrors.pingcap.com/" + file)
-                .then(resp => resp.json())
-                .then(data => data.signed)
+            let component = await fetch(
+              "https://tiup-mirrors.pingcap.com/" + file
+            )
+              .then((resp) => resp.json())
+              .then((data) => data.signed);
 
-            if(components[component.id].yanked || components[component.id].hidden) {
-                continue
+            if (
+              components[component.id].yanked ||
+              components[component.id].hidden
+            ) {
+              continue;
             }
 
             insert_component(component.id, component.description);
+          }
+        } catch (err) {
+          console.error("Failed to load components:", err);
         }
-    })()
-</script>
+      })();
+    </script>
+  </body>
 </html>
