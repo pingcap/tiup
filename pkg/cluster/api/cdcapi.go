@@ -374,11 +374,8 @@ func (c *CDCOpenAPIClient) CreateChangefeed(bucket, prefix, endpoint, accessKey,
 			return err
 		}
 		data, statusCode, err := c.client.PostWithStatusCode(c.ctx, endpoints[0], bytes.NewReader(body))
-		if err != nil {
-			switch statusCode {
-			case http.StatusBadRequest:
-				return fmt.Errorf("bad request when creating changefeed: %s", data)
-			}
+		if err != nil && statusCode == http.StatusBadRequest {
+			return fmt.Errorf("bad request when creating changefeed: %s", data)
 		}
 		return err
 	}, stopRetry)
