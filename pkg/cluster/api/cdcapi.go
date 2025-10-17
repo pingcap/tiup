@@ -357,7 +357,15 @@ func (c *CDCOpenAPIClient) CreateChangefeed(bucket, prefix, endpoint, accessKey,
 
 	sinkURI := fmt.Sprintf("s3://%s/%s/cdc?%s", bucket, prefix, strings.Join(options, "&"))
 
-	err := utils.Retry(func() error {
+	start := time.Now()
+	stopRetry := func(err error) bool {
+		if time.Since(start) > 10*time.Second {
+			return false
+		}
+		return err != nil && !strings.Contains(err.Error(), "bad request when creating changefeed")
+	}
+
+	err := utils.RetryUntil(func() error {
 		cfg := map[string]any{
 			"sink_uri": sinkURI,
 		}
@@ -365,11 +373,15 @@ func (c *CDCOpenAPIClient) CreateChangefeed(bucket, prefix, endpoint, accessKey,
 		if err != nil {
 			return err
 		}
-		_, err = c.client.Post(c.ctx, endpoints[0], bytes.NewReader(body))
-		return errors.Wrap(err, fmt.Sprintf("failed to create changefeed with sinkURI %s", sinkURI))
-	}, utils.RetryOption{
-		Timeout: 10 * time.Second,
-	})
+		data, statusCode, err := c.client.PostWithStatusCode(c.ctx, endpoints[0], bytes.NewReader(body))
+		if err != nil {
+			switch statusCode {
+			case http.StatusBadRequest:
+				return fmt.Errorf("bad request when creating changefeed: %s", data)
+			}
+		}
+		return err
+	}, stopRetry)
 
 	return err
 }
