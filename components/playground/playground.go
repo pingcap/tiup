@@ -1296,6 +1296,8 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 		// set TICDC_NEWARCH env for TiCDC when TiCI is enabled
 		if cid == spec.ComponentCDC && hasTiCI {
+			// wait for TiKV up
+			time.Sleep(time.Second * 5)
 			if cdcInst, ok := ins.(*instance.TiCDC); ok {
 				cdcInst.SetEnvs([]string{"TICDC_NEWARCH=true"})
 			}
