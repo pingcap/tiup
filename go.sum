@@ -56,14 +56,8 @@ github.com/VividCortex/ewma v1.2.0 h1:f58SaIzcDXrSy3kWaHNvuJgJ3Nmz59Zji6XoJR/q1o
 github.com/VividCortex/ewma v1.2.0/go.mod h1:nz4BbCtbLyFDeC9SUHbtcT5644juEuWfUAUnGx7j5l4=
 github.com/VoltDB/voltdb-client-go v1.0.8 h1:Xhf4LREQumXaRSUixMt1eWea6+0dz/Yo9mkqyEULbj8=
 github.com/VoltDB/voltdb-client-go v1.0.8/go.mod h1:mMhb5zwkT46Ef3NvkFqt+kX0j+ltQ2Sdqj9+ICq+Yto=
-github.com/alecthomas/assert v1.0.0 h1:3XmGh/PSuLzDbK3W2gUbRXwgW5lqPkuqvRgeQ30FI5o=
-github.com/alecthomas/assert v1.0.0/go.mod h1:va/d2JC+M7F6s+80kl/R3G7FUiW6JzUO+hPhLyJ36ZY=
 github.com/alecthomas/chroma v0.9.4 h1:YL7sOAE3p8HS96T9km7RgvmsZIctqbK1qJ0b7hzed44=
 github.com/alecthomas/chroma v0.9.4/go.mod h1:jtJATyUxlIORhUOFNA9NZDWGAQ8wpxQQqNSB4rjA/1s=
-github.com/alecthomas/colour v0.1.0 h1:nOE9rJm6dsZ66RGWYSFrXw461ZIt9A6+nHgL7FRrDUk=
-github.com/alecthomas/colour v0.1.0/go.mod h1:QO9JBoKquHd+jz9nshCh40fOfO+JzsoXy8qTHF68zU0=
-github.com/alecthomas/repr v0.2.0 h1:HAzS41CIzNW5syS8Mf9UwXhNH1J9aix/BvDRf1Ml2Yk=
-github.com/alecthomas/repr v0.2.0/go.mod h1:Fr0507jx4eOXV7AlPV6AVZLYrLIuIeSOWtW57eE/O/4=
 github.com/alexbrainman/odbc v0.0.0-20210605012845-39f8520b0d5f h1:qJp6jWdG+PBNCDtIwRpspahMaZ3hlfde/25ExBORKso=
 github.com/alexbrainman/odbc v0.0.0-20210605012845-39f8520b0d5f/go.mod h1:c5eyz5amZqTKvY3ipqerFO/74a/8CYmXOahSr40c+Ww=
 github.com/amsokol/ignite-go-client v0.12.2 h1:q4Mr+UUiKVnR7ykjR1YARVS5jp+ZU6ekCIs0V4WgFDo=
@@ -317,8 +311,6 @@ github.com/joomcode/errorx v1.1.0 h1:dizuSG6yHzlvXOOGHW00gwsmM4Sb9x/yWEfdtPztqcs
 github.com/joomcode/errorx v1.1.0/go.mod h1:eQzdtdlNyN7etw6YCS4W4+lu442waxZYw5yvz0ULrRo=
 github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnrnM=
 github.com/json-iterator/go v1.1.12/go.mod h1:e30LSqwooZae/UwlEbR2852Gd8hjQvJoHmT4TnhNGBo=
-github.com/july2993/yaml v0.0.0-20200423062752-adcfa5abe2ed h1:4dMu41sJad3+E9AMc2hCimGhll184HfPKdu05R6YJtc=
-github.com/july2993/yaml v0.0.0-20200423062752-adcfa5abe2ed/go.mod h1:7FtNkxNa9xDptPhcc7mWT/Ov++hkuMU/NKtgkPZPUwo=
 github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 h1:iQTw/8FWTuc7uiaSepXwyf3o52HaUYcV+Tu66S3F5GA=
 github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0/go.mod h1:1NbS8ALrpOvjt0rHPNLyCIeMtbizbir8U//inJ+zuB8=
 github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 h1:Z9n2FFNUXsshfwJMBgNA0RU6/i7WVaAegv3PtuIHPMs=
@@ -691,6 +683,8 @@ gopkg.in/jcmturner/gokrb5.v6 v6.1.1 h1:n0KFjpbuM5pFMN38/Ay+Br3l91netGSVqHPHEXeWU
 gopkg.in/jcmturner/gokrb5.v6 v6.1.1/go.mod h1:NFjHNLrHQiruory+EmqDXCGv6CrjkeYeA+bR9mIfNFk=
 gopkg.in/jcmturner/rpc.v1 v1.1.0 h1:QHIUxTX1ISuAv9dD2wJ9HWQVuWDX/Zc0PfeC2tjc4rU=
 gopkg.in/jcmturner/rpc.v1 v1.1.0/go.mod h1:YIdkC4XfD6GXbzje11McwsDuOlZQSb9W4vfLvuNnlv8=
+gopkg.in/yaml.v2 v2.2.2/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
+gopkg.in/yaml.v2 v2.4.0/go.mod h1:RDklbk79AGWmwhnvt/jBztapEOGDOx6ZbXqjP6csGnQ=
 gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
 gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
 gopkg.in/yaml.v3 v3.0.0-20220512140231-539c8e751b99/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=

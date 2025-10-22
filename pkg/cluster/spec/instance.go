@@ -82,11 +82,17 @@ type Component interface {
 	SetVersion(string)
 }
 
+// UpdateConfig is used to control behavior pre/post hook of instances.
+type UpdateConfig struct {
+	CurrentVersion string
+	TargetVersion  string
+}
+
 // RollingUpdateInstance represent a instance need to transfer state when restart.
 // e.g transfer leader.
 type RollingUpdateInstance interface {
-	PreRestart(ctx context.Context, topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config) error
-	PostRestart(ctx context.Context, topo Topology, tlsCfg *tls.Config) error
+	PreRestart(ctx context.Context, topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config, extra *UpdateConfig) error
+	PostRestart(ctx context.Context, topo Topology, tlsCfg *tls.Config, extra *UpdateConfig) error
 }
 
 // Instance represents the instance.

@@ -18,7 +18,7 @@ import (
 )
 
 func TestPasswd(t *testing.T) {
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		l := Intn(64)
 		if l < 8 { // make sure it's greater than 8
 			l += 8

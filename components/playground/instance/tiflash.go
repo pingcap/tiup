@@ -172,7 +172,7 @@ func isKeyPresentInMap(m map[string]any, key string) bool {
 	keys := strings.Split(key, ".")
 	currentMap := m
 
-	for i := 0; i < len(keys); i++ {
+	for i := range keys {
 		if _, ok := currentMap[keys[i]]; !ok {
 			return false
 		}

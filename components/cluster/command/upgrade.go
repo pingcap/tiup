@@ -14,6 +14,8 @@
 package command
 
 import (
+	"time"
+
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
@@ -23,6 +25,7 @@ func newUpgradeCmd() *cobra.Command {
 	offlineMode := false
 	ignoreVersionCheck := false
 	var tidbVer, tikvVer, pdVer, tsoVer, schedulingVer, tiflashVer, kvcdcVer, dashboardVer, cdcVer, alertmanagerVer, nodeExporterVer, blackboxExporterVer, tiproxyVer string
+	var restartTimeout time.Duration
 
 	cmd := &cobra.Command{
 		Use:   "upgrade <cluster-name> <version>",
@@ -54,7 +57,7 @@ func newUpgradeCmd() *cobra.Command {
 				spec.ComponentNodeExporter:     nodeExporterVer,
 			}
 
-			return cm.Upgrade(clusterName, version, componentVersions, gOpt, skipConfirm, offlineMode, ignoreVersionCheck)
+			return cm.Upgrade(clusterName, version, componentVersions, gOpt, skipConfirm, offlineMode, ignoreVersionCheck, restartTimeout)
 		},
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 			switch len(args) {
@@ -86,5 +89,6 @@ func newUpgradeCmd() *cobra.Command {
 	cmd.Flags().StringVar(&nodeExporterVer, "node-exporter-version", "", "Fix the version of node-exporter and no longer follows the cluster version.")
 	cmd.Flags().StringVar(&blackboxExporterVer, "blackbox-exporter-version", "", "Fix the version of blackbox-exporter and no longer follows the cluster version.")
 	cmd.Flags().StringVar(&tiproxyVer, "tiproxy-version", "", "Fix the version of tiproxy and no longer follows the cluster version.")
+	cmd.Flags().DurationVar(&restartTimeout, "restart-timeout", time.Second*0, "Timeout for after upgrade prompt")
 	return cmd
 }

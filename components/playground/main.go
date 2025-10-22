@@ -253,6 +253,9 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 
 			return nil
 		},
+		PostRunE: func(cmd *cobra.Command, args []string) error {
+			return environment.GlobalEnv().Close()
+		},
 	}
 
 	rootCmd.Flags().StringVar(&options.ShOpt.Mode, "mode", "tidb", "TiUP playground mode: 'tidb', 'tidb-cse', 'tiflash-disagg', 'tikv-slim'")
@@ -463,7 +466,7 @@ func checkDB(dbAddr string, timeout int) bool {
 // checkStoreStatus uses pd client to check whether a store is up. timeout <= 0 means no timeout
 func checkStoreStatus(pdClient *api.PDClient, storeAddr string, timeout int) bool {
 	if timeout > 0 {
-		for i := 0; i < timeout; i++ {
+		for range timeout {
 			if up, err := pdClient.IsUp(storeAddr); err == nil && up {
 				return true
 			}
@@ -481,7 +484,7 @@ func checkStoreStatus(pdClient *api.PDClient, storeAddr string, timeout int) boo
 
 func checkDMMasterStatus(dmMasterClient *api.DMMasterClient, dmMasterAddr string, timeout int) bool {
 	if timeout > 0 {
-		for i := 0; i < timeout; i++ {
+		for range timeout {
 			if _, isActive, _, err := dmMasterClient.GetMaster(dmMasterAddr); err == nil && isActive {
 				return true
 			}

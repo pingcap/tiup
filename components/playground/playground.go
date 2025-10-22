@@ -511,9 +511,9 @@ func (p *Playground) sanitizeComponentConfig(cid string, cfg *instance.Config) e
 		return p.sanitizeConfig(p.bootOptions.TiCDC, cfg)
 	case spec.ComponentTiKVCDC:
 		return p.sanitizeConfig(p.bootOptions.TiKVCDC, cfg)
-	case "tici-meta":
+	case spec.ComponentTiCIMeta:
 		return p.sanitizeConfig(p.bootOptions.TiCIMeta, cfg)
-	case "tici-worker":
+	case spec.ComponentTiCIWorker:
 		return p.sanitizeConfig(p.bootOptions.TiCIWorker, cfg)
 	case spec.ComponentPump:
 		return p.sanitizeConfig(p.bootOptions.Pump, cfg)
@@ -1296,6 +1296,8 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 		// set TICDC_NEWARCH env for TiCDC when TiCI is enabled
 		if cid == spec.ComponentCDC && hasTiCI {
+			// wait for TiKV up
+			time.Sleep(time.Second * 5)
 			if cdcInst, ok := ins.(*instance.TiCDC); ok {
 				cdcInst.SetEnvs([]string{"TICDC_NEWARCH=true"})
 			}
@@ -1305,7 +1307,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		if cid == spec.ComponentTiCIMeta && !hasChangefeedCreated {
 			// wait for cdc initialized
 			// TODO: use a better way to check whether cdc is ready
-			time.Sleep(time.Second * 10)
+			time.Sleep(time.Second * 15)
 
 			fmt.Println("Creating changefeed...")
 			s3Config, err := instance.GetTiCIS3ConfigFromFile(options.TiCIMeta.ConfigPath)

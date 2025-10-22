@@ -129,7 +129,6 @@ func (c *TiDBComponent) SetVersion(version string) {
 func (c *TiDBComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.TiDBServers))
 	for _, s := range c.Topology.TiDBServers {
-		s := s
 		ins = append(ins, &TiDBInstance{BaseInstance{
 			InstanceSpec: s,
 			Name:         c.Name(),

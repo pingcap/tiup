@@ -130,7 +130,6 @@ func (c *TiKVCDCComponent) SetVersion(version string) {
 func (c *TiKVCDCComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.TiKVCDCServers))
 	for _, s := range c.Topology.TiKVCDCServers {
-		s := s
 		instance := &TiKVCDCInstance{BaseInstance{
 			InstanceSpec: s,
 			Name:         c.Name(),
@@ -263,7 +262,7 @@ var _ RollingUpdateInstance = &TiKVCDCInstance{}
 
 // PreRestart implements RollingUpdateInstance interface.
 // All errors are ignored, to trigger hard restart.
-func (i *TiKVCDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config) error {
+func (i *TiKVCDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config, updcfg *UpdateConfig) error {
 	tidbTopo, ok := topo.(*Specification)
 	if !ok {
 		panic("should be type of tidb topology")
@@ -326,7 +325,7 @@ func (i *TiKVCDCInstance) PreRestart(ctx context.Context, topo Topology, apiTime
 }
 
 // PostRestart implements RollingUpdateInstance interface.
-func (i *TiKVCDCInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tls.Config) error {
+func (i *TiKVCDCInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tls.Config, updcfg *UpdateConfig) error {
 	logger, ok := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 	if !ok {
 		panic("logger not found")

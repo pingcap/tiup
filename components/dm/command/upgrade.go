@@ -14,6 +14,8 @@
 package command
 
 import (
+	"time"
+
 	"github.com/spf13/cobra"
 )
 
@@ -28,7 +30,7 @@ func newUpgradeCmd() *cobra.Command {
 				return cmd.Help()
 			}
 
-			return cm.Upgrade(args[0], args[1], nil, gOpt, skipConfirm, offlineMode, ignoreVersionCheck)
+			return cm.Upgrade(args[0], args[1], nil, gOpt, skipConfirm, offlineMode, ignoreVersionCheck, time.Second*0)
 		},
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 			switch len(args) {
