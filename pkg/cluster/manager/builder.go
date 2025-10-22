@@ -135,7 +135,7 @@ func buildScaleOutTask(
 		var dirs []string
 		globalOptions := metadata.GetTopology().BaseTopo().GlobalOptions
 		for _, dir := range []string{globalOptions.DeployDir, globalOptions.DataDir, globalOptions.LogDir} {
-			for _, dirname := range strings.Split(dir, ",") {
+			for dirname := range strings.SplitSeq(dir, ",") {
 				if dirname == "" {
 					continue
 				}

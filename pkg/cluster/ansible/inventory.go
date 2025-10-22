@@ -27,7 +27,7 @@ import (
 	"github.com/pingcap/tiup/pkg/tidbver"
 	"github.com/relex/aini"
 	"gopkg.in/ini.v1"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 var (

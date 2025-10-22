@@ -386,7 +386,7 @@ func CheckSysLimits(opt *CheckOptions, user string, l []byte) []*CheckResult {
 		nofileHard int
 	)
 
-	for _, line := range strings.Split(string(l), "\n") {
+	for line := range strings.SplitSeq(string(l), "\n") {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "#") {
 			continue
@@ -447,7 +447,7 @@ func CheckSysLimits(opt *CheckOptions, user string, l []byte) []*CheckResult {
 func CheckKernelParameters(opt *CheckOptions, p []byte) []*CheckResult {
 	var results []*CheckResult
 
-	for _, line := range strings.Split(string(p), "\n") {
+	for line := range strings.SplitSeq(string(p), "\n") {
 		line = strings.TrimSpace(line)
 		fields := strings.Fields(line)
 		if len(fields) < 3 {
@@ -615,7 +615,7 @@ func CheckListeningPort(opt *CheckOptions, host string, topo *spec.Specification
 	})
 
 	for p := range ports {
-		for _, line := range strings.Split(string(rawData), "\n") {
+		for line := range strings.SplitSeq(string(rawData), "\n") {
 			fields := strings.Fields(line)
 			if len(fields) < 5 || fields[0] != "LISTEN" {
 				continue
@@ -859,7 +859,7 @@ func CheckTHP(ctx context.Context, e ctxt.Executor, sudo bool) *CheckResult {
 		return result
 	}
 
-	for _, line := range strings.Split(strings.Trim(string(stdout), "\n"), "\n") {
+	for line := range strings.SplitSeq(strings.Trim(string(stdout), "\n"), "\n") {
 		if len(line) > 0 && !strings.Contains(line, "[never]") {
 			result.Err = fmt.Errorf("THP is enabled, please disable it for best performance")
 			return result

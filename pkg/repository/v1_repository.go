@@ -725,7 +725,6 @@ func (r *V1Repository) UpdateComponentManifests() error {
 
 	var g errgroup.Group
 	for name := range index.Components {
-		name := name
 		g.Go(func() error {
 			_, err := r.updateComponentManifest(name, false)
 			if err != nil && errors.Cause(err) == ErrUnknownComponent {

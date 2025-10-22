@@ -171,7 +171,6 @@ func (c *SchedulingComponent) SetVersion(version string) {
 func (c *SchedulingComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.SchedulingServers))
 	for _, s := range c.Topology.SchedulingServers {
-		s := s
 		ins = append(ins, &SchedulingInstance{
 			BaseInstance: BaseInstance{
 				InstanceSpec: s,
@@ -354,11 +353,11 @@ func (i *SchedulingInstance) ScaleConfig(
 var _ RollingUpdateInstance = &SchedulingInstance{}
 
 // PreRestart implements RollingUpdateInstance interface.
-func (i *SchedulingInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config) error {
+func (i *SchedulingInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config, updcfg *UpdateConfig) error {
 	return nil
 }
 
 // PostRestart implements RollingUpdateInstance interface.
-func (i *SchedulingInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tls.Config) error {
+func (i *SchedulingInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tls.Config, updcfg *UpdateConfig) error {
 	return nil
 }

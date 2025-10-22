@@ -132,7 +132,6 @@ func (c *CDCComponent) SetVersion(version string) {
 func (c *CDCComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.CDCServers))
 	for _, s := range c.Topology.CDCServers {
-		s := s
 		instance := &CDCInstance{BaseInstance{
 			InstanceSpec: s,
 			Name:         c.Name(),
@@ -280,7 +279,7 @@ func (i *CDCInstance) GetAddr() string {
 
 // PreRestart implements RollingUpdateInstance interface.
 // All errors are ignored, to trigger hard restart.
-func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config) error {
+func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config, updcfg *UpdateConfig) error {
 	tidbTopo, ok := topo.(*Specification)
 	if !ok {
 		panic("should be type of tidb topology")
@@ -357,7 +356,7 @@ func (i *CDCInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutS
 }
 
 // PostRestart implements RollingUpdateInstance interface.
-func (i *CDCInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tls.Config) error {
+func (i *CDCInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tls.Config, updcfg *UpdateConfig) error {
 	logger, ok := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
 	if !ok {
 		panic("logger not found")

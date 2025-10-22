@@ -171,7 +171,6 @@ func (c *TSOComponent) SetVersion(version string) {
 func (c *TSOComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.TSOServers))
 	for _, s := range c.Topology.TSOServers {
-		s := s
 		ins = append(ins, &TSOInstance{
 			BaseInstance: BaseInstance{
 				InstanceSpec: s,
@@ -354,11 +353,11 @@ func (i *TSOInstance) ScaleConfig(
 var _ RollingUpdateInstance = &TSOInstance{}
 
 // PreRestart implements RollingUpdateInstance interface.
-func (i *TSOInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config) error {
+func (i *TSOInstance) PreRestart(ctx context.Context, topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config, updcfg *UpdateConfig) error {
 	return nil
 }
 
 // PostRestart implements RollingUpdateInstance interface.
-func (i *TSOInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tls.Config) error {
+func (i *TSOInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tls.Config, updcfg *UpdateConfig) error {
 	return nil
 }
