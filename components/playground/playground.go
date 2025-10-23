@@ -516,7 +516,7 @@ func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) 
 		return err
 	}
 
-	if err := inst.PrepareBinary(component, inst.Component(), version); err != nil {
+	if err := inst.PrepareBinary(component, inst.Role(), version); err != nil {
 		return err
 	}
 
@@ -530,6 +530,11 @@ func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) 
 
 	if err := inst.Process().Start(); err != nil {
 		return err
+	}
+
+	// TODO: implement this into inst.Start()
+	if inst.Component() == spec.ComponentTiDB && inst.Role() == instance.TiDBRoleSystem {
+		time.Sleep(10 * time.Second)
 	}
 
 	p.addWaitInstance(inst)
@@ -836,7 +841,7 @@ func (p *Playground) addInstance(componentID string, role string, cfg instance.C
 		ins = inst
 		p.schedulings = append(p.schedulings, inst)
 	case spec.ComponentTiDB:
-		inst := instance.NewTiDBInstance(p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, dataDir, p.enableBinlog())
+		inst := instance.NewTiDBInstance(p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, dataDir, p.enableBinlog(), role)
 		ins = inst
 		p.tidbs = append(p.tidbs, inst)
 	case spec.ComponentTiKV:
@@ -907,6 +912,9 @@ func (p *Playground) waitAllDBUp() ([]string, []string) {
 		for _, db := range p.tidbs {
 			wg.Add(1)
 			prefix := "- TiDB: " + db.Addr()
+			if db.Role() == instance.TiDBRoleSystem {
+				prefix = "- TiDB System: " + db.Addr()
+			}
 			bar := bars.AddBar(prefix)
 			go func(dbInst *instance.TiDBInstance) {
 				defer wg.Done()
@@ -976,9 +984,9 @@ func (p *Playground) waitAllTiFlashUp() {
 			wg.Add(1)
 
 			tiflashKindName := "TiFlash"
-			if flash.Role == instance.TiFlashRoleDisaggCompute {
+			if flash.Role() == instance.TiFlashRoleDisaggCompute {
 				tiflashKindName = "TiFlash (CN)"
-			} else if flash.Role == instance.TiFlashRoleDisaggWrite {
+			} else if flash.Role() == instance.TiFlashRoleDisaggWrite {
 				tiflashKindName = "TiFlash (WN)"
 			}
 
@@ -1090,16 +1098,11 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		return fmt.Errorf("all components count must be great than 0 (pd=%v)", options.PD.Num)
 	}
 
-	if options.ShOpt.Mode != "tidb-cse" {
-		if options.TiKVWorker.Num > 0 {
-			return fmt.Errorf("TiKV worker is only supported in tidb-cse mode")
-		}
+	if options.TiKVWorker.Num > 1 {
+		return fmt.Errorf("TiKV worker only supports at most 1 instance")
 	}
-
-	if options.ShOpt.Mode == "tidb-cse" {
-		if options.TiKVWorker.Num > 1 {
-			return fmt.Errorf("TiKV worker only supports at most 1 instance")
-		}
+	if options.TiDBSystem.Num > 1 {
+		return fmt.Errorf("TiKV worker only supports at most 1 instance")
 	}
 
 	if !utils.Version(options.Version).IsNightly() {
@@ -1113,29 +1116,99 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		}
 	}
 
+	switch options.ShOpt.Mode {
+	case "tidb-cse", "tiflash-disagg", "tidb-nextgen":
+		if !strings.HasPrefix(options.ShOpt.CSE.S3Endpoint, "https://") && !strings.HasPrefix(options.ShOpt.CSE.S3Endpoint, "http://") {
+			return fmt.Errorf("require S3 endpoint to start with http:// or https://")
+		}
+
+		isSecure := strings.HasPrefix(options.ShOpt.CSE.S3Endpoint, "https://")
+		rawEndpoint := strings.TrimPrefix(options.ShOpt.CSE.S3Endpoint, "https://")
+		rawEndpoint = strings.TrimPrefix(rawEndpoint, "http://")
+
+		// Currently we always assign region=local. Other regions are not supported.
+		if strings.Contains(rawEndpoint, "amazonaws.com") {
+			return fmt.Errorf("Currently TiUP playground only supports local S3 (like minio). S3 on AWS Regions are not supported. Contributions are welcome!")
+		}
+
+		// Preflight check whether specified object storage is available.
+		s3Client, err := minio.New(rawEndpoint, &minio.Options{
+			Creds:  credentials.NewStaticV4(options.ShOpt.CSE.AccessKey, options.ShOpt.CSE.SecretKey, ""),
+			Secure: isSecure,
+		})
+		if err != nil {
+			return errors.Annotate(err, "can not connect to S3 endpoint")
+		}
+
+		ctxCheck, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		bucketExists, err := s3Client.BucketExists(ctxCheck, options.ShOpt.CSE.Bucket)
+		if err != nil {
+			return errors.Annotate(err, "can not connect to S3 endpoint")
+		}
+		if !bucketExists {
+			// Try to create bucket.
+			err := s3Client.MakeBucket(ctxCheck, options.ShOpt.CSE.Bucket, minio.MakeBucketOptions{})
+			if err != nil {
+				return fmt.Errorf("cannot create s3 bucket: Bucket %s doesn't exist and fail to create automatically (your bucket name may be invalid?)", options.ShOpt.CSE.Bucket)
+			}
+		}
+	}
+
 	type InstancePair struct {
 		comp string
 		role string
 		instance.Config
 	}
 
-	instances := []InstancePair{
-		{spec.ComponentTiProxy, "", options.TiProxy},
-		{spec.ComponentTiKV, "", options.TiKV},
-		{spec.ComponentPump, "", options.Pump},
-		{spec.ComponentTiDB, "", options.TiDB},
-		{spec.ComponentCDC, "", options.TiCDC},
-		{spec.ComponentTiKVCDC, "", options.TiKVCDC},
-		{spec.ComponentDrainer, "", options.Drainer},
-		{spec.ComponentDMMaster, "", options.DMMaster},
-		{spec.ComponentDMWorker, "", options.DMWorker},
+	// add pd
+	var instances []InstancePair
+	if options.ShOpt.PDMode == "pd" {
+		instances = append(instances, InstancePair{spec.ComponentPD, instance.PDRoleNormal, options.PD})
+	} else if options.ShOpt.PDMode == "ms" {
+		if !tidbver.PDSupportMicroservices(options.Version) {
+			return fmt.Errorf("PD cluster doesn't support microservices mode in version %s", options.Version)
+		}
+		instances = append(instances,
+			InstancePair{spec.ComponentPD, instance.PDRoleAPI, options.PD},
+			InstancePair{spec.ComponentPD, instance.PDRoleTSO, options.TSO},
+			InstancePair{spec.ComponentPD, instance.PDRoleScheduling, options.Scheduling},
+		)
 	}
 
-	if options.ShOpt.Mode == "tidb-nextgen" {
-		instances = append(instances,
+	// add tikv
+	instances = append(instances,
+		InstancePair{spec.ComponentTiKV, "", options.TiKV},
+	)
+	switch options.ShOpt.Mode {
+	case "tidb-cse", "tidb-nextgen":
+		instances = append(
+			instances,
 			InstancePair{spec.ComponentTiKVWorker, "", options.TiKVWorker},
 		)
 	}
+
+	// add tidb
+	if options.ShOpt.Mode == "tidb-nextgen" {
+		instances = append(
+			instances,
+			InstancePair{comp: spec.ComponentTiDB, role: instance.TiDBRoleSystem, Config: options.TiDBSystem},
+		)
+	}
+	instances = append(instances,
+		InstancePair{spec.ComponentTiDB, instance.TiDBRoleDefault, options.TiDB},
+	)
+
+	instances = append(instances,
+		InstancePair{spec.ComponentTiProxy, "", options.TiProxy},
+		InstancePair{spec.ComponentPump, "", options.Pump},
+		InstancePair{spec.ComponentCDC, "", options.TiCDC},
+		InstancePair{spec.ComponentTiKVCDC, "", options.TiKVCDC},
+		InstancePair{spec.ComponentDrainer, "", options.Drainer},
+		InstancePair{spec.ComponentDMMaster, "", options.DMMaster},
+		InstancePair{spec.ComponentDMWorker, "", options.DMWorker},
+	)
 
 	if options.ShOpt.Mode == "tidb" {
 		instances = append(instances,
@@ -1147,71 +1220,10 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			return fmt.Errorf("TiUP playground only supports CSE/Disagg mode for TiDB cluster >= v7.1.0 (or nightly)")
 		}
 
-		if !strings.HasPrefix(options.ShOpt.CSE.S3Endpoint, "https://") && !strings.HasPrefix(options.ShOpt.CSE.S3Endpoint, "http://") {
-			return fmt.Errorf("CSE/Disagg mode requires S3 endpoint to start with http:// or https://")
-		}
-
-		isSecure := strings.HasPrefix(options.ShOpt.CSE.S3Endpoint, "https://")
-		rawEndpoint := strings.TrimPrefix(options.ShOpt.CSE.S3Endpoint, "https://")
-		rawEndpoint = strings.TrimPrefix(rawEndpoint, "http://")
-
-		// Currently we always assign region=local. Other regions are not supported.
-		if strings.Contains(rawEndpoint, "amazonaws.com") {
-			return fmt.Errorf("Currently TiUP playground CSE/Disagg mode only supports local S3 (like minio). S3 on AWS Regions are not supported. Contributions are welcome!")
-		}
-
-		// Preflight check whether specified object storage is available.
-		s3Client, err := minio.New(rawEndpoint, &minio.Options{
-			Creds:  credentials.NewStaticV4(options.ShOpt.CSE.AccessKey, options.ShOpt.CSE.SecretKey, ""),
-			Secure: isSecure,
-		})
-		if err != nil {
-			return errors.Annotate(err, "CSE/Disagg mode preflight check failed")
-		}
-
-		ctxCheck, cancel := context.WithTimeout(ctx, 5*time.Second)
-		defer cancel()
-
-		bucketExists, err := s3Client.BucketExists(ctxCheck, options.ShOpt.CSE.Bucket)
-		if err != nil {
-			return errors.Annotate(err, "CSE/Disagg mode preflight check failed")
-		}
-
-		if !bucketExists {
-			// Try to create bucket.
-			err := s3Client.MakeBucket(ctxCheck, options.ShOpt.CSE.Bucket, minio.MakeBucketOptions{})
-			if err != nil {
-				return fmt.Errorf("CSE/Disagg mode preflight check failed: Bucket %s doesn't exist and fail to create automatically (your bucket name may be invalid?)", options.ShOpt.CSE.Bucket)
-			}
-		}
-
 		instances = append(
 			instances,
 			InstancePair{spec.ComponentTiFlash, instance.TiFlashRoleDisaggWrite, options.TiFlashWrite},
 			InstancePair{spec.ComponentTiFlash, instance.TiFlashRoleDisaggCompute, options.TiFlashCompute},
-		)
-	}
-
-	if options.ShOpt.Mode == "tidb-cse" {
-		instances = append(
-			instances,
-			InstancePair{comp: spec.ComponentTiKVWorker, Config: options.TiKVWorker},
-		)
-	}
-
-	if options.ShOpt.PDMode == "pd" {
-		instances = append([]InstancePair{{spec.ComponentPD, instance.PDRoleNormal, options.PD}},
-			instances...,
-		)
-	} else if options.ShOpt.PDMode == "ms" {
-		if !tidbver.PDSupportMicroservices(options.Version) {
-			return fmt.Errorf("PD cluster doesn't support microservices mode in version %s", options.Version)
-		}
-		instances = append([]InstancePair{
-			{spec.ComponentPD, instance.PDRoleAPI, options.PD},
-			{spec.ComponentPD, instance.PDRoleTSO, options.TSO},
-			{spec.ComponentPD, instance.PDRoleScheduling, options.Scheduling}},
-			instances...,
 		)
 	}
 

@@ -28,9 +28,9 @@ func NewDMWorker(shOpt SharedOptions, binPath string, dir, host, configPath stri
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
-			Role:       "dm-worker",
 			Port:       utils.MustGetFreePort(host, port, shOpt.PortOffset),
 			ConfigPath: configPath,
+			role:       "dm-worker",
 		},
 		masters: masters,
 	}

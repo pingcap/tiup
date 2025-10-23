@@ -38,9 +38,9 @@ func NewDrainer(shOpt SharedOptions, binPath string, dir, host, configPath strin
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
-			Role:       "drainer",
 			Port:       utils.MustGetFreePort(host, 8250, shOpt.PortOffset),
 			ConfigPath: configPath,
+			role:       "drainer",
 		},
 		pds: pds,
 	}

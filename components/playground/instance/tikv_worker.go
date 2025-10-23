@@ -54,8 +54,8 @@ func NewTiKVWorkerInstance(shOpt SharedOptions, binPath string, dir, host, confi
 			Dir:        dir,
 			Host:       host,
 			Port:       utils.MustGetFreePort(host, port, shOpt.PortOffset),
-			Role:       "tikv_worker",
 			ConfigPath: configPath,
+			role:       "tikv_worker",
 		},
 		pds: pds,
 	}
@@ -71,8 +71,10 @@ func (inst *TiKVWorkerInstance) Start(ctx context.Context) error {
 	if inst.shOpt.PDMode == "ms" {
 		return errors.New("tikv_worker does not support ms pd mode")
 	}
-	if inst.shOpt.Mode != "tidb-cse" {
-		return errors.New("tikv_worker only supports tidb-cse mode")
+	switch inst.shOpt.Mode {
+	case "tidb-cse", "tidb-nextgen":
+	default:
+		return errors.Errorf("tikv_worker does not support %s mode", inst.shOpt.Mode)
 	}
 
 	configPath := filepath.Join(inst.Dir, "tikv_worker.toml")

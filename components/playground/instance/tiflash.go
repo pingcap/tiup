@@ -74,7 +74,7 @@ func NewTiFlashInstance(role TiFlashRole, shOpt SharedOptions, binPath, dir, hos
 			Port:       httpPort,
 			StatusPort: utils.MustGetFreePort(host, 8234, shOpt.PortOffset),
 			ConfigPath: configPath,
-			Role:       role,
+			role:       role,
 		},
 		tcpPort:         utils.MustGetFreePort(host, 9100, shOpt.PortOffset), // 9000 for default object store port
 		servicePort:     utils.MustGetFreePort(host, 3930, shOpt.PortOffset),

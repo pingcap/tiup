@@ -22,7 +22,7 @@ func (inst *TiFlashInstance) getProxyConfig() map[string]any {
 	config["storage.reserve-space"] = 0
 	config["storage.reserve-raft-space"] = 0
 
-	if inst.Role == TiFlashRoleDisaggWrite {
+	if inst.Role() == TiFlashRoleDisaggWrite {
 		if inst.shOpt.Mode == "tidb-cse" {
 			config["storage.api-version"] = 2
 			config["storage.enable-ttl"] = true
@@ -35,7 +35,7 @@ func (inst *TiFlashInstance) getProxyConfig() map[string]any {
 		}
 	}
 	// If TiKVColumnar is enabled, TiFlash Proxy need to know how to access S3 as well.
-	if inst.Role == TiFlashRoleDisaggCompute && inst.shOpt.Mode == "tidb-cse" && inst.shOpt.EnableTiKVColumnar {
+	if inst.Role() == TiFlashRoleDisaggCompute && inst.shOpt.Mode == "tidb-cse" && inst.shOpt.EnableTiKVColumnar {
 		config["dfs.prefix"] = "tikv"
 		config["dfs.s3-endpoint"] = inst.shOpt.CSE.S3Endpoint
 		config["dfs.s3-key-id"] = inst.shOpt.CSE.AccessKey
@@ -53,7 +53,7 @@ func (inst *TiFlashInstance) getConfig() map[string]any {
 	config["flash.proxy.config"] = filepath.Join(inst.Dir, "tiflash_proxy.toml")
 	config["logger.level"] = "debug"
 
-	if inst.Role == TiFlashRoleDisaggWrite {
+	if inst.Role() == TiFlashRoleDisaggWrite {
 		config["storage.s3.endpoint"] = inst.shOpt.CSE.S3Endpoint
 		config["storage.s3.bucket"] = inst.shOpt.CSE.Bucket
 		config["storage.s3.root"] = "/tiflash-cse/"
@@ -65,7 +65,7 @@ func (inst *TiFlashInstance) getConfig() map[string]any {
 			config["enable_safe_point_v2"] = true
 			config["storage.api_version"] = 2
 		}
-	} else if inst.Role == TiFlashRoleDisaggCompute {
+	} else if inst.Role() == TiFlashRoleDisaggCompute {
 		config["storage.s3.endpoint"] = inst.shOpt.CSE.S3Endpoint
 		config["storage.s3.bucket"] = inst.shOpt.CSE.Bucket
 		config["storage.s3.root"] = "/tiflash-cse/"
@@ -85,9 +85,9 @@ func (inst *TiFlashInstance) getConfig() map[string]any {
 
 	if inst.shOpt.HighPerf {
 		config["logger.level"] = "info"
-		if inst.Role == TiFlashRoleDisaggWrite {
+		if inst.Role() == TiFlashRoleDisaggWrite {
 			config["profiles.default.cpu_thread_count_scale"] = 5.0
-		} else if inst.Role == TiFlashRoleDisaggCompute {
+		} else if inst.Role() == TiFlashRoleDisaggCompute {
 			config["profiles.default.task_scheduler_thread_soft_limit"] = 0
 			config["profiles.default.task_scheduler_thread_hard_limit"] = 0
 		}

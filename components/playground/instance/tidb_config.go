@@ -22,7 +22,8 @@ func (inst *TiDBInstance) getConfig() map[string]any {
 	config := make(map[string]any)
 	config["security.auto-tls"] = true
 
-	if inst.shOpt.Mode == "tidb-cse" {
+	switch inst.shOpt.Mode {
+	case "tidb-cse":
 		config["keyspace-name"] = "mykeyspace"
 		config["enable-safe-point-v2"] = true
 		config["force-enable-vector-type"] = true
@@ -52,9 +53,19 @@ func (inst *TiDBInstance) getConfig() map[string]any {
 		config["tiflash-replicas.group-id"] = "enable_s3_wn_region"
 		config["tiflash-replicas.extra-s3-rule"] = false
 		config["tiflash-replicas.min-count"] = 1
-	} else if inst.shOpt.Mode == "tiflash-disagg" {
+	case "tiflash-disagg":
 		config["use-autoscaler"] = false
 		config["disaggregated-tiflash"] = true
+	case "tidb-nextgen":
+		config["enable-safe-point-v2"] = true
+		config["split-table"] = false
+		config["use-autoscaler"] = false
+		config["disaggregated-tiflash"] = false
+		if inst.Role() == TiDBRoleSystem {
+			config["keyspace-name"] = "SYSTEM"
+		} else {
+			config["keyspace-name"] = "keyspace1"
+		}
 	}
 
 	tiproxyCrtPath := filepath.Join(inst.tiproxyCertDir, "tiproxy.crt")

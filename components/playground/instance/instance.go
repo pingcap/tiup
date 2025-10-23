@@ -63,13 +63,13 @@ type instance struct {
 	ID         int
 	Dir        string
 	Host       string
-	Role       string
 	Port       int
 	StatusPort int // client port for PD
 	ConfigPath string
 	BinPath    string
 	Version    utils.Version
 	proc       Process
+	role       string
 }
 
 // MetricAddr will be used by prometheus scrape_configs.
@@ -85,8 +85,12 @@ type Instance interface {
 	Start(ctx context.Context) error
 	// Name Return the display name.
 	Name() string
-	// Component Return the binary name.
+	// Component returns the package name.
 	Component() string
+	// Role returns the role of the package.
+	// It is used to start binaries differently for the same package.
+	// For example, start PD in microservice mode, or start TiDB with another configuration.
+	Role() string
 	// LogFile return the log file name
 	LogFile() string
 	// MetricAddr return the address to pull metrics.
@@ -103,11 +107,15 @@ type Instance interface {
 }
 
 func (inst *instance) Name() string {
-	return fmt.Sprintf("%s-%d", inst.Role, inst.ID)
+	return fmt.Sprintf("%s-%d", inst.Role(), inst.ID)
 }
 
 func (inst *instance) Component() string {
-	return inst.Role
+	return inst.role
+}
+
+func (inst *instance) Role() string {
+	return inst.role
 }
 
 func (inst *instance) Wait() error {
@@ -176,7 +184,7 @@ func AdvertiseHost(listen string) string {
 func pdEndpoints(pds []*PDInstance, isHTTP bool) []string {
 	var endpoints []string
 	for _, pd := range pds {
-		if pd.Role == PDRoleTSO || pd.Role == PDRoleScheduling {
+		if pd.Role() == PDRoleTSO || pd.Role() == PDRoleScheduling {
 			continue
 		}
 		if isHTTP {

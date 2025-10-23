@@ -28,7 +28,7 @@ func NewDMMaster(shOpt SharedOptions, binPath string, dir, host, configPath stri
 			ID:      id,
 			Dir:     dir,
 			Host:    host,
-			Role:    "dm-master",
+			role:    "dm-master",
 			Port:    utils.MustGetFreePort(host, 8291, shOpt.PortOffset),
 			// Similar like PD's client port, here use StatusPort for Master Port.
 			StatusPort: utils.MustGetFreePort(host, port, shOpt.PortOffset),

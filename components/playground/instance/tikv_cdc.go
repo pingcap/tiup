@@ -38,9 +38,9 @@ func NewTiKVCDC(shOpt SharedOptions, binPath string, dir, host, configPath strin
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
-			Role:       "tikv-cdc",
 			Port:       utils.MustGetFreePort(host, 8600, shOpt.PortOffset),
 			ConfigPath: configPath,
+			role:       "tikv-cdc",
 		},
 		pds: pds,
 	}
