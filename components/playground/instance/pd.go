@@ -184,7 +184,7 @@ func (inst *PDInstance) LogFile() string {
 	if inst.Role() == PDRoleNormal || inst.Role() == PDRoleAPI {
 		return filepath.Join(inst.Dir, "pd.log")
 	}
-	return filepath.Join(inst.Dir, fmt.Sprintf("%s.log", inst.Role))
+	return filepath.Join(inst.Dir, fmt.Sprintf("%s.log", inst.Role()))
 }
 
 // Addr return the listen address of PD
