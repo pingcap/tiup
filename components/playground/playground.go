@@ -1052,6 +1052,86 @@ func (p *Playground) waitAllDMMasterUp() {
 	}
 }
 
+// waitPDAndTiKVUp waits for all PD and TiKV instances to be ready (for nextgen mode)
+func (p *Playground) waitPDAndTiKVUp() {
+	if len(p.pds) == 0 || len(p.tikvs) == 0 {
+		return
+	}
+
+	var endpoints []string
+	for _, pd := range p.pds {
+		endpoints = append(endpoints, pd.Addr())
+	}
+	pdClient := api.NewPDClient(
+		context.WithValue(context.TODO(), logprinter.ContextKeyLogger, log),
+		endpoints, 10*time.Second, nil,
+	)
+
+	var wg sync.WaitGroup
+	bars := progress.NewMultiBar(colorstr.Sprintf("[dark_gray]Waiting for PD and TiKV instances ready"))
+
+	// Wait for all TiKV instances to be up
+	for _, kv := range p.tikvs {
+		wg.Add(1)
+		prefix := "- TiKV: " + kv.Addr()
+		bar := bars.AddBar(prefix)
+		go func(kvInst *instance.TiKVInstance) {
+			defer wg.Done()
+			displayResult := &progress.DisplayProps{
+				Prefix: prefix,
+			}
+			if cmd := kvInst.Process().Cmd(); cmd == nil {
+				displayResult.Mode = progress.ModeError
+				displayResult.Suffix = "initialize command failed"
+			} else if state := cmd.ProcessState; state != nil && state.Exited() {
+				displayResult.Mode = progress.ModeError
+				displayResult.Suffix = fmt.Sprintf("process exited with code: %d", state.ExitCode())
+			} else if s := checkStoreStatus(pdClient, kvInst.Addr(), options.TiKV.UpTimeout); !s {
+				displayResult.Mode = progress.ModeError
+				displayResult.Suffix = "failed to up after timeout"
+			} else {
+				displayResult.Mode = progress.ModeDone
+			}
+			bar.UpdateDisplay(displayResult)
+		}(kv)
+	}
+	bars.StartRenderLoop()
+	wg.Wait()
+	bars.StopRenderLoop()
+}
+
+// waitTiDBSystemUp waits for TiDB System instance to be ready (for nextgen mode)
+func (p *Playground) waitTiDBSystemUp() {
+	var systemDB *instance.TiDBInstance
+	for _, db := range p.tidbs {
+		if db.Role() == instance.TiDBRoleSystem {
+			systemDB = db
+			break
+		}
+	}
+	if systemDB == nil {
+		return
+	}
+
+	bars := progress.NewMultiBar(colorstr.Sprintf("[dark_gray]Waiting for TiDB System instance ready"))
+	prefix := "- TiDB System: " + systemDB.Addr()
+	bar := bars.AddBar(prefix)
+	bars.StartRenderLoop()
+
+	if s := checkDB(systemDB.Addr(), options.TiDB.UpTimeout); s {
+		bar.UpdateDisplay(&progress.DisplayProps{
+			Prefix: prefix,
+			Mode:   progress.ModeDone,
+		})
+	} else {
+		bar.UpdateDisplay(&progress.DisplayProps{
+			Prefix: prefix,
+			Mode:   progress.ModeError,
+		})
+	}
+	bars.StopRenderLoop()
+}
+
 func (p *Playground) bindVersion(comp string, version string) (bindVersion string) {
 	bindVersion = version
 	switch comp {
@@ -1238,6 +1318,8 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 	anyPumpReady := false
 	allDMMasterReady := false
+	pdAndTiKVReady := false
+	tidbSystemReady := false
 	// Start all instance except tiflash.
 	err := p.WalkInstances(func(cid string, ins instance.Instance) error {
 		if cid == spec.ComponentTiFlash {
@@ -1247,6 +1329,21 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		if cid == spec.ComponentDMWorker && !allDMMasterReady {
 			p.waitAllDMMasterUp()
 			allDMMasterReady = true
+		}
+
+		// For nextgen mode, ensure proper startup ordering for TiDB instances
+		if cid == spec.ComponentTiDB && options.ShOpt.Mode == "tidb-nextgen" {
+			tidbInst := ins.(*instance.TiDBInstance)
+			// Wait for PD and TiKV before starting TiDB System
+			if tidbInst.Role() == instance.TiDBRoleSystem && !pdAndTiKVReady {
+				p.waitPDAndTiKVUp()
+				pdAndTiKVReady = true
+			}
+			// Wait for TiDB System before starting TiDB Default
+			if tidbInst.Role() == instance.TiDBRoleDefault && !tidbSystemReady {
+				p.waitTiDBSystemUp()
+				tidbSystemReady = true
+			}
 		}
 
 		err := p.startInstance(ctx, ins)
