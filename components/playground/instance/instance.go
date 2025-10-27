@@ -32,10 +32,15 @@ import (
 type Mode = string
 
 var (
+	// ModeNormal is the default mode.
 	ModeNormal = "tidb"
+	// ModeCSE is for CSE testing.
 	ModeCSE = "tidb-cse"
+	// ModeNextGen is for NG testing.
 	ModeNextGen = "tidb-x"
+	// ModeDisAgg is for tiflash testing.
 	ModeDisAgg = "tiflash-disagg"
+	// ModeTiKVSlim is for special tikv testing.
 	ModeTiKVSlim = "tikv-slim"
 )
 
