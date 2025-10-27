@@ -1278,8 +1278,12 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 	var monitorInfo *MonitorInfo
 	if options.Monitor {
 		// TODO: remove this hack
-		if options.Version == utils.NextgenVersionAlias {
-			options.Version = utils.LatestVersionAlias
+		if strings.Contains(options.Version, "nextgen") || options.Version == utils.NextgenVersionAlias {
+			version, err := env.V1Repository().ResolveComponentVersion(spec.ComponentTiDB, utils.LatestVersionAlias)
+			if err != nil {
+				return errors.Annotate(err, fmt.Sprintf("Cannot resolve version %s to a valid semver string", options.Version))
+			}
+			options.Version = string(version)
 		}
 
 		var err error
