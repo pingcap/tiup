@@ -23,7 +23,7 @@ func (inst *TiDBInstance) getConfig() map[string]any {
 	config["security.auto-tls"] = true
 
 	switch inst.shOpt.Mode {
-	case "tidb-cse":
+	case ModeCSE:
 		config["keyspace-name"] = "mykeyspace"
 		config["enable-safe-point-v2"] = true
 		config["force-enable-vector-type"] = true
@@ -53,10 +53,10 @@ func (inst *TiDBInstance) getConfig() map[string]any {
 		config["tiflash-replicas.group-id"] = "enable_s3_wn_region"
 		config["tiflash-replicas.extra-s3-rule"] = false
 		config["tiflash-replicas.min-count"] = 1
-	case "tiflash-disagg":
+	case ModeDisAgg:
 		config["use-autoscaler"] = false
 		config["disaggregated-tiflash"] = true
-	case "tidb-nextgen":
+	case ModeNextGen:
 		config["enable-safe-point-v2"] = true
 		config["split-table"] = false
 		config["use-autoscaler"] = false
