@@ -26,11 +26,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	errNSDeploy            = errNS.NewSubNamespace("deploy")
-	errDeployNameDuplicate = errNSDeploy.NewType("name_dup", utils.ErrTraitPreCheck)
-)
-
 func newDeploy() *cobra.Command {
 	opt := manager.DeployOptions{
 		IdentityFile: path.Join(utils.UserHome(), ".ssh", "id_rsa"),

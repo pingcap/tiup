@@ -42,7 +42,6 @@ import (
 )
 
 var (
-	errNS       = errorx.NewNamespace("cmd")
 	rootCmd     *cobra.Command
 	gOpt        operator.Options
 	skipConfirm bool
