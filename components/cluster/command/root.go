@@ -167,7 +167,6 @@ func init() {
 		newPruneCmd(),
 		newListCmd(),
 		newAuditCmd(),
-		newImportCmd(),
 		newEditConfigCmd(),
 		newShowConfigCmd(),
 		newReloadCmd(),
