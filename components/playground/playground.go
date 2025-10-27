@@ -1117,7 +1117,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 	}
 
 	switch options.ShOpt.Mode {
-	case "tidb-cse", "tiflash-disagg", "tidb-nextgen":
+	case instance.ModeCSE, instance.ModeDisAgg, instance.ModeNextGen:
 		if !strings.HasPrefix(options.ShOpt.CSE.S3Endpoint, "https://") && !strings.HasPrefix(options.ShOpt.CSE.S3Endpoint, "http://") {
 			return fmt.Errorf("require S3 endpoint to start with http:// or https://")
 		}
@@ -1182,7 +1182,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		InstancePair{spec.ComponentTiKV, "", options.TiKV},
 	)
 	switch options.ShOpt.Mode {
-	case "tidb-cse", "tidb-nextgen":
+	case instance.ModeCSE, instance.ModeNextGen:
 		instances = append(
 			instances,
 			InstancePair{spec.ComponentTiKVWorker, "", options.TiKVWorker},
@@ -1190,7 +1190,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 	}
 
 	// add tidb
-	if options.ShOpt.Mode == "tidb-nextgen" {
+	if options.ShOpt.Mode == instance.ModeNextGen {
 		instances = append(
 			instances,
 			InstancePair{comp: spec.ComponentTiDB, role: instance.TiDBRoleSystem, Config: options.TiDBSystem},
@@ -1210,11 +1210,11 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		InstancePair{spec.ComponentDMWorker, "", options.DMWorker},
 	)
 
-	if options.ShOpt.Mode == "tidb" {
+	if options.ShOpt.Mode == instance.ModeNormal {
 		instances = append(instances,
 			InstancePair{spec.ComponentTiFlash, instance.TiFlashRoleNormal, options.TiFlash},
 		)
-	} else if options.ShOpt.Mode == "tidb-cse" || options.ShOpt.Mode == "tiflash-disagg" {
+	} else if options.ShOpt.Mode == instance.ModeCSE || options.ShOpt.Mode == instance.ModeDisAgg {
 		if !tidbver.TiFlashPlaygroundNewStartMode(options.Version) {
 			// For simplicity, currently we only implemented disagg mode when TiFlash can run without config.
 			return fmt.Errorf("TiUP playground only supports CSE/Disagg mode for TiDB cluster >= v7.1.0 (or nightly)")
@@ -1357,7 +1357,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		}
 	}
 
-	if p.bootOptions.ShOpt.Mode == "tikv-slim" {
+	if p.bootOptions.ShOpt.Mode == instance.ModeTiKVSlim {
 		if p.bootOptions.ShOpt.PDMode == "ms" {
 			var (
 				tsoAddr        []string

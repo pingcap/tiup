@@ -28,6 +28,17 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
+// Mode of playground
+type Mode = string
+
+var (
+	ModeNormal = "tidb"
+	ModeCSE = "tidb-cse"
+	ModeNextGen = "tidb-x"
+	ModeDisAgg = "tiflash-disagg"
+	ModeTiKVSlim = "tikv-slim"
+)
+
 // Config of the instance.
 type Config struct {
 	ConfigPath string `yaml:"config_path"`
@@ -44,11 +55,11 @@ type Config struct {
 type SharedOptions struct {
 	/// Whether or not to tune the cluster in order to run faster (instead of easier to debug).
 	HighPerf           bool       `yaml:"high_perf"`
-	CSE                CSEOptions `yaml:"cse"` // Only available when mode == tidb-cse or tiflash-disagg
+	CSE                CSEOptions `yaml:"cse"` // Only available when mode == ModeCSE or ModeDisAgg
 	PDMode             string     `yaml:"pd_mode"`
 	Mode               string     `yaml:"mode"`
 	PortOffset         int        `yaml:"port_offset"`
-	EnableTiKVColumnar bool       `yaml:"enable_tikv_columnar"` // Only available when mode == tidb-cse
+	EnableTiKVColumnar bool       `yaml:"enable_tikv_columnar"` // Only available when mode == ModeCSE
 }
 
 // CSEOptions contains configs to run TiDB cluster in CSE mode.

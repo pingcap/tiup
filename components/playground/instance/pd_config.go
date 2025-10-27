@@ -23,12 +23,12 @@ func (inst *PDInstance) getConfig() map[string]any {
 	}
 
 	switch inst.shOpt.Mode {
-	case "tidb-cse":
+	case ModeCSE:
 		config["keyspace.pre-alloc"] = []string{"mykeyspace"}
 		config["replication.enable-placement-rules"] = true
 		config["schedule.merge-schedule-limit"] = 0
 		config["schedule.replica-schedule-limit"] = 500
-	case "tidb-nextgen":
+	case ModeNextGen:
 		config["keyspace.pre-alloc"] = []string{"keyspace1"}
 	}
 
