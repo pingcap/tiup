@@ -859,6 +859,23 @@ func (r *V1Repository) ResolveComponentVersionWithPlatform(id, constraint, platf
 			return "", err
 		}
 		ver = v.String()
+	case utils.NextgenVersionAlias:
+		com, err := r.GetComponentManifest(id, false)
+		if err != nil {
+			return "", err
+		}
+
+		versions := com.VersionList(r.PlatformString())
+		for v := range versions {
+			if strings.Contains(v, "nextgen") || strings.Contains(v, "next-gen") {
+				ver = v
+				break
+			}
+		}
+
+		if ver == "" {
+			return "", errors.Annotatef(ErrUnknownVersion, "version %s on %s for component %s not found", constraint, platform, id)
+		}
 	default:
 		ver, err = findVersionFromManifest(id, constraint, platform, manifest)
 		if err != nil {

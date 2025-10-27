@@ -150,6 +150,8 @@ Examples:
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				options.Version = args[0]
+			} else if options.ShOpt.Mode == "tidb-nextgen" {
+				options.Version = utils.NextgenVersionAlias
 			}
 
 			if err := populateDefaultOpt(cmd.Flags()); err != nil {

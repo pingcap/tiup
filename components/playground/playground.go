@@ -534,7 +534,7 @@ func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) 
 
 	// TODO: implement this into inst.Start()
 	if inst.Component() == spec.ComponentTiDB && inst.Role() == instance.TiDBRoleSystem {
-		time.Sleep(10 * time.Second)
+		time.Sleep(15 * time.Second)
 	}
 
 	p.addWaitInstance(inst)
@@ -1277,6 +1277,11 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 	var monitorInfo *MonitorInfo
 	if options.Monitor {
+		// TODO: remove this hack
+		if options.Version == utils.NextgenVersionAlias {
+			options.Version = utils.LatestVersionAlias
+		}
+
 		var err error
 
 		p.monitor, monitorInfo, err = p.bootMonitor(ctx, env)

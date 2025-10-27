@@ -104,6 +104,9 @@ func (inst *TiKVWorkerInstance) LogFile() string {
 
 // Component return the binary name.
 func (inst *TiKVWorkerInstance) Component() string {
+	if inst.shOpt.Mode == "tidb-nextgen" {
+		return "tikv-worker"
+	}
 	return "tikv"
 }
 
