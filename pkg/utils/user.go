@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"os"
 	"os/user"
 
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
@@ -18,10 +19,10 @@ func CurrentUser() string {
 
 // UserHome returns home directory of current user
 func UserHome() string {
-	user, err := user.Current()
+	homedir, err := os.UserHomeDir()
 	if err != nil {
 		logprinter.Errorf("Get current user home: %s", err)
 		return "root"
 	}
-	return user.HomeDir
+	return homedir
 }
