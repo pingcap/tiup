@@ -15,7 +15,6 @@ package main
 
 import (
 	"os"
-	"os/user"
 	"path/filepath"
 	"testing"
 
