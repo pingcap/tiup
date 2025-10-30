@@ -504,6 +504,7 @@ func (r *V1Repository) DownloadComponent(item *v1manifest.VersionItem, target st
 	if err != nil {
 		return errors.Trace(err)
 	}
+	defer os.Remove(targetDir)
 
 	if err := r.mirror.Download(item.URL, targetDir); err != nil {
 		return err
