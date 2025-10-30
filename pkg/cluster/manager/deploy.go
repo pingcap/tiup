@@ -15,7 +15,6 @@ package manager
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -198,18 +197,6 @@ func (m *Manager) Deploy(
 	var iterErr error // error when itering over instances
 	iterErr = nil
 
-	topo.IterInstance(func(inst spec.Instance) {
-		// check for "imported" parameter, it can not be true when deploying and scaling out
-		// only for tidb now, need to support dm
-		if inst.IsImported() && m.sysName == "tidb" {
-			iterErr = errors.New(
-				"'imported' is set to 'true' for new instance, this is only used " +
-					"for instances imported from tidb-ansible and make no sense when " +
-					"deploying new instances, please delete the line or set it to 'false' for new instances")
-			return // skip the host to avoid issues
-		}
-	})
-
 	// generate CA and client cert for TLS enabled cluster
 	_, err = m.genAndSaveCertificate(name, globalOptions)
 	if err != nil {
@@ -337,7 +324,7 @@ func (m *Manager) Deploy(
 	}
 	certificateTasks = append(certificateTasks, sessionCertTasks...)
 
-	refreshConfigTasks, _ := buildInitConfigTasks(m, name, topo, metadata.GetBaseMeta(), gOpt, nil)
+	refreshConfigTasks := buildInitConfigTasks(m, name, topo, metadata.GetBaseMeta(), gOpt, nil)
 
 	// Deploy monitor relevant components to remote
 	dlTasks, dpTasks, err := buildMonitoredDeployTask(
