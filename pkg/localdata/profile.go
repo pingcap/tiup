@@ -22,7 +22,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"os/user"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -54,11 +53,11 @@ func InitProfile() *Profile {
 	case DefaultTiUPHome != "":
 		profileDir = DefaultTiUPHome
 	default:
-		u, err := user.Current()
+		homedir, err := os.UserHomeDir()
 		if err != nil {
 			panic("cannot get current user information: " + err.Error())
 		}
-		profileDir = filepath.Join(u.HomeDir, ProfileDirName)
+		profileDir = filepath.Join(homedir, ProfileDirName)
 	}
 
 	cfg, err := InitConfig(profileDir)

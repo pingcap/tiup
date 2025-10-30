@@ -15,7 +15,6 @@ package spec
 
 import (
 	"os"
-	"os/user"
 	"path"
 	"path/filepath"
 
@@ -43,11 +42,11 @@ var profileDir string
 // getHomeDir get the home directory of current user (if they have one).
 // The result path might be empty.
 func getHomeDir() (string, error) {
-	u, err := user.Current()
+	homedir, err := os.UserHomeDir()
 	if err != nil {
 		return "", errors.Trace(err)
 	}
-	return u.HomeDir, nil
+	return homedir, nil
 }
 
 var initialized = false
