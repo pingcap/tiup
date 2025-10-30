@@ -263,6 +263,7 @@ func (i *MonitorInstance) InitConfig(
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
+	opt InstanceOpt,
 ) error {
 	gOpts := *i.topo.BaseTopo().GlobalOptions
 	if err := i.BaseInstance.InitConfig(ctx, e, gOpts, deployUser, paths); err != nil {
@@ -651,11 +652,12 @@ func (i *MonitorInstance) ScaleConfig(
 	clusterVersion string,
 	deployUser string,
 	paths meta.DirPaths,
+	opt InstanceOpt,
 ) error {
 	s := i.topo
 	defer func() { i.topo = s }()
 	i.topo = topo
-	return i.InitConfig(ctx, e, clusterName, clusterVersion, deployUser, paths)
+	return i.InitConfig(ctx, e, clusterName, clusterVersion, deployUser, paths, opt)
 }
 
 func mergeAdditionalScrapeConf(source string, addition map[string]any) error {
