@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -43,7 +42,7 @@ type TiFlashSpec struct {
 	Host                 string               `yaml:"host"`
 	ManageHost           string               `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
 	SSHPort              int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported             bool                 `yaml:"imported,omitempty"`
+	Imported             bool                 `yaml:"-"`
 	Patched              bool                 `yaml:"patched,omitempty"`
 	IgnoreExporter       bool                 `yaml:"ignore_exporter,omitempty"`
 	TCPPort              int                  `yaml:"tcp_port" default:"9000"`
@@ -150,11 +149,6 @@ func (s *TiFlashSpec) GetManageHost() string {
 		return s.ManageHost
 	}
 	return s.Host
-}
-
-// IsImported returns if the node is imported from TiDB-Ansible
-func (s *TiFlashSpec) IsImported() bool {
-	return s.Imported
 }
 
 // IgnoreMonitorAgent returns if the node does not have monitor agents available
@@ -795,28 +789,6 @@ func (i *TiFlashInstance) InitConfig(
 		return err
 	}
 
-	// merge config files for imported instance
-	if i.IsImported() {
-		configPath := ClusterPath(
-			clusterName,
-			AnsibleImportedConfigPath,
-			fmt.Sprintf(
-				"%s-learner-%s-%d.toml",
-				i.ComponentName(),
-				i.GetHost(),
-				i.GetPort(),
-			),
-		)
-		importConfig, err := os.ReadFile(configPath)
-		if err != nil {
-			return err
-		}
-		conf, err = mergeImported(importConfig, conf)
-		if err != nil {
-			return err
-		}
-	}
-
 	err = i.mergeTiFlashLearnerServerConfig(ctx, e, conf, spec.LearnerConfig, paths)
 	if err != nil {
 		return err
@@ -825,32 +797,6 @@ func (i *TiFlashInstance) InitConfig(
 	// Init the configuration using cfg and server_configs
 	if conf, err = i.initTiFlashConfig(ctx, version, topo.ServerConfigs.TiFlash, paths); err != nil {
 		return err
-	}
-
-	// merge config files for imported instance
-	if i.IsImported() {
-		configPath := ClusterPath(
-			clusterName,
-			AnsibleImportedConfigPath,
-			fmt.Sprintf(
-				"%s-%s-%d.toml",
-				i.ComponentName(),
-				i.GetHost(),
-				i.GetPort(),
-			),
-		)
-		importConfig, err := os.ReadFile(configPath)
-		if err != nil {
-			return err
-		}
-		// TODO: maybe we also need to check the imported config?
-		// if _, err = checkTiFlashStorageConfigWithVersion(clusterVersion, importConfig); err != nil {
-		// 	return err
-		// }
-		conf, err = mergeImported(importConfig, conf)
-		if err != nil {
-			return err
-		}
 	}
 
 	// Check the configuration of instance level

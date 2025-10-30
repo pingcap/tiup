@@ -140,13 +140,8 @@ func (m *Manager) ScaleIn(
 	topo = metadata.GetTopology()
 	base = metadata.GetBaseMeta()
 
-	regenConfigTasks, hasImported := buildInitConfigTasks(m, name, topo, base, gOpt, nodes)
-	// handle dir scheme changes
-	if hasImported {
-		if err := spec.HandleImportPathMigration(name); err != nil {
-			return err
-		}
-	}
+	regenConfigTasks := buildInitConfigTasks(m, name, topo, base, gOpt, nodes)
+
 	b, err = m.sshTaskBuilder(name, topo, base.User, gOpt)
 	if err != nil {
 		return err

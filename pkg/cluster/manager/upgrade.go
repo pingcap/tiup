@@ -141,7 +141,6 @@ This operation will upgrade %s %s cluster %s (with a concurrency of %d) to %s:%s
 		m.logger.Infof("Upgrading cluster...")
 	}
 
-	hasImported := false
 	for _, comp := range components {
 		version := comp.CalculateVersion(clusterVersion)
 
@@ -168,22 +167,6 @@ This operation will upgrade %s %s cluster %s (with a concurrency of %d) to %s:%s
 			// for some component, dataDirs might need to be created due to upgrade
 			// eg: TiCDC support DataDir since v4.0.13
 			tb = tb.Mkdir(topo.BaseTopo().GlobalOptions.User, inst.GetManageHost(), topo.BaseTopo().GlobalOptions.SystemdMode != spec.UserMode, dataDirs...)
-
-			if inst.IsImported() {
-				switch inst.ComponentName() {
-				case spec.ComponentPrometheus, spec.ComponentGrafana, spec.ComponentAlertmanager:
-					tb.CopyComponent(
-						inst.ComponentSource(),
-						inst.OS(),
-						inst.Arch(),
-						version,
-						"", // use default srcPath
-						inst.GetManageHost(),
-						deployDir,
-					)
-				}
-				hasImported = true
-			}
 
 			// backup files of the old version
 			tb = tb.BackupComponent(inst.ComponentSource(), base.Version, inst.GetManageHost(), deployDir)
@@ -274,12 +257,6 @@ This operation will upgrade %s %s cluster %s (with a concurrency of %d) to %s:%s
 		sshProxyProps,
 	)
 
-	// handle dir scheme changes
-	if hasImported {
-		if err := spec.HandleImportPathMigration(name); err != nil {
-			return err
-		}
-	}
 	ctx := ctxt.New(
 		context.Background(),
 		opt.Concurrency,
