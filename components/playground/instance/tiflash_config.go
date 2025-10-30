@@ -93,5 +93,14 @@ func (inst *TiFlashInstance) getConfig() map[string]any {
 		}
 	}
 
+	if inst.Version.IsFTS() {
+		defaultS3Config := getDefaultTiCIMetaS3Config()
+		config["tici.s3.endpoint"] = defaultS3Config.Endpoint
+		config["tici.s3.access_key"] = defaultS3Config.AccessKey
+		config["tici.s3.secret_key"] = defaultS3Config.SecretKey
+		config["tici.s3.bucket"] = defaultS3Config.Bucket
+		config["tici.s3.prefix"] = defaultS3Config.Prefix
+	}
+
 	return config
 }
