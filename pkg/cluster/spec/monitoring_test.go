@@ -229,32 +229,68 @@ scrape_configs:
 
 func TestGetRetention(t *testing.T) {
 	var val string
-	val = getRetention("-1d")
+	val = getRetentionTime("-1d")
 	assert.EqualValues(t, "30d", val)
 
-	val = getRetention("0d")
+	val = getRetentionTime("0d")
 	assert.EqualValues(t, "30d", val)
 
-	val = getRetention("01d")
+	val = getRetentionTime("01d")
 	assert.EqualValues(t, "30d", val)
 
-	val = getRetention("1dd")
+	val = getRetentionTime("1dd")
 	assert.EqualValues(t, "30d", val)
 
-	val = getRetention("*1d")
+	val = getRetentionTime("*1d")
 	assert.EqualValues(t, "30d", val)
 
-	val = getRetention("1d ")
+	val = getRetentionTime("1d ")
+	assert.EqualValues(t, "1d", val)
+
+	val = getRetentionTime(" 1d")
+	assert.EqualValues(t, "1d", val)
+
+	val = getRetentionTime("ddd")
 	assert.EqualValues(t, "30d", val)
 
-	val = getRetention("ddd")
-	assert.EqualValues(t, "30d", val)
-
-	val = getRetention("60d")
+	val = getRetentionTime("60d")
 	assert.EqualValues(t, "60d", val)
 
-	val = getRetention("999d")
+	val = getRetentionTime("999d")
 	assert.EqualValues(t, "999d", val)
+
+	val = getRetentionSize("-1MB")
+	assert.EqualValues(t, "", val)
+
+	val = getRetentionSize("30d")
+	assert.EqualValues(t, "", val)
+
+	val = getRetentionSize("1k")
+	assert.EqualValues(t, "", val)
+
+	val = getRetentionSize("01G")
+	assert.EqualValues(t, "", val)
+
+	val = getRetentionSize("233mb")
+	assert.EqualValues(t, "233MB", val)
+
+	val = getRetentionSize("*1GB")
+	assert.EqualValues(t, "", val)
+
+	val = getRetentionSize("20GB ")
+	assert.EqualValues(t, "20GB", val)
+
+	val = getRetentionSize(" 20GB")
+	assert.EqualValues(t, "20GB", val)
+
+	val = getRetentionSize("3TB")
+	assert.EqualValues(t, "3TB", val)
+
+	val = getRetentionSize("30GB")
+	assert.EqualValues(t, "30GB", val)
+
+	val = getRetentionSize("1EB")
+	assert.EqualValues(t, "1EB", val)
 }
 
 // TestHandleRemoteWrite verifies that remote write configurations are properly handled
