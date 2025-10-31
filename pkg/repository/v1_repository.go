@@ -542,6 +542,11 @@ func (r *V1Repository) PurgeTimestamp() {
 // has the same value of our local one. (not hashing the snapshot file itself)
 // Return weather the manifest is changed compared to the one in local ts and the FileHash of snapshot.
 func (r *V1Repository) fetchTimestamp() (changed bool, manifest *v1manifest.Manifest, err error) {
+	// Ideally a repository check was not mandatory to simply run a program, but as it is,
+	// an uninitialized repository would cause a nil pointer dereference, so return an error.
+	if r == nil {
+		return false, nil, errors.New("repo is nil")
+	}
 	// check cache first
 	if r.timestamp != nil {
 		return false, r.timestamp, nil
