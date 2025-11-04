@@ -290,6 +290,7 @@ func HideSensitiveInfo(args []string) []string {
 func filterURI(uri string) string {
 	filterKeys := []string{
 		"sasl-password",
+		"access-key", // This is more like a username than a password.
 		"secret-access-key",
 		"session-token",
 	}
