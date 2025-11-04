@@ -14,6 +14,7 @@
 package environment
 
 import (
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -21,6 +22,7 @@ import (
 
 func TestHideSensitiveInfo(t *testing.T) {
 	xxx := "******"
+	uxxx := url.QueryEscape(xxx)
 
 	cases := []struct {
 		args   []string
@@ -41,6 +43,18 @@ func TestHideSensitiveInfo(t *testing.T) {
 		{
 			[]string{"tiup", "dmctl", "--master-addr", "127.0.0.1:8261", "encrypt", "very_secret"},
 			[]string{"tiup", "dmctl", "--master-addr", "127.0.0.1:8261", "encrypt", xxx},
+		},
+		{
+			[]string{"tiup", "br", "validate", "decode", "--field=end-version", "--storage", "s3://backup-101/snapshot-?access-key=key&secret-access-key=access-key"},
+			[]string{"tiup", "br", "validate", "decode", "--field=end-version", "--storage", "s3://backup-101/snapshot-?access-key=key&secret-access-key=" + uxxx},
+		},
+		{
+			[]string{"tiup", "cdc", "cli", "changefeed", "create", "--sink-uri=kafka://example.com:9092?protocol=canal-json&sasl-password=secret"},
+			[]string{"tiup", "cdc", "cli", "changefeed", "create", "--sink-uri=kafka://example.com:9092?protocol=canal-json&sasl-password=" + uxxx},
+		},
+		{
+			[]string{"tiup", "https://user:pass@example.com"},
+			[]string{"tiup", "https://user:xxxxx@example.com"}, // (*URL).Redacted does this
 		},
 	}
 

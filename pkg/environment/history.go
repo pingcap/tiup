@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -272,10 +273,44 @@ func HideSensitiveInfo(args []string) []string {
 				redacted = true
 				break
 			}
+			arg = filterURI(arg)
+			if strings.HasPrefix(arg, "--sink-uri=") {
+				arg = "--sink-uri=" + filterURI(arg[11:])
+			}
 		}
 		if !redacted {
 			r = append(r, arg)
 		}
 	}
 	return r
+}
+
+// Redacts a URI by filtering out query values based on their key.
+// values are replaced by ******
+func filterURI(uri string) string {
+	filterKeys := []string{
+		"sasl-password",
+		"secret-access-key",
+		"session-token",
+	}
+	replacementKey := "******"
+
+	u, err := url.Parse(uri)
+	if err != nil {
+		return uri
+	}
+	if u.Scheme == "" {
+		return uri
+	}
+
+	v, err := url.ParseQuery(u.RawQuery)
+	if err == nil {
+		for _, filterKey := range filterKeys {
+			if v.Has(filterKey) {
+				v.Set(filterKey, replacementKey)
+			}
+		}
+	}
+	u.RawQuery = v.Encode()
+	return u.Redacted()
 }
