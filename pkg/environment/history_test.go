@@ -34,6 +34,10 @@ func TestHideSensitiveInfo(t *testing.T) {
 			[]string{"tiup", "tidb-lightning", "--tidb-password", "secret"},
 			[]string{"tiup", "tidb-lightning", "--tidb-password", xxx},
 		},
+		{
+			[]string{"tiup", "dumpling", "--port", "10611", "--host", "127.0.0.1", "--user", "root", "--password", "msandbox"},
+			[]string{"tiup", "dumpling", "--port", "10611", "--host", "127.0.0.1", "--user", "root", "--password", xxx},
+		},
 	}
 
 	for _, tc := range cases {
