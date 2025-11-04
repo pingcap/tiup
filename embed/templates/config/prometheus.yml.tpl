@@ -191,6 +191,21 @@ scrape_configs:
 {{- range .SchedulingAddrs}}
       - '{{.}}'
 {{- end}}
+  - job_name: "router"
+    honor_labels: true # don't overwrite job & instance labels
+{{- if .TLSEnabled}}
+    scheme: https
+    tls_config:
+      insecure_skip_verify: false
+      ca_file: ../tls/ca.crt
+      cert_file: ../tls/prometheus.crt
+      key_file: ../tls/prometheus.pem
+{{- end}}
+    static_configs:
+    - targets:
+{{- range RouterAddrs}}
+      - '{{.}}'
+{{- end}}
 {{- if .TiFlashStatusAddrs}}
   - job_name: "tiflash"
     honor_labels: true # don't overwrite job & instance labels

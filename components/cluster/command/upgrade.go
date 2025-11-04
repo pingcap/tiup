@@ -24,7 +24,8 @@ import (
 func newUpgradeCmd() *cobra.Command {
 	offlineMode := false
 	ignoreVersionCheck := false
-	var tidbVer, tikvVer, pdVer, tsoVer, schedulingVer, tiflashVer, kvcdcVer, dashboardVer, cdcVer, alertmanagerVer, nodeExporterVer, blackboxExporterVer, tiproxyVer string
+	var tidbVer, tikvVer, pdVer, tsoVer, schedulingVer, routerVer, tiflashVer, kvcdcVer, dashboardVer, cdcVer,
+		alertmanagerVer, nodeExporterVer, blackboxExporterVer, tiproxyVer string
 	var restartTimeout time.Duration
 
 	cmd := &cobra.Command{
@@ -49,6 +50,7 @@ func newUpgradeCmd() *cobra.Command {
 				spec.ComponentPD:               pdVer,
 				spec.ComponentTSO:              tsoVer,
 				spec.ComponentScheduling:       schedulingVer,
+				spec.ComponentRouter:           routerVer,
 				spec.ComponentTiFlash:          tiflashVer,
 				spec.ComponentTiKVCDC:          kvcdcVer,
 				spec.ComponentCDC:              cdcVer,

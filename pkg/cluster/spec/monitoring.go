@@ -345,6 +345,13 @@ func (i *MonitorInstance) InitConfig(
 			cfig.AddScheduling(scheduling.Host, uint64(scheduling.Port))
 		}
 	}
+	if servers, found := topoHasField("RouterServers"); found {
+		for i := 0; i < servers.Len(); i++ {
+			router := servers.Index(i).Interface().(*RouterSpec)
+			uniqueHosts.Insert(router.Host)
+			cfig.AddRouter(router.Host, uint64(router.Port))
+		}
+	}
 	if servers, found := topoHasField("TiKVServers"); found {
 		for i := 0; i < servers.Len(); i++ {
 			kv := servers.Index(i).Interface().(*TiKVSpec)
