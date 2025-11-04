@@ -68,7 +68,7 @@ func HistoryRecord(env *Environment, command []string, date time.Time, code int)
 	}
 
 	h := &historyRow{
-		Command: strings.Join(HidePassword(command), " "),
+		Command: strings.Join(HideSensitiveInfo(command), " "),
 		Date:    date,
 		Code:    code,
 	}
@@ -243,14 +243,16 @@ func getLatestHistoryFile(dir string) (item historyItem) {
 	return
 }
 
-// HidePassword replace password with ******
-func HidePassword(args []string) []string {
+// HideSensitiveInfo replaces password and other sensitive info with ******
+func HideSensitiveInfo(args []string) []string {
 	redactArgs := []string{
 		// general
 		"-p",
 		// dumpling
+		"-password",
 		"--password",
 		// lightning
+		"-tidb-password",
 		"--tidb-password",
 	}
 	var r []string
