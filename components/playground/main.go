@@ -21,7 +21,6 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
-	"os/user"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -546,11 +545,11 @@ func getAbsolutePath(path string) (string, error) {
 	}
 
 	if strings.HasPrefix(path, "~/") {
-		usr, err := user.Current()
+		homedir, err := os.UserHomeDir()
 		if err != nil {
 			return "", errors.Annotatef(err, "retrieve user home failed")
 		}
-		path = filepath.Join(usr.HomeDir, path[2:])
+		path = filepath.Join(homedir, path[2:])
 	}
 
 	absPath, err := filepath.Abs(path)

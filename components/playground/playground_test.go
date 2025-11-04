@@ -15,7 +15,6 @@ package main
 
 import (
 	"os"
-	"os/user"
 	"path/filepath"
 	"testing"
 
@@ -34,11 +33,11 @@ func TestPlaygroundAbsDir(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "/b", b)
 
-	u, err := user.Current()
+	h, err := os.UserHomeDir()
 	assert.Nil(t, err)
 	c, err := getAbsolutePath("~/c/d/e")
 	assert.Nil(t, err)
-	assert.Equal(t, filepath.Join(u.HomeDir, "c/d/e"), c)
+	assert.Equal(t, filepath.Join(h, "c/d/e"), c)
 }
 
 func TestParseMysqlCommand(t *testing.T) {
