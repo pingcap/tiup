@@ -254,6 +254,8 @@ func HideSensitiveInfo(args []string) []string {
 		// lightning
 		"-tidb-password",
 		"--tidb-password",
+		// dmctl encrypt
+		"encrypt",
 	}
 	var r []string
 	for i := 0; i < len(args); i++ {

@@ -38,6 +38,10 @@ func TestHideSensitiveInfo(t *testing.T) {
 			[]string{"tiup", "dumpling", "--port", "10611", "--host", "127.0.0.1", "--user", "root", "--password", "msandbox"},
 			[]string{"tiup", "dumpling", "--port", "10611", "--host", "127.0.0.1", "--user", "root", "--password", xxx},
 		},
+		{
+			[]string{"tiup", "dmctl", "--master-addr", "127.0.0.1:8261", "encrypt", "very_secret"},
+			[]string{"tiup", "dmctl", "--master-addr", "127.0.0.1:8261", "encrypt", xxx},
+		},
 	}
 
 	for _, tc := range cases {
