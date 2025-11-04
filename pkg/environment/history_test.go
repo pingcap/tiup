@@ -56,6 +56,10 @@ func TestHideSensitiveInfo(t *testing.T) {
 			[]string{"tiup", "https://user:pass@example.com"},
 			[]string{"tiup", "https://user:xxxxx@example.com"}, // (*URL).Redacted does this
 		},
+		{
+			[]string{"tiup", "bench", "tpcc", "run", "-H", "example.com", "-P", "4000", "-U", "root", "-pr9876ABC4Z2dWAL", "--threads", "10", "--time", "10m"},
+			[]string{"tiup", "bench", "tpcc", "run", "-H", "example.com", "-P", "4000", "-U", "root", "-p" + xxx, "--threads", "10", "--time", "10m"},
+		},
 	}
 
 	for _, tc := range cases {
