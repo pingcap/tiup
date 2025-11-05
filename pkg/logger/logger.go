@@ -14,16 +14,25 @@
 package logger
 
 import (
+	"github.com/pingcap/tiup/pkg/environment"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
 // InitGlobalLogger initializes zap global logger.
+// Default level is INFO; DEBUG when environment.DebugMode is true.
 func InitGlobalLogger() {
 	core := zapcore.NewTee(
 		newAuditLogCore(),
 		newDebugLogCore(),
 	)
-	logger := zap.New(core)
+
+	level := zapcore.InfoLevel
+	if environment.DebugMode {
+		level = zapcore.DebugLevel
+	}
+
+	atomic := zap.NewAtomicLevelAt(level)
+	logger := zap.New(core, zap.IncreaseLevel(atomic))
 	zap.ReplaceGlobals(logger)
 }
