@@ -14,15 +14,15 @@
 package localdata
 
 // DefaultTiUPHome represents the default home directory for this build of tiup
-// If this is left empty, the default will be thee combination of the running
+// If this is left empty, the default will be the combination of the running
 // user's home directory and ProfileDirName
 var DefaultTiUPHome string
 
 // ProfileDirName is the name of the profile directory to be used
 var ProfileDirName = ".tiup"
 
-// Notice: if you try to add a new env name which is notable by the user, shou should
-// add it to cmd/env.go:envList so that the command `tiup env` will show that env.
+// Notice: if you add a new user‑visible environment variable, also add it to localdata.EnvList so that
+// the command `tiup env` will show it.
 const (
 	// ComponentParentDir represent the parent directory of all downloaded components
 	ComponentParentDir = "components"
