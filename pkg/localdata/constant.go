@@ -21,8 +21,9 @@ var DefaultTiUPHome string
 // ProfileDirName is the name of the profile directory to be used
 var ProfileDirName = ".tiup"
 
-// Notice: if you add a new user‑visible environment variable, also add it to localdata.EnvList so that
-// the command `tiup env` will show it.
+// Notice: if you add a new user-visible environment variable,
+// update `EnvList` in pkg/environment/env.go to keep `tiup env`
+// and debug log outputs consistent.
 const (
 	// ComponentParentDir represent the parent directory of all downloaded components
 	ComponentParentDir = "components"
