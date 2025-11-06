@@ -20,6 +20,7 @@ import (
 	"os/exec"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/google/uuid"
@@ -224,6 +225,7 @@ the latest stable version will be downloaded from the repository.`,
 
 // Execute parses the command line arguments and calls proper functions
 func Execute() {
+	start := time.Now()
 	code := 0
 
 	err := rootCmd.Execute()
@@ -235,6 +237,15 @@ func Execute() {
 		} else {
 			fmt.Fprintln(os.Stderr, color.RedString("Error: %v", err))
 			code = 1
+		}
+	}
+
+	// record TiUP execution history
+	env := environment.GlobalEnv()
+	if env != nil {
+		err := environment.HistoryRecord(env, os.Args, start, code)
+		if err != nil {
+			log.Warnf("Recording TiUP execution history failed: %v", err)
 		}
 	}
 
