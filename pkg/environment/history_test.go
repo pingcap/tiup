@@ -46,7 +46,7 @@ func TestHideSensitiveInfo(t *testing.T) {
 		},
 		{
 			[]string{"tiup", "br", "validate", "decode", "--field=end-version", "--storage", "s3://backup-101/snapshot-?access-key=key&secret-access-key=access-key"},
-			[]string{"tiup", "br", "validate", "decode", "--field=end-version", "--storage", "s3://backup-101/snapshot-?access-key=key&secret-access-key=" + uxxx},
+			[]string{"tiup", "br", "validate", "decode", "--field=end-version", "--storage", "s3://backup-101/snapshot-?access-key=" + uxxx + "&secret-access-key=" + uxxx},
 		},
 		{
 			[]string{"tiup", "cdc", "cli", "changefeed", "create", "--sink-uri=kafka://example.com:9092?protocol=canal-json&sasl-password=secret"},
