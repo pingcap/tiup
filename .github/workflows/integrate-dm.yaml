@@ -114,7 +114,8 @@ jobs:
           find ./logs -type f -exec sh -c 'echo "{}" && cat {} && echo "\n"' \; || true
 
       - name: Upload coverage to Codecov
-        run: |
-          curl -Os https://uploader.codecov.io/latest/linux/codecov
-          chmod +x codecov
-          ./codecov -F dm -s ./tests/tiup-dm/cover -f '*.out'
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./tests/tiup-dm/cover/*.out 
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
