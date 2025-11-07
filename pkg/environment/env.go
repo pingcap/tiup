@@ -35,6 +35,52 @@ var (
 	ErrInstallFirst = errors.New("component not installed")
 )
 
+// EnvList is the canonical allowlist of environment variables TiUP will print or expose.
+// Keep this list as the single source of truth for env visibility.
+var EnvList = []string{
+	// Core locations and versions
+	localdata.EnvNameHome,
+	localdata.EnvNameWorkDir,
+	localdata.EnvNameUserInputVersion,
+	localdata.EnvNameTiUPVersion,
+
+	// Telemetry identifiers and status
+	localdata.EnvNameTelemetryStatus,
+	localdata.EnvNameTelemetryUUID,
+	localdata.EnvNameTelemetryEventUUID,
+	localdata.EnvNameTelemetrySecret,
+
+	// Component/instance directories
+	localdata.EnvNameInstanceDataDir,
+	localdata.EnvNameComponentDataDir,
+	localdata.EnvNameComponentInstallDir,
+
+	// SSH and copy tools configuration
+	localdata.EnvNameSSHPassPrompt,
+	localdata.EnvNameNativeSSHClient,
+	localdata.EnvNameSSHPath,
+	localdata.EnvNameSCPPath,
+
+	// Misc runtime controls
+	localdata.EnvNameKeepSourceTarget,
+	localdata.EnvNameMirrorSyncScript,
+	localdata.EnvNameLogPath,
+	localdata.EnvNameDebug,
+	localdata.EnvTag,
+}
+
+// WhitelistedEnvs returns only the environment variables defined in EnvList,
+// formatted as KEY=VALUE strings. Empty values are omitted.
+func WhitelistedEnvs() []string {
+	var envs []string
+	for _, key := range EnvList {
+		if val := os.Getenv(key); val != "" {
+			envs = append(envs, fmt.Sprintf("%s=%s", key, val))
+		}
+	}
+	return envs
+}
+
 // Mirror return mirror of tiup.
 // If it's not defined, it will use "https://tiup-mirrors.pingcap.com/".
 func Mirror() string {
