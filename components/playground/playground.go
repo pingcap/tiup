@@ -1278,6 +1278,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 	var monitorInfo *MonitorInfo
 	if options.Monitor {
 		// TODO: remove this hack
+		oldVersion := options.Version
 		options.Version = strings.TrimSuffix(options.Version, "-"+utils.NextgenVersionAlias)
 
 		var err error
@@ -1296,6 +1297,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		if err != nil {
 			return err
 		}
+		options.Version = oldVersion
 	}
 
 	colorCmd := color.New(color.FgHiCyan, color.Bold)

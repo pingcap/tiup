@@ -855,7 +855,6 @@ func (r *V1Repository) ResolveComponentVersionWithPlatform(id, constraint, platf
 				return !strings.Contains(s, "nextgen") && !strings.Contains(s, "next-gen")
 			}
 		}
-		fmt.Printf("%s,%s, %p\n\n", id, constraint, f)
 		v, _, err := r.LatestStableVersion(id, false, f)
 		if err != nil {
 			return "", err
