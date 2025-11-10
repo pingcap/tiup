@@ -1105,7 +1105,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		return fmt.Errorf("TiKV worker only supports at most 1 instance")
 	}
 
-	if !utils.Version(options.Version).IsNightly() {
+	if utils.Version(options.Version).IsValid() {
 		if semver.Compare(options.Version, "v3.1.0") < 0 && options.TiFlash.Num != 0 {
 			fmt.Println(color.YellowString("Warning: current version %s doesn't support TiFlash", options.Version))
 			options.TiFlash.Num = 0
@@ -1278,13 +1278,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 	var monitorInfo *MonitorInfo
 	if options.Monitor {
 		// TODO: remove this hack
-		if strings.Contains(options.Version, "nextgen") || options.Version == utils.NextgenVersionAlias {
-			version, err := env.V1Repository().ResolveComponentVersion(spec.ComponentTiDB, utils.LatestVersionAlias)
-			if err != nil {
-				return errors.Annotate(err, fmt.Sprintf("Cannot resolve version %s to a valid semver string", options.Version))
-			}
-			options.Version = string(version)
-		}
+		options.Version = strings.TrimSuffix(options.Version, "-"+utils.NextgenVersionAlias)
 
 		var err error
 
@@ -1656,12 +1650,20 @@ func (p *Playground) bootNGMonitoring(ctx context.Context, env *environment.Envi
 
 // return not error iff the Cmd is started successfully.
 func (p *Playground) bootGrafana(ctx context.Context, env *environment.Environment, monitorInfo *MonitorInfo) (*grafana, error) {
-	// set up grafana
-	options := p.bootOptions
-	if err := installIfMissing("grafana", options.Version); err != nil {
+	// TODO: merge into startInstance
+	var sversion utils.Version
+	var err error
+	sversion, err = environment.GlobalEnv().V1Repository().ResolveComponentVersion("grafana", options.Version)
+	if err != nil {
 		return nil, err
 	}
-	installPath, err := env.Profile().ComponentInstalledPath("grafana", utils.Version(options.Version))
+
+	// set up grafana
+	options := p.bootOptions
+	if err := installIfMissing("grafana", string(sversion)); err != nil {
+		return nil, err
+	}
+	installPath, err := env.Profile().ComponentInstalledPath("grafana", sversion)
 	if err != nil {
 		return nil, err
 	}
@@ -1703,7 +1705,7 @@ func (p *Playground) bootGrafana(ctx context.Context, env *environment.Environme
 		return nil, err
 	}
 
-	grafana := newGrafana(options.Version, options.Host, options.GrafanaPort)
+	grafana := newGrafana(string(sversion), options.Host, options.GrafanaPort)
 	// fmt.Println("Start Grafana instance...")
 	err = grafana.start(ctx, grafanaDir, options.ShOpt.PortOffset, "http://"+utils.JoinHostPort(monitorInfo.IP, monitorInfo.Port))
 	if err != nil {

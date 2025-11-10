@@ -146,7 +146,7 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 		}
 
 		if spec.Version == "" {
-			ver, _, err := r.LatestStableVersion(spec.ID, false)
+			ver, _, err := r.LatestStableVersion(spec.ID, false, nil)
 			if err != nil {
 				errs = append(errs, err.Error())
 				continue
@@ -778,7 +778,7 @@ func (r *V1Repository) ComponentVersion(id, ver string, includeYanked bool) (*v1
 		ver = manifest.Nightly
 	}
 	if ver == "" {
-		v, _, err := r.LatestStableVersion(id, includeYanked)
+		v, _, err := r.LatestStableVersion(id, includeYanked, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -806,7 +806,7 @@ func (r *V1Repository) LocalComponentVersion(id, ver string, includeYanked bool)
 		ver = manifest.Nightly
 	}
 	if ver == "" {
-		v, _, err := r.LatestStableVersion(id, includeYanked)
+		v, _, err := r.LatestStableVersion(id, includeYanked, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -847,36 +847,26 @@ func (r *V1Repository) ResolveComponentVersionWithPlatform(id, constraint, platf
 		return "", err
 	}
 	var ver string
-	switch constraint {
-	case "", utils.LatestVersionAlias:
-		v, _, err := r.LatestStableVersion(id, false)
+	switch {
+	case constraint == "" || strings.HasPrefix(constraint, utils.LatestVersionAlias):
+		var f func(string) bool
+		if strings.Contains(constraint, utils.NextgenVersionAlias) {
+			f = func(s string) bool {
+				return !strings.Contains(s, "nextgen") && !strings.Contains(s, "next-gen")
+			}
+		}
+		fmt.Printf("%s,%s, %p\n\n", id, constraint, f)
+		v, _, err := r.LatestStableVersion(id, false, f)
 		if err != nil {
 			return "", err
 		}
 		ver = v.String()
-	case utils.NightlyVersionAlias:
+	case strings.HasPrefix(constraint, utils.NightlyVersionAlias):
 		v, _, err := r.LatestNightlyVersion(id)
 		if err != nil {
 			return "", err
 		}
 		ver = v.String()
-	case utils.NextgenVersionAlias:
-		com, err := r.GetComponentManifest(id, false)
-		if err != nil {
-			return "", err
-		}
-
-		versions := com.VersionList(r.PlatformString())
-		for v := range versions {
-			if strings.Contains(v, "nextgen") || strings.Contains(v, "next-gen") {
-				ver = v
-				break
-			}
-		}
-
-		if ver == "" {
-			return "", errors.Annotatef(ErrUnknownVersion, "version %s on %s for component %s not found", constraint, platform, id)
-		}
 	default:
 		ver, err = findVersionFromManifest(id, constraint, platform, manifest)
 		if err != nil {
@@ -913,7 +903,7 @@ func (r *V1Repository) LatestNightlyVersion(id string) (utils.Version, *v1manife
 }
 
 // LatestStableVersion returns the latest stable version of specific component
-func (r *V1Repository) LatestStableVersion(id string, withYanked bool) (utils.Version, *v1manifest.VersionItem, error) {
+func (r *V1Repository) LatestStableVersion(id string, withYanked bool, filter func(string) bool) (utils.Version, *v1manifest.VersionItem, error) {
 	com, err := r.GetComponentManifest(id, withYanked)
 	if err != nil {
 		return "", nil, err
@@ -933,6 +923,9 @@ func (r *V1Repository) LatestStableVersion(id string, withYanked bool) (utils.Ve
 	var lastStable string
 	for v := range versions {
 		if utils.Version(v).IsNightly() {
+			continue
+		}
+		if filter != nil && filter(v) {
 			continue
 		}
 

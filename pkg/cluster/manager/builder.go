@@ -217,7 +217,7 @@ func buildScaleOutTask(
 			case spec.ComponentTiSpark:
 				env := environment.GlobalEnv()
 				var sparkVer utils.Version
-				if sparkVer, _, iterErr = env.V1Repository().LatestStableVersion(spec.ComponentSpark, false); iterErr != nil {
+				if sparkVer, _, iterErr = env.V1Repository().LatestStableVersion(spec.ComponentSpark, false, nil); iterErr != nil {
 					return
 				}
 				tb = tb.DeploySpark(inst, sparkVer.String(), srcPath, deployDir)

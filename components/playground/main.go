@@ -33,7 +33,6 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/playground/instance"
 	"github.com/pingcap/tiup/pkg/cluster/api"
-	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
@@ -150,7 +149,7 @@ Examples:
 			if len(args) > 0 {
 				options.Version = args[0]
 			} else if options.ShOpt.Mode == instance.ModeNextGen {
-				options.Version = utils.NextgenVersionAlias
+				options.Version = fmt.Sprintf("%s-%s", utils.LatestVersionAlias, utils.NextgenVersionAlias)
 			}
 
 			if err := populateDefaultOpt(cmd.Flags()); err != nil {
@@ -212,27 +211,14 @@ Examples:
 
 			// expand version string
 			if !semver.IsValid(options.Version) {
-				version, err := env.V1Repository().ResolveComponentVersion(spec.ComponentTiDB, options.Version)
-				if err != nil {
-					return errors.Annotate(err, fmt.Sprintf("Cannot resolve version %s to a valid semver string", options.Version))
-				}
-				// for nightly, may not use the same version for cluster
-				if options.Version == "nightly" {
-					version = "nightly"
-				}
-
-				if options.Version != version.String() {
-					colorstr.Fprintf(os.Stderr, `
-Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. If you'd like to use other versions:
+				colorstr.Fprintf(os.Stdout, `
+Note: Version constraint is [green][bold]%s[reset]. If you'd like to use other versions:
 
     Use exact version:      [tiup_command]tiup playground v7.1.0[reset]
     Use version range:      [tiup_command]tiup playground ^5[reset]
     Use nightly:            [tiup_command]tiup playground nightly[reset]
 
-`, options.Version, version.String())
-				}
-
-				options.Version = version.String()
+`, options.Version)
 			}
 
 			bootErr := p.bootCluster(ctx, env, options)
