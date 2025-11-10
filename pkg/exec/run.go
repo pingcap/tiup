@@ -199,7 +199,7 @@ func cmdCheckUpdate(component string, version utils.Version) {
 	}()
 
 	go func() {
-		latestV, _, err := environment.GlobalEnv().V1Repository().LatestStableVersion(component, false)
+		latestV, _, err := environment.GlobalEnv().V1Repository().LatestStableVersion(component, false, nil)
 		if err != nil {
 			result <- ""
 			return

@@ -300,7 +300,7 @@ func (m *Manager) Deploy(
 				if sparkVer, _, iterErr = env.V1Repository().WithOptions(repository.Options{
 					GOOS:   inst.OS(),
 					GOARCH: inst.Arch(),
-				}).LatestStableVersion(spec.ComponentSpark, false); iterErr != nil {
+				}).LatestStableVersion(spec.ComponentSpark, false, nil); iterErr != nil {
 					return
 				}
 				t = t.DeploySpark(inst, sparkVer.String(), "" /* default srcPath */, deployDir)

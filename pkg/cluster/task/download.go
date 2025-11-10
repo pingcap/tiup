@@ -49,7 +49,7 @@ func (d *Downloader) Execute(_ context.Context) error {
 		ver, _, err := env.V1Repository().WithOptions(repository.Options{
 			GOOS:   d.os,
 			GOARCH: d.arch,
-		}).LatestStableVersion(d.component, false)
+		}).LatestStableVersion(d.component, false, nil)
 		if err != nil {
 			return err
 		}

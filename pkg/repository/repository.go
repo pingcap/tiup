@@ -37,7 +37,7 @@ type Repository interface {
 	FetchRootManifest() (root *v1manifest.Root, err error)
 	PurgeTimestamp()
 	UpdateComponentManifests() error
-	LatestStableVersion(id string, withYanked bool) (utils.Version, *v1manifest.VersionItem, error)
+	LatestStableVersion(id string, withYanked bool, filter func(string) bool) (utils.Version, *v1manifest.VersionItem, error)
 	LatestNightlyVersion(id string) (utils.Version, *v1manifest.VersionItem, error)
 	ComponentVersion(id, ver string, includeYanked bool) (*v1manifest.VersionItem, error)
 }

@@ -199,7 +199,7 @@ This operation will upgrade %s %s cluster %s (with a concurrency of %d) to %s:%s
 					sparkVer, _, err := env.V1Repository().WithOptions(repository.Options{
 						GOOS:   inst.OS(),
 						GOARCH: inst.Arch(),
-					}).LatestStableVersion(spec.ComponentSpark, false)
+					}).LatestStableVersion(spec.ComponentSpark, false, nil)
 					if err != nil {
 						return err
 					}
