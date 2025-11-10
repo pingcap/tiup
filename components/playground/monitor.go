@@ -138,7 +138,7 @@ scrape_configs:
 	}
 
 	var binPath string
-	if binPath, err = tiupexec.PrepareBinary("prometheus", utils.Version(sversion), binPath); err != nil {
+	if binPath, err = tiupexec.PrepareBinary("prometheus", sversion, binPath); err != nil {
 		return nil, err
 	}
 	cmd := instance.PrepareCommand(ctx, binPath, args, nil, dir)
