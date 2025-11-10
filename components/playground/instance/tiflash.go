@@ -56,7 +56,7 @@ func NewTiFlashInstance(role TiFlashRole, shOpt SharedOptions, binPath, dir, hos
 	if role != TiFlashRoleNormal && role != TiFlashRoleDisaggWrite && role != TiFlashRoleDisaggCompute {
 		panic(fmt.Sprintf("Unknown TiFlash role %s", role))
 	}
-	if (role == TiFlashRoleDisaggCompute || role == TiFlashRoleDisaggWrite) && shOpt.Mode != ModeCSE && shOpt.Mode != ModeDisAgg {
+	if (role == TiFlashRoleDisaggCompute || role == TiFlashRoleDisaggWrite) && shOpt.Mode != ModeCSE && shOpt.Mode != ModeDisAgg && shOpt.Mode != ModeNextGen {
 		panic(fmt.Sprintf("Unsupported disagg role in mode %s", shOpt.Mode))
 	}
 
