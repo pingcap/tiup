@@ -19,19 +19,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/stretchr/testify/require"
 )
 
 func TestResetMirror(t *testing.T) {
-	uuid := uuid.New().String()
-	root := path.Join("/tmp", uuid)
-	_ = os.Mkdir(root, 0o755)
-	_ = os.Mkdir(path.Join(root, "bin"), 0o755)
-	t.Cleanup(func() {
-		os.RemoveAll(root)
-	})
+	root := t.TempDir()
+	require.NoError(t, os.Mkdir(path.Join(root, "bin"), 0o755))
 
 	cfg, _ := InitConfig(root)
 	profile := NewProfile(root, cfg)
@@ -48,15 +42,14 @@ func TestResetMirror(t *testing.T) {
 }
 
 func TestWriteMetaFile_abs(t *testing.T) {
-	tmpdir, err := os.MkdirTemp("/tmp", "tiup_test_metafile")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	tmpdir := t.TempDir()
+
 	instance := filepath.Join(tmpdir, "testinstance")
 	cfg, _ := InitConfig(tmpdir)
 	profile := NewProfile(tmpdir, cfg)
 
 	p := Process{}
-	err = profile.WriteMetaFile(instance, &p)
+	err := profile.WriteMetaFile(instance, &p)
 	require.NoError(t, err)
 
 	_, err = os.Stat(instance)
@@ -64,15 +57,14 @@ func TestWriteMetaFile_abs(t *testing.T) {
 }
 
 func TestWriteMetaFile_rel(t *testing.T) {
-	tmpdir, err := os.MkdirTemp("/tmp", "tiup_test_metafile")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	tmpdir := t.TempDir()
+
 	instance := "testinstance"
 	cfg, _ := InitConfig(tmpdir)
 	profile := NewProfile(tmpdir, cfg)
 
 	p := Process{}
-	err = profile.WriteMetaFile(instance, &p)
+	err := profile.WriteMetaFile(instance, &p)
 	require.NoError(t, err)
 
 	_, err = os.Stat(profile.Path(instance))
@@ -80,15 +72,14 @@ func TestWriteMetaFile_rel(t *testing.T) {
 }
 
 func TestWriteMetaFile_readback(t *testing.T) {
-	tmpdir, err := os.MkdirTemp("/tmp", "tiup_test_metafile")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	tmpdir := t.TempDir()
+
 	instance := filepath.Join(tmpdir, DataParentDir, "testinstance")
 	cfg, _ := InitConfig(tmpdir)
 	profile := NewProfile(tmpdir, cfg)
 
 	p := Process{}
-	err = profile.WriteMetaFile(instance, &p)
+	err := profile.WriteMetaFile(instance, &p)
 	require.NoError(t, err)
 
 	p2, err := profile.ReadMetaFile(filepath.Base(instance))
