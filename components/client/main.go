@@ -134,6 +134,9 @@ func isInstanceAlive(tiupHome, instance string) bool {
 	if err != nil {
 		return false
 	}
+	if s == nil {
+		return false
+	}
 	exist, _ := gops.PidExists(int32(s.Pid))
 	return exist
 }
