@@ -837,7 +837,7 @@ func (p *Playground) addInstance(componentID string, role string, cfg instance.C
 		ins = inst
 		p.schedulings = append(p.schedulings, inst)
 	case spec.ComponentTiDB:
-		inst := instance.NewTiDBInstance(p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, dataDir, p.enableBinlog(), role)
+		inst := instance.NewTiDBInstance(p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, p.tikvWorkers, dataDir, p.enableBinlog(), role)
 		ins = inst
 		p.tidbs = append(p.tidbs, inst)
 	case spec.ComponentTiKV:
