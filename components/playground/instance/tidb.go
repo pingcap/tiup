@@ -38,6 +38,7 @@ type TiDBInstance struct {
 	instance
 	shOpt          SharedOptions
 	pds            []*PDInstance
+	kvwrks         []*TiKVWorkerInstance
 	tiproxyCertDir string
 	enableBinlog   bool
 }
@@ -45,7 +46,7 @@ type TiDBInstance struct {
 var _ Instance = &TiDBInstance{}
 
 // NewTiDBInstance return a TiDBInstance
-func NewTiDBInstance(shOpt SharedOptions, binPath string, dir, host, configPath string, id, port int, pds []*PDInstance, tiproxyCertDir string, enableBinlog bool, role string) *TiDBInstance {
+func NewTiDBInstance(shOpt SharedOptions, binPath string, dir, host, configPath string, id, port int, pds []*PDInstance, kvwrks []*TiKVWorkerInstance, tiproxyCertDir string, enableBinlog bool, role string) *TiDBInstance {
 	if port <= 0 {
 		if role == TiDBRoleSystem {
 			port = 3000
@@ -67,6 +68,7 @@ func NewTiDBInstance(shOpt SharedOptions, binPath string, dir, host, configPath 
 		},
 		tiproxyCertDir: tiproxyCertDir,
 		pds:            pds,
+		kvwrks:         kvwrks,
 		enableBinlog:   enableBinlog,
 	}
 }
@@ -77,7 +79,7 @@ func (inst *TiDBInstance) Start(ctx context.Context) error {
 	if err := prepareConfig(
 		configPath,
 		inst.ConfigPath,
-		inst.getConfig(),
+		inst.getConfig(inst.kvwrks),
 	); err != nil {
 		return err
 	}

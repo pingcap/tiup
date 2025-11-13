@@ -14,11 +14,14 @@
 package instance
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
-func (inst *TiDBInstance) getConfig() map[string]any {
+func (inst *TiDBInstance) getConfig(kvwrks []*TiKVWorkerInstance) map[string]any {
 	config := make(map[string]any)
 	config["security.auto-tls"] = true
 
@@ -62,6 +65,8 @@ func (inst *TiDBInstance) getConfig() map[string]any {
 		config["use-autoscaler"] = false
 		config["disaggregated-tiflash"] = false
 		if inst.Role() == TiDBRoleSystem {
+			config["instance.tidb_service_scope"] = "dxf_service"
+			config["tikv-worker-url"] = fmt.Sprintf("http://%s", utils.JoinHostPort(AdvertiseHost(kvwrks[0].Host), kvwrks[0].Port))
 			config["keyspace-name"] = "SYSTEM"
 		} else {
 			config["keyspace-name"] = "keyspace1"

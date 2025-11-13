@@ -508,19 +508,15 @@ func (p *Playground) sanitizeComponentConfig(cid string, cfg *instance.Config) e
 }
 
 func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) error {
-	var version utils.Version
-	var err error
-	boundVersion := p.bindVersion(inst.Component(), p.bootOptions.Version)
 	component := inst.Component()
-	if version, err = environment.GlobalEnv().V1Repository().ResolveComponentVersion(component, boundVersion); err != nil {
+
+	boundVersion := p.bindVersion(inst.Component(), p.bootOptions.Version)
+
+	if err := inst.PrepareBinary(component, inst.Role(), boundVersion); err != nil {
 		return err
 	}
 
-	if err := inst.PrepareBinary(component, inst.Role(), version); err != nil {
-		return err
-	}
-
-	if err = inst.Start(ctx); err != nil {
+	if err := inst.Start(ctx); err != nil {
 		return err
 	}
 
@@ -841,7 +837,7 @@ func (p *Playground) addInstance(componentID string, role string, cfg instance.C
 		ins = inst
 		p.schedulings = append(p.schedulings, inst)
 	case spec.ComponentTiDB:
-		inst := instance.NewTiDBInstance(p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, dataDir, p.enableBinlog(), role)
+		inst := instance.NewTiDBInstance(p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, p.tikvWorkers, dataDir, p.enableBinlog(), role)
 		ins = inst
 		p.tidbs = append(p.tidbs, inst)
 	case spec.ComponentTiKV:
