@@ -62,6 +62,7 @@ func (inst *TiDBInstance) getConfig() map[string]any {
 		config["use-autoscaler"] = false
 		config["disaggregated-tiflash"] = false
 		if inst.Role() == TiDBRoleSystem {
+			config["instance.tidb_service_scope"] = "dxf_service"
 			config["keyspace-name"] = "SYSTEM"
 		} else {
 			config["keyspace-name"] = "keyspace1"

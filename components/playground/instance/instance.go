@@ -23,6 +23,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/environment"
 	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/tui/colorstr"
 	"github.com/pingcap/tiup/pkg/utils"
@@ -117,7 +118,7 @@ type Instance interface {
 	// Proc return the underlying process.
 	Process() Process
 	// PrepareBinary use given binpath or download from tiup mirrors.
-	PrepareBinary(binaryName string, componentName string, version utils.Version) error
+	PrepareBinary(binaryName string, componentName string, version string) error
 	// PrepareProcess construct the process used later.
 	PrepareProcess(ctx context.Context, binPath string, args, envs []string, workDir string) error
 }
@@ -154,7 +155,14 @@ func (inst *instance) MetricAddr() (r MetricAddr) {
 	return
 }
 
-func (inst *instance) PrepareBinary(binaryName string, componentName string, version utils.Version) error {
+func (inst *instance) PrepareBinary(binaryName string, componentName string, boundVersion string) error {
+	var version utils.Version
+	var err error
+	if inst.BinPath == "" {
+		if version, err = environment.GlobalEnv().V1Repository().ResolveComponentVersion(binaryName, boundVersion); err != nil {
+			return err
+		}
+	}
 	instanceBinPath, err := tiupexec.PrepareBinary(binaryName, version, inst.BinPath)
 	if err != nil {
 		return err
