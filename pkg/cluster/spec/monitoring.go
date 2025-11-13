@@ -41,7 +41,7 @@ type PrometheusSpec struct {
 	Host                  string                 `yaml:"host"`
 	ManageHost            string                 `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
 	SSHPort               int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported              bool                   `yaml:"imported,omitempty"`
+	Imported              bool                   `yaml:"-"`
 	Patched               bool                   `yaml:"patched,omitempty"`
 	IgnoreExporter        bool                   `yaml:"ignore_exporter,omitempty"`
 	Port                  int                    `yaml:"port" default:"9090"`
@@ -104,11 +104,6 @@ func (s *PrometheusSpec) GetManageHost() string {
 		return s.ManageHost
 	}
 	return s.Host
-}
-
-// IsImported returns if the node is imported from TiDB-Ansible
-func (s *PrometheusSpec) IsImported() bool {
-	return s.Imported
 }
 
 // IgnoreMonitorAgent returns if the node does not have monitor agents available

@@ -17,7 +17,6 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -36,7 +35,7 @@ type TiDBSpec struct {
 	ListenHost      string               `yaml:"listen_host,omitempty"`
 	AdvertiseAddr   string               `yaml:"advertise_address,omitempty"`
 	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported        bool                 `yaml:"imported,omitempty"`
+	Imported        bool                 `yaml:"-"`
 	Patched         bool                 `yaml:"patched,omitempty"`
 	IgnoreExporter  bool                 `yaml:"ignore_exporter,omitempty"`
 	Port            int                  `yaml:"port" default:"4000"`
@@ -77,11 +76,6 @@ func (s *TiDBSpec) GetManageHost() string {
 		return s.ManageHost
 	}
 	return s.Host
-}
-
-// IsImported returns if the node is imported from TiDB-Ansible
-func (s *TiDBSpec) IsImported() bool {
-	return s.Imported
 }
 
 // IgnoreMonitorAgent returns if the node does not have monitor agents available
@@ -218,27 +212,6 @@ func (i *TiDBInstance) InitConfig(
 	}
 
 	globalConfig := topo.ServerConfigs.TiDB
-	// merge config files for imported instance
-	if i.IsImported() {
-		configPath := ClusterPath(
-			clusterName,
-			AnsibleImportedConfigPath,
-			fmt.Sprintf(
-				"%s-%s-%d.toml",
-				i.ComponentName(),
-				i.GetHost(),
-				i.GetPort(),
-			),
-		)
-		importConfig, err := os.ReadFile(configPath)
-		if err != nil {
-			return err
-		}
-		globalConfig, err = mergeImported(importConfig, globalConfig)
-		if err != nil {
-			return err
-		}
-	}
 
 	spec.Config, err = i.setTiProxyConfig(ctx, topo, version, spec.Config, paths)
 	if err != nil {

@@ -26,7 +26,6 @@ Available Commands:
   display       Get cluster information
   list          Get cluster list
   audit         View cluster operation log
-  import        Import a cluster deployed by TiDB-Ansible
   edit-config   Editing the configuration of TiDB clusters
   reload        for overriding cluster configurations when necessary
   patch         replaces deployed components on its cluster with temporary component packages
@@ -327,41 +326,4 @@ Or just replace one of the TiDBs:
 
 ```
 tiup cluster patch test-cluster /tmp/tidb-hotfix.tar.gz -N 172.16.4.5:4000
-```
-
-## Importing TiDB-Ansible clusters
-
-Before TiUP, clusters were generally deployed using TiDB-Ansible, and the import command was used to transition this part of the cluster to TiUP receivership.
-Use of the import command.
-
-```bash
-[user@localhost ~]# tiup cluster import --help
-Import an existing TiDB cluster from TiDB-Ansible
-
-Usage:
-  tiup cluster import [flags]
-
-Flags:
-  -d, --dir string          TiDB-Ansible's directory, default is current directory
-  -h, -help import          help information
-      --inventory string    inventory file name (default is "event.ini")
-      --no-backup           does not backup Ansible directories, for Ansible directories with multiple inventory files
-  -r, --rename NAME         Rename the imported cluster
-
-Global Flags:
-      --ssh-timeout int     SSH connection timeout
-  -y, --yes                 Skip all confirmation steps
-```
-
-Example: Importing a cluster:
-
-```bash
-cd tidb-ansible
-tiup cluster import
-```
-
-perhaps
-
-```bash
-tiup cluster import --dir=/path/to/tidb-ansible
 ```

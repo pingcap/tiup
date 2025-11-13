@@ -99,10 +99,6 @@ func (m *Manager) ScaleOut(
 		if newPartTopo, ok := newPart.(*spec.Specification); ok {
 			newPartTopo.AdjustByVersion(base.Version)
 		}
-
-		if err := validateNewTopo(newPart); err != nil {
-			return err
-		}
 	}
 
 	var (
@@ -228,21 +224,6 @@ You need to execute '%s' to start the new instance.`, color.YellowString("tiup c
 	m.logger.Infof("Scaled cluster `%s` out successfully", color.YellowString(name))
 
 	return nil
-}
-
-// validateNewTopo checks the new part of scale-out topology to make sure it's supported
-func validateNewTopo(topo spec.Topology) (err error) {
-	topo.IterInstance(func(instance spec.Instance) {
-		// check for "imported" parameter, it can not be true when scaling out
-		if instance.IsImported() {
-			err = errors.New(
-				"'imported' is set to 'true' for new instance, this is only used " +
-					"for instances imported from tidb-ansible and make no sense when " +
-					"scaling out, please delete the line or set it to 'false' for new instances")
-			return
-		}
-	})
-	return err
 }
 
 // checkForGlobalConfigs checks the input scale out topology to make sure users are aware

@@ -112,11 +112,6 @@ func (s *TSOSpec) GetManageHost() string {
 	return s.Host
 }
 
-// IsImported returns if the node is imported from TiDB-Ansible
-func (s *TSOSpec) IsImported() bool {
-	return false
-}
-
 // IgnoreMonitorAgent returns if the node does not have monitor agents available
 func (s *TSOSpec) IgnoreMonitorAgent() bool {
 	return s.IgnoreExporter

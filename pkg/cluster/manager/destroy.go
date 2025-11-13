@@ -196,7 +196,7 @@ func (m *Manager) DestroyTombstone(
 		return err
 	}
 
-	regenConfigTasks, _ := buildInitConfigTasks(m, name, topo, base, gOpt, nodes)
+	regenConfigTasks := buildInitConfigTasks(m, name, topo, base, gOpt, nodes)
 	t = b.
 		ParallelStep("+ Refresh instance configs", gOpt.Force, regenConfigTasks...).
 		ParallelStep("+ Reload prometheus and grafana", gOpt.Force,

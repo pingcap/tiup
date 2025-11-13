@@ -40,7 +40,7 @@ type TiSparkMasterSpec struct {
 	ManageHost     string            `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
 	ListenHost     string            `yaml:"listen_host,omitempty"`
 	SSHPort        int               `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported       bool              `yaml:"imported,omitempty"`
+	Imported       bool              `yaml:"-"`
 	Patched        bool              `yaml:"patched,omitempty"`
 	IgnoreExporter bool              `yaml:"ignore_exporter,omitempty"`
 	Port           int               `yaml:"port" default:"7077"`
@@ -72,11 +72,6 @@ func (s *TiSparkMasterSpec) GetMainPort() int {
 	return s.Port
 }
 
-// IsImported returns if the node is imported from TiDB-Ansible
-func (s *TiSparkMasterSpec) IsImported() bool {
-	return s.Imported
-}
-
 // IgnoreMonitorAgent returns if the node does not have monitor agents available
 func (s *TiSparkMasterSpec) IgnoreMonitorAgent() bool {
 	return s.IgnoreExporter
@@ -88,7 +83,7 @@ type TiSparkWorkerSpec struct {
 	ManageHost     string `yaml:"manage_host,omitempty"`
 	ListenHost     string `yaml:"listen_host,omitempty"`
 	SSHPort        int    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported       bool   `yaml:"imported,omitempty"`
+	Imported       bool   `yaml:"-"`
 	Patched        bool   `yaml:"patched,omitempty"`
 	IgnoreExporter bool   `yaml:"ignore_exporter,omitempty"`
 	Port           int    `yaml:"port" default:"7078"`
@@ -116,11 +111,6 @@ func (s *TiSparkWorkerSpec) SSH() (string, int) {
 // GetMainPort returns the main port of the instance
 func (s *TiSparkWorkerSpec) GetMainPort() int {
 	return s.Port
-}
-
-// IsImported returns if the node is imported from TiDB-Ansible
-func (s *TiSparkWorkerSpec) IsImported() bool {
-	return s.Imported
 }
 
 // IgnoreMonitorAgent returns if the node does not have monitor agents available
