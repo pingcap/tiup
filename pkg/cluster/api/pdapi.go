@@ -1050,6 +1050,7 @@ func (pc *PDClient) SetLeaderPriority(name string, value int32) error {
 const (
 	tsoStatusURI        = "status"
 	schedulingStatusURI = "status"
+	routerStatusURI     = "status"
 )
 
 // TSOClient is an HTTP client of the TSO server
@@ -1198,10 +1199,6 @@ func NewSchedulingClient(
 	return cli
 }
 
-// func (tc *SchedulingClient) l() *logprinter.Logger {
-// 	return tc.ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
-// }
-
 func (tc *SchedulingClient) tryIdentifyVersion() {
 	endpoints := tc.getEndpoints(schedulingStatusURI)
 	response := map[string]string{}
@@ -1239,6 +1236,97 @@ func (tc *SchedulingClient) getEndpoints(uri string) (endpoints []string) {
 // CheckHealth checks the health of scheduling node.
 func (tc *SchedulingClient) CheckHealth() error {
 	endpoints := tc.getEndpoints(schedulingStatusURI)
+
+	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
+		body, err := tc.httpClient.Get(tc.ctx, endpoint)
+		if err != nil {
+			return body, err
+		}
+
+		return body, nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// RouterClient is an HTTP client of the router server
+type RouterClient struct {
+	version    string
+	addrs      []string
+	tlsEnabled bool
+	httpClient *utils.HTTPClient
+	ctx        context.Context
+}
+
+// RouterClient returns a new RouterClient, the context must have
+// a *logprinter.Logger as value of "logger"
+func NewRouterClient(
+	ctx context.Context,
+	addrs []string,
+	timeout time.Duration,
+	tlsConfig *tls.Config,
+) *RouterClient {
+	enableTLS := false
+	if tlsConfig != nil {
+		enableTLS = true
+	}
+
+	if _, ok := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger); !ok {
+		panic("the context must have logger inside")
+	}
+
+	cli := &RouterClient{
+		addrs:      addrs,
+		tlsEnabled: enableTLS,
+		httpClient: utils.NewHTTPClient(timeout, tlsConfig),
+		ctx:        ctx,
+	}
+
+	cli.tryIdentifyVersion()
+	return cli
+}
+
+func (tc *RouterClient) tryIdentifyVersion() {
+	endpoints := tc.getEndpoints(routerStatusURI)
+	response := map[string]string{}
+	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
+		body, err := tc.httpClient.Get(tc.ctx, endpoint)
+		if err != nil {
+			return body, err
+		}
+
+		return body, json.Unmarshal(body, &response)
+	})
+	if err == nil {
+		tc.version = response["version"]
+	}
+}
+
+// GetURL builds the client URL of PDClient
+func (tc *RouterClient) GetURL(addr string) string {
+	httpPrefix := "http"
+	if tc.tlsEnabled {
+		httpPrefix = "https"
+	}
+	return fmt.Sprintf("%s://%s", httpPrefix, addr)
+}
+
+func (tc *RouterClient) getEndpoints(uri string) (endpoints []string) {
+	for _, addr := range tc.addrs {
+		endpoint := fmt.Sprintf("%s/%s", tc.GetURL(addr), uri)
+		endpoints = append(endpoints, endpoint)
+	}
+
+	return
+}
+
+// CheckHealth checks the health of router node.
+func (tc *RouterClient) CheckHealth() error {
+	endpoints := tc.getEndpoints(routerStatusURI)
 
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		body, err := tc.httpClient.Get(tc.ctx, endpoint)
