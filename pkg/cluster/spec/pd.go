@@ -230,6 +230,7 @@ func (i *PDInstance) InitConfig(
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
+	opt InstanceOpt,
 ) error {
 	topo := i.topo.(*Specification)
 	if err := i.BaseInstance.InitConfig(ctx, e, topo.GlobalOptions, deployUser, paths); err != nil {
@@ -355,9 +356,10 @@ func (i *PDInstance) ScaleConfig(
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
+	opt InstanceOpt,
 ) error {
 	// We need pd.toml here, but we don't need to check it
-	if err := i.InitConfig(ctx, e, clusterName, clusterVersion, deployUser, paths); err != nil &&
+	if err := i.InitConfig(ctx, e, clusterName, clusterVersion, deployUser, paths, opt); err != nil &&
 		errors.Cause(err) != ErrorCheckConfig {
 		return err
 	}
