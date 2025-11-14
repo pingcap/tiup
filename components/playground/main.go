@@ -393,6 +393,14 @@ func populateDefaultOpt(flagSet *pflag.FlagSet) error {
 		defaultInt(&options.TiDBSystem.Num, "db.system", 1)
 		defaultInt(&options.TiKV.Num, "kv", 1)
 		defaultStr(&options.TiDBSystem.BinPath, "db.system.binpath", options.TiDB.BinPath)
+		defaultInt(&options.TiFlashWrite.Num, "tiflash.write", options.TiFlash.Num)
+		defaultStr(&options.TiFlashWrite.BinPath, "tiflash.write.binpath", options.TiFlash.BinPath)
+		defaultStr(&options.TiFlashWrite.ConfigPath, "tiflash.write.config", options.TiFlash.ConfigPath)
+		options.TiFlashWrite.UpTimeout = options.TiFlash.UpTimeout
+		defaultInt(&options.TiFlashCompute.Num, "tiflash.compute", options.TiFlash.Num)
+		defaultStr(&options.TiFlashCompute.BinPath, "tiflash.compute.binpath", options.TiFlash.BinPath)
+		defaultStr(&options.TiFlashCompute.ConfigPath, "tiflash.compute.config", options.TiFlash.ConfigPath)
+		options.TiFlashCompute.UpTimeout = options.TiFlash.UpTimeout
 	case instance.ModeTiKVSlim:
 		defaultInt(&options.TiKV.Num, "kv", 1)
 	case instance.ModeCSE, instance.ModeDisAgg:

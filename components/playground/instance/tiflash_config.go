@@ -23,7 +23,7 @@ func (inst *TiFlashInstance) getProxyConfig() map[string]any {
 	config["storage.reserve-raft-space"] = 0
 
 	if inst.Role() == TiFlashRoleDisaggWrite {
-		if inst.shOpt.Mode == ModeCSE {
+		if inst.shOpt.Mode == ModeCSE || inst.shOpt.Mode == ModeNextGen {
 			config["storage.api-version"] = 2
 			config["storage.enable-ttl"] = true
 			config["dfs.prefix"] = "tikv"
@@ -32,6 +32,16 @@ func (inst *TiFlashInstance) getProxyConfig() map[string]any {
 			config["dfs.s3-secret-key"] = inst.shOpt.CSE.SecretKey
 			config["dfs.s3-bucket"] = inst.shOpt.CSE.Bucket
 			config["dfs.s3-region"] = "local"
+		}
+		if inst.shOpt.Mode == ModeNextGen {
+			config["storage.api_version"] = 2
+			config["storage.enable-ttl"] = true
+		}
+	}
+	if inst.Role() == TiFlashRoleDisaggCompute {
+		if inst.shOpt.Mode == ModeNextGen {
+			config["storage.api_version"] = 2
+			config["storage.enable-ttl"] = true
 		}
 	}
 	// If TiKVColumnar is enabled, TiFlash Proxy need to know how to access S3 as well.
@@ -65,6 +75,9 @@ func (inst *TiFlashInstance) getConfig() map[string]any {
 			config["enable_safe_point_v2"] = true
 			config["storage.api_version"] = 2
 		}
+		if inst.shOpt.Mode == ModeNextGen {
+			config["storage.api_version"] = 2
+		}
 	} else if inst.Role() == TiFlashRoleDisaggCompute {
 		config["storage.s3.endpoint"] = inst.shOpt.CSE.S3Endpoint
 		config["storage.s3.bucket"] = inst.shOpt.CSE.Bucket
@@ -80,6 +93,9 @@ func (inst *TiFlashInstance) getConfig() map[string]any {
 			if inst.shOpt.EnableTiKVColumnar {
 				config["flash.use_columnar"] = true
 			}
+		}
+		if inst.shOpt.Mode == ModeNextGen {
+			config["storage.api_version"] = 2
 		}
 	}
 

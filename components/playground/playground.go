@@ -1210,8 +1210,8 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		instances = append(instances,
 			InstancePair{spec.ComponentTiFlash, instance.TiFlashRoleNormal, options.TiFlash},
 		)
-	} else if options.ShOpt.Mode == instance.ModeCSE || options.ShOpt.Mode == instance.ModeDisAgg {
-		if !tidbver.TiFlashPlaygroundNewStartMode(options.Version) {
+	} else if options.ShOpt.Mode == instance.ModeCSE || options.ShOpt.Mode == instance.ModeNextGen || options.ShOpt.Mode == instance.ModeDisAgg {
+		if utils.Version(options.Version).IsValid() && !tidbver.TiFlashPlaygroundNewStartMode(options.Version) {
 			// For simplicity, currently we only implemented disagg mode when TiFlash can run without config.
 			return fmt.Errorf("TiUP playground only supports CSE/Disagg mode for TiDB cluster >= v7.1.0 (or nightly)")
 		}
@@ -1274,6 +1274,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 	var monitorInfo *MonitorInfo
 	if options.Monitor {
 		// TODO: remove this hack
+		oldVersion := options.Version
 		options.Version = strings.TrimSuffix(options.Version, "-"+utils.NextgenVersionAlias)
 
 		var err error
@@ -1292,6 +1293,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		if err != nil {
 			return err
 		}
+		options.Version = oldVersion
 	}
 
 	colorCmd := color.New(color.FgHiCyan, color.Bold)
