@@ -37,6 +37,7 @@ type TiCIInstance struct {
 	instance
 	Process
 
+	shOpt SharedOptions
 	// TiCI specific fields
 	pds  []*PDInstance
 	dbs  []*TiDBInstance
@@ -82,9 +83,10 @@ func NewTiCIInstanceWithRole(shOpt SharedOptions, binPath string, dir, host, con
 			StatusPort: utils.MustGetFreePort(host, defaultStatusPort, shOpt.PortOffset),
 			ConfigPath: configPath,
 		},
-		pds:  pds,
-		dbs:  dbs,
-		role: role,
+		shOpt: shOpt,
+		pds:   pds,
+		dbs:   dbs,
+		role:  role,
 	}
 
 	return tici

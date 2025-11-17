@@ -79,11 +79,6 @@ func (v Version) IsNightly() bool {
 	return strings.Contains(string(v), NightlyVersionAlias)
 }
 
-// IsFTS returns true if the version is a TiDB FTS feature branch
-func (v Version) IsFTS() bool {
-	return strings.Contains(string(v), FTSVersionAlias)
-}
-
 // String implements the fmt.Stringer interface
 func (v Version) String() string {
 	return string(v)
