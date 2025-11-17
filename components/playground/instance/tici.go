@@ -37,6 +37,7 @@ type TiCIInstance struct {
 	instance
 	Process
 
+	shOpt SharedOptions
 	// TiCI specific fields
 	pds  []*PDInstance
 	dbs  []*TiDBInstance

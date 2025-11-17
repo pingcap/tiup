@@ -20,62 +20,10 @@ func (inst *TiCIInstance) getMetaConfig() map[string]any {
 		tidbServers = append(tidbServers, db.DSN())
 	}
 	config["tidb_server.dsns"] = tidbServers
-	defaultS3Config := getDefaultTiCIMetaS3Config()
-	config["s3.endpoint"] = defaultS3Config.Endpoint
-	config["s3.access_key"] = defaultS3Config.AccessKey
-	config["s3.secret_key"] = defaultS3Config.SecretKey
-	config["s3.bucket"] = defaultS3Config.Bucket
-	config["s3.prefix"] = defaultS3Config.Prefix
+	config["s3.endpoint"] = inst.shOpt.S3.Endpoint
+	config["s3.access_key"] = inst.shOpt.S3.AccessKey
+	config["s3.secret_key"] = inst.shOpt.S3.SecretKey
+	config["s3.bucket"] = inst.shOpt.S3.Bucket
+	config["s3.prefix"] = inst.shOpt.S3.Prefix
 	return config
-}
-
-// TiCIS3Config represents the S3 configuration for TiCI
-type TiCIS3Config struct {
-	Endpoint  string
-	AccessKey string
-	SecretKey string
-	Bucket    string
-	Prefix    string
-}
-
-func getDefaultTiCIMetaS3Config() *TiCIS3Config {
-	return &TiCIS3Config{
-		Endpoint:  "http://localhost:9000",
-		AccessKey: "minioadmin",
-		SecretKey: "minioadmin",
-		Bucket:    "ticidefaultbucket",
-		Prefix:    "tici_default_prefix",
-	}
-}
-
-// GetTiCIS3ConfigFromFile reads the S3 configuration from the given config file path
-func GetTiCIS3ConfigFromFile(configPath string) (*TiCIS3Config, error) {
-	defaultConfig := getDefaultTiCIMetaS3Config()
-	if configPath == "" {
-		return defaultConfig, nil
-	}
-	// read the configuration file
-	ticiMetaConfig, err := unmarshalConfig(configPath)
-	if err != nil {
-		return nil, err
-	}
-	s3, ok := ticiMetaConfig["s3"].(map[string]any)
-	if ok {
-		if v, ok := s3["endpoint"].(string); ok {
-			defaultConfig.Endpoint = v
-		}
-		if v, ok := s3["access_key"].(string); ok {
-			defaultConfig.AccessKey = v
-		}
-		if v, ok := s3["secret_key"].(string); ok {
-			defaultConfig.SecretKey = v
-		}
-		if v, ok := s3["bucket"].(string); ok {
-			defaultConfig.Bucket = v
-		}
-		if v, ok := s3["prefix"].(string); ok {
-			defaultConfig.Prefix = v
-		}
-	}
-	return defaultConfig, nil
 }

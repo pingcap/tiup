@@ -15,12 +15,11 @@ package instance
 
 func (inst *TiCIInstance) getWorkerConfig() map[string]any {
 	config := make(map[string]any)
-	defaultS3Config := getDefaultTiCIMetaS3Config()
-	config["s3.endpoint"] = defaultS3Config.Endpoint
-	config["s3.access_key"] = defaultS3Config.AccessKey
-	config["s3.secret_key"] = defaultS3Config.SecretKey
-	config["s3.bucket"] = defaultS3Config.Bucket
-	config["s3.prefix"] = defaultS3Config.Prefix
+	config["s3.endpoint"] = inst.shOpt.S3.Endpoint
+	config["s3.access_key"] = inst.shOpt.S3.AccessKey
+	config["s3.secret_key"] = inst.shOpt.S3.SecretKey
+	config["s3.bucket"] = inst.shOpt.S3.Bucket
+	config["s3.prefix"] = inst.shOpt.S3.Prefix
 	return config
 }
 

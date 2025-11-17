@@ -43,20 +43,21 @@ type Config struct {
 // Unlike Config, these options are shared for all instances of all components.
 type SharedOptions struct {
 	/// Whether or not to tune the cluster in order to run faster (instead of easier to debug).
-	HighPerf           bool       `yaml:"high_perf"`
-	CSE                CSEOptions `yaml:"cse"` // Only available when mode == tidb-cse or tiflash-disagg
-	PDMode             string     `yaml:"pd_mode"`
-	Mode               string     `yaml:"mode"`
-	PortOffset         int        `yaml:"port_offset"`
-	EnableTiKVColumnar bool       `yaml:"enable_tikv_columnar"` // Only available when mode == tidb-cse
+	HighPerf           bool      `yaml:"high_perf"`
+	S3                 S3Options `yaml:"s3"` // Only available when mode == tidb-cse, tiflash-disagg or tidb-fts
+	PDMode             string    `yaml:"pd_mode"`
+	Mode               string    `yaml:"mode"`
+	PortOffset         int       `yaml:"port_offset"`
+	EnableTiKVColumnar bool      `yaml:"enable_tikv_columnar"` // Only available when mode == tidb-cse
 }
 
-// CSEOptions contains configs to run TiDB cluster in CSE mode.
-type CSEOptions struct {
-	S3Endpoint string `yaml:"s3_endpoint"`
-	Bucket     string `yaml:"bucket"`
-	AccessKey  string `yaml:"access_key"`
-	SecretKey  string `yaml:"secret_key"`
+// S3Options contains configs to run TiDB cluster in CSE mode.
+type S3Options struct {
+	Endpoint  string `yaml:"endpoint"`
+	Bucket    string `yaml:"bucket"`
+	AccessKey string `yaml:"access_key"`
+	SecretKey string `yaml:"secret_key"`
+	Prefix    string `yaml:"prefix"`
 }
 
 type instance struct {

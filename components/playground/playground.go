@@ -1093,7 +1093,7 @@ func (p *Playground) waitAllDMMasterUp() {
 }
 
 func (p *Playground) bindVersion(comp string, version string) (bindVersion string) {
-	if version == utils.FTSVersionAlias {
+	if p.bootOptions.ShOpt.Mode == "tidb-fts" {
 		if comp == spec.ComponentTiFlash || comp == spec.ComponentTiDB {
 			bindVersion = utils.FTSVersionAlias
 		} else {
@@ -1150,9 +1150,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		if options.TiKVWorker.Num > 0 {
 			return fmt.Errorf("TiKV worker is only supported in tidb-cse mode")
 		}
-	}
-
-	if options.ShOpt.Mode == "tidb-cse" {
+	} else {
 		if options.TiKVWorker.Num > 1 {
 			return fmt.Errorf("TiKV worker only supports at most 1 instance")
 		}
@@ -1186,8 +1184,6 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		{spec.ComponentDrainer, "", "", options.Drainer},
 		{spec.ComponentDMMaster, "", "", options.DMMaster},
 		{spec.ComponentDMWorker, "", "", options.DMWorker},
-		{spec.ComponentTiCIMeta, "", "", options.TiCIMeta},
-		{spec.ComponentTiCIWorker, "", "", options.TiCIWorker},
 	}
 
 	switch options.ShOpt.Mode {
@@ -1201,12 +1197,12 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			return fmt.Errorf("TiUP playground only supports CSE/Disagg mode for TiDB cluster >= v7.1.0 (or nightly)")
 		}
 
-		if !strings.HasPrefix(options.ShOpt.CSE.S3Endpoint, "https://") && !strings.HasPrefix(options.ShOpt.CSE.S3Endpoint, "http://") {
+		if !strings.HasPrefix(options.ShOpt.S3.Endpoint, "https://") && !strings.HasPrefix(options.ShOpt.S3.Endpoint, "http://") {
 			return fmt.Errorf("CSE/Disagg mode requires S3 endpoint to start with http:// or https://")
 		}
 
-		isSecure := strings.HasPrefix(options.ShOpt.CSE.S3Endpoint, "https://")
-		rawEndpoint := strings.TrimPrefix(options.ShOpt.CSE.S3Endpoint, "https://")
+		isSecure := strings.HasPrefix(options.ShOpt.S3.Endpoint, "https://")
+		rawEndpoint := strings.TrimPrefix(options.ShOpt.S3.Endpoint, "https://")
 		rawEndpoint = strings.TrimPrefix(rawEndpoint, "http://")
 
 		// Currently we always assign region=local. Other regions are not supported.
@@ -1216,7 +1212,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 		// Preflight check whether specified object storage is available.
 		s3Client, err := minio.New(rawEndpoint, &minio.Options{
-			Creds:  credentials.NewStaticV4(options.ShOpt.CSE.AccessKey, options.ShOpt.CSE.SecretKey, ""),
+			Creds:  credentials.NewStaticV4(options.ShOpt.S3.AccessKey, options.ShOpt.S3.SecretKey, ""),
 			Secure: isSecure,
 		})
 		if err != nil {
@@ -1226,16 +1222,16 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		ctxCheck, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
-		bucketExists, err := s3Client.BucketExists(ctxCheck, options.ShOpt.CSE.Bucket)
+		bucketExists, err := s3Client.BucketExists(ctxCheck, options.ShOpt.S3.Bucket)
 		if err != nil {
 			return errors.Annotate(err, "CSE/Disagg mode preflight check failed")
 		}
 
 		if !bucketExists {
 			// Try to create bucket.
-			err := s3Client.MakeBucket(ctxCheck, options.ShOpt.CSE.Bucket, minio.MakeBucketOptions{})
+			err := s3Client.MakeBucket(ctxCheck, options.ShOpt.S3.Bucket, minio.MakeBucketOptions{})
 			if err != nil {
-				return fmt.Errorf("CSE/Disagg mode preflight check failed: Bucket %s doesn't exist and fail to create automatically (your bucket name may be invalid?)", options.ShOpt.CSE.Bucket)
+				return fmt.Errorf("CSE/Disagg mode preflight check failed: Bucket %s doesn't exist and fail to create automatically (your bucket name may be invalid?)", options.ShOpt.S3.Bucket)
 			}
 		}
 
@@ -1250,6 +1246,13 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		instances = append(
 			instances,
 			InstancePair{comp: spec.ComponentTiKVWorker, Config: options.TiKVWorker},
+		)
+	}
+
+	if options.ShOpt.Mode == "tidb-fts" {
+		instances = append(instances,
+			InstancePair{comp: spec.ComponentTiCIMeta, Config: options.TiCIMeta},
+			InstancePair{comp: spec.ComponentTiCIWorker, Config: options.TiCIWorker},
 		)
 	}
 
@@ -1279,7 +1282,6 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		}
 	}
 
-	hasTiCI := options.TiCIMeta.Num > 0 || options.TiCIWorker.Num > 0
 	anyPumpReady := false
 	allDMMasterReady := false
 	hasChangefeedCreated := false
@@ -1295,7 +1297,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		}
 
 		// set TICDC_NEWARCH env for TiCDC when TiCI is enabled
-		if cid == spec.ComponentCDC && hasTiCI {
+		if options.ShOpt.Mode == "tidb-fts" && cid == spec.ComponentCDC {
 			// wait for TiKV up
 			time.Sleep(time.Second * 5)
 			if cdcInst, ok := ins.(*instance.TiCDC); ok {
@@ -1310,14 +1312,11 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			time.Sleep(time.Second * 15)
 
 			fmt.Println("Creating changefeed...")
-			s3Config, err := instance.GetTiCIS3ConfigFromFile(options.TiCIMeta.ConfigPath)
-			if err != nil {
-				return err
-			}
 			flushInterval, err := instance.GetCDCS3FlushIntervalFromFile(options.TiCIWorker.ConfigPath)
 			if err != nil {
 				return err
 			}
+			s3Config := options.ShOpt.S3
 			cdcClient := api.NewCDCOpenAPIClient(ctx, []string{p.ticdcs[0].Addr()}, 10*time.Second, nil)
 			if err := cdcClient.CreateChangefeed(s3Config.Bucket, s3Config.Prefix, s3Config.Endpoint, s3Config.AccessKey, s3Config.SecretKey, flushInterval); err != nil {
 				fmt.Println(color.RedString("Failed to create changefeed: %s", err))
@@ -1331,7 +1330,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		// wait for tici-meta to be ready before starting tici-worker
 		// TODO: use a better way to check whether tici-meta is ready
 		if cid == spec.ComponentTiCIWorker {
-			time.Sleep(3 * time.Second)
+			time.Sleep(2 * time.Second)
 		}
 
 		err := p.startInstance(ctx, ins)
