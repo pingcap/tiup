@@ -31,7 +31,8 @@ import (
 
 	"github.com/fatih/color"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/google/uuid"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/playground/instance"
 	"github.com/pingcap/tiup/pkg/cluster/api"
@@ -414,11 +415,7 @@ func populateDefaultOpt(flagSet *pflag.FlagSet) error {
 		defaultInt(&options.TiCIWorker.Num, "tici.worker", 1)
 		defaultInt(&options.TiCDC.Num, "ticdc", 1)
 		defaultInt(&options.TiFlash.Num, "tiflash", 1)
-		if tag != "" {
-			options.ShOpt.S3.Prefix = tag
-		} else {
-			options.ShOpt.S3.Prefix = fmt.Sprintf("tici-%s", uuid.New().String())
-		}
+		options.ShOpt.S3.Prefix = tag
 	default:
 		return errors.Errorf("Unknown --mode %s", options.ShOpt.Mode)
 	}
@@ -613,8 +610,49 @@ func main() {
 	}
 }
 
+func removeMinioPrefix() {
+	s3Config := options.ShOpt.S3
+	isSecure := strings.HasPrefix(s3Config.Endpoint, "https://")
+	rawEndpoint := strings.TrimPrefix(s3Config.Endpoint, "https://")
+	rawEndpoint = strings.TrimPrefix(rawEndpoint, "http://")
+
+	s3Client, err := minio.New(rawEndpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(s3Config.AccessKey, s3Config.SecretKey, ""),
+		Secure: isSecure,
+	})
+	if err != nil {
+		return
+	}
+
+	objectsCh := make(chan minio.ObjectInfo)
+	ctx := context.Background()
+
+	go func() {
+		defer close(objectsCh)
+
+		// List all objects from a bucket-name with a matching prefix.
+		for object := range s3Client.ListObjects(ctx, s3Config.Bucket, minio.ListObjectsOptions{
+			Prefix:    s3Config.Prefix,
+			Recursive: true,
+		}) {
+			if object.Err != nil {
+				fmt.Println(color.RedString("Error: %v", object.Err))
+			}
+			objectsCh <- object
+		}
+	}()
+
+	errorCh := s3Client.RemoveObjects(ctx, s3Config.Bucket, objectsCh, minio.RemoveObjectsOptions{})
+	for e := range errorCh {
+		fmt.Println(color.RedString(fmt.Sprintf("Failed to remove %s, error: %v", e.ObjectName, e.Err)))
+	}
+}
+
 func removeData() {
 	if deleteWhenExit {
 		os.RemoveAll(dataDir)
+		if options.ShOpt.Mode == "tidb-fts" {
+			removeMinioPrefix()
+		}
 	}
 }

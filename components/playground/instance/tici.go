@@ -83,9 +83,10 @@ func NewTiCIInstanceWithRole(shOpt SharedOptions, binPath string, dir, host, con
 			StatusPort: utils.MustGetFreePort(host, defaultStatusPort, shOpt.PortOffset),
 			ConfigPath: configPath,
 		},
-		pds:  pds,
-		dbs:  dbs,
-		role: role,
+		shOpt: shOpt,
+		pds:   pds,
+		dbs:   dbs,
+		role:  role,
 	}
 
 	return tici

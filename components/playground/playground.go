@@ -1251,6 +1251,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 	if options.ShOpt.Mode == "tidb-fts" {
 		instances = append(instances,
+			InstancePair{spec.ComponentTiFlash, instance.PDRoleNormal, instance.TiFlashRoleNormal, options.TiFlash},
 			InstancePair{comp: spec.ComponentTiCIMeta, Config: options.TiCIMeta},
 			InstancePair{comp: spec.ComponentTiCIWorker, Config: options.TiCIWorker},
 		)
