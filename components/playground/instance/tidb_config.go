@@ -60,7 +60,7 @@ func (inst *TiDBInstance) getConfig() map[string]any {
 		config["enable-safe-point-v2"] = true
 		config["split-table"] = false
 		config["use-autoscaler"] = false
-		config["disaggregated-tiflash"] = false
+		config["disaggregated-tiflash"] = true
 		if inst.Role() == TiDBRoleSystem {
 			config["keyspace-name"] = "SYSTEM"
 		} else {
