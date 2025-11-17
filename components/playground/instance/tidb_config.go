@@ -63,7 +63,7 @@ func (inst *TiDBInstance) getConfig(kvwrks []*TiKVWorkerInstance) map[string]any
 		config["enable-safe-point-v2"] = true
 		config["split-table"] = false
 		config["use-autoscaler"] = false
-		config["disaggregated-tiflash"] = false
+		config["disaggregated-tiflash"] = true
 		if inst.Role() == TiDBRoleSystem {
 			config["instance.tidb_service_scope"] = "dxf_service"
 			config["tikv-worker-url"] = fmt.Sprintf("http://%s", utils.JoinHostPort(AdvertiseHost(kvwrks[0].Host), kvwrks[0].Port))
