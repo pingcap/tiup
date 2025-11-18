@@ -40,7 +40,6 @@ type PDSpec struct {
 	AdvertiseClientAddr string `yaml:"advertise_client_addr,omitempty"`
 	AdvertisePeerAddr   string `yaml:"advertise_peer_addr,omitempty"`
 	SSHPort             int    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported            bool   `yaml:"-"`
 	Patched             bool   `yaml:"patched,omitempty"`
 	IgnoreExporter      bool   `yaml:"ignore_exporter,omitempty"`
 	// Use Name to get the name with a default value if it's empty.

@@ -763,6 +763,16 @@ func (s *Specification) dirConflictsDetect() error {
 						continue
 					}
 
+					prev, exist := dirStats[item]
+					if exist {
+						return &meta.ValidateErr{
+							Type:   meta.TypeConflict,
+							Target: "directory",
+							LHS:    fmt.Sprintf("%s:%s.%s", prev.cfg, item.host, prev.tp),
+							RHS:    fmt.Sprintf("%s:%s.%s", cfg, item.host, tp),
+							Value:  item.dir,
+						}
+					}
 					dirStats[item] = conflict{
 						tp:  tp,
 						cfg: cfg,

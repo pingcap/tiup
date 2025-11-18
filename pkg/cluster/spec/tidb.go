@@ -35,7 +35,6 @@ type TiDBSpec struct {
 	ListenHost      string               `yaml:"listen_host,omitempty"`
 	AdvertiseAddr   string               `yaml:"advertise_address,omitempty"`
 	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported        bool                 `yaml:"-"`
 	Patched         bool                 `yaml:"patched,omitempty"`
 	IgnoreExporter  bool                 `yaml:"ignore_exporter,omitempty"`
 	Port            int                  `yaml:"port" default:"4000"`

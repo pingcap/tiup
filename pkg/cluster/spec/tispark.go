@@ -40,7 +40,6 @@ type TiSparkMasterSpec struct {
 	ManageHost     string            `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
 	ListenHost     string            `yaml:"listen_host,omitempty"`
 	SSHPort        int               `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported       bool              `yaml:"-"`
 	Patched        bool              `yaml:"patched,omitempty"`
 	IgnoreExporter bool              `yaml:"ignore_exporter,omitempty"`
 	Port           int               `yaml:"port" default:"7077"`
