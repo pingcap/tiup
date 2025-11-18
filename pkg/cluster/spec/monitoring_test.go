@@ -229,67 +229,67 @@ scrape_configs:
 
 func TestGetRetention(t *testing.T) {
 	var val string
-	val = getRetentionTime("-1d")
+	val = getRetentionTime(nil, "-1d")
 	assert.EqualValues(t, "30d", val)
 
-	val = getRetentionTime("0d")
+	val = getRetentionTime(nil, "0d")
 	assert.EqualValues(t, "30d", val)
 
-	val = getRetentionTime("01d")
+	val = getRetentionTime(nil, "01d")
 	assert.EqualValues(t, "30d", val)
 
-	val = getRetentionTime("1dd")
+	val = getRetentionTime(nil, "1dd")
 	assert.EqualValues(t, "30d", val)
 
-	val = getRetentionTime("*1d")
+	val = getRetentionTime(nil, "*1d")
 	assert.EqualValues(t, "30d", val)
 
-	val = getRetentionTime("1d ")
+	val = getRetentionTime(nil, "1d ")
 	assert.EqualValues(t, "1d", val)
 
-	val = getRetentionTime(" 1d")
+	val = getRetentionTime(nil, " 1d")
 	assert.EqualValues(t, "1d", val)
 
-	val = getRetentionTime("ddd")
+	val = getRetentionTime(nil, "ddd")
 	assert.EqualValues(t, "30d", val)
 
-	val = getRetentionTime("60d")
+	val = getRetentionTime(nil, "60d")
 	assert.EqualValues(t, "60d", val)
 
-	val = getRetentionTime("999d")
+	val = getRetentionTime(nil, "999d")
 	assert.EqualValues(t, "999d", val)
 
-	val = getRetentionSize("-1MB")
+	val = getRetentionSize(nil, "-1MB")
 	assert.EqualValues(t, "", val)
 
-	val = getRetentionSize("30d")
+	val = getRetentionSize(nil, "30d")
 	assert.EqualValues(t, "", val)
 
-	val = getRetentionSize("1k")
+	val = getRetentionSize(nil, "1k")
 	assert.EqualValues(t, "", val)
 
-	val = getRetentionSize("01G")
+	val = getRetentionSize(nil, "01G")
 	assert.EqualValues(t, "", val)
 
-	val = getRetentionSize("233mb")
+	val = getRetentionSize(nil, "233mb")
 	assert.EqualValues(t, "233MB", val)
 
-	val = getRetentionSize("*1GB")
+	val = getRetentionSize(nil, "*1GB")
 	assert.EqualValues(t, "", val)
 
-	val = getRetentionSize("20GB ")
+	val = getRetentionSize(nil, "20GB ")
 	assert.EqualValues(t, "20GB", val)
 
-	val = getRetentionSize(" 20GB")
+	val = getRetentionSize(nil, " 20GB")
 	assert.EqualValues(t, "20GB", val)
 
-	val = getRetentionSize("3TB")
+	val = getRetentionSize(nil, "3TB")
 	assert.EqualValues(t, "3TB", val)
 
-	val = getRetentionSize("30GB")
+	val = getRetentionSize(nil, "30GB")
 	assert.EqualValues(t, "30GB", val)
 
-	val = getRetentionSize("1EB")
+	val = getRetentionSize(nil, "1EB")
 	assert.EqualValues(t, "1EB", val)
 }
 

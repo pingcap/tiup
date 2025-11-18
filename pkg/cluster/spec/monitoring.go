@@ -30,6 +30,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/config"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/utils"
@@ -284,12 +285,13 @@ func (i *MonitorInstance) InitConfig(
 		AdditionalArgs: spec.AdditionalArgs,
 	}
 	// Set retention policy
-	if spec.RetentionTime == "" {
-		cfg.RetentionTime = getRetentionTime(spec.Retention)
+	logPtr := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger)
+	if spec.RetentionTime == "" { // keep backward compatiability
+		cfg.RetentionTime = getRetentionTime(logPtr, spec.Retention)
 	} else {
-		cfg.RetentionTime = getRetentionTime(spec.RetentionTime)
+		cfg.RetentionTime = getRetentionTime(logPtr, spec.RetentionTime)
 	}
-	cfg.RetentionSize = getRetentionSize(spec.RetentionSize)
+	cfg.RetentionSize = getRetentionSize(logPtr, spec.RetentionSize)
 
 	// Check if agent mode is enabled in additional arguments
 	if !cfg.EnablePromAgentMode {
@@ -683,19 +685,25 @@ func mergeAdditionalScrapeConf(source string, addition map[string]any) error {
 	return utils.WriteFile(source, bytes, 0644)
 }
 
-func getRetentionSize(retention string) string {
+func getRetentionSize(l *logprinter.Logger, retention string) string {
 	retention = strings.ToUpper(strings.TrimSpace(retention))
 	valid, _ := regexp.MatchString("^[1-9]\\d*(B|KB|MB|GB|TB|PB|EB)$", retention)
 	if retention == "" || !valid {
+		if !valid && l != nil {
+			l.Warnf("invalid retention size %s, ignored.", retention)
+		}
 		return ""
 	}
 	return retention
 }
 
-func getRetentionTime(retention string) string {
+func getRetentionTime(l *logprinter.Logger, retention string) string {
 	retention = strings.TrimSpace(retention)
 	valid, _ := regexp.MatchString("^[1-9]\\d*d$", retention)
 	if retention == "" || !valid {
+		if !valid && l != nil {
+			l.Warnf("invalid retention time %s, using 30d as default", retention)
+		}
 		return "30d"
 	}
 	return retention
