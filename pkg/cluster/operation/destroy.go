@@ -253,15 +253,7 @@ func DestroyMonitored(ctx context.Context, inst spec.Instance, options *spec.Mon
 
 	delPaths = append(delPaths, options.DataDir)
 	delPaths = append(delPaths, options.LogDir)
-
-	// In TiDB-Ansible, deploy dir are shared by all components on the same
-	// host, so not deleting it.
-	if !inst.IsImported() {
-		delPaths = append(delPaths, options.DeployDir)
-	} else {
-		logger.Warnf("Monitored deploy dir %s not deleted for TiDB-Ansible imported instance %s.",
-			options.DeployDir, inst.InstanceName())
-	}
+	delPaths = append(delPaths, options.DeployDir)
 	systemdDir := "/etc/systemd/system/"
 	sudo := true
 	if systemdMode == spec.UserMode {
@@ -393,35 +385,24 @@ func DestroyComponent(ctx context.Context, instances []spec.Instance, cls spec.T
 
 		logDir := ins.LogDir()
 
-		// In TiDB-Ansible, deploy dir are shared by all components on the same
-		// host, so not deleting it.
-		if ins.IsImported() {
-			// not deleting files for imported clusters
-			if !strings.HasPrefix(logDir, ins.DeployDir()) && cls.CountDir(ins.GetManageHost(), logDir) == 1 {
+		if keepDeployDir {
+			delPaths.Insert(filepath.Join(deployDir, "conf"))
+			delPaths.Insert(filepath.Join(deployDir, "bin"))
+			delPaths.Insert(filepath.Join(deployDir, "scripts"))
+			if cls.BaseTopo().GlobalOptions.TLSEnabled {
+				delPaths.Insert(filepath.Join(deployDir, spec.TLSCertKeyDir))
+			}
+			// only delete path if it is not used by any other instance in the cluster
+			if strings.HasPrefix(logDir, deployDir) && cls.CountDir(ins.GetManageHost(), logDir) == 1 {
 				delPaths.Insert(logDir)
 			}
-			logger.Warnf("Deploy dir %s not deleted for TiDB-Ansible imported instance %s.",
-				ins.DeployDir(), ins.InstanceName())
 		} else {
-			if keepDeployDir {
-				delPaths.Insert(filepath.Join(deployDir, "conf"))
-				delPaths.Insert(filepath.Join(deployDir, "bin"))
-				delPaths.Insert(filepath.Join(deployDir, "scripts"))
-				if cls.BaseTopo().GlobalOptions.TLSEnabled {
-					delPaths.Insert(filepath.Join(deployDir, spec.TLSCertKeyDir))
-				}
-				// only delete path if it is not used by any other instance in the cluster
-				if strings.HasPrefix(logDir, deployDir) && cls.CountDir(ins.GetManageHost(), logDir) == 1 {
-					delPaths.Insert(logDir)
-				}
-			} else {
-				// only delete path if it is not used by any other instance in the cluster
-				if cls.CountDir(ins.GetManageHost(), logDir) == 1 {
-					delPaths.Insert(logDir)
-				}
-				if cls.CountDir(ins.GetManageHost(), ins.DeployDir()) == 1 {
-					delPaths.Insert(ins.DeployDir())
-				}
+			// only delete path if it is not used by any other instance in the cluster
+			if cls.CountDir(ins.GetManageHost(), logDir) == 1 {
+				delPaths.Insert(logDir)
+			}
+			if cls.CountDir(ins.GetManageHost(), ins.DeployDir()) == 1 {
+				delPaths.Insert(ins.DeployDir())
 			}
 		}
 
@@ -432,7 +413,7 @@ func DestroyComponent(ctx context.Context, instances []spec.Instance, cls spec.T
 				dpCnt++
 			}
 		}
-		if !ins.IsImported() && cls.CountDir(ins.GetManageHost(), deployDir)-dpCnt == 1 {
+		if cls.CountDir(ins.GetManageHost(), deployDir)-dpCnt == 1 {
 			delPaths.Insert(deployDir)
 		}
 

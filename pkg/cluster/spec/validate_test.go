@@ -14,10 +14,7 @@
 package spec
 
 import (
-	"bytes"
 	"fmt"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/joomcode/errorx"
@@ -45,72 +42,6 @@ pd_servers:
 `), &topo)
 	require.Error(t, err)
 	require.Equal(t, "directory conflict for '/test-1' between 'tidb_servers:172.16.5.138.deploy_dir' and 'pd_servers:172.16.5.138.data_dir'", err.Error())
-
-	err = yaml.Unmarshal([]byte(`
-global:
-  user: "test1"
-  ssh_port: 220
-  deploy_dir: "test-deploy"
-  data_dir: "/test-data"
-tikv_servers:
-  - host: 172.16.5.138
-    data_dir: "test-1"
-pd_servers:
-  - host: 172.16.5.138
-    data_dir: "test-1"
-`), &topo)
-	require.NoError(t, err)
-
-	// report conflict if a non-import node use same dir as an imported one
-	err = yaml.Unmarshal([]byte(`
-global:
-  user: "test1"
-  ssh_port: 220
-  deploy_dir: deploy
-  data_dir: data
-tidb_servers:
-  - host: 172.16.4.190
-    deploy_dir: /home/tidb/deploy
-pd_servers:
-  - host: 172.16.4.190
-    imported: true
-    name: pd_ip-172-16-4-190
-    deploy_dir: /home/tidb/deploy
-    data_dir: /home/tidb/deploy/data.pd
-    log_dir: /home/tidb/deploy/log
-`), &topo)
-	require.Error(t, err)
-	require.Equal(t, "directory conflict for '/home/tidb/deploy' between 'tidb_servers:172.16.4.190.deploy_dir' and 'pd_servers:172.16.4.190.deploy_dir'", err.Error())
-
-	// two imported tidb pass the validation, two pd servers (only one is imported) don't
-	err = yaml.Unmarshal([]byte(`
-global:
-  user: "test2"
-  ssh_port: 220
-  deploy_dir: deploy
-  data_dir: /data
-tidb_servers:
-  - host: 172.16.4.190
-    imported: true
-    port: 3306
-    deploy_dir: /home/tidb/deploy1
-  - host: 172.16.4.190
-    imported: true
-    status_port: 3307
-    deploy_dir: /home/tidb/deploy1
-pd_servers:
-  - host: 172.16.4.190
-    imported: true
-    name: pd_ip-172-16-4-190
-    deploy_dir: /home/tidb/deploy
-  - host: 172.16.4.190
-    name: pd_ip-172-16-4-190-2
-    client_port: 2381
-    peer_port: 2382
-    deploy_dir: /home/tidb/deploy
-`), &topo)
-	require.Error(t, err)
-	require.Equal(t, "directory conflict for '/home/tidb/deploy' between 'pd_servers:172.16.4.190.deploy_dir' and 'pd_servers:172.16.4.190.deploy_dir'", err.Error())
 }
 
 func TestPortConflicts(t *testing.T) {
@@ -318,58 +249,6 @@ pd_servers:
 	cnt = topo.CountDir("172.16.5.138", "")
 	require.Equal(t, 0, cnt)
 	cnt = topo.CountDir("172.16.5.139", "/test-data")
-	require.Equal(t, 1, cnt)
-
-	err = yaml.Unmarshal([]byte(`
-global:
-  user: "test1"
-  ssh_port: 220
-  deploy_dir: deploy
-  data_dir: data
-tidb_servers:
-  - host: 172.16.4.190
-    imported: true
-    deploy_dir: /home/tidb/deploy
-pd_servers:
-  - host: 172.16.4.190
-    imported: true
-    name: pd_ip-172-16-4-190
-    deploy_dir: /home/tidb/deploy
-    data_dir: /home/tidb/deploy/data.pd
-    log_dir: /home/tidb/deploy/log
-`), &topo)
-	require.NoError(t, err)
-	cnt = topo.CountDir("172.16.4.190", "/home/tidb/deploy")
-	require.Equal(t, 5, cnt)
-}
-
-func TestCountDir2(t *testing.T) {
-	file := filepath.Join("testdata", "countdir.yaml")
-	meta := ClusterMeta{}
-	yamlFile, err := os.ReadFile(file)
-	require.NoError(t, err)
-	decoder := yaml.NewDecoder(bytes.NewReader(yamlFile))
-	decoder.KnownFields(true)
-	err = decoder.Decode(&meta)
-	require.NoError(t, err)
-	topo := meta.Topology
-
-	// If the imported dir is somehow containing paths ens with slash,
-	// or having multiple slash in it, the count result should not
-	// be different.
-	cnt := topo.CountDir("172.17.0.4", "/foo/bar/sometidbpath123")
-	require.Equal(t, 3, cnt)
-	cnt = topo.CountDir("172.17.0.4", "/foo/bar/sometidbpath123/")
-	require.Equal(t, 3, cnt)
-	cnt = topo.CountDir("172.17.0.4", "/foo/bar/sometidbpath123//")
-	require.Equal(t, 3, cnt)
-	cnt = topo.CountDir("172.17.0.4", "/foo/bar/sometidbpath123/log")
-	require.Equal(t, 1, cnt)
-	cnt = topo.CountDir("172.17.0.4", "/foo/bar/sometidbpath123//log")
-	require.Equal(t, 1, cnt)
-	cnt = topo.CountDir("172.17.0.4", "/foo/bar/sometidbpath123/log/")
-	require.Equal(t, 1, cnt)
-	cnt = topo.CountDir("172.17.0.4", "/foo/bar/sometidbpath123//log/")
 	require.Equal(t, 1, cnt)
 }
 

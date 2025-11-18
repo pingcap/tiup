@@ -17,7 +17,6 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -41,7 +40,6 @@ type PDSpec struct {
 	AdvertiseClientAddr string `yaml:"advertise_client_addr,omitempty"`
 	AdvertisePeerAddr   string `yaml:"advertise_peer_addr,omitempty"`
 	SSHPort             int    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported            bool   `yaml:"imported,omitempty"`
 	Patched             bool   `yaml:"patched,omitempty"`
 	IgnoreExporter      bool   `yaml:"ignore_exporter,omitempty"`
 	// Use Name to get the name with a default value if it's empty.
@@ -111,11 +109,6 @@ func (s *PDSpec) GetManageHost() string {
 		return s.ManageHost
 	}
 	return s.Host
-}
-
-// IsImported returns if the node is imported from TiDB-Ansible
-func (s *PDSpec) IsImported() bool {
-	return s.Imported
 }
 
 // IgnoreMonitorAgent returns if the node does not have monitor agents available
@@ -273,27 +266,6 @@ func (i *PDInstance) InitConfig(
 	}
 
 	globalConfig := topo.ServerConfigs.PD
-	// merge config files for imported instance
-	if i.IsImported() {
-		configPath := ClusterPath(
-			clusterName,
-			AnsibleImportedConfigPath,
-			fmt.Sprintf(
-				"%s-%s-%d.toml",
-				i.ComponentName(),
-				i.GetHost(),
-				i.GetPort(),
-			),
-		)
-		importConfig, err := os.ReadFile(configPath)
-		if err != nil {
-			return err
-		}
-		globalConfig, err = mergeImported(importConfig, globalConfig)
-		if err != nil {
-			return err
-		}
-	}
 
 	// set TLS configs
 	spec.Config, err = i.setTLSConfig(ctx, enableTLS, spec.Config, paths)
