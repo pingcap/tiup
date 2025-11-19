@@ -271,44 +271,6 @@ func (env *Environment) SelectInstalledVersion(component string, ver utils.Versi
 	return ver, errInstallFirst
 }
 
-// DownloadComponentIfMissing downloads the specific version of a component if it is missing
-func (env *Environment) DownloadComponentIfMissing(component string, ver utils.Version) (utils.Version, error) {
-	var err error
-	if ver.String() == utils.NightlyVersionAlias {
-		if ver, _, err = env.v1Repo.LatestNightlyVersion(component); err != nil {
-			return "", err
-		}
-	}
-
-	// Use the latest version if user doesn't specify a specific version and
-	// download the latest version if the specific component doesn't be installed
-
-	// Check whether the specific version exist in local
-	ver, err = env.SelectInstalledVersion(component, ver)
-	needDownload := errors.Cause(err) == ErrInstallFirst
-	if err != nil && !needDownload {
-		return "", err
-	}
-
-	if needDownload {
-		fmt.Fprintf(os.Stderr, "The component `%s` version %s is not installed; downloading from repository.\n", component, ver.String())
-		spec := repository.ComponentSpec{
-			ID:      component,
-			Version: string(ver),
-			Force:   false,
-		}
-		if err := env.v1Repo.UpdateComponents([]repository.ComponentSpec{spec}); err != nil {
-			return "", err
-		}
-	}
-
-	if ver.IsEmpty() {
-		return env.SelectInstalledVersion(component, ver)
-	}
-
-	return ver, nil
-}
-
 // BinaryPath return the installed binary path.
 func (env *Environment) BinaryPath(component string, ver utils.Version) (string, error) {
 	installPath, err := env.profile.ComponentInstalledPath(component, ver)

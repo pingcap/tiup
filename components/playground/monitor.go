@@ -79,7 +79,7 @@ func (m *monitor) wait() error {
 }
 
 // the cmd is not started after return
-func newMonitor(ctx context.Context, shOpt instance.SharedOptions, version string, host, dir string) (*monitor, error) {
+func newMonitor(ctx context.Context, shOpt instance.SharedOptions, version string, host, dir string, forcePull bool) (*monitor, error) {
 	if err := utils.MkdirAll(dir, 0755); err != nil {
 		return nil, errors.AddStack(err)
 	}
@@ -138,7 +138,7 @@ scrape_configs:
 	}
 
 	var binPath string
-	if binPath, err = tiupexec.PrepareBinary("prometheus", sversion, binPath); err != nil {
+	if binPath, err = tiupexec.PrepareBinary("prometheus", sversion, binPath, forcePull); err != nil {
 		return nil, err
 	}
 	cmd := instance.PrepareCommand(ctx, binPath, args, nil, dir)
