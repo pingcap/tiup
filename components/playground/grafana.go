@@ -31,20 +31,22 @@ import (
 )
 
 type grafana struct {
-	host    string
-	port    int
-	version string
+	host      string
+	port      int
+	version   string
+	forcePull bool
 
 	waitErr  error
 	waitOnce sync.Once
 	cmd      *exec.Cmd
 }
 
-func newGrafana(version string, host string, port int) *grafana {
+func newGrafana(version string, host string, port int, forcePull bool) *grafana {
 	return &grafana{
-		host:    host,
-		version: version,
-		port:    port,
+		host:      host,
+		version:   version,
+		port:      port,
+		forcePull: forcePull,
 	}
 }
 
@@ -195,7 +197,7 @@ http_port = %d
 	}
 
 	var binPath string
-	if binPath, err = tiupexec.PrepareBinary("grafana", utils.Version(g.version), binPath); err != nil {
+	if binPath, err = tiupexec.PrepareBinary("grafana", utils.Version(g.version), binPath, g.forcePull); err != nil {
 		return err
 	}
 	cmd := instance.PrepareCommand(ctx, binPath, args, nil, dir)

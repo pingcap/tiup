@@ -102,6 +102,7 @@ the latest stable version will be downloaded from the repository.`,
 				return cmd.Help()
 			}
 			env := environment.GlobalEnv()
+			forcePull := false
 
 			// TBD: change this flag to subcommand
 
@@ -138,6 +139,8 @@ the latest stable version will be downloaded from the repository.`,
 				}
 				binPath = args[1]
 				args = args[2:]
+			case "--force-pull":
+				forcePull = true
 			case "--tag", "-T":
 				if len(args) < 2 {
 					return fmt.Errorf("flag %s needs an argument", args[0])
@@ -163,7 +166,7 @@ the latest stable version will be downloaded from the repository.`,
 				args = args[1:]
 			}
 
-			return tiupexec.RunComponent(env, tag, componentSpec, binPath, args)
+			return tiupexec.RunComponent(env, tag, componentSpec, binPath, forcePull, args)
 		},
 		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
 			return environment.GlobalEnv().Close()

@@ -512,7 +512,7 @@ func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) 
 
 	boundVersion := p.bindVersion(inst.Component(), p.bootOptions.Version)
 
-	if err := inst.PrepareBinary(component, inst.Role(), boundVersion); err != nil {
+	if err := inst.PrepareBinary(component, inst.Role(), boundVersion, p.bootOptions.ShOpt.ForcePull); err != nil {
 		return err
 	}
 
@@ -1574,7 +1574,7 @@ func (p *Playground) bootMonitor(ctx context.Context, env *environment.Environme
 	dataDir := p.dataDir
 	promDir := filepath.Join(dataDir, "prometheus")
 
-	monitor, err := newMonitor(ctx, options.ShOpt, options.Version, options.Host, promDir)
+	monitor, err := newMonitor(ctx, options.ShOpt, options.Version, options.Host, promDir, p.bootOptions.ShOpt.ForcePull)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1703,7 +1703,7 @@ func (p *Playground) bootGrafana(ctx context.Context, env *environment.Environme
 		return nil, err
 	}
 
-	grafana := newGrafana(string(sversion), options.Host, options.GrafanaPort)
+	grafana := newGrafana(string(sversion), options.Host, options.GrafanaPort, p.bootOptions.ShOpt.ForcePull)
 	// fmt.Println("Start Grafana instance...")
 	err = grafana.start(ctx, grafanaDir, options.ShOpt.PortOffset, "http://"+utils.JoinHostPort(monitorInfo.IP, monitorInfo.Port))
 	if err != nil {
