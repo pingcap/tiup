@@ -244,7 +244,7 @@ Note: Version constraint is [green][bold]%s[reset]. If you'd like to use other v
 		},
 	}
 
-	rootCmd.Flags().StringVar(&options.ShOpt.Mode, "mode", "tidb", fmt.Sprintf("TiUP playground mode: '%s', '%s', '%s', '%s', '%s'", instance.ModeNormal, instance.ModeCSE, instance.ModeCSE, instance.ModeDisAgg, instance.ModeTiKVSlim))
+	rootCmd.Flags().StringVar(&options.ShOpt.Mode, "mode", "tidb", fmt.Sprintf("TiUP playground mode: '%s', '%s', '%s', '%s', '%s'", instance.ModeNormal, instance.ModeCSE, instance.ModeNextGen, instance.ModeDisAgg, instance.ModeTiKVSlim))
 	rootCmd.Flags().StringVar(&options.ShOpt.PDMode, "pd.mode", "pd", "PD mode: 'pd', 'ms'")
 	rootCmd.Flags().StringVar(&options.ShOpt.CSE.S3Endpoint, "cse.s3_endpoint", "http://127.0.0.1:9000",
 		fmt.Sprintf("Object store URL for --mode=%s, --mode=%s, --mode=%s", instance.ModeCSE, instance.ModeDisAgg, instance.ModeNextGen))

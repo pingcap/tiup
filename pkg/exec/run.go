@@ -239,7 +239,7 @@ func PrepareBinary(component string, version utils.Version, binPath string, forc
 		binPath = tmp
 	} else {
 		env := environment.GlobalEnv()
-		var ver utils.Version
+		ver := version
 		var err error
 
 		if ver.String() == utils.NightlyVersionAlias {
