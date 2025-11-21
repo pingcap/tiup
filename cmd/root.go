@@ -141,7 +141,6 @@ the latest stable version will be downloaded from the repository.`,
 				args = args[2:]
 			case "--force-pull":
 				forcePull = true
-				args = args[1:]
 			case "--tag", "-T":
 				if len(args) < 2 {
 					return fmt.Errorf("flag %s needs an argument", args[0])
@@ -229,8 +228,8 @@ the latest stable version will be downloaded from the repository.`,
 
 // Execute parses the command line arguments and calls proper functions
 func Execute() {
-	code := 0
 	start := time.Now()
+	code := 0
 
 	err := rootCmd.Execute()
 	if err != nil {

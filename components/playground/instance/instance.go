@@ -43,6 +43,8 @@ var (
 	ModeDisAgg = "tiflash-disagg"
 	// ModeTiKVSlim is for special tikv testing.
 	ModeTiKVSlim = "tikv-slim"
+	// ModeFTS is for full text search.
+	ModeFTS = "tidb-fts"
 )
 
 // Config of the instance.

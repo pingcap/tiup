@@ -109,7 +109,7 @@ func (inst *TiFlashInstance) getConfig() map[string]any {
 		}
 	}
 
-	if inst.shOpt.Mode == "tidb-fts" {
+	if inst.shOpt.Mode == ModeFTS {
 		config["tici.s3.endpoint"] = inst.shOpt.S3.Endpoint
 		config["tici.s3.access_key"] = inst.shOpt.S3.AccessKey
 		config["tici.s3.secret_key"] = inst.shOpt.S3.SecretKey

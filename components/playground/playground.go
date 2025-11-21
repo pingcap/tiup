@@ -523,17 +523,11 @@ func (p *Playground) sanitizeComponentConfig(cid string, cfg *instance.Config) e
 
 func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) error {
 	component := inst.Component()
-	if component == spec.ComponentTSO || component == spec.ComponentScheduling {
-		component = spec.ComponentPD
-	}
-	if component == spec.ComponentTiKVWorker {
-		component = spec.ComponentTiKV
-	}
+	// FIXME: temporary workaround for TiCI
 	if component == spec.ComponentTiCIMeta || component == spec.ComponentTiCIWorker {
 		component = spec.ComponentTiCI
 	}
-	boundVersion := p.bindVersion(inst.Component(), p.bootOptions.Version)
-
+	boundVersion := p.bindVersion(component, p.bootOptions.Version)
 	if err := inst.PrepareBinary(component, inst.Role(), boundVersion, p.bootOptions.ShOpt.ForcePull); err != nil {
 		return err
 	}
@@ -1159,7 +1153,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 	}
 
 	switch options.ShOpt.Mode {
-	case instance.ModeCSE, instance.ModeDisAgg, instance.ModeNextGen, "tidb-fts":
+	case instance.ModeCSE, instance.ModeDisAgg, instance.ModeNextGen, instance.ModeFTS:
 		if !strings.HasPrefix(options.ShOpt.S3.Endpoint, "https://") && !strings.HasPrefix(options.ShOpt.S3.Endpoint, "http://") {
 			return fmt.Errorf("require S3 endpoint to start with http:// or https://")
 		}
@@ -1269,7 +1263,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		)
 	}
 
-	if options.ShOpt.Mode == "tidb-fts" {
+	if options.ShOpt.Mode == instance.ModeFTS {
 		instances = append(instances,
 			InstancePair{spec.ComponentTiFlash, instance.TiFlashRoleNormal, options.TiFlash},
 			InstancePair{comp: spec.ComponentTiCIMeta, Config: options.TiCIMeta},
@@ -1301,7 +1295,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		}
 
 		// set TICDC_NEWARCH env for TiCDC when TiCI is enabled
-		if options.ShOpt.Mode == "tidb-fts" && cid == spec.ComponentCDC {
+		if options.ShOpt.Mode == instance.ModeFTS && cid == spec.ComponentCDC {
 			// wait for TiKV up
 			time.Sleep(time.Second * 5)
 			if cdcInst, ok := ins.(*instance.TiCDC); ok {

@@ -65,8 +65,8 @@ type BootOptions struct {
 	TiFlashCompute instance.Config        `yaml:"tiflash_compute"` // Only available when ShOpt.Mode == ModeCSE or ModeDisAgg
 	TiCDC          instance.Config        `yaml:"ticdc"`
 	TiKVCDC        instance.Config        `yaml:"tikv_cdc"`
-	TiCIMeta       instance.Config        `yaml:"tici_meta"`   // Only available when ShOpt.Mode == tidb-fts
-	TiCIWorker     instance.Config        `yaml:"tici_worker"` // Only available when ShOpt.Mode == tidb-fts
+	TiCIMeta       instance.Config        `yaml:"tici_meta"`   // Only available when ShOpt.Mode == ModeFTS
+	TiCIWorker     instance.Config        `yaml:"tici_worker"` // Only available when ShOpt.Mode == ModeFTS
 	TiKVWorker     instance.Config        `yaml:"tikv_worker"` // Only available when ShOpt.Mode == ModeCSE or ModeNextGen
 	Pump           instance.Config        `yaml:"pump"`
 	Drainer        instance.Config        `yaml:"drainer"`
@@ -248,16 +248,16 @@ Note: Version constraint is [green][bold]%s[reset]. If you'd like to use other v
 		},
 	}
 
-	rootCmd.Flags().StringVar(&options.ShOpt.Mode, "mode", "tidb", fmt.Sprintf("TiUP playground mode: '%s', '%s', '%s', '%s', '%s', 'tidb-fts'", instance.ModeNormal, instance.ModeCSE, instance.ModeNextGen, instance.ModeDisAgg, instance.ModeTiKVSlim))
+	rootCmd.Flags().StringVar(&options.ShOpt.Mode, "mode", "tidb", fmt.Sprintf("TiUP playground mode: '%s', '%s', '%s', '%s', '%s', '%s'", instance.ModeNormal, instance.ModeCSE, instance.ModeNextGen, instance.ModeDisAgg, instance.ModeTiKVSlim, instance.ModeFTS))
 	rootCmd.Flags().StringVar(&options.ShOpt.PDMode, "pd.mode", "pd", "PD mode: 'pd', 'ms'")
 	rootCmd.Flags().StringVar(&options.ShOpt.S3.Endpoint, "cse.endpoint", "http://127.0.0.1:9000",
-		fmt.Sprintf("Object store URL for --mode=%s, --mode=%s, --mode=%s or --mode=tidb-fts", instance.ModeCSE, instance.ModeDisAgg, instance.ModeNextGen))
+		fmt.Sprintf("Object store URL for --mode=%s, --mode=%s, --mode=%s or --mode=%s", instance.ModeCSE, instance.ModeDisAgg, instance.ModeNextGen, instance.ModeFTS))
 	rootCmd.Flags().StringVar(&options.ShOpt.S3.Bucket, "cse.bucket", "tiflash",
-		fmt.Sprintf("Object store bucket for --mode=%s, --mode=%s, --mode=%s or --mode=tidb-fts", instance.ModeCSE, instance.ModeDisAgg, instance.ModeNextGen))
+		fmt.Sprintf("Object store bucket for --mode=%s, --mode=%s, --mode=%s or --mode=%s", instance.ModeCSE, instance.ModeDisAgg, instance.ModeNextGen, instance.ModeFTS))
 	rootCmd.Flags().StringVar(&options.ShOpt.S3.AccessKey, "cse.access_key", "minioadmin",
-		fmt.Sprintf("Object store access key for --mode=%s, --mode=%s, --mode=%s or --mode=tidb-fts", instance.ModeCSE, instance.ModeDisAgg, instance.ModeNextGen))
+		fmt.Sprintf("Object store access key for --mode=%s, --mode=%s, --mode=%s or --mode=%s", instance.ModeCSE, instance.ModeDisAgg, instance.ModeNextGen, instance.ModeFTS))
 	rootCmd.Flags().StringVar(&options.ShOpt.S3.SecretKey, "cse.secret_key", "minioadmin",
-		fmt.Sprintf("Object store secret key for --mode=%s, --mode=%s, --mode=%s or --mode=tidb-fts", instance.ModeCSE, instance.ModeDisAgg, instance.ModeNextGen))
+		fmt.Sprintf("Object store secret key for --mode=%s, --mode=%s, --mode=%s or --mode=%s", instance.ModeCSE, instance.ModeDisAgg, instance.ModeNextGen, instance.ModeFTS))
 	rootCmd.Flags().BoolVar(&options.ShOpt.HighPerf, "perf", false, "Tune default config for better performance instead of debug troubleshooting")
 	rootCmd.Flags().BoolVar(&options.ShOpt.EnableTiKVColumnar, "tikv.columnar", false,
 		fmt.Sprintf("Enable TiKV columnar storage engine, only available when --mode=%s", instance.ModeCSE))
@@ -287,8 +287,8 @@ Note: Version constraint is [green][bold]%s[reset]. If you'd like to use other v
 		fmt.Sprintf("TiFlash Compute instance number, available when --mode=%s or --mode=%s, take precedence over --tiflash", instance.ModeCSE, instance.ModeDisAgg))
 	rootCmd.Flags().IntVar(&options.TiCDC.Num, "ticdc", 0, "TiCDC instance number")
 	rootCmd.Flags().IntVar(&options.TiKVCDC.Num, "kvcdc", 0, "TiKV-CDC instance number")
-	rootCmd.Flags().IntVar(&options.TiCIMeta.Num, "tici.meta", 0, "TiCI MetaServer instance number, available when --mode=tidb-fts")
-	rootCmd.Flags().IntVar(&options.TiCIWorker.Num, "tici.worker", 0, "TiCI WorkerNode instance number, available when --mode=tidb-fts")
+	rootCmd.Flags().IntVar(&options.TiCIMeta.Num, "tici.meta", 0, fmt.Sprintf("TiCI MetaServer instance number, available when --mode=%s", instance.ModeFTS))
+	rootCmd.Flags().IntVar(&options.TiCIWorker.Num, "tici.worker", 0, fmt.Sprintf("TiCI WorkerNode instance number, available when --mode=%s", instance.ModeFTS))
 	rootCmd.Flags().IntVar(&options.Pump.Num, "pump", 0, "Pump instance number")
 	rootCmd.Flags().IntVar(&options.Drainer.Num, "drainer", 0, "Drainer instance number")
 	rootCmd.Flags().IntVar(&options.DMMaster.Num, "dm-master", 0, "DM-master instance number")
@@ -338,8 +338,8 @@ Note: Version constraint is [green][bold]%s[reset]. If you'd like to use other v
 	rootCmd.Flags().StringVar(&options.Drainer.ConfigPath, "drainer.config", "", "Drainer instance configuration file")
 	rootCmd.Flags().StringVar(&options.TiCDC.ConfigPath, "ticdc.config", "", "TiCDC instance configuration file")
 	rootCmd.Flags().StringVar(&options.TiKVCDC.ConfigPath, "kvcdc.config", "", "TiKV-CDC instance configuration file")
-	rootCmd.Flags().StringVar(&options.TiCIMeta.ConfigPath, "tici.meta.config", "", "TiCI-Meta instance configuration file, available when --mode=tidb-fts")
-	rootCmd.Flags().StringVar(&options.TiCIWorker.ConfigPath, "tici.worker.config", "", "TiCI-Worker instance configuration file, available when --mode=tidb-fts")
+	rootCmd.Flags().StringVar(&options.TiCIMeta.ConfigPath, "tici.meta.config", "", fmt.Sprintf("TiCI-Meta instance configuration file, available when --mode=%s", instance.ModeFTS))
+	rootCmd.Flags().StringVar(&options.TiCIWorker.ConfigPath, "tici.worker.config", "", fmt.Sprintf("TiCI-Worker instance configuration file, available when --mode=%s", instance.ModeFTS))
 	rootCmd.Flags().StringVar(&options.DMMaster.ConfigPath, "dm-master.config", "", "DM-master instance configuration file")
 	rootCmd.Flags().StringVar(&options.DMWorker.ConfigPath, "dm-worker.config", "", "DM-worker instance configuration file")
 	rootCmd.Flags().StringVar(&options.TiKVWorker.ConfigPath, "tikv.worker.config", "", "TiKV worker instance configuration file")
@@ -360,8 +360,8 @@ Note: Version constraint is [green][bold]%s[reset]. If you'd like to use other v
 		fmt.Sprintf("TiFlash Compute instance binary path, available when --mode=%s or --mode=%s, take precedence over --tiflash.binpath", instance.ModeCSE, instance.ModeDisAgg))
 	rootCmd.Flags().StringVar(&options.TiCDC.BinPath, "ticdc.binpath", "", "TiCDC instance binary path")
 	rootCmd.Flags().StringVar(&options.TiKVCDC.BinPath, "kvcdc.binpath", "", "TiKV-CDC instance binary path")
-	rootCmd.Flags().StringVar(&options.TiCIMeta.BinPath, "tici.binpath", "", "TiCI-Meta/Worker instance binary path, available when --mode=tidb-fts")
-	rootCmd.Flags().StringVar(&options.TiCIWorker.BinPath, "tici.worker.binpath", "", "TiCI-Worker instance binary path, available when --mode=tidb-fts")
+	rootCmd.Flags().StringVar(&options.TiCIMeta.BinPath, "tici.binpath", "", fmt.Sprintf("TiCI-Meta/Worker instance binary path, available when --mode=%s", instance.ModeFTS))
+	rootCmd.Flags().StringVar(&options.TiCIWorker.BinPath, "tici.worker.binpath", "", fmt.Sprintf("TiCI-Worker instance binary path, available when --mode=%s", instance.ModeFTS))
 	rootCmd.Flags().StringVar(&options.Pump.BinPath, "pump.binpath", "", "Pump instance binary path")
 	rootCmd.Flags().StringVar(&options.Drainer.BinPath, "drainer.binpath", "", "Drainer instance binary path")
 	rootCmd.Flags().StringVar(&options.DMMaster.BinPath, "dm-master.binpath", "", "DM-master instance binary path")
@@ -436,7 +436,7 @@ func populateDefaultOpt(flagSet *pflag.FlagSet) error {
 		// Note: if a path of `tikv-server` is specified, the real resolved path of tikv-worker will become `tikv-worker` in the same directory.
 		defaultInt(&options.TiKVWorker.Num, "tikv.worker", 1)
 		defaultStr(&options.TiKVWorker.BinPath, "tikv.worker.binpath", options.TiKV.BinPath)
-	case "tidb-fts":
+	case instance.ModeFTS:
 		defaultInt(&options.TiDB.Num, "db", 1)
 		defaultInt(&options.TiKV.Num, "kv", 1)
 		defaultInt(&options.TiCIMeta.Num, "tici.meta", 1)
@@ -677,7 +677,7 @@ func removeMinioPrefix() {
 func removeData() {
 	if deleteWhenExit {
 		os.RemoveAll(dataDir)
-		if options.ShOpt.Mode == "tidb-fts" {
+		if options.ShOpt.Mode == instance.ModeFTS {
 			removeMinioPrefix()
 		}
 	}

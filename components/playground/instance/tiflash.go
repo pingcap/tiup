@@ -85,7 +85,7 @@ func NewTiFlashInstance(role TiFlashRole, shOpt SharedOptions, binPath, dir, hos
 		pds:             pds,
 		dbs:             dbs,
 	}
-	if shOpt.Mode == "tidb-fts" {
+	if shOpt.Mode == ModeFTS {
 		instance.ticReaderPort = utils.MustGetFreePort(host, 8520, shOpt.PortOffset)
 	}
 	return instance
@@ -145,7 +145,7 @@ func (inst *TiFlashInstance) Start(ctx context.Context) error {
 		{"flash.proxy.data-dir", filepath.Join(inst.Dir, "proxy_data")},
 		{"flash.proxy.log-file", filepath.Join(inst.Dir, "tiflash_tikv.log")},
 	}
-	if inst.shOpt.Mode == "tidb-fts" {
+	if inst.shOpt.Mode == ModeFTS {
 		runtimeConfig = append(runtimeConfig, []string{"tici.reader_node.addr", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.ticReaderPort)})
 	}
 
