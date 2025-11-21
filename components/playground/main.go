@@ -41,7 +41,7 @@ import (
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/tui/colorstr"
 	"github.com/pingcap/tiup/pkg/utils"
-		"github.com/pingcap/tiup/pkg/version"
+	"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	clientv3 "go.etcd.io/etcd/client/v3"

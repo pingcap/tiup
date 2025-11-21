@@ -229,6 +229,15 @@ func Merge2Toml(comp string, global, overwrite map[string]any) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// mergeImported merge the imported config and server-level config
+func mergeImported(imported []byte, custom map[string]any) (map[string]any, error) {
+	importedMap := make(map[string]any)
+	if err := toml.Unmarshal(imported, &importedMap); err != nil {
+		return nil, err
+	}
+	return MergeConfig(importedMap, custom), nil
+}
+
 func encodeRemoteCfg2Yaml(remote Remote) ([]byte, error) {
 	if len(remote.RemoteRead) == 0 && len(remote.RemoteWrite) == 0 {
 		return []byte{}, nil

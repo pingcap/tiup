@@ -40,13 +40,10 @@ func auditDir() string {
 
 func cleanupDir() {
 	_ = os.RemoveAll(auditDir())
-<<<<<<< HEAD
-=======
 }
 
 func resetDir() {
 	cleanupDir()
->>>>>>> origin/master
 	_ = os.MkdirAll(auditDir(), 0o777)
 }
 
