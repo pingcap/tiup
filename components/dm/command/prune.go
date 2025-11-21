@@ -84,11 +84,13 @@ func clearOutDatedEtcdInfo(clusterName string, metadata *spec.Metadata, opt oper
 
 	for _, master := range registeredMasters {
 		if _, ok := existedMasters[master]; !ok {
+			master := master // create a local copy of the loop variable
 			mastersToDelete = append(mastersToDelete, master)
 		}
 	}
 	for _, worker := range registeredWorkers {
 		if _, ok := existedWorkers[worker]; !ok {
+			worker := worker // create a local copy of the loop variable
 			workersToDelete = append(workersToDelete, worker)
 		}
 	}
@@ -98,19 +100,25 @@ func clearOutDatedEtcdInfo(clusterName string, metadata *spec.Metadata, opt oper
 	errCh := make(chan error, len(existedMasters)+len(existedWorkers))
 	var wg sync.WaitGroup
 
-	for _, master := range mastersToDelete {
-		wg.Add(1)
-		go func() {
-			errCh <- dmMasterClient.OfflineMaster(master, nil)
-			wg.Done()
-		}()
+	for _, master := range registeredMasters {
+		if _, ok := existedMasters[master]; !ok {
+			master := master // create a local copy of the loop variable
+			wg.Add(1)
+			go func() {
+				errCh <- dmMasterClient.OfflineMaster(master, nil)
+				wg.Done()
+			}()
+		}
 	}
-	for _, worker := range workersToDelete {
-		wg.Add(1)
-		go func() {
-			errCh <- dmMasterClient.OfflineWorker(worker, nil)
-			wg.Done()
-		}()
+	for _, worker := range registeredWorkers {
+		if _, ok := existedWorkers[worker]; !ok {
+			worker := worker // create a local copy of the loop variable
+			wg.Add(1)
+			go func() {
+				errCh <- dmMasterClient.OfflineWorker(worker, nil)
+				wg.Done()
+			}()
+		}
 	}
 
 	wg.Wait()
