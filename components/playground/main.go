@@ -21,7 +21,6 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
-	"os/user"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -36,14 +35,13 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/playground/instance"
 	"github.com/pingcap/tiup/pkg/cluster/api"
-	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/tui/colorstr"
 	"github.com/pingcap/tiup/pkg/utils"
-	"github.com/pingcap/tiup/pkg/version"
+		"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -60,15 +58,16 @@ type BootOptions struct {
 	Scheduling     instance.Config        `yaml:"scheduling"` // Only available when pd_mode == ms
 	TiProxy        instance.Config        `yaml:"tiproxy"`
 	TiDB           instance.Config        `yaml:"tidb"`
+	TiDBSystem     instance.Config        `yaml:"tidb.system"`
 	TiKV           instance.Config        `yaml:"tikv"`
-	TiFlash        instance.Config        `yaml:"tiflash"`         // ignored when ShOpt.Mode == tidb-cse or tiflash-disagg
-	TiFlashWrite   instance.Config        `yaml:"tiflash_write"`   // Only available when ShOpt.Mode == tidb-cse or tiflash-disagg
-	TiFlashCompute instance.Config        `yaml:"tiflash_compute"` // Only available when ShOpt.Mode == tidb-cse or tiflash-disagg
+	TiFlash        instance.Config        `yaml:"tiflash"`         // ignored when ShOpt.Mode == ModeCSE or ModeDisAgg
+	TiFlashWrite   instance.Config        `yaml:"tiflash_write"`   // Only available when ShOpt.Mode == ModeCSE or ModeDisAgg
+	TiFlashCompute instance.Config        `yaml:"tiflash_compute"` // Only available when ShOpt.Mode == ModeCSE or ModeDisAgg
 	TiCDC          instance.Config        `yaml:"ticdc"`
 	TiKVCDC        instance.Config        `yaml:"tikv_cdc"`
 	TiCIMeta       instance.Config        `yaml:"tici_meta"`   // Only available when ShOpt.Mode == tidb-fts
 	TiCIWorker     instance.Config        `yaml:"tici_worker"` // Only available when ShOpt.Mode == tidb-fts
-	TiKVWorker     instance.Config        `yaml:"tikv_worker"` // Only available when ShOpt.Mode == tidb-cse
+	TiKVWorker     instance.Config        `yaml:"tikv_worker"` // Only available when ShOpt.Mode == ModeCSE or ModeNextGen
 	Pump           instance.Config        `yaml:"pump"`
 	Drainer        instance.Config        `yaml:"drainer"`
 	Host           string                 `yaml:"host"`
@@ -153,6 +152,8 @@ Examples:
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				options.Version = args[0]
+			} else if options.ShOpt.Mode == instance.ModeNextGen {
+				options.Version = fmt.Sprintf("%s-%s", utils.LatestVersionAlias, utils.NextgenVersionAlias)
 			}
 
 			if err := populateDefaultOpt(cmd.Flags()); err != nil {
@@ -214,27 +215,14 @@ Examples:
 
 			// expand version string
 			if !semver.IsValid(options.Version) {
-				version, err := env.V1Repository().ResolveComponentVersion(spec.ComponentTiDB, options.Version)
-				if err != nil {
-					return errors.Annotate(err, fmt.Sprintf("Cannot resolve version %s to a valid semver string", options.Version))
-				}
-				// for nightly, may not use the same version for cluster
-				if options.Version == "nightly" {
-					version = "nightly"
-				}
-
-				if options.Version != version.String() {
-					colorstr.Fprintf(os.Stderr, `
-Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. If you'd like to use other versions:
+				colorstr.Fprintf(os.Stdout, `
+Note: Version constraint is [green][bold]%s[reset]. If you'd like to use other versions:
 
     Use exact version:      [tiup_command]tiup playground v7.1.0[reset]
     Use version range:      [tiup_command]tiup playground ^5[reset]
     Use nightly:            [tiup_command]tiup playground nightly[reset]
 
-`, options.Version, version.String())
-				}
-
-				options.Version = version.String()
+`, options.Version)
 			}
 
 			bootErr := p.bootCluster(ctx, env, options)
@@ -260,14 +248,20 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 		},
 	}
 
-	rootCmd.Flags().StringVar(&options.ShOpt.Mode, "mode", "tidb", "TiUP playground mode: 'tidb', 'tidb-cse', 'tiflash-disagg', 'tikv-slim', 'tidb-fts'")
+	rootCmd.Flags().StringVar(&options.ShOpt.Mode, "mode", "tidb", fmt.Sprintf("TiUP playground mode: '%s', '%s', '%s', '%s', '%s', 'tidb-fts'", instance.ModeNormal, instance.ModeCSE, instance.ModeNextGen, instance.ModeDisAgg, instance.ModeTiKVSlim))
 	rootCmd.Flags().StringVar(&options.ShOpt.PDMode, "pd.mode", "pd", "PD mode: 'pd', 'ms'")
-	rootCmd.Flags().StringVar(&options.ShOpt.S3.Endpoint, "s3.endpoint", "http://127.0.0.1:9000", "Object store URL for --mode=tidb-cse, --mode=tiflash-disagg or --mode=tidb-fts")
-	rootCmd.Flags().StringVar(&options.ShOpt.S3.Bucket, "s3.bucket", "tiflash", "Object store bucket for --mode=tidb-cse, --mode=tiflash-disagg or --mode=tidb-fts")
-	rootCmd.Flags().StringVar(&options.ShOpt.S3.AccessKey, "s3.access_key", "minioadmin", "Object store access key for --mode=tidb-cse, --mode=tiflash-disagg or --mode=tidb-fts")
-	rootCmd.Flags().StringVar(&options.ShOpt.S3.SecretKey, "s3.secret_key", "minioadmin", "Object store secret key for --mode=tidb-cse, --mode=tiflash-disagg or --mode=tidb-fts")
+	rootCmd.Flags().StringVar(&options.ShOpt.CSE.Endpoint, "cse.endpoint", "http://127.0.0.1:9000",
+		fmt.Sprintf("Object store URL for --mode=%s, --mode=%s, --mode=%s or --mode=tidb-fts", instance.ModeCSE, instance.ModeDisAgg, instance.ModeNextGen))
+	rootCmd.Flags().StringVar(&options.ShOpt.CSE.Bucket, "cse.bucket", "tiflash",
+		fmt.Sprintf("Object store bucket for --mode=%s, --mode=%s, --mode=%s or --mode=tidb-fts", instance.ModeCSE, instance.ModeDisAgg, instance.ModeNextGen))
+	rootCmd.Flags().StringVar(&options.ShOpt.CSE.AccessKey, "cse.access_key", "minioadmin",
+		fmt.Sprintf("Object store access key for --mode=%s, --mode=%s, --mode=%s or --mode=tidb-fts", instance.ModeCSE, instance.ModeDisAgg, instance.ModeNextGen))
+	rootCmd.Flags().StringVar(&options.ShOpt.CSE.SecretKey, "cse.secret_key", "minioadmin",
+		fmt.Sprintf("Object store secret key for --mode=%s, --mode=%s, --mode=%s or --mode=tidb-fts", instance.ModeCSE, instance.ModeDisAgg, instance.ModeNextGen))
 	rootCmd.Flags().BoolVar(&options.ShOpt.HighPerf, "perf", false, "Tune default config for better performance instead of debug troubleshooting")
-	rootCmd.Flags().BoolVar(&options.ShOpt.EnableTiKVColumnar, "tikv.columnar", false, "Enable TiKV columnar storage engine, only available when --mode=tidb-cse")
+	rootCmd.Flags().BoolVar(&options.ShOpt.EnableTiKVColumnar, "tikv.columnar", false,
+		fmt.Sprintf("Enable TiKV columnar storage engine, only available when --mode=%s", instance.ModeCSE))
+	rootCmd.Flags().BoolVar(&options.ShOpt.ForcePull, "force-pull", false, "Force redownload the component. It is useful to manually refresh nightly or broken binaries")
 
 	rootCmd.PersistentFlags().StringVarP(&tag, "tag", "T", "", "Specify a tag for playground, data dir of this tag will not be removed after exit")
 	rootCmd.Flags().Bool("without-monitor", false, "Don't start prometheus and grafana component")
@@ -279,14 +273,18 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 	// NOTE: Do not set default values if they may be changed in different modes.
 
 	rootCmd.Flags().IntVar(&options.TiDB.Num, "db", 0, "TiDB instance number")
+	rootCmd.Flags().IntVar(&options.TiDBSystem.Num, "db.system", 0, "TiDB system instance number")
 	rootCmd.Flags().IntVar(&options.TiKV.Num, "kv", 0, "TiKV instance number")
 	rootCmd.Flags().IntVar(&options.PD.Num, "pd", 0, "PD instance number")
 	rootCmd.Flags().IntVar(&options.TSO.Num, "tso", 0, "TSO instance number")
 	rootCmd.Flags().IntVar(&options.Scheduling.Num, "scheduling", 0, "Scheduling instance number")
 	rootCmd.Flags().IntVar(&options.TiProxy.Num, "tiproxy", 0, "TiProxy instance number")
-	rootCmd.Flags().IntVar(&options.TiFlash.Num, "tiflash", 0, "TiFlash instance number, when --mode=tidb-cse or --mode=tiflash-disagg this will set instance number for both Write Node and Compute Node")
-	rootCmd.Flags().IntVar(&options.TiFlashWrite.Num, "tiflash.write", 0, "TiFlash Write instance number, available when --mode=tidb-cse or --mode=tiflash-disagg, take precedence over --tiflash")
-	rootCmd.Flags().IntVar(&options.TiFlashCompute.Num, "tiflash.compute", 0, "TiFlash Compute instance number, available when --mode=tidb-cse or --mode=tiflash-disagg, take precedence over --tiflash")
+	rootCmd.Flags().IntVar(&options.TiFlash.Num, "tiflash", 0,
+		fmt.Sprintf("TiFlash instance number, when --mode=%s or --mode=%s this will set instance number for both Write Node and Compute Node", instance.ModeCSE, instance.ModeDisAgg))
+	rootCmd.Flags().IntVar(&options.TiFlashWrite.Num, "tiflash.write", 0,
+		fmt.Sprintf("TiFlash Write instance number, available when --mode=%s or --mode=%s, take precedence over --tiflash", instance.ModeCSE, instance.ModeDisAgg))
+	rootCmd.Flags().IntVar(&options.TiFlashCompute.Num, "tiflash.compute", 0,
+		fmt.Sprintf("TiFlash Compute instance number, available when --mode=%s or --mode=%s, take precedence over --tiflash", instance.ModeCSE, instance.ModeDisAgg))
 	rootCmd.Flags().IntVar(&options.TiCDC.Num, "ticdc", 0, "TiCDC instance number")
 	rootCmd.Flags().IntVar(&options.TiKVCDC.Num, "kvcdc", 0, "TiKV-CDC instance number")
 	rootCmd.Flags().IntVar(&options.TiCIMeta.Num, "tici.meta", 0, "TiCI MetaServer instance number, available when --mode=tidb-fts")
@@ -295,7 +293,8 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 	rootCmd.Flags().IntVar(&options.Drainer.Num, "drainer", 0, "Drainer instance number")
 	rootCmd.Flags().IntVar(&options.DMMaster.Num, "dm-master", 0, "DM-master instance number")
 	rootCmd.Flags().IntVar(&options.DMWorker.Num, "dm-worker", 0, "DM-worker instance number")
-	rootCmd.Flags().IntVar(&options.TiKVWorker.Num, "tikv.worker", 0, "TiKV worker instance number, only available when --mode=tidb-cse. Could be 0 or 1.")
+	rootCmd.Flags().IntVar(&options.TiKVWorker.Num, "tikv.worker", 0,
+		fmt.Sprintf("TiKV worker instance number, only available when --mode=%s or --mode=%s. Could be 0 or 1.", instance.ModeCSE, instance.ModeNextGen))
 
 	rootCmd.Flags().IntVar(&options.TiDB.UpTimeout, "db.timeout", 60, "TiDB max wait time in seconds for starting, 0 means no limit")
 	rootCmd.Flags().IntVar(&options.TiFlash.UpTimeout, "tiflash.timeout", 120, "TiFlash max wait time in seconds for starting, 0 means no limit")
@@ -304,6 +303,8 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 	rootCmd.Flags().StringVar(&options.Host, "host", "127.0.0.1", "Playground cluster host")
 	rootCmd.Flags().StringVar(&options.TiDB.Host, "db.host", "", "Playground TiDB host. If not provided, TiDB will still use `host` flag as its host")
 	rootCmd.Flags().IntVar(&options.TiDB.Port, "db.port", 0, "Playground TiDB port. If not provided, TiDB will use 4000 as its port. Or 6000 if TiProxy is enabled.")
+	rootCmd.Flags().StringVar(&options.TiDBSystem.Host, "db.system.host", "", "Playground TiDB system host. If not provided, TiDB will still use `host` flag as its host")
+	rootCmd.Flags().IntVar(&options.TiDBSystem.Port, "db.system.port", 0, "Playground TiDB system port. If not provided, TiDB will use 4000 as its port. Or 6000 if TiProxy is enabled.")
 	rootCmd.Flags().StringVar(&options.PD.Host, "pd.host", "", "Playground PD host. If not provided, PD will still use `host` flag as its host")
 	rootCmd.Flags().IntVar(&options.PD.Port, "pd.port", 0, "Playground PD port. If not provided, PD will use 2379 as its port")
 	rootCmd.Flags().StringVar(&options.TiKV.Host, "kv.host", "", "Playground TiKV host. If not provided, TiKV will still use `host` flag as its host")
@@ -321,14 +322,18 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 	rootCmd.Flags().IntVar(&options.TiKVWorker.Port, "tikv.worker.port", 19000, "TiKV worker instance port")
 
 	rootCmd.Flags().StringVar(&options.TiDB.ConfigPath, "db.config", "", "TiDB instance configuration file")
+	rootCmd.Flags().StringVar(&options.TiDBSystem.ConfigPath, "db.system.config", "", "TiDB system instance configuration file")
 	rootCmd.Flags().StringVar(&options.TiKV.ConfigPath, "kv.config", "", "TiKV instance configuration file")
 	rootCmd.Flags().StringVar(&options.PD.ConfigPath, "pd.config", "", "PD instance configuration file")
 	rootCmd.Flags().StringVar(&options.TSO.ConfigPath, "tso.config", "", "TSO instance configuration file")
 	rootCmd.Flags().StringVar(&options.Scheduling.ConfigPath, "scheduling.config", "", "Scheduling instance configuration file")
 	rootCmd.Flags().StringVar(&options.TiProxy.ConfigPath, "tiproxy.config", "", "TiProxy instance configuration file")
-	rootCmd.Flags().StringVar(&options.TiFlash.ConfigPath, "tiflash.config", "", "TiFlash instance configuration file, when --mode=tidb-cse or --mode=tiflash-disagg this will set config file for both Write Node and Compute Node")
-	rootCmd.Flags().StringVar(&options.TiFlashWrite.ConfigPath, "tiflash.write.config", "", "TiFlash Write instance configuration file, available when --mode=tidb-cse or --mode=tiflash-disagg, take precedence over --tiflash.config")
-	rootCmd.Flags().StringVar(&options.TiFlashCompute.ConfigPath, "tiflash.compute.config", "", "TiFlash Compute instance configuration file, available when --mode=tidb-cse or --mode=tiflash-disagg, take precedence over --tiflash.config")
+	rootCmd.Flags().StringVar(&options.TiFlash.ConfigPath, "tiflash.config", "",
+		fmt.Sprintf("TiFlash instance configuration file, when --mode=%s or --mode=%s, this will set config file for both Write Node and Compute Node", instance.ModeCSE, instance.ModeDisAgg))
+	rootCmd.Flags().StringVar(&options.TiFlashWrite.ConfigPath, "tiflash.write.config", "",
+		fmt.Sprintf("TiFlash Write instance configuration file, available when --mode=%s or --mode=%s, take precedence over --tiflash.config", instance.ModeCSE, instance.ModeDisAgg))
+	rootCmd.Flags().StringVar(&options.TiFlashCompute.ConfigPath, "tiflash.compute.config", "",
+		fmt.Sprintf("TiFlash Compute instance configuration file, available when --mode=%s or --mode=%s, take precedence over --tiflash.config", instance.ModeCSE, instance.ModeDisAgg))
 	rootCmd.Flags().StringVar(&options.Pump.ConfigPath, "pump.config", "", "Pump instance configuration file")
 	rootCmd.Flags().StringVar(&options.Drainer.ConfigPath, "drainer.config", "", "Drainer instance configuration file")
 	rootCmd.Flags().StringVar(&options.TiCDC.ConfigPath, "ticdc.config", "", "TiCDC instance configuration file")
@@ -340,15 +345,19 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 	rootCmd.Flags().StringVar(&options.TiKVWorker.ConfigPath, "tikv.worker.config", "", "TiKV worker instance configuration file")
 
 	rootCmd.Flags().StringVar(&options.TiDB.BinPath, "db.binpath", "", "TiDB instance binary path")
+	rootCmd.Flags().StringVar(&options.TiDBSystem.BinPath, "db.system.binpath", "", "TiDB system instance binary path, if not specified, same as `db.binpath`")
 	rootCmd.Flags().StringVar(&options.TiKV.BinPath, "kv.binpath", "", "TiKV instance binary path")
 	rootCmd.Flags().StringVar(&options.PD.BinPath, "pd.binpath", "", "PD instance binary path")
 	rootCmd.Flags().StringVar(&options.TSO.BinPath, "tso.binpath", "", "TSO instance binary path")
 	rootCmd.Flags().StringVar(&options.Scheduling.BinPath, "scheduling.binpath", "", "Scheduling instance binary path")
 	rootCmd.Flags().StringVar(&options.TiProxy.BinPath, "tiproxy.binpath", "", "TiProxy instance binary path")
 	rootCmd.Flags().StringVar(&options.TiProxy.Version, "tiproxy.version", "", "TiProxy instance version")
-	rootCmd.Flags().StringVar(&options.TiFlash.BinPath, "tiflash.binpath", "", "TiFlash instance binary path, when --mode=tidb-cse or --mode=tiflash-disagg this will set binary path for both Write Node and Compute Node")
-	rootCmd.Flags().StringVar(&options.TiFlashWrite.BinPath, "tiflash.write.binpath", "", "TiFlash Write instance binary path, available when --mode=tidb-cse or --mode=tiflash-disagg, take precedence over --tiflash.binpath")
-	rootCmd.Flags().StringVar(&options.TiFlashCompute.BinPath, "tiflash.compute.binpath", "", "TiFlash Compute instance binary path, available when --mode=tidb-cse or --mode=tiflash-disagg, take precedence over --tiflash.binpath")
+	rootCmd.Flags().StringVar(&options.TiFlash.BinPath, "tiflash.binpath", "",
+		fmt.Sprintf("TiFlash instance binary path, when --mode=%s or --mode=%s this will set binary path for both Write Node and Compute Node", instance.ModeCSE, instance.ModeDisAgg))
+	rootCmd.Flags().StringVar(&options.TiFlashWrite.BinPath, "tiflash.write.binpath", "",
+		fmt.Sprintf("TiFlash Write instance binary path, available when --mode=%s or --mode=%s, take precedence over --tiflash.binpath", instance.ModeCSE, instance.ModeDisAgg))
+	rootCmd.Flags().StringVar(&options.TiFlashCompute.BinPath, "tiflash.compute.binpath", "",
+		fmt.Sprintf("TiFlash Compute instance binary path, available when --mode=%s or --mode=%s, take precedence over --tiflash.binpath", instance.ModeCSE, instance.ModeDisAgg))
 	rootCmd.Flags().StringVar(&options.TiCDC.BinPath, "ticdc.binpath", "", "TiCDC instance binary path")
 	rootCmd.Flags().StringVar(&options.TiKVCDC.BinPath, "kvcdc.binpath", "", "TiKV-CDC instance binary path")
 	rootCmd.Flags().StringVar(&options.TiCIMeta.BinPath, "tici.binpath", "", "TiCI-Meta/Worker instance binary path, available when --mode=tidb-fts")
@@ -387,13 +396,26 @@ func populateDefaultOpt(flagSet *pflag.FlagSet) error {
 	}
 
 	switch options.ShOpt.Mode {
-	case "tidb":
+	case instance.ModeNormal:
 		defaultInt(&options.TiDB.Num, "db", 1)
 		defaultInt(&options.TiKV.Num, "kv", 1)
 		defaultInt(&options.TiFlash.Num, "tiflash", 1)
-	case "tikv-slim":
+	case instance.ModeNextGen:
+		defaultInt(&options.TiDB.Num, "db", 1)
+		defaultInt(&options.TiDBSystem.Num, "db.system", 1)
 		defaultInt(&options.TiKV.Num, "kv", 1)
-	case "tidb-cse", "tiflash-disagg":
+		defaultStr(&options.TiDBSystem.BinPath, "db.system.binpath", options.TiDB.BinPath)
+		defaultInt(&options.TiFlashWrite.Num, "tiflash.write", options.TiFlash.Num)
+		defaultStr(&options.TiFlashWrite.BinPath, "tiflash.write.binpath", options.TiFlash.BinPath)
+		defaultStr(&options.TiFlashWrite.ConfigPath, "tiflash.write.config", options.TiFlash.ConfigPath)
+		options.TiFlashWrite.UpTimeout = options.TiFlash.UpTimeout
+		defaultInt(&options.TiFlashCompute.Num, "tiflash.compute", options.TiFlash.Num)
+		defaultStr(&options.TiFlashCompute.BinPath, "tiflash.compute.binpath", options.TiFlash.BinPath)
+		defaultStr(&options.TiFlashCompute.ConfigPath, "tiflash.compute.config", options.TiFlash.ConfigPath)
+		options.TiFlashCompute.UpTimeout = options.TiFlash.UpTimeout
+	case instance.ModeTiKVSlim:
+		defaultInt(&options.TiKV.Num, "kv", 1)
+	case instance.ModeCSE, instance.ModeDisAgg:
 		defaultInt(&options.TiDB.Num, "db", 1)
 		defaultInt(&options.TiKV.Num, "kv", 1)
 		defaultInt(&options.TiFlash.Num, "tiflash", 1)
@@ -405,6 +427,12 @@ func populateDefaultOpt(flagSet *pflag.FlagSet) error {
 		defaultStr(&options.TiFlashCompute.BinPath, "tiflash.compute.binpath", options.TiFlash.BinPath)
 		defaultStr(&options.TiFlashCompute.ConfigPath, "tiflash.compute.config", options.TiFlash.ConfigPath)
 		options.TiFlashCompute.UpTimeout = options.TiFlash.UpTimeout
+	default:
+		return errors.Errorf("Unknown --mode %s", options.ShOpt.Mode)
+	}
+
+	switch options.ShOpt.Mode {
+	case instance.ModeNextGen, instance.ModeCSE, instance.ModeDisAgg:
 		// Note: if a path of `tikv-server` is specified, the real resolved path of tikv-worker will become `tikv-worker` in the same directory.
 		defaultInt(&options.TiKVWorker.Num, "tikv.worker", 1)
 		defaultStr(&options.TiKVWorker.BinPath, "tikv.worker.binpath", options.TiKV.BinPath)
@@ -415,9 +443,7 @@ func populateDefaultOpt(flagSet *pflag.FlagSet) error {
 		defaultInt(&options.TiCIWorker.Num, "tici.worker", 1)
 		defaultInt(&options.TiCDC.Num, "ticdc", 1)
 		defaultInt(&options.TiFlash.Num, "tiflash", 1)
-		options.ShOpt.S3.Prefix = tag
-	default:
-		return errors.Errorf("Unknown --mode %s", options.ShOpt.Mode)
+		options.ShOpt.CSE.Prefix = tag
 	}
 
 	switch options.ShOpt.PDMode {
@@ -538,11 +564,11 @@ func getAbsolutePath(path string) (string, error) {
 	}
 
 	if strings.HasPrefix(path, "~/") {
-		usr, err := user.Current()
+		homedir, err := os.UserHomeDir()
 		if err != nil {
 			return "", errors.Annotatef(err, "retrieve user home failed")
 		}
-		path = filepath.Join(usr.HomeDir, path[2:])
+		path = filepath.Join(homedir, path[2:])
 	}
 
 	absPath, err := filepath.Abs(path)
@@ -567,7 +593,7 @@ func loadPort(dir string) (port int, err error) {
 	return
 }
 
-func dumpDSN(fname string, dbs []*instance.TiDBInstance, tdbs []*instance.TiProxy) {
+func dumpDSN(fname string, dbs []*instance.TiDBInstance, tdbs []*instance.TiProxyInstance) {
 	var dsn []string
 	for _, db := range dbs {
 		dsn = append(dsn, db.DSN())

@@ -42,7 +42,7 @@ func (c *CopyComponent) Execute(ctx context.Context) error {
 		ver, _, err := env.V1Repository().WithOptions(repository.Options{
 			GOOS:   c.os,
 			GOARCH: c.arch,
-		}).LatestStableVersion(c.component, false)
+		}).LatestStableVersion(c.component, false, nil)
 		if err != nil {
 			return err
 		}

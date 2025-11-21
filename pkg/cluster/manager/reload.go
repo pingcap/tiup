@@ -77,14 +77,7 @@ func (m *Manager) Reload(name string, gOpt operator.Options, skipRestart, skipCo
 	uniqueHosts, noAgentHosts := getMonitorHosts(topo)
 
 	// init config
-	refreshConfigTasks, hasImported := buildInitConfigTasks(m, name, topo, base, gOpt, nil)
-
-	// handle dir scheme changes
-	if hasImported {
-		if err := spec.HandleImportPathMigration(name); err != nil {
-			return err
-		}
-	}
+	refreshConfigTasks := buildInitConfigTasks(m, name, topo, base, gOpt, nil)
 
 	monitorConfigTasks := buildInitMonitoredConfigTasks(
 		m.specManager,

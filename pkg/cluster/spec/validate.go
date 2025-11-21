@@ -233,19 +233,6 @@ func CheckClusterDirOverlap(entries []DirEntry) error {
 			}
 
 			if utils.IsSubDir(d1.dir, d2.dir) || utils.IsSubDir(d2.dir, d1.dir) {
-				// overlap is allowed in the case both sides are imported
-				if d1.instance.IsImported() && d2.instance.IsImported() {
-					continue
-				}
-
-				// overlap is allowed in the case one side is imported and the other is monitor,
-				// we assume that the monitor is deployed with the first instance in that host,
-				// it implies that the monitor is imported too.
-				if (strings.HasPrefix(d1.dirKind, "monitor") && d2.instance.IsImported()) ||
-					(d1.instance.IsImported() && strings.HasPrefix(d2.dirKind, "monitor")) {
-					continue
-				}
-
 				// overlap is allowed in the case one side is data dir of a monitor instance,
 				// as the *_exporter don't need data dir, the field is only kept for compatibility
 				// with legacy tidb-ansible deployments.
@@ -518,10 +505,6 @@ func (s *Specification) platformConflictsDetect() error {
 		compSpecs := topoSpec.Field(i)
 		for index := 0; index < compSpecs.Len(); index++ {
 			compSpec := reflect.Indirect(compSpecs.Index(index))
-			// skip nodes imported from TiDB-Ansible
-			if compSpec.Addr().Interface().(InstanceSpec).IsImported() {
-				continue
-			}
 			// check hostname
 			host := compSpec.FieldByName("Host").String()
 			cfg := strings.Split(topoType.Field(i).Tag.Get("yaml"), ",")[0] // without meta
@@ -728,9 +711,8 @@ func (s *Specification) dirConflictsDetect() error {
 			dir  string
 		}
 		conflict struct {
-			tp       string
-			cfg      string
-			imported bool
+			tp  string
+			cfg string
 		}
 	)
 
@@ -780,10 +762,9 @@ func (s *Specification) dirConflictsDetect() error {
 					if item.dir != "" && !strings.HasPrefix(item.dir, "/") {
 						continue
 					}
+
 					prev, exist := dirStats[item]
-					// not checking between imported nodes
-					if exist &&
-						!(compSpec.Addr().Interface().(InstanceSpec).IsImported() && prev.imported) {
+					if exist {
 						return &meta.ValidateErr{
 							Type:   meta.TypeConflict,
 							Target: "directory",
@@ -792,12 +773,9 @@ func (s *Specification) dirConflictsDetect() error {
 							Value:  item.dir,
 						}
 					}
-					// not reporting error for nodes imported from TiDB-Ansible, but keep
-					// their dirs in the map to check if other nodes are using them
 					dirStats[item] = conflict{
-						tp:       tp,
-						cfg:      cfg,
-						imported: compSpec.Addr().Interface().(InstanceSpec).IsImported(),
+						tp:  tp,
+						cfg: cfg,
 					}
 				}
 			}
@@ -1049,10 +1027,6 @@ func (s *Specification) validateMonitorAgent() error {
 		compSpecs := topoSpec.Field(i)
 		for index := 0; index < compSpecs.Len(); index++ {
 			compSpec := reflect.Indirect(compSpecs.Index(index))
-			// skip nodes imported from TiDB-Ansible
-			if compSpec.Addr().Interface().(InstanceSpec).IsImported() {
-				continue
-			}
 
 			// check hostname
 			host := compSpec.FieldByName("Host").String()

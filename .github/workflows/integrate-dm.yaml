@@ -40,16 +40,15 @@ jobs:
           - '--native-ssh --do-cases test_cmd'
           - '--native-ssh --do-cases test_upgrade'
     steps:
-      - name: Set up Go 1.24
-        uses: actions/setup-go@v4
-        with:
-          go-version: 1.24.x
-        id: go
-
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
         with:
           ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: 'go.mod'
 
       - name: Build build_integration_test
         run: |
@@ -82,7 +81,7 @@ jobs:
       - name: Run test suite
         id: test
         run: |
-          # ensuere docker ssh is ready
+          # ensure docker ssh is ready
           sleep 4
           # should not use -it
           # ref: https://stackoverflow.com/questions/43099116/error-the-input-device-is-not-a-tty
@@ -90,7 +89,6 @@ jobs:
 
       - name: Collect component log
         if: ${{ failure() }}
-        # if: ${{ failure() }}
         run: |
           docker exec tiup-cluster-control bash -c 'mkdir -p /tiup-cluster/logs; [[ -d ~/.tiup/logs ]] && find ~/.tiup/logs -type f -name "*.log" -exec cp {} /tiup-cluster/logs \; || true'
 
@@ -114,7 +112,8 @@ jobs:
           find ./logs -type f -exec sh -c 'echo "{}" && cat {} && echo "\n"' \; || true
 
       - name: Upload coverage to Codecov
-        run: |
-          curl -Os https://uploader.codecov.io/latest/linux/codecov
-          chmod +x codecov
-          ./codecov -F dm -s ./tests/tiup-dm/cover -f '*.out'
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./tests/tiup-dm/cover/*.out 
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

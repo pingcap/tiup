@@ -25,7 +25,7 @@ import (
 )
 
 // PDRole is the role of PD.
-type PDRole string
+type PDRole = string
 
 const (
 	// PDRoleNormal is the default role of PD
@@ -41,14 +41,14 @@ const (
 // PDInstance represent a running pd-server
 type PDInstance struct {
 	instance
-	shOpt         SharedOptions
-	role          PDRole
-	initEndpoints []*PDInstance
-	joinEndpoints []*PDInstance
-	pds           []*PDInstance
-	Process
+	shOpt             SharedOptions
+	initEndpoints     []*PDInstance
+	joinEndpoints     []*PDInstance
+	pds               []*PDInstance
 	kvIsSingleReplica bool
 }
+
+var _ Instance = &PDInstance{}
 
 // NewPDInstance return a PDInstance
 func NewPDInstance(role PDRole, shOpt SharedOptions, binPath, dir, host, configPath string, id int, pds []*PDInstance, port int, kvIsSingleReplica bool) *PDInstance {
@@ -65,8 +65,8 @@ func NewPDInstance(role PDRole, shOpt SharedOptions, binPath, dir, host, configP
 			Port:       utils.MustGetFreePort(host, 2380, shOpt.PortOffset),
 			StatusPort: utils.MustGetFreePort(host, port, shOpt.PortOffset),
 			ConfigPath: configPath,
+			role:       role,
 		},
-		role:              role,
 		pds:               pds,
 		kvIsSingleReplica: kvIsSingleReplica,
 	}
@@ -86,7 +86,7 @@ func (inst *PDInstance) InitCluster(pds []*PDInstance) *PDInstance {
 
 // Name return the name of pd.
 func (inst *PDInstance) Name() string {
-	switch inst.role {
+	switch inst.Role() {
 	case PDRoleTSO:
 		return fmt.Sprintf("tso-%d", inst.ID)
 	case PDRoleScheduling:
@@ -109,9 +109,9 @@ func (inst *PDInstance) Start(ctx context.Context) error {
 
 	uid := inst.Name()
 	var args []string
-	switch inst.role {
+	switch inst.Role() {
 	case PDRoleNormal, PDRoleAPI:
-		if inst.role == PDRoleAPI {
+		if inst.Role() == PDRoleAPI {
 			args = []string{"services", "api"}
 		}
 		args = append(args, []string{
@@ -171,26 +171,20 @@ func (inst *PDInstance) Start(ctx context.Context) error {
 		}
 	}
 
-	inst.Process = &process{cmd: PrepareCommand(ctx, inst.BinPath, args, nil, inst.Dir)}
-
-	logIfErr(inst.Process.SetOutputFile(inst.LogFile()))
-	return inst.Process.Start()
+	return inst.PrepareProcess(ctx, inst.BinPath, args, nil, inst.Dir)
 }
 
 // Component return the component name.
 func (inst *PDInstance) Component() string {
-	if inst.role == PDRoleNormal || inst.role == PDRoleAPI {
-		return "pd"
-	}
-	return string(inst.role)
+	return PDRoleNormal
 }
 
 // LogFile return the log file.
 func (inst *PDInstance) LogFile() string {
-	if inst.role == PDRoleNormal || inst.role == PDRoleAPI {
+	if inst.Role() == PDRoleNormal || inst.Role() == PDRoleAPI {
 		return filepath.Join(inst.Dir, "pd.log")
 	}
-	return filepath.Join(inst.Dir, fmt.Sprintf("%s.log", string(inst.role)))
+	return filepath.Join(inst.Dir, fmt.Sprintf("%s.log", inst.Role()))
 }
 
 // Addr return the listen address of PD

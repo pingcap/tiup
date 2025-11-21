@@ -15,7 +15,6 @@ package spec
 
 import (
 	"os"
-	"os/user"
 	"path"
 	"path/filepath"
 
@@ -26,16 +25,15 @@ import (
 
 // sub directory names
 const (
-	TiUPPackageCacheDir      = "packages"
-	TiUPClusterDir           = "clusters"
-	TiUPAuditDir             = "audit"
-	TLSCertKeyDir            = "tls"
-	TLSCertKeyDirWithAnsible = "ssl"
-	TLSCACert                = "ca.crt"
-	TLSCAKey                 = "ca.pem"
-	TLSClientCert            = "client.crt"
-	TLSClientKey             = "client.pem"
-	PFXClientCert            = "client.pfx"
+	TiUPPackageCacheDir = "packages"
+	TiUPClusterDir      = "clusters"
+	TiUPAuditDir        = "audit"
+	TLSCertKeyDir       = "tls"
+	TLSCACert           = "ca.crt"
+	TLSCAKey            = "ca.pem"
+	TLSClientCert       = "client.crt"
+	TLSClientKey        = "client.pem"
+	PFXClientCert       = "client.pfx"
 )
 
 var profileDir string
@@ -43,11 +41,11 @@ var profileDir string
 // getHomeDir get the home directory of current user (if they have one).
 // The result path might be empty.
 func getHomeDir() (string, error) {
-	u, err := user.Current()
+	homedir, err := os.UserHomeDir()
 	if err != nil {
 		return "", errors.Trace(err)
 	}
-	return u.HomeDir, nil
+	return homedir, nil
 }
 
 var initialized = false

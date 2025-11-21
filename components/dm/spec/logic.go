@@ -44,7 +44,6 @@ type (
 		Role() string
 		SSH() (string, int)
 		GetMainPort() int
-		IsImported() bool
 		IgnoreMonitorAgent() bool
 	}
 )

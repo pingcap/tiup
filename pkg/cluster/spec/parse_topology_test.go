@@ -22,13 +22,11 @@ import (
 )
 
 func withTempFile(t *testing.T, content string, fn func(string)) {
-	file, err := os.CreateTemp("/tmp", "topology-test")
+	file, err := os.CreateTemp(t.TempDir(), "topo")
 	require.NoError(t, err)
-	defer os.Remove(file.Name())
 
 	_, err = file.WriteString(content)
 	require.NoError(t, err)
-	file.Close()
 
 	fn(file.Name())
 }
@@ -603,4 +601,66 @@ func TestFixRelativePath(t *testing.T) {
 	require.Equal(t, "", topo.TiKVServers[0].DeployDir)
 	require.Equal(t, "", topo.TiKVServers[0].DataDir)
 	require.Equal(t, "", topo.TiKVServers[0].LogDir)
+}
+
+func TestMergeResource(t *testing.T) {
+	withTempFile(t, `
+global:
+  resource_control:
+    memory_limit: 4
+    cpu_quota: 4
+    io_read_bandwidth_max: 4
+    io_write_bandwidth_max: 4
+    limit_core: 4
+    timeout_stop_sec: 4
+    timeout_start_sec: 4
+tidb_servers:
+  - host: 172.16.5.139
+    resource_control:
+      memory_limit: 3
+      cpu_quota: 3
+      io_read_bandwidth_max: 3
+      io_write_bandwidth_max: 3
+      limit_core: 3
+      timeout_stop_sec: 3
+      timeout_start_sec: 3
+  - host: 172.16.5.138
+`, func(base string) {
+		baseTopo := Specification{}
+		require.NoError(t, ParseTopologyYaml(base, &baseTopo))
+
+		require.Equal(t, "3", baseTopo.TiDBServers[0].ResourceControl.MemoryLimit)
+		require.Equal(t, "3", baseTopo.TiDBServers[0].ResourceControl.CPUQuota)
+		require.Equal(t, "3", baseTopo.TiDBServers[0].ResourceControl.IOReadBandwidthMax)
+		require.Equal(t, "3", baseTopo.TiDBServers[0].ResourceControl.IOWriteBandwidthMax)
+		require.Equal(t, "3", baseTopo.TiDBServers[0].ResourceControl.LimitCORE)
+		require.Equal(t, "3", baseTopo.TiDBServers[0].ResourceControl.TimeoutStartSec)
+		require.Equal(t, "3", baseTopo.TiDBServers[0].ResourceControl.TimeoutStopSec)
+
+		n := MergeResourceControl(baseTopo.GlobalOptions.ResourceControl, baseTopo.TiDBServers[0].ResourceControl)
+		require.Equal(t, "3", n.MemoryLimit)
+		require.Equal(t, "3", n.CPUQuota)
+		require.Equal(t, "3", n.IOReadBandwidthMax)
+		require.Equal(t, "3", n.IOWriteBandwidthMax)
+		require.Equal(t, "3", n.LimitCORE)
+		require.Equal(t, "3", n.TimeoutStartSec)
+		require.Equal(t, "3", n.TimeoutStopSec)
+
+		require.Equal(t, "", baseTopo.TiDBServers[1].ResourceControl.MemoryLimit)
+		require.Equal(t, "", baseTopo.TiDBServers[1].ResourceControl.CPUQuota)
+		require.Equal(t, "", baseTopo.TiDBServers[1].ResourceControl.IOReadBandwidthMax)
+		require.Equal(t, "", baseTopo.TiDBServers[1].ResourceControl.IOWriteBandwidthMax)
+		require.Equal(t, "", baseTopo.TiDBServers[1].ResourceControl.LimitCORE)
+		require.Equal(t, "", baseTopo.TiDBServers[1].ResourceControl.TimeoutStartSec)
+		require.Equal(t, "", baseTopo.TiDBServers[1].ResourceControl.TimeoutStopSec)
+
+		n = MergeResourceControl(baseTopo.GlobalOptions.ResourceControl, baseTopo.TiDBServers[1].ResourceControl)
+		require.Equal(t, "4", n.MemoryLimit)
+		require.Equal(t, "4", n.CPUQuota)
+		require.Equal(t, "4", n.IOReadBandwidthMax)
+		require.Equal(t, "4", n.IOWriteBandwidthMax)
+		require.Equal(t, "4", n.LimitCORE)
+		require.Equal(t, "4", n.TimeoutStartSec)
+		require.Equal(t, "4", n.TimeoutStopSec)
+	})
 }

@@ -24,6 +24,7 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/playground/instance"
+	"github.com/pingcap/tiup/pkg/environment"
 	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -78,7 +79,7 @@ func (m *monitor) wait() error {
 }
 
 // the cmd is not started after return
-func newMonitor(ctx context.Context, shOpt instance.SharedOptions, version string, host, dir string) (*monitor, error) {
+func newMonitor(ctx context.Context, shOpt instance.SharedOptions, version string, host, dir string, forcePull bool) (*monitor, error) {
 	if err := utils.MkdirAll(dir, 0755); err != nil {
 		return nil, errors.AddStack(err)
 	}
@@ -128,9 +129,16 @@ scrape_configs:
 		fmt.Sprintf("--storage.tsdb.path=%s", filepath.Join(dir, "data")),
 	}
 
-	var binPath string
+	// TODO: merge into startInstance
+	var sversion utils.Version
 	var err error
-	if binPath, err = tiupexec.PrepareBinary("prometheus", utils.Version(version), binPath); err != nil {
+	sversion, err = environment.GlobalEnv().V1Repository().ResolveComponentVersion("prometheus", version)
+	if err != nil {
+		return nil, err
+	}
+
+	var binPath string
+	if binPath, err = tiupexec.PrepareBinary("prometheus", sversion, binPath, forcePull); err != nil {
 		return nil, err
 	}
 	cmd := instance.PrepareCommand(ctx, binPath, args, nil, dir)

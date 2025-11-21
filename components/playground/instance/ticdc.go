@@ -28,7 +28,6 @@ type TiCDC struct {
 	instance
 	pds  []*PDInstance
 	envs []string // Environment variables
-	Process
 }
 
 var _ Instance = &TiCDC{}
@@ -46,6 +45,7 @@ func NewTiCDC(shOpt SharedOptions, binPath string, dir, host, configPath string,
 			Host:       host,
 			Port:       utils.MustGetFreePort(host, port, shOpt.PortOffset),
 			ConfigPath: configPath,
+			role:       "cdc",
 		},
 		pds: pds,
 	}
@@ -76,20 +76,12 @@ func (c *TiCDC) Start(ctx context.Context) error {
 		}
 	}
 
-	c.Process = &process{cmd: PrepareCommand(ctx, c.BinPath, args, c.envs, c.Dir)}
-
-	logIfErr(c.Process.SetOutputFile(c.LogFile()))
-	return c.Process.Start()
+	return c.PrepareProcess(ctx, c.BinPath, args, c.envs, c.Dir)
 }
 
 // SetEnvs sets environment variables for the TiCDC instance
 func (c *TiCDC) SetEnvs(envs []string) {
 	c.envs = envs
-}
-
-// Component return component name.
-func (c *TiCDC) Component() string {
-	return "cdc"
 }
 
 // LogFile return the log file.

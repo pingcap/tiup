@@ -5,7 +5,7 @@ services:
     networks:
       tiops:
         ipv4_address: __IPPREFIX__.201
-    image: mysql:5.7
+    image: mysql:8.0
     command: --default-authentication-plugin=mysql_native_password --log-bin=/var/lib/mysql/mysql-bin.log --server-id=1 --binlog-format=ROW --gtid_mode=ON --enforce-gtid-consistency=true
     restart: always
     environment:
@@ -17,7 +17,7 @@ services:
     networks:
       tiops:
         ipv4_address: __IPPREFIX__.202
-    image: mysql:5.7
+    image: mysql:8.0
     command: --default-authentication-plugin=mysql_native_password --log-bin=/var/lib/mysql/mysql-bin.log --server-id=2 --binlog-format=ROW --gtid_mode=ON --enforce-gtid-consistency=true
     restart: always
     environment:
@@ -29,4 +29,4 @@ services:
     networks:
       tiops:
         ipv4_address: __IPPREFIX__.211
-    image: pingcap/tidb:v4.0.3
+    image: pingcap/tidb:v8.5.3

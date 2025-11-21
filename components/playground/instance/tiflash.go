@@ -16,7 +16,6 @@ package instance
 import (
 	"context"
 	"fmt"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -26,7 +25,7 @@ import (
 )
 
 // TiFlashRole is the role of TiFlash.
-type TiFlashRole string
+type TiFlashRole = string
 
 const (
 	// TiFlashRoleNormal is used when TiFlash is not in disaggregated mode.
@@ -41,8 +40,6 @@ const (
 // TiFlashInstance represent a running TiFlash
 type TiFlashInstance struct {
 	instance
-	Role TiFlashRole // Used in wait routine, so it is public
-
 	shOpt           SharedOptions
 	tcpPort         int
 	servicePort     int
@@ -51,15 +48,16 @@ type TiFlashInstance struct {
 	ticReaderPort   int
 	pds             []*PDInstance
 	dbs             []*TiDBInstance
-	Process
 }
+
+var _ Instance = &TiFlashInstance{}
 
 // NewTiFlashInstance return a TiFlashInstance
 func NewTiFlashInstance(role TiFlashRole, shOpt SharedOptions, binPath, dir, host, configPath string, id int, pds []*PDInstance, dbs []*TiDBInstance, version string) *TiFlashInstance {
 	if role != TiFlashRoleNormal && role != TiFlashRoleDisaggWrite && role != TiFlashRoleDisaggCompute {
 		panic(fmt.Sprintf("Unknown TiFlash role %s", role))
 	}
-	if (role == TiFlashRoleDisaggCompute || role == TiFlashRoleDisaggWrite) && shOpt.Mode != "tidb-cse" && shOpt.Mode != "tiflash-disagg" {
+	if (role == TiFlashRoleDisaggCompute || role == TiFlashRoleDisaggWrite) && shOpt.Mode != ModeCSE && shOpt.Mode != ModeDisAgg && shOpt.Mode != ModeNextGen {
 		panic(fmt.Sprintf("Unsupported disagg role in mode %s", shOpt.Mode))
 	}
 
@@ -77,8 +75,8 @@ func NewTiFlashInstance(role TiFlashRole, shOpt SharedOptions, binPath, dir, hos
 			Port:       httpPort,
 			StatusPort: utils.MustGetFreePort(host, 8234, shOpt.PortOffset),
 			ConfigPath: configPath,
+			role:       role,
 		},
-		Role:            role,
 		tcpPort:         utils.MustGetFreePort(host, 9100, shOpt.PortOffset), // 9000 for default object store port
 		servicePort:     utils.MustGetFreePort(host, 3930, shOpt.PortOffset),
 		proxyPort:       utils.MustGetFreePort(host, 20170, shOpt.PortOffset),
@@ -162,10 +160,7 @@ func (inst *TiFlashInstance) Start(ctx context.Context) error {
 		}
 	}
 
-	inst.Process = &process{cmd: PrepareCommand(ctx, inst.BinPath, args, nil, inst.Dir)}
-
-	logIfErr(inst.Process.SetOutputFile(inst.LogFile()))
-	return inst.Process.Start()
+	return inst.PrepareProcess(ctx, inst.BinPath, args, nil, inst.Dir)
 }
 
 func isKeyPresentInMap(m map[string]any, key string) bool {
@@ -194,11 +189,6 @@ func (inst *TiFlashInstance) Component() string {
 // LogFile return the log file name.
 func (inst *TiFlashInstance) LogFile() string {
 	return filepath.Join(inst.Dir, "tiflash.log")
-}
-
-// Cmd returns the internal Cmd instance
-func (inst *TiFlashInstance) Cmd() *exec.Cmd {
-	return inst.Process.Cmd()
 }
 
 // StoreAddr return the store address of TiFlash

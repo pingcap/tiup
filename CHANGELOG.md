@@ -1,5 +1,18 @@
 TiUP Changelog
 
+<<<<<<< HEAD
+=======
+## [1.16.4] 2025-10-28
+
+### Fixes
+
+- Fix that `tiup` did not remove download tempdir (#2626, @xhebox)
+- Fix that `tiup` may not close gracefully sometimes (#2607, @xhebox)
+- Fix possible panic duration `tiup-cluster upgrade` (#2598, @xhebox)
+- Fix that `tiup` dont repect the HOME env variable in some cases (#2624, @dveeden)
+- Fix typos in `tiup` (#2601, @ottok)
+
+>>>>>>> origin/master
 ## [1.16.3] 2025-08-26
 
 ### New Features

@@ -17,7 +17,6 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -34,7 +33,6 @@ type DrainerSpec struct {
 	Host            string               `yaml:"host"`
 	ManageHost      string               `yaml:"manage_host,omitempty" validate:"manage_host:editable"`
 	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported        bool                 `yaml:"imported,omitempty"`
 	Patched         bool                 `yaml:"patched,omitempty"`
 	IgnoreExporter  bool                 `yaml:"ignore_exporter,omitempty"`
 	Port            int                  `yaml:"port" default:"8249"`
@@ -101,11 +99,6 @@ func (s *DrainerSpec) GetManageHost() string {
 		return s.ManageHost
 	}
 	return s.Host
-}
-
-// IsImported returns if the node is imported from TiDB-Ansible
-func (s *DrainerSpec) IsImported() bool {
-	return s.Imported
 }
 
 // IgnoreMonitorAgent returns if the node does not have monitor agents available
@@ -223,10 +216,6 @@ func (i *DrainerInstance) InitConfig(
 	enableTLS := topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(*DrainerSpec)
 	nodeID := utils.JoinHostPort(i.GetHost(), i.GetPort())
-	// keep origin node id if is imported
-	if i.IsImported() {
-		nodeID = ""
-	}
 
 	pds := []string{}
 	for _, pdspec := range topo.PDServers {
@@ -260,27 +249,6 @@ func (i *DrainerInstance) InitConfig(
 	}
 
 	globalConfig := topo.ServerConfigs.Drainer
-	// merge config files for imported instance
-	if i.IsImported() {
-		configPath := ClusterPath(
-			clusterName,
-			AnsibleImportedConfigPath,
-			fmt.Sprintf(
-				"%s-%s-%d.toml",
-				i.ComponentName(),
-				i.GetHost(),
-				i.GetPort(),
-			),
-		)
-		importConfig, err := os.ReadFile(configPath)
-		if err != nil {
-			return err
-		}
-		globalConfig, err = mergeImported(importConfig, globalConfig)
-		if err != nil {
-			return err
-		}
-	}
 
 	// set TLS configs
 	spec.Config, err = i.setTLSConfig(ctx, enableTLS, spec.Config, paths)

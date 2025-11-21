@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"path"
 	"reflect"
 	"strings"
@@ -29,17 +28,12 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/utils"
-	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 )
 
 const (
-	// AnsibleImportedConfigPath is the sub path where all imported configs are stored
-	AnsibleImportedConfigPath = "ansible-imported-configs"
 	// TempConfigPath is the sub path where generated temporary configs are stored
 	TempConfigPath = "config-cache"
-	// migrateLockName is the directory name of migrating lock
-	migrateLockName = "tiup-migrate.lck"
 )
 
 // ErrorCheckConfig represent error occurred in config check stage
@@ -249,17 +243,6 @@ func encodeRemoteCfg2Yaml(remote Remote) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func mergeImported(importConfig []byte, specConfigs ...map[string]any) (map[string]any, error) {
-	var configData map[string]any
-	if err := toml.Unmarshal(importConfig, &configData); err != nil {
-		return nil, perrs.Trace(err)
-	}
-
-	// overwrite topology specifieced configs upon the imported configs
-	lhs := MergeConfig(configData, specConfigs...)
-	return lhs, nil
-}
-
 func checkConfig(ctx context.Context, e ctxt.Executor, componentName, componentSource, version, nodeOS, arch, config string, paths meta.DirPaths) error {
 	var cmd string
 	configPath := path.Join(paths.Deploy, "conf", config)
@@ -307,40 +290,4 @@ func checkConfig(ctx context.Context, e ctxt.Executor, componentName, componentS
 func hasConfigCheckFlag(ctx context.Context, e ctxt.Executor, binPath string) bool {
 	stdout, stderr, _ := e.Execute(ctx, fmt.Sprintf("%s --help", binPath), false)
 	return strings.Contains(string(stdout), "config-check") || strings.Contains(string(stderr), "config-check")
-}
-
-// HandleImportPathMigration tries to rename old configs file directory for imported clusters to the new name
-func HandleImportPathMigration(clsName string) error {
-	dirPath := ClusterPath(clsName)
-	targetPath := path.Join(dirPath, AnsibleImportedConfigPath)
-	_, err := os.Stat(targetPath)
-	if os.IsNotExist(err) {
-		zap.L().Warn("renaming config dir", zap.String("orig", dirPath), zap.String("new", targetPath))
-
-		if lckErr := utils.Retry(func() error {
-			_, lckErr := os.Stat(path.Join(dirPath, migrateLockName))
-			if os.IsNotExist(lckErr) {
-				return nil
-			}
-			return perrs.Errorf("config dir already lock by another task, %s", lckErr)
-		}); lckErr != nil {
-			return lckErr
-		}
-		if lckErr := os.Mkdir(path.Join(dirPath, migrateLockName), 0755); lckErr != nil {
-			return perrs.Errorf("can not lock config dir, %s", lckErr)
-		}
-		defer func() {
-			rmErr := os.Remove(path.Join(dirPath, migrateLockName))
-			if rmErr != nil {
-				zap.L().Error("error unlocking config dir", zap.Error(rmErr))
-			}
-		}()
-
-		// ignore if the old config path does not exist
-		if _, err := os.Stat(path.Join(dirPath, "config")); os.IsNotExist(err) {
-			return nil
-		}
-		return os.Rename(path.Join(dirPath, "config"), targetPath)
-	}
-	return nil
 }

@@ -26,7 +26,6 @@ import (
 type Drainer struct {
 	instance
 	pds []*PDInstance
-	Process
 }
 
 var _ Instance = &Drainer{}
@@ -41,16 +40,12 @@ func NewDrainer(shOpt SharedOptions, binPath string, dir, host, configPath strin
 			Host:       host,
 			Port:       utils.MustGetFreePort(host, 8250, shOpt.PortOffset),
 			ConfigPath: configPath,
+			role:       "drainer",
 		},
 		pds: pds,
 	}
 	d.StatusPort = d.Port
 	return d
-}
-
-// Component return component name.
-func (d *Drainer) Component() string {
-	return "drainer"
 }
 
 // LogFile return the log file name.
@@ -63,17 +58,12 @@ func (d *Drainer) Addr() string {
 	return utils.JoinHostPort(AdvertiseHost(d.Host), d.Port)
 }
 
-// NodeID return the node id of drainer.
-func (d *Drainer) NodeID() string {
-	return fmt.Sprintf("drainer_%d", d.ID)
-}
-
 // Start implements Instance interface.
 func (d *Drainer) Start(ctx context.Context) error {
 	endpoints := pdEndpoints(d.pds, true)
 
 	args := []string{
-		fmt.Sprintf("--node-id=%s", d.NodeID()),
+		fmt.Sprintf("--node-id=%s", d.Name()),
 		fmt.Sprintf("--addr=%s", utils.JoinHostPort(d.Host, d.Port)),
 		fmt.Sprintf("--advertise-addr=%s", utils.JoinHostPort(AdvertiseHost(d.Host), d.Port)),
 		fmt.Sprintf("--pd-urls=%s", strings.Join(endpoints, ",")),
@@ -83,8 +73,5 @@ func (d *Drainer) Start(ctx context.Context) error {
 		args = append(args, fmt.Sprintf("--config=%s", d.ConfigPath))
 	}
 
-	d.Process = &process{cmd: PrepareCommand(ctx, d.BinPath, args, nil, d.Dir)}
-
-	logIfErr(d.Process.SetOutputFile(d.LogFile()))
-	return d.Process.Start()
+	return d.PrepareProcess(ctx, d.BinPath, args, nil, d.Dir)
 }

@@ -22,11 +22,14 @@ func (inst *PDInstance) getConfig() map[string]any {
 		config["replication.max-replicas"] = 1
 	}
 
-	if inst.shOpt.Mode == "tidb-cse" {
+	switch inst.shOpt.Mode {
+	case ModeCSE:
 		config["keyspace.pre-alloc"] = []string{"mykeyspace"}
 		config["replication.enable-placement-rules"] = true
 		config["schedule.merge-schedule-limit"] = 0
 		config["schedule.replica-schedule-limit"] = 500
+	case ModeNextGen:
+		config["keyspace.pre-alloc"] = []string{"keyspace1"}
 	}
 
 	return config

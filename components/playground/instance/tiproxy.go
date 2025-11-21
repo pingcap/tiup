@@ -27,14 +27,13 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
-// TiProxy represent a ticdc instance.
-type TiProxy struct {
+// TiProxyInstance represent a ticdc instance.
+type TiProxyInstance struct {
 	instance
 	pds []*PDInstance
-	Process
 }
 
-var _ Instance = &TiProxy{}
+var _ Instance = &TiProxyInstance{}
 
 // GenTiProxySessionCerts will create a self-signed certs for TiProxy session migration. NOTE that this cert is directly used by TiDB.
 func GenTiProxySessionCerts(dir string) error {
@@ -68,11 +67,11 @@ func GenTiProxySessionCerts(dir string) error {
 }
 
 // NewTiProxy create a TiProxy instance.
-func NewTiProxy(shOpt SharedOptions, binPath string, dir, host, configPath string, id int, port int, pds []*PDInstance) *TiProxy {
+func NewTiProxy(shOpt SharedOptions, binPath string, dir, host, configPath string, id int, port int, pds []*PDInstance) *TiProxyInstance {
 	if port <= 0 {
 		port = 6000
 	}
-	tiproxy := &TiProxy{
+	tiproxy := &TiProxyInstance{
 		instance: instance{
 			BinPath:    binPath,
 			ID:         id,
@@ -81,6 +80,7 @@ func NewTiProxy(shOpt SharedOptions, binPath string, dir, host, configPath strin
 			Port:       utils.MustGetFreePort(host, port, shOpt.PortOffset),
 			StatusPort: utils.MustGetFreePort(host, 3080, shOpt.PortOffset),
 			ConfigPath: configPath,
+			role:       "tiproxy",
 		},
 		pds: pds,
 	}
@@ -88,7 +88,7 @@ func NewTiProxy(shOpt SharedOptions, binPath string, dir, host, configPath strin
 }
 
 // MetricAddr implements Instance interface.
-func (c *TiProxy) MetricAddr() (r MetricAddr) {
+func (c *TiProxyInstance) MetricAddr() (r MetricAddr) {
 	r.Targets = append(r.Targets, utils.JoinHostPort(c.Host, c.StatusPort))
 	r.Labels = map[string]string{
 		"__metrics_path__": "/api/metrics",
@@ -97,7 +97,7 @@ func (c *TiProxy) MetricAddr() (r MetricAddr) {
 }
 
 // Start implements Instance interface.
-func (c *TiProxy) Start(ctx context.Context) error {
+func (c *TiProxyInstance) Start(ctx context.Context) error {
 	endpoints := pdEndpoints(c.pds, false)
 
 	configPath := filepath.Join(c.Dir, "config", "proxy.toml")
@@ -135,28 +135,15 @@ func (c *TiProxy) Start(ctx context.Context) error {
 		fmt.Sprintf("--config=%s", configPath),
 	}
 
-	c.Process = &process{cmd: PrepareCommand(ctx, c.BinPath, args, nil, c.Dir)}
-
-	logIfErr(c.Process.SetOutputFile(c.LogFile()))
-	return c.Process.Start()
-}
-
-// Addr return addresses that can be connected by MySQL clients.
-func (c *TiProxy) Addr() string {
-	return utils.JoinHostPort(AdvertiseHost(c.Host), c.Port)
+	return c.PrepareProcess(ctx, c.BinPath, args, nil, c.Dir)
 }
 
 // DSN returns the Data Source Name for connecting to TiProxy.
-func (c *TiProxy) DSN() string {
+func (c *TiProxyInstance) DSN() string {
 	return fmt.Sprintf("mysql://root@%s", c.Addr())
 }
 
-// Component return component name.
-func (c *TiProxy) Component() string {
-	return "tiproxy"
-}
-
 // LogFile return the log file.
-func (c *TiProxy) LogFile() string {
+func (c *TiProxyInstance) LogFile() string {
 	return filepath.Join(c.Dir, "tiproxy.log")
 }
