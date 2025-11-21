@@ -250,13 +250,13 @@ Note: Version constraint is [green][bold]%s[reset]. If you'd like to use other v
 
 	rootCmd.Flags().StringVar(&options.ShOpt.Mode, "mode", "tidb", fmt.Sprintf("TiUP playground mode: '%s', '%s', '%s', '%s', '%s', 'tidb-fts'", instance.ModeNormal, instance.ModeCSE, instance.ModeNextGen, instance.ModeDisAgg, instance.ModeTiKVSlim))
 	rootCmd.Flags().StringVar(&options.ShOpt.PDMode, "pd.mode", "pd", "PD mode: 'pd', 'ms'")
-	rootCmd.Flags().StringVar(&options.ShOpt.CSE.Endpoint, "cse.endpoint", "http://127.0.0.1:9000",
+	rootCmd.Flags().StringVar(&options.ShOpt.S3.Endpoint, "cse.endpoint", "http://127.0.0.1:9000",
 		fmt.Sprintf("Object store URL for --mode=%s, --mode=%s, --mode=%s or --mode=tidb-fts", instance.ModeCSE, instance.ModeDisAgg, instance.ModeNextGen))
-	rootCmd.Flags().StringVar(&options.ShOpt.CSE.Bucket, "cse.bucket", "tiflash",
+	rootCmd.Flags().StringVar(&options.ShOpt.S3.Bucket, "cse.bucket", "tiflash",
 		fmt.Sprintf("Object store bucket for --mode=%s, --mode=%s, --mode=%s or --mode=tidb-fts", instance.ModeCSE, instance.ModeDisAgg, instance.ModeNextGen))
-	rootCmd.Flags().StringVar(&options.ShOpt.CSE.AccessKey, "cse.access_key", "minioadmin",
+	rootCmd.Flags().StringVar(&options.ShOpt.S3.AccessKey, "cse.access_key", "minioadmin",
 		fmt.Sprintf("Object store access key for --mode=%s, --mode=%s, --mode=%s or --mode=tidb-fts", instance.ModeCSE, instance.ModeDisAgg, instance.ModeNextGen))
-	rootCmd.Flags().StringVar(&options.ShOpt.CSE.SecretKey, "cse.secret_key", "minioadmin",
+	rootCmd.Flags().StringVar(&options.ShOpt.S3.SecretKey, "cse.secret_key", "minioadmin",
 		fmt.Sprintf("Object store secret key for --mode=%s, --mode=%s, --mode=%s or --mode=tidb-fts", instance.ModeCSE, instance.ModeDisAgg, instance.ModeNextGen))
 	rootCmd.Flags().BoolVar(&options.ShOpt.HighPerf, "perf", false, "Tune default config for better performance instead of debug troubleshooting")
 	rootCmd.Flags().BoolVar(&options.ShOpt.EnableTiKVColumnar, "tikv.columnar", false,
@@ -443,7 +443,7 @@ func populateDefaultOpt(flagSet *pflag.FlagSet) error {
 		defaultInt(&options.TiCIWorker.Num, "tici.worker", 1)
 		defaultInt(&options.TiCDC.Num, "ticdc", 1)
 		defaultInt(&options.TiFlash.Num, "tiflash", 1)
-		options.ShOpt.CSE.Prefix = tag
+		options.ShOpt.S3.Prefix = tag
 	}
 
 	switch options.ShOpt.PDMode {
@@ -637,7 +637,7 @@ func main() {
 }
 
 func removeMinioPrefix() {
-	s3Config := options.ShOpt.CSE
+	s3Config := options.ShOpt.S3
 	isSecure := strings.HasPrefix(s3Config.Endpoint, "https://")
 	rawEndpoint := strings.TrimPrefix(s3Config.Endpoint, "https://")
 	rawEndpoint = strings.TrimPrefix(rawEndpoint, "http://")

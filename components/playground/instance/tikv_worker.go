@@ -113,10 +113,10 @@ func (inst *TiKVWorkerInstance) Component() string {
 func (inst *TiKVWorkerInstance) getConfig() map[string]any {
 	config := make(map[string]any)
 	config["dfs.prefix"] = "tikv"
-	config["dfs.s3-endpoint"] = inst.shOpt.CSE.Endpoint
-	config["dfs.s3-key-id"] = inst.shOpt.CSE.AccessKey
-	config["dfs.s3-secret-key"] = inst.shOpt.CSE.SecretKey
-	config["dfs.s3-bucket"] = inst.shOpt.CSE.Bucket
+	config["dfs.s3-endpoint"] = inst.shOpt.S3.Endpoint
+	config["dfs.s3-key-id"] = inst.shOpt.S3.AccessKey
+	config["dfs.s3-secret-key"] = inst.shOpt.S3.SecretKey
+	config["dfs.s3-bucket"] = inst.shOpt.S3.Bucket
 	config["dfs.s3-region"] = "local"
 	config["raft-engine.enabled"] = false
 	config["schema-manager.dir"] = filepath.Join(inst.Dir, "schemas")

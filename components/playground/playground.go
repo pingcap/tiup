@@ -1160,12 +1160,12 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 	switch options.ShOpt.Mode {
 	case instance.ModeCSE, instance.ModeDisAgg, instance.ModeNextGen, "tidb-fts":
-		if !strings.HasPrefix(options.ShOpt.CSE.Endpoint, "https://") && !strings.HasPrefix(options.ShOpt.CSE.Endpoint, "http://") {
+		if !strings.HasPrefix(options.ShOpt.S3.Endpoint, "https://") && !strings.HasPrefix(options.ShOpt.S3.Endpoint, "http://") {
 			return fmt.Errorf("require S3 endpoint to start with http:// or https://")
 		}
 
-		isSecure := strings.HasPrefix(options.ShOpt.CSE.Endpoint, "https://")
-		rawEndpoint := strings.TrimPrefix(options.ShOpt.CSE.Endpoint, "https://")
+		isSecure := strings.HasPrefix(options.ShOpt.S3.Endpoint, "https://")
+		rawEndpoint := strings.TrimPrefix(options.ShOpt.S3.Endpoint, "https://")
 		rawEndpoint = strings.TrimPrefix(rawEndpoint, "http://")
 
 		// Currently we always assign region=local. Other regions are not supported.
@@ -1175,7 +1175,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 		// Preflight check whether specified object storage is available.
 		s3Client, err := minio.New(rawEndpoint, &minio.Options{
-			Creds:  credentials.NewStaticV4(options.ShOpt.CSE.AccessKey, options.ShOpt.CSE.SecretKey, ""),
+			Creds:  credentials.NewStaticV4(options.ShOpt.S3.AccessKey, options.ShOpt.S3.SecretKey, ""),
 			Secure: isSecure,
 		})
 		if err != nil {
@@ -1185,15 +1185,15 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		ctxCheck, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
-		bucketExists, err := s3Client.BucketExists(ctxCheck, options.ShOpt.CSE.Bucket)
+		bucketExists, err := s3Client.BucketExists(ctxCheck, options.ShOpt.S3.Bucket)
 		if err != nil {
 			return errors.Annotate(err, "can not connect to S3 endpoint")
 		}
 		if !bucketExists {
 			// Try to create bucket.
-			err := s3Client.MakeBucket(ctxCheck, options.ShOpt.CSE.Bucket, minio.MakeBucketOptions{})
+			err := s3Client.MakeBucket(ctxCheck, options.ShOpt.S3.Bucket, minio.MakeBucketOptions{})
 			if err != nil {
-				return fmt.Errorf("cannot create s3 bucket: Bucket %s doesn't exist and fail to create automatically (your bucket name may be invalid?)", options.ShOpt.CSE.Bucket)
+				return fmt.Errorf("cannot create s3 bucket: Bucket %s doesn't exist and fail to create automatically (your bucket name may be invalid?)", options.ShOpt.S3.Bucket)
 			}
 		}
 	}
@@ -1320,7 +1320,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			if err != nil {
 				return err
 			}
-			s3Config := options.ShOpt.CSE
+			s3Config := options.ShOpt.S3
 			cdcClient := api.NewCDCOpenAPIClient(ctx, []string{p.ticdcs[0].Addr()}, 10*time.Second, nil)
 			if err := cdcClient.CreateChangefeed(s3Config.Bucket, s3Config.Prefix, s3Config.Endpoint, s3Config.AccessKey, s3Config.SecretKey, flushInterval); err != nil {
 				fmt.Println(color.RedString("Failed to create changefeed: %s", err))

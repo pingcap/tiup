@@ -27,10 +27,10 @@ func (inst *TiFlashInstance) getProxyConfig() map[string]any {
 			config["storage.api-version"] = 2
 			config["storage.enable-ttl"] = true
 			config["dfs.prefix"] = "tikv"
-			config["dfs.s3-endpoint"] = inst.shOpt.CSE.Endpoint
-			config["dfs.s3-key-id"] = inst.shOpt.CSE.AccessKey
-			config["dfs.s3-secret-key"] = inst.shOpt.CSE.SecretKey
-			config["dfs.s3-bucket"] = inst.shOpt.CSE.Bucket
+			config["dfs.s3-endpoint"] = inst.shOpt.S3.Endpoint
+			config["dfs.s3-key-id"] = inst.shOpt.S3.AccessKey
+			config["dfs.s3-secret-key"] = inst.shOpt.S3.SecretKey
+			config["dfs.s3-bucket"] = inst.shOpt.S3.Bucket
 			config["dfs.s3-region"] = "local"
 		}
 		if inst.shOpt.Mode == ModeNextGen {
@@ -47,10 +47,10 @@ func (inst *TiFlashInstance) getProxyConfig() map[string]any {
 	// If TiKVColumnar is enabled, TiFlash Proxy need to know how to access S3 as well.
 	if inst.Role() == TiFlashRoleDisaggCompute && inst.shOpt.Mode == ModeCSE && inst.shOpt.EnableTiKVColumnar {
 		config["dfs.prefix"] = "tikv"
-		config["dfs.s3-endpoint"] = inst.shOpt.CSE.Endpoint
-		config["dfs.s3-key-id"] = inst.shOpt.CSE.AccessKey
-		config["dfs.s3-secret-key"] = inst.shOpt.CSE.SecretKey
-		config["dfs.s3-bucket"] = inst.shOpt.CSE.Bucket
+		config["dfs.s3-endpoint"] = inst.shOpt.S3.Endpoint
+		config["dfs.s3-key-id"] = inst.shOpt.S3.AccessKey
+		config["dfs.s3-secret-key"] = inst.shOpt.S3.SecretKey
+		config["dfs.s3-bucket"] = inst.shOpt.S3.Bucket
 		config["dfs.s3-region"] = "local"
 	}
 
@@ -64,11 +64,11 @@ func (inst *TiFlashInstance) getConfig() map[string]any {
 	config["logger.level"] = "debug"
 
 	if inst.Role() == TiFlashRoleDisaggWrite {
-		config["storage.s3.endpoint"] = inst.shOpt.CSE.Endpoint
-		config["storage.s3.bucket"] = inst.shOpt.CSE.Bucket
+		config["storage.s3.endpoint"] = inst.shOpt.S3.Endpoint
+		config["storage.s3.bucket"] = inst.shOpt.S3.Bucket
 		config["storage.s3.root"] = "/tiflash-cse/"
-		config["storage.s3.access_key_id"] = inst.shOpt.CSE.AccessKey
-		config["storage.s3.secret_access_key"] = inst.shOpt.CSE.SecretKey
+		config["storage.s3.access_key_id"] = inst.shOpt.S3.AccessKey
+		config["storage.s3.secret_access_key"] = inst.shOpt.S3.SecretKey
 		config["storage.main.dir"] = []string{filepath.Join(inst.Dir, "main_data")}
 		config["flash.disaggregated_mode"] = "tiflash_write"
 		if inst.shOpt.Mode == ModeCSE {
@@ -79,11 +79,11 @@ func (inst *TiFlashInstance) getConfig() map[string]any {
 			config["storage.api_version"] = 2
 		}
 	} else if inst.Role() == TiFlashRoleDisaggCompute {
-		config["storage.s3.endpoint"] = inst.shOpt.CSE.Endpoint
-		config["storage.s3.bucket"] = inst.shOpt.CSE.Bucket
+		config["storage.s3.endpoint"] = inst.shOpt.S3.Endpoint
+		config["storage.s3.bucket"] = inst.shOpt.S3.Bucket
 		config["storage.s3.root"] = "/tiflash-cse/"
-		config["storage.s3.access_key_id"] = inst.shOpt.CSE.AccessKey
-		config["storage.s3.secret_access_key"] = inst.shOpt.CSE.SecretKey
+		config["storage.s3.access_key_id"] = inst.shOpt.S3.AccessKey
+		config["storage.s3.secret_access_key"] = inst.shOpt.S3.SecretKey
 		config["storage.remote.cache.dir"] = filepath.Join(inst.Dir, "remote_cache")
 		config["storage.remote.cache.capacity"] = uint64(50000000000) // 50GB
 		config["storage.main.dir"] = []string{filepath.Join(inst.Dir, "main_data")}
@@ -110,11 +110,11 @@ func (inst *TiFlashInstance) getConfig() map[string]any {
 	}
 
 	if inst.shOpt.Mode == "tidb-fts" {
-		config["tici.s3.endpoint"] = inst.shOpt.CSE.Endpoint
-		config["tici.s3.access_key"] = inst.shOpt.CSE.AccessKey
-		config["tici.s3.secret_key"] = inst.shOpt.CSE.SecretKey
-		config["tici.s3.bucket"] = inst.shOpt.CSE.Bucket
-		config["tici.s3.prefix"] = inst.shOpt.CSE.Prefix
+		config["tici.s3.endpoint"] = inst.shOpt.S3.Endpoint
+		config["tici.s3.access_key"] = inst.shOpt.S3.AccessKey
+		config["tici.s3.secret_key"] = inst.shOpt.S3.SecretKey
+		config["tici.s3.bucket"] = inst.shOpt.S3.Bucket
+		config["tici.s3.prefix"] = inst.shOpt.S3.Prefix
 	}
 
 	return config
