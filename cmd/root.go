@@ -20,6 +20,7 @@ import (
 	"os/exec"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/google/uuid"
@@ -167,9 +168,6 @@ the latest stable version will be downloaded from the repository.`,
 			}
 
 			return tiupexec.RunComponent(env, tag, componentSpec, binPath, forcePull, args)
-		},
-		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
-			return environment.GlobalEnv().Close()
 		},
 		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
 			return environment.GlobalEnv().Close()

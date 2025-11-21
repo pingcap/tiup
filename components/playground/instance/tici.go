@@ -35,7 +35,6 @@ const (
 // TiCIInstance represents a TiCI service instance (either MetaServer or WorkerNode)
 type TiCIInstance struct {
 	instance
-	Process
 
 	shOpt SharedOptions
 	// TiCI specific fields
@@ -118,10 +117,8 @@ func (inst *TiCIInstance) Start(ctx context.Context) error {
 		fmt.Sprintf("--config=%s", configPath),
 		fmt.Sprintf("--log-file=%s", inst.LogFile()),
 	}
-	inst.Process = &process{cmd: PrepareCommand(ctx, inst.BinPath, args, nil, inst.Dir)}
 
-	logIfErr(inst.Process.SetOutputFile(inst.LogFile()))
-	return inst.Process.Start()
+	return inst.PrepareProcess(ctx, inst.BinPath, args, nil, inst.Dir)
 }
 
 func (inst *TiCIInstance) getConfig() map[string]any {

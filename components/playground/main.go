@@ -637,7 +637,7 @@ func main() {
 }
 
 func removeMinioPrefix() {
-	s3Config := options.ShOpt.S3
+	s3Config := options.ShOpt.CSE
 	isSecure := strings.HasPrefix(s3Config.Endpoint, "https://")
 	rawEndpoint := strings.TrimPrefix(s3Config.Endpoint, "https://")
 	rawEndpoint = strings.TrimPrefix(rawEndpoint, "http://")

@@ -138,6 +138,11 @@ func (c *TiProxyInstance) Start(ctx context.Context) error {
 	return c.PrepareProcess(ctx, c.BinPath, args, nil, c.Dir)
 }
 
+// Addr return addresses that can be connected by MySQL clients.
+func (c *TiProxyInstance) Addr() string {
+	return utils.JoinHostPort(AdvertiseHost(c.Host), c.Port)
+}
+
 // DSN returns the Data Source Name for connecting to TiProxy.
 func (c *TiProxyInstance) DSN() string {
 	return fmt.Sprintf("mysql://root@%s", c.Addr())

@@ -271,6 +271,13 @@ func (env *Environment) SelectInstalledVersion(component string, ver utils.Versi
 	return ver, errInstallFirst
 }
 
+// BinaryPath return the installed binary path.
+func (env *Environment) BinaryPath(component string, ver utils.Version) (string, error) {
+	installPath, err := env.profile.ComponentInstalledPath(component, ver)
+	if err != nil {
+		return "", err
+	}
+
 	return env.v1Repo.BinaryPath(installPath, component, ver.String())
 }
 

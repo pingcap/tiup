@@ -71,7 +71,7 @@ type Playground struct {
 	tiflashs         []*instance.TiFlashInstance
 	tiproxys         []*instance.TiProxyInstance
 	ticdcs           []*instance.TiCDC
-	tikvCdcs         []*instance.TiKVCDC
+	tikvCdcs         []*instance.TiKVCDCInstance
 	ticiMetas        []*instance.TiCIInstance
 	ticiWorkers      []*instance.TiCIInstance
 	pumps            []*instance.Pump
@@ -342,14 +342,14 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 		}
 	case spec.ComponentTiCIMeta:
 		for i := 0; i < len(p.ticiMetas); i++ {
-			if p.ticiMetas[i].Pid() == pid {
+			if p.ticiMetas[i].Process().Pid() == pid {
 				p.ticiMetas = slices.Delete(p.ticiMetas, i, i+1)
 				break
 			}
 		}
 	case spec.ComponentTiCIWorker:
 		for i := 0; i < len(p.ticiWorkers); i++ {
-			if p.ticiWorkers[i].Pid() == pid {
+			if p.ticiWorkers[i].Process().Pid() == pid {
 				p.ticiWorkers = slices.Delete(p.ticiWorkers, i, i+1)
 				break
 			}
@@ -1582,13 +1582,13 @@ func (p *Playground) terminate(sig syscall.Signal) {
 		}
 	}
 	for _, inst := range p.ticiWorkers {
-		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
-			kill(inst.Component(), inst.Pid(), inst.Wait)
+		if inst.Process() != nil && inst.Process().Cmd() != nil && inst.Process().Cmd().Process != nil {
+			kill(inst.Component(), inst.Process().Pid(), inst.Wait)
 		}
 	}
 	for _, inst := range p.ticiMetas {
-		if inst.Process != nil && inst.Process.Cmd() != nil && inst.Process.Cmd().Process != nil {
-			kill(inst.Component(), inst.Pid(), inst.Wait)
+		if inst.Process() != nil && inst.Process().Cmd() != nil && inst.Process().Cmd().Process != nil {
+			kill(inst.Component(), inst.Process().Pid(), inst.Wait)
 		}
 	}
 	for _, inst := range p.ticdcs {
