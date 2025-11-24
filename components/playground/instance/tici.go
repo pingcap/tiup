@@ -143,12 +143,17 @@ func (inst *TiCIInstance) roleString() string {
 	}
 }
 
-// Component implements Process interface
+// Component implements Instance interface
 func (inst *TiCIInstance) Component() string {
-	return fmt.Sprintf("tici-%s", inst.roleString())
+	return "tici"
 }
 
-// LogFile implements Process interface
+// Role implements Instance interface
+func (inst *TiCIInstance) Role() string {
+	return fmt.Sprintf("%s-%s", inst.Component(), inst.roleString())
+}
+
+// LogFile implements Instance interface
 func (inst *TiCIInstance) LogFile() string {
 	return filepath.Join(inst.Dir, fmt.Sprintf("%s.log", inst.Component()))
 }

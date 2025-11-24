@@ -523,10 +523,6 @@ func (p *Playground) sanitizeComponentConfig(cid string, cfg *instance.Config) e
 
 func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) error {
 	component := inst.Component()
-	// FIXME: temporary workaround for TiCI
-	if component == spec.ComponentTiCIMeta || component == spec.ComponentTiCIWorker {
-		component = spec.ComponentTiCI
-	}
 	boundVersion := p.bindVersion(component, p.bootOptions.Version)
 	if err := inst.PrepareBinary(component, inst.Role(), boundVersion, p.bootOptions.ShOpt.ForcePull); err != nil {
 		return err
