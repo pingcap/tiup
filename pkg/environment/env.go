@@ -35,6 +35,52 @@ var (
 	ErrInstallFirst = errors.New("component not installed")
 )
 
+// EnvList is the canonical allowlist of environment variables TiUP will print or expose.
+// Keep this list as the single source of truth for env visibility.
+var EnvList = []string{
+	// Core locations and versions
+	localdata.EnvNameHome,
+	localdata.EnvNameWorkDir,
+	localdata.EnvNameUserInputVersion,
+	localdata.EnvNameTiUPVersion,
+
+	// Telemetry identifiers and status
+	localdata.EnvNameTelemetryStatus,
+	localdata.EnvNameTelemetryUUID,
+	localdata.EnvNameTelemetryEventUUID,
+	localdata.EnvNameTelemetrySecret,
+
+	// Component/instance directories
+	localdata.EnvNameInstanceDataDir,
+	localdata.EnvNameComponentDataDir,
+	localdata.EnvNameComponentInstallDir,
+
+	// SSH and copy tools configuration
+	localdata.EnvNameSSHPassPrompt,
+	localdata.EnvNameNativeSSHClient,
+	localdata.EnvNameSSHPath,
+	localdata.EnvNameSCPPath,
+
+	// Misc runtime controls
+	localdata.EnvNameKeepSourceTarget,
+	localdata.EnvNameMirrorSyncScript,
+	localdata.EnvNameLogPath,
+	localdata.EnvNameDebug,
+	localdata.EnvTag,
+}
+
+// WhitelistedEnvs returns only the environment variables defined in EnvList,
+// formatted as KEY=VALUE strings. Empty values are omitted.
+func WhitelistedEnvs() []string {
+	var envs []string
+	for _, key := range EnvList {
+		if val := os.Getenv(key); val != "" {
+			envs = append(envs, fmt.Sprintf("%s=%s", key, val))
+		}
+	}
+	return envs
+}
+
 // Mirror return mirror of tiup.
 // If it's not defined, it will use "https://tiup-mirrors.pingcap.com/".
 func Mirror() string {
@@ -223,44 +269,6 @@ func (env *Environment) SelectInstalledVersion(component string, ver utils.Versi
 		}
 	}
 	return ver, errInstallFirst
-}
-
-// DownloadComponentIfMissing downloads the specific version of a component if it is missing
-func (env *Environment) DownloadComponentIfMissing(component string, ver utils.Version) (utils.Version, error) {
-	var err error
-	if ver.IsNightly() {
-		if ver, _, err = env.v1Repo.LatestNightlyVersion(component); err != nil {
-			return "", err
-		}
-	}
-
-	// Use the latest version if user doesn't specify a specific version and
-	// download the latest version if the specific component doesn't be installed
-
-	// Check whether the specific version exist in local
-	ver, err = env.SelectInstalledVersion(component, ver)
-	needDownload := errors.Cause(err) == ErrInstallFirst
-	if err != nil && !needDownload {
-		return "", err
-	}
-
-	if needDownload {
-		fmt.Fprintf(os.Stderr, "The component `%s` version %s is not installed; downloading from repository.\n", component, ver.String())
-		spec := repository.ComponentSpec{
-			ID:      component,
-			Version: string(ver),
-			Force:   false,
-		}
-		if err := env.v1Repo.UpdateComponents([]repository.ComponentSpec{spec}); err != nil {
-			return "", err
-		}
-	}
-
-	if ver.IsEmpty() {
-		return env.SelectInstalledVersion(component, ver)
-	}
-
-	return ver, nil
 }
 
 // BinaryPath return the installed binary path.

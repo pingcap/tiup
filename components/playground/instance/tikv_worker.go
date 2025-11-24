@@ -37,8 +37,9 @@ type TiKVWorkerInstance struct {
 	instance
 	shOpt SharedOptions
 	pds   []*PDInstance
-	Process
 }
+
+var _ Instance = &TiKVWorkerInstance{}
 
 // NewTiKVWorkerInstance creates a new TiKVWorker instance.
 func NewTiKVWorkerInstance(shOpt SharedOptions, binPath string, dir, host, configPath string, id int, port int, pds []*PDInstance) *TiKVWorkerInstance {
@@ -54,6 +55,7 @@ func NewTiKVWorkerInstance(shOpt SharedOptions, binPath string, dir, host, confi
 			Host:       host,
 			Port:       utils.MustGetFreePort(host, port, shOpt.PortOffset),
 			ConfigPath: configPath,
+			role:       "tikv_worker",
 		},
 		pds: pds,
 	}
@@ -69,8 +71,10 @@ func (inst *TiKVWorkerInstance) Start(ctx context.Context) error {
 	if inst.shOpt.PDMode == "ms" {
 		return errors.New("tikv_worker does not support ms pd mode")
 	}
-	if inst.shOpt.Mode != "tidb-cse" {
-		return errors.New("tikv_worker only supports tidb-cse mode")
+	switch inst.shOpt.Mode {
+	case ModeCSE, ModeNextGen:
+	default:
+		return errors.Errorf("tikv_worker does not support %s mode", inst.shOpt.Mode)
 	}
 
 	configPath := filepath.Join(inst.Dir, "tikv_worker.toml")
@@ -90,20 +94,20 @@ func (inst *TiKVWorkerInstance) Start(ctx context.Context) error {
 		fmt.Sprintf("--config=%s", configPath),
 	}
 
-	inst.Process = &process{cmd: PrepareCommand(ctx, inst.BinPath, args, nil, inst.Dir)}
-
-	logIfErr(inst.Process.SetOutputFile(inst.LogFile()))
-	return inst.Process.Start()
-}
-
-// Component return the component name.
-func (inst *TiKVWorkerInstance) Component() string {
-	return "tikv_worker"
+	return inst.PrepareProcess(ctx, inst.BinPath, args, nil, inst.Dir)
 }
 
 // LogFile return the log file name.
 func (inst *TiKVWorkerInstance) LogFile() string {
 	return filepath.Join(inst.Dir, "tikv_worker.log")
+}
+
+// Component return the binary name.
+func (inst *TiKVWorkerInstance) Component() string {
+	if inst.shOpt.Mode == ModeNextGen {
+		return "tikv-worker"
+	}
+	return "tikv"
 }
 
 func (inst *TiKVWorkerInstance) getConfig() map[string]any {

@@ -116,10 +116,11 @@ jobs:
           find ./logs -type f -exec sh -c 'echo "{}" && cat {} && echo "\n"' \; || true
 
       - name: Upload coverage to Codecov
-        run: |
-          curl -Os https://uploader.codecov.io/latest/linux/codecov
-          chmod +x codecov
-          ./codecov -F cluster -s ./tests/tiup-cluster/cover -f '*.out'
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./tests/tiup-cluster/cover/*.out
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
 #      - name: Setup tmate session
 #        uses: mxschmitt/action-tmate@v3

@@ -30,8 +30,9 @@ type TiKVInstance struct {
 	shOpt SharedOptions
 	pds   []*PDInstance
 	tsos  []*PDInstance
-	Process
 }
+
+var _ Instance = &TiKVInstance{}
 
 // NewTiKVInstance return a TiKVInstance
 func NewTiKVInstance(shOpt SharedOptions, binPath string, dir, host, configPath string, id int, port int, pds []*PDInstance, tsos []*PDInstance) *TiKVInstance {
@@ -48,6 +49,7 @@ func NewTiKVInstance(shOpt SharedOptions, binPath string, dir, host, configPath 
 			Port:       utils.MustGetFreePort(host, port, shOpt.PortOffset),
 			StatusPort: utils.MustGetFreePort(host, 20180, shOpt.PortOffset),
 			ConfigPath: configPath,
+			role:       "tikv",
 		},
 		pds:  pds,
 		tsos: tsos,
@@ -99,15 +101,7 @@ func (inst *TiKVInstance) Start(ctx context.Context) error {
 	}
 
 	envs := []string{"MALLOC_CONF=prof:true,prof_active:false"}
-	inst.Process = &process{cmd: PrepareCommand(ctx, inst.BinPath, args, envs, inst.Dir)}
-
-	logIfErr(inst.Process.SetOutputFile(inst.LogFile()))
-	return inst.Process.Start()
-}
-
-// Component return the component name.
-func (inst *TiKVInstance) Component() string {
-	return "tikv"
+	return inst.PrepareProcess(ctx, inst.BinPath, args, envs, inst.Dir)
 }
 
 // LogFile return the log file name.

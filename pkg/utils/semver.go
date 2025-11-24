@@ -29,6 +29,9 @@ import (
 // NightlyVersionAlias represents latest build of master branch.
 const NightlyVersionAlias = "nightly"
 
+// NextgenVersionAlias represents latest build of nextgen branch.
+const NextgenVersionAlias = "nextgen"
+
 // LatestVersionAlias represents the latest build (excluding nightly versions).
 const LatestVersionAlias = "latest"
 

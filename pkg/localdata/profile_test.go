@@ -16,19 +16,16 @@ package localdata
 import (
 	"os"
 	"path"
+	"path/filepath"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/stretchr/testify/require"
 )
 
 func TestResetMirror(t *testing.T) {
-	uuid := uuid.New().String()
-	root := path.Join("/tmp", uuid)
-	_ = os.Mkdir(root, 0o755)
-	_ = os.Mkdir(path.Join(root, "bin"), 0o755)
-	defer os.RemoveAll(root)
+	root := t.TempDir()
+	require.NoError(t, os.Mkdir(path.Join(root, "bin"), 0o755))
 
 	cfg, _ := InitConfig(root)
 	profile := NewProfile(root, cfg)
@@ -42,4 +39,51 @@ func TestResetMirror(t *testing.T) {
 	require.NoError(t, profile.ResetMirror(path.Join(root, "mock-mirror"), ""))
 	require.Error(t, profile.ResetMirror(root, ""))
 	require.NoError(t, profile.ResetMirror(root, path.Join(root, "mock-mirror", "root.json")))
+}
+
+func TestWriteMetaFile_abs(t *testing.T) {
+	tmpdir := t.TempDir()
+
+	instance := filepath.Join(tmpdir, "testinstance")
+	cfg, _ := InitConfig(tmpdir)
+	profile := NewProfile(tmpdir, cfg)
+
+	p := Process{}
+	err := profile.WriteMetaFile(instance, &p)
+	require.NoError(t, err)
+
+	_, err = os.Stat(instance)
+	require.NoError(t, err)
+}
+
+func TestWriteMetaFile_rel(t *testing.T) {
+	tmpdir := t.TempDir()
+
+	instance := "testinstance"
+	cfg, _ := InitConfig(tmpdir)
+	profile := NewProfile(tmpdir, cfg)
+
+	p := Process{}
+	err := profile.WriteMetaFile(instance, &p)
+	require.NoError(t, err)
+
+	_, err = os.Stat(profile.Path(instance))
+	require.NoError(t, err)
+}
+
+func TestWriteMetaFile_readback(t *testing.T) {
+	tmpdir := t.TempDir()
+
+	instance := filepath.Join(tmpdir, DataParentDir, "testinstance")
+	cfg, _ := InitConfig(tmpdir)
+	profile := NewProfile(tmpdir, cfg)
+
+	p := Process{}
+	err := profile.WriteMetaFile(instance, &p)
+	require.NoError(t, err)
+
+	p2, err := profile.ReadMetaFile(filepath.Base(instance))
+	require.NoError(t, err)
+	require.NotNil(t, p2)
+	require.Equal(t, p, *p2)
 }

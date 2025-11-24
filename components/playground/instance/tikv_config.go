@@ -13,6 +13,8 @@
 
 package instance
 
+import "path/filepath"
+
 func (inst *TiKVInstance) getConfig() map[string]any {
 	config := make(map[string]any)
 	config["rocksdb.max-open-files"] = 256
@@ -20,7 +22,8 @@ func (inst *TiKVInstance) getConfig() map[string]any {
 	config["storage.reserve-space"] = 0
 	config["storage.reserve-raft-space"] = 0
 
-	if inst.shOpt.Mode == "tidb-cse" {
+	switch inst.shOpt.Mode {
+	case ModeCSE:
 		config["storage.api-version"] = 2
 		config["storage.enable-ttl"] = true
 		config["dfs.prefix"] = "tikv"
@@ -30,6 +33,19 @@ func (inst *TiKVInstance) getConfig() map[string]any {
 		config["dfs.s3-bucket"] = inst.shOpt.S3.Bucket
 		config["dfs.s3-region"] = "local"
 		config["kvengine.build-columnar"] = true
+	case ModeNextGen:
+		config["storage.api-version"] = 2
+		config["storage.enable-ttl"] = true
+		config["dfs.prefix"] = "tikv"
+		config["dfs.s3-endpoint"] = inst.shOpt.S3.Endpoint
+		config["dfs.s3-key-id"] = inst.shOpt.S3.AccessKey
+		config["dfs.s3-secret-key"] = inst.shOpt.S3.SecretKey
+		config["dfs.s3-bucket"] = inst.shOpt.S3.Bucket
+		config["dfs.s3-region"] = "local"
+		config["rfengine.wal-sync-dir"] = filepath.Join(inst.Dir, "raft-wal")
+		config["rfengine.lightweight-backup"] = true
+		config["rfengine.target-file-size"] = "512MB"
+		config["rfengine.wal-chunk-target-file-size"] = "128MB"
 	}
 
 	return config

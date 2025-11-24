@@ -110,9 +110,9 @@ kvcdc_servers:
   - host: 172.16.5.244
     data_dir: "tikv-cdc-data"
 tici_meta_servers:
-  - host: 172.16.5.255
+  - host: 172.16.5.250
 tici_worker_servers:
-  - host: 172.16.5.256
+  - host: 172.16.5.251
     data_dir: "tici-worker-data"
 `), &topo)
 	require.NoError(t, err)
@@ -231,13 +231,11 @@ kvcdc_servers:
     port: 8601
     config:
       log-level: "debug"
-
 tici_meta_servers:
   - host: 172.16.5.254
   - host: 172.16.5.255
     config:
       reader_pool.ttl_seconds: 9
-
 tici_worker_servers:
   - host: 172.16.5.256
   - host: 172.16.5.257
@@ -553,74 +551,6 @@ split-merge-interval = "1h"
 	got, err := Merge2Toml("pd", topo.ServerConfigs.PD, topo.PDServers[1].Config)
 	require.NoError(t, err)
 	require.Equal(t, expected, string(got))
-}
-
-func TestMergeImported(t *testing.T) {
-	spec := Specification{}
-
-	// values set in topology specification of the cluster
-	err := yaml.Unmarshal([]byte(`
-server_configs:
-  tikv:
-    config.item1: 100
-    config.item2: 300
-    config.item3.item5: 500
-    config.item3.item6: 600
-    config2.item4.item7: 700
-
-tikv_servers:
-  - host: 172.16.5.138
-    config:
-      config.item2: 500
-      config.item3.item5: 700
-      config2.itemy: 1000
-
-`), &spec)
-	require.NoError(t, err)
-
-	// values set in imported configs, this will be overritten by values from
-	// topology specification if present there
-	config := []byte(`
-[config]
-item2 = 501
-[config.item3]
-item5 = 701
-item6 = 600
-
-[config2]
-itemx = "valuex"
-itemy = 999
-[config2.item4]
-item7 = 780
-`)
-
-	expected := `# WARNING: This file is auto-generated. Do not edit! All your modification will be overwritten!
-# You can use 'tiup cluster edit-config' and 'tiup cluster reload' to update the configuration
-# All configuration items you want to change can be added to:
-# server_configs:
-#   tikv:
-#     aa.b1.c3: value
-#     aa.b2.c4: value
-[config]
-item1 = 100
-item2 = 500
-[config.item3]
-item5 = 700
-item6 = 600
-
-[config2]
-itemx = "valuex"
-itemy = 1000
-[config2.item4]
-item7 = 700
-`
-
-	merge1, err := mergeImported(config, spec.ServerConfigs.TiKV)
-	require.NoError(t, err)
-
-	merge2, err := Merge2Toml(ComponentTiKV, merge1, spec.TiKVServers[0].Config)
-	require.NoError(t, err)
-	require.Equal(t, expected, string(merge2))
 }
 
 func TestTiKVLabels(t *testing.T) {

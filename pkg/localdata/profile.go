@@ -22,7 +22,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"os/user"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -54,11 +53,11 @@ func InitProfile() *Profile {
 	case DefaultTiUPHome != "":
 		profileDir = DefaultTiUPHome
 	default:
-		u, err := user.Current()
+		homedir, err := os.UserHomeDir()
 		if err != nil {
 			panic("cannot get current user information: " + err.Error())
 		}
-		profileDir = filepath.Join(u.HomeDir, ProfileDirName)
+		profileDir = filepath.Join(homedir, ProfileDirName)
 	}
 
 	cfg, err := InitConfig(profileDir)
@@ -119,17 +118,19 @@ func (p *Profile) ComponentInstalledPath(component string, version utils.Version
 }
 
 func (p *Profile) saveTo(path string, data []byte, perm os.FileMode) error {
-	fullPath := filepath.Join(p.root, path)
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(p.root, path)
+	}
 	// create sub directory if needed
-	if err := utils.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
+	if err := utils.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return errors.Trace(err)
 	}
-	return utils.WriteFile(fullPath, data, perm)
+	return utils.WriteFile(path, data, perm)
 }
 
 // WriteMetaFile writes process meta to instance/MetaFilename.
 func (p *Profile) WriteMetaFile(instance string, data *Process) error {
-	metaFile := filepath.Join(DataParentDir, instance, MetaFilename)
+	metaFile := filepath.Join(instance, MetaFilename)
 	jsonData, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
 		return errors.Trace(err)

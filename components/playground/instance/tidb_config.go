@@ -14,15 +14,19 @@
 package instance
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
-func (inst *TiDBInstance) getConfig() map[string]any {
+func (inst *TiDBInstance) getConfig(kvwrks []*TiKVWorkerInstance) map[string]any {
 	config := make(map[string]any)
 	config["security.auto-tls"] = true
 
-	if inst.shOpt.Mode == "tidb-cse" {
+	switch inst.shOpt.Mode {
+	case ModeCSE:
 		config["keyspace-name"] = "mykeyspace"
 		config["enable-safe-point-v2"] = true
 		config["force-enable-vector-type"] = true
@@ -52,9 +56,21 @@ func (inst *TiDBInstance) getConfig() map[string]any {
 		config["tiflash-replicas.group-id"] = "enable_s3_wn_region"
 		config["tiflash-replicas.extra-s3-rule"] = false
 		config["tiflash-replicas.min-count"] = 1
-	} else if inst.shOpt.Mode == "tiflash-disagg" {
+	case ModeDisAgg:
 		config["use-autoscaler"] = false
 		config["disaggregated-tiflash"] = true
+	case ModeNextGen:
+		config["enable-safe-point-v2"] = true
+		config["split-table"] = false
+		config["use-autoscaler"] = false
+		config["disaggregated-tiflash"] = true
+		if inst.Role() == TiDBRoleSystem {
+			config["instance.tidb_service_scope"] = "dxf_service"
+			config["tikv-worker-url"] = fmt.Sprintf("http://%s", utils.JoinHostPort(AdvertiseHost(kvwrks[0].Host), kvwrks[0].Port))
+			config["keyspace-name"] = "SYSTEM"
+		} else {
+			config["keyspace-name"] = "keyspace1"
+		}
 	}
 
 	tiproxyCrtPath := filepath.Join(inst.tiproxyCertDir, "tiproxy.crt")

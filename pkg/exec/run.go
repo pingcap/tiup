@@ -27,6 +27,7 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
+	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/tui/colorstr"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/version"
@@ -40,14 +41,14 @@ var skipStartingMessages = map[string]bool{
 }
 
 // RunComponent start a component and wait it
-func RunComponent(env *environment.Environment, tag, spec, binPath string, args []string) error {
+func RunComponent(env *environment.Environment, tag, spec, binPath string, forcePull bool, args []string) error {
 	component, version := environment.ParseCompVersion(spec)
 
 	if version == "" {
 		cmdCheckUpdate(component, version)
 	}
 
-	binPath, err := PrepareBinary(component, version, binPath)
+	binPath, err := PrepareBinary(component, version, binPath, forcePull)
 	if err != nil {
 		return err
 	}
@@ -80,7 +81,7 @@ func RunComponent(env *environment.Environment, tag, spec, binPath string, args 
 	}
 
 	if skip, ok := skipStartingMessages[component]; !skip || !ok {
-		colorstr.Fprintf(os.Stderr, "Starting component [bold]%s[reset]: %s\n", component, strings.Join(environment.HidePassword(c.Args), " "))
+		colorstr.Fprintf(os.Stderr, "Starting component [bold]%s[reset]: %s\n", component, strings.Join(environment.HideSensitiveInfo(c.Args), " "))
 	}
 
 	err = c.Start()
@@ -199,7 +200,7 @@ func cmdCheckUpdate(component string, version utils.Version) {
 	}()
 
 	go func() {
-		latestV, _, err := environment.GlobalEnv().V1Repository().LatestStableVersion(component, false)
+		latestV, _, err := environment.GlobalEnv().V1Repository().LatestStableVersion(component, false, nil)
 		if err != nil {
 			result <- ""
 			return
@@ -229,7 +230,7 @@ func cmdCheckUpdate(component string, version utils.Version) {
 }
 
 // PrepareBinary use given binpath or download from tiup mirror
-func PrepareBinary(component string, version utils.Version, binPath string) (string, error) {
+func PrepareBinary(component string, version utils.Version, binPath string, force bool) (string, error) {
 	if binPath != "" {
 		tmp, err := filepath.Abs(binPath)
 		if err != nil {
@@ -237,12 +238,48 @@ func PrepareBinary(component string, version utils.Version, binPath string) (str
 		}
 		binPath = tmp
 	} else {
-		selectVer, err := environment.GlobalEnv().DownloadComponentIfMissing(component, version)
-		if err != nil {
-			return "", err
+		env := environment.GlobalEnv()
+		ver := version
+		var err error
+
+		if ver.String() == utils.NightlyVersionAlias {
+			if ver, _, err = env.V1Repository().LatestNightlyVersion(component); err != nil {
+				return "", err
+			}
 		}
 
-		binPath, err = environment.GlobalEnv().BinaryPath(component, selectVer)
+		needDownload := false
+		if !force {
+			// Use the latest version if user doesn't specify a specific version and
+			// download the latest version if the specific component doesn't be installed
+			// Check whether the specific version exist in local
+			ver, err = env.SelectInstalledVersion(component, ver)
+			needDownload = errors.Cause(err) == environment.ErrInstallFirst
+			if err != nil && !needDownload {
+				return "", err
+			}
+		}
+
+		if needDownload || force {
+			fmt.Fprintf(os.Stderr, "The component `%s` version %s is not installed; downloading from repository.\n", component, ver.String())
+			spec := repository.ComponentSpec{
+				ID:      component,
+				Version: string(ver),
+				Force:   force,
+			}
+			if err := env.V1Repository().UpdateComponents([]repository.ComponentSpec{spec}); err != nil {
+				return "", err
+			}
+		}
+
+		if ver.IsEmpty() {
+			ver, err = env.SelectInstalledVersion(component, ver)
+			if err != nil {
+				return "", err
+			}
+		}
+
+		binPath, err = environment.GlobalEnv().BinaryPath(component, ver)
 		if err != nil {
 			return "", err
 		}
@@ -256,7 +293,7 @@ func saveProcessInfo(p *PrepareCommandParams, c *exec.Cmd) error {
 		CreatedTime: time.Now().Format(time.RFC3339),
 		Pid:         c.Process.Pid,
 		Exec:        c.Args[0],
-		Args:        environment.HidePassword(c.Args),
+		Args:        environment.HideSensitiveInfo(c.Args),
 		Dir:         p.InstanceDir,
 		Env:         c.Env,
 		Cmd:         c,

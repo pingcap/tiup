@@ -51,7 +51,6 @@ type TiKVSpec struct {
 	ListenHost          string               `yaml:"listen_host,omitempty"`
 	AdvertiseAddr       string               `yaml:"advertise_addr,omitempty"`
 	SSHPort             int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported            bool                 `yaml:"imported,omitempty"`
 	Patched             bool                 `yaml:"patched,omitempty"`
 	IgnoreExporter      bool                 `yaml:"ignore_exporter,omitempty"`
 	Port                int                  `yaml:"port" default:"20160"`
@@ -122,11 +121,6 @@ func (s *TiKVSpec) GetManageHost() string {
 		return s.ManageHost
 	}
 	return s.Host
-}
-
-// IsImported returns if the node is imported from TiDB-Ansible
-func (s *TiKVSpec) IsImported() bool {
-	return s.Imported
 }
 
 // IgnoreMonitorAgent returns if the node does not have monitor agents available
@@ -294,27 +288,6 @@ func (i *TiKVInstance) InitConfig(
 	}
 
 	globalConfig := topo.ServerConfigs.TiKV
-	// merge config files for imported instance
-	if i.IsImported() {
-		configPath := ClusterPath(
-			clusterName,
-			AnsibleImportedConfigPath,
-			fmt.Sprintf(
-				"%s-%s-%d.toml",
-				i.ComponentName(),
-				i.GetHost(),
-				i.GetPort(),
-			),
-		)
-		importConfig, err := os.ReadFile(configPath)
-		if err != nil {
-			return err
-		}
-		globalConfig, err = mergeImported(importConfig, globalConfig)
-		if err != nil {
-			return err
-		}
-	}
 
 	// set TLS configs
 	spec.Config, err = i.setTLSConfig(ctx, enableTLS, spec.Config, paths)

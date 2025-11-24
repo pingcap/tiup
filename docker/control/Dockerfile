@@ -2,6 +2,7 @@ FROM golang:1.24
 
 WORKDIR /tiup-cluster
 COPY . /tiup-cluster/
+COPY my.cnf /root/.my.cnf
 
 # tiup-cluster dependencies
  RUN apt-get -y -q update && \

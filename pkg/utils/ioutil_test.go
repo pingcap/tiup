@@ -19,10 +19,15 @@ import (
 )
 
 func TestMain(m *testing.M) {
+	cleanup()
+	m.Run()
+	cleanup()
+}
+
+func cleanup() {
 	os.RemoveAll(path.Join(currentDir(), "testdata", "parent"))
 	os.RemoveAll(path.Join(currentDir(), "testdata", "ssh-exec"))
 	os.RemoveAll(path.Join(currentDir(), "testdata", "nop-nop"))
-	m.Run()
 }
 
 func currentDir() string {
