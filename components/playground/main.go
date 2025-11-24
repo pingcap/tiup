@@ -250,13 +250,13 @@ Note: Version constraint is [green][bold]%s[reset]. If you'd like to use other v
 
 	rootCmd.Flags().StringVar(&options.ShOpt.Mode, "mode", "tidb", fmt.Sprintf("TiUP playground mode: '%s', '%s', '%s', '%s', '%s', '%s'", instance.ModeNormal, instance.ModeCSE, instance.ModeNextGen, instance.ModeDisAgg, instance.ModeTiKVSlim, instance.ModeFTS))
 	rootCmd.Flags().StringVar(&options.ShOpt.PDMode, "pd.mode", "pd", "PD mode: 'pd', 'ms'")
-	rootCmd.Flags().StringVar(&options.ShOpt.S3.Endpoint, "cse.endpoint", "http://127.0.0.1:9000",
+	rootCmd.Flags().StringVar(&options.ShOpt.S3.Endpoint, "s3.endpoint", "http://127.0.0.1:9000",
 		fmt.Sprintf("Object store URL for --mode=%s, --mode=%s, --mode=%s or --mode=%s", instance.ModeCSE, instance.ModeDisAgg, instance.ModeNextGen, instance.ModeFTS))
-	rootCmd.Flags().StringVar(&options.ShOpt.S3.Bucket, "cse.bucket", "tiflash",
+	rootCmd.Flags().StringVar(&options.ShOpt.S3.Bucket, "s3.bucket", "tiflash",
 		fmt.Sprintf("Object store bucket for --mode=%s, --mode=%s, --mode=%s or --mode=%s", instance.ModeCSE, instance.ModeDisAgg, instance.ModeNextGen, instance.ModeFTS))
-	rootCmd.Flags().StringVar(&options.ShOpt.S3.AccessKey, "cse.access_key", "minioadmin",
+	rootCmd.Flags().StringVar(&options.ShOpt.S3.AccessKey, "s3.access_key", "minioadmin",
 		fmt.Sprintf("Object store access key for --mode=%s, --mode=%s, --mode=%s or --mode=%s", instance.ModeCSE, instance.ModeDisAgg, instance.ModeNextGen, instance.ModeFTS))
-	rootCmd.Flags().StringVar(&options.ShOpt.S3.SecretKey, "cse.secret_key", "minioadmin",
+	rootCmd.Flags().StringVar(&options.ShOpt.S3.SecretKey, "s3.secret_key", "minioadmin",
 		fmt.Sprintf("Object store secret key for --mode=%s, --mode=%s, --mode=%s or --mode=%s", instance.ModeCSE, instance.ModeDisAgg, instance.ModeNextGen, instance.ModeFTS))
 	rootCmd.Flags().BoolVar(&options.ShOpt.HighPerf, "perf", false, "Tune default config for better performance instead of debug troubleshooting")
 	rootCmd.Flags().BoolVar(&options.ShOpt.EnableTiKVColumnar, "tikv.columnar", false,
