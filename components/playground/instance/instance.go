@@ -50,10 +50,12 @@ var (
 	ModeNextGenFTS Mode = "tidb-x-fts"
 )
 
+// Checks if the mode is NextGen mode.
 func IsNGMode(m Mode) bool {
 	return strings.HasPrefix(m, "tidb-x")
 }
 
+// Checks if the mode is FTS mode.
 func IsFTSMode(m Mode) bool {
 	return strings.HasSuffix(m, "-fts")
 }
