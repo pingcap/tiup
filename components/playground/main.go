@@ -427,6 +427,14 @@ func populateDefaultOpt(flagSet *pflag.FlagSet) error {
 		defaultStr(&options.TiFlashCompute.BinPath, "tiflash.compute.binpath", options.TiFlash.BinPath)
 		defaultStr(&options.TiFlashCompute.ConfigPath, "tiflash.compute.config", options.TiFlash.ConfigPath)
 		options.TiFlashCompute.UpTimeout = options.TiFlash.UpTimeout
+	case instance.ModeFTS:
+		defaultInt(&options.TiDB.Num, "db", 1)
+		defaultInt(&options.TiKV.Num, "kv", 1)
+		defaultInt(&options.TiCIMeta.Num, "tici.meta", 1)
+		defaultInt(&options.TiCIWorker.Num, "tici.worker", 1)
+		defaultInt(&options.TiCDC.Num, "ticdc", 1)
+		defaultInt(&options.TiFlash.Num, "tiflash", 1)
+		options.ShOpt.S3.Prefix = tag
 	default:
 		return errors.Errorf("Unknown --mode %s", options.ShOpt.Mode)
 	}
@@ -436,14 +444,6 @@ func populateDefaultOpt(flagSet *pflag.FlagSet) error {
 		// Note: if a path of `tikv-server` is specified, the real resolved path of tikv-worker will become `tikv-worker` in the same directory.
 		defaultInt(&options.TiKVWorker.Num, "tikv.worker", 1)
 		defaultStr(&options.TiKVWorker.BinPath, "tikv.worker.binpath", options.TiKV.BinPath)
-	case instance.ModeFTS:
-		defaultInt(&options.TiDB.Num, "db", 1)
-		defaultInt(&options.TiKV.Num, "kv", 1)
-		defaultInt(&options.TiCIMeta.Num, "tici.meta", 1)
-		defaultInt(&options.TiCIWorker.Num, "tici.worker", 1)
-		defaultInt(&options.TiCDC.Num, "ticdc", 1)
-		defaultInt(&options.TiFlash.Num, "tiflash", 1)
-		options.ShOpt.S3.Prefix = tag
 	}
 
 	switch options.ShOpt.PDMode {

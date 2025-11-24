@@ -755,14 +755,14 @@ func (p *Playground) WalkInstances(fn func(componentID string, ins instance.Inst
 	}
 
 	for _, ins := range p.ticiMetas {
-		err := fn(ins.Component(), ins)
+		err := fn(spec.ComponentTiCIMeta, ins)
 		if err != nil {
 			return err
 		}
 	}
 
 	for _, ins := range p.ticiWorkers {
-		err := fn(ins.Component(), ins)
+		err := fn(spec.ComponentTiCIWorker, ins)
 		if err != nil {
 			return err
 		}
@@ -1083,13 +1083,22 @@ func (p *Playground) waitAllDMMasterUp() {
 }
 
 func (p *Playground) bindVersion(comp string, version string) (bindVersion string) {
-	bindVersion = version
+	if p.bootOptions.ShOpt.Mode == instance.ModeFTS {
+		switch comp {
+		case spec.ComponentTiDB, spec.ComponentTiFlash:
+			bindVersion = utils.FTSVersionAlias
+		default:
+			bindVersion = utils.NightlyVersionAlias
+		}
+		return
+	}
 	switch comp {
 	case spec.ComponentTiKVCDC:
 		bindVersion = p.bootOptions.TiKVCDC.Version
 	case spec.ComponentTiProxy:
 		bindVersion = p.bootOptions.TiProxy.Version
 	default:
+		bindVersion = version
 	}
 	return
 }
@@ -1573,12 +1582,12 @@ func (p *Playground) terminate(sig syscall.Signal) {
 	}
 	for _, inst := range p.ticiWorkers {
 		if inst.Process() != nil && inst.Process().Cmd() != nil && inst.Process().Cmd().Process != nil {
-			kill(inst.Component(), inst.Process().Pid(), inst.Wait)
+			kill(inst.Name(), inst.Process().Pid(), inst.Wait)
 		}
 	}
 	for _, inst := range p.ticiMetas {
 		if inst.Process() != nil && inst.Process().Cmd() != nil && inst.Process().Cmd().Process != nil {
-			kill(inst.Component(), inst.Process().Pid(), inst.Wait)
+			kill(inst.Name(), inst.Process().Pid(), inst.Wait)
 		}
 	}
 	for _, inst := range p.ticdcs {
