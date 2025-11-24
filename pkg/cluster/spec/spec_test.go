@@ -162,6 +162,15 @@ kvcdc_servers:
     data_dir: "tikv-cdc-data"
   - host: 172.16.5.245
     port: 33333
+tici_meta_servers:
+  - host: 172.16.5.254
+  - host: 172.16.5.255
+    port: 8530
+tici_worker_servers:
+  - host: 172.16.5.264
+    data_dir: "/tici-worker-data"
+  - host: 172.16.5.265
+    port: 8550
 `), &topo)
 	require.NoError(t, err)
 
@@ -222,6 +231,16 @@ kvcdc_servers:
     port: 8601
     config:
       log-level: "debug"
+tici_meta_servers:
+  - host: 172.16.5.254
+  - host: 172.16.5.255
+    config:
+      reader_pool.ttl_seconds: 9
+tici_worker_servers:
+  - host: 172.16.5.256
+  - host: 172.16.5.257
+    config:
+      heartbeat_interval: "10s"
 `), &topo)
 	require.NoError(t, err)
 	require.Equal(t, map[string]any{
