@@ -109,6 +109,11 @@ cdc_servers:
 kvcdc_servers:
   - host: 172.16.5.244
     data_dir: "tikv-cdc-data"
+tici_meta_servers:
+  - host: 172.16.5.250
+tici_worker_servers:
+  - host: 172.16.5.251
+    data_dir: "tici-worker-data"
 `), &topo)
 	require.NoError(t, err)
 	require.Equal(t, "test1", topo.GlobalOptions.User)
