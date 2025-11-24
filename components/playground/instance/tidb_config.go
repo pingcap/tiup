@@ -59,7 +59,7 @@ func (inst *TiDBInstance) getConfig(kvwrks []*TiKVWorkerInstance) map[string]any
 	case ModeDisAgg:
 		config["use-autoscaler"] = false
 		config["disaggregated-tiflash"] = true
-	case ModeNextGen:
+	case ModeNextGen, ModeNextGenFTS:
 		config["enable-safe-point-v2"] = true
 		config["split-table"] = false
 		config["use-autoscaler"] = false

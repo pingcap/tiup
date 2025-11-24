@@ -23,7 +23,7 @@ func (inst *TiFlashInstance) getProxyConfig() map[string]any {
 	config["storage.reserve-raft-space"] = 0
 
 	if inst.Role() == TiFlashRoleDisaggWrite {
-		if inst.shOpt.Mode == ModeCSE || inst.shOpt.Mode == ModeNextGen {
+		if inst.shOpt.Mode == ModeCSE || IsNGMode(inst.shOpt.Mode) {
 			config["storage.api-version"] = 2
 			config["storage.enable-ttl"] = true
 			config["dfs.prefix"] = "tikv"
@@ -33,13 +33,13 @@ func (inst *TiFlashInstance) getProxyConfig() map[string]any {
 			config["dfs.s3-bucket"] = inst.shOpt.S3.Bucket
 			config["dfs.s3-region"] = "local"
 		}
-		if inst.shOpt.Mode == ModeNextGen {
+		if IsNGMode(inst.shOpt.Mode) {
 			config["storage.api_version"] = 2
 			config["storage.enable-ttl"] = true
 		}
 	}
 	if inst.Role() == TiFlashRoleDisaggCompute {
-		if inst.shOpt.Mode == ModeNextGen {
+		if IsNGMode(inst.shOpt.Mode) {
 			config["storage.api_version"] = 2
 			config["storage.enable-ttl"] = true
 		}
@@ -75,7 +75,7 @@ func (inst *TiFlashInstance) getConfig() map[string]any {
 			config["enable_safe_point_v2"] = true
 			config["storage.api_version"] = 2
 		}
-		if inst.shOpt.Mode == ModeNextGen {
+		if IsNGMode(inst.shOpt.Mode) {
 			config["storage.api_version"] = 2
 		}
 	} else if inst.Role() == TiFlashRoleDisaggCompute {
@@ -94,7 +94,7 @@ func (inst *TiFlashInstance) getConfig() map[string]any {
 				config["flash.use_columnar"] = true
 			}
 		}
-		if inst.shOpt.Mode == ModeNextGen {
+		if IsNGMode(inst.shOpt.Mode) {
 			config["storage.api_version"] = 2
 		}
 	}
@@ -109,7 +109,7 @@ func (inst *TiFlashInstance) getConfig() map[string]any {
 		}
 	}
 
-	if inst.shOpt.Mode == ModeFTS {
+	if IsFTSMode(inst.shOpt.Mode) {
 		config["tici.s3.endpoint"] = inst.shOpt.S3.Endpoint
 		config["tici.s3.access_key"] = inst.shOpt.S3.AccessKey
 		config["tici.s3.secret_key"] = inst.shOpt.S3.SecretKey
