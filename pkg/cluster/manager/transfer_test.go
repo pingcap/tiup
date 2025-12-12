@@ -25,7 +25,6 @@ func TestRenderSpec(t *testing.T) {
 		InstanceSpec: &spec.TiDBSpec{
 			Host:       "172.16.5.140",
 			SSHPort:    22,
-			Imported:   false,
 			Port:       4000,
 			StatusPort: 10080,
 			DeployDir:  "/home/test/deploy/tidb-4000",
@@ -41,7 +40,6 @@ func TestRenderSpec(t *testing.T) {
 		InstanceSpec: &spec.PDSpec{
 			Host:       "172.16.5.140",
 			SSHPort:    22,
-			Imported:   false,
 			Name:       "pd-1",
 			ClientPort: 2379,
 			PeerPort:   2380,

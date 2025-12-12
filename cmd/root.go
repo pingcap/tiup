@@ -20,6 +20,7 @@ import (
 	"os/exec"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/google/uuid"
@@ -101,6 +102,7 @@ the latest stable version will be downloaded from the repository.`,
 				return cmd.Help()
 			}
 			env := environment.GlobalEnv()
+			forcePull := false
 
 			// TBD: change this flag to subcommand
 
@@ -137,6 +139,8 @@ the latest stable version will be downloaded from the repository.`,
 				}
 				binPath = args[1]
 				args = args[2:]
+			case "--force-pull":
+				forcePull = true
 			case "--tag", "-T":
 				if len(args) < 2 {
 					return fmt.Errorf("flag %s needs an argument", args[0])
@@ -162,7 +166,7 @@ the latest stable version will be downloaded from the repository.`,
 				args = args[1:]
 			}
 
-			return tiupexec.RunComponent(env, tag, componentSpec, binPath, args)
+			return tiupexec.RunComponent(env, tag, componentSpec, binPath, forcePull, args)
 		},
 		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
 			return environment.GlobalEnv().Close()
@@ -224,6 +228,7 @@ the latest stable version will be downloaded from the repository.`,
 
 // Execute parses the command line arguments and calls proper functions
 func Execute() {
+	start := time.Now()
 	code := 0
 
 	err := rootCmd.Execute()
@@ -235,6 +240,15 @@ func Execute() {
 		} else {
 			fmt.Fprintln(os.Stderr, color.RedString("Error: %v", err))
 			code = 1
+		}
+	}
+
+	// record TiUP execution history
+	env := environment.GlobalEnv()
+	if env != nil {
+		err := environment.HistoryRecord(env, os.Args, start, code)
+		if err != nil {
+			log.Warnf("Recording TiUP execution history failed: %v", err)
 		}
 	}
 

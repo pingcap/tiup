@@ -38,8 +38,12 @@ func auditDir() string {
 	return path.Join(currentDir(), "testdata", "audit")
 }
 
-func resetDir() {
+func cleanupDir() {
 	_ = os.RemoveAll(auditDir())
+}
+
+func resetDir() {
+	cleanupDir()
 	_ = os.MkdirAll(auditDir(), 0o777)
 }
 
@@ -69,6 +73,7 @@ func TestOutputAuditLog(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, 20, len(paths))
+	cleanupDir()
 }
 
 func TestShowAuditLog(t *testing.T) {
@@ -127,4 +132,5 @@ test with second`, time.Unix(second, 0).Format("2006-01-02T15:04:05")), readFake
 ---------------------------------------
 test with nanosecond`, time.Unix(nanoSecond/1e9, 0).Format("2006-01-02T15:04:05")), readFakeStdout(f))
 	f.Close()
+	cleanupDir()
 }

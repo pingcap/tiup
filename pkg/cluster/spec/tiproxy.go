@@ -106,11 +106,6 @@ func (s *TiProxySpec) GetManageHost() string {
 	return s.Host
 }
 
-// IsImported returns if the node is imported from TiDB-Ansible
-func (s *TiProxySpec) IsImported() bool {
-	return false
-}
-
 // IgnoreMonitorAgent returns if the node does not have monitor agents available
 func (s *TiProxySpec) IgnoreMonitorAgent() bool {
 	return false

@@ -19,11 +19,14 @@ import (
 )
 
 // InitGlobalLogger initializes zap global logger.
+// Default level is Debug.
 func InitGlobalLogger() {
 	core := zapcore.NewTee(
 		newAuditLogCore(),
 		newDebugLogCore(),
 	)
-	logger := zap.New(core)
+	level := zapcore.DebugLevel
+	atomic := zap.NewAtomicLevelAt(level)
+	logger := zap.New(core, zap.IncreaseLevel(atomic))
 	zap.ReplaceGlobals(logger)
 }

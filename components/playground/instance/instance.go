@@ -23,6 +23,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/environment"
 	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/tui/colorstr"
 	"github.com/pingcap/tiup/pkg/utils"
@@ -65,6 +66,7 @@ type SharedOptions struct {
 	Mode               string     `yaml:"mode"`
 	PortOffset         int        `yaml:"port_offset"`
 	EnableTiKVColumnar bool       `yaml:"enable_tikv_columnar"` // Only available when mode == ModeCSE
+	ForcePull          bool       `yaml:"force_pull"`
 }
 
 // CSEOptions contains configs to run TiDB cluster in CSE mode.
@@ -117,7 +119,7 @@ type Instance interface {
 	// Proc return the underlying process.
 	Process() Process
 	// PrepareBinary use given binpath or download from tiup mirrors.
-	PrepareBinary(binaryName string, componentName string, version utils.Version) error
+	PrepareBinary(binaryName string, componentName string, version string, force bool) error
 	// PrepareProcess construct the process used later.
 	PrepareProcess(ctx context.Context, binPath string, args, envs []string, workDir string) error
 }
@@ -154,8 +156,15 @@ func (inst *instance) MetricAddr() (r MetricAddr) {
 	return
 }
 
-func (inst *instance) PrepareBinary(binaryName string, componentName string, version utils.Version) error {
-	instanceBinPath, err := tiupexec.PrepareBinary(binaryName, version, inst.BinPath)
+func (inst *instance) PrepareBinary(binaryName string, componentName string, boundVersion string, force bool) error {
+	var version utils.Version
+	var err error
+	if inst.BinPath == "" {
+		if version, err = environment.GlobalEnv().V1Repository().ResolveComponentVersion(binaryName, boundVersion); err != nil {
+			return err
+		}
+	}
+	instanceBinPath, err := tiupexec.PrepareBinary(binaryName, version, inst.BinPath, force)
 	if err != nil {
 		return err
 	}

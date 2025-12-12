@@ -70,10 +70,11 @@ jobs:
           bash ./tests/tiup/${{ matrix.cases }}.sh
 
       - name: Upload coverage to Codecov
-        run: |
-          curl -Os https://uploader.codecov.io/latest/linux/codecov
-          chmod +x codecov
-          ./codecov -F tiup -s ./tests/tiup/cover -f '*.out'
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./tests/tiup/cover/*out
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   unit-test:
     runs-on: ubuntu-latest
@@ -95,7 +96,8 @@ jobs:
           make test
 
       - name: Upload coverage to Codecov
-        run: |
-          curl -Os https://uploader.codecov.io/latest/linux/codecov
-          chmod +x codecov
-          ./codecov -F unittest -s cover -f '*.out'
+        uses: codecov/codecov-action@v5
+        with:
+          files: cover/*.out
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

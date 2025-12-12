@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -68,7 +69,7 @@ func HistoryRecord(env *Environment, command []string, date time.Time, code int)
 	}
 
 	h := &historyRow{
-		Command: strings.Join(HidePassword(command), " "),
+		Command: strings.Join(HideSensitiveInfo(command), " "),
 		Date:    date,
 		Code:    code,
 	}
@@ -243,15 +244,19 @@ func getLatestHistoryFile(dir string) (item historyItem) {
 	return
 }
 
-// HidePassword replace password with ******
-func HidePassword(args []string) []string {
+// HideSensitiveInfo replaces password and other sensitive info with ******
+func HideSensitiveInfo(args []string) []string {
 	redactArgs := []string{
 		// general
 		"-p",
 		// dumpling
+		"-password",
 		"--password",
 		// lightning
+		"-tidb-password",
 		"--tidb-password",
+		// dmctl encrypt
+		"encrypt",
 	}
 	var r []string
 	for i := 0; i < len(args); i++ {
@@ -268,10 +273,45 @@ func HidePassword(args []string) []string {
 				redacted = true
 				break
 			}
+			arg = filterURI(arg)
+			if strings.HasPrefix(arg, "--sink-uri=") {
+				arg = "--sink-uri=" + filterURI(arg[11:])
+			}
 		}
 		if !redacted {
 			r = append(r, arg)
 		}
 	}
 	return r
+}
+
+// Redacts a URI by filtering out query values based on their key.
+// values are replaced by ******
+func filterURI(uri string) string {
+	filterKeys := []string{
+		"sasl-password",
+		"access-key", // This is more like a username than a password.
+		"secret-access-key",
+		"session-token",
+	}
+	replacementKey := "******"
+
+	u, err := url.Parse(uri)
+	if err != nil {
+		return uri
+	}
+	if u.Scheme == "" {
+		return uri
+	}
+
+	v, err := url.ParseQuery(u.RawQuery)
+	if err == nil {
+		for _, filterKey := range filterKeys {
+			if v.Has(filterKey) {
+				v.Set(filterKey, replacementKey)
+			}
+		}
+	}
+	u.RawQuery = v.Encode()
+	return u.Redacted()
 }

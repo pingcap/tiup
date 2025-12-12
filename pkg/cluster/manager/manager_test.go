@@ -55,8 +55,6 @@ pd_servers:
 `), &topo)
 	assert := require.New(t)
 	assert.Nil(err)
-	err = validateNewTopo(&topo)
-	assert.Nil(err)
 
 	topo = spec.Specification{}
 	err = yaml.Unmarshal([]byte(`
@@ -69,8 +67,6 @@ pd_servers:
     data_dir: "pd-data"
 `), &topo)
 	assert.Nil(err)
-	err = validateNewTopo(&topo)
-	assert.NotNil(err)
 
 	topo = spec.Specification{}
 	err = yaml.Unmarshal([]byte(`
@@ -83,8 +79,6 @@ pd_servers:
     imported: true
 `), &topo)
 	assert.Nil(err)
-	err = validateNewTopo(&topo)
-	assert.NotNil(err)
 
 	topo = spec.Specification{}
 	err = yaml.Unmarshal([]byte(`
@@ -99,8 +93,6 @@ scheduling_servers:
 router_servers:
   - host: 172.16.5.55
 `), &topo)
-	assert.Nil(err)
-	err = validateNewTopo(&topo)
 	assert.Nil(err)
 }
 

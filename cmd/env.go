@@ -17,20 +17,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/pingcap/tiup/pkg/localdata"
+	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/spf13/cobra"
 )
-
-var envList = []string{
-	localdata.EnvNameHome,
-	localdata.EnvNameSSHPassPrompt,
-	localdata.EnvNameSSHPath,
-	localdata.EnvNameSCPPath,
-	localdata.EnvNameKeepSourceTarget,
-	localdata.EnvNameMirrorSyncScript,
-	localdata.EnvNameLogPath,
-	localdata.EnvNameDebug,
-}
 
 func newEnvCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -38,7 +27,7 @@ func newEnvCmd() *cobra.Command {
 		Short: "Show the list of system environment variable that related to TiUP",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				showEnvList(true, envList...)
+				showEnvList(true, environment.EnvList...)
 				return nil
 			}
 			showEnvList(false, args...)

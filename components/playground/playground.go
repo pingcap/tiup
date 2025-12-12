@@ -518,19 +518,15 @@ func (p *Playground) sanitizeComponentConfig(cid string, cfg *instance.Config) e
 }
 
 func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) error {
-	var version utils.Version
-	var err error
-	boundVersion := p.bindVersion(inst.Component(), p.bootOptions.Version)
 	component := inst.Component()
-	if version, err = environment.GlobalEnv().V1Repository().ResolveComponentVersion(component, boundVersion); err != nil {
+
+	boundVersion := p.bindVersion(inst.Component(), p.bootOptions.Version)
+
+	if err := inst.PrepareBinary(component, inst.Role(), boundVersion, p.bootOptions.ShOpt.ForcePull); err != nil {
 		return err
 	}
 
-	if err := inst.PrepareBinary(component, inst.Role(), version); err != nil {
-		return err
-	}
-
-	if err = inst.Start(ctx); err != nil {
+	if err := inst.Start(ctx); err != nil {
 		return err
 	}
 
@@ -864,7 +860,7 @@ func (p *Playground) addInstance(componentID string, role string, cfg instance.C
 		ins = inst
 		p.routers = append(p.routers, inst)
 	case spec.ComponentTiDB:
-		inst := instance.NewTiDBInstance(p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, dataDir, p.enableBinlog(), role)
+		inst := instance.NewTiDBInstance(p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, cfg.Port, p.pds, p.tikvWorkers, dataDir, p.enableBinlog(), role)
 		ins = inst
 		p.tidbs = append(p.tidbs, inst)
 	case spec.ComponentTiKV:
@@ -1129,7 +1125,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		return fmt.Errorf("TiKV worker only supports at most 1 instance")
 	}
 
-	if !utils.Version(options.Version).IsNightly() {
+	if utils.Version(options.Version).IsValid() {
 		if semver.Compare(options.Version, "v3.1.0") < 0 && options.TiFlash.Num != 0 {
 			fmt.Println(color.YellowString("Warning: current version %s doesn't support TiFlash", options.Version))
 			options.TiFlash.Num = 0
@@ -1239,8 +1235,8 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		instances = append(instances,
 			InstancePair{spec.ComponentTiFlash, instance.TiFlashRoleNormal, options.TiFlash},
 		)
-	} else if options.ShOpt.Mode == instance.ModeCSE || options.ShOpt.Mode == instance.ModeDisAgg {
-		if !tidbver.TiFlashPlaygroundNewStartMode(options.Version) {
+	} else if options.ShOpt.Mode == instance.ModeCSE || options.ShOpt.Mode == instance.ModeNextGen || options.ShOpt.Mode == instance.ModeDisAgg {
+		if utils.Version(options.Version).IsValid() && !tidbver.TiFlashPlaygroundNewStartMode(options.Version) {
 			// For simplicity, currently we only implemented disagg mode when TiFlash can run without config.
 			return fmt.Errorf("TiUP playground only supports CSE/Disagg mode for TiDB cluster >= v7.1.0 (or nightly)")
 		}
@@ -1303,13 +1299,8 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 	var monitorInfo *MonitorInfo
 	if options.Monitor {
 		// TODO: remove this hack
-		if strings.Contains(options.Version, "nextgen") || options.Version == utils.NextgenVersionAlias {
-			version, err := env.V1Repository().ResolveComponentVersion(spec.ComponentTiDB, utils.LatestVersionAlias)
-			if err != nil {
-				return errors.Annotate(err, fmt.Sprintf("Cannot resolve version %s to a valid semver string", options.Version))
-			}
-			options.Version = string(version)
-		}
+		oldVersion := options.Version
+		options.Version = strings.TrimSuffix(options.Version, "-"+utils.NextgenVersionAlias)
 
 		var err error
 
@@ -1327,6 +1318,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		if err != nil {
 			return err
 		}
+		options.Version = oldVersion
 	}
 
 	colorCmd := color.New(color.FgHiCyan, color.Bold)
@@ -1619,7 +1611,7 @@ func (p *Playground) bootMonitor(ctx context.Context, env *environment.Environme
 	dataDir := p.dataDir
 	promDir := filepath.Join(dataDir, "prometheus")
 
-	monitor, err := newMonitor(ctx, options.ShOpt, options.Version, options.Host, promDir)
+	monitor, err := newMonitor(ctx, options.ShOpt, options.Version, options.Host, promDir, p.bootOptions.ShOpt.ForcePull)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1693,12 +1685,20 @@ func (p *Playground) bootNGMonitoring(ctx context.Context, env *environment.Envi
 
 // return not error iff the Cmd is started successfully.
 func (p *Playground) bootGrafana(ctx context.Context, env *environment.Environment, monitorInfo *MonitorInfo) (*grafana, error) {
-	// set up grafana
-	options := p.bootOptions
-	if err := installIfMissing("grafana", options.Version); err != nil {
+	// TODO: merge into startInstance
+	var sversion utils.Version
+	var err error
+	sversion, err = environment.GlobalEnv().V1Repository().ResolveComponentVersion("grafana", options.Version)
+	if err != nil {
 		return nil, err
 	}
-	installPath, err := env.Profile().ComponentInstalledPath("grafana", utils.Version(options.Version))
+
+	// set up grafana
+	options := p.bootOptions
+	if err := installIfMissing("grafana", string(sversion)); err != nil {
+		return nil, err
+	}
+	installPath, err := env.Profile().ComponentInstalledPath("grafana", sversion)
 	if err != nil {
 		return nil, err
 	}
@@ -1740,7 +1740,7 @@ func (p *Playground) bootGrafana(ctx context.Context, env *environment.Environme
 		return nil, err
 	}
 
-	grafana := newGrafana(options.Version, options.Host, options.GrafanaPort)
+	grafana := newGrafana(string(sversion), options.Host, options.GrafanaPort, p.bootOptions.ShOpt.ForcePull)
 	// fmt.Println("Start Grafana instance...")
 	err = grafana.start(ctx, grafanaDir, options.ShOpt.PortOffset, "http://"+utils.JoinHostPort(monitorInfo.IP, monitorInfo.Port))
 	if err != nil {

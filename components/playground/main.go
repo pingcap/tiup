@@ -33,7 +33,6 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/playground/instance"
 	"github.com/pingcap/tiup/pkg/cluster/api"
-	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
@@ -151,7 +150,7 @@ Examples:
 			if len(args) > 0 {
 				options.Version = args[0]
 			} else if options.ShOpt.Mode == instance.ModeNextGen {
-				options.Version = utils.NextgenVersionAlias
+				options.Version = fmt.Sprintf("%s-%s", utils.LatestVersionAlias, utils.NextgenVersionAlias)
 			}
 
 			if err := populateDefaultOpt(cmd.Flags()); err != nil {
@@ -213,27 +212,14 @@ Examples:
 
 			// expand version string
 			if !semver.IsValid(options.Version) {
-				version, err := env.V1Repository().ResolveComponentVersion(spec.ComponentTiDB, options.Version)
-				if err != nil {
-					return errors.Annotate(err, fmt.Sprintf("Cannot resolve version %s to a valid semver string", options.Version))
-				}
-				// for nightly, may not use the same version for cluster
-				if options.Version == "nightly" {
-					version = "nightly"
-				}
-
-				if options.Version != version.String() {
-					colorstr.Fprintf(os.Stderr, `
-Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. If you'd like to use other versions:
+				colorstr.Fprintf(os.Stdout, `
+Note: Version constraint is [green][bold]%s[reset]. If you'd like to use other versions:
 
     Use exact version:      [tiup_command]tiup playground v7.1.0[reset]
     Use version range:      [tiup_command]tiup playground ^5[reset]
     Use nightly:            [tiup_command]tiup playground nightly[reset]
 
-`, options.Version, version.String())
-				}
-
-				options.Version = version.String()
+`, options.Version)
 			}
 
 			bootErr := p.bootCluster(ctx, env, options)
@@ -259,7 +245,7 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 		},
 	}
 
-	rootCmd.Flags().StringVar(&options.ShOpt.Mode, "mode", "tidb", fmt.Sprintf("TiUP playground mode: '%s', '%s', '%s', '%s', '%s'", instance.ModeNormal, instance.ModeCSE, instance.ModeCSE, instance.ModeDisAgg, instance.ModeTiKVSlim))
+	rootCmd.Flags().StringVar(&options.ShOpt.Mode, "mode", "tidb", fmt.Sprintf("TiUP playground mode: '%s', '%s', '%s', '%s', '%s'", instance.ModeNormal, instance.ModeCSE, instance.ModeNextGen, instance.ModeDisAgg, instance.ModeTiKVSlim))
 	rootCmd.Flags().StringVar(&options.ShOpt.PDMode, "pd.mode", "pd", "PD mode: 'pd', 'ms'")
 	rootCmd.Flags().StringVar(&options.ShOpt.CSE.S3Endpoint, "cse.s3_endpoint", "http://127.0.0.1:9000",
 		fmt.Sprintf("Object store URL for --mode=%s, --mode=%s, --mode=%s", instance.ModeCSE, instance.ModeDisAgg, instance.ModeNextGen))
@@ -272,6 +258,7 @@ Note: Version constraint [bold]%s[reset] is resolved to [green][bold]%s[reset]. 
 	rootCmd.Flags().BoolVar(&options.ShOpt.HighPerf, "perf", false, "Tune default config for better performance instead of debug troubleshooting")
 	rootCmd.Flags().BoolVar(&options.ShOpt.EnableTiKVColumnar, "tikv.columnar", false,
 		fmt.Sprintf("Enable TiKV columnar storage engine, only available when --mode=%s", instance.ModeCSE))
+	rootCmd.Flags().BoolVar(&options.ShOpt.ForcePull, "force-pull", false, "Force redownload the component. It is useful to manually refresh nightly or broken binaries")
 
 	rootCmd.PersistentFlags().StringVarP(&tag, "tag", "T", "", "Specify a tag for playground, data dir of this tag will not be removed after exit")
 	rootCmd.Flags().Bool("without-monitor", false, "Don't start prometheus and grafana component")
@@ -411,6 +398,14 @@ func populateDefaultOpt(flagSet *pflag.FlagSet) error {
 		defaultInt(&options.TiDBSystem.Num, "db.system", 1)
 		defaultInt(&options.TiKV.Num, "kv", 1)
 		defaultStr(&options.TiDBSystem.BinPath, "db.system.binpath", options.TiDB.BinPath)
+		defaultInt(&options.TiFlashWrite.Num, "tiflash.write", options.TiFlash.Num)
+		defaultStr(&options.TiFlashWrite.BinPath, "tiflash.write.binpath", options.TiFlash.BinPath)
+		defaultStr(&options.TiFlashWrite.ConfigPath, "tiflash.write.config", options.TiFlash.ConfigPath)
+		options.TiFlashWrite.UpTimeout = options.TiFlash.UpTimeout
+		defaultInt(&options.TiFlashCompute.Num, "tiflash.compute", options.TiFlash.Num)
+		defaultStr(&options.TiFlashCompute.BinPath, "tiflash.compute.binpath", options.TiFlash.BinPath)
+		defaultStr(&options.TiFlashCompute.ConfigPath, "tiflash.compute.config", options.TiFlash.ConfigPath)
+		options.TiFlashCompute.UpTimeout = options.TiFlash.UpTimeout
 	case instance.ModeTiKVSlim:
 		defaultInt(&options.TiKV.Num, "kv", 1)
 	case instance.ModeCSE, instance.ModeDisAgg:

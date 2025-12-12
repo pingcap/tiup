@@ -54,6 +54,7 @@ func Download(component, nodeOS, arch string, version string) error {
 	} else if version != "nightly" {
 		if err := repo.VerifyComponent(component, version, targetPath); err != nil {
 			os.Remove(targetPath)
+			return err
 		}
 	}
 	return nil

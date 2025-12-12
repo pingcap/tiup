@@ -527,6 +527,12 @@ func MergeResourceControl(lhs, rhs meta.ResourceControl) meta.ResourceControl {
 	if rhs.LimitCORE != "" {
 		lhs.LimitCORE = rhs.LimitCORE
 	}
+	if rhs.TimeoutStartSec != "" {
+		lhs.TimeoutStartSec = rhs.TimeoutStartSec
+	}
+	if rhs.TimeoutStopSec != "" {
+		lhs.TimeoutStopSec = rhs.TimeoutStopSec
+	}
 	return lhs
 }
 

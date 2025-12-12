@@ -231,7 +231,11 @@ func extractSuggestionFromErrorX(err *errorx.Error) string {
 // Execute executes the root command
 func Execute() {
 	zap.L().Info("Execute command", zap.String("command", tui.OsArgs()))
-	zap.L().Debug("Environment variables", zap.Strings("env", os.Environ()))
+	if tiupmeta.DebugMode {
+		zap.L().Debug("Environment variables", zap.Strings("env", os.Environ()))
+	} else {
+		zap.L().Debug("Environment variables", zap.Strings("env", tiupmeta.WhitelistedEnvs()))
+	}
 
 	code := 0
 	err := rootCmd.Execute()

@@ -80,7 +80,6 @@ type (
 		Role() string
 		SSH() (string, int)
 		GetMainPort() int
-		IsImported() bool
 		IgnoreMonitorAgent() bool
 	}
 
@@ -702,10 +701,6 @@ func setCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) error 
 			clientPort := reflect.Indirect(field).FieldByName("ClientPort").Int()
 			field.Field(j).Set(reflect.ValueOf(fmt.Sprintf("pd-%s-%d", host, clientPort)))
 		case "DataDir":
-			if imported := reflect.Indirect(field).FieldByName("Imported"); imported.IsValid() && imported.Interface().(bool) {
-				setDefaultDir(globalOptions.DataDir, field.Addr().Interface().(InstanceSpec).Role(), getPort(field), field.Field(j))
-			}
-
 			dataDir := field.Field(j).String()
 
 			// If the per-instance data_dir already have a value, skip filling default values
@@ -735,10 +730,6 @@ func setCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) error 
 		case "DeployDir":
 			setDefaultDir(globalOptions.DeployDir, field.Addr().Interface().(InstanceSpec).Role(), getPort(field), field.Field(j))
 		case "LogDir":
-			if imported := reflect.Indirect(field).FieldByName("Imported"); imported.IsValid() && imported.Interface().(bool) {
-				setDefaultDir(globalOptions.LogDir, field.Addr().Interface().(InstanceSpec).Role(), getPort(field), field.Field(j))
-			}
-
 			logDir := field.Field(j).String()
 
 			// If the per-instance log_dir already have a value, skip filling default values

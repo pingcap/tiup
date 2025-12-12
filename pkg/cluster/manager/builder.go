@@ -217,7 +217,7 @@ func buildScaleOutTask(
 			case spec.ComponentTiSpark:
 				env := environment.GlobalEnv()
 				var sparkVer utils.Version
-				if sparkVer, _, iterErr = env.V1Repository().LatestStableVersion(spec.ComponentSpark, false); iterErr != nil {
+				if sparkVer, _, iterErr = env.V1Repository().LatestStableVersion(spec.ComponentSpark, false, nil); iterErr != nil {
 					return
 				}
 				tb = tb.DeploySpark(inst, sparkVer.String(), srcPath, deployDir)
@@ -241,23 +241,6 @@ func buildScaleOutTask(
 		return nil, iterErr
 	}
 
-	// Download and copy the latest component to remote if the cluster is imported from Ansible
-	mergedTopo.IterInstance(func(inst spec.Instance) {
-		if inst.IsImported() {
-			deployDir := spec.Abs(base.User, inst.DeployDir())
-			// data dir would be empty for components which don't need it
-			// Download and copy the latest component to remote if the cluster is imported from Ansible
-			tb := task.NewBuilder(m.logger)
-			version := inst.CalculateVersion(base.Version)
-			switch compName := inst.ComponentName(); compName {
-			case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertmanager:
-				tb.Download(compName, inst.OS(), inst.Arch(), version).
-					CopyComponent(compName, inst.OS(), inst.Arch(), version, "", inst.GetManageHost(), deployDir)
-			}
-			deployCompTasks = append(deployCompTasks, tb.BuildAsStep(fmt.Sprintf("  - Deploy instance %s -> %s", inst.ComponentName(), inst.ID())))
-		}
-	})
-
 	// init scale out config
 	scaleOutConfigTasks := buildScaleConfigTasks(m, name, topo, newPart, base, gOpt, p)
 
@@ -273,13 +256,7 @@ func buildScaleOutTask(
 
 	// always ignore config check result in scale out
 	gOpt.IgnoreConfigCheck = true
-	refreshConfigTasks, hasImported := buildInitConfigTasks(m, name, mergedTopo, base, gOpt, nil)
-	// handle dir scheme changes
-	if hasImported {
-		if err := spec.HandleImportPathMigration(name); err != nil {
-			return task.NewBuilder(m.logger).Build(), err
-		}
-	}
+	refreshConfigTasks := buildInitConfigTasks(m, name, mergedTopo, base, gOpt, nil)
 
 	_, noAgentHosts := getMonitorHosts(mergedTopo)
 
@@ -639,9 +616,8 @@ func buildInitConfigTasks(
 	base *spec.BaseMeta,
 	gOpt operator.Options,
 	nodes []string,
-) ([]*task.StepDisplay, bool) {
+) []*task.StepDisplay {
 	var tasks []*task.StepDisplay
-	hasImported := false
 	deletedNodes := set.NewStringSet(nodes...)
 
 	topo.IterInstance(func(instance spec.Instance) {
@@ -657,23 +633,6 @@ func buildInitConfigTasks(
 
 		// Download and copy the latest component to remote if the cluster is imported from Ansible
 		tb := task.NewBuilder(m.logger)
-		if instance.IsImported() {
-			version := instance.CalculateVersion(base.Version)
-			switch compName {
-			case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertmanager:
-				tb.Download(compName, instance.OS(), instance.Arch(), version).
-					CopyComponent(
-						compName,
-						instance.OS(),
-						instance.Arch(),
-						version,
-						"", // use default srcPath
-						instance.GetManageHost(),
-						deployDir,
-					)
-			}
-			hasImported = true
-		}
 
 		t := tb.
 			InitConfig(
@@ -694,7 +653,7 @@ func buildInitConfigTasks(
 		tasks = append(tasks, t)
 	})
 
-	return tasks, hasImported
+	return tasks
 }
 
 // buildDownloadCompTasks build download component tasks
@@ -766,14 +725,7 @@ func buildTLSTask(
 		return nil, err
 	}
 
-	refreshConfigTasks, hasImported := buildInitConfigTasks(m, name, topo, base, gOpt, nil)
-
-	// handle dir scheme changes
-	if hasImported {
-		if err := spec.HandleImportPathMigration(name); err != nil {
-			return task.NewBuilder(m.logger).Build(), err
-		}
-	}
+	refreshConfigTasks := buildInitConfigTasks(m, name, topo, base, gOpt, nil)
 
 	// monitor
 	uniqueHosts, noAgentHosts := getMonitorHosts(topo)
