@@ -262,6 +262,12 @@ func (i *TiCIMetaInstance) PrepareStart(ctx context.Context, tlsCfg *tls.Config)
 	if v, ok := spec.Config["s3.secret_key"].(string); ok {
 		secretKey = v
 	}
+	if v, ok := spec.Config["s3.region"].(string); ok {
+		endpoint = fmt.Sprintf("%s&region=%s", endpoint, v)
+	}
+	if v, ok := spec.Config["s3.use_path_style"].(bool); ok {
+		endpoint = fmt.Sprintf("%s&force-path-style=%t", endpoint, v)
+	}
 	cdcAddr := utils.JoinHostPort(topo.CDCServers[0].Host, topo.CDCServers[0].Port)
 	cdcClient := api.NewCDCOpenAPIClient(ctx, []string{cdcAddr}, 10*time.Second, nil)
 	return cdcClient.CreateChangefeed(bucket, prefix, endpoint, accessKey, secretKey, flushInterval)
