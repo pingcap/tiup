@@ -174,7 +174,7 @@ func checkOSInfo(opt *CheckOptions, osInfo *sysinfo.OS) *CheckResult {
 	switch osInfo.Vendor {
 	case "kylin":
 		// VERSION_ID="V10"
-		if CompareVersion(strings.Trim(osInfo.Version, "V"), "10") < 0 {
+		if compareVersion(strings.Trim(osInfo.Version, "V"), "10") < 0 {
 			result.Err = fmt.Errorf("%s %s not supported, use version V10 or higher",
 				osInfo.Name, osInfo.Release)
 			return result
@@ -188,7 +188,7 @@ func checkOSInfo(opt *CheckOptions, osInfo *sysinfo.OS) *CheckResult {
 		// Amazon Linux 2 is based on CentOS 7 and is recommended for
 		// AWS Graviton 2 (ARM64) deployments.
 		// https://aws.amazon.com/amazon-linux-2/
-		if CompareVersion(osInfo.Version, "2") < 0 || CompareVersion(osInfo.Version, "3") >= 0 {
+		if compareVersion(osInfo.Version, "2") < 0 || compareVersion(osInfo.Version, "3") >= 0 {
 			result.Err = fmt.Errorf("%s %s not supported, use Amazon Linux 2 or Amazon Linux 2023 please",
 				osInfo.Name, osInfo.Release)
 			return result
@@ -196,21 +196,21 @@ func checkOSInfo(opt *CheckOptions, osInfo *sysinfo.OS) *CheckResult {
 	case "centos":
 		// CentOS Linux is EOL
 		// CentOS Stream 9 and newer is still fine
-		if CompareVersion(osInfo.Version, "9") < 0 {
+		if compareVersion(osInfo.Version, "9") < 0 {
 			result.Err = fmt.Errorf("%s %s not supported, use version 9 or higher",
 				osInfo.Name, osInfo.Release)
 			return result
 		}
 	case "redhat", "rhel", "ol":
 		// RHEL 8.4 or newer 8.x versions are supported
-		if CompareVersion(osInfo.Version, "8.4") < 0 || CompareVersion(osInfo.Version, "9") >= 0 {
+		if compareVersion(osInfo.Version, "8.4") < 0 || compareVersion(osInfo.Version, "9") >= 0 {
 			result.Err = fmt.Errorf("%s %s not supported, use version 8.4 or a later 8.x version please",
 				osInfo.Name, osInfo.Release)
 			return result
 		}
 	case "rocky":
 		// Rocky Linux
-		if CompareVersion(osInfo.Version, "9.1") < 0 {
+		if compareVersion(osInfo.Version, "9.1") < 0 {
 			result.Err = fmt.Errorf("%s %s not supported, use version 9.1 or later please",
 				osInfo.Name, osInfo.Release)
 			return result
@@ -220,7 +220,7 @@ func checkOSInfo(opt *CheckOptions, osInfo *sysinfo.OS) *CheckResult {
 		msg := "Debian support is not fully tested, be careful"
 		result.Err = fmt.Errorf("%s (%s)", result.Msg, msg)
 		result.Warn = true
-		if CompareVersion(osInfo.Version, "10") < 0 {
+		if compareVersion(osInfo.Version, "10") < 0 {
 			result.Err = fmt.Errorf("%s %s not supported, use version 10 or higher (%s)",
 				osInfo.Name, osInfo.Release, msg)
 			result.Warn = false
@@ -231,7 +231,7 @@ func checkOSInfo(opt *CheckOptions, osInfo *sysinfo.OS) *CheckResult {
 		msg := "Ubuntu support is not fully tested, be careful"
 		result.Err = fmt.Errorf("%s (%s)", result.Msg, msg)
 		result.Warn = true
-		if CompareVersion(osInfo.Version, "20.04") < 0 {
+		if compareVersion(osInfo.Version, "20.04") < 0 {
 			result.Err = fmt.Errorf("%s %s not supported, use version 20.04 or higher (%s)",
 				osInfo.Name, osInfo.Release, msg)
 			result.Warn = false
@@ -1023,7 +1023,7 @@ func CheckTimeZone(ctx context.Context, topo *spec.Specification, host string, r
 
 // compareVersion compares two version strings v1 and v2.
 // It returns 1 if v1 > v2, -1 if v1 < v2, and 0 if v1 == v2.
-func CompareVersion(v1, v2 string) int {
+func compareVersion(v1, v2 string) int {
 	// Split version strings by "." into slices
 	p1 := strings.Split(v1, ".")
 	p2 := strings.Split(v2, ".")
