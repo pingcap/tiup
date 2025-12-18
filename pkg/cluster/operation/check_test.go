@@ -41,6 +41,15 @@ func TestCompareVersion(t *testing.T) {
 	assert.Equal(t, -1, compareVersion("7", "9"))
 	assert.Equal(t, -1, compareVersion("1.9", "2.0"))
 	assert.Equal(t, -1, compareVersion("8", "8.4"))
+
+	// Test Different Length Versions
+	assert.Equal(t, 1, compareVersion("8.1.3", "8.1"))
+	assert.Equal(t, 0, compareVersion("8.1.0", "8.1"))
+	assert.Equal(t, -1, compareVersion("8.1", "8.1.3"))
+	assert.Equal(t, 1, compareVersion("8.2.1", "8.2"))
+	assert.Equal(t, -1, compareVersion("8.2", "8.2.1"))
+	assert.Equal(t, 0, compareVersion("8.0.0", "8"))
+	assert.Equal(t, 0, compareVersion("1.0.0", "1"))
 }
 
 // TestCheckOSInfo verifies the OS version validation logic.
