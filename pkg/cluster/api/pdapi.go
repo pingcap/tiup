@@ -1262,7 +1262,7 @@ type RouterClient struct {
 	ctx        context.Context
 }
 
-// RouterClient returns a new RouterClient, the context must have
+// NewRouterClient returns a new RouterClient, the context must have
 // a *logprinter.Logger as value of "logger"
 func NewRouterClient(
 	ctx context.Context,
