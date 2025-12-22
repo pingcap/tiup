@@ -72,7 +72,7 @@ func (inst *TiKVWorkerInstance) Start(ctx context.Context) error {
 		return errors.New("tikv_worker does not support ms pd mode")
 	}
 	switch inst.shOpt.Mode {
-	case ModeCSE, ModeNextGen:
+	case ModeCSE, ModeNextGen, ModeNextGenFTS:
 	default:
 		return errors.Errorf("tikv_worker does not support %s mode", inst.shOpt.Mode)
 	}
@@ -104,7 +104,7 @@ func (inst *TiKVWorkerInstance) LogFile() string {
 
 // Component return the binary name.
 func (inst *TiKVWorkerInstance) Component() string {
-	if inst.shOpt.Mode == ModeNextGen {
+	if IsNGMode(inst.shOpt.Mode) {
 		return "tikv-worker"
 	}
 	return "tikv"

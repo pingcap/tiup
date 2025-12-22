@@ -17,7 +17,9 @@ func (inst *TiCIInstance) getMetaConfig() map[string]any {
 	config := make(map[string]any)
 	tidbServers := make([]string, 0, len(inst.dbs))
 	for _, db := range inst.dbs {
-		tidbServers = append(tidbServers, db.DSN())
+		if db.Role() == TiDBRoleSystem {
+			tidbServers = append(tidbServers, db.DSN())
+		}
 	}
 	config["tidb_server.dsns"] = tidbServers
 	config["s3.endpoint"] = inst.shOpt.S3.Endpoint

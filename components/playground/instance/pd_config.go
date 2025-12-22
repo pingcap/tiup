@@ -22,13 +22,12 @@ func (inst *PDInstance) getConfig() map[string]any {
 		config["replication.max-replicas"] = 1
 	}
 
-	switch inst.shOpt.Mode {
-	case ModeCSE:
+	if inst.shOpt.Mode == ModeCSE {
 		config["keyspace.pre-alloc"] = []string{"mykeyspace"}
 		config["replication.enable-placement-rules"] = true
 		config["schedule.merge-schedule-limit"] = 0
 		config["schedule.replica-schedule-limit"] = 500
-	case ModeNextGen:
+	} else if IsNGMode(inst.shOpt.Mode) {
 		config["keyspace.pre-alloc"] = []string{"keyspace1"}
 	}
 
