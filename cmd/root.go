@@ -78,6 +78,12 @@ the latest stable version will be downloaded from the repository.`,
 			return nil
 		},
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 0 {
+				switch args[0] {
+				case "--help", "-h", "--version", "-v":
+					return nil
+				}
+			}
 			switch cmd.Name() {
 			case "init", "rotate", "set":
 				if cmd.HasParent() && cmd.Parent().Name() == "mirror" {
