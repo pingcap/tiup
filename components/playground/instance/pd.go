@@ -112,7 +112,7 @@ func (inst *PDInstance) Start(ctx context.Context) error {
 	} else if inst.role == PDRoleResourceManager {
 		configFile = "resource_manager.toml"
 	} else {
-		configFile = fmt.Sprintf("%s.toml", string(inst.role))
+		configFile = fmt.Sprintf("%s.toml", inst.role)
 	}
 	configPath := filepath.Join(inst.Dir, configFile)
 	if err := prepareConfig(
