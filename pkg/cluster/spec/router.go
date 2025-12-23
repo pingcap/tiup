@@ -21,7 +21,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
@@ -61,27 +60,13 @@ func (s *RouterSpec) Status(ctx context.Context, timeout time.Duration, tlsCfg *
 
 	addr := utils.JoinHostPort(s.GetManageHost(), s.Port)
 	tc := api.NewRouterClient(ctx, []string{addr}, timeout, tlsCfg)
-	pc := api.NewPDClient(ctx, pdList, timeout, tlsCfg)
 
 	// check health
 	err := tc.CheckHealth()
 	if err != nil {
 		return "Down"
 	}
-
-	primary, err := pc.GetServicePrimary(routerService)
-	if err != nil {
-		return "ERR"
-	}
 	res := "Up"
-	enableTLS := false
-	if tlsCfg != nil {
-		enableTLS = true
-	}
-	if s.GetAdvertiseListenURL(enableTLS) == primary {
-		res += "|P"
-	}
-
 	return res
 }
 
@@ -312,24 +297,9 @@ func (i *RouterInstance) setTLSConfig(ctx context.Context, enableTLS bool, confi
 }
 
 // IsPrimary checks if the instance is primary
+// for router, all instances are equal for currently.
 func (i *RouterInstance) IsPrimary(ctx context.Context, topo Topology, tlsCfg *tls.Config) (bool, error) {
-	tidbTopo, ok := topo.(*Specification)
-	if !ok {
-		panic("topo should be type of tidb topology")
-	}
-	pdClient := api.NewPDClient(ctx, tidbTopo.GetPDListWithManageHost(), time.Second*5, tlsCfg)
-	primary, err := pdClient.GetServicePrimary(routerService)
-	if err != nil {
-		return false, errors.Annotatef(err, "failed to get router primary %s", i.GetHost())
-	}
-
-	spec := i.InstanceSpec.(*RouterSpec)
-	enableTLS := false
-	if tlsCfg != nil {
-		enableTLS = true
-	}
-
-	return primary == spec.GetAdvertiseListenURL(enableTLS), nil
+	return false, nil
 }
 
 // ScaleConfig deploy temporary config on scaling

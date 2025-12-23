@@ -203,7 +203,7 @@ scrape_configs:
 {{- end}}
     static_configs:
     - targets:
-{{- range RouterAddrs}}
+{{- range .RouterAddrs}}
       - '{{.}}'
 {{- end}}
 {{- if .TiFlashStatusAddrs}}
