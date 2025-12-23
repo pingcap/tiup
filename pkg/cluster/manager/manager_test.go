@@ -90,6 +90,8 @@ tso_servers:
   - host: 172.16.5.53
 scheduling_servers:
   - host: 172.16.5.54
+router_servers:
+  - host: 172.16.5.55
 `), &topo)
 	assert.Nil(err)
 }
