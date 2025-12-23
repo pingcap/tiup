@@ -36,6 +36,10 @@ const (
 	PDRoleTSO PDRole = "tso"
 	// PDRoleScheduling is the role of PD scheduling
 	PDRoleScheduling PDRole = "scheduling"
+	// PDRoleRouter is the role of PD router
+	PDRoleRouter PDRole = "router"
+	// PDRoleResourceManager is the role of PD resource manager
+	PDRoleResourceManager PDRole = "resource-manager"
 )
 
 // PDInstance represent a running pd-server
@@ -91,6 +95,10 @@ func (inst *PDInstance) Name() string {
 		return fmt.Sprintf("tso-%d", inst.ID)
 	case PDRoleScheduling:
 		return fmt.Sprintf("scheduling-%d", inst.ID)
+	case PDRoleRouter:
+		return fmt.Sprintf("router-%d", inst.ID)
+	case PDRoleResourceManager:
+		return fmt.Sprintf("resource_manager-%d", inst.ID)
 	default:
 		return fmt.Sprintf("pd-%d", inst.ID)
 	}
@@ -98,7 +106,15 @@ func (inst *PDInstance) Name() string {
 
 // Start calls set inst.cmd and Start
 func (inst *PDInstance) Start(ctx context.Context) error {
-	configPath := filepath.Join(inst.Dir, "pd.toml")
+	var configFile string
+	if inst.role == PDRoleNormal || inst.role == PDRoleAPI {
+		configFile = "pd.toml"
+	} else if inst.role == PDRoleResourceManager {
+		configFile = "resource_manager.toml"
+	} else {
+		configFile = fmt.Sprintf("%s.toml", inst.role)
+	}
+	configPath := filepath.Join(inst.Dir, configFile)
 	if err := prepareConfig(
 		configPath,
 		inst.ConfigPath,
@@ -160,6 +176,34 @@ func (inst *PDInstance) Start(ctx context.Context) error {
 		args = []string{
 			"services",
 			"scheduling",
+			fmt.Sprintf("--listen-addr=http://%s", utils.JoinHostPort(inst.Host, inst.StatusPort)),
+			fmt.Sprintf("--advertise-listen-addr=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.StatusPort)),
+			fmt.Sprintf("--backend-endpoints=%s", strings.Join(endpoints, ",")),
+			fmt.Sprintf("--log-file=%s", inst.LogFile()),
+			fmt.Sprintf("--config=%s", configPath),
+		}
+		if tidbver.PDSupportMicroservicesWithName(inst.Version.String()) {
+			args = append(args, fmt.Sprintf("--name=%s", uid))
+		}
+	case PDRoleRouter:
+		endpoints := pdEndpoints(inst.pds, true)
+		args = []string{
+			"services",
+			"router",
+			fmt.Sprintf("--listen-addr=http://%s", utils.JoinHostPort(inst.Host, inst.StatusPort)),
+			fmt.Sprintf("--advertise-listen-addr=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.StatusPort)),
+			fmt.Sprintf("--backend-endpoints=%s", strings.Join(endpoints, ",")),
+			fmt.Sprintf("--log-file=%s", inst.LogFile()),
+			fmt.Sprintf("--config=%s", configPath),
+		}
+		if tidbver.PDSupportMicroservicesWithName(inst.Version.String()) {
+			args = append(args, fmt.Sprintf("--name=%s", uid))
+		}
+	case PDRoleResourceManager:
+		endpoints := pdEndpoints(inst.pds, true)
+		args = []string{
+			"services",
+			"resource-manager",
 			fmt.Sprintf("--listen-addr=http://%s", utils.JoinHostPort(inst.Host, inst.StatusPort)),
 			fmt.Sprintf("--advertise-listen-addr=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.StatusPort)),
 			fmt.Sprintf("--backend-endpoints=%s", strings.Join(endpoints, ",")),
