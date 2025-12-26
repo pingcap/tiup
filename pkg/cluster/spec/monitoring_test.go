@@ -229,32 +229,68 @@ scrape_configs:
 
 func TestGetRetention(t *testing.T) {
 	var val string
-	val = getRetention("-1d")
+	val = getRetentionTime(nil, "-1d")
 	assert.EqualValues(t, "30d", val)
 
-	val = getRetention("0d")
+	val = getRetentionTime(nil, "0d")
 	assert.EqualValues(t, "30d", val)
 
-	val = getRetention("01d")
+	val = getRetentionTime(nil, "01d")
 	assert.EqualValues(t, "30d", val)
 
-	val = getRetention("1dd")
+	val = getRetentionTime(nil, "1dd")
 	assert.EqualValues(t, "30d", val)
 
-	val = getRetention("*1d")
+	val = getRetentionTime(nil, "*1d")
 	assert.EqualValues(t, "30d", val)
 
-	val = getRetention("1d ")
+	val = getRetentionTime(nil, "1d ")
+	assert.EqualValues(t, "1d", val)
+
+	val = getRetentionTime(nil, " 1d")
+	assert.EqualValues(t, "1d", val)
+
+	val = getRetentionTime(nil, "ddd")
 	assert.EqualValues(t, "30d", val)
 
-	val = getRetention("ddd")
-	assert.EqualValues(t, "30d", val)
-
-	val = getRetention("60d")
+	val = getRetentionTime(nil, "60d")
 	assert.EqualValues(t, "60d", val)
 
-	val = getRetention("999d")
+	val = getRetentionTime(nil, "999d")
 	assert.EqualValues(t, "999d", val)
+
+	val = getRetentionSize(nil, "-1MB")
+	assert.EqualValues(t, "", val)
+
+	val = getRetentionSize(nil, "30d")
+	assert.EqualValues(t, "", val)
+
+	val = getRetentionSize(nil, "1k")
+	assert.EqualValues(t, "", val)
+
+	val = getRetentionSize(nil, "01G")
+	assert.EqualValues(t, "", val)
+
+	val = getRetentionSize(nil, "233mb")
+	assert.EqualValues(t, "233MB", val)
+
+	val = getRetentionSize(nil, "*1GB")
+	assert.EqualValues(t, "", val)
+
+	val = getRetentionSize(nil, "20GB ")
+	assert.EqualValues(t, "20GB", val)
+
+	val = getRetentionSize(nil, " 20GB")
+	assert.EqualValues(t, "20GB", val)
+
+	val = getRetentionSize(nil, "3TB")
+	assert.EqualValues(t, "3TB", val)
+
+	val = getRetentionSize(nil, "30GB")
+	assert.EqualValues(t, "30GB", val)
+
+	val = getRetentionSize(nil, "1EB")
+	assert.EqualValues(t, "1EB", val)
 }
 
 // TestHandleRemoteWrite verifies that remote write configurations are properly handled
