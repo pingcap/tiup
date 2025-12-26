@@ -191,6 +191,7 @@ scrape_configs:
 {{- range .SchedulingAddrs}}
       - '{{.}}'
 {{- end}}
+{{- if .ResourceManagerAddrs}}
   - job_name: "resource-manager"
     honor_labels: true # don't overwrite job & instance labels
 {{- if .TLSEnabled}}
@@ -205,6 +206,7 @@ scrape_configs:
     - targets:
 {{- range .ResourceManagerAddrs}}
       - '{{.}}'
+{{- end}}
 {{- end}}
 {{- if .TiFlashStatusAddrs}}
   - job_name: "tiflash"
