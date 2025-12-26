@@ -24,7 +24,7 @@ import (
 func newUpgradeCmd() *cobra.Command {
 	offlineMode := false
 	ignoreVersionCheck := false
-	var tidbVer, tikvVer, pdVer, tsoVer, schedulingVer, tiflashVer, kvcdcVer, dashboardVer, cdcVer, alertmanagerVer, nodeExporterVer, blackboxExporterVer, tiproxyVer string
+	var tidbVer, tikvVer, pdVer, tsoVer, schedulingVer, resourceManagerVer, tiflashVer, kvcdcVer, dashboardVer, cdcVer, alertmanagerVer, nodeExporterVer, blackboxExporterVer, tiproxyVer string
 	var restartTimeout time.Duration
 
 	cmd := &cobra.Command{
@@ -49,6 +49,7 @@ func newUpgradeCmd() *cobra.Command {
 				spec.ComponentPD:               pdVer,
 				spec.ComponentTSO:              tsoVer,
 				spec.ComponentScheduling:       schedulingVer,
+				spec.ComponentResourceManager:  resourceManagerVer,
 				spec.ComponentTiFlash:          tiflashVer,
 				spec.ComponentTiKVCDC:          kvcdcVer,
 				spec.ComponentCDC:              cdcVer,
@@ -81,6 +82,7 @@ func newUpgradeCmd() *cobra.Command {
 	cmd.Flags().StringVar(&pdVer, "pd-version", "", "Fix the version of pd and no longer follows the cluster version.")
 	cmd.Flags().StringVar(&tsoVer, "tso-version", "", "Fix the version of tso and no longer follows the cluster version.")
 	cmd.Flags().StringVar(&schedulingVer, "scheduling-version", "", "Fix the version of scheduling and no longer follows the cluster version.")
+	cmd.Flags().StringVar(&resourceManagerVer, "resource-manager-version", "", "Fix the version of resource-manager and no longer follows the cluster version.")
 	cmd.Flags().StringVar(&tiflashVer, "tiflash-version", "", "Fix the version of tiflash and no longer follows the cluster version.")
 	cmd.Flags().StringVar(&dashboardVer, "tidb-dashboard-version", "", "Fix the version of tidb-dashboard and no longer follows the cluster version.")
 	cmd.Flags().StringVar(&cdcVer, "cdc-version", "", "Fix the version of cdc and no longer follows the cluster version.")
