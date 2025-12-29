@@ -90,6 +90,15 @@ func (u *UpdateMeta) Execute(ctx context.Context) error {
 	}
 	newMeta.Topology.SchedulingServers = schedulingServers
 
+	resourceManagers := make([]*spec.ResourceManagerSpec, 0)
+	for i, instance := range (&spec.ResourceManagerComponent{Topology: topo}).Instances() {
+		if deleted.Exist(instance.ID()) {
+			continue
+		}
+		resourceManagers = append(resourceManagers, topo.ResourceManagerServers[i])
+	}
+	newMeta.Topology.ResourceManagerServers = resourceManagers
+
 	tiproxyServers := make([]*spec.TiProxySpec, 0)
 	for i, instance := range (&spec.TiProxyComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {

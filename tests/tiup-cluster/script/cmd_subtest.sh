@@ -88,7 +88,25 @@ function cmd_subtest() {
     id=`tiup-cluster audit | grep "deploy $name $version" | awk '{print $1}'`
     tiup-cluster $client audit $id
 
-    tiup-cluster $client --yes start $name
+    for attempt in 1 2; do
+        if tiup-cluster $client --yes --wait-timeout=300 start $name; then
+            break
+        fi
+        echo "start failed (attempt $attempt/2), dumping logs"
+        tiup-cluster $client exec $name -N n1 --command "systemctl status tidb-4000 --no-pager -l || true"
+        tiup-cluster $client exec $name -N n1 --command "journalctl -u tidb-4000 -n 200 --no-pager || true"
+        tiup-cluster $client exec $name -N n1 --command "tail -n 200 /home/tidb/deploy/tidb-4000/log/tidb.log 2>/dev/null || true"
+        tiup-cluster $client exec $name -N n1 --command "tail -n 200 /home/tidb/deploy/tidb-4000/log/tidb_stderr.log 2>/dev/null || true"
+        tiup-cluster $client exec $name -N n1 --command "tail -n 200 /home/tidb/deploy/tikv-20160/log/tikv.log 2>/dev/null || true"
+        tiup-cluster $client exec $name -N n3 --command "tail -n 200 /home/tidb/deploy/pd-2379/log/pd.log 2>/dev/null || true"
+        tiup-cluster $client exec $name -N n5 --command "tail -n 200 /home/tidb/deploy/pd-2379/log/pd.log 2>/dev/null || true"
+
+        if [ "$attempt" -eq 2 ]; then
+            exit 1
+        fi
+        echo "retry start after 10s"
+        sleep 10
+    done
 
     # Patch a stopped cluster
     tiup-cluster $client --yes patch $name ~/.tiup/storage/cluster/packages/tidb-v$version-linux-amd64.tar.gz -R tidb --offline
@@ -131,7 +149,25 @@ function cmd_subtest() {
     # let the CI to stop the job if hang forever
     ! tiup-cluster $client --yes start $name -R prometheus,grafana
 
-    tiup-cluster $client --yes restart $name
+    for attempt in 1 2; do
+        if tiup-cluster $client --yes --wait-timeout=300 restart $name; then
+            break
+        fi
+        echo "restart failed (attempt $attempt/2), dumping logs"
+        tiup-cluster $client exec $name -N n1 --command "systemctl status tidb-4000 --no-pager -l || true"
+        tiup-cluster $client exec $name -N n1 --command "journalctl -u tidb-4000 -n 200 --no-pager || true"
+        tiup-cluster $client exec $name -N n1 --command "tail -n 200 /home/tidb/deploy/tidb-4000/log/tidb.log 2>/dev/null || true"
+        tiup-cluster $client exec $name -N n1 --command "tail -n 200 /home/tidb/deploy/tidb-4000/log/tidb_stderr.log 2>/dev/null || true"
+        tiup-cluster $client exec $name -N n1 --command "tail -n 200 /home/tidb/deploy/tikv-20160/log/tikv.log 2>/dev/null || true"
+        tiup-cluster $client exec $name -N n3 --command "tail -n 200 /home/tidb/deploy/pd-2379/log/pd.log 2>/dev/null || true"
+        tiup-cluster $client exec $name -N n5 --command "tail -n 200 /home/tidb/deploy/pd-2379/log/pd.log 2>/dev/null || true"
+
+        if [ "$attempt" -eq 2 ]; then
+            exit 1
+        fi
+        echo "retry restart after 10s"
+        sleep 10
+    done
 
     tiup-cluster $client _test $name writable
 
@@ -179,7 +215,7 @@ function cmd_subtest() {
     tiup-cluster $client exec $name -N n1 --command "ls /home/tidb/deploy/prometheus-9090/log/prometheus.log"
     ! tiup-cluster $client exec $name -N n1 --command "ls /home/tidb/deploy/tikv-20160/log/tikv.log"
 
-    tiup-cluster $client --yes start $name
+    tiup-cluster $client --yes --wait-timeout=300 start $name
 
     ! tiup-cluster $client _test $name data
 

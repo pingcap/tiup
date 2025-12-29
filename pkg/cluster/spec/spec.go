@@ -118,39 +118,41 @@ type (
 
 	// ServerConfigs represents the server runtime configuration
 	ServerConfigs struct {
-		TiDB           map[string]any    `yaml:"tidb"`
-		TiKV           map[string]any    `yaml:"tikv"`
-		PD             map[string]any    `yaml:"pd"`
-		TSO            map[string]any    `yaml:"tso"`
-		Scheduling     map[string]any    `yaml:"scheduling"`
-		Dashboard      map[string]any    `yaml:"tidb_dashboard"`
-		TiFlash        map[string]any    `yaml:"tiflash"`
-		TiProxy        map[string]any    `yaml:"tiproxy"`
-		TiFlashLearner map[string]any    `yaml:"tiflash-learner"`
-		Pump           map[string]any    `yaml:"pump"`
-		Drainer        map[string]any    `yaml:"drainer"`
-		CDC            map[string]any    `yaml:"cdc"`
-		TiKVCDC        map[string]any    `yaml:"kvcdc"`
-		Grafana        map[string]string `yaml:"grafana"`
+		TiDB            map[string]any    `yaml:"tidb"`
+		TiKV            map[string]any    `yaml:"tikv"`
+		PD              map[string]any    `yaml:"pd"`
+		TSO             map[string]any    `yaml:"tso"`
+		Scheduling      map[string]any    `yaml:"scheduling"`
+		ResourceManager map[string]any    `yaml:"resource_manager"`
+		Dashboard       map[string]any    `yaml:"tidb_dashboard"`
+		TiFlash         map[string]any    `yaml:"tiflash"`
+		TiProxy         map[string]any    `yaml:"tiproxy"`
+		TiFlashLearner  map[string]any    `yaml:"tiflash-learner"`
+		Pump            map[string]any    `yaml:"pump"`
+		Drainer         map[string]any    `yaml:"drainer"`
+		CDC             map[string]any    `yaml:"cdc"`
+		TiKVCDC         map[string]any    `yaml:"kvcdc"`
+		Grafana         map[string]string `yaml:"grafana"`
 	}
 
 	// ComponentVersions represents the versions of components
 	ComponentVersions struct {
-		TiDB         string `yaml:"tidb,omitempty"`
-		TiKV         string `yaml:"tikv,omitempty"`
-		TiFlash      string `yaml:"tiflash,omitempty"`
-		PD           string `yaml:"pd,omitempty"`
-		TSO          string `yaml:"tso,omitempty"`
-		Scheduling   string `yaml:"scheduling,omitempty"`
-		Dashboard    string `yaml:"tidb_dashboard,omitempty"`
-		Pump         string `yaml:"pump,omitempty"`
-		Drainer      string `yaml:"drainer,omitempty"`
-		CDC          string `yaml:"cdc,omitempty"`
-		TiKVCDC      string `yaml:"kvcdc,omitempty"`
-		TiProxy      string `yaml:"tiproxy,omitempty"`
-		Prometheus   string `yaml:"prometheus,omitempty"`
-		Grafana      string `yaml:"grafana,omitempty"`
-		AlertManager string `yaml:"alertmanager,omitempty"`
+		TiDB            string `yaml:"tidb,omitempty"`
+		TiKV            string `yaml:"tikv,omitempty"`
+		TiFlash         string `yaml:"tiflash,omitempty"`
+		PD              string `yaml:"pd,omitempty"`
+		TSO             string `yaml:"tso,omitempty"`
+		Scheduling      string `yaml:"scheduling,omitempty"`
+		ResourceManager string `yaml:"resource_manager,omitempty"`
+		Dashboard       string `yaml:"tidb_dashboard,omitempty"`
+		Pump            string `yaml:"pump,omitempty"`
+		Drainer         string `yaml:"drainer,omitempty"`
+		CDC             string `yaml:"cdc,omitempty"`
+		TiKVCDC         string `yaml:"kvcdc,omitempty"`
+		TiProxy         string `yaml:"tiproxy,omitempty"`
+		Prometheus      string `yaml:"prometheus,omitempty"`
+		Grafana         string `yaml:"grafana,omitempty"`
+		AlertManager    string `yaml:"alertmanager,omitempty"`
 		// The versions of exporters are placed within the monitored section because they are not explicitly treated as separate components.
 		// NodeExporter     string `yaml:"node_exporter,omitempty"`
 		// BlackboxExporter string `yaml:"blackbox_exporter,omitempty"`
@@ -171,28 +173,29 @@ type (
 
 	// Specification represents the specification of topology.yaml
 	Specification struct {
-		GlobalOptions     GlobalOptions        `yaml:"global,omitempty" validate:"global:editable"`
-		MonitoredOptions  MonitoredOptions     `yaml:"monitored,omitempty" validate:"monitored:editable"`
-		ComponentVersions ComponentVersions    `yaml:"component_versions,omitempty" validate:"component_versions:editable"`
-		ComponentSources  ComponentSources     `yaml:"component_sources,omitempty" validate:"component_sources:editable"`
-		ServerConfigs     ServerConfigs        `yaml:"server_configs,omitempty" validate:"server_configs:ignore"`
-		TiDBServers       []*TiDBSpec          `yaml:"tidb_servers"`
-		TiKVServers       []*TiKVSpec          `yaml:"tikv_servers"`
-		TiFlashServers    []*TiFlashSpec       `yaml:"tiflash_servers"`
-		TiProxyServers    []*TiProxySpec       `yaml:"tiproxy_servers"`
-		PDServers         []*PDSpec            `yaml:"pd_servers"`
-		TSOServers        []*TSOSpec           `yaml:"tso_servers,omitempty"`
-		SchedulingServers []*SchedulingSpec    `yaml:"scheduling_servers,omitempty"`
-		DashboardServers  []*DashboardSpec     `yaml:"tidb_dashboard_servers,omitempty"`
-		PumpServers       []*PumpSpec          `yaml:"pump_servers,omitempty"`
-		Drainers          []*DrainerSpec       `yaml:"drainer_servers,omitempty"`
-		CDCServers        []*CDCSpec           `yaml:"cdc_servers,omitempty"`
-		TiKVCDCServers    []*TiKVCDCSpec       `yaml:"kvcdc_servers,omitempty"`
-		TiSparkMasters    []*TiSparkMasterSpec `yaml:"tispark_masters,omitempty"`
-		TiSparkWorkers    []*TiSparkWorkerSpec `yaml:"tispark_workers,omitempty"`
-		Monitors          []*PrometheusSpec    `yaml:"monitoring_servers"`
-		Grafanas          []*GrafanaSpec       `yaml:"grafana_servers,omitempty"`
-		Alertmanagers     []*AlertmanagerSpec  `yaml:"alertmanager_servers,omitempty"`
+		GlobalOptions          GlobalOptions          `yaml:"global,omitempty" validate:"global:editable"`
+		MonitoredOptions       MonitoredOptions       `yaml:"monitored,omitempty" validate:"monitored:editable"`
+		ComponentVersions      ComponentVersions      `yaml:"component_versions,omitempty" validate:"component_versions:editable"`
+		ComponentSources       ComponentSources       `yaml:"component_sources,omitempty" validate:"component_sources:editable"`
+		ServerConfigs          ServerConfigs          `yaml:"server_configs,omitempty" validate:"server_configs:ignore"`
+		TiDBServers            []*TiDBSpec            `yaml:"tidb_servers"`
+		TiKVServers            []*TiKVSpec            `yaml:"tikv_servers"`
+		TiFlashServers         []*TiFlashSpec         `yaml:"tiflash_servers"`
+		TiProxyServers         []*TiProxySpec         `yaml:"tiproxy_servers"`
+		PDServers              []*PDSpec              `yaml:"pd_servers"`
+		TSOServers             []*TSOSpec             `yaml:"tso_servers,omitempty"`
+		SchedulingServers      []*SchedulingSpec      `yaml:"scheduling_servers,omitempty"`
+		ResourceManagerServers []*ResourceManagerSpec `yaml:"resource_manager_servers,omitempty"`
+		DashboardServers       []*DashboardSpec       `yaml:"tidb_dashboard_servers,omitempty"`
+		PumpServers            []*PumpSpec            `yaml:"pump_servers,omitempty"`
+		Drainers               []*DrainerSpec         `yaml:"drainer_servers,omitempty"`
+		CDCServers             []*CDCSpec             `yaml:"cdc_servers,omitempty"`
+		TiKVCDCServers         []*TiKVCDCSpec         `yaml:"kvcdc_servers,omitempty"`
+		TiSparkMasters         []*TiSparkMasterSpec   `yaml:"tispark_masters,omitempty"`
+		TiSparkWorkers         []*TiSparkWorkerSpec   `yaml:"tispark_workers,omitempty"`
+		Monitors               []*PrometheusSpec      `yaml:"monitoring_servers"`
+		Grafanas               []*GrafanaSpec         `yaml:"grafana_servers,omitempty"`
+		Alertmanagers          []*AlertmanagerSpec    `yaml:"alertmanager_servers,omitempty"`
 	}
 )
 
@@ -558,48 +561,50 @@ func (s *Specification) GetEtcdProxyClient(tlsCfg *tls.Config, tcpProxy *proxy.T
 func (s *Specification) Merge(that Topology) Topology {
 	spec := that.(*Specification)
 	return &Specification{
-		GlobalOptions:     s.GlobalOptions,
-		MonitoredOptions:  s.MonitoredOptions,
-		ServerConfigs:     s.ServerConfigs,
-		ComponentVersions: s.ComponentVersions.Merge(spec.ComponentVersions),
-		TiDBServers:       append(s.TiDBServers, spec.TiDBServers...),
-		TiKVServers:       append(s.TiKVServers, spec.TiKVServers...),
-		PDServers:         append(s.PDServers, spec.PDServers...),
-		DashboardServers:  append(s.DashboardServers, spec.DashboardServers...),
-		TiFlashServers:    append(s.TiFlashServers, spec.TiFlashServers...),
-		TiProxyServers:    append(s.TiProxyServers, spec.TiProxyServers...),
-		TSOServers:        append(s.TSOServers, spec.TSOServers...),
-		SchedulingServers: append(s.SchedulingServers, spec.SchedulingServers...),
-		PumpServers:       append(s.PumpServers, spec.PumpServers...),
-		Drainers:          append(s.Drainers, spec.Drainers...),
-		CDCServers:        append(s.CDCServers, spec.CDCServers...),
-		TiKVCDCServers:    append(s.TiKVCDCServers, spec.TiKVCDCServers...),
-		TiSparkMasters:    append(s.TiSparkMasters, spec.TiSparkMasters...),
-		TiSparkWorkers:    append(s.TiSparkWorkers, spec.TiSparkWorkers...),
-		Monitors:          append(s.Monitors, spec.Monitors...),
-		Grafanas:          append(s.Grafanas, spec.Grafanas...),
-		Alertmanagers:     append(s.Alertmanagers, spec.Alertmanagers...),
+		GlobalOptions:          s.GlobalOptions,
+		MonitoredOptions:       s.MonitoredOptions,
+		ServerConfigs:          s.ServerConfigs,
+		ComponentVersions:      s.ComponentVersions.Merge(spec.ComponentVersions),
+		TiDBServers:            append(s.TiDBServers, spec.TiDBServers...),
+		TiKVServers:            append(s.TiKVServers, spec.TiKVServers...),
+		PDServers:              append(s.PDServers, spec.PDServers...),
+		DashboardServers:       append(s.DashboardServers, spec.DashboardServers...),
+		TiFlashServers:         append(s.TiFlashServers, spec.TiFlashServers...),
+		TiProxyServers:         append(s.TiProxyServers, spec.TiProxyServers...),
+		TSOServers:             append(s.TSOServers, spec.TSOServers...),
+		SchedulingServers:      append(s.SchedulingServers, spec.SchedulingServers...),
+		ResourceManagerServers: append(s.ResourceManagerServers, spec.ResourceManagerServers...),
+		PumpServers:            append(s.PumpServers, spec.PumpServers...),
+		Drainers:               append(s.Drainers, spec.Drainers...),
+		CDCServers:             append(s.CDCServers, spec.CDCServers...),
+		TiKVCDCServers:         append(s.TiKVCDCServers, spec.TiKVCDCServers...),
+		TiSparkMasters:         append(s.TiSparkMasters, spec.TiSparkMasters...),
+		TiSparkWorkers:         append(s.TiSparkWorkers, spec.TiSparkWorkers...),
+		Monitors:               append(s.Monitors, spec.Monitors...),
+		Grafanas:               append(s.Grafanas, spec.Grafanas...),
+		Alertmanagers:          append(s.Alertmanagers, spec.Alertmanagers...),
 	}
 }
 
 // Merge returns a new ComponentVersions which sum old ones
 func (v *ComponentVersions) Merge(that ComponentVersions) ComponentVersions {
 	return ComponentVersions{
-		TiDB:         utils.Ternary(that.TiDB != "", that.TiDB, v.TiDB).(string),
-		TiKV:         utils.Ternary(that.TiKV != "", that.TiKV, v.TiKV).(string),
-		PD:           utils.Ternary(that.PD != "", that.PD, v.PD).(string),
-		TSO:          utils.Ternary(that.TSO != "", that.TSO, v.TSO).(string),
-		Scheduling:   utils.Ternary(that.Scheduling != "", that.Scheduling, v.Scheduling).(string),
-		Dashboard:    utils.Ternary(that.Dashboard != "", that.Dashboard, v.Dashboard).(string),
-		TiFlash:      utils.Ternary(that.TiFlash != "", that.TiFlash, v.TiFlash).(string),
-		TiProxy:      utils.Ternary(that.TiProxy != "", that.TiProxy, v.TiProxy).(string),
-		Pump:         utils.Ternary(that.Pump != "", that.Pump, v.Pump).(string),
-		Drainer:      utils.Ternary(that.Drainer != "", that.Drainer, v.Drainer).(string),
-		CDC:          utils.Ternary(that.CDC != "", that.CDC, v.CDC).(string),
-		TiKVCDC:      utils.Ternary(that.TiKVCDC != "", that.TiKVCDC, v.TiKVCDC).(string),
-		Grafana:      utils.Ternary(that.Grafana != "", that.Grafana, v.Grafana).(string),
-		Prometheus:   utils.Ternary(that.Prometheus != "", that.Prometheus, v.Prometheus).(string),
-		AlertManager: utils.Ternary(that.AlertManager != "", that.AlertManager, v.AlertManager).(string),
+		TiDB:            utils.Ternary(that.TiDB != "", that.TiDB, v.TiDB).(string),
+		TiKV:            utils.Ternary(that.TiKV != "", that.TiKV, v.TiKV).(string),
+		PD:              utils.Ternary(that.PD != "", that.PD, v.PD).(string),
+		TSO:             utils.Ternary(that.TSO != "", that.TSO, v.TSO).(string),
+		Scheduling:      utils.Ternary(that.Scheduling != "", that.Scheduling, v.Scheduling).(string),
+		ResourceManager: utils.Ternary(that.ResourceManager != "", that.ResourceManager, v.ResourceManager).(string),
+		Dashboard:       utils.Ternary(that.Dashboard != "", that.Dashboard, v.Dashboard).(string),
+		TiFlash:         utils.Ternary(that.TiFlash != "", that.TiFlash, v.TiFlash).(string),
+		TiProxy:         utils.Ternary(that.TiProxy != "", that.TiProxy, v.TiProxy).(string),
+		Pump:            utils.Ternary(that.Pump != "", that.Pump, v.Pump).(string),
+		Drainer:         utils.Ternary(that.Drainer != "", that.Drainer, v.Drainer).(string),
+		CDC:             utils.Ternary(that.CDC != "", that.CDC, v.CDC).(string),
+		TiKVCDC:         utils.Ternary(that.TiKVCDC != "", that.TiKVCDC, v.TiKVCDC).(string),
+		Grafana:         utils.Ternary(that.Grafana != "", that.Grafana, v.Grafana).(string),
+		Prometheus:      utils.Ternary(that.Prometheus != "", that.Prometheus, v.Prometheus).(string),
+		AlertManager:    utils.Ternary(that.AlertManager != "", that.AlertManager, v.AlertManager).(string),
 	}
 }
 
@@ -802,10 +807,11 @@ func (s *Specification) ComponentsByStopOrder() (comps []Component) {
 
 // ComponentsByStartOrder return component in the order need to start.
 func (s *Specification) ComponentsByStartOrder() (comps []Component) {
-	// "pd", "tso", "scheduling", "dashboard", "tiproxy", "tikv", "pump", "tidb", "tiflash", "drainer", "cdc", "tikv-cdc", "prometheus", "grafana", "alertmanager"
+	// "pd", "tso", "scheduling", "resource-manager", "dashboard", "tiproxy", "tikv", "pump", "tidb", "tiflash", "drainer", "cdc", "tikv-cdc", "prometheus", "grafana", "alertmanager"
 	comps = append(comps, &PDComponent{s})
 	comps = append(comps, &TSOComponent{s})
 	comps = append(comps, &SchedulingComponent{s})
+	comps = append(comps, &ResourceManagerComponent{s})
 	comps = append(comps, &DashboardComponent{s})
 	comps = append(comps, &TiProxyComponent{s})
 	comps = append(comps, &TiKVComponent{s})
@@ -828,7 +834,7 @@ func (s *Specification) ComponentsByUpdateOrder(curVer string) (comps []Componen
 	// Ref: https://github.com/pingcap/tiup/issues/2166
 	cdcUpgradeBeforePDTiKVTiDB := tidbver.TiCDCUpgradeBeforePDTiKVTiDB(curVer)
 
-	// "tiflash", <"cdc">, "pd", "tso", "scheduling", "dashboard", "tiproxy", "tikv", "pump", "tidb", "drainer", <"cdc>", "prometheus", "grafana", "alertmanager"
+	// "tiflash", <"cdc">, "pd", "tso", "scheduling", "resource-manager", "dashboard", "tiproxy", "tikv", "pump", "tidb", "drainer", <"cdc>", "prometheus", "grafana", "alertmanager"
 	comps = append(comps, &TiFlashComponent{s})
 	if cdcUpgradeBeforePDTiKVTiDB {
 		comps = append(comps, &CDCComponent{s})
@@ -836,6 +842,7 @@ func (s *Specification) ComponentsByUpdateOrder(curVer string) (comps []Componen
 	comps = append(comps, &PDComponent{s})
 	comps = append(comps, &TSOComponent{s})
 	comps = append(comps, &SchedulingComponent{s})
+	comps = append(comps, &ResourceManagerComponent{s})
 	comps = append(comps, &DashboardComponent{s})
 	comps = append(comps, &TiProxyComponent{s})
 	comps = append(comps, &TiKVComponent{s})
