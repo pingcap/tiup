@@ -209,7 +209,8 @@ func AdvertiseHost(listen string) string {
 func pdEndpoints(pds []*PDInstance, isHTTP bool) []string {
 	var endpoints []string
 	for _, pd := range pds {
-		if pd.Role() == PDRoleTSO || pd.Role() == PDRoleScheduling || pd.Role() == PDRoleRouter || pd.Role() == PDRoleRouter {
+		if pd.Role() == PDRoleTSO || pd.Role() == PDRoleScheduling ||
+			pd.Role() == PDRoleRouter || pd.Role() == PDRoleResourceManager {
 			continue
 		}
 		if isHTTP {

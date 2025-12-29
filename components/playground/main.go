@@ -49,29 +49,30 @@ import (
 
 // BootOptions is the topology and options used to start a playground cluster
 type BootOptions struct {
-	ShOpt          instance.SharedOptions `yaml:"shared_opt"`
-	Version        string                 `yaml:"version"`
-	PD             instance.Config        `yaml:"pd"`         // will change to api when pd_mode == ms
-	TSO            instance.Config        `yaml:"tso"`        // Only available when pd_mode == ms
-	Scheduling     instance.Config        `yaml:"scheduling"` // Only available when pd_mode == ms
-	Router         instance.Config        `yaml:"router"`
-	TiProxy        instance.Config        `yaml:"tiproxy"`
-	TiDB           instance.Config        `yaml:"tidb"`
-	TiDBSystem     instance.Config        `yaml:"tidb.system"`
-	TiKV           instance.Config        `yaml:"tikv"`
-	TiFlash        instance.Config        `yaml:"tiflash"`         // ignored when ShOpt.Mode == ModeCSE or ModeDisAgg
-	TiFlashWrite   instance.Config        `yaml:"tiflash_write"`   // Only available when ShOpt.Mode == ModeCSE or ModeDisAgg
-	TiFlashCompute instance.Config        `yaml:"tiflash_compute"` // Only available when ShOpt.Mode == ModeCSE or ModeDisAgg
-	TiCDC          instance.Config        `yaml:"ticdc"`
-	TiKVCDC        instance.Config        `yaml:"tikv_cdc"`
-	TiKVWorker     instance.Config        `yaml:"tikv_worker"` // Only available when ShOpt.Mode == ModeCSE or ModeNextGen
-	Pump           instance.Config        `yaml:"pump"`
-	Drainer        instance.Config        `yaml:"drainer"`
-	Host           string                 `yaml:"host"`
-	Monitor        bool                   `yaml:"monitor"`
-	GrafanaPort    int                    `yaml:"grafana_port"`
-	DMMaster       instance.Config        `yaml:"dm_master"`
-	DMWorker       instance.Config        `yaml:"dm_worker"`
+	ShOpt           instance.SharedOptions `yaml:"shared_opt"`
+	Version         string                 `yaml:"version"`
+	PD              instance.Config        `yaml:"pd"`               // will change to api when pd_mode == ms
+	TSO             instance.Config        `yaml:"tso"`              // Only available when pd_mode == ms
+	Scheduling      instance.Config        `yaml:"scheduling"`       // Only available when pd_mode == ms
+	Router          instance.Config        `yaml:"router"`           // Only available when pd_mode == ms
+	ResourceManager instance.Config        `yaml:"resource_manager"` // Only available when pd_mode == ms
+	TiProxy         instance.Config        `yaml:"tiproxy"`
+	TiDB            instance.Config        `yaml:"tidb"`
+	TiDBSystem      instance.Config        `yaml:"tidb.system"`
+	TiKV            instance.Config        `yaml:"tikv"`
+	TiFlash         instance.Config        `yaml:"tiflash"`         // ignored when ShOpt.Mode == ModeCSE or ModeDisAgg
+	TiFlashWrite    instance.Config        `yaml:"tiflash_write"`   // Only available when ShOpt.Mode == ModeCSE or ModeDisAgg
+	TiFlashCompute  instance.Config        `yaml:"tiflash_compute"` // Only available when ShOpt.Mode == ModeCSE or ModeDisAgg
+	TiCDC           instance.Config        `yaml:"ticdc"`
+	TiKVCDC         instance.Config        `yaml:"tikv_cdc"`
+	TiKVWorker      instance.Config        `yaml:"tikv_worker"` // Only available when ShOpt.Mode == ModeCSE or ModeNextGen
+	Pump            instance.Config        `yaml:"pump"`
+	Drainer         instance.Config        `yaml:"drainer"`
+	Host            string                 `yaml:"host"`
+	Monitor         bool                   `yaml:"monitor"`
+	GrafanaPort     int                    `yaml:"grafana_port"`
+	DMMaster        instance.Config        `yaml:"dm_master"`
+	DMWorker        instance.Config        `yaml:"dm_worker"`
 }
 
 var (
@@ -276,6 +277,7 @@ Note: Version constraint is [green][bold]%s[reset]. If you'd like to use other v
 	rootCmd.Flags().IntVar(&options.TSO.Num, "tso", 0, "TSO instance number")
 	rootCmd.Flags().IntVar(&options.Scheduling.Num, "scheduling", 0, "Scheduling instance number")
 	rootCmd.Flags().IntVar(&options.Router.Num, "router", 0, "Router instance number")
+	rootCmd.Flags().IntVar(&options.ResourceManager.Num, "resource-manager", 0, "Resource manager instance number")
 	rootCmd.Flags().IntVar(&options.TiProxy.Num, "tiproxy", 0, "TiProxy instance number")
 	rootCmd.Flags().IntVar(&options.TiFlash.Num, "tiflash", 0,
 		fmt.Sprintf("TiFlash instance number, when --mode=%s or --mode=%s this will set instance number for both Write Node and Compute Node", instance.ModeCSE, instance.ModeDisAgg))
@@ -323,6 +325,7 @@ Note: Version constraint is [green][bold]%s[reset]. If you'd like to use other v
 	rootCmd.Flags().StringVar(&options.TSO.ConfigPath, "tso.config", "", "TSO instance configuration file")
 	rootCmd.Flags().StringVar(&options.Scheduling.ConfigPath, "scheduling.config", "", "Scheduling instance configuration file")
 	rootCmd.Flags().StringVar(&options.Router.ConfigPath, "router.config", "", "Router instance configuration file")
+	rootCmd.Flags().StringVar(&options.ResourceManager.ConfigPath, "resource-manager.config", "", "Resource manager instance configuration file")
 	rootCmd.Flags().StringVar(&options.TiProxy.ConfigPath, "tiproxy.config", "", "TiProxy instance configuration file")
 	rootCmd.Flags().StringVar(&options.TiFlash.ConfigPath, "tiflash.config", "",
 		fmt.Sprintf("TiFlash instance configuration file, when --mode=%s or --mode=%s, this will set config file for both Write Node and Compute Node", instance.ModeCSE, instance.ModeDisAgg))
@@ -345,6 +348,7 @@ Note: Version constraint is [green][bold]%s[reset]. If you'd like to use other v
 	rootCmd.Flags().StringVar(&options.TSO.BinPath, "tso.binpath", "", "TSO instance binary path")
 	rootCmd.Flags().StringVar(&options.Scheduling.BinPath, "scheduling.binpath", "", "Scheduling instance binary path")
 	rootCmd.Flags().StringVar(&options.Router.BinPath, "router.binpath", "", "Router instance binary path")
+	rootCmd.Flags().StringVar(&options.ResourceManager.BinPath, "resource-manager.binpath", "", "Resource manager instance binary path")
 	rootCmd.Flags().StringVar(&options.TiProxy.BinPath, "tiproxy.binpath", "", "TiProxy instance binary path")
 	rootCmd.Flags().StringVar(&options.TiProxy.Version, "tiproxy.version", "", "TiProxy instance version")
 	rootCmd.Flags().StringVar(&options.TiFlash.BinPath, "tiflash.binpath", "",
@@ -444,9 +448,12 @@ func populateDefaultOpt(flagSet *pflag.FlagSet) error {
 		defaultInt(&options.Scheduling.Num, "scheduling", 1)
 		defaultStr(&options.Scheduling.BinPath, "scheduling.binpath", options.PD.BinPath)
 		defaultStr(&options.Scheduling.ConfigPath, "scheduling.config", options.PD.ConfigPath)
-		defaultInt(&options.Router.Num, "router", 1)
+		defaultInt(&options.Router.Num, "router", 0)
 		defaultStr(&options.Router.BinPath, "router.binpath", options.PD.BinPath)
 		defaultStr(&options.Router.ConfigPath, "router.config", options.PD.ConfigPath)
+		defaultInt(&options.ResourceManager.Num, "resource-manager", 0)
+		defaultStr(&options.ResourceManager.BinPath, "resource-manager.binpath", options.PD.BinPath)
+		defaultStr(&options.ResourceManager.ConfigPath, "resource-manager.config", options.PD.ConfigPath)
 	default:
 		return errors.Errorf("Unknown --pd.mode %s", options.ShOpt.PDMode)
 	}
