@@ -88,7 +88,7 @@ function cmd_subtest() {
     id=`tiup-cluster audit | grep "deploy $name $version" | awk '{print $1}'`
     tiup-cluster $client audit $id
 
-    if ! tiup-cluster $client --yes --wait-timeout=1800 start $name; then
+    if ! tiup-cluster $client --yes --wait-timeout=300 start $name; then
         echo "start failed, dumping tidb-4000 logs on n1"
         tiup-cluster $client exec $name -N n1 --command "systemctl status tidb-4000 --no-pager -l || true"
         tiup-cluster $client exec $name -N n1 --command "journalctl -u tidb-4000 -n 200 --no-pager || true"
@@ -137,7 +137,7 @@ function cmd_subtest() {
     # let the CI to stop the job if hang forever
     ! tiup-cluster $client --yes start $name -R prometheus,grafana
 
-    if ! tiup-cluster $client --yes --wait-timeout=1800 restart $name; then
+    if ! tiup-cluster $client --yes --wait-timeout=300 restart $name; then
         echo "restart failed, dumping tidb-4000 logs on n1"
         tiup-cluster $client exec $name -N n1 --command "systemctl status tidb-4000 --no-pager -l || true"
         tiup-cluster $client exec $name -N n1 --command "journalctl -u tidb-4000 -n 200 --no-pager || true"

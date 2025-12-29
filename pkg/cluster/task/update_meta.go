@@ -40,11 +40,9 @@ func (u *UpdateMeta) Execute(ctx context.Context) error {
 	newMeta := &spec.ClusterMeta{}
 	*newMeta = *u.metadata
 	newMeta.Topology = &spec.Specification{
-		GlobalOptions:     u.metadata.Topology.GlobalOptions,
-		MonitoredOptions:  u.metadata.Topology.MonitoredOptions,
-		ServerConfigs:     u.metadata.Topology.ServerConfigs,
-		ComponentVersions: u.metadata.Topology.ComponentVersions,
-		ComponentSources:  u.metadata.Topology.ComponentSources,
+		GlobalOptions:    u.metadata.Topology.GlobalOptions,
+		MonitoredOptions: u.metadata.Topology.MonitoredOptions,
+		ServerConfigs:    u.metadata.Topology.ServerConfigs,
 	}
 
 	tidbServers := make([]*spec.TiDBSpec, 0)
