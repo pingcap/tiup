@@ -1422,6 +1422,10 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 				resourceManagerAddr = append(resourceManagerAddr, resourceManager.Addr())
 			}
 
+			for _, router := range p.routers {
+				routerAddr = append(schedulingAddr, router.Addr())
+			}
+
 			fmt.Printf("PD API Endpoints:   ")
 			colorCmd.Printf("%s\n", strings.Join(apiAddr, ","))
 			fmt.Printf("PD TSO Endpoints:   ")
@@ -1594,12 +1598,12 @@ func (p *Playground) terminate(sig syscall.Signal) {
 	}
 	for _, inst := range p.routers {
 		if inst.Process() != nil && inst.Process().Cmd() != nil && inst.Process().Cmd().Process != nil {
-			kill(inst.Component(), inst.Process().Pid(), inst.Wait)
+			kill(inst.Name(), inst.Process().Pid(), inst.Wait)
 		}
 	}
 	for _, inst := range p.resourceManagers {
 		if inst.Process() != nil && inst.Process().Cmd() != nil && inst.Process().Cmd().Process != nil {
-			kill(inst.Component(), inst.Process().Pid(), inst.Wait)
+			kill(inst.Name(), inst.Process().Pid(), inst.Wait)
 		}
 	}
 	for _, inst := range p.tiproxys {
