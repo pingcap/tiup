@@ -4,16 +4,23 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"syscall"
 	"time"
 
 	"github.com/pingcap/tiup/components/playground/proc"
-	"github.com/pingcap/tiup/pkg/cluster/api"
 )
 
 func init() {
 	MustRegister(Spec{
 		ServiceID: proc.ServiceDrainer,
+		Catalog: Catalog{
+			FlagPrefix:         "drainer",
+			AllowModifyNum:     true,
+			AllowModifyConfig:  true,
+			AllowModifyBinPath: true,
+			DefaultNum:         func(_ BootContext) int { return 0 },
+			IsEnabled:          func(_ BootContext) bool { return true },
+			AllowScaleOut:      true,
+		},
 		StartAfter: []proc.ServiceID{
 			proc.ServicePD,
 			proc.ServicePDAPI,
@@ -67,51 +74,18 @@ func scaleInDrainerByOffline(rt Runtime, w io.Writer, inst proc.Process, pid int
 	if err := c.OfflineDrainer(ctxOffline, drainer.Addr()); err != nil {
 		return false, err
 	}
-	go watchDrainerTombstone(rt, c, drainer)
+	go watchAsyncScaleInStop(rt, 5*time.Second, func() (done bool, err error) {
+		ctxProbe, cancelProbe := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancelProbe()
+		return c.IsDrainerTombstone(ctxProbe, drainer.Addr())
+	}, asyncScaleInStopEvent{
+		serviceID:   proc.ServiceDrainer,
+		inst:        drainer,
+		stopMessage: fmt.Sprintf("stop offline drainer %s", drainer.Addr()),
+	})
 
 	if w != nil {
 		fmt.Fprintf(w, "requested scale-in %s (waiting for offline)\n", drainer.Addr())
 	}
 	return true, nil
-}
-
-type drainerTombstoneEvent struct {
-	inst *proc.Drainer
-}
-
-func (e drainerTombstoneEvent) Handle(rt Runtime) {
-	if rt == nil || e.inst == nil {
-		return
-	}
-
-	if !rt.RemoveProc(proc.ServiceDrainer, e.inst) {
-		return
-	}
-
-	fmt.Fprintf(rt.TermWriter(), "stop offline drainer %s\n", e.inst.Addr())
-	pid := 0
-	if info := e.inst.Info(); info != nil && info.Proc != nil {
-		pid = info.Proc.Pid()
-	}
-	rt.ExpectExitPID(pid)
-	if pid > 0 {
-		if err := syscall.Kill(pid, syscall.SIGQUIT); err != nil {
-			fmt.Fprintln(rt.TermWriter(), err)
-		}
-	}
-
-	rt.OnProcsChanged()
-}
-
-func watchDrainerTombstone(rt Runtime, c *api.BinlogClient, inst *proc.Drainer) {
-	if rt == nil || c == nil || inst == nil {
-		return
-	}
-	pollUntil(rt, 5*time.Second, 0, func() (done bool, err error) {
-		ctxProbe, cancelProbe := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancelProbe()
-		return c.IsDrainerTombstone(ctxProbe, inst.Addr())
-	}, func() {
-		rt.EmitEvent(drainerTombstoneEvent{inst: inst})
-	})
 }

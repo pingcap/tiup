@@ -28,6 +28,7 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/playground/proc"
+	pgservice "github.com/pingcap/tiup/components/playground/service"
 	"github.com/pingcap/tiup/pkg/tui/colorstr"
 	"github.com/spf13/cobra"
 
@@ -99,7 +100,6 @@ type DisplayRequest struct {
 
 type ScaleInRequest struct {
 	Name string `json:"name,omitempty"`
-	PID  int    `json:"pid,omitempty"`
 }
 
 type ScaleOutRequest struct {
@@ -124,7 +124,7 @@ type CommandReply struct {
 	Error   string `json:"error,omitempty"`
 }
 
-func newScaleOut() *cobra.Command {
+func newScaleOut(state *cliState) *cobra.Command {
 	var services []string
 	var counts []int
 	var cfg proc.Config
@@ -157,11 +157,11 @@ func newScaleOut() *cobra.Command {
 				if serviceID == "" {
 					continue
 				}
-				def, ok := serviceDefFor(serviceID)
+				spec, ok := pgservice.SpecFor(serviceID)
 				if !ok {
 					return fmt.Errorf("unknown service %s", serviceID)
 				}
-				if !def.ScaleOut {
+				if !spec.Catalog.AllowScaleOut {
 					return fmt.Errorf("service %q does not support scale-out", serviceID)
 				}
 				count := counts[i]
@@ -175,7 +175,7 @@ func newScaleOut() *cobra.Command {
 				})
 			}
 
-			num, err := scaleOut(cmd.OutOrStdout(), reqs)
+			num, err := scaleOut(cmd.OutOrStdout(), reqs, state)
 			if err != nil {
 				return err
 			}
@@ -200,8 +200,7 @@ func newScaleOut() *cobra.Command {
 	return cmd
 }
 
-func newScaleIn() *cobra.Command {
-	var pids []int
+func newScaleIn(state *cliState) *cobra.Command {
 	var names []string
 
 	cmd := &cobra.Command{
@@ -209,23 +208,21 @@ func newScaleIn() *cobra.Command {
 		Short:   "Scale in one or more instances by name",
 		Example: "tiup playground scale-in --name tidb-0",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(pids) == 0 && len(names) == 0 {
+			if len(names) == 0 {
 				return cmd.Help()
 			}
 
-			return scaleIn(cmd.OutOrStdout(), names, pids)
+			return scaleIn(cmd.OutOrStdout(), names, state)
 		},
 		Hidden: false,
 	}
 
 	cmd.Flags().StringSliceVar(&names, "name", nil, "Instance name(s) to scale in (get from `tiup playground display`)")
-	cmd.Flags().IntSliceVar(&pids, "pid", nil, "PID(s) to scale in")
-	_ = cmd.Flags().MarkDeprecated("pid", "use --name instead")
 
 	return cmd
 }
 
-func newDisplay() *cobra.Command {
+func newDisplay(state *cliState) *cobra.Command {
 	var verbose bool
 	var jsonOut bool
 	cmd := &cobra.Command{
@@ -233,7 +230,7 @@ func newDisplay() *cobra.Command {
 		Short:  "Display instances in the running playground",
 		Hidden: false,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return display(cmd.OutOrStdout(), verbose, jsonOut)
+			return display(cmd.OutOrStdout(), verbose, jsonOut, state)
 		},
 	}
 	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Show more details for each instance")
@@ -241,8 +238,8 @@ func newDisplay() *cobra.Command {
 	return cmd
 }
 
-func scaleIn(out io.Writer, names []string, pids []int) error {
-	port, err := targetTag()
+func scaleIn(out io.Writer, names []string, state *cliState) error {
+	target, err := resolvePlaygroundTarget(state.tag, state.tiupDataDir, state.dataDir)
 	if err != nil {
 		printDisplayFailureWarning(out, err)
 		return renderedError{err: err}
@@ -260,15 +257,8 @@ func scaleIn(out io.Writer, names []string, pids []int) error {
 		}
 		cmds = append(cmds, c)
 	}
-	for _, pid := range pids {
-		c := Command{
-			Type:    ScaleInCommandType,
-			ScaleIn: &ScaleInRequest{PID: pid},
-		}
-		cmds = append(cmds, c)
-	}
 
-	addr := "127.0.0.1:" + strconv.Itoa(port)
+	addr := "127.0.0.1:" + strconv.Itoa(target.port)
 	if err := sendCommandsAndPrintResult(out, cmds, addr); err != nil {
 		printDisplayFailureWarning(out, err)
 		return renderedError{err: err}
@@ -276,8 +266,8 @@ func scaleIn(out io.Writer, names []string, pids []int) error {
 	return nil
 }
 
-func scaleOut(out io.Writer, reqs []ScaleOutRequest) (num int, err error) {
-	port, err := targetTag()
+func scaleOut(out io.Writer, reqs []ScaleOutRequest, state *cliState) (num int, err error) {
+	target, err := resolvePlaygroundTarget(state.tag, state.tiupDataDir, state.dataDir)
 	if err != nil {
 		printDisplayFailureWarning(out, err)
 		return 0, renderedError{err: err}
@@ -296,7 +286,7 @@ func scaleOut(out io.Writer, reqs []ScaleOutRequest) (num int, err error) {
 		})
 	}
 
-	addr := "127.0.0.1:" + strconv.Itoa(port)
+	addr := "127.0.0.1:" + strconv.Itoa(target.port)
 	if err := sendCommandsAndPrintResult(out, cmds, addr); err != nil {
 		printDisplayFailureWarning(out, err)
 		return 0, renderedError{err: err}
@@ -304,8 +294,8 @@ func scaleOut(out io.Writer, reqs []ScaleOutRequest) (num int, err error) {
 	return len(cmds), nil
 }
 
-func display(out io.Writer, verbose, jsonOut bool) error {
-	port, err := targetTag()
+func display(out io.Writer, verbose, jsonOut bool, state *cliState) error {
+	target, err := resolvePlaygroundTarget(state.tag, state.tiupDataDir, state.dataDir)
 	if err != nil {
 		printDisplayFailureWarning(out, err)
 		return renderedError{err: err}
@@ -315,7 +305,7 @@ func display(out io.Writer, verbose, jsonOut bool) error {
 		Display: &DisplayRequest{Verbose: verbose, JSON: jsonOut},
 	}
 
-	addr := "127.0.0.1:" + strconv.Itoa(port)
+	addr := "127.0.0.1:" + strconv.Itoa(target.port)
 	if err := sendCommandsAndPrintResult(out, []Command{c}, addr); err != nil {
 		printDisplayFailureWarning(out, err)
 		return renderedError{err: err}

@@ -17,11 +17,11 @@ func TestPrometheusRenderSDFileStableOrder(t *testing.T) {
 		},
 	}
 
-	cid2targets := map[RepoComponentID]MetricAddr{
-		RepoComponentID("z-job"): {Targets: []string{"127.0.0.1:2", "127.0.0.1:1", "127.0.0.1:1"}},
-		RepoComponentID("a-job"): {Targets: []string{"127.0.0.1:3"}},
+	sid2targets := map[ServiceID]MetricAddr{
+		ServiceID("z-job"): {Targets: []string{"127.0.0.1:2", "127.0.0.1:1", "127.0.0.1:1"}},
+		ServiceID("a-job"): {Targets: []string{"127.0.0.1:3"}},
 	}
-	if err := inst.RenderSDFile(cid2targets); err != nil {
+	if err := inst.RenderSDFile(sid2targets); err != nil {
 		t.Fatalf("RenderSDFile: %v", err)
 	}
 

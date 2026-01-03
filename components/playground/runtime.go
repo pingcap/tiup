@@ -10,7 +10,17 @@ import (
 var _ pgservice.Runtime = (*Playground)(nil)
 
 func (p *Playground) Booted() bool {
-	return p != nil && p.booted
+	if p == nil || p.evtCh == nil {
+		return false
+	}
+	respCh := make(chan bool, 1)
+	p.emitEvent(bootedStateRequest{respCh: respCh})
+	select {
+	case v := <-respCh:
+		return v
+	case <-p.controllerDoneCh:
+		return false
+	}
 }
 
 func (p *Playground) SharedOptions() proc.SharedOptions {
@@ -36,22 +46,29 @@ func (p *Playground) BootConfig(serviceID proc.ServiceID) (proc.Config, bool) {
 }
 
 func (p *Playground) Procs(serviceID proc.ServiceID) []proc.Process {
-	if p == nil || serviceID == "" {
+	if p == nil || serviceID == "" || p.evtCh == nil {
 		return nil
 	}
-	return append([]proc.Process(nil), p.procs[serviceID]...)
+	respCh := make(chan []proc.Process, 1)
+	p.emitEvent(procsByServiceRequest{serviceID: serviceID, respCh: respCh})
+	select {
+	case list := <-respCh:
+		return list
+	case <-p.controllerDoneCh:
+		return nil
+	}
 }
 
 func (p *Playground) AddProc(serviceID proc.ServiceID, inst proc.Process) {
-	p.appendProc(serviceID, inst)
+	panic("Playground.AddProc is controller-only; use controllerRuntime")
 }
 
 func (p *Playground) RemoveProc(serviceID proc.ServiceID, inst proc.Process) bool {
-	return p.removeProc(serviceID, inst)
+	panic("Playground.RemoveProc is controller-only; use controllerRuntime")
 }
 
 func (p *Playground) ExpectExitPID(pid int) {
-	p.expectExitPID(pid)
+	panic("Playground.ExpectExitPID is controller-only; use controllerRuntime")
 }
 
 func (p *Playground) Stopping() bool {

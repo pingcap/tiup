@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -38,7 +37,7 @@ func (inst *PrometheusInstance) LogFile() string {
 
 // RenderSDFile writes Prometheus file_sd targets for all instances.
 // ref: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#file_sd_config
-func (inst *PrometheusInstance) RenderSDFile(cid2targets map[RepoComponentID]MetricAddr) error {
+func (inst *PrometheusInstance) RenderSDFile(sid2targets map[ServiceID]MetricAddr) error {
 	if inst == nil {
 		return nil
 	}
@@ -46,26 +45,26 @@ func (inst *PrometheusInstance) RenderSDFile(cid2targets map[RepoComponentID]Met
 	if inst.sdFile == "" {
 		inst.sdFile = filepath.Join(inst.Dir, "targets.json")
 	}
-	if cid2targets == nil {
-		cid2targets = make(map[RepoComponentID]MetricAddr)
+	if sid2targets == nil {
+		sid2targets = make(map[ServiceID]MetricAddr)
 	}
 
-	cid2targets[ComponentPrometheus] = MetricAddr{Targets: []string{utils.JoinHostPort(inst.Host, inst.Port)}}
+	sid2targets[ServicePrometheus] = MetricAddr{Targets: []string{utils.JoinHostPort(inst.Host, inst.Port)}}
 
-	var orderedIDs []RepoComponentID
-	for id, t := range cid2targets {
+	var orderedIDs []ServiceID
+	for id, t := range sid2targets {
 		if len(t.Targets) == 0 {
 			continue
 		}
 		orderedIDs = append(orderedIDs, id)
 	}
-	slices.SortStableFunc(orderedIDs, func(a, b RepoComponentID) int {
+	slices.SortStableFunc(orderedIDs, func(a, b ServiceID) int {
 		return strings.Compare(a.String(), b.String())
 	})
 
 	items := make([]MetricAddr, 0, len(orderedIDs))
 	for _, id := range orderedIDs {
-		t := cid2targets[id]
+		t := sid2targets[id]
 
 		targets := append([]string(nil), t.Targets...)
 		slices.Sort(targets)
@@ -136,7 +135,7 @@ scrape_configs:
 `
 
 	configPath := filepath.Join(inst.Dir, "prometheus.yml")
-	if err := utils.WriteFile(configPath, []byte(tmpl), os.ModePerm); err != nil {
+	if err := utils.WriteFile(configPath, []byte(tmpl), 0644); err != nil {
 		return errors.AddStack(err)
 	}
 	inst.sdFile = filepath.Join(inst.Dir, "targets.json")

@@ -5,6 +5,40 @@ import "github.com/pingcap/tiup/components/playground/proc"
 func init() {
 	MustRegister(Spec{
 		ServiceID: proc.ServiceTiKVWorker,
+		Catalog: Catalog{
+			FlagPrefix:         "tikv.worker",
+			AllowModifyNum:     true,
+			MaxNum:             1,
+			AllowModifyHost:    true,
+			AllowModifyPort:    true,
+			DefaultPort:        19000,
+			AllowModifyConfig:  true,
+			AllowModifyBinPath: true,
+			DefaultNum: func(ctx BootContext) int {
+				if ctx == nil {
+					return 0
+				}
+				switch ctx.SharedOptions().Mode {
+				case proc.ModeNextGen, proc.ModeCSE, proc.ModeDisAgg:
+					return 1
+				default:
+					return 0
+				}
+			},
+			DefaultBinPathFrom: proc.ServiceTiKV,
+			IsEnabled: func(ctx BootContext) bool {
+				if ctx == nil {
+					return false
+				}
+				switch ctx.SharedOptions().Mode {
+				case proc.ModeNextGen, proc.ModeCSE, proc.ModeDisAgg:
+					return true
+				default:
+					return false
+				}
+			},
+			IsCritical: func(_ BootContext) bool { return true },
+		},
 		StartAfter: []proc.ServiceID{
 			proc.ServicePD,
 			proc.ServicePDAPI,

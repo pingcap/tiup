@@ -81,6 +81,7 @@ func (inst *PDInstance) Prepare(ctx context.Context) error {
 		configPath,
 		inst.ConfigPath,
 		inst.getConfig(),
+		nil,
 	); err != nil {
 		return err
 	}

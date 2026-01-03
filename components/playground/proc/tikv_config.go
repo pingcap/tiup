@@ -26,22 +26,12 @@ func (inst *TiKVInstance) getConfig() map[string]any {
 	case ModeCSE:
 		config["storage.api-version"] = 2
 		config["storage.enable-ttl"] = true
-		config["dfs.prefix"] = "tikv"
-		config["dfs.s3-endpoint"] = inst.ShOpt.CSE.S3Endpoint
-		config["dfs.s3-key-id"] = inst.ShOpt.CSE.AccessKey
-		config["dfs.s3-secret-key"] = inst.ShOpt.CSE.SecretKey
-		config["dfs.s3-bucket"] = inst.ShOpt.CSE.Bucket
-		config["dfs.s3-region"] = "local"
+		applyS3DFSConfig(config, inst.ShOpt.CSE, "tikv")
 		config["kvengine.build-columnar"] = true
 	case ModeNextGen:
 		config["storage.api-version"] = 2
 		config["storage.enable-ttl"] = true
-		config["dfs.prefix"] = "tikv"
-		config["dfs.s3-endpoint"] = inst.ShOpt.CSE.S3Endpoint
-		config["dfs.s3-key-id"] = inst.ShOpt.CSE.AccessKey
-		config["dfs.s3-secret-key"] = inst.ShOpt.CSE.SecretKey
-		config["dfs.s3-bucket"] = inst.ShOpt.CSE.Bucket
-		config["dfs.s3-region"] = "local"
+		applyS3DFSConfig(config, inst.ShOpt.CSE, "tikv")
 		config["rfengine.wal-sync-dir"] = filepath.Join(inst.Dir, "raft-wal")
 		config["rfengine.lightweight-backup"] = true
 		config["rfengine.target-file-size"] = "512MB"

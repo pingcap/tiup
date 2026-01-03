@@ -23,35 +23,40 @@ import (
 	"github.com/pingcap/errors"
 )
 
-func targetTag() (port int, err error) {
+func resolvePlaygroundTarget(explicitTag, tiupDataDir, dataDir string) (playgroundTarget, error) {
 	// If the caller provides an explicit target (tag or TIUP_INSTANCE_DATA_DIR),
 	// do not guess.
-	if tag != "" || tiupDataDir != "" {
+	if explicitTag != "" || tiupDataDir != "" {
 		port, err := loadPort(dataDir)
 		if err != nil {
-			return 0, playgroundNotRunningError{err: errors.Annotatef(err, "no playground running for tag %q", tag)}
+			tag := explicitTag
+			if tag == "" {
+				tag = filepath.Base(dataDir)
+			}
+			return playgroundTarget{}, playgroundNotRunningError{err: errors.Annotatef(err, "no playground running for tag %q", tag)}
 		}
-		return port, nil
+		tag := explicitTag
+		if tag == "" {
+			tag = filepath.Base(dataDir)
+		}
+		return playgroundTarget{tag: tag, dir: dataDir, port: port}, nil
 	}
 
 	baseDir := dataDir
 	if baseDir == "" {
-		return 0, playgroundNotRunningError{err: errors.Errorf("no playground running")}
+		return playgroundTarget{}, playgroundNotRunningError{err: errors.Errorf("no playground running")}
 	}
 
 	targets, err := listPlaygroundTargets(baseDir)
 	if err != nil {
-		return 0, errors.AddStack(err)
+		return playgroundTarget{}, errors.AddStack(err)
 	}
 	if len(targets) == 0 {
-		return 0, playgroundNotRunningError{err: errors.Errorf("no playground running")}
+		return playgroundTarget{}, playgroundNotRunningError{err: errors.Errorf("no playground running")}
 	}
 	if len(targets) == 1 {
 		// Single running playground: implicit selection is unambiguous.
-		t := targets[0]
-		tag = t.tag
-		dataDir = t.dir
-		return t.port, nil
+		return targets[0], nil
 	}
 
 	var items []string
@@ -59,7 +64,7 @@ func targetTag() (port int, err error) {
 		items = append(items, fmt.Sprintf("%s(%d)", t.tag, t.port))
 	}
 	slices.Sort(items)
-	return 0, errors.Errorf("multiple playgrounds found: %s; please specify --tag", strings.Join(items, ", "))
+	return playgroundTarget{}, errors.Errorf("multiple playgrounds found: %s; please specify --tag", strings.Join(items, ", "))
 }
 
 type playgroundTarget struct {

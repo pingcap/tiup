@@ -54,14 +54,14 @@ func newBinaryPreloader(ctx context.Context, pg *Playground, bootVer string, for
 	}
 }
 
-func (p *binaryPreloader) constraintFor(component string) string {
+func (p *binaryPreloader) constraintFor(serviceID proc.ServiceID) string {
 	if p == nil {
 		return utils.LatestVersionAlias
 	}
 	if p.pg == nil {
 		return utils.LatestVersionAlias
 	}
-	constraint := p.pg.bindVersion(component, p.bootVer)
+	constraint := p.pg.versionConstraintForService(serviceID, p.bootVer)
 	if constraint == "" {
 		constraint = utils.LatestVersionAlias
 	}
@@ -73,7 +73,7 @@ func (p *binaryPreloader) collect(startingTasks map[string]*progressv2.Task) {
 		return
 	}
 
-	_ = p.pg.WalkProcs(func(_ proc.ServiceID, inst proc.Process) error {
+	_ = p.pg.WalkProcs(func(serviceID proc.ServiceID, inst proc.Process) error {
 		if inst == nil {
 			return nil
 		}
@@ -83,7 +83,7 @@ func (p *binaryPreloader) collect(startingTasks map[string]*progressv2.Task) {
 		}
 
 		component := info.RepoComponentID.String()
-		constraint := p.constraintFor(component)
+		constraint := p.constraintFor(serviceID)
 		key := binaryPreloadKey{component: component, constraint: constraint}
 
 		item, ok := p.items[key]
@@ -181,12 +181,12 @@ func (p *binaryPreloader) wait(component, constraint string) (*binaryPreload, er
 	}
 }
 
-func (p *binaryPreloader) resolve(component string) (constraint, binPath string, version utils.Version, err error) {
+func (p *binaryPreloader) resolve(serviceID proc.ServiceID, component string) (constraint, binPath string, version utils.Version, err error) {
 	if p == nil {
 		return "", "", utils.Version(""), fmt.Errorf("binary preloader is nil")
 	}
 
-	constraint = p.constraintFor(component)
+	constraint = p.constraintFor(serviceID)
 	item, err := p.wait(component, constraint)
 	if err != nil {
 		return constraint, "", utils.Version(""), err

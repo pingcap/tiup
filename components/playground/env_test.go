@@ -11,11 +11,6 @@ import (
 func TestTargetTag_SingleAutoSelect(t *testing.T) {
 	base := t.TempDir()
 
-	oldTag, oldDataDir, oldInstanceDir := tag, dataDir, tiupDataDir
-	t.Cleanup(func() {
-		tag, dataDir, tiupDataDir = oldTag, oldDataDir, oldInstanceDir
-	})
-
 	dir := filepath.Join(base, "only")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatalf("mkdir: %v", err)
@@ -24,32 +19,23 @@ func TestTargetTag_SingleAutoSelect(t *testing.T) {
 		t.Fatalf("dumpPort: %v", err)
 	}
 
-	tag = ""
-	tiupDataDir = ""
-	dataDir = base
-
-	port, err := targetTag()
+	target, err := resolvePlaygroundTarget("", "", base)
 	if err != nil {
-		t.Fatalf("targetTag: %v", err)
+		t.Fatalf("resolvePlaygroundTarget: %v", err)
 	}
-	if port != 12345 {
-		t.Fatalf("unexpected port: %d", port)
+	if target.port != 12345 {
+		t.Fatalf("unexpected port: %d", target.port)
 	}
-	if tag != "only" {
-		t.Fatalf("unexpected tag: %q", tag)
+	if target.tag != "only" {
+		t.Fatalf("unexpected tag: %q", target.tag)
 	}
-	if dataDir != dir {
-		t.Fatalf("unexpected dataDir: %q", dataDir)
+	if target.dir != dir {
+		t.Fatalf("unexpected dir: %q", target.dir)
 	}
 }
 
 func TestTargetTag_MultipleRequireExplicitTag(t *testing.T) {
 	base := t.TempDir()
-
-	oldTag, oldDataDir, oldInstanceDir := tag, dataDir, tiupDataDir
-	t.Cleanup(func() {
-		tag, dataDir, tiupDataDir = oldTag, oldDataDir, oldInstanceDir
-	})
 
 	if err := os.MkdirAll(filepath.Join(base, "a"), 0o755); err != nil {
 		t.Fatalf("mkdir a: %v", err)
@@ -64,11 +50,7 @@ func TestTargetTag_MultipleRequireExplicitTag(t *testing.T) {
 		t.Fatalf("dumpPort b: %v", err)
 	}
 
-	tag = ""
-	tiupDataDir = ""
-	dataDir = base
-
-	_, err := targetTag()
+	_, err := resolvePlaygroundTarget("", "", base)
 	if err == nil {
 		t.Fatalf("expected error")
 	}
@@ -83,16 +65,7 @@ func TestTargetTag_MultipleRequireExplicitTag(t *testing.T) {
 func TestTargetTag_ExplicitMissingTagIsNotRunning(t *testing.T) {
 	base := t.TempDir()
 
-	oldTag, oldDataDir, oldInstanceDir := tag, dataDir, tiupDataDir
-	t.Cleanup(func() {
-		tag, dataDir, tiupDataDir = oldTag, oldDataDir, oldInstanceDir
-	})
-
-	tag = "missing"
-	tiupDataDir = ""
-	dataDir = filepath.Join(base, tag)
-
-	_, err := targetTag()
+	_, err := resolvePlaygroundTarget("missing", "", filepath.Join(base, "missing"))
 	if err == nil {
 		t.Fatalf("expected error")
 	}

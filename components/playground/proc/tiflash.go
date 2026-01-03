@@ -94,7 +94,7 @@ func (inst *TiFlashInstance) WaitReady(ctx context.Context) error {
 		case <-ctx.Done():
 			err := ctx.Err()
 			if err == context.DeadlineExceeded && inst.UpTimeout > 0 {
-				return fmt.Errorf("timeout (%ds)", inst.UpTimeout)
+				return readyTimeoutError(inst.UpTimeout)
 			}
 			return err
 		case <-ticker.C:
@@ -112,8 +112,8 @@ func (inst *TiFlashInstance) MetricAddr() (r MetricAddr) {
 // Prepare builds the TiFlash process command.
 func (inst *TiFlashInstance) Prepare(ctx context.Context) error {
 	info := inst.Info()
-	if !tidbver.TiFlashPlaygroundNewStartMode(inst.Version.String()) {
-		return fmt.Errorf("tiflash is only supported in TiDB >= v7.1.0 (or nightly), got %s", inst.Version)
+	if v := inst.Version.String(); v != "" && !tidbver.TiFlashPlaygroundNewStartMode(v) {
+		return fmt.Errorf("tiflash is only supported in TiDB >= v7.1.0 (or nightly), got %s", v)
 	}
 
 	proxyConfigPath := filepath.Join(inst.Dir, "tiflash_proxy.toml")
@@ -121,6 +121,7 @@ func (inst *TiFlashInstance) Prepare(ctx context.Context) error {
 		proxyConfigPath,
 		"",
 		inst.getProxyConfig(),
+		nil,
 	); err != nil {
 		return err
 	}
@@ -130,6 +131,7 @@ func (inst *TiFlashInstance) Prepare(ctx context.Context) error {
 		configPath,
 		inst.ConfigPath,
 		inst.getConfig(),
+		nil,
 	); err != nil {
 		return err
 	}

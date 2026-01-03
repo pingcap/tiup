@@ -3,16 +3,28 @@ package service
 import (
 	"fmt"
 	"io"
-	"syscall"
 	"time"
 
 	"github.com/pingcap/tiup/components/playground/proc"
-	"github.com/pingcap/tiup/pkg/cluster/api"
 )
 
 func init() {
 	MustRegister(Spec{
 		ServiceID: proc.ServiceTiKV,
+		Catalog: Catalog{
+			FlagPrefix:         "kv",
+			AllowModifyNum:     true,
+			AllowModifyHost:    true,
+			AllowModifyPort:    true,
+			AllowModifyConfig:  true,
+			AllowModifyBinPath: true,
+			DefaultNum:         func(_ BootContext) int { return 1 },
+			IsEnabled:          func(_ BootContext) bool { return true },
+			IsCritical: func(_ BootContext) bool {
+				return true
+			},
+			AllowScaleOut: true,
+		},
 		StartAfter: []proc.ServiceID{
 			proc.ServicePD,
 			proc.ServicePDAPI,
@@ -66,49 +78,16 @@ func scaleInTiKVByTombstone(rt Runtime, w io.Writer, inst proc.Process, pid int)
 	if err := c.DelStore(kv.StoreAddr(), nil); err != nil {
 		return false, err
 	}
-	go watchTiKVTombstone(rt, c, kv)
+	go watchAsyncScaleInStop(rt, 5*time.Second, func() (done bool, err error) {
+		return c.IsTombStone(kv.StoreAddr())
+	}, asyncScaleInStopEvent{
+		serviceID:   proc.ServiceTiKV,
+		inst:        kv,
+		stopMessage: fmt.Sprintf("stop tombstone tikv %s", kv.StoreAddr()),
+	})
 
 	if w != nil {
 		fmt.Fprintf(w, "requested scale-in %s (waiting for tombstone)\n", kv.StoreAddr())
 	}
 	return true, nil
-}
-
-type tiKVTombstoneEvent struct {
-	inst *proc.TiKVInstance
-}
-
-func (e tiKVTombstoneEvent) Handle(rt Runtime) {
-	if rt == nil || e.inst == nil {
-		return
-	}
-
-	if !rt.RemoveProc(proc.ServiceTiKV, e.inst) {
-		return
-	}
-
-	fmt.Fprintf(rt.TermWriter(), "stop tombstone tikv %s\n", e.inst.StoreAddr())
-	pid := 0
-	if proc := e.inst.Info().Proc; proc != nil {
-		pid = proc.Pid()
-	}
-	rt.ExpectExitPID(pid)
-	if pid > 0 {
-		if err := syscall.Kill(pid, syscall.SIGQUIT); err != nil {
-			fmt.Fprintln(rt.TermWriter(), err)
-		}
-	}
-
-	rt.OnProcsChanged()
-}
-
-func watchTiKVTombstone(rt Runtime, c *api.PDClient, inst *proc.TiKVInstance) {
-	if rt == nil || c == nil || inst == nil {
-		return
-	}
-	pollUntil(rt, 5*time.Second, 0, func() (done bool, err error) {
-		return c.IsTombStone(inst.StoreAddr())
-	}, func() {
-		rt.EmitEvent(tiKVTombstoneEvent{inst: inst})
-	})
 }

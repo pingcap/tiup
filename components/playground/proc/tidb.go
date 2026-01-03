@@ -52,10 +52,15 @@ var _ Process = &TiDBInstance{}
 func (inst *TiDBInstance) Prepare(ctx context.Context) error {
 	info := inst.Info()
 	configPath := filepath.Join(inst.Dir, "tidb.toml")
+	baseConfig, err := inst.getConfig(inst.KVWorkers)
+	if err != nil {
+		return err
+	}
 	if err := prepareConfig(
 		configPath,
 		inst.ConfigPath,
-		inst.getConfig(inst.KVWorkers),
+		baseConfig,
+		nil,
 	); err != nil {
 		return err
 	}

@@ -14,10 +14,16 @@ type controllerEvent interface{}
 
 type controllerState struct {
 	booting bool
-}
+	booted  bool
 
-type procStartedEvent struct {
-	inst proc.Process
+	procs            map[proc.ServiceID][]proc.Process
+	requiredServices map[proc.ServiceID]int
+	criticalRunning  map[proc.ServiceID]int
+	expectedExit     map[int]struct{}
+	idAlloc          map[proc.ServiceID]int
+
+	procByPID  map[int]*procRecord
+	procByName map[string]*procRecord
 }
 
 type procExitedEvent struct {
@@ -34,6 +40,56 @@ type procExitDecision struct {
 type bootStateEvent struct {
 	booting bool
 	ackCh   chan struct{}
+}
+
+type bootedStateEvent struct {
+	booted bool
+	ackCh  chan struct{}
+}
+
+type setRequiredServicesEvent struct {
+	required map[proc.ServiceID]int
+	ackCh    chan struct{}
+}
+
+type procsByServiceRequest struct {
+	serviceID proc.ServiceID
+	respCh    chan []proc.Process
+}
+
+type procsSnapshotRequest struct {
+	respCh chan map[proc.ServiceID][]proc.Process
+}
+
+type procRecordsSnapshotRequest struct {
+	respCh chan []procRecordSnapshot
+}
+
+type bootedStateRequest struct {
+	respCh chan bool
+}
+
+type addProcRequest struct {
+	serviceID proc.ServiceID
+	cfg       proc.Config
+	respCh    chan addProcResponse
+}
+
+type addProcResponse struct {
+	inst proc.Process
+	err  error
+}
+
+type startProcRequest struct {
+	ctx     context.Context
+	inst    proc.Process
+	preload *binaryPreloader
+	respCh  chan startProcResponse
+}
+
+type startProcResponse struct {
+	readyCh <-chan error
+	err     error
 }
 
 type stopSignalEvent struct {
@@ -54,20 +110,34 @@ type commandResponse struct {
 	err    error
 }
 
-func (p *Playground) startController(ctx context.Context) {
+func (p *Playground) startController() {
 	if p == nil {
 		return
 	}
 	p.controllerOnce.Do(func() {
+		// The controller lifetime is managed explicitly via p.controllerCancel.
+		// Do not bind it to the boot context: Ctrl+C cancels boot to abort
+		// downloads quickly, but shutdown still needs the controller-owned state
+		// to terminate processes.
+		controllerCtx, cancel := context.WithCancel(context.Background())
+		p.controllerCancel = cancel
 		p.cmdReqCh = make(chan commandRequest)
 		p.evtCh = make(chan controllerEvent, 64)
 		p.controllerDoneCh = make(chan struct{})
-		go p.controllerLoop(ctx)
+		go p.controllerLoop(controllerCtx)
 	})
 }
 
 func (p *Playground) controllerLoop(ctx context.Context) {
-	state := controllerState{}
+	state := controllerState{
+		procs:            make(map[proc.ServiceID][]proc.Process),
+		requiredServices: make(map[proc.ServiceID]int),
+		criticalRunning:  make(map[proc.ServiceID]int),
+		expectedExit:     make(map[int]struct{}),
+		idAlloc:          make(map[proc.ServiceID]int),
+		procByPID:        make(map[int]*procRecord),
+		procByName:       make(map[string]*procRecord),
+	}
 	defer func() {
 		if p != nil && p.controllerDoneCh != nil {
 			close(p.controllerDoneCh)
@@ -77,7 +147,7 @@ func (p *Playground) controllerLoop(ctx context.Context) {
 		select {
 		case req := <-p.cmdReqCh:
 			var buf bytes.Buffer
-			err := p.handleCommand(req.cmd, &buf)
+			err := p.handleCommand(&state, req.cmd, &buf)
 			req.respCh <- commandResponse{output: buf.Bytes(), err: err}
 		case evt := <-p.evtCh:
 			p.handleEvent(&state, evt)
@@ -96,27 +166,107 @@ func (p *Playground) handleEvent(state *controllerState, evt controllerEvent) {
 		if e.ackCh != nil {
 			close(e.ackCh)
 		}
+	case bootedStateEvent:
+		if state != nil {
+			state.booted = e.booted
+		}
+		if e.ackCh != nil {
+			close(e.ackCh)
+		}
+	case setRequiredServicesEvent:
+		if state != nil {
+			state.requiredServices = make(map[proc.ServiceID]int, len(e.required))
+			for k, v := range e.required {
+				if k != "" && v > 0 {
+					state.requiredServices[k] = v
+				}
+			}
+			state.criticalRunning = make(map[proc.ServiceID]int)
+		}
+		if e.ackCh != nil {
+			close(e.ackCh)
+		}
 	case stopSignalEvent:
-		p.startShutdown(stopCauseSignal, e.sig)
+		p.startShutdownWithControllerState(state, stopCauseSignal, e.sig)
 	case stopInternalEvent:
-		p.startShutdown(stopCauseInternal, 0)
+		p.startShutdownWithControllerState(state, stopCauseInternal, 0)
 	case forceKillEvent:
-		p.forceKillShutdown()
-	case procStartedEvent:
-		p.handleProcStarted(e.inst)
+		p.forceKillShutdownWithControllerState(state)
+	case procsByServiceRequest:
+		var out []proc.Process
+		if state != nil && state.procs != nil && e.serviceID != "" {
+			out = append([]proc.Process(nil), state.procs[e.serviceID]...)
+		}
+		if e.respCh != nil {
+			e.respCh <- out
+			close(e.respCh)
+		}
+	case procsSnapshotRequest:
+		out := make(map[proc.ServiceID][]proc.Process)
+		if state != nil && state.procs != nil {
+			for id, list := range state.procs {
+				out[id] = append([]proc.Process(nil), list...)
+			}
+		}
+		if e.respCh != nil {
+			e.respCh <- out
+			close(e.respCh)
+		}
+	case procRecordsSnapshotRequest:
+		var out []procRecordSnapshot
+		if state != nil {
+			out = state.snapshotProcRecords()
+		}
+		if e.respCh != nil {
+			e.respCh <- out
+			close(e.respCh)
+		}
+	case bootedStateRequest:
+		booted := false
+		if state != nil {
+			booted = state.booted
+		}
+		if e.respCh != nil {
+			e.respCh <- booted
+			close(e.respCh)
+		}
+	case addProcRequest:
+		var (
+			inst proc.Process
+			err  error
+		)
+		if p != nil {
+			inst, err = p.addProcInController(state, e.serviceID, e.cfg)
+		}
+		if e.respCh != nil {
+			e.respCh <- addProcResponse{inst: inst, err: err}
+			close(e.respCh)
+		}
+	case startProcRequest:
+		var (
+			readyCh <-chan error
+			err     error
+		)
+		if p != nil {
+			readyCh, err = p.startProc(state, e.ctx, e.inst, e.preload)
+		}
+		if e.respCh != nil {
+			e.respCh <- startProcResponse{readyCh: readyCh, err: err}
+			close(e.respCh)
+		}
 	case procExitedEvent:
 		booting := false
 		if state != nil {
 			booting = state.booting
 		}
-		dec := p.handleProcExited(e.inst, e.pid, e.err, booting)
+		dec := p.handleProcExited(state, e.inst, e.pid, e.err, booting)
 		if e.respCh != nil {
 			e.respCh <- dec
 			close(e.respCh)
 		}
 	default:
 		if se, ok := evt.(pgservice.Event); ok && se != nil {
-			se.Handle(p)
+			se.Handle(controllerRuntime{pg: p, state: state})
 		}
 	}
 }
@@ -174,7 +324,7 @@ func (p *Playground) doCommand(ctx context.Context, cmd *Command) ([]byte, error
 }
 
 // handleProcStarted runs in the controller goroutine.
-func (p *Playground) handleProcStarted(inst proc.Process) {
+func (p *Playground) handleProcStarted(state *controllerState, inst proc.Process) {
 	if p == nil || inst == nil {
 		return
 	}
@@ -183,19 +333,29 @@ func (p *Playground) handleProcStarted(inst proc.Process) {
 	if info == nil {
 		return
 	}
+
+	if state != nil {
+		state.upsertProcRecord(inst)
+	}
 	serviceID := info.Service
-	min := p.requiredServices[serviceID]
+	min := 0
+	if state != nil && state.requiredServices != nil {
+		min = state.requiredServices[serviceID]
+	}
 	if min <= 0 {
 		return
 	}
-	if p.criticalRunning == nil {
-		p.criticalRunning = make(map[proc.ServiceID]int)
+	if state == nil {
+		return
 	}
-	p.criticalRunning[serviceID]++
+	if state.criticalRunning == nil {
+		state.criticalRunning = make(map[proc.ServiceID]int)
+	}
+	state.criticalRunning[serviceID]++
 }
 
 // handleProcExited runs in the controller goroutine.
-func (p *Playground) handleProcExited(inst proc.Process, pid int, err error, booting bool) procExitDecision {
+func (p *Playground) handleProcExited(state *controllerState, inst proc.Process, pid int, err error, booting bool) procExitDecision {
 	if p == nil || inst == nil {
 		return procExitDecision{}
 	}
@@ -206,23 +366,30 @@ func (p *Playground) handleProcExited(inst proc.Process, pid int, err error, boo
 	}
 
 	expectedExit := false
-	if pid > 0 && p.expectedExit != nil {
-		if _, ok := p.expectedExit[pid]; ok {
+	if pid > 0 && state != nil && state.expectedExit != nil {
+		if _, ok := state.expectedExit[pid]; ok {
 			expectedExit = true
-			delete(p.expectedExit, pid)
+			delete(state.expectedExit, pid)
 		}
 	}
 
+	if state != nil {
+		state.deleteProcRecord(pid, info.Name())
+	}
+
 	serviceID := info.Service
-	min := p.requiredServices[serviceID]
-	if min > 0 && p.criticalRunning != nil {
-		if p.criticalRunning[serviceID] > 0 {
-			p.criticalRunning[serviceID]--
+	min := 0
+	if state != nil && state.requiredServices != nil {
+		min = state.requiredServices[serviceID]
+	}
+	if min > 0 && state != nil && state.criticalRunning != nil {
+		if state.criticalRunning[serviceID] > 0 {
+			state.criticalRunning[serviceID]--
 		}
 	}
 	remaining := 0
-	if p.criticalRunning != nil {
-		remaining = p.criticalRunning[serviceID]
+	if state != nil && state.criticalRunning != nil {
+		remaining = state.criticalRunning[serviceID]
 	}
 
 	triggerAutoStop := min > 0 && remaining < min && !expectedExit
@@ -263,7 +430,7 @@ func (p *Playground) handleProcExited(inst proc.Process, pid int, err error, boo
 		}
 		// Start shutdown after printing the root cause above, so subsequent
 		// process exits won't interleave with user-facing output.
-		p.startShutdown(stopCauseInternal, 0)
+		p.startShutdownWithControllerState(state, stopCauseInternal, 0)
 	}
 
 	return procExitDecision{expectedExit: expectedExit}
@@ -276,6 +443,50 @@ func (p *Playground) setControllerBooting(ctx context.Context, booting bool) {
 
 	ackCh := make(chan struct{})
 	p.emitEvent(bootStateEvent{booting: booting, ackCh: ackCh})
+
+	if ackCh == nil {
+		return
+	}
+	if ctx == nil {
+		<-ackCh
+		return
+	}
+	select {
+	case <-ackCh:
+	case <-ctx.Done():
+	case <-p.controllerDoneCh:
+	}
+}
+
+func (p *Playground) setControllerRequiredServices(ctx context.Context, required map[proc.ServiceID]int) {
+	if p == nil || p.evtCh == nil {
+		return
+	}
+
+	ackCh := make(chan struct{})
+	p.emitEvent(setRequiredServicesEvent{required: required, ackCh: ackCh})
+
+	if ackCh == nil {
+		return
+	}
+	if ctx == nil {
+		<-ackCh
+		return
+	}
+	select {
+	case <-ackCh:
+	case <-ctx.Done():
+	case <-p.controllerDoneCh:
+	}
+}
+
+func (p *Playground) setControllerBooted(ctx context.Context, booted bool) {
+	if p == nil || p.evtCh == nil {
+		return
+	}
+
+	ackCh := make(chan struct{})
+	p.emitEvent(bootedStateEvent{booted: booted, ackCh: ackCh})
 
 	if ackCh == nil {
 		return

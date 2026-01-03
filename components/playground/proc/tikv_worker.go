@@ -75,6 +75,7 @@ func (inst *TiKVWorkerInstance) Prepare(ctx context.Context) error {
 		configPath,
 		inst.ConfigPath,
 		inst.getConfig(),
+		nil,
 	); err != nil {
 		return err
 	}
@@ -98,12 +99,7 @@ func (inst *TiKVWorkerInstance) LogFile() string {
 
 func (inst *TiKVWorkerInstance) getConfig() map[string]any {
 	config := make(map[string]any)
-	config["dfs.prefix"] = "tikv"
-	config["dfs.s3-endpoint"] = inst.ShOpt.CSE.S3Endpoint
-	config["dfs.s3-key-id"] = inst.ShOpt.CSE.AccessKey
-	config["dfs.s3-secret-key"] = inst.ShOpt.CSE.SecretKey
-	config["dfs.s3-bucket"] = inst.ShOpt.CSE.Bucket
-	config["dfs.s3-region"] = "local"
+	applyS3DFSConfig(config, inst.ShOpt.CSE, "tikv")
 	config["raft-engine.enabled"] = false
 	config["schema-manager.dir"] = filepath.Join(inst.Dir, "schemas")
 	config["schema-manager.schema-refresh-threshold"] = 1

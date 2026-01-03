@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	stdErrors "errors"
 	"fmt"
+	"net"
 	"net/http"
 	"os/exec"
 	"regexp"
@@ -83,27 +84,69 @@ func (p *Playground) printClusterInfoCallout(tidbSucc, tiproxySucc []string) boo
 	}
 
 	const labelWidth = 16
-	formatLabel := func(label string) string {
-		return fmt.Sprintf("%-*s", labelWidth, label)
-	}
-	joinBlocks := func(blocks [][]string) string {
-		var lines []string
-		for _, b := range blocks {
-			if len(b) == 0 {
-				continue
-			}
-			if len(lines) > 0 {
-				lines = append(lines, "")
-			}
-			lines = append(lines, b...)
-		}
-		return strings.Join(lines, "\n")
+
+	out := p.termWriter()
+	label := func(label string) string { return fmt.Sprintf("%-*s", labelWidth, label) }
+	mysql := mysqlCommand()
+	dashboardURL, grafanaURL := p.clusterInfoMonitorURLs()
+
+	type block = []string
+	var blocks []block
+
+	grayLine := func(s string) string { return colorstr.SprintfForWriter(out, "[dark_gray]%s[reset]", s) }
+	boldLine := func(s string) string { return colorstr.SprintfForWriter(out, "[bold]%s[reset]", s) }
+	grayLabelLine := func(k, v string) string {
+		return colorstr.SprintfForWriter(out, "[dark_gray]%s[reset] %s", label(k), v)
 	}
 
-	var (
-		dashboardURL string
-		grafanaURL   string
-	)
+	blocks = append(blocks, block{boldLine("TiDB Playground Cluster is started, enjoy! 🎉")})
+	if p.deleteWhenExit {
+		blocks = append(blocks, block{
+			grayLine("Cluster data will be destroyed after exit."),
+			colorstr.SprintfForWriter(out, "[dark_gray]To persist data after exit, use [cyan]--tag <name>[reset][dark_gray].[reset]"),
+		})
+	}
+
+	blocks = append(blocks, clusterInfoMySQLConnectLines(grayLabelLine, mysql, "Connect TiDB:", tidbSucc))
+	blocks = append(blocks, clusterInfoMySQLConnectLines(grayLabelLine, mysql, "Connect TiProxy:", tiproxySucc))
+	blocks = append(blocks, p.clusterInfoDMConnectLines(grayLabelLine))
+
+	if dashboardURL != "" {
+		blocks = append(blocks, block{grayLabelLine("TiDB Dashboard:", dashboardURL)})
+	}
+	if grafanaURL != "" {
+		blocks = append(blocks, block{grayLabelLine("Grafana:", grafanaURL)})
+	}
+
+	blocks = append(blocks, p.clusterInfoTiKVSlimLines(grayLabelLine))
+
+	content := joinNonEmptyBlocks(blocks)
+	fmt.Fprint(out, tuiv2output.Callout{
+		Style:      tuiv2output.CalloutSucceeded,
+		StatusText: "Cluster info",
+		Content:    content,
+	}.Render(out))
+	return true
+}
+
+func joinNonEmptyBlocks(blocks [][]string) string {
+	var lines []string
+	for _, b := range blocks {
+		if len(b) == 0 {
+			continue
+		}
+		if len(lines) > 0 {
+			lines = append(lines, "")
+		}
+		lines = append(lines, b...)
+	}
+	return strings.Join(lines, "\n")
+}
+
+func (p *Playground) clusterInfoMonitorURLs() (dashboardURL, grafanaURL string) {
+	if p == nil {
+		return "", ""
+	}
 
 	pdMembers := pgservice.ProcsOf[*proc.PDInstance](p, proc.ServicePD, proc.ServicePDAPI)
 	tidbInstances := pgservice.ProcsOf[*proc.TiDBInstance](p, proc.ServiceTiDBSystem, proc.ServiceTiDB)
@@ -119,112 +162,63 @@ func (p *Playground) printClusterInfoCallout(tidbSucc, tiproxySucc []string) boo
 		grafanaURL = fmt.Sprintf("http://%s", utils.JoinHostPort(gs[0].Host, gs[0].Port))
 	}
 
-	out := p.termWriter()
-	label := formatLabel
-	mysql := mysqlCommand()
+	return dashboardURL, grafanaURL
+}
 
-	type block = []string
-	var blocks []block
-
-	grayLine := func(s string) string { return colorstr.SprintfForWriter(out, "[dark_gray]%s[reset]", s) }
-	boldLine := func(s string) string { return colorstr.SprintfForWriter(out, "[bold]%s[reset]", s) }
-	grayLabelLine := func(k, v string) string {
-		return colorstr.SprintfForWriter(out, "[dark_gray]%s[reset] %s", label(k), v)
-	}
-
-	blocks = append(blocks, block{boldLine("TiDB Playground Cluster is started, enjoy! 🎉")})
-	if deleteWhenExit {
-		blocks = append(blocks, block{
-			grayLine("Cluster data will be destroyed after exit."),
-			colorstr.SprintfForWriter(out, "[dark_gray]To persist data after exit, use [cyan]--tag <name>[reset][dark_gray].[reset]"),
-		})
-	}
-
-	var tidbLines []string
-	for _, dbAddr := range tidbSucc {
-		ss := strings.Split(dbAddr, ":")
-		if len(ss) < 2 {
+func clusterInfoMySQLConnectLines(grayLabelLine func(k, v string) string, mysql, label string, addrs []string) []string {
+	var lines []string
+	for _, dbAddr := range addrs {
+		host, port, err := net.SplitHostPort(dbAddr)
+		if err != nil {
 			continue
 		}
-		cmd := fmt.Sprintf("%s --host %s --port %s -u root", mysql, ss[0], ss[1])
-		tidbLines = append(tidbLines, grayLabelLine("Connect TiDB:", cmd))
+		cmd := fmt.Sprintf("%s --host %s --port %s -u root", mysql, host, port)
+		lines = append(lines, grayLabelLine(label, cmd))
 	}
-	blocks = append(blocks, tidbLines)
+	return lines
+}
 
-	var tiproxyLines []string
-	for _, dbAddr := range tiproxySucc {
-		ss := strings.Split(dbAddr, ":")
-		if len(ss) < 2 {
-			continue
-		}
-		cmd := fmt.Sprintf("%s --host %s --port %s -u root", mysql, ss[0], ss[1])
-		tiproxyLines = append(tiproxyLines, grayLabelLine("Connect TiProxy:", cmd))
+func (p *Playground) clusterInfoDMConnectLines(grayLabelLine func(k, v string) string) []string {
+	if p == nil {
+		return nil
 	}
-	blocks = append(blocks, tiproxyLines)
-
 	dmMasters := pgservice.ProcsOf[*proc.DMMaster](p, proc.ServiceDMMaster)
-	if len(dmMasters) > 0 {
-		endpoints := make([]string, 0, len(dmMasters))
-		for _, dmMaster := range dmMasters {
-			endpoints = append(endpoints, dmMaster.Addr())
+	if len(dmMasters) == 0 {
+		return nil
+	}
+
+	endpoints := make([]string, 0, len(dmMasters))
+	for _, dmMaster := range dmMasters {
+		endpoints = append(endpoints, dmMaster.Addr())
+	}
+	cmd := fmt.Sprintf("tiup dmctl --master-addr %s", strings.Join(endpoints, ","))
+	return []string{grayLabelLine("Connect DM:", cmd)}
+}
+
+func (p *Playground) clusterInfoTiKVSlimLines(grayLabelLine func(k, v string) string) []string {
+	if p == nil || p.bootOptions == nil || p.bootOptions.ShOpt.Mode != proc.ModeTiKVSlim {
+		return nil
+	}
+
+	pdAddrs := func(serviceIDs ...proc.ServiceID) string {
+		var addrs []string
+		for _, pd := range pgservice.ProcsOf[*proc.PDInstance](p, serviceIDs...) {
+			addrs = append(addrs, pd.Addr())
 		}
-		cmd := fmt.Sprintf("tiup dmctl --master-addr %s", strings.Join(endpoints, ","))
-		blocks = append(blocks, block{grayLabelLine("Connect DM:", cmd)})
+		return strings.Join(addrs, ",")
 	}
 
-	if dashboardURL != "" {
-		blocks = append(blocks, block{grayLabelLine("TiDB Dashboard:", dashboardURL)})
-	}
-	if grafanaURL != "" {
-		blocks = append(blocks, block{grayLabelLine("Grafana:", grafanaURL)})
+	if p.bootOptions.ShOpt.PDMode != "ms" {
+		return []string{grayLabelLine("PD Endpoints:", pdAddrs(proc.ServicePD, proc.ServicePDAPI))}
 	}
 
-	if p.bootOptions != nil && p.bootOptions.ShOpt.Mode == proc.ModeTiKVSlim {
-		if p.bootOptions.ShOpt.PDMode == "ms" {
-			var (
-				tsoAddr             []string
-				apiAddr             []string
-				schedulingAddr      []string
-				routerAddr          []string
-				resourceManagerAddr []string
-			)
-			for _, api := range pgservice.ProcsOf[*proc.PDInstance](p, proc.ServicePDAPI) {
-				apiAddr = append(apiAddr, api.Addr())
-			}
-			for _, tso := range pgservice.ProcsOf[*proc.PDInstance](p, proc.ServicePDTSO) {
-				tsoAddr = append(tsoAddr, tso.Addr())
-			}
-			for _, scheduling := range pgservice.ProcsOf[*proc.PDInstance](p, proc.ServicePDScheduling) {
-				schedulingAddr = append(schedulingAddr, scheduling.Addr())
-			}
-			for _, router := range pgservice.ProcsOf[*proc.PDInstance](p, proc.ServicePDRouter) {
-				routerAddr = append(routerAddr, router.Addr())
-			}
-			for _, resourceManager := range pgservice.ProcsOf[*proc.PDInstance](p, proc.ServicePDResourceManager) {
-				resourceManagerAddr = append(resourceManagerAddr, resourceManager.Addr())
-			}
-
-			blocks = append(blocks, block{grayLabelLine("PD API Endpoints:", strings.Join(apiAddr, ","))})
-			blocks = append(blocks, block{grayLabelLine("PD TSO Endpoints:", strings.Join(tsoAddr, ","))})
-			blocks = append(blocks, block{grayLabelLine("PD Scheduling Endpoints:", strings.Join(schedulingAddr, ","))})
-			blocks = append(blocks, block{grayLabelLine("PD Router Endpoints:", strings.Join(routerAddr, ","))})
-			blocks = append(blocks, block{grayLabelLine("PD Resource Manager Endpoints:", strings.Join(resourceManagerAddr, ","))})
-		} else {
-			var pdAddrs []string
-			for _, pd := range pgservice.ProcsOf[*proc.PDInstance](p, proc.ServicePD, proc.ServicePDAPI) {
-				pdAddrs = append(pdAddrs, pd.Addr())
-			}
-			blocks = append(blocks, block{grayLabelLine("PD Endpoints:", strings.Join(pdAddrs, ","))})
-		}
+	return []string{
+		grayLabelLine("PD API Endpoints:", pdAddrs(proc.ServicePDAPI)),
+		grayLabelLine("PD TSO Endpoints:", pdAddrs(proc.ServicePDTSO)),
+		grayLabelLine("PD Scheduling Endpoints:", pdAddrs(proc.ServicePDScheduling)),
+		grayLabelLine("PD Router Endpoints:", pdAddrs(proc.ServicePDRouter)),
+		grayLabelLine("PD Resource Manager Endpoints:", pdAddrs(proc.ServicePDResourceManager)),
 	}
-
-	content := joinBlocks(blocks)
-	fmt.Fprint(out, tuiv2output.Callout{
-		Style:      tuiv2output.CalloutSucceeded,
-		StatusText: "Cluster info",
-		Content:    content,
-	}.Render(out))
-	return true
 }
 
 func hasDashboard(pdAddr string) bool {
@@ -278,43 +272,7 @@ func (p *Playground) renderSDFile() error {
 		return nil
 	}
 	prom := proms[0]
-
-	cid2targets := make(map[proc.RepoComponentID]proc.MetricAddr)
-
-	_ = p.WalkProcs(func(_ proc.ServiceID, inst proc.Process) error {
-		if inst == nil {
-			return nil
-		}
-		info := inst.Info()
-		if info != nil && info.Service == proc.ServicePrometheus {
-			return nil
-		}
-
-		var v proc.MetricAddr
-		if m, ok := inst.(interface{ MetricAddr() proc.MetricAddr }); ok {
-			v = m.MetricAddr()
-		} else {
-			v = info.MetricAddr()
-		}
-		if len(v.Targets) == 0 {
-			return nil
-		}
-		componentID := proc.RepoComponentID("")
-		if info != nil {
-			componentID = info.RepoComponentID
-		}
-		t, ok := cid2targets[componentID]
-		if ok {
-			v.Targets = append(v.Targets, t.Targets...)
-			if v.Labels == nil && len(t.Labels) > 0 {
-				v.Labels = t.Labels
-			}
-		}
-		cid2targets[componentID] = v
-		return nil
-	})
-
-	return prom.RenderSDFile(cid2targets)
+	return renderPrometheusSDFile(prom, p.WalkProcs)
 }
 
 func logIfErr(err error) {

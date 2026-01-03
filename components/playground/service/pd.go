@@ -12,24 +12,123 @@ func init() {
 		serviceID  proc.ServiceID
 		startAfter []proc.ServiceID
 		scaleIn    ScaleInHookFunc
+		catalog    Catalog
 	}{
-		{proc.ServicePD, nil, scaleInPDMember},
-		{proc.ServicePDAPI, nil, scaleInPDMember},
-		{proc.ServicePDTSO, []proc.ServiceID{proc.ServicePD, proc.ServicePDAPI}, nil},
-		{proc.ServicePDScheduling, []proc.ServiceID{proc.ServicePD, proc.ServicePDAPI}, nil},
-		{proc.ServicePDRouter, []proc.ServiceID{proc.ServicePD, proc.ServicePDAPI}, nil},
-		{proc.ServicePDResourceManager, []proc.ServiceID{proc.ServicePD, proc.ServicePDAPI}, nil},
+		{
+			serviceID: proc.ServicePD,
+			scaleIn:   scaleInPDMember,
+			catalog: Catalog{
+				FlagPrefix:         "pd",
+				AllowModifyNum:     true,
+				AllowModifyHost:    true,
+				AllowModifyPort:    true,
+				AllowModifyConfig:  true,
+				AllowModifyBinPath: true,
+				DefaultNum:         func(_ BootContext) int { return 1 },
+				IsEnabled:          func(ctx BootContext) bool { return ctx != nil && ctx.SharedOptions().PDMode != "ms" },
+				IsCritical:         func(ctx BootContext) bool { return ctx != nil && ctx.SharedOptions().PDMode != "ms" },
+				AllowScaleOut:      true,
+			},
+		},
+		{
+			serviceID: proc.ServicePDAPI,
+			scaleIn:   scaleInPDMember,
+			catalog: Catalog{
+				IsEnabled:     func(ctx BootContext) bool { return ctx != nil && ctx.SharedOptions().PDMode == "ms" },
+				CopyFrom:      proc.ServicePD,
+				CopyWhen:      func(ctx BootContext) bool { return ctx != nil && ctx.SharedOptions().PDMode == "ms" },
+				IsCritical:    func(ctx BootContext) bool { return ctx != nil && ctx.SharedOptions().PDMode == "ms" },
+				AllowScaleOut: true,
+			},
+		},
+		{
+			serviceID:  proc.ServicePDTSO,
+			startAfter: []proc.ServiceID{proc.ServicePD, proc.ServicePDAPI},
+			catalog: Catalog{
+				FlagPrefix:         "tso",
+				AllowModifyNum:     true,
+				AllowModifyHost:    true,
+				AllowModifyConfig:  true,
+				AllowModifyBinPath: true,
+				DefaultNum: func(ctx BootContext) int {
+					if ctx != nil && ctx.SharedOptions().PDMode == "ms" {
+						return 1
+					}
+					return 0
+				},
+				DefaultBinPathFrom:    proc.ServicePD,
+				DefaultConfigPathFrom: proc.ServicePD,
+				IsEnabled:             func(ctx BootContext) bool { return ctx != nil && ctx.SharedOptions().PDMode == "ms" },
+				IsCritical:            func(ctx BootContext) bool { return ctx != nil && ctx.SharedOptions().PDMode == "ms" },
+				AllowScaleOut:         true,
+			},
+		},
+		{
+			serviceID:  proc.ServicePDScheduling,
+			startAfter: []proc.ServiceID{proc.ServicePD, proc.ServicePDAPI},
+			catalog: Catalog{
+				FlagPrefix:         "scheduling",
+				AllowModifyNum:     true,
+				AllowModifyHost:    true,
+				AllowModifyConfig:  true,
+				AllowModifyBinPath: true,
+				DefaultNum: func(ctx BootContext) int {
+					if ctx != nil && ctx.SharedOptions().PDMode == "ms" {
+						return 1
+					}
+					return 0
+				},
+				DefaultBinPathFrom:    proc.ServicePD,
+				DefaultConfigPathFrom: proc.ServicePD,
+				IsEnabled:             func(ctx BootContext) bool { return ctx != nil && ctx.SharedOptions().PDMode == "ms" },
+				IsCritical:            func(ctx BootContext) bool { return ctx != nil && ctx.SharedOptions().PDMode == "ms" },
+				AllowScaleOut:         true,
+			},
+		},
+		{
+			serviceID:  proc.ServicePDRouter,
+			startAfter: []proc.ServiceID{proc.ServicePD, proc.ServicePDAPI},
+			catalog: Catalog{
+				FlagPrefix:            "router",
+				AllowModifyNum:        true,
+				AllowModifyHost:       true,
+				AllowModifyConfig:     true,
+				AllowModifyBinPath:    true,
+				DefaultNum:            func(_ BootContext) int { return 0 },
+				DefaultBinPathFrom:    proc.ServicePD,
+				DefaultConfigPathFrom: proc.ServicePD,
+				IsEnabled:             func(ctx BootContext) bool { return ctx != nil && ctx.SharedOptions().PDMode == "ms" },
+				AllowScaleOut:         true,
+			},
+		},
+		{
+			serviceID:  proc.ServicePDResourceManager,
+			startAfter: []proc.ServiceID{proc.ServicePD, proc.ServicePDAPI},
+			catalog: Catalog{
+				FlagPrefix:            "resource-manager",
+				AllowModifyNum:        true,
+				AllowModifyHost:       true,
+				AllowModifyConfig:     true,
+				AllowModifyBinPath:    true,
+				DefaultNum:            func(_ BootContext) int { return 0 },
+				DefaultBinPathFrom:    proc.ServicePD,
+				DefaultConfigPathFrom: proc.ServicePD,
+				IsEnabled:             func(ctx BootContext) bool { return ctx != nil && ctx.SharedOptions().PDMode == "ms" },
+				AllowScaleOut:         true,
+			},
+		},
 	} {
-		registerPDService(item.serviceID, item.startAfter, item.scaleIn)
+		registerPDService(item.serviceID, item.startAfter, item.scaleIn, item.catalog)
 	}
 }
 
-func registerPDService(serviceID proc.ServiceID, startAfter []proc.ServiceID, scaleIn ScaleInHookFunc) {
+func registerPDService(serviceID proc.ServiceID, startAfter []proc.ServiceID, scaleIn ScaleInHookFunc, catalog Catalog) {
 	MustRegister(Spec{
 		ServiceID: serviceID,
 		NewProc: func(rt Runtime, params NewProcParams) (proc.Process, error) {
 			return newPDInstance(rt, serviceID, params)
 		},
+		Catalog:     catalog,
 		StartAfter:  startAfter,
 		ScaleInHook: scaleIn,
 	})

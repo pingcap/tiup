@@ -113,7 +113,7 @@ func (m *DMMaster) WaitReady(ctx context.Context) error {
 		case <-ctx.Done():
 			err := ctx.Err()
 			if err == context.DeadlineExceeded && m.UpTimeout > 0 {
-				return fmt.Errorf("timeout (%ds)", m.UpTimeout)
+				return readyTimeoutError(m.UpTimeout)
 			}
 			return err
 		case <-ticker.C:

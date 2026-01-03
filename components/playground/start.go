@@ -6,6 +6,7 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/playground/proc"
+	"github.com/pingcap/tiup/pkg/environment"
 	progressv2 "github.com/pingcap/tiup/pkg/tuiv2/progress"
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -57,7 +58,7 @@ func (p *Playground) initBootStartingTasks() map[string]*progressv2.Task {
 		} else {
 			// If the user didn't specify a binary path, show the planned version
 			// constraint from the beginning.
-			ver := p.bindVersion(info.RepoComponentID.String(), bootVer)
+			ver := p.versionConstraintForService(info.Service, bootVer)
 			if ver == "" {
 				ver = utils.LatestVersionAlias
 			}
@@ -112,6 +113,10 @@ func (p *Playground) closeStartingGroup() {
 // This is primarily used when the user interrupts booting (Ctrl+C) so shutdown
 // can be rendered in a separate group without interleaving progress output.
 func (p *Playground) abandonActiveGroups() {
+	p.abandonActiveGroupsWithStartedRecords(nil)
+}
+
+func (p *Playground) abandonActiveGroupsWithStartedRecords(procRecords []procRecordSnapshot) {
 	if p == nil {
 		return
 	}
@@ -119,7 +124,6 @@ func (p *Playground) abandonActiveGroups() {
 	p.progressMu.Lock()
 	startingGroup := p.startingGroup
 	startingTasks := p.startingTasks
-	startedProcs := append([]proc.Process(nil), p.startedProcs...)
 	downloadGroup := p.downloadGroup
 
 	p.startingGroup = nil
@@ -130,11 +134,19 @@ func (p *Playground) abandonActiveGroups() {
 	// Mark instances that have already been started as canceled, while keeping
 	// not-yet-started ones (e.g. TiFlash) as running spinners in the snapshot.
 	if startingTasks != nil {
-		for _, inst := range startedProcs {
-			if inst == nil {
+		if len(procRecords) == 0 {
+			procRecords = p.procRecordsSnapshot()
+		}
+		for _, rec := range procRecords {
+			name := rec.Name
+			if name == "" && rec.Inst != nil {
+				if info := rec.Inst.Info(); info != nil {
+					name = info.Name()
+				}
+			}
+			if name == "" {
 				continue
 			}
-			name := inst.Info().Name()
 			if t := startingTasks[name]; t != nil {
 				t.Cancel("")
 			}
@@ -198,24 +210,106 @@ func (p *Playground) markStartingTaskError(inst proc.Process, meta string, err e
 	task.Error(err.Error())
 }
 
-func (p *Playground) startProc(ctx context.Context, inst proc.Process) (readyCh <-chan error, err error) {
-	return p.startProcWithStartedHandler(ctx, inst, func(inst proc.Process) {
-		p.emitEvent(procStartedEvent{inst: inst})
-	})
+func (p *Playground) requestStartProc(ctx context.Context, inst proc.Process, preload *binaryPreloader) (<-chan error, error) {
+	if p == nil {
+		return nil, context.Canceled
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if inst == nil {
+		return nil, fmt.Errorf("instance is nil")
+	}
+	if p.evtCh == nil {
+		return nil, fmt.Errorf("controller not started")
+	}
+
+	respCh := make(chan startProcResponse, 1)
+	p.emitEvent(startProcRequest{ctx: ctx, inst: inst, preload: preload, respCh: respCh})
+	select {
+	case resp := <-respCh:
+		return resp.readyCh, resp.err
+	case <-p.controllerDoneCh:
+		return nil, fmt.Errorf("playground is stopping")
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
 }
 
-// startProcInController starts a process while running in the controller
-// goroutine.
-//
-// It updates controller-owned runtime state (critical counts, etc.) directly,
-// avoiding deadlocks from sending controller events to itself.
-func (p *Playground) startProcInController(ctx context.Context, inst proc.Process) (readyCh <-chan error, err error) {
-	return p.startProcWithStartedHandler(ctx, inst, func(inst proc.Process) {
-		p.handleProcStarted(inst)
-	})
+func (p *Playground) startProc(state *controllerState, ctx context.Context, inst proc.Process, preload *binaryPreloader) (readyCh <-chan error, err error) {
+	if p == nil || state == nil || inst == nil {
+		return nil, fmt.Errorf("startProc: controller state is nil")
+	}
+
+	info := inst.Info()
+	if info == nil {
+		return nil, fmt.Errorf("instance %T has nil info", inst)
+	}
+
+	// Resolve binary path and version in the controller to avoid cross-goroutine
+	// mutations of ProcessInfo.
+	if bin := info.UserBinPath; bin != "" {
+		info.BinPath = bin
+		// Best-effort resolve the intended service version for feature gates
+		// (e.g. TiFlash start mode) even when the user provides a binary path.
+		//
+		// This keeps behavior consistent with repository-provided binaries while
+		// avoiding a hard dependency on downloading components.
+		component := info.RepoComponentID.String()
+		constraint := p.versionConstraintForService(info.Service, "")
+		if p.bootOptions != nil {
+			constraint = p.versionConstraintForService(info.Service, p.bootOptions.Version)
+		}
+		if constraint == "" {
+			constraint = utils.LatestVersionAlias
+		}
+		if component != "" {
+			if v, err := environment.GlobalEnv().V1Repository().ResolveComponentVersion(component, constraint); err == nil {
+				info.Version = v
+			}
+		}
+	} else if info.BinPath == "" {
+		component := info.RepoComponentID.String()
+		constraint := p.versionConstraintForService(info.Service, "")
+		if p.bootOptions != nil {
+			constraint = p.versionConstraintForService(info.Service, p.bootOptions.Version)
+		}
+		if constraint == "" {
+			constraint = utils.LatestVersionAlias
+		}
+
+		if preload != nil {
+			c, binPath, version, err := preload.resolve(info.Service, component)
+			if err != nil {
+				p.markStartingTaskError(inst, c, err)
+				return nil, err
+			}
+			info.BinPath = binPath
+			info.Version = version
+		} else {
+			v, err := environment.GlobalEnv().V1Repository().ResolveComponentVersion(component, constraint)
+			if err != nil {
+				p.markStartingTaskError(inst, constraint, err)
+				return nil, err
+			}
+			forcePull := false
+			if p.bootOptions != nil {
+				forcePull = p.bootOptions.ShOpt.ForcePull
+			}
+			binPath, err := prepareComponentBinary(component, v, forcePull)
+			if err != nil {
+				p.markStartingTaskError(inst, constraint, err)
+				return nil, err
+			}
+			info.BinPath = binPath
+			info.Version = v
+		}
+	}
+
+	return p.startProcWithControllerState(state, ctx, inst)
 }
 
-func (p *Playground) startProcWithStartedHandler(ctx context.Context, inst proc.Process, started func(proc.Process)) (readyCh <-chan error, err error) {
+func (p *Playground) startProcWithControllerState(state *controllerState, ctx context.Context, inst proc.Process) (readyCh <-chan error, err error) {
 	task := p.getOrCreateStartingTask(inst)
 
 	if inst == nil {
@@ -276,9 +370,7 @@ func (p *Playground) startProcWithStartedHandler(ctx context.Context, inst proc.
 		return nil, err
 	}
 
-	if started != nil {
-		started(inst)
-	}
+	p.handleProcStarted(state, inst)
 
 	exitCh := make(chan error, 1)
 	p.addWaitProc(inst, exitCh)

@@ -23,17 +23,11 @@ const (
 	stopCauseSignal
 )
 
-func (p *Playground) expectExitPID(pid int) {
-	if p == nil || pid <= 0 {
-		return
-	}
-	if p.expectedExit == nil {
-		p.expectedExit = make(map[int]struct{})
-	}
-	p.expectedExit[pid] = struct{}{}
+func (p *Playground) startShutdown(cause stopCause, sig syscall.Signal) {
+	p.startShutdownWithControllerState(nil, cause, sig)
 }
 
-func (p *Playground) startShutdown(cause stopCause, sig syscall.Signal) {
+func (p *Playground) startShutdownWithControllerState(state *controllerState, cause stopCause, sig syscall.Signal) {
 	if p == nil {
 		return
 	}
@@ -45,8 +39,26 @@ func (p *Playground) startShutdown(cause stopCause, sig syscall.Signal) {
 			close(p.interruptedCh)
 		}
 
+		var procRecords []procRecordSnapshot
+		if state != nil {
+			procRecords = state.snapshotProcRecords()
+		} else {
+			procRecords = p.procRecordsSnapshot()
+		}
+		p.shutdownProcRecords = procRecords
+
+		// Stop accepting new commands/events as early as possible to keep
+		// lifecycle predictable, after collecting the controller-owned state we
+		// need for termination.
+		if p.controllerCancel != nil {
+			p.controllerCancel()
+		}
+		if p.processGroup != nil {
+			p.processGroup.Close()
+		}
+
 		// Freeze any in-progress boot UI so it stops redrawing while we terminate.
-		p.abandonActiveGroups()
+		p.abandonActiveGroupsWithStartedRecords(procRecords)
 
 		if cause == stopCauseSignal && sig != 0 {
 			printInterrupt(p.ui, sig)
@@ -69,17 +81,21 @@ func (p *Playground) startShutdown(cause stopCause, sig syscall.Signal) {
 			defer p.terminateDoneOnce.Do(func() {
 				close(p.terminateDoneCh)
 			})
-			p.terminateGracefully()
+			p.terminateGracefully(p.shutdownProcRecords)
 		}()
 	})
 }
 
 func (p *Playground) forceKillShutdown() {
+	p.forceKillShutdownWithControllerState(nil)
+}
+
+func (p *Playground) forceKillShutdownWithControllerState(state *controllerState) {
 	if p == nil {
 		return
 	}
 
-	p.startShutdown(stopCauseSignal, syscall.SIGINT)
+	p.startShutdownWithControllerState(state, stopCauseSignal, syscall.SIGINT)
 
 	p.progressMu.Lock()
 	shutdownGroup := p.shutdownGroup
@@ -88,7 +104,7 @@ func (p *Playground) forceKillShutdown() {
 		shutdownGroup.SetTitle("Shutdown (force killed)")
 	}
 
-	go p.terminateForceKill()
+	go p.terminateForceKill(p.shutdownProcRecords)
 }
 
 func (p *Playground) addWaitProc(inst proc.Process, exitCh chan error) {
@@ -98,10 +114,6 @@ func (p *Playground) addWaitProc(inst proc.Process, exitCh chan error) {
 		info = inst.Info()
 		name = info.Name()
 	}
-
-	p.progressMu.Lock()
-	p.startedProcs = append(p.startedProcs, inst)
-	p.progressMu.Unlock()
 
 	waiter := func() error {
 		var err error
@@ -169,20 +181,14 @@ func (p *Playground) shutdownProcTitle(inst proc.Process) string {
 		return "Instance"
 	}
 
-	// Only show the instance index when there are multiple instances with the same
-	// display title. This keeps common cases (single TiKV worker, etc.) compact.
-	if p != nil && p.procTitleCounts == nil {
-		p.progressMu.Lock()
-		if p.procTitleCounts == nil {
-			p.procTitleCounts = p.buildProcTitleCounts()
-		}
-		p.progressMu.Unlock()
-	}
 	title := procTitle(inst)
 	p.progressMu.Lock()
 	counts := p.procTitleCounts
 	p.progressMu.Unlock()
-	includeID := counts != nil && counts[title] > 1
+	includeID := true
+	if counts != nil {
+		includeID = counts[title] > 1
+	}
 	return procDisplayName(inst, includeID)
 }
 
@@ -203,7 +209,7 @@ func (p *Playground) wait() error {
 	return nil
 }
 
-func (p *Playground) terminateGracefully() {
+func (p *Playground) terminateGracefully(records []procRecordSnapshot) {
 	// Prevent late additions (scale-out waiters, monitors, etc.) from extending
 	// the lifetime of the process while we are shutting down.
 	if p != nil && p.processGroup != nil {
@@ -218,16 +224,14 @@ func (p *Playground) terminateGracefully() {
 	}
 
 	p.progressMu.Lock()
-	startedProcs := append([]proc.Process(nil), p.startedProcs...)
 	shutdownGroup := p.shutdownGroup
 	p.progressMu.Unlock()
 
 	targets := func() []shutdownTarget {
-		seenPIDs := make(map[int]struct{})
 		byService := make(map[proc.ServiceID][]shutdownTarget)
 		var serviceIDs []proc.ServiceID
 
-		add := func(inst proc.Process) {
+		add := func(serviceID proc.ServiceID, inst proc.Process, pid int) {
 			if inst == nil {
 				return
 			}
@@ -239,17 +243,19 @@ func (p *Playground) terminateGracefully() {
 			if osProc == nil || osProc.Cmd() == nil || osProc.Cmd().Process == nil {
 				return
 			}
-
-			pid := osProc.Pid()
+			if pid <= 0 {
+				pid = osProc.Pid()
+			}
 			if pid <= 0 {
 				return
 			}
-			if _, ok := seenPIDs[pid]; ok {
+			if serviceID == "" {
+				serviceID = info.Service
+			}
+			if serviceID == "" {
 				return
 			}
-			seenPIDs[pid] = struct{}{}
 
-			serviceID := info.Service
 			if _, ok := byService[serviceID]; !ok {
 				serviceIDs = append(serviceIDs, serviceID)
 			}
@@ -260,8 +266,8 @@ func (p *Playground) terminateGracefully() {
 			})
 		}
 
-		for _, inst := range startedProcs {
-			add(inst)
+		for _, rec := range records {
+			add(rec.ServiceID, rec.Inst, rec.PID)
 		}
 
 		ordered, err := topoSortServiceIDs(serviceIDs)
@@ -347,7 +353,7 @@ func (p *Playground) terminateGracefully() {
 	}
 }
 
-func (p *Playground) terminateForceKill() {
+func (p *Playground) terminateForceKill(records []procRecordSnapshot) {
 	if p == nil {
 		return
 	}
@@ -355,27 +361,17 @@ func (p *Playground) terminateForceKill() {
 		p.processGroup.Close()
 	}
 
-	p.progressMu.Lock()
-	startedProcs := append([]proc.Process(nil), p.startedProcs...)
-	p.progressMu.Unlock()
-
-	seenPIDs := make(map[int]struct{})
-	for _, inst := range startedProcs {
-		if inst == nil {
-			continue
+	for _, rec := range records {
+		pid := rec.PID
+		if pid <= 0 && rec.Inst != nil {
+			info := rec.Inst.Info()
+			if info != nil && info.Proc != nil {
+				pid = info.Proc.Pid()
+			}
 		}
-		info := inst.Info()
-		if info == nil || info.Proc == nil {
-			continue
-		}
-		pid := info.Proc.Pid()
 		if pid <= 0 {
 			continue
 		}
-		if _, ok := seenPIDs[pid]; ok {
-			continue
-		}
-		seenPIDs[pid] = struct{}{}
 		_ = syscall.Kill(pid, syscall.SIGKILL)
 	}
 }

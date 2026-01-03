@@ -199,7 +199,11 @@ func (c ttyTaskComponent) Line(ctx ttyRenderContext) string {
 	case t.kind == taskKindDownload:
 		content = ttyDownloadContent(t, ctx, c.titleWidth, c.downloadLabelWidth)
 	case t.status == taskStatusError:
-		title := ttyTaskLabel(t, ctx, 0)
+		titleWidth := 0
+		if t.meta != "" {
+			titleWidth = c.titleWidth
+		}
+		title := ttyTaskLabel(t, ctx, titleWidth)
 		if t.message != "" {
 			// Keep the colon adjacent to the title for readability. Padding the
 			// title would introduce awkward spaces before ':' when other tasks have
@@ -209,14 +213,22 @@ func (c ttyTaskComponent) Line(ctx ttyRenderContext) string {
 			content = title
 		}
 	case t.status == taskStatusSkipped:
-		title := ttyTaskLabel(t, ctx, 0)
+		titleWidth := 0
+		if t.meta != "" {
+			titleWidth = c.titleWidth
+		}
+		title := ttyTaskLabel(t, ctx, titleWidth)
 		if t.message != "" {
 			content = fmt.Sprintf("%s: %s", title, ctx.styles.message.Render(t.message))
 		} else {
 			content = title
 		}
 	case t.status == taskStatusCanceled:
-		title := ttyTaskLabel(t, ctx, 0)
+		titleWidth := 0
+		if t.meta != "" {
+			titleWidth = c.titleWidth
+		}
+		title := ttyTaskLabel(t, ctx, titleWidth)
 		if t.message != "" {
 			content = fmt.Sprintf("%s: %s", title, ctx.styles.message.Render(t.message))
 		} else {

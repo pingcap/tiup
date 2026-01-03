@@ -206,9 +206,13 @@ func pdEndpoints(pds []*PDInstance, isHTTP bool) []string {
 	return endpoints
 }
 
-// prepareConfig accepts a user specified config and merge user config with a
-// pre-defined one.
-func prepareConfig(outputConfigPath string, userConfigPath string, preDefinedConfig map[string]any) (err error) {
+// prepareConfig writes a merged config to outputConfigPath.
+//
+// Merge order:
+// 1) preDefinedConfig provides defaults
+// 2) userConfigPath overrides defaults
+// 3) forceOverride overwrites both (for runtime-required fields)
+func prepareConfig(outputConfigPath string, userConfigPath string, preDefinedConfig map[string]any, forceOverride map[string]any) (err error) {
 	dir := filepath.Dir(outputConfigPath)
 	if err := utils.MkdirAll(dir, 0755); err != nil {
 		return err
@@ -235,7 +239,11 @@ func prepareConfig(outputConfigPath string, userConfigPath string, preDefinedCon
 
 	enc := toml.NewEncoder(cf)
 	enc.Indent = ""
-	return enc.Encode(spec.MergeConfig(preDefinedConfig, userConfig))
+	merged := spec.MergeConfig(preDefinedConfig, userConfig)
+	if len(forceOverride) > 0 {
+		merged = spec.MergeConfig(merged, forceOverride)
+	}
+	return enc.Encode(merged)
 }
 
 func unmarshalConfig(path string) (map[string]any, error) {

@@ -42,9 +42,12 @@ type displayItem struct {
 	Log     string `json:"log,omitempty"`
 }
 
-func (p *Playground) handleDisplay(r io.Writer, verbose, jsonOut bool) error {
+func (p *Playground) handleDisplay(state *controllerState, r io.Writer, verbose, jsonOut bool) error {
 	if p == nil {
 		return fmt.Errorf("playground is nil")
+	}
+	if state == nil {
+		return fmt.Errorf("playground controller state is nil")
 	}
 	if r == nil {
 		r = io.Discard
@@ -104,7 +107,7 @@ func (p *Playground) handleDisplay(r io.Writer, verbose, jsonOut bool) error {
 
 	if jsonOut {
 		var items []*displayItem
-		err := p.WalkProcs(func(serviceID proc.ServiceID, ins proc.Process) error {
+		err := state.walkProcs(func(serviceID proc.ServiceID, ins proc.Process) error {
 			item, err := collect(serviceID, ins)
 			if err != nil {
 				return err
@@ -130,7 +133,7 @@ func (p *Playground) handleDisplay(r io.Writer, verbose, jsonOut bool) error {
 	}
 	td := utils.NewTableDisplayer(r, header)
 
-	return p.WalkProcs(func(serviceID proc.ServiceID, ins proc.Process) error {
+	return state.walkProcs(func(serviceID proc.ServiceID, ins proc.Process) error {
 		item, err := collect(serviceID, ins)
 		if err != nil || item == nil {
 			return err

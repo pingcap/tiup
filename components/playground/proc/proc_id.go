@@ -2,8 +2,6 @@ package proc
 
 import (
 	"strings"
-
-	"github.com/go4org/hashtriemap"
 )
 
 // ServiceID is a logical service identifier in playground.
@@ -25,8 +23,8 @@ type RepoComponentID string
 
 func (id RepoComponentID) String() string { return string(id) }
 
-var componentDisplayNames hashtriemap.HashTrieMap[RepoComponentID, string]
-var serviceDisplayNames hashtriemap.HashTrieMap[ServiceID, string]
+var componentDisplayNames map[RepoComponentID]string
+var serviceDisplayNames map[ServiceID]string
 
 // RegisterComponentDisplayName registers a user-facing name for a repository
 // component ID.
@@ -37,7 +35,10 @@ func RegisterComponentDisplayName(componentID RepoComponentID, displayName strin
 	if componentID == "" || displayName == "" {
 		return
 	}
-	componentDisplayNames.Store(componentID, displayName)
+	if componentDisplayNames == nil {
+		componentDisplayNames = make(map[RepoComponentID]string)
+	}
+	componentDisplayNames[componentID] = displayName
 }
 
 // ComponentDisplayName returns a user-facing name for a repository component ID.
@@ -48,8 +49,10 @@ func ComponentDisplayName(componentID RepoComponentID) string {
 	if componentID == "" {
 		return ""
 	}
-	if s, ok := componentDisplayNames.Load(componentID); ok && s != "" {
-		return s
+	if componentDisplayNames != nil {
+		if s := componentDisplayNames[componentID]; s != "" {
+			return s
+		}
 	}
 	return titleCaseComponentID(componentID.String())
 }
@@ -62,7 +65,10 @@ func RegisterServiceDisplayName(serviceID ServiceID, displayName string) {
 	if serviceID == "" || displayName == "" {
 		return
 	}
-	serviceDisplayNames.Store(serviceID, displayName)
+	if serviceDisplayNames == nil {
+		serviceDisplayNames = make(map[ServiceID]string)
+	}
+	serviceDisplayNames[serviceID] = displayName
 }
 
 // ServiceDisplayName returns a user-facing name for a service.
@@ -73,8 +79,10 @@ func ServiceDisplayName(serviceID ServiceID) string {
 	if serviceID == "" {
 		return ""
 	}
-	if s, ok := serviceDisplayNames.Load(serviceID); ok && s != "" {
-		return s
+	if serviceDisplayNames != nil {
+		if s := serviceDisplayNames[serviceID]; s != "" {
+			return s
+		}
 	}
 	return titleCaseComponentID(string(serviceID))
 }

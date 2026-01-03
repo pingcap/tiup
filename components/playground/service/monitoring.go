@@ -2,14 +2,25 @@ package service
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/pingcap/tiup/components/playground/proc"
 	"github.com/pingcap/tiup/pkg/utils"
+	"golang.org/x/mod/semver"
 )
+
+func stripNextGenVersionSuffix(version string) string {
+	return strings.TrimSuffix(version, "-"+utils.NextgenVersionAlias)
+}
 
 func init() {
 	MustRegister(Spec{
 		ServiceID: proc.ServicePrometheus,
+		Catalog: Catalog{
+			IsEnabled:   func(ctx BootContext) bool { return ctx != nil && ctx.MonitorEnabled() },
+			PlanConfig:  func(_ BootContext) proc.Config { return proc.Config{Num: 1} },
+			VersionBind: stripNextGenVersionSuffix,
+		},
 		NewProc: func(rt Runtime, params NewProcParams) (proc.Process, error) {
 			shOpt := rt.SharedOptions()
 			port := allocPort(params.Host, params.Config.Port, 9090, shOpt.PortOffset)
@@ -32,6 +43,17 @@ func init() {
 
 	MustRegister(Spec{
 		ServiceID: proc.ServiceGrafana,
+		Catalog: Catalog{
+			IsEnabled: func(ctx BootContext) bool { return ctx != nil && ctx.MonitorEnabled() },
+			PlanConfig: func(ctx BootContext) proc.Config {
+				port := 0
+				if ctx != nil {
+					port = ctx.GrafanaPortOverride()
+				}
+				return proc.Config{Num: 1, Port: port}
+			},
+			VersionBind: stripNextGenVersionSuffix,
+		},
 		StartAfter: []proc.ServiceID{
 			proc.ServicePrometheus,
 		},
@@ -63,6 +85,22 @@ func init() {
 
 	MustRegister(Spec{
 		ServiceID: proc.ServiceNGMonitoring,
+		Catalog: Catalog{
+			IsEnabled: func(ctx BootContext) bool {
+				if ctx == nil || !ctx.MonitorEnabled() {
+					return false
+				}
+				// ng-monitoring-server is only available in newer releases. Skip it on
+				// versions known to not include it.
+				baseVersion := stripNextGenVersionSuffix(ctx.BootVersion())
+				if !utils.Version(baseVersion).IsValid() {
+					return true
+				}
+				return semver.Compare(baseVersion, "v5.3.0") >= 0
+			},
+			PlanConfig:  func(_ BootContext) proc.Config { return proc.Config{Num: 1} },
+			VersionBind: stripNextGenVersionSuffix,
+		},
 		StartAfter: []proc.ServiceID{
 			proc.ServicePD,
 			proc.ServicePDAPI,

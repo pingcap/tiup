@@ -11,40 +11,10 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/playground/proc"
+	pgservice "github.com/pingcap/tiup/components/playground/service"
 	"github.com/pingcap/tiup/pkg/tidbver"
-	"github.com/pingcap/tiup/pkg/tui/colorstr"
 	"github.com/pingcap/tiup/pkg/utils"
 )
-
-func (p *Playground) setRequiredServices(options *BootOptions) {
-	if p == nil || options == nil {
-		return
-	}
-
-	required := make(map[proc.ServiceID]int)
-
-	for _, def := range serviceCatalog {
-		if def.CriticalWhen == nil || !def.CriticalWhen(options) {
-			continue
-		}
-		cfg := options.Service(def.ServiceID)
-		if cfg == nil || cfg.Num <= 0 {
-			continue
-		}
-		required[def.ServiceID] = 1
-	}
-
-	p.requiredServices = required
-	p.criticalRunning = make(map[proc.ServiceID]int)
-}
-
-func (p *Playground) isRequiredService(serviceID proc.ServiceID) bool {
-	if p == nil || serviceID == "" {
-		return false
-	}
-	min := p.requiredServices[serviceID]
-	return min > 0
-}
 
 func normalizeBootErr(ctx context.Context, err error) error {
 	if err == nil || ctx == nil {
@@ -97,49 +67,15 @@ func (p *Playground) validateBootOptions(ctx context.Context, options *BootOptio
 
 	cfgPD := options.Service(proc.ServicePD)
 	cfgDMMaster := options.Service(proc.ServiceDMMaster)
-	cfgTiKVWorker := options.Service(proc.ServiceTiKVWorker)
-	cfgTiDBSystem := options.Service(proc.ServiceTiDBSystem)
-	cfgTiFlash := options.Service(proc.ServiceTiFlash)
-	cfgTiFlashWrite := options.Service(proc.ServiceTiFlashWrite)
-	cfgTiFlashCompute := options.Service(proc.ServiceTiFlashCompute)
+
+	if err := validateServiceCountLimits(options); err != nil {
+		return err
+	}
 
 	// All other components depend on PD, except DM. Ensure PD count > 0 for the
 	// common modes.
 	if options.ShOpt.PDMode != "ms" && cfgPD != nil && cfgPD.Num < 1 && cfgDMMaster != nil && cfgDMMaster.Num < 1 {
 		return fmt.Errorf("all components count must be great than 0 (pd=%v)", cfgPD.Num)
-	}
-
-	if cfgTiKVWorker != nil && cfgTiKVWorker.Num > 1 {
-		return fmt.Errorf("TiKV worker only supports at most 1 instance")
-	}
-	if cfgTiDBSystem != nil && cfgTiDBSystem.Num > 1 {
-		return fmt.Errorf("TiDB system only supports at most 1 instance")
-	}
-
-	if utils.Version(options.Version).IsValid() {
-		hasTiFlash := false
-		if cfgTiFlash != nil && cfgTiFlash.Num != 0 {
-			hasTiFlash = true
-		}
-		if cfgTiFlashWrite != nil && cfgTiFlashWrite.Num != 0 {
-			hasTiFlash = true
-		}
-		if cfgTiFlashCompute != nil && cfgTiFlashCompute.Num != 0 {
-			hasTiFlash = true
-		}
-
-		if hasTiFlash && !tidbver.TiFlashPlaygroundNewStartMode(options.Version) {
-			colorstr.Fprintf(p.termWriter(), "[yellow][bold]Warning:[reset] TiFlash requires TiDB >= v7.1.0 (or nightly); disabling TiFlash for version %s\n", options.Version)
-			if cfgTiFlash != nil {
-				cfgTiFlash.Num = 0
-			}
-			if cfgTiFlashWrite != nil {
-				cfgTiFlashWrite.Num = 0
-			}
-			if cfgTiFlashCompute != nil {
-				cfgTiFlashCompute.Num = 0
-			}
-		}
 	}
 
 	switch options.ShOpt.Mode {
@@ -184,6 +120,32 @@ func (p *Playground) validateBootOptions(ctx context.Context, options *BootOptio
 	return nil
 }
 
+func validateServiceCountLimits(options *BootOptions) error {
+	if options == nil {
+		return nil
+	}
+
+	for _, spec := range pgservice.AllSpecs() {
+		maxNum := spec.Catalog.MaxNum
+		if spec.ServiceID == "" || maxNum <= 0 {
+			continue
+		}
+
+		cfg := options.Service(spec.ServiceID)
+		if cfg == nil || cfg.Num <= maxNum {
+			continue
+		}
+
+		name := proc.ServiceDisplayName(spec.ServiceID)
+		if name == "" {
+			name = spec.ServiceID.String()
+		}
+		return fmt.Errorf("%s only supports at most %d instance(s)", name, maxNum)
+	}
+
+	return nil
+}
+
 type plannedProc struct {
 	serviceID proc.ServiceID
 	cfg       proc.Config
@@ -208,8 +170,9 @@ func planProcs(options *BootOptions) ([]plannedProc, error) {
 	cfgByService := make(map[proc.ServiceID]proc.Config)
 	var serviceIDs []proc.ServiceID
 
-	for _, def := range serviceCatalog {
-		if def.PlanWhen == nil || !def.PlanWhen(options) {
+	for _, spec := range pgservice.AllSpecs() {
+		def := spec.Catalog
+		if def.IsEnabled == nil || !def.IsEnabled(options) {
 			continue
 		}
 
@@ -217,11 +180,11 @@ func planProcs(options *BootOptions) ([]plannedProc, error) {
 		if def.PlanConfig != nil {
 			cfg = def.PlanConfig(options)
 		} else {
-			cfg, _ = options.ServiceConfig(def.ServiceID)
+			cfg, _ = options.ServiceConfig(spec.ServiceID)
 		}
 
-		cfgByService[def.ServiceID] = cfg
-		serviceIDs = append(serviceIDs, def.ServiceID)
+		cfgByService[spec.ServiceID] = cfg
+		serviceIDs = append(serviceIDs, spec.ServiceID)
 	}
 
 	ordered, err := topoSortServiceIDs(serviceIDs)
@@ -236,13 +199,13 @@ func planProcs(options *BootOptions) ([]plannedProc, error) {
 	return plans, nil
 }
 
-func (p *Playground) addPlannedProcs(plans []plannedProc) error {
+func (p *Playground) addPlannedProcs(ctx context.Context, plans []plannedProc) error {
 	if p == nil {
 		return nil
 	}
 	for _, plan := range plans {
 		for i := 0; i < plan.cfg.Num; i++ {
-			_, err := p.addProc(plan.serviceID, plan.cfg)
+			_, err := p.requestAddProc(ctx, plan.serviceID, plan.cfg)
 			if err != nil {
 				return err
 			}

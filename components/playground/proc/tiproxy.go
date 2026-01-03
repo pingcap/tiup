@@ -21,8 +21,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/BurntSushi/toml"
-	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/crypto"
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -92,37 +90,13 @@ func (c *TiProxyInstance) Prepare(ctx context.Context) error {
 	endpoints := pdEndpoints(c.PDs, false)
 
 	configPath := filepath.Join(c.Dir, "config", "proxy.toml")
-	dir := filepath.Dir(configPath)
-	if err := utils.MkdirAll(dir, 0755); err != nil {
-		return err
-	}
-
-	userConfig, err := unmarshalConfig(c.ConfigPath)
-	if err != nil {
-		return err
-	}
-	if userConfig == nil {
-		userConfig = make(map[string]any)
-	}
-
-	cf, err := os.Create(configPath)
-	if err != nil {
-		return err
-	}
-
-	enc := toml.NewEncoder(cf)
-	enc.Indent = ""
-	if err := enc.Encode(spec.MergeConfig(userConfig, map[string]any{
+	if err := prepareConfig(configPath, c.ConfigPath, nil, map[string]any{
 		"proxy.pd-addrs":        strings.Join(endpoints, ","),
 		"proxy.addr":            utils.JoinHostPort(c.Host, c.Port),
 		"proxy.advertise-addr":  AdvertiseHost(c.Host),
 		"api.addr":              utils.JoinHostPort(c.Host, c.StatusPort),
 		"log.log-file.filename": c.LogFile(),
-	})); err != nil {
-		_ = cf.Close()
-		return err
-	}
-	if err := cf.Close(); err != nil {
+	}); err != nil {
 		return err
 	}
 

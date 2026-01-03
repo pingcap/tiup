@@ -16,26 +16,60 @@ func init() {
 		proc.ServiceTiKVWorker,
 		proc.ServicePump,
 	}
-	for _, serviceID := range []proc.ServiceID{
-		proc.ServiceTiDB,
-		proc.ServiceTiDBSystem,
-	} {
-		serviceID := serviceID
-		spec := Spec{
-			ServiceID: serviceID,
-			NewProc: func(rt Runtime, params NewProcParams) (proc.Process, error) {
-				return newTiDBInstance(rt, serviceID, params)
+
+	MustRegister(Spec{
+		ServiceID: proc.ServiceTiDBSystem,
+		NewProc: func(rt Runtime, params NewProcParams) (proc.Process, error) {
+			return newTiDBInstance(rt, proc.ServiceTiDBSystem, params)
+		},
+		Catalog: Catalog{
+			FlagPrefix:         "db.system",
+			AllowModifyNum:     true,
+			MaxNum:             1,
+			AllowModifyHost:    true,
+			AllowModifyPort:    true,
+			AllowModifyConfig:  true,
+			AllowModifyBinPath: true,
+			DefaultNum: func(ctx BootContext) int {
+				if ctx != nil && ctx.SharedOptions().Mode == proc.ModeNextGen {
+					return 1
+				}
+				return 0
 			},
-			PostScaleOut: postScaleOutTiDB,
-		}
-		if serviceID == proc.ServiceTiDBSystem {
-			spec.StartAfter = startAfter
-		}
-		if serviceID == proc.ServiceTiDB {
-			spec.StartAfter = append([]proc.ServiceID{proc.ServiceTiDBSystem}, startAfter...)
-		}
-		MustRegister(spec)
-	}
+			DefaultBinPathFrom: proc.ServiceTiDB,
+			IsEnabled:          func(ctx BootContext) bool { return ctx != nil && ctx.SharedOptions().Mode == proc.ModeNextGen },
+			IsCritical:         func(ctx BootContext) bool { return ctx != nil && ctx.SharedOptions().Mode == proc.ModeNextGen },
+		},
+		StartAfter: startAfter,
+	})
+
+	MustRegister(Spec{
+		ServiceID: proc.ServiceTiDB,
+		NewProc: func(rt Runtime, params NewProcParams) (proc.Process, error) {
+			return newTiDBInstance(rt, proc.ServiceTiDB, params)
+		},
+		Catalog: Catalog{
+			FlagPrefix:         "db",
+			AllowModifyNum:     true,
+			AllowModifyHost:    true,
+			AllowModifyPort:    true,
+			AllowModifyConfig:  true,
+			AllowModifyBinPath: true,
+			AllowModifyTimeout: true,
+			DefaultTimeout:     60,
+			DefaultNum: func(ctx BootContext) int {
+				if ctx != nil && ctx.SharedOptions().Mode == proc.ModeTiKVSlim {
+					return 0
+				}
+				return 1
+			},
+			IsEnabled:     func(_ BootContext) bool { return true },
+			IsCritical:    func(ctx BootContext) bool { return ctx != nil && ctx.SharedOptions().Mode != proc.ModeTiKVSlim },
+			AllowScaleOut: true,
+		},
+		StartAfter:   append([]proc.ServiceID{proc.ServiceTiDBSystem}, startAfter...),
+		PostScaleOut: postScaleOutTiDB,
+	})
 }
 
 func enableBinlog(rt Runtime) bool {

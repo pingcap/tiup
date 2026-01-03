@@ -77,7 +77,7 @@ func (p *cmdProcess) Wait() error {
 
 // Pid implements OSProcess.
 func (p *cmdProcess) Pid() int {
-	if p == nil {
+	if p == nil || p.cmd == nil || p.cmd.Process == nil {
 		return 0
 	}
 	return p.cmd.Process.Pid

@@ -65,3 +65,39 @@ func (o *BootOptions) SortedServiceIDs() []proc.ServiceID {
 	})
 	return out
 }
+
+func (o *BootOptions) SharedOptions() proc.SharedOptions {
+	if o == nil {
+		return proc.SharedOptions{}
+	}
+	return o.ShOpt
+}
+
+func (o *BootOptions) BootVersion() string {
+	if o == nil {
+		return ""
+	}
+	return o.Version
+}
+
+func (o *BootOptions) MonitorEnabled() bool {
+	return o != nil && o.Monitor
+}
+
+func (o *BootOptions) GrafanaPortOverride() int {
+	if o == nil {
+		return 0
+	}
+	return o.GrafanaPort
+}
+
+func (o *BootOptions) ServiceConfigFor(serviceID proc.ServiceID) proc.Config {
+	if o == nil || serviceID == "" {
+		return proc.Config{}
+	}
+	cfg := o.Service(serviceID)
+	if cfg == nil {
+		return proc.Config{}
+	}
+	return *cfg
+}

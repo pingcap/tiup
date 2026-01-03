@@ -46,27 +46,49 @@ func init() {
 
 // Ready return nil when pump is ready to serve.
 func (p *Pump) Ready(ctx context.Context) error {
-	url := fmt.Sprintf("http://%s/status", utils.JoinHostPort(p.Host, p.Port))
-
-	ready := func() bool {
-		resp, err := http.Get(url)
-		if err != nil {
-			return false
-		}
-		defer resp.Body.Close()
-		return resp.StatusCode == 200
+	if ctx == nil {
+		ctx = context.Background()
 	}
 
+	url := fmt.Sprintf("http://%s/status", utils.JoinHostPort(p.Host, p.Port))
+	client := &http.Client{}
+
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+
 	for {
-		if ready() {
+		perAttempt := 5 * time.Second
+		if deadline, ok := ctx.Deadline(); ok {
+			remain := time.Until(deadline)
+			if remain <= 0 {
+				return ctx.Err()
+			}
+			if remain < perAttempt {
+				perAttempt = remain
+			}
+		}
+
+		attemptCtx, cancel := context.WithTimeout(ctx, perAttempt)
+		req, err := http.NewRequestWithContext(attemptCtx, http.MethodGet, url, nil)
+		if err != nil {
+			cancel()
+			return err
+		}
+
+		resp, err := client.Do(req)
+		if resp != nil {
+			_ = resp.Body.Close()
+		}
+		cancel()
+
+		if err == nil && resp != nil && resp.StatusCode == http.StatusOK {
 			return nil
 		}
 
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-time.After(time.Second):
-			// just retry
+		case <-ticker.C:
 		}
 	}
 }
@@ -88,7 +110,7 @@ func (p *Pump) WaitReady(ctx context.Context) error {
 
 	err := p.Ready(ctx)
 	if err == context.DeadlineExceeded {
-		return fmt.Errorf("timeout (%ds)", timeoutSec)
+		return readyTimeoutError(timeoutSec)
 	}
 	return err
 }

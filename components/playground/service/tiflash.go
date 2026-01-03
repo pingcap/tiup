@@ -3,36 +3,148 @@ package service
 import (
 	"fmt"
 	"io"
-	"syscall"
 	"time"
 
 	"github.com/pingcap/tiup/components/playground/proc"
-	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/tidbver"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 func init() {
-	for _, serviceID := range []proc.ServiceID{
-		proc.ServiceTiFlash,
-		proc.ServiceTiFlashWrite,
-		proc.ServiceTiFlashCompute,
-	} {
-		serviceID := serviceID
-		MustRegister(Spec{
-			ServiceID: serviceID,
-			StartAfter: []proc.ServiceID{
-				proc.ServicePD,
-				proc.ServicePDAPI,
-				proc.ServiceTiKV,
-				proc.ServiceTiDBSystem,
-				proc.ServiceTiDB,
-			},
-			NewProc: func(rt Runtime, params NewProcParams) (proc.Process, error) {
-				return newTiFlashInstance(rt, serviceID, params)
-			},
-			ScaleInHook: scaleInTiFlashByTombstone,
-		})
+	hasTiDB := func(ctx BootContext) bool {
+		if ctx == nil {
+			return false
+		}
+		return ctx.ServiceConfigFor(proc.ServiceTiDB).Num > 0
 	}
+
+	startAfter := []proc.ServiceID{
+		proc.ServicePD,
+		proc.ServicePDAPI,
+		proc.ServiceTiKV,
+	}
+
+	MustRegister(Spec{
+		ServiceID: proc.ServiceTiFlash,
+		Catalog: Catalog{
+			FlagPrefix:         "tiflash",
+			AllowModifyNum:     true,
+			AllowModifyConfig:  true,
+			AllowModifyBinPath: true,
+			AllowModifyTimeout: true,
+			DefaultTimeout:     120,
+			DefaultNum: func(ctx BootContext) int {
+				if ctx == nil {
+					return 0
+				}
+				switch ctx.SharedOptions().Mode {
+				case proc.ModeNormal, proc.ModeCSE, proc.ModeDisAgg:
+					v := ctx.BootVersion()
+					if utils.Version(v).IsValid() && !tidbver.TiFlashPlaygroundNewStartMode(v) {
+						return 0
+					}
+					return 1
+				default:
+					return 0
+				}
+			},
+			IsEnabled: func(ctx BootContext) bool {
+				return ctx != nil && ctx.SharedOptions().Mode == proc.ModeNormal && hasTiDB(ctx)
+			},
+			AllowScaleOut: true,
+		},
+		StartAfter: startAfter,
+		NewProc: func(rt Runtime, params NewProcParams) (proc.Process, error) {
+			return newTiFlashInstance(rt, proc.ServiceTiFlash, params)
+		},
+		ScaleInHook: scaleInTiFlashByTombstone,
+	})
+
+	MustRegister(Spec{
+		ServiceID: proc.ServiceTiFlashWrite,
+		Catalog: Catalog{
+			FlagPrefix:         "tiflash.write",
+			AllowModifyNum:     true,
+			AllowModifyConfig:  true,
+			AllowModifyBinPath: true,
+			DefaultNum: func(ctx BootContext) int {
+				if ctx == nil {
+					return 0
+				}
+				switch ctx.SharedOptions().Mode {
+				case proc.ModeCSE, proc.ModeNextGen, proc.ModeDisAgg:
+					return ctx.ServiceConfigFor(proc.ServiceTiFlash).Num
+				default:
+					return 0
+				}
+			},
+			DefaultBinPathFrom:    proc.ServiceTiFlash,
+			DefaultConfigPathFrom: proc.ServiceTiFlash,
+			DefaultTimeoutFrom:    proc.ServiceTiFlash,
+			IsEnabled: func(ctx BootContext) bool {
+				if ctx == nil {
+					return false
+				}
+				if !hasTiDB(ctx) {
+					return false
+				}
+				switch ctx.SharedOptions().Mode {
+				case proc.ModeCSE, proc.ModeNextGen, proc.ModeDisAgg:
+					return true
+				default:
+					return false
+				}
+			},
+		},
+		StartAfter: startAfter,
+		NewProc: func(rt Runtime, params NewProcParams) (proc.Process, error) {
+			return newTiFlashInstance(rt, proc.ServiceTiFlashWrite, params)
+		},
+		ScaleInHook: scaleInTiFlashByTombstone,
+	})
+
+	MustRegister(Spec{
+		ServiceID: proc.ServiceTiFlashCompute,
+		Catalog: Catalog{
+			FlagPrefix:         "tiflash.compute",
+			AllowModifyNum:     true,
+			AllowModifyConfig:  true,
+			AllowModifyBinPath: true,
+			DefaultNum: func(ctx BootContext) int {
+				if ctx == nil {
+					return 0
+				}
+				switch ctx.SharedOptions().Mode {
+				case proc.ModeCSE, proc.ModeNextGen, proc.ModeDisAgg:
+					return ctx.ServiceConfigFor(proc.ServiceTiFlash).Num
+				default:
+					return 0
+				}
+			},
+			DefaultBinPathFrom:    proc.ServiceTiFlash,
+			DefaultConfigPathFrom: proc.ServiceTiFlash,
+			DefaultTimeoutFrom:    proc.ServiceTiFlash,
+			IsEnabled: func(ctx BootContext) bool {
+				if ctx == nil {
+					return false
+				}
+				if !hasTiDB(ctx) {
+					return false
+				}
+				switch ctx.SharedOptions().Mode {
+				case proc.ModeCSE, proc.ModeNextGen, proc.ModeDisAgg:
+					return true
+				default:
+					return false
+				}
+			},
+		},
+		StartAfter: startAfter,
+		NewProc: func(rt Runtime, params NewProcParams) (proc.Process, error) {
+			return newTiFlashInstance(rt, proc.ServiceTiFlashCompute, params)
+		},
+		ScaleInHook: scaleInTiFlashByTombstone,
+	})
 }
 
 func scaleInTiFlashByTombstone(rt Runtime, w io.Writer, inst proc.Process, pid int) (async bool, err error) {
@@ -53,52 +165,19 @@ func scaleInTiFlashByTombstone(rt Runtime, w io.Writer, inst proc.Process, pid i
 	if err := c.DelStore(flash.StoreAddr(), nil); err != nil {
 		return false, err
 	}
-	go watchTiFlashTombstone(rt, c, flash)
+	serviceID := flash.Info().Service
+	go watchAsyncScaleInStop(rt, 5*time.Second, func() (done bool, err error) {
+		return c.IsTombStone(flash.StoreAddr())
+	}, asyncScaleInStopEvent{
+		serviceID:   serviceID,
+		inst:        flash,
+		stopMessage: fmt.Sprintf("stop tombstone tiflash %s", flash.StoreAddr()),
+	})
 
 	if w != nil {
 		fmt.Fprintf(w, "requested scale-in %s (waiting for tombstone)\n", flash.StoreAddr())
 	}
 	return true, nil
-}
-
-type tiFlashTombstoneEvent struct {
-	inst *proc.TiFlashInstance
-}
-
-func (e tiFlashTombstoneEvent) Handle(rt Runtime) {
-	if rt == nil || e.inst == nil {
-		return
-	}
-
-	serviceID := e.inst.Info().Service
-	if !rt.RemoveProc(serviceID, e.inst) {
-		return
-	}
-
-	fmt.Fprintf(rt.TermWriter(), "stop tombstone tiflash %s\n", e.inst.StoreAddr())
-	pid := 0
-	if proc := e.inst.Info().Proc; proc != nil {
-		pid = proc.Pid()
-	}
-	rt.ExpectExitPID(pid)
-	if pid > 0 {
-		if err := syscall.Kill(pid, syscall.SIGQUIT); err != nil {
-			fmt.Fprintln(rt.TermWriter(), err)
-		}
-	}
-
-	rt.OnProcsChanged()
-}
-
-func watchTiFlashTombstone(rt Runtime, c *api.PDClient, inst *proc.TiFlashInstance) {
-	if rt == nil || c == nil || inst == nil {
-		return
-	}
-	pollUntil(rt, 5*time.Second, 0, func() (done bool, err error) {
-		return c.IsTombStone(inst.StoreAddr())
-	}, func() {
-		rt.EmitEvent(tiFlashTombstoneEvent{inst: inst})
-	})
 }
 
 func newTiFlashInstance(rt Runtime, serviceID proc.ServiceID, params NewProcParams) (proc.Process, error) {

@@ -3,6 +3,8 @@ package service
 import (
 	"fmt"
 	"io"
+	"slices"
+	"strings"
 
 	"github.com/pingcap/tiup/components/playground/proc"
 )
@@ -49,14 +51,173 @@ type ScaleInHookFunc func(rt Runtime, w io.Writer, inst proc.Process, pid int) (
 
 type PostScaleOutFunc func(w io.Writer, inst proc.Process)
 
+// BootContext is the minimal boot-time surface that service metadata depends on.
+//
+// It is implemented by *main.BootOptions.
+type BootContext interface {
+	SharedOptions() proc.SharedOptions
+	BootVersion() string
+
+	MonitorEnabled() bool
+	GrafanaPortOverride() int
+
+	// ServiceConfigFor returns the current config snapshot for a service.
+	//
+	// It is primarily used to express "default from another service" rules.
+	ServiceConfigFor(serviceID proc.ServiceID) proc.Config
+}
+
+type VersionBindFunc func(baseVersion string) string
+
+// Catalog is declarative metadata for a service.
+//
+// It is used to:
+//   - register and interpret CLI flags (via `components/playground/catalog_flags.go`);
+//   - compute default values derived from mode/other services;
+//   - decide whether a service should be planned (booted) for a given BootContext;
+//   - decide whether a service is "critical" (required) and whether it supports scale-out;
+//   - customize version selection for repository component resolution.
+//
+// It is intentionally "data-first": most orchestration code should depend on
+// this metadata rather than hardcoding service-specific special cases.
+type Catalog struct {
+	// FlagPrefix is the CLI flag namespace for this service.
+	//
+	// When non-empty, flags are registered under:
+	//   - `--<FlagPrefix>`             (count, when HasCount is true)
+	//   - `--<FlagPrefix>.host`        (host override, when HasHost is true)
+	//   - `--<FlagPrefix>.port`        (port override, when HasPort is true)
+	//   - `--<FlagPrefix>.config`      (config file path, when HasConfig is true)
+	//   - `--<FlagPrefix>.binpath`     (binary path, when HasBinPath is true)
+	//   - `--<FlagPrefix>.timeout`     (ready wait timeout seconds, when HasTimeout is true)
+	//   - `--<FlagPrefix>.version`     (version constraint override, when HasVersion is true)
+	//
+	// When empty, this service is "internal-only" from the CLI perspective (it
+	// may still be planned via EnabledWhen/PlanConfig).
+	FlagPrefix string
+
+	// AllowModifyNum indicates the service exposes an instance count flag
+	// (`--<FlagPrefix>`), stored into proc.Config.Num.
+	AllowModifyNum bool
+	// MaxNum is a hard upper bound for proc.Config.Num at boot time.
+	//
+	// A value <= 0 means "no explicit limit". When > 0 and the requested Num
+	// exceeds it, boot option validation fails.
+	MaxNum int
+	// DefaultNum decides the default instance count when the count flag isn't
+	// explicitly set.
+	DefaultNum func(ctx BootContext) int
+	// AllowModifyHost indicates the service exposes a host override flag
+	// (`--<FlagPrefix>.host`), stored into proc.Config.Host.
+	AllowModifyHost bool
+	// AllowModifyPort indicates the service exposes a port override flag
+	// (`--<FlagPrefix>.port`), stored into proc.Config.Port.
+	//
+	// The meaning of "port override" is service-specific, but the general
+	// convention is: 0 means "use the default port allocation logic".
+	AllowModifyPort bool
+	// DefaultPort is the default value used when registering the port flag.
+	//
+	// Most services leave this as 0 so "unset" remains distinguishable; a non-zero
+	// value is useful when a service wants to surface a concrete default port in
+	// help output.
+	DefaultPort int
+	// AllowModifyConfig indicates the service exposes a config file path flag
+	// (`--<FlagPrefix>.config`), stored into proc.Config.ConfigPath.
+	AllowModifyConfig bool
+	// AllowModifyBinPath indicates the service exposes a binary path override flag
+	// (`--<FlagPrefix>.binpath`), stored into proc.Config.BinPath.
+	//
+	// When a user provides a BinPath, playground will not resolve/download the
+	// repository component for this service.
+	AllowModifyBinPath bool
+	// AllowModifyTimeout indicates the service exposes a ready-wait timeout flag
+	// (`--<FlagPrefix>.timeout`), stored into proc.Config.UpTimeout (seconds).
+	//
+	// This timeout is used by instances that implement proc.ReadyWaiter.
+	AllowModifyTimeout bool
+	// DefaultTimeout is the default value used when registering the timeout flag.
+	//
+	// A value <= 0 means "no limit" (wait indefinitely), matching the semantics
+	// of proc.Config.UpTimeout.
+	DefaultTimeout int
+	// AllowModifyVersion indicates the service exposes a per-service version constraint
+	// override flag (`--<FlagPrefix>.version`), stored into proc.Config.Version.
+	//
+	// When false, proc.Config.Version is ignored and the global boot version is
+	// used instead.
+	AllowModifyVersion bool
+
+	// AllowScaleOut indicates whether the service supports adding new instances in a
+	// running playground (via the scale-out command path).
+	AllowScaleOut bool
+
+	// DefaultXXXFrom copies the value from another service when the destination
+	// flag is not explicitly set.
+	//
+	// These are used to express "inherit from another service" behavior while
+	// keeping per-service flags consistent. For example, a `*.system` service may
+	// reuse the main service's binary path unless the user explicitly overrides
+	// it.
+	DefaultBinPathFrom    proc.ServiceID
+	DefaultConfigPathFrom proc.ServiceID
+	// DefaultTimeoutFrom copies proc.Config.UpTimeout from another service.
+	//
+	// This is typically used for services that do not expose their own timeout
+	// flag but should follow another service's timeout value.
+	DefaultTimeoutFrom proc.ServiceID
+
+	// CopyFrom copies the entire proc.Config from another service unconditionally
+	// when CopyWhen returns true.
+	//
+	// This is stronger than DefaultXXXFrom: it overwrites all fields of the
+	// destination config (Num/Host/Port/ConfigPath/BinPath/UpTimeout/Version).
+	CopyFrom proc.ServiceID
+	// CopyWhen decides whether CopyFrom should be applied for the current boot
+	// context.
+	CopyWhen func(ctx BootContext) bool
+
+	// IsEnabled decides whether this service is enabled for the current boot
+	// context.
+	//
+	// When nil or false, the service will not be included in the boot plan (so
+	// no instances will be created at boot time and scale-out is disallowed).
+	IsEnabled func(ctx BootContext) bool
+	// PlanConfig returns the proc.Config snapshot used during planning when the
+	// service is enabled.
+	//
+	// When nil, planning falls back to the config stored in BootOptions.Services.
+	// This is useful for "internal" services that have no flags but should still
+	// be started with a deterministic config.
+	PlanConfig func(ctx BootContext) proc.Config
+
+	// IsCritical marks a service as "critical" for the current boot context.
+	//
+	// When true and the planned instance count is > 0, the controller will treat
+	// this service as required: if the number of running instances drops below
+	// the required minimum, playground will trigger auto shutdown.
+	IsCritical func(ctx BootContext) bool
+
+	// VersionBind transforms the selected base version (boot version or per-service
+	// override) before resolving repository components.
+	//
+	// It is typically used when a service is not available in some version
+	// variants (e.g. NextGen suffix) and should fall back to the base TiDB
+	// version.
+	VersionBind VersionBindFunc
+}
+
 type Spec struct {
 	ServiceID proc.ServiceID
 	NewProc   func(rt Runtime, params NewProcParams) (proc.Process, error)
 
+	Catalog Catalog
+
 	// StartAfter declares boot-time ordering dependencies.
 	//
-	// Playground waits for all ready checks of the listed services (if any)
-	// before starting this service.
+	// Playground waits until at least one instance of each listed service becomes
+	// ready (or is considered ready when it has no explicit ready check) before
+	// starting this service.
 	StartAfter []proc.ServiceID
 
 	// ScaleInHook runs before the generic "expect-exit + SIGQUIT" path.
@@ -96,6 +257,24 @@ func MustRegister(spec Spec) {
 func SpecFor(serviceID proc.ServiceID) (Spec, bool) {
 	spec, ok := specs[serviceID]
 	return spec, ok
+}
+
+func AllSpecs() []Spec {
+	if len(specs) == 0 {
+		return nil
+	}
+	serviceIDs := make([]proc.ServiceID, 0, len(specs))
+	for id := range specs {
+		serviceIDs = append(serviceIDs, id)
+	}
+	slices.SortStableFunc(serviceIDs, func(a, b proc.ServiceID) int {
+		return strings.Compare(a.String(), b.String())
+	})
+	out := make([]Spec, 0, len(serviceIDs))
+	for _, id := range serviceIDs {
+		out = append(out, specs[id])
+	}
+	return out
 }
 
 func ProcsOf[T proc.Process](rt Runtime, serviceIDs ...proc.ServiceID) []T {

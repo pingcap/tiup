@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"github.com/fatih/color"
-	_ "github.com/go-sql-driver/mysql"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/playground/proc"
 	"github.com/pingcap/tiup/pkg/environment"
@@ -64,12 +63,7 @@ func (e renderedError) Unwrap() error {
 }
 
 var (
-	options        = &BootOptions{}
-	tag            string
-	deleteWhenExit bool
-	tiupDataDir    string
-	dataDir        string
-	log            = logprinter.NewLogger("")
+	log = logprinter.NewLogger("")
 )
 
 func attachUIOutput(ui *progressv2.UI) (restore func()) {
@@ -120,7 +114,11 @@ func printInterrupt(ui *progressv2.UI, sig syscall.Signal) {
 	colorstr.Fprintf(ui.Writer(), "%s[red][bold]%s[reset]\n", prefix, msg)
 }
 
-func execute() error {
+func execute(state *cliState) error {
+	if state == nil {
+		state = newCLIState()
+	}
+
 	rootCmd := &cobra.Command{
 		Use: fmt.Sprintf("%s [version]", filepath.Base(os.Args[0])),
 		Long: `Bootstrap a TiDB cluster in your local host, the latest release version will be chosen
@@ -142,58 +140,60 @@ Examples:
 			return nil
 		},
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			tiupDataDir = os.Getenv(localdata.EnvNameInstanceDataDir)
+			state.tiupDataDir = os.Getenv(localdata.EnvNameInstanceDataDir)
 			tiupHome := os.Getenv(localdata.EnvNameHome)
 			if tiupHome == "" {
 				tiupHome, _ = getAbsolutePath(filepath.Join("~", localdata.ProfileDirName))
 			}
 
 			isRoot := cmd.Parent() == nil
+			state.deleteWhenExit = false
 
 			switch {
-			case tag != "":
-				dataDir = filepath.Join(tiupHome, localdata.DataParentDir, tag)
-			case tiupDataDir != "":
-				dataDir = tiupDataDir
-				tag = filepath.Base(dataDir)
+			case state.tag != "":
+				state.dataDir = filepath.Join(tiupHome, localdata.DataParentDir, state.tag)
+			case state.tiupDataDir != "":
+				state.dataDir = state.tiupDataDir
+				state.tag = filepath.Base(state.dataDir)
 			default:
 				if isRoot {
-					tag = utils.Base62Tag()
-					dataDir = filepath.Join(tiupHome, localdata.DataParentDir, tag)
-					deleteWhenExit = true
+					state.tag = utils.Base62Tag()
+					state.dataDir = filepath.Join(tiupHome, localdata.DataParentDir, state.tag)
+					state.deleteWhenExit = true
 				} else {
-					dataDir = filepath.Join(tiupHome, localdata.DataParentDir)
+					state.dataDir = filepath.Join(tiupHome, localdata.DataParentDir)
 				}
 			}
 
 			if isRoot {
-				err := utils.MkdirAll(dataDir, os.ModePerm)
+				err := utils.MkdirAll(state.dataDir, 0755)
 				if err != nil {
 					return err
 				}
 				if out := tuiv2output.Stdout.Get(); tuiterm.Resolve(out).Control {
-					_, _ = fmt.Fprintf(out, "\033]0;TiUP Playground: %s\a", tag)
+					_, _ = fmt.Fprintf(out, "\033]0;TiUP Playground: %s\a", state.tag)
 				}
 			}
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
-				options.Version = args[0]
-			} else if options.ShOpt.Mode == proc.ModeNextGen {
-				options.Version = fmt.Sprintf("%s-%s", utils.LatestVersionAlias, utils.NextgenVersionAlias)
+				state.options.Version = args[0]
+			} else if state.options.ShOpt.Mode == proc.ModeNextGen {
+				state.options.Version = fmt.Sprintf("%s-%s", utils.LatestVersionAlias, utils.NextgenVersionAlias)
 			}
 
-			if err := populateDefaultOpt(cmd.Flags()); err != nil {
+			if err := populateDefaultOpt(cmd.Flags(), &state.options); err != nil {
 				return err
 			}
 
-			port := utils.MustGetFreePort("0.0.0.0", 9527, options.ShOpt.PortOffset)
-			err := dumpPort(filepath.Join(dataDir, "port"), port)
-			p := NewPlayground(dataDir, port)
+			port := utils.MustGetFreePort("0.0.0.0", 9527, state.options.ShOpt.PortOffset)
+			err := dumpPort(filepath.Join(state.dataDir, "port"), port)
+			p := NewPlayground(state.dataDir, port)
 			if err != nil {
 				return err
 			}
+			p.deleteWhenExit = state.deleteWhenExit
 
 			ui := progressv2.New(progressv2.Options{Mode: progressv2.ModeAuto, Out: os.Stderr})
 			defer ui.Close()
@@ -250,7 +250,7 @@ Examples:
 				}
 			}()
 
-			bootErr := p.bootCluster(ctx, options)
+			bootErr := p.bootCluster(ctx, &state.options)
 			if bootErr != nil {
 				// Ctrl+C during boot is not a "failure" from user perspective.
 				// The signal handler already started shutdown; wait for it to finish.
@@ -309,45 +309,45 @@ Examples:
 	tui.AddColorFunctionsForCobra()
 	tui.BeautifyCobraUsageAndHelp(rootCmd)
 
-	rootCmd.Flags().StringVar(&options.ShOpt.Mode, "mode", "tidb", fmt.Sprintf("TiUP playground mode: '%s', '%s', '%s', '%s', '%s'", proc.ModeNormal, proc.ModeCSE, proc.ModeNextGen, proc.ModeDisAgg, proc.ModeTiKVSlim))
-	rootCmd.Flags().StringVar(&options.ShOpt.PDMode, "pd.mode", "pd", "PD mode: 'pd', 'ms'")
-	rootCmd.Flags().StringVar(&options.ShOpt.CSE.S3Endpoint, "cse.s3_endpoint", "http://127.0.0.1:9000",
+	rootCmd.Flags().StringVar(&state.options.ShOpt.Mode, "mode", "tidb", fmt.Sprintf("TiUP playground mode: '%s', '%s', '%s', '%s', '%s'", proc.ModeNormal, proc.ModeCSE, proc.ModeNextGen, proc.ModeDisAgg, proc.ModeTiKVSlim))
+	rootCmd.Flags().StringVar(&state.options.ShOpt.PDMode, "pd.mode", "pd", "PD mode: 'pd', 'ms'")
+	rootCmd.Flags().StringVar(&state.options.ShOpt.CSE.S3Endpoint, "cse.s3_endpoint", "http://127.0.0.1:9000",
 		fmt.Sprintf("Object store URL for --mode=%s, --mode=%s, --mode=%s", proc.ModeCSE, proc.ModeDisAgg, proc.ModeNextGen))
-	rootCmd.Flags().StringVar(&options.ShOpt.CSE.Bucket, "cse.bucket", "tiflash",
+	rootCmd.Flags().StringVar(&state.options.ShOpt.CSE.Bucket, "cse.bucket", "tiflash",
 		fmt.Sprintf("Object store bucket for --mode=%s, --mode=%s, --mode=%s", proc.ModeCSE, proc.ModeDisAgg, proc.ModeNextGen))
-	rootCmd.Flags().StringVar(&options.ShOpt.CSE.AccessKey, "cse.access_key", "minioadmin",
+	rootCmd.Flags().StringVar(&state.options.ShOpt.CSE.AccessKey, "cse.access_key", "minioadmin",
 		fmt.Sprintf("Object store access key for --mode=%s, --mode=%s, --mode=%s", proc.ModeCSE, proc.ModeDisAgg, proc.ModeNextGen))
-	rootCmd.Flags().StringVar(&options.ShOpt.CSE.SecretKey, "cse.secret_key", "minioadmin",
+	rootCmd.Flags().StringVar(&state.options.ShOpt.CSE.SecretKey, "cse.secret_key", "minioadmin",
 		fmt.Sprintf("Object store secret key for --mode=%s, --mode=%s, --mode=%s", proc.ModeCSE, proc.ModeDisAgg, proc.ModeNextGen))
-	rootCmd.Flags().BoolVar(&options.ShOpt.HighPerf, "perf", false, "Tune default config for better performance instead of debug troubleshooting")
-	rootCmd.Flags().BoolVar(&options.ShOpt.EnableTiKVColumnar, "tikv.columnar", false,
+	rootCmd.Flags().BoolVar(&state.options.ShOpt.HighPerf, "perf", false, "Tune default config for better performance instead of debug troubleshooting")
+	rootCmd.Flags().BoolVar(&state.options.ShOpt.EnableTiKVColumnar, "tikv.columnar", false,
 		fmt.Sprintf("Enable TiKV columnar storage engine, only available when --mode=%s", proc.ModeCSE))
-	rootCmd.Flags().BoolVar(&options.ShOpt.ForcePull, "force-pull", false, "Force redownload the component. It is useful to manually refresh nightly or broken binaries")
+	rootCmd.Flags().BoolVar(&state.options.ShOpt.ForcePull, "force-pull", false, "Force redownload the component. It is useful to manually refresh nightly or broken binaries")
 
-	rootCmd.PersistentFlags().StringVarP(&tag, "tag", "T", "", "Specify a tag for playground, data dir of this tag will not be removed after exit")
+	rootCmd.PersistentFlags().StringVarP(&state.tag, "tag", "T", "", "Specify a tag for playground, data dir of this tag will not be removed after exit")
 	rootCmd.Flags().Bool("without-monitor", false, "Don't start prometheus and grafana component")
-	rootCmd.Flags().BoolVar(&options.Monitor, "monitor", true, "Start prometheus and grafana component")
-	_ = rootCmd.Flags().MarkDeprecated("monitor", "Please use --without-monitor to control whether to disable monitor.")
-	rootCmd.Flags().IntVar(&options.GrafanaPort, "grafana.port", 3000, "grafana port. If not provided, grafana will use 3000 as its port.")
-	rootCmd.Flags().IntVar(&options.ShOpt.PortOffset, "port-offset", 0, "If specified, all components will use default_port+port_offset as the port. This argument is useful when you want to start multiple playgrounds on the same host. Recommend to set to 10000, 20000, etc.")
+	rootCmd.Flags().IntVar(&state.options.GrafanaPort, "grafana.port", 3000, "grafana port. If not provided, grafana will use 3000 as its port.")
+	rootCmd.Flags().IntVar(&state.options.ShOpt.PortOffset, "port-offset", 0, "If specified, all components will use default_port+port_offset as the port. This argument is useful when you want to start multiple playgrounds on the same host. Recommend to set to 10000, 20000, etc.")
 
 	// NOTE: Do not set default values if they may be changed in different modes.
 
-	registerServiceFlags(rootCmd.Flags(), options)
+	registerServiceFlags(rootCmd.Flags(), &state.options)
 
-	rootCmd.Flags().StringVar(&options.Host, "host", "127.0.0.1", "Playground cluster host")
+	rootCmd.Flags().StringVar(&state.options.Host, "host", "127.0.0.1", "Playground cluster host")
 
-	rootCmd.AddCommand(newDisplay())
-	rootCmd.AddCommand(newScaleOut())
-	rootCmd.AddCommand(newScaleIn())
+	rootCmd.AddCommand(newDisplay(state))
+	rootCmd.AddCommand(newScaleOut(state))
+	rootCmd.AddCommand(newScaleIn(state))
 
 	return rootCmd.Execute()
 }
 
-func populateDefaultOpt(flagSet *pflag.FlagSet) error {
+func populateDefaultOpt(flagSet *pflag.FlagSet, options *BootOptions) error {
 	if flagSet.Lookup("without-monitor").Changed {
 		v, _ := flagSet.GetBool("without-monitor")
-		options.Monitor = !v
+		if options != nil {
+			options.Monitor = !v
+		}
 	}
 
 	return applyServiceDefaults(flagSet, options)
@@ -432,8 +432,10 @@ func newEtcdClient(endpoint string) (*clientv3.Client, error) {
 func main() {
 	tui.RegisterArg0("tiup playground")
 
+	state := newCLIState()
+
 	code := 0
-	err := execute()
+	err := execute(state)
 	if err != nil {
 		var rendered renderedError
 		if !stdErrors.As(err, &rendered) {
@@ -442,15 +444,11 @@ func main() {
 		}
 		code = 1
 	}
-	removeData()
+	if state != nil && state.deleteWhenExit && state.dataDir != "" {
+		_ = os.RemoveAll(state.dataDir)
+	}
 
 	if code != 0 {
 		os.Exit(code)
-	}
-}
-
-func removeData() {
-	if deleteWhenExit {
-		os.RemoveAll(dataDir)
 	}
 }

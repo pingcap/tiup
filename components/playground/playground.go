@@ -26,35 +26,22 @@ import (
 // Playground represent the playground of a cluster.
 type Playground struct {
 	dataDir         string
-	booted          bool
+	deleteWhenExit  bool
 	bootOptions     *BootOptions
 	bootBaseConfigs map[proc.ServiceID]proc.Config
 	port            int
 
-	startedProcs []proc.Process
+	// shutdownProcRecords snapshots controller-owned proc records at the moment
+	// shutdown starts. It lets termination logic work after the controller loop
+	// is canceled (no more events/commands).
+	shutdownProcRecords []procRecordSnapshot
 
-	// procs holds all running (or planned) component processes grouped by ServiceID.
-	//
-	// It replaces the previous "one field per service" slices, so service-level
-	// behaviors (walk/display/scale/remove) can be implemented generically.
-	//
-	// It is owned by the controller goroutine after boot, so it is intentionally
-	// not protected by a mutex. Boot code builds it before the command server is
-	// started.
-	procs map[proc.ServiceID][]proc.Process
-
-	requiredServices map[proc.ServiceID]int
-	criticalRunning  map[proc.ServiceID]int
-	bootCancel       context.CancelCauseFunc
+	bootCancel context.CancelCauseFunc
 
 	shutdownOnce  sync.Once
 	stoppingCh    chan struct{}
 	interruptedCh chan struct{}
-
-	expectedExit map[int]struct{}
-
-	idAlloc      map[proc.ServiceID]int
-	processGroup *ProcessGroup
+	processGroup  *ProcessGroup
 
 	ui            *progressv2.UI
 	startingGroup *progressv2.Group
@@ -64,7 +51,6 @@ type Playground struct {
 	// progressMu protects UI-related state that is accessed from multiple
 	// goroutines (boot flow, stop handling, instance waiters), including:
 	// - progress groups/tasks (download/starting/shutdown)
-	// - startedProcs snapshots for interrupt handling
 	// - procTitleCounts used for user-facing titles
 	progressMu sync.Mutex
 
@@ -84,6 +70,7 @@ type Playground struct {
 	terminateDoneOnce sync.Once
 
 	controllerOnce   sync.Once
+	controllerCancel context.CancelFunc
 	cmdReqCh         chan commandRequest
 	evtCh            chan controllerEvent
 	controllerDoneCh chan struct{}
@@ -94,10 +81,6 @@ func NewPlayground(dataDir string, port int) *Playground {
 	return &Playground{
 		dataDir:         dataDir,
 		port:            port,
-		idAlloc:         make(map[proc.ServiceID]int),
-		criticalRunning: make(map[proc.ServiceID]int),
-		expectedExit:    make(map[int]struct{}),
-		procs:           make(map[proc.ServiceID][]proc.Process),
 		stoppingCh:      make(chan struct{}),
 		interruptedCh:   make(chan struct{}),
 		terminateDoneCh: make(chan struct{}),

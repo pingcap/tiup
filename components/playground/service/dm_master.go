@@ -9,7 +9,19 @@ import (
 
 func init() {
 	MustRegister(Spec{
-		ServiceID:   proc.ServiceDMMaster,
+		ServiceID: proc.ServiceDMMaster,
+		Catalog: Catalog{
+			FlagPrefix:         "dm-master",
+			AllowModifyNum:     true,
+			AllowModifyHost:    true,
+			AllowModifyPort:    true,
+			DefaultPort:        8261,
+			AllowModifyConfig:  true,
+			AllowModifyBinPath: true,
+			DefaultNum:         func(_ BootContext) int { return 0 },
+			IsEnabled:          func(_ BootContext) bool { return true },
+			AllowScaleOut:      true,
+		},
 		NewProc:     newDMMasterInstance,
 		ScaleInHook: scaleInDMMaster,
 	})

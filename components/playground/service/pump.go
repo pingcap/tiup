@@ -4,16 +4,23 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"syscall"
 	"time"
 
 	"github.com/pingcap/tiup/components/playground/proc"
-	"github.com/pingcap/tiup/pkg/cluster/api"
 )
 
 func init() {
 	MustRegister(Spec{
 		ServiceID: proc.ServicePump,
+		Catalog: Catalog{
+			FlagPrefix:         "pump",
+			AllowModifyNum:     true,
+			AllowModifyConfig:  true,
+			AllowModifyBinPath: true,
+			DefaultNum:         func(_ BootContext) int { return 0 },
+			IsEnabled:          func(_ BootContext) bool { return true },
+			AllowScaleOut:      true,
+		},
 		StartAfter: []proc.ServiceID{
 			proc.ServicePD,
 			proc.ServicePDAPI,
@@ -67,51 +74,18 @@ func scaleInPumpByOffline(rt Runtime, w io.Writer, inst proc.Process, pid int) (
 	if err := c.OfflinePump(ctxOffline, pump.Addr()); err != nil {
 		return false, err
 	}
-	go watchPumpTombstone(rt, c, pump)
+	go watchAsyncScaleInStop(rt, 5*time.Second, func() (done bool, err error) {
+		ctxProbe, cancelProbe := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancelProbe()
+		return c.IsPumpTombstone(ctxProbe, pump.Addr())
+	}, asyncScaleInStopEvent{
+		serviceID:   proc.ServicePump,
+		inst:        pump,
+		stopMessage: fmt.Sprintf("stop offline pump %s", pump.Addr()),
+	})
 
 	if w != nil {
 		fmt.Fprintf(w, "requested scale-in %s (waiting for offline)\n", pump.Addr())
 	}
 	return true, nil
-}
-
-type pumpTombstoneEvent struct {
-	inst *proc.Pump
-}
-
-func (e pumpTombstoneEvent) Handle(rt Runtime) {
-	if rt == nil || e.inst == nil {
-		return
-	}
-
-	if !rt.RemoveProc(proc.ServicePump, e.inst) {
-		return
-	}
-
-	fmt.Fprintf(rt.TermWriter(), "stop offline pump %s\n", e.inst.Addr())
-	pid := 0
-	if info := e.inst.Info(); info != nil && info.Proc != nil {
-		pid = info.Proc.Pid()
-	}
-	rt.ExpectExitPID(pid)
-	if pid > 0 {
-		if err := syscall.Kill(pid, syscall.SIGQUIT); err != nil {
-			fmt.Fprintln(rt.TermWriter(), err)
-		}
-	}
-
-	rt.OnProcsChanged()
-}
-
-func watchPumpTombstone(rt Runtime, c *api.BinlogClient, inst *proc.Pump) {
-	if rt == nil || c == nil || inst == nil {
-		return
-	}
-	pollUntil(rt, 5*time.Second, 0, func() (done bool, err error) {
-		ctxProbe, cancelProbe := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancelProbe()
-		return c.IsPumpTombstone(ctxProbe, inst.Addr())
-	}, func() {
-		rt.EmitEvent(pumpTombstoneEvent{inst: inst})
-	})
 }

@@ -23,6 +23,10 @@ type ReadyWaiter interface {
 	WaitReady(ctx context.Context) error
 }
 
+func readyTimeoutError(timeoutSec int) error {
+	return fmt.Errorf("timeout (%ds)", timeoutSec)
+}
+
 func tcpAddrReady(ctx context.Context, addr string, timeoutSec int) error {
 	if addr == "" {
 		return fmt.Errorf("empty address")
@@ -41,7 +45,10 @@ func tcpAddrReady(ctx context.Context, addr string, timeoutSec int) error {
 		if deadline, ok := ctx.Deadline(); ok {
 			remain := time.Until(deadline)
 			if remain <= 0 {
-				return fmt.Errorf("timeout (%ds)", timeoutSec)
+				if timeoutSec > 0 {
+					return readyTimeoutError(timeoutSec)
+				}
+				return context.DeadlineExceeded
 			}
 			if remain < perAttempt {
 				perAttempt = remain
@@ -58,7 +65,7 @@ func tcpAddrReady(ctx context.Context, addr string, timeoutSec int) error {
 		case <-ctx.Done():
 			err := ctx.Err()
 			if err == context.DeadlineExceeded && timeoutSec > 0 {
-				return fmt.Errorf("timeout (%ds)", timeoutSec)
+				return readyTimeoutError(timeoutSec)
 			}
 			return err
 		case <-ticker.C:

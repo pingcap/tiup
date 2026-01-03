@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/playground/proc"
+	pgservice "github.com/pingcap/tiup/components/playground/service"
 	"github.com/spf13/pflag"
 )
 
@@ -10,35 +11,56 @@ func registerServiceFlags(flagSet *pflag.FlagSet, opts *BootOptions) {
 	if flagSet == nil || opts == nil {
 		return
 	}
-	for _, def := range serviceCatalog {
-		if def.FlagPrefix == "" {
+
+	serviceDisplayName := func(serviceID proc.ServiceID) string {
+		if serviceID != "" {
+			if s := proc.ServiceDisplayName(serviceID); s != "" {
+				return s
+			}
+			return serviceID.String()
+		}
+		return "service"
+	}
+
+	for _, spec := range pgservice.AllSpecs() {
+		def := spec.Catalog
+		if def.FlagPrefix == "" || spec.ServiceID == "" {
 			continue
 		}
-		cfg := opts.Service(def.ServiceID)
+		cfg := opts.Service(spec.ServiceID)
 		if cfg == nil {
 			continue
 		}
 
-		if def.HasCount {
-			flagSet.IntVar(&cfg.Num, def.countFlag(), 0, def.helpCount())
+		displayName := serviceDisplayName(spec.ServiceID)
+		countFlag := def.FlagPrefix
+		hostFlag := def.FlagPrefix + ".host"
+		portFlag := def.FlagPrefix + ".port"
+		configFlag := def.FlagPrefix + ".config"
+		binPathFlag := def.FlagPrefix + ".binpath"
+		timeoutFlag := def.FlagPrefix + ".timeout"
+		versionFlag := def.FlagPrefix + ".version"
+
+		if def.AllowModifyNum {
+			flagSet.IntVar(&cfg.Num, countFlag, 0, displayName+" instance number")
 		}
-		if def.HasHost {
-			flagSet.StringVar(&cfg.Host, def.hostFlag(), "", def.helpHost())
+		if def.AllowModifyHost {
+			flagSet.StringVar(&cfg.Host, hostFlag, "", displayName+" host (default: --host)")
 		}
-		if def.HasPort {
-			flagSet.IntVar(&cfg.Port, def.portFlag(), def.PortDefault, def.helpPort())
+		if def.AllowModifyPort {
+			flagSet.IntVar(&cfg.Port, portFlag, def.DefaultPort, displayName+" port (0 means default)")
 		}
-		if def.HasConfig {
-			flagSet.StringVar(&cfg.ConfigPath, def.configFlag(), "", def.helpConfig())
+		if def.AllowModifyConfig {
+			flagSet.StringVar(&cfg.ConfigPath, configFlag, "", displayName+" instance configuration file")
 		}
-		if def.HasBinPath {
-			flagSet.StringVar(&cfg.BinPath, def.binPathFlag(), "", def.helpBinPath())
+		if def.AllowModifyBinPath {
+			flagSet.StringVar(&cfg.BinPath, binPathFlag, "", displayName+" instance binary path")
 		}
-		if def.HasTimeout {
-			flagSet.IntVar(&cfg.UpTimeout, def.timeoutFlag(), def.TimeoutDefault, def.helpTimeout())
+		if def.AllowModifyTimeout {
+			flagSet.IntVar(&cfg.UpTimeout, timeoutFlag, def.DefaultTimeout, displayName+" max wait time in seconds for starting, 0 means no limit")
 		}
-		if def.HasVersion {
-			flagSet.StringVar(&cfg.Version, def.versionFlag(), "", def.helpVersion())
+		if def.AllowModifyVersion {
+			flagSet.StringVar(&cfg.Version, versionFlag, "", displayName+" instance version (override)")
 		}
 	}
 }
@@ -60,17 +82,6 @@ func applyServiceDefaults(flagSet *pflag.FlagSet, opts *BootOptions) error {
 		return errors.Errorf("Unknown --pd.mode %s", opts.ShOpt.PDMode)
 	}
 
-	defaultInt := func(flagName string, dst *int, v int) {
-		if dst == nil || flagName == "" {
-			return
-		}
-		f := flagSet.Lookup(flagName)
-		if f == nil || f.Changed {
-			return
-		}
-		*dst = v
-	}
-
 	defaultStr := func(flagName string, dst *string, v string) {
 		if dst == nil || flagName == "" {
 			return
@@ -83,32 +94,52 @@ func applyServiceDefaults(flagSet *pflag.FlagSet, opts *BootOptions) error {
 	}
 
 	// Apply default counts first (some later defaults depend on these).
-	for _, def := range serviceCatalog {
-		if def.FlagPrefix == "" || !def.HasCount || def.DefaultNum == nil {
-			continue
+	{
+		specs := pgservice.AllSpecs()
+		for i := 0; i < 8; i++ {
+			changed := false
+			for _, spec := range specs {
+				def := spec.Catalog
+				if def.FlagPrefix == "" || spec.ServiceID == "" || !def.AllowModifyNum || def.DefaultNum == nil {
+					continue
+				}
+				cfg := opts.Service(spec.ServiceID)
+				if cfg == nil {
+					continue
+				}
+				flagName := def.FlagPrefix
+				f := flagSet.Lookup(flagName)
+				if f == nil || f.Changed {
+					continue
+				}
+				want := def.DefaultNum(opts)
+				if cfg.Num != want {
+					cfg.Num = want
+					changed = true
+				}
+			}
+			if !changed {
+				break
+			}
 		}
-		cfg := opts.Service(def.ServiceID)
-		if cfg == nil {
-			continue
-		}
-		defaultInt(def.countFlag(), &cfg.Num, def.DefaultNum(opts))
 	}
 
 	// Apply field defaults derived from another service.
-	for _, def := range serviceCatalog {
-		if def.FlagPrefix == "" {
+	for _, spec := range pgservice.AllSpecs() {
+		def := spec.Catalog
+		if def.FlagPrefix == "" || spec.ServiceID == "" {
 			continue
 		}
-		cfg := opts.Service(def.ServiceID)
+		cfg := opts.Service(spec.ServiceID)
 		if cfg == nil {
 			continue
 		}
 
-		if def.DefaultBinPathFrom != "" && def.HasBinPath {
-			defaultStr(def.binPathFlag(), &cfg.BinPath, opts.Service(def.DefaultBinPathFrom).BinPath)
+		if def.DefaultBinPathFrom != "" && def.AllowModifyBinPath {
+			defaultStr(def.FlagPrefix+".binpath", &cfg.BinPath, opts.Service(def.DefaultBinPathFrom).BinPath)
 		}
-		if def.DefaultConfigPathFrom != "" && def.HasConfig {
-			defaultStr(def.configFlag(), &cfg.ConfigPath, opts.Service(def.DefaultConfigPathFrom).ConfigPath)
+		if def.DefaultConfigPathFrom != "" && def.AllowModifyConfig {
+			defaultStr(def.FlagPrefix+".config", &cfg.ConfigPath, opts.Service(def.DefaultConfigPathFrom).ConfigPath)
 		}
 		if def.DefaultTimeoutFrom != "" {
 			cfg.UpTimeout = opts.Service(def.DefaultTimeoutFrom).UpTimeout
@@ -116,11 +147,12 @@ func applyServiceDefaults(flagSet *pflag.FlagSet, opts *BootOptions) error {
 	}
 
 	// Apply full config copies last.
-	for _, def := range serviceCatalog {
+	for _, spec := range pgservice.AllSpecs() {
+		def := spec.Catalog
 		if def.CopyFrom == "" || def.CopyWhen == nil || !def.CopyWhen(opts) {
 			continue
 		}
-		dst := opts.Service(def.ServiceID)
+		dst := opts.Service(spec.ServiceID)
 		src := opts.Service(def.CopyFrom)
 		if dst == nil || src == nil {
 			continue

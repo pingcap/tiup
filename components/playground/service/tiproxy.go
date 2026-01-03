@@ -11,6 +11,20 @@ import (
 func init() {
 	MustRegister(Spec{
 		ServiceID: proc.ServiceTiProxy,
+		Catalog: Catalog{
+			FlagPrefix:         "tiproxy",
+			AllowModifyNum:     true,
+			AllowModifyHost:    true,
+			AllowModifyPort:    true,
+			AllowModifyConfig:  true,
+			AllowModifyBinPath: true,
+			AllowModifyTimeout: true,
+			DefaultTimeout:     60,
+			AllowModifyVersion: true,
+			DefaultNum:         func(_ BootContext) int { return 0 },
+			IsEnabled:          func(_ BootContext) bool { return true },
+			AllowScaleOut:      true,
+		},
 		StartAfter: []proc.ServiceID{
 			proc.ServicePD,
 			proc.ServicePDAPI,

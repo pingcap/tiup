@@ -18,10 +18,9 @@ func (p *Playground) bootCluster(ctx context.Context, options *BootOptions) (err
 	}
 
 	p.bootOptions = options
-	p.setRequiredServices(options)
 	// Start the controller early so instance lifecycle events (started/exited)
 	// can be handled via the actor loop during boot.
-	p.startController(ctx)
+	p.startController()
 	p.setControllerBooting(ctx, true)
 	defer p.setControllerBooting(context.Background(), false)
 
@@ -29,18 +28,20 @@ func (p *Playground) bootCluster(ctx context.Context, options *BootOptions) (err
 		return err
 	}
 
-	plans, err := planProcs(options)
+	plan, err := buildBootPlan(options)
 	if err != nil {
 		return err
 	}
-	p.bootBaseConfigs = make(map[proc.ServiceID]proc.Config, len(plans))
-	for _, plan := range plans {
-		p.bootBaseConfigs[plan.serviceID] = plan.cfg
-	}
-	if err := p.addPlannedProcs(plans); err != nil {
+
+	p.bootBaseConfigs = plan.BaseConfigs
+	required := plan.RequiredServices
+	p.setControllerRequiredServices(ctx, required)
+
+	if err := p.addPlannedProcs(ctx, plan.Plans); err != nil {
 		return err
 	}
 
+	planned := p.procsSnapshot()
 	startingTasks := p.initBootStartingTasks()
 
 	p.progressMu.Lock()
@@ -66,32 +67,24 @@ func (p *Playground) bootCluster(ctx context.Context, options *BootOptions) (err
 		}()
 	}
 
-	starter := newBootStarter(p, ctx, preloader)
-	tidbReady, tiproxyReady, err := starter.startPlanned(plans)
+	starter := newBootStarter(p, ctx, preloader, planned, required)
+	ready, err := starter.startPlanned(plan.Plans)
 	if err != nil {
 		return err
 	}
 
-	tidbSucc := starter.waitReadyAddrs(tidbReady)
-	tiproxySucc := starter.waitReadyAddrs(tiproxyReady)
+	// Ensure critical services become ready before concluding boot. This is
+	// especially important for modes like TiKV-slim where TiDB is not started and
+	// thus won't implicitly wait for TiKV readiness via StartAfter.
+	if err := starter.waitRequiredReady(); err != nil {
+		return err
+	}
+
+	tidbSucc := starter.waitReadyAddrs(ready[proc.ServiceTiDB])
+	tiproxySucc := starter.waitReadyAddrs(ready[proc.ServiceTiProxy])
 
 	if ctx.Err() != nil {
 		return ctx.Err()
-	}
-
-	// TiDB is a critical component for all modes that include it. If none becomes
-	// ready, abort boot and stop the cluster instead of continuing to start
-	// optional components.
-	if options.ShOpt.Mode != proc.ModeTiKVSlim && options.Service(proc.ServiceTiDB).Num > 0 && len(tidbSucc) == 0 {
-		return fmt.Errorf("no TiDB instance became ready")
-	}
-
-	if len(tidbSucc) > 0 {
-		if err := p.startTiFlashAfterTiDB(ctx, preloader); err != nil {
-			return err
-		}
-	} else if ctx.Err() == nil {
-		p.skipTiFlashStartingTasks("no TiDB ready")
 	}
 
 	// Conclude "Starting instances" before printing user-facing hints, so the
@@ -120,7 +113,7 @@ func (p *Playground) bootCluster(ctx context.Context, options *BootOptions) (err
 
 	// Mark boot as completed before starting the HTTP command server, so
 	// subsequent scale-out operations can follow the "join" path.
-	p.booted = true
+	p.setControllerBooted(context.Background(), true)
 
 	// Start the HTTP command server last, after all post-start
 	// artifacts (sd file, dsn, topology hints) are ready.

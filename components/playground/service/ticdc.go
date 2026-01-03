@@ -5,6 +5,17 @@ import "github.com/pingcap/tiup/components/playground/proc"
 func init() {
 	MustRegister(Spec{
 		ServiceID: proc.ServiceTiCDC,
+		Catalog: Catalog{
+			FlagPrefix:         "ticdc",
+			AllowModifyNum:     true,
+			AllowModifyHost:    true,
+			AllowModifyPort:    true,
+			AllowModifyConfig:  true,
+			AllowModifyBinPath: true,
+			DefaultNum:         func(_ BootContext) int { return 0 },
+			IsEnabled:          func(_ BootContext) bool { return true },
+			AllowScaleOut:      true,
+		},
 		StartAfter: []proc.ServiceID{
 			proc.ServicePD,
 			proc.ServicePDAPI,

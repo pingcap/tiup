@@ -21,7 +21,7 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
-func (inst *TiDBInstance) getConfig(kvwrks []*TiKVWorkerInstance) map[string]any {
+func (inst *TiDBInstance) getConfig(kvwrks []*TiKVWorkerInstance) (map[string]any, error) {
 	config := make(map[string]any)
 	config["security.auto-tls"] = true
 
@@ -66,6 +66,9 @@ func (inst *TiDBInstance) getConfig(kvwrks []*TiKVWorkerInstance) map[string]any
 		config["disaggregated-tiflash"] = true
 		if inst.Service == ServiceTiDBSystem {
 			config["instance.tidb_service_scope"] = "dxf_service"
+			if len(kvwrks) == 0 {
+				return nil, fmt.Errorf("tidb-system requires tikv-worker")
+			}
 			config["tikv-worker-url"] = fmt.Sprintf("http://%s", utils.JoinHostPort(AdvertiseHost(kvwrks[0].Host), kvwrks[0].Port))
 			config["keyspace-name"] = "SYSTEM"
 		} else {
@@ -82,5 +85,5 @@ func (inst *TiDBInstance) getConfig(kvwrks []*TiKVWorkerInstance) map[string]any
 		config["security.session-token-signing-key"] = tiproxyKeyPath
 	}
 
-	return config
+	return config, nil
 }

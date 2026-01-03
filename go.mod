@@ -22,7 +22,6 @@ require (
 	github.com/gibson042/canonicaljson-go v1.0.3
 	github.com/gizak/termui/v3 v3.1.0
 	github.com/go-sql-driver/mysql v1.7.1
-	github.com/go4org/hashtriemap v0.0.0-20251130024219-545ba229f689
 	github.com/gofrs/flock v0.8.1
 	github.com/gogo/protobuf v1.3.2
 	github.com/google/uuid v1.6.0
