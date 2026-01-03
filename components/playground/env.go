@@ -14,46 +14,81 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 
 	"github.com/pingcap/errors"
 )
 
-// targetTag find the target playground we want to send the command.
-// first try the tag of current instance, then find the first playground.
-// so, if running multi playground, you must specify the tag to send the command to.
-// note the flowing two instance will use two different tag.
-// 1. tiup playground
-// 2. tiup playground display
 func targetTag() (port int, err error) {
-	port, err = loadPort(dataDir)
-	if err == nil {
+	// If the caller provides an explicit target (tag or TIUP_INSTANCE_DATA_DIR),
+	// do not guess.
+	if tag != "" || tiupDataDir != "" {
+		port, err := loadPort(dataDir)
+		if err != nil {
+			return 0, playgroundNotRunningError{err: errors.Annotatef(err, "no playground running for tag %q", tag)}
+		}
 		return port, nil
 	}
-	err = nil
 
-	_ = filepath.Walk(filepath.Dir(dataDir), func(path string, info os.FileInfo, err error) error {
-		if port != 0 {
-			return filepath.SkipDir
-		}
-
-		// ignore error
-		if err != nil {
-			return nil
-		}
-
-		if !info.IsDir() {
-			return nil
-		}
-
-		port, _ = loadPort(path)
-		return nil
-	})
-
-	if port == 0 {
-		return 0, errors.Errorf("no playground running")
+	baseDir := dataDir
+	if baseDir == "" {
+		return 0, playgroundNotRunningError{err: errors.Errorf("no playground running")}
 	}
 
-	return
+	targets, err := listPlaygroundTargets(baseDir)
+	if err != nil {
+		return 0, errors.AddStack(err)
+	}
+	if len(targets) == 0 {
+		return 0, playgroundNotRunningError{err: errors.Errorf("no playground running")}
+	}
+	if len(targets) == 1 {
+		// Single running playground: implicit selection is unambiguous.
+		t := targets[0]
+		tag = t.tag
+		dataDir = t.dir
+		return t.port, nil
+	}
+
+	var items []string
+	for _, t := range targets {
+		items = append(items, fmt.Sprintf("%s(%d)", t.tag, t.port))
+	}
+	slices.Sort(items)
+	return 0, errors.Errorf("multiple playgrounds found: %s; please specify --tag", strings.Join(items, ", "))
+}
+
+type playgroundTarget struct {
+	tag  string
+	dir  string
+	port int
+}
+
+func listPlaygroundTargets(baseDir string) ([]playgroundTarget, error) {
+	entries, err := os.ReadDir(baseDir)
+	if err != nil {
+		return nil, errors.AddStack(err)
+	}
+
+	var out []playgroundTarget
+	for _, ent := range entries {
+		if !ent.IsDir() {
+			continue
+		}
+		dir := filepath.Join(baseDir, ent.Name())
+		port, err := loadPort(dir)
+		if err != nil || port <= 0 {
+			continue
+		}
+		out = append(out, playgroundTarget{tag: ent.Name(), dir: dir, port: port})
+	}
+
+	slices.SortStableFunc(out, func(a, b playgroundTarget) int {
+		return strings.Compare(a.tag, b.tag)
+	})
+	return out, nil
 }

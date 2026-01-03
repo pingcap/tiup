@@ -196,7 +196,7 @@ func cmdCheckUpdate(component string, version utils.Version) {
 
 	go func() {
 		time.Sleep(cancelTimeout)
-		result <- colorstr.Sprintf("[yellow]Timedout (after %s)", cancelTimeout)
+		result <- colorstr.SprintfForWriter(os.Stderr, "[yellow]Timedout (after %s)", cancelTimeout)
 	}()
 
 	go func() {
@@ -208,7 +208,7 @@ func cmdCheckUpdate(component string, version utils.Version) {
 		selectVer, _ := environment.GlobalEnv().SelectInstalledVersion(component, version)
 
 		if semver.Compare(selectVer.String(), latestV.String()) < 0 {
-			result <- colorstr.Sprintf(`
+			result <- colorstr.SprintfForWriter(os.Stderr, `
 [yellow]A new version of [bold]%[1]s[reset][yellow] is available:[reset] [red][bold]%[2]s[reset] -> [green][bold]%[3]s[reset]
 
     To update this component:   [tiup_command]tiup update %[1]s[reset]

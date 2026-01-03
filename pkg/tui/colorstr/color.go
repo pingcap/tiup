@@ -26,8 +26,10 @@ package colorstr
 import (
 	"fmt"
 	"io"
+	"os"
 
 	"github.com/mitchellh/colorstring"
+	tuiterm "github.com/pingcap/tiup/pkg/tui/term"
 )
 
 type colorTokens struct {
@@ -57,8 +59,6 @@ func (c colorTokens) Sprintf(format string, a ...any) string {
 
 // DefaultTokens uses default color tokens.
 var DefaultTokens = (func() colorTokens {
-	// TODO: Respect NO_COLOR env
-	// TODO: Add more color tokens here
 	colors := make(map[string]string)
 	for k, v := range colorstring.DefaultColors {
 		colors[k] = v
@@ -72,20 +72,32 @@ var DefaultTokens = (func() colorTokens {
 	}
 })()
 
+func tokensForWriter(w io.Writer) colorTokens {
+	tokens := DefaultTokens
+	tokens.Disable = !tuiterm.Resolve(w).Color
+	return tokens
+}
+
 // Printf is a convenience wrapper for fmt.Printf with support for color codes.
 // Only color codes in the format param will be respected.
 func Printf(format string, a ...any) (n int, err error) {
-	return DefaultTokens.Printf(format, a...)
+	return Fprintf(os.Stdout, format, a...)
 }
 
 // Fprintf is a convenience wrapper for fmt.Fprintf with support for color codes.
 // Only color codes in the format param will be respected.
 func Fprintf(w io.Writer, format string, a ...any) (n int, err error) {
-	return DefaultTokens.Fprintf(w, format, a...)
+	return tokensForWriter(w).Fprintf(w, format, a...)
+}
+
+// SprintfForWriter is like Sprintf but resolves whether to output ANSI codes
+// based on the provided writer.
+func SprintfForWriter(w io.Writer, format string, a ...any) string {
+	return tokensForWriter(w).Sprintf(format, a...)
 }
 
 // Sprintf is a convenience wrapper for fmt.Sprintf with support for color codes.
 // Only color codes in the format param will be respected.
 func Sprintf(format string, a ...any) string {
-	return DefaultTokens.Sprintf(format, a...)
+	return tokensForWriter(os.Stdout).Sprintf(format, a...)
 }
