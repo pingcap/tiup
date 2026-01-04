@@ -17,7 +17,7 @@ func init() {
 	MustRegister(Spec{
 		ServiceID: proc.ServicePrometheus,
 		Catalog: Catalog{
-			IsEnabled:   func(ctx BootContext) bool { return ctx != nil && ctx.MonitorEnabled() },
+			IsEnabled:   func(ctx BootContext) bool { return ctx.MonitorEnabled() },
 			PlanConfig:  func(_ BootContext) proc.Config { return proc.Config{Num: 1} },
 			VersionBind: stripNextGenVersionSuffix,
 		},
@@ -44,12 +44,9 @@ func init() {
 	MustRegister(Spec{
 		ServiceID: proc.ServiceGrafana,
 		Catalog: Catalog{
-			IsEnabled: func(ctx BootContext) bool { return ctx != nil && ctx.MonitorEnabled() },
+			IsEnabled: func(ctx BootContext) bool { return ctx.MonitorEnabled() },
 			PlanConfig: func(ctx BootContext) proc.Config {
-				port := 0
-				if ctx != nil {
-					port = ctx.GrafanaPortOverride()
-				}
+				port := ctx.GrafanaPortOverride()
 				return proc.Config{Num: 1, Port: port}
 			},
 			VersionBind: stripNextGenVersionSuffix,
@@ -87,7 +84,7 @@ func init() {
 		ServiceID: proc.ServiceNGMonitoring,
 		Catalog: Catalog{
 			IsEnabled: func(ctx BootContext) bool {
-				if ctx == nil || !ctx.MonitorEnabled() {
+				if !ctx.MonitorEnabled() {
 					return false
 				}
 				// ng-monitoring-server is only available in newer releases. Skip it on

@@ -16,6 +16,7 @@ func init() {
 			AllowModifyNum:     true,
 			AllowModifyHost:    true,
 			AllowModifyPort:    true,
+			DefaultPort:        6000,
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
 			AllowModifyTimeout: true,

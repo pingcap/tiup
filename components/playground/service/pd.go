@@ -22,11 +22,12 @@ func init() {
 				AllowModifyNum:     true,
 				AllowModifyHost:    true,
 				AllowModifyPort:    true,
+				DefaultPort:        2379,
 				AllowModifyConfig:  true,
 				AllowModifyBinPath: true,
 				DefaultNum:         func(_ BootContext) int { return 1 },
-				IsEnabled:          func(ctx BootContext) bool { return ctx != nil && ctx.SharedOptions().PDMode != "ms" },
-				IsCritical:         func(ctx BootContext) bool { return ctx != nil && ctx.SharedOptions().PDMode != "ms" },
+				IsEnabled:          func(ctx BootContext) bool { return ctx.SharedOptions().PDMode != "ms" },
+				IsCritical:         func(ctx BootContext) bool { return ctx.SharedOptions().PDMode != "ms" },
 				AllowScaleOut:      true,
 			},
 		},
@@ -34,11 +35,29 @@ func init() {
 			serviceID: proc.ServicePDAPI,
 			scaleIn:   scaleInPDMember,
 			catalog: Catalog{
-				IsEnabled:     func(ctx BootContext) bool { return ctx != nil && ctx.SharedOptions().PDMode == "ms" },
-				CopyFrom:      proc.ServicePD,
-				CopyWhen:      func(ctx BootContext) bool { return ctx != nil && ctx.SharedOptions().PDMode == "ms" },
-				IsCritical:    func(ctx BootContext) bool { return ctx != nil && ctx.SharedOptions().PDMode == "ms" },
-				AllowScaleOut: true,
+				FlagPrefix:         "pd.api",
+				AllowModifyNum:     true,
+				AllowModifyHost:    true,
+				AllowModifyPort:    true,
+				DefaultPort:        2379,
+				AllowModifyConfig:  true,
+				AllowModifyBinPath: true,
+				DefaultNum: func(ctx BootContext) int {
+					if ctx.SharedOptions().PDMode != "ms" {
+						return 0
+					}
+					// Default to the same count as `--pd`, so users can configure the
+					// PD microservices cluster size with one flag and override it with
+					// `--pd.api` when needed.
+					return ctx.ServiceConfigFor(proc.ServicePD).Num
+				},
+				DefaultBinPathFrom:    proc.ServicePD,
+				DefaultConfigPathFrom: proc.ServicePD,
+				DefaultHostFrom:       proc.ServicePD,
+				DefaultPortFrom:       proc.ServicePD,
+				IsEnabled:             func(ctx BootContext) bool { return ctx.SharedOptions().PDMode == "ms" },
+				IsCritical:            func(ctx BootContext) bool { return ctx.SharedOptions().PDMode == "ms" },
+				AllowScaleOut:         true,
 			},
 		},
 		{
@@ -51,15 +70,15 @@ func init() {
 				AllowModifyConfig:  true,
 				AllowModifyBinPath: true,
 				DefaultNum: func(ctx BootContext) int {
-					if ctx != nil && ctx.SharedOptions().PDMode == "ms" {
+					if ctx.SharedOptions().PDMode == "ms" {
 						return 1
 					}
 					return 0
 				},
 				DefaultBinPathFrom:    proc.ServicePD,
 				DefaultConfigPathFrom: proc.ServicePD,
-				IsEnabled:             func(ctx BootContext) bool { return ctx != nil && ctx.SharedOptions().PDMode == "ms" },
-				IsCritical:            func(ctx BootContext) bool { return ctx != nil && ctx.SharedOptions().PDMode == "ms" },
+				IsEnabled:             func(ctx BootContext) bool { return ctx.SharedOptions().PDMode == "ms" },
+				IsCritical:            func(ctx BootContext) bool { return ctx.SharedOptions().PDMode == "ms" },
 				AllowScaleOut:         true,
 			},
 		},
@@ -73,15 +92,15 @@ func init() {
 				AllowModifyConfig:  true,
 				AllowModifyBinPath: true,
 				DefaultNum: func(ctx BootContext) int {
-					if ctx != nil && ctx.SharedOptions().PDMode == "ms" {
+					if ctx.SharedOptions().PDMode == "ms" {
 						return 1
 					}
 					return 0
 				},
 				DefaultBinPathFrom:    proc.ServicePD,
 				DefaultConfigPathFrom: proc.ServicePD,
-				IsEnabled:             func(ctx BootContext) bool { return ctx != nil && ctx.SharedOptions().PDMode == "ms" },
-				IsCritical:            func(ctx BootContext) bool { return ctx != nil && ctx.SharedOptions().PDMode == "ms" },
+				IsEnabled:             func(ctx BootContext) bool { return ctx.SharedOptions().PDMode == "ms" },
+				IsCritical:            func(ctx BootContext) bool { return ctx.SharedOptions().PDMode == "ms" },
 				AllowScaleOut:         true,
 			},
 		},
@@ -97,7 +116,7 @@ func init() {
 				DefaultNum:            func(_ BootContext) int { return 0 },
 				DefaultBinPathFrom:    proc.ServicePD,
 				DefaultConfigPathFrom: proc.ServicePD,
-				IsEnabled:             func(ctx BootContext) bool { return ctx != nil && ctx.SharedOptions().PDMode == "ms" },
+				IsEnabled:             func(ctx BootContext) bool { return ctx.SharedOptions().PDMode == "ms" },
 				AllowScaleOut:         true,
 			},
 		},
@@ -113,7 +132,7 @@ func init() {
 				DefaultNum:            func(_ BootContext) int { return 0 },
 				DefaultBinPathFrom:    proc.ServicePD,
 				DefaultConfigPathFrom: proc.ServicePD,
-				IsEnabled:             func(ctx BootContext) bool { return ctx != nil && ctx.SharedOptions().PDMode == "ms" },
+				IsEnabled:             func(ctx BootContext) bool { return ctx.SharedOptions().PDMode == "ms" },
 				AllowScaleOut:         true,
 			},
 		},

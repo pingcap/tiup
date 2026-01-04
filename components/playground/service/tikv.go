@@ -16,6 +16,7 @@ func init() {
 			AllowModifyNum:     true,
 			AllowModifyHost:    true,
 			AllowModifyPort:    true,
+			DefaultPort:        20160,
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
 			DefaultNum:         func(_ BootContext) int { return 1 },

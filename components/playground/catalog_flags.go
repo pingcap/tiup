@@ -92,6 +92,16 @@ func applyServiceDefaults(flagSet *pflag.FlagSet, opts *BootOptions) error {
 		}
 		*dst = v
 	}
+	defaultInt := func(flagName string, dst *int, v int) {
+		if dst == nil || flagName == "" {
+			return
+		}
+		f := flagSet.Lookup(flagName)
+		if f == nil || f.Changed {
+			return
+		}
+		*dst = v
+	}
 
 	// Apply default counts first (some later defaults depend on these).
 	{
@@ -141,23 +151,15 @@ func applyServiceDefaults(flagSet *pflag.FlagSet, opts *BootOptions) error {
 		if def.DefaultConfigPathFrom != "" && def.AllowModifyConfig {
 			defaultStr(def.FlagPrefix+".config", &cfg.ConfigPath, opts.Service(def.DefaultConfigPathFrom).ConfigPath)
 		}
+		if def.DefaultHostFrom != "" && def.AllowModifyHost {
+			defaultStr(def.FlagPrefix+".host", &cfg.Host, opts.Service(def.DefaultHostFrom).Host)
+		}
+		if def.DefaultPortFrom != "" && def.AllowModifyPort {
+			defaultInt(def.FlagPrefix+".port", &cfg.Port, opts.Service(def.DefaultPortFrom).Port)
+		}
 		if def.DefaultTimeoutFrom != "" {
 			cfg.UpTimeout = opts.Service(def.DefaultTimeoutFrom).UpTimeout
 		}
-	}
-
-	// Apply full config copies last.
-	for _, spec := range pgservice.AllSpecs() {
-		def := spec.Catalog
-		if def.CopyFrom == "" || def.CopyWhen == nil || !def.CopyWhen(opts) {
-			continue
-		}
-		dst := opts.Service(spec.ServiceID)
-		src := opts.Service(def.CopyFrom)
-		if dst == nil || src == nil {
-			continue
-		}
-		*dst = *src
 	}
 
 	return nil

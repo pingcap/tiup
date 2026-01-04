@@ -54,6 +54,9 @@ type PostScaleOutFunc func(w io.Writer, inst proc.Process)
 // BootContext is the minimal boot-time surface that service metadata depends on.
 //
 // It is implemented by *main.BootOptions.
+//
+// BootContext is guaranteed to be non-nil for all catalog callbacks
+// (DefaultNum/IsEnabled/IsCritical/PlanConfig, etc). Callers must not pass nil.
 type BootContext interface {
 	SharedOptions() proc.SharedOptions
 	BootVersion() string
@@ -161,21 +164,21 @@ type Catalog struct {
 	// it.
 	DefaultBinPathFrom    proc.ServiceID
 	DefaultConfigPathFrom proc.ServiceID
+	// DefaultHostFrom copies proc.Config.Host from another service.
+	//
+	// It is only applied when this service exposes the host flag and the host
+	// flag is not explicitly set.
+	DefaultHostFrom proc.ServiceID
+	// DefaultPortFrom copies proc.Config.Port from another service.
+	//
+	// It is only applied when this service exposes the port flag and the port
+	// flag is not explicitly set.
+	DefaultPortFrom proc.ServiceID
 	// DefaultTimeoutFrom copies proc.Config.UpTimeout from another service.
 	//
 	// This is typically used for services that do not expose their own timeout
 	// flag but should follow another service's timeout value.
 	DefaultTimeoutFrom proc.ServiceID
-
-	// CopyFrom copies the entire proc.Config from another service unconditionally
-	// when CopyWhen returns true.
-	//
-	// This is stronger than DefaultXXXFrom: it overwrites all fields of the
-	// destination config (Num/Host/Port/ConfigPath/BinPath/UpTimeout/Version).
-	CopyFrom proc.ServiceID
-	// CopyWhen decides whether CopyFrom should be applied for the current boot
-	// context.
-	CopyWhen func(ctx BootContext) bool
 
 	// IsEnabled decides whether this service is enabled for the current boot
 	// context.

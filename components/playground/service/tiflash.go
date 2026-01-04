@@ -12,9 +12,6 @@ import (
 
 func init() {
 	hasTiDB := func(ctx BootContext) bool {
-		if ctx == nil {
-			return false
-		}
 		return ctx.ServiceConfigFor(proc.ServiceTiDB).Num > 0
 	}
 
@@ -34,9 +31,6 @@ func init() {
 			AllowModifyTimeout: true,
 			DefaultTimeout:     120,
 			DefaultNum: func(ctx BootContext) int {
-				if ctx == nil {
-					return 0
-				}
 				switch ctx.SharedOptions().Mode {
 				case proc.ModeNormal, proc.ModeCSE, proc.ModeDisAgg:
 					v := ctx.BootVersion()
@@ -49,7 +43,7 @@ func init() {
 				}
 			},
 			IsEnabled: func(ctx BootContext) bool {
-				return ctx != nil && ctx.SharedOptions().Mode == proc.ModeNormal && hasTiDB(ctx)
+				return ctx.SharedOptions().Mode == proc.ModeNormal && hasTiDB(ctx)
 			},
 			AllowScaleOut: true,
 		},
@@ -68,9 +62,6 @@ func init() {
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
 			DefaultNum: func(ctx BootContext) int {
-				if ctx == nil {
-					return 0
-				}
 				switch ctx.SharedOptions().Mode {
 				case proc.ModeCSE, proc.ModeNextGen, proc.ModeDisAgg:
 					return ctx.ServiceConfigFor(proc.ServiceTiFlash).Num
@@ -82,9 +73,6 @@ func init() {
 			DefaultConfigPathFrom: proc.ServiceTiFlash,
 			DefaultTimeoutFrom:    proc.ServiceTiFlash,
 			IsEnabled: func(ctx BootContext) bool {
-				if ctx == nil {
-					return false
-				}
 				if !hasTiDB(ctx) {
 					return false
 				}
@@ -111,9 +99,6 @@ func init() {
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
 			DefaultNum: func(ctx BootContext) int {
-				if ctx == nil {
-					return 0
-				}
 				switch ctx.SharedOptions().Mode {
 				case proc.ModeCSE, proc.ModeNextGen, proc.ModeDisAgg:
 					return ctx.ServiceConfigFor(proc.ServiceTiFlash).Num
@@ -125,9 +110,6 @@ func init() {
 			DefaultConfigPathFrom: proc.ServiceTiFlash,
 			DefaultTimeoutFrom:    proc.ServiceTiFlash,
 			IsEnabled: func(ctx BootContext) bool {
-				if ctx == nil {
-					return false
-				}
 				if !hasTiDB(ctx) {
 					return false
 				}

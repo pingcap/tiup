@@ -28,17 +28,18 @@ func init() {
 			MaxNum:             1,
 			AllowModifyHost:    true,
 			AllowModifyPort:    true,
+			DefaultPort:        3000,
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
 			DefaultNum: func(ctx BootContext) int {
-				if ctx != nil && ctx.SharedOptions().Mode == proc.ModeNextGen {
+				if ctx.SharedOptions().Mode == proc.ModeNextGen {
 					return 1
 				}
 				return 0
 			},
 			DefaultBinPathFrom: proc.ServiceTiDB,
-			IsEnabled:          func(ctx BootContext) bool { return ctx != nil && ctx.SharedOptions().Mode == proc.ModeNextGen },
-			IsCritical:         func(ctx BootContext) bool { return ctx != nil && ctx.SharedOptions().Mode == proc.ModeNextGen },
+			IsEnabled:          func(ctx BootContext) bool { return ctx.SharedOptions().Mode == proc.ModeNextGen },
+			IsCritical:         func(ctx BootContext) bool { return ctx.SharedOptions().Mode == proc.ModeNextGen },
 		},
 		StartAfter: startAfter,
 	})
@@ -53,18 +54,19 @@ func init() {
 			AllowModifyNum:     true,
 			AllowModifyHost:    true,
 			AllowModifyPort:    true,
+			DefaultPort:        4000,
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
 			AllowModifyTimeout: true,
 			DefaultTimeout:     60,
 			DefaultNum: func(ctx BootContext) int {
-				if ctx != nil && ctx.SharedOptions().Mode == proc.ModeTiKVSlim {
+				if ctx.SharedOptions().Mode == proc.ModeTiKVSlim {
 					return 0
 				}
 				return 1
 			},
 			IsEnabled:     func(_ BootContext) bool { return true },
-			IsCritical:    func(ctx BootContext) bool { return ctx != nil && ctx.SharedOptions().Mode != proc.ModeTiKVSlim },
+			IsCritical:    func(ctx BootContext) bool { return ctx.SharedOptions().Mode != proc.ModeTiKVSlim },
 			AllowScaleOut: true,
 		},
 		StartAfter:   append([]proc.ServiceID{proc.ServiceTiDBSystem}, startAfter...),

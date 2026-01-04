@@ -15,9 +15,6 @@ func init() {
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
 			DefaultNum: func(ctx BootContext) int {
-				if ctx == nil {
-					return 0
-				}
 				switch ctx.SharedOptions().Mode {
 				case proc.ModeNextGen, proc.ModeCSE, proc.ModeDisAgg:
 					return 1
@@ -27,9 +24,6 @@ func init() {
 			},
 			DefaultBinPathFrom: proc.ServiceTiKV,
 			IsEnabled: func(ctx BootContext) bool {
-				if ctx == nil {
-					return false
-				}
 				switch ctx.SharedOptions().Mode {
 				case proc.ModeNextGen, proc.ModeCSE, proc.ModeDisAgg:
 					return true
