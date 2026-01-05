@@ -1,4 +1,4 @@
-.PHONY: components server targets
+.PHONY: targets
 .DEFAULT_GOAL := default
 
 LANG=C
@@ -44,96 +44,118 @@ default: check build
 include ./tests/Makefile
 
 # Build TiUP and all components
+.PHONY: build
 build: tiup components
 	@# Target: build tiup and all it's components
 
+.PHONY: components
 components: playground client cluster dm server
 	@# Target: build the playground, client, cluster, dm and server components
 
+.PHONY: tiup
 tiup:
 	@# Target: build the tiup driver
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup
 
+.PHONY: playground
 playground:
 	@# Target: build tiup-playground component
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-playground ./components/playground
 
+.PHONY: client
 client:
 	@# Target: build the tiup-client component
 	$(MAKE) -C components/client $(MAKECMDGOALS)
 
+.PHONY: cluster
 cluster:
 	@# Target: build the tiup-cluster component
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-cluster ./components/cluster
 
+.PHONY: dm
 dm:
 	@# Target: build the tiup-dm component
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-dm ./components/dm
 
+.PHONY: ctl
 ctl:
 	@# Target: build the tiup-ctl component
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-ctl ./components/ctl
 
+.PHONY: server
 server:
 	@# Target: build the tiup-server component
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-server ./server
 
+.PHONY: check
 check: fmt lint tidy check-static vet
 	@# Target: run all checkers. (fmt, lint, tidy, check-static and vet)
 	$(MAKE) -C components/client ${MAKECMDGOALS}
 
+.PHONY: check-static
 check-static: tools/bin/golangci-lint
 	@# Target: run the golangci-lint static check tool
 	tools/bin/golangci-lint run --config tools/check/golangci.yaml ./... --timeout=3m --fix
 
+.PHONY: lint
 lint:
 	@# Target: run the lint checker revive
 	@echo "linting"
 	@go tool github.com/mgechev/revive -formatter friendly -config tools/check/revive.toml $(FILES)
 
+.PHONY: vet
 vet:
 	@# Target: run the go vet tool
 	$(GO) vet ./...
 
+.PHONY: tidy
 tidy:
 	@# Target: run tidy check
 	@echo "go mod tidy"
 	./tools/check/check-tidy.sh
 
+.PHONY: clean
 clean:
 	@# Target: run the build cleanup steps
 	@rm -rf bin
 	@rm -rf cover
 	@rm -rf tests/*/{bin/*.test,logs,cover/*.out}
 
+.PHONY: test
 test: failpoint-enable run-tests failpoint-disable
 	@# Target: run tests with failpoint enabled
 	$(MAKE) -C components/client ${MAKECMDGOALS}
 
 # TODO: refactor integration tests base on v1 manifest
 # run-tests: unit-test integration_test
+.PHONY: run-tests
 run-tests: unit-test
 	@# Target: run the unit tests
 
 # Run tests
+.PHONY: unit-test
 unit-test:
 	@# Target: run the code coverage test phase
 	mkdir -p cover
 	TIUP_HOME=$(shell pwd)/tests/tiup $(GOTEST) ./... -covermode=count -coverprofile cover/cov.unit-test.out
 
+.PHONY: race
 race: failpoint-enable
 	@# Target: run race check with failpoint enabled
 	TIUP_HOME=$(shell pwd)/tests/tiup $(GOTEST) -race ./...  || { $(FAILPOINT_DISABLE); exit 1; }
 	@$(FAILPOINT_DISABLE)
 
+.PHONY: failpoint-enable
 failpoint-enable:
 	@# Target: enable failpoint
 	@$(FAILPOINT_ENABLE)
 
+.PHONY: failpoint-disable
 failpoint-disable:
 	@# Target: disable failpoint
 	@$(FAILPOINT_DISABLE)
 
+.PHONY: fmt
 fmt:
 	@# Target: run the go formatter utility
 	@echo "gofmt (simplify)"

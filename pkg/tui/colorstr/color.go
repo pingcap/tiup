@@ -26,8 +26,11 @@ package colorstr
 import (
 	"fmt"
 	"io"
+	"os"
+	"sync/atomic"
 
 	"github.com/mitchellh/colorstring"
+	tuiterm "github.com/pingcap/tiup/pkg/tui/term"
 )
 
 type colorTokens struct {
@@ -57,8 +60,6 @@ func (c colorTokens) Sprintf(format string, a ...any) string {
 
 // DefaultTokens uses default color tokens.
 var DefaultTokens = (func() colorTokens {
-	// TODO: Respect NO_COLOR env
-	// TODO: Add more color tokens here
 	colors := make(map[string]string)
 	for k, v := range colorstring.DefaultColors {
 		colors[k] = v
@@ -72,20 +73,47 @@ var DefaultTokens = (func() colorTokens {
 	}
 })()
 
+var colorEnabled atomic.Bool
+
+func init() {
+	// Enable color when either stdout or stderr supports it. This avoids surprising
+	// "no color on stderr" behavior when stdout is piped but stderr is still a TTY.
+	colorEnabled.Store(tuiterm.ResolveFile(os.Stdout).Color || tuiterm.ResolveFile(os.Stderr).Color)
+}
+
+// SetColorEnabled sets whether ANSI styling output is enabled globally.
+//
+// This matches the behavior of common CLI color libraries (e.g. github.com/fatih/color):
+// the decision is made once and then reused across all output.
+func SetColorEnabled(enabled bool) {
+	colorEnabled.Store(enabled)
+}
+
+// ColorEnabled reports whether ANSI styling output is enabled globally.
+func ColorEnabled() bool {
+	return colorEnabled.Load()
+}
+
+func tokens() colorTokens {
+	tokens := DefaultTokens
+	tokens.Disable = !ColorEnabled()
+	return tokens
+}
+
 // Printf is a convenience wrapper for fmt.Printf with support for color codes.
 // Only color codes in the format param will be respected.
 func Printf(format string, a ...any) (n int, err error) {
-	return DefaultTokens.Printf(format, a...)
+	return Fprintf(os.Stdout, format, a...)
 }
 
 // Fprintf is a convenience wrapper for fmt.Fprintf with support for color codes.
 // Only color codes in the format param will be respected.
 func Fprintf(w io.Writer, format string, a ...any) (n int, err error) {
-	return DefaultTokens.Fprintf(w, format, a...)
+	return tokens().Fprintf(w, format, a...)
 }
 
 // Sprintf is a convenience wrapper for fmt.Sprintf with support for color codes.
 // Only color codes in the format param will be respected.
 func Sprintf(format string, a ...any) string {
-	return DefaultTokens.Sprintf(format, a...)
+	return tokens().Sprintf(format, a...)
 }

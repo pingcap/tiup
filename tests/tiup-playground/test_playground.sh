@@ -35,11 +35,29 @@ set -x
 function check_instance_num() {
     instance=$1
     mustbe=$2
-    num=$(tiup-playground display | grep "$instance" | wc -l | sed 's/ //g')
+    num=$(tiup-playground display | awk -v svc="$instance" '$2==svc {n++} END {print n+0}')
     if [ "$num" != "$mustbe" ]; then
         echo "unexpected $instance instance number: $num"
         tiup-playground display
     fi
+}
+
+function first_instance_name() {
+    service=$1
+    shift
+    tiup-playground "$@" display | awk -v svc="$service" '$2==svc {print $1; exit}'
+}
+
+function first_running_instance_pid() {
+    service=$1
+    shift
+    tiup-playground "$@" display -v | awk -v svc="$service" '$2==svc && $5=="running" {print $7; exit}'
+}
+
+function running_instance_num() {
+    service=$1
+    shift
+    tiup-playground "$@" display | awk -v svc="$service" '$2==svc && $4=="running" {n++} END {print n+0}'
 }
 
 function kill_all() {
@@ -85,29 +103,40 @@ ls "${TIUP_HOME}/data/test_play/prometheus/data"
 # 1(init) + 2(scale-out)
 check_instance_num tidb 3
 
+# scale-in should reject specifying both --name and --pid
+name=$(first_instance_name tidb)
+pid=$(first_running_instance_pid tidb)
+if tiup-playground scale-in --name "$name" --pid "$pid"; then
+    echo "expected scale-in to fail when both --name and --pid are provided"
+    exit 1
+fi
+
 # get pid of one tidb instance and scale-in
-pid=`tiup-playground display | grep "tidb" | awk 'NR==1 {print $1}'`
 tiup-playground scale-in --pid $pid
 
 sleep 5
 check_instance_num tidb 2
 
 # get pid of one tidb instance and kill it
-pid=`tiup-playground display | grep "tidb" | awk 'NR==1 {print $1}'`
+before_running=$(running_instance_num tidb)
+pid=$(first_running_instance_pid tidb)
 kill -9 $pid
 sleep 5
 
 echo "*display after kill -9:"
 tiup-playground display
-tiup-playground display | grep "signal: killed" | wc -l | grep -q "1"
+after_running=$(running_instance_num tidb)
+test "$after_running" -lt "$before_running"
 
 # get pid of one tidb instance and kill it
-pid=`tiup-playground display | grep "tidb" | grep -v "killed" | awk 'NR==1 {print $1}'`
+before_running=$(running_instance_num tidb)
+pid=$(first_running_instance_pid tidb)
 kill $pid
 sleep 5
 echo "*display after kill:"
 tiup-playground display
-tiup-playground display | grep -E "terminated|exit" | wc -l | grep -q "1"
+after_running=$(running_instance_num tidb)
+test "$after_running" -lt "$before_running"
 
 killall -2 tiup-playground.test || killall -2 tiup-playground
 
@@ -134,11 +163,11 @@ timeout 300 grep -q "TiDB Playground Cluster is started" <(tail -f $outfile_1)
 tiup-playground --tag $TAG display | grep -qv "exit"
 
 # TiDB scale-out to 4
-tiup-playground --tag $TAG scale-out --db 2
+tiup-playground --tag $TAG scale-out --service tidb --count 2
 sleep 5
 # TiDB scale-in to 3
-pid=`tiup-playground --tag $TAG display | grep "tidb" | awk 'NR==1 {print $1}'`
-tiup-playground --tag $TAG scale-in --pid $pid
+name=$(first_instance_name tidb --tag $TAG)
+tiup-playground --tag $TAG scale-in --name $name
 sleep 5
 # check number of TiDB instances.
 tidb_num=$(tiup-playground --tag $TAG display | grep "tidb" | wc -l | sed 's/ //g')
@@ -161,8 +190,8 @@ tiup-playground scale-out --kvcdc 2
 sleep 5
 check_instance_num tikv-cdc 3 # 1(init) + 2(scale-out)
 # scale in
-pid=`tiup-playground display | grep "tikv-cdc" | awk 'NR==1 {print $1}'`
-tiup-playground scale-in --pid $pid
+name=$(first_instance_name tikv-cdc)
+tiup-playground scale-in --name $name
 sleep 5
 check_instance_num tikv-cdc 2
 
@@ -181,8 +210,8 @@ tiup-playground scale-out --tiproxy 1
 sleep 5
 check_instance_num tiproxy 2
 # scale in
-pid=`tiup-playground display | grep "tiproxy" | awk 'NR==1 {print $1}'`
-tiup-playground scale-in --pid $pid
+name=$(first_instance_name tiproxy)
+tiup-playground scale-in --name $name
 sleep 5
 check_instance_num tiproxy 1
 
