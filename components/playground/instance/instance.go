@@ -19,6 +19,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 	"github.com/pingcap/errors"
@@ -34,18 +35,30 @@ type Mode = string
 
 var (
 	// ModeNormal is the default mode.
-	ModeNormal = "tidb"
+	ModeNormal Mode = "tidb"
 	// ModeCSE is for CSE testing.
-	ModeCSE = "tidb-cse"
+	ModeCSE Mode = "tidb-cse"
 	// ModeNextGen is for NG testing.
-	ModeNextGen = "tidb-x"
+	ModeNextGen Mode = "tidb-x"
 	// ModeDisAgg is for tiflash testing.
-	ModeDisAgg = "tiflash-disagg"
+	ModeDisAgg Mode = "tiflash-disagg"
 	// ModeTiKVSlim is for special tikv testing.
-	ModeTiKVSlim = "tikv-slim"
+	ModeTiKVSlim Mode = "tikv-slim"
 	// ModeFTS is for full text search.
-	ModeFTS = "tidb-fts"
+	ModeFTS Mode = "tidb-fts"
+	// ModeNextGenFTS is for NG with full text search.
+	ModeNextGenFTS Mode = "tidb-x-fts"
 )
+
+// Checks if the mode is NextGen mode.
+func IsNGMode(m Mode) bool {
+	return strings.HasPrefix(m, "tidb-x")
+}
+
+// Checks if the mode is FTS mode.
+func IsFTSMode(m Mode) bool {
+	return strings.HasSuffix(m, "-fts")
+}
 
 // Config of the instance.
 type Config struct {
@@ -65,10 +78,11 @@ type SharedOptions struct {
 	HighPerf           bool      `yaml:"high_perf"`
 	S3                 S3Options `yaml:"s3"` // Only available when mode == ModeCSE or ModeDisAgg
 	PDMode             string    `yaml:"pd_mode"`
-	Mode               string    `yaml:"mode"`
+	Mode               Mode      `yaml:"mode"`
 	PortOffset         int       `yaml-:":port_offset"`
 	EnableTiKVColumnar bool      `yaml:"enable_tikv_columnar"` // Only available when mode == ModeCSE
 	ForcePull          bool      `yaml:"force_pull"`
+	CreateChangefeed   bool      `yaml:"create_changefeed"`
 }
 
 // S3Options contains configs to run TiDB cluster in CSE mode.

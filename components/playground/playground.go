@@ -524,6 +524,9 @@ func (p *Playground) sanitizeComponentConfig(cid string, cfg *instance.Config) e
 func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) error {
 	component := inst.Component()
 	boundVersion := p.bindVersion(component, p.bootOptions.Version)
+	if component == spec.ComponentTiCI && boundVersion == fmt.Sprintf("%s-%s", utils.LatestVersionAlias, utils.NextgenVersionAlias) {
+		boundVersion = utils.NightlyVersionAlias
+	}
 	if err := inst.PrepareBinary(component, inst.Role(), boundVersion, p.bootOptions.ShOpt.ForcePull); err != nil {
 		return err
 	}
@@ -1158,7 +1161,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 	}
 
 	switch options.ShOpt.Mode {
-	case instance.ModeCSE, instance.ModeDisAgg, instance.ModeNextGen, instance.ModeFTS:
+	case instance.ModeCSE, instance.ModeDisAgg, instance.ModeNextGen, instance.ModeFTS, instance.ModeNextGenFTS:
 		if !strings.HasPrefix(options.ShOpt.S3.Endpoint, "https://") && !strings.HasPrefix(options.ShOpt.S3.Endpoint, "http://") {
 			return fmt.Errorf("require S3 endpoint to start with http:// or https://")
 		}
@@ -1223,7 +1226,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		InstancePair{spec.ComponentTiKV, "", options.TiKV},
 	)
 	switch options.ShOpt.Mode {
-	case instance.ModeCSE, instance.ModeNextGen:
+	case instance.ModeCSE, instance.ModeNextGen, instance.ModeNextGenFTS:
 		instances = append(
 			instances,
 			InstancePair{spec.ComponentTiKVWorker, "", options.TiKVWorker},
@@ -1231,7 +1234,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 	}
 
 	// add tidb
-	if options.ShOpt.Mode == instance.ModeNextGen {
+	if instance.IsNGMode(options.ShOpt.Mode) {
 		instances = append(
 			instances,
 			InstancePair{comp: spec.ComponentTiDB, role: instance.TiDBRoleSystem, Config: options.TiDBSystem},
@@ -1251,11 +1254,12 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		InstancePair{spec.ComponentDMWorker, "", options.DMWorker},
 	)
 
-	if options.ShOpt.Mode == instance.ModeNormal {
+	switch options.ShOpt.Mode {
+	case instance.ModeNormal:
 		instances = append(instances,
 			InstancePair{spec.ComponentTiFlash, instance.TiFlashRoleNormal, options.TiFlash},
 		)
-	} else if options.ShOpt.Mode == instance.ModeCSE || options.ShOpt.Mode == instance.ModeNextGen || options.ShOpt.Mode == instance.ModeDisAgg {
+	case instance.ModeCSE, instance.ModeNextGen, instance.ModeDisAgg, instance.ModeNextGenFTS:
 		if utils.Version(options.Version).IsValid() && !tidbver.TiFlashPlaygroundNewStartMode(options.Version) {
 			// For simplicity, currently we only implemented disagg mode when TiFlash can run without config.
 			return fmt.Errorf("TiUP playground only supports CSE/Disagg mode for TiDB cluster >= v7.1.0 (or nightly)")
@@ -1271,6 +1275,11 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 	if options.ShOpt.Mode == instance.ModeFTS {
 		instances = append(instances,
 			InstancePair{spec.ComponentTiFlash, instance.TiFlashRoleNormal, options.TiFlash},
+		)
+	}
+
+	if instance.IsFTSMode(options.ShOpt.Mode) {
+		instances = append(instances,
 			InstancePair{comp: spec.ComponentTiCIMeta, Config: options.TiCIMeta},
 			InstancePair{comp: spec.ComponentTiCIWorker, Config: options.TiCIWorker},
 		)
@@ -1287,7 +1296,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 	anyPumpReady := false
 	allDMMasterReady := false
-	hasChangefeedCreated := false
+	hasChangefeedCreated := !options.ShOpt.CreateChangefeed
 	// Start all instance except tiflash.
 	if err := p.WalkInstances(func(cid string, ins instance.Instance) error {
 		if cid == spec.ComponentTiFlash {
@@ -1300,7 +1309,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		}
 
 		// set TICDC_NEWARCH env for TiCDC when TiCI is enabled
-		if options.ShOpt.Mode == instance.ModeFTS && cid == spec.ComponentCDC {
+		if instance.IsFTSMode(options.ShOpt.Mode) && cid == spec.ComponentCDC {
 			// wait for TiKV up
 			time.Sleep(time.Second * 5)
 			if cdcInst, ok := ins.(*instance.TiCDC); ok {

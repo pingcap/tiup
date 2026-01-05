@@ -22,8 +22,7 @@ func (inst *TiKVInstance) getConfig() map[string]any {
 	config["storage.reserve-space"] = 0
 	config["storage.reserve-raft-space"] = 0
 
-	switch inst.shOpt.Mode {
-	case ModeCSE:
+	if inst.shOpt.Mode == ModeCSE {
 		config["storage.api-version"] = 2
 		config["storage.enable-ttl"] = true
 		config["dfs.prefix"] = "tikv"
@@ -33,7 +32,7 @@ func (inst *TiKVInstance) getConfig() map[string]any {
 		config["dfs.s3-bucket"] = inst.shOpt.S3.Bucket
 		config["dfs.s3-region"] = "local"
 		config["kvengine.build-columnar"] = true
-	case ModeNextGen:
+	} else if IsNGMode(inst.shOpt.Mode) {
 		config["storage.api-version"] = 2
 		config["storage.enable-ttl"] = true
 		config["dfs.prefix"] = "tikv"

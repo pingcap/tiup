@@ -57,7 +57,7 @@ func NewTiFlashInstance(role TiFlashRole, shOpt SharedOptions, binPath, dir, hos
 	if role != TiFlashRoleNormal && role != TiFlashRoleDisaggWrite && role != TiFlashRoleDisaggCompute {
 		panic(fmt.Sprintf("Unknown TiFlash role %s", role))
 	}
-	if (role == TiFlashRoleDisaggCompute || role == TiFlashRoleDisaggWrite) && shOpt.Mode != ModeCSE && shOpt.Mode != ModeDisAgg && shOpt.Mode != ModeNextGen {
+	if (role == TiFlashRoleDisaggCompute || role == TiFlashRoleDisaggWrite) && shOpt.Mode != ModeCSE && shOpt.Mode != ModeDisAgg && shOpt.Mode != ModeNextGen && shOpt.Mode != ModeNextGenFTS {
 		panic(fmt.Sprintf("Unsupported disagg role in mode %s", shOpt.Mode))
 	}
 
@@ -85,7 +85,7 @@ func NewTiFlashInstance(role TiFlashRole, shOpt SharedOptions, binPath, dir, hos
 		pds:             pds,
 		dbs:             dbs,
 	}
-	if shOpt.Mode == ModeFTS {
+	if IsFTSMode(shOpt.Mode) {
 		instance.ticReaderPort = utils.MustGetFreePort(host, 8520, shOpt.PortOffset)
 	}
 	return instance
@@ -145,7 +145,7 @@ func (inst *TiFlashInstance) Start(ctx context.Context) error {
 		{"flash.proxy.data-dir", filepath.Join(inst.Dir, "proxy_data")},
 		{"flash.proxy.log-file", filepath.Join(inst.Dir, "tiflash_tikv.log")},
 	}
-	if inst.shOpt.Mode == ModeFTS {
+	if IsFTSMode(inst.shOpt.Mode) {
 		runtimeConfig = append(runtimeConfig, []string{"tici.reader_node.addr", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.ticReaderPort)})
 	}
 
