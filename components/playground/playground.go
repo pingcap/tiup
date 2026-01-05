@@ -1387,8 +1387,9 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 	colorCmd := color.New(color.FgHiCyan, color.Bold)
 
-	if len(tidbSucc) > 0 {
-		// start TiFlash after at least one TiDB is up.
+	// In FTS mode, TiFlash can start without TiDB. In other modes, TiFlash needs at least one TiDB to be up.
+	if len(tidbSucc) > 0 || (p.bootOptions.ShOpt.Mode == instance.ModeFTS && len(p.tiflashs) > 0) {
+		// start TiFlash after at least one TiDB is up (or in FTS mode even without TiDB).
 		var started []*instance.TiFlashInstance
 		for _, flash := range p.tiflashs {
 			if err := p.startInstance(ctx, flash); err != nil {
@@ -1399,7 +1400,9 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		}
 		p.tiflashs = started
 		p.waitAllTiFlashUp()
+	}
 
+	if len(tidbSucc) > 0 {
 		fmt.Println()
 		successMsg := "🎉 TiDB Playground Cluster is started"
 		if len(p.ticiMetas) > 0 {
