@@ -225,7 +225,7 @@ func TestGrafanaDatasourceConfig(t *testing.T) {
 
 	// Test datasource configuration
 	clusterName := "test-cluster"
-	err := grafanaInstance.InitConfig(ctxt.New(ctx, 0, logprinter.NewLogger("")), mockExec, clusterName, "v5.4.0", "tidb", paths)
+	err := grafanaInstance.InitConfig(ctxt.New(ctx, 0, logprinter.NewLogger("")), mockExec, clusterName, "v5.4.0", "tidb", paths, InstanceOpt{})
 	require.NoError(t, err)
 
 	// Verify the datasource configuration file
@@ -247,7 +247,7 @@ func TestGrafanaDatasourceConfig(t *testing.T) {
 
 	// Test without VM remote write enabled
 	topo.Monitors[0].PromRemoteWriteToVM = false
-	err = grafanaInstance.InitConfig(ctxt.New(ctx, 0, logprinter.NewLogger("")), mockExec, clusterName, "v5.4.0", "tidb", paths)
+	err = grafanaInstance.InitConfig(ctxt.New(ctx, 0, logprinter.NewLogger("")), mockExec, clusterName, "v5.4.0", "tidb", paths, InstanceOpt{})
 	require.NoError(t, err)
 
 	// Verify the datasource configuration file again
@@ -400,7 +400,7 @@ func TestVictoriaMetricsDefaultDatasource(t *testing.T) {
 	grafanaInstance := comp.Instances()[0].(*GrafanaInstance)
 
 	// Run InitConfig which will process dashboards
-	err = grafanaInstance.InitConfig(ctxt.New(ctx, 0, logprinter.NewLogger("")), origExecutor, "test-cluster", "v5.4.0", "tidb", paths)
+	err = grafanaInstance.InitConfig(ctxt.New(ctx, 0, logprinter.NewLogger("")), origExecutor, "test-cluster", "v5.4.0", "tidb", paths, InstanceOpt{})
 	require.NoError(t, err)
 
 	// Check if the dashboard file was created and datasource references were updated
