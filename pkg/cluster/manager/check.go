@@ -685,7 +685,11 @@ func fixFailedChecks(host string, res *operator.CheckResult, t *task.Builder, sy
 		msg = fmt.Sprintf("will try to %s, reboot might be needed", color.HiBlueString("disable SELinux"))
 	case operator.CheckNameTHP:
 		t.Shell(host,
-			fmt.Sprintf(`if [ -d %[1]s ]; then echo never > %[1]s/enabled; fi`, "/sys/kernel/mm/transparent_hugepage"),
+			fmt.Sprintf(
+				`if [ -d %[1]s ]; then echo never > %[1]s/enabled; fi && %s`,
+				"/sys/kernel/mm/transparent_hugepage",
+				`grubby --update-kernel=ALL --args="transparent_hugepage=never"`,
+			),
 			"",
 			sudo)
 		msg = fmt.Sprintf("will try to %s, please check again after reboot", color.HiBlueString("disable THP"))
