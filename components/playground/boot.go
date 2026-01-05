@@ -167,27 +167,26 @@ type bootPlan struct {
 }
 
 func buildBootPlan(options *BootOptions) (bootPlan, error) {
-	plans, err := planProcs(options)
+	plans, baseConfigs, err := planProcs(options)
 	if err != nil {
 		return bootPlan{}, err
 	}
 
-	baseConfigs := make(map[proc.ServiceID]proc.Config, len(plans))
-	for _, plan := range plans {
-		baseConfigs[plan.serviceID] = plan.cfg
+	if baseConfigs == nil {
+		baseConfigs = make(map[proc.ServiceID]proc.Config)
 	}
 
 	required := make(map[proc.ServiceID]int)
-	for _, plan := range plans {
-		if plan.serviceID == "" || plan.cfg.Num <= 0 || options == nil {
+	for serviceID, cfg := range baseConfigs {
+		if serviceID == "" || cfg.Num <= 0 || options == nil {
 			continue
 		}
-		spec, ok := pgservice.SpecFor(plan.serviceID)
+		spec, ok := pgservice.SpecFor(serviceID)
 		if !ok {
 			continue
 		}
 		if spec.Catalog.IsCritical != nil && spec.Catalog.IsCritical(options) {
-			required[plan.serviceID] = 1
+			required[serviceID] = 1
 		}
 	}
 
@@ -198,19 +197,19 @@ func buildBootPlan(options *BootOptions) (bootPlan, error) {
 	}, nil
 }
 
-func planProcs(options *BootOptions) ([]plannedProc, error) {
+func planProcs(options *BootOptions) ([]plannedProc, map[proc.ServiceID]proc.Config, error) {
 	if options == nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	if options.ShOpt.PDMode == "ms" && !tidbver.PDSupportMicroservices(options.Version) {
-		return nil, fmt.Errorf("PD cluster doesn't support microservices mode in version %s", options.Version)
+		return nil, nil, fmt.Errorf("PD cluster doesn't support microservices mode in version %s", options.Version)
 	}
 
 	if options.ShOpt.Mode == proc.ModeCSE || options.ShOpt.Mode == proc.ModeNextGen || options.ShOpt.Mode == proc.ModeDisAgg {
 		if utils.Version(options.Version).IsValid() && !tidbver.TiFlashPlaygroundNewStartMode(options.Version) {
 			// For simplicity, currently we only implemented disagg mode when TiFlash can run without config.
-			return nil, fmt.Errorf("TiUP playground only supports CSE/Disagg mode for TiDB cluster >= v7.1.0 (or nightly)")
+			return nil, nil, fmt.Errorf("TiUP playground only supports CSE/Disagg mode for TiDB cluster >= v7.1.0 (or nightly)")
 		}
 	}
 
@@ -231,19 +230,61 @@ func planProcs(options *BootOptions) ([]plannedProc, error) {
 		}
 
 		cfgByService[spec.ServiceID] = cfg
-		serviceIDs = append(serviceIDs, spec.ServiceID)
+		if cfg.Num > 0 {
+			serviceIDs = append(serviceIDs, spec.ServiceID)
+		}
 	}
 
-	ordered, err := topoSortServiceIDs(serviceIDs)
+	type serviceStartKey struct {
+		hasUserBin bool
+		critical   bool
+		id         string
+	}
+	keys := make(map[proc.ServiceID]serviceStartKey, len(serviceIDs))
+	for _, serviceID := range serviceIDs {
+		cfg := cfgByService[serviceID]
+		key := serviceStartKey{hasUserBin: cfg.BinPath != "", id: serviceID.String()}
+		if cfg.Num > 0 {
+			if spec, ok := pgservice.SpecFor(serviceID); ok && spec.Catalog.IsCritical != nil && spec.Catalog.IsCritical(options) {
+				key.critical = true
+			}
+		}
+		keys[serviceID] = key
+	}
+
+	ordered, err := topoSortServiceIDsWithCompare(serviceIDs, func(a, b proc.ServiceID) int {
+		ka := keys[a]
+		kb := keys[b]
+		switch {
+		case ka.hasUserBin != kb.hasUserBin:
+			if ka.hasUserBin {
+				return -1
+			}
+			return 1
+		case ka.critical != kb.critical:
+			if ka.critical {
+				return -1
+			}
+			return 1
+		default:
+			if ka.id == "" {
+				ka.id = a.String()
+			}
+			if kb.id == "" {
+				kb.id = b.String()
+			}
+			return strings.Compare(ka.id, kb.id)
+		}
+	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	plans := make([]plannedProc, 0, len(ordered))
 	for _, serviceID := range ordered {
 		plans = append(plans, plannedProc{serviceID: serviceID, cfg: cfgByService[serviceID]})
 	}
-	return plans, nil
+	return plans, cfgByService, nil
 }
 
 func (p *Playground) addPlannedProcs(ctx context.Context, plans []plannedProc) error {

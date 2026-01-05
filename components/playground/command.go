@@ -256,7 +256,7 @@ func newScaleIn(state *cliState) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "scale-in",
 		Short:   "Scale in one or more instances by name or pid",
-		Example: "tiup playground scale-in --name tidb-0\n  tiup playground scale-in --pid 12345",
+		Example: "  tiup playground scale-in --name tidb-0\n  tiup playground scale-in --pid 12345",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(names) == 0 && len(pids) == 0 {
 				return cmd.Help()
@@ -295,8 +295,8 @@ func newScaleIn(state *cliState) *cobra.Command {
 		Hidden: false,
 	}
 
-	cmd.Flags().StringSliceVar(&names, "name", nil, "Instance name(s) to scale in (get from `tiup playground display`)")
-	cmd.Flags().IntSliceVar(&pids, "pid", nil, "Instance PID(s) to scale in (get from `tiup playground display --verbose`)")
+	cmd.Flags().StringSliceVar(&names, "name", nil, "Instance name(s) to scale in (get from tiup playground display)")
+	cmd.Flags().IntSliceVar(&pids, "pid", nil, "Instance PID(s) to scale in (get from tiup playground display --verbose)")
 
 	return cmd
 }
@@ -313,7 +313,7 @@ func newDisplay(state *cliState) *cobra.Command {
 				return err
 			}
 			if !verbose && !jsonOut {
-				colorstr.Fprintf(tuiv2output.Stderr.Get(), "[dark_gray]Tip: use --verbose to show more columns: COMPONENT, PID, VERSION, BINARY, LOG[reset]\n")
+				colorstr.Fprintf(tuiv2output.Stderr.Get(), "\n[dark_gray]Tip: use --verbose to show more columns: COMPONENT, PID, VERSION, BINARY, LOG[reset]\n")
 			}
 			return nil
 		},
@@ -460,7 +460,10 @@ func sendCommandsAndPrintResult(out io.Writer, cmds []Command, addr string) erro
 		if reply.Message != "" {
 			_, _ = io.WriteString(out, reply.Message)
 		}
-		if reply.Error != "" {
+		// Only print server-side stderr output when the command is successful.
+		// On failures, callers will render a single warning callout based on the
+		// returned error to avoid duplicated messages.
+		if reply.OK && reply.Error != "" {
 			_, _ = io.WriteString(out, reply.Error)
 			if reply.Error[len(reply.Error)-1] != '\n' {
 				_, _ = io.WriteString(out, "\n")

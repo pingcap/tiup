@@ -60,7 +60,7 @@ type Playground struct {
 	// inst.Info().Name(). It lets "Starting instances" show the
 	// full instance list from the beginning (including components that start later,
 	// like TiFlash).
-	startingTasks map[string]*progressv2.Task
+	startingTasks map[string]progressTask
 
 	// procTitleCounts is computed once during boot to decide whether to display
 	// an instance index in user-facing output (e.g. "TiKV 0").

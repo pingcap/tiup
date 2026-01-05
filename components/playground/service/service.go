@@ -169,6 +169,13 @@ type Catalog struct {
 	// running playground (via the scale-out command path).
 	AllowScaleOut bool
 
+	// HideInProgress indicates this service should be hidden in boot/shutdown
+	// progress output by default.
+	//
+	// Playground may still reveal it when it becomes slow (e.g. taking too long
+	// to start/stop) or when it fails.
+	HideInProgress bool
+
 	// DefaultXXXFrom copies the value from another service when the destination
 	// flag is not explicitly set.
 	//
@@ -257,6 +264,14 @@ func Register(spec Spec) error {
 	}
 	if spec.NewProc == nil {
 		return fmt.Errorf("service %s newProc is nil", spec.ServiceID)
+	}
+	if spec.ScaleInHook == nil {
+		spec.ScaleInHook = func(rt ControllerRuntime, w io.Writer, inst proc.Process, pid int) (bool, error) {
+			return false, nil
+		}
+	}
+	if spec.PostScaleOut == nil {
+		spec.PostScaleOut = func(w io.Writer, inst proc.Process) {}
 	}
 	if _, ok := specs[spec.ServiceID]; ok {
 		return fmt.Errorf("duplicate service spec: %s", spec.ServiceID)

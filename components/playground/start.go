@@ -3,21 +3,78 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+	"time"
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/playground/proc"
+	pgservice "github.com/pingcap/tiup/components/playground/service"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/repository"
 	progressv2 "github.com/pingcap/tiup/pkg/tuiv2/progress"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
-// initBootStartingTasks pre-creates one task per planned process so the
+type progressTask interface {
+	SetMeta(meta string)
+	Start()
+	Done()
+	Error(msg string)
+	Cancel(reason string)
+}
+
+type hideIfFastProgressTask interface {
+	SetHideIfFast(revealAfter time.Duration)
+}
+
+const hideInProgressRevealAfterStart = 5 * time.Second
+
+func applyHideInProgressPolicy(task progressTask, serviceID proc.ServiceID, revealAfter time.Duration) {
+	if task == nil || serviceID == "" {
+		return
+	}
+	spec, ok := pgservice.SpecFor(serviceID)
+	if !ok || !spec.Catalog.HideInProgress {
+		return
+	}
+	if t, ok := task.(hideIfFastProgressTask); ok {
+		t.SetHideIfFast(revealAfter)
+	}
+}
+
+var readyOKCh = func() <-chan error {
+	ch := make(chan error)
+	close(ch)
+	return ch
+}()
+
+var taskStartedOKCh = func() <-chan struct{} {
+	ch := make(chan struct{})
+	close(ch)
+	return ch
+}()
+
+func startProgressTask(task progressTask, meta string) <-chan struct{} {
+	if task == nil {
+		return taskStartedOKCh
+	}
+	started := make(chan struct{})
+	go func() {
+		if meta != "" {
+			task.SetMeta(meta)
+		}
+		task.Start()
+		close(started)
+	}()
+	return started
+}
+
+// initBootStartingTasks pre-creates one pending task per planned process so the
 // "Starting instances" group can show a stable component list from the
 // beginning (including components that start later, like TiFlash).
 //
 // It returns the created tasks map when the group is active in TTY mode.
-func (p *Playground) initBootStartingTasks() map[string]*progressv2.Task {
+func (p *Playground) initBootStartingTasks() map[string]progressTask {
 	if p == nil {
 		return nil
 	}
@@ -38,7 +95,7 @@ func (p *Playground) initBootStartingTasks() map[string]*progressv2.Task {
 		bootVer = p.bootOptions.Version
 	}
 
-	tasks := make(map[string]*progressv2.Task)
+	tasks := make(map[string]progressTask)
 	_ = p.WalkProcs(func(_ proc.ServiceID, inst proc.Process) error {
 		if inst == nil {
 			return nil
@@ -50,7 +107,8 @@ func (p *Playground) initBootStartingTasks() map[string]*progressv2.Task {
 
 		title := procTitle(inst)
 		includeID := counts != nil && counts[title] > 1
-		t := startingGroup.Task(procDisplayName(inst, includeID))
+		t := startingGroup.TaskPending(procDisplayName(inst, includeID))
+		applyHideInProgressPolicy(t, info.Service, hideInProgressRevealAfterStart)
 
 		if bin := info.UserBinPath; bin != "" {
 			// User explicitly configured a binary path, keep it as the stable
@@ -133,7 +191,7 @@ func (p *Playground) abandonActiveGroupsWithStartedRecords(procRecords []procRec
 	p.progressMu.Unlock()
 
 	// Mark instances that have already been started as canceled, while keeping
-	// not-yet-started ones (e.g. TiFlash) as running spinners in the snapshot.
+	// not-yet-started ones (e.g. TiFlash) as pending in the snapshot.
 	if startingTasks != nil {
 		if len(procRecords) == 0 {
 			procRecords = p.procRecordsSnapshot()
@@ -163,7 +221,7 @@ func (p *Playground) abandonActiveGroupsWithStartedRecords(procRecords []procRec
 	}
 }
 
-func (p *Playground) getOrCreateStartingTask(inst proc.Process) *progressv2.Task {
+func (p *Playground) getOrCreateStartingTask(inst proc.Process) progressTask {
 	if p == nil || inst == nil {
 		return nil
 	}
@@ -182,7 +240,7 @@ func (p *Playground) getOrCreateStartingTask(inst proc.Process) *progressv2.Task
 	}
 
 	if p.startingTasks == nil {
-		p.startingTasks = make(map[string]*progressv2.Task)
+		p.startingTasks = make(map[string]progressTask)
 	}
 	if t := p.startingTasks[name]; t != nil {
 		return t
@@ -191,7 +249,8 @@ func (p *Playground) getOrCreateStartingTask(inst proc.Process) *progressv2.Task
 	title := procTitle(inst)
 	includeID := p.procTitleCounts != nil && p.procTitleCounts[title] > 1
 
-	t := startingGroup.Task(procDisplayName(inst, includeID))
+	t := startingGroup.TaskPending(procDisplayName(inst, includeID))
+	applyHideInProgressPolicy(t, inst.Info().Service, hideInProgressRevealAfterStart)
 	p.startingTasks[name] = t
 	return t
 }
@@ -206,14 +265,20 @@ func (p *Playground) markStartingTaskError(inst proc.Process, meta string, err e
 		return
 	}
 
+	info := inst.Info()
+	hasUserBin := info != nil && info.UserBinPath != ""
+	errStr := err.Error()
+
 	// When a user provides a binary path (often long), prefer showing the error
 	// message instead of repeating the path in the meta column.
-	if info := inst.Info(); info != nil && info.UserBinPath != "" {
-		task.SetMeta("")
-	} else if meta != "" {
-		task.SetMeta(meta)
-	}
-	task.Error(err.Error())
+	go func() {
+		if hasUserBin {
+			task.SetMeta("")
+		} else if meta != "" {
+			task.SetMeta(meta)
+		}
+		task.Error(errStr)
+	}()
 }
 
 func (p *Playground) requestStartProc(ctx context.Context, inst proc.Process, preload *binaryPreloader) (<-chan error, error) {
@@ -256,42 +321,58 @@ func (p *Playground) startProc(state *controllerState, ctx context.Context, inst
 	// mutations of ProcessInfo.
 	if bin := info.UserBinPath; bin != "" {
 		info.BinPath = bin
-		// Best-effort resolve the intended service version for feature gates
-		// (e.g. TiFlash start mode) even when the user provides a binary path.
-		//
-		// This keeps behavior consistent with repository-provided binaries while
-		// avoiding a hard dependency on downloading components.
-		component := info.RepoComponentID.String()
-		constraint := p.versionConstraintForService(info.Service, "")
+		bootVer := ""
 		if p.bootOptions != nil {
-			constraint = p.versionConstraintForService(info.Service, p.bootOptions.Version)
+			bootVer = p.bootOptions.Version
 		}
+		constraint := p.versionConstraintForService(info.Service, bootVer)
 		if constraint == "" {
 			constraint = utils.LatestVersionAlias
 		}
-		if component != "" {
-			if v, err := environment.GlobalEnv().V1Repository().ResolveComponentVersion(component, constraint); err == nil {
-				info.Version = v
-			}
-		}
+		// Use the version constraint directly for feature gates to avoid blocking
+		// local binaries on repository downloads.
+		info.Version = utils.Version(constraint)
 	} else if info.BinPath == "" {
 		component := info.RepoComponentID.String()
-		constraint := p.versionConstraintForService(info.Service, "")
+		bootVer := ""
 		if p.bootOptions != nil {
-			constraint = p.versionConstraintForService(info.Service, p.bootOptions.Version)
+			bootVer = p.bootOptions.Version
 		}
+		constraint := p.versionConstraintForService(info.Service, bootVer)
 		if constraint == "" {
 			constraint = utils.LatestVersionAlias
 		}
 
 		if preload != nil {
-			c, binPath, version, err := preload.resolve(info.Service, component)
-			if err != nil {
-				p.markStartingTaskError(inst, c, err)
+			if component == "" {
+				err := fmt.Errorf("component is empty")
+				p.markStartingTaskError(inst, constraint, err)
 				return nil, err
 			}
-			info.BinPath = binPath
-			info.Version = version
+
+			readyCh := make(chan error, 1)
+			serviceID := info.Service
+			go func() {
+				c, binPath, version, err := preload.resolve(serviceID, component)
+				if err != nil {
+					p.markStartingTaskError(inst, c, err)
+					readyCh <- err
+					close(readyCh)
+					return
+				}
+				if ok := p.emitEvent(startProcResolvedEvent{
+					ctx:     ctx,
+					inst:    inst,
+					binPath: binPath,
+					version: version,
+					readyCh: readyCh,
+				}); !ok {
+					err := fmt.Errorf("playground is stopping")
+					readyCh <- err
+					close(readyCh)
+				}
+			}()
+			return readyCh, nil
 		} else {
 			v, err := environment.GlobalEnv().V1Repository().ResolveComponentVersion(component, constraint)
 			if err != nil {
@@ -315,13 +396,42 @@ func (p *Playground) startProc(state *controllerState, ctx context.Context, inst
 	return p.startProcWithControllerState(state, ctx, inst)
 }
 
-func (p *Playground) startProcWithControllerState(state *controllerState, ctx context.Context, inst proc.Process) (readyCh <-chan error, err error) {
-	task := p.getOrCreateStartingTask(inst)
-
-	if inst == nil {
+func (p *Playground) startProcWithResolvedBinary(state *controllerState, ctx context.Context, inst proc.Process, binPath string, version utils.Version, readyCh chan error) {
+	if binPath == "" {
 		err := fmt.Errorf("binary not resolved")
 		p.markStartingTaskError(inst, "", err)
-		return nil, err
+		readyCh <- err
+		close(readyCh)
+		return
+	}
+	if p.Stopping() {
+		err := fmt.Errorf("playground is stopping")
+		readyCh <- err
+		close(readyCh)
+		return
+	}
+
+	info := inst.Info()
+	info.BinPath = binPath
+	if !version.IsEmpty() {
+		info.Version = version
+	}
+
+	startedReadyCh, err := p.startProcWithControllerState(state, ctx, inst)
+	if err != nil {
+		readyCh <- err
+		close(readyCh)
+		return
+	}
+	go func() {
+		readyCh <- <-startedReadyCh
+		close(readyCh)
+	}()
+}
+
+func (p *Playground) startProcWithControllerState(state *controllerState, ctx context.Context, inst proc.Process) (readyCh <-chan error, err error) {
+	if inst == nil {
+		return nil, fmt.Errorf("instance is nil")
 	}
 
 	info := inst.Info()
@@ -331,16 +441,18 @@ func (p *Playground) startProcWithControllerState(state *controllerState, ctx co
 		return nil, err
 	}
 
+	task := p.getOrCreateStartingTask(inst)
+	meta := ""
 	if task != nil {
 		if bin := info.UserBinPath; bin != "" {
-			task.SetMeta(prettifyUserPath(bin))
+			meta = prettifyUserPath(bin)
 		} else if v := info.Version.String(); v != "" {
-			task.SetMeta(v)
+			meta = v
 		}
-		// Emit a start event for plain logs (non-TTY) so users can see which
-		// component is currently being started when the command appears stuck.
-		task.Start()
 	}
+	// Do not block process startup on progress rendering (e.g. heavy download
+	// progress callbacks). UI updates are best-effort.
+	taskStarted := startProgressTask(task, meta)
 
 	if err := inst.Prepare(ctx); err != nil {
 		p.markStartingTaskError(inst, "", err)
@@ -366,18 +478,9 @@ func (p *Playground) startProcWithControllerState(state *controllerState, ctx co
 
 	p.handleProcStarted(state, inst)
 
-	exitCh := make(chan error, 1)
-	p.addWaitProc(inst, exitCh)
-
-	readyCh = p.startReadyCheck(ctx, inst, task, exitCh)
-	if readyCh != nil {
-		return readyCh, nil
-	}
-
-	if task != nil {
-		task.Done()
-	}
-	return nil, nil
+	exitCh := p.addWaitProc(inst)
+	readyCh = p.startReadyCheck(ctx, inst, task, taskStarted, exitCh)
+	return readyCh, nil
 }
 
 // prepareComponentBinary ensures the resolved component version is installed and
@@ -390,6 +493,36 @@ func prepareComponentBinary(component string, v utils.Version, forcePull bool) (
 	if env == nil {
 		return "", errors.New("global environment not initialized")
 	}
+	return prepareComponentBinaryWithInstaller(envComponentBinaryInstaller{env: env}, component, v, forcePull)
+}
+
+type componentBinaryInstaller interface {
+	BinaryPath(component string, v utils.Version) (string, error)
+	UpdateComponents(specs []repository.ComponentSpec) error
+}
+
+type envComponentBinaryInstaller struct {
+	env *environment.Environment
+}
+
+func (e envComponentBinaryInstaller) BinaryPath(component string, v utils.Version) (string, error) {
+	if e.env == nil {
+		return "", errors.New("global environment not initialized")
+	}
+	return e.env.BinaryPath(component, v)
+}
+
+func (e envComponentBinaryInstaller) UpdateComponents(specs []repository.ComponentSpec) error {
+	if e.env == nil {
+		return errors.New("global environment not initialized")
+	}
+	return e.env.V1Repository().UpdateComponents(specs)
+}
+
+func prepareComponentBinaryWithInstaller(inst componentBinaryInstaller, component string, v utils.Version, forcePull bool) (string, error) {
+	if inst == nil {
+		return "", errors.New("component binary installer is nil")
+	}
 	if component == "" {
 		return "", errors.New("component is empty")
 	}
@@ -397,39 +530,58 @@ func prepareComponentBinary(component string, v utils.Version, forcePull bool) (
 		return "", errors.Errorf("component `%s` version is empty", component)
 	}
 
-	needDownload := forcePull
-	if !forcePull {
-		_, err := env.SelectInstalledVersion(component, v)
-		if err != nil {
-			if errors.Cause(err) != environment.ErrInstallFirst {
-				return "", err
-			}
-			needDownload = true
-		}
+	binPath, err := inst.BinaryPath(component, v)
+	if err == nil && !forcePull && binaryExists(binPath) {
+		return binPath, nil
 	}
 
-	if needDownload {
-		spec := repository.ComponentSpec{
-			ID:      component,
-			Version: v.String(),
-			Force:   forcePull,
-		}
-		if err := env.V1Repository().UpdateComponents([]repository.ComponentSpec{spec}); err != nil {
-			return "", err
-		}
+	spec := repository.ComponentSpec{
+		ID:      component,
+		Version: v.String(),
+		Force:   forcePull || !binaryExists(binPath),
+	}
+	if err := inst.UpdateComponents([]repository.ComponentSpec{spec}); err != nil {
+		return "", err
 	}
 
-	return env.BinaryPath(component, v)
+	binPath, err = inst.BinaryPath(component, v)
+	if err != nil {
+		return "", err
+	}
+	if !binaryExists(binPath) {
+		return "", errors.Errorf("component `%s:%s` installed but binary not found at %s", component, v.String(), binPath)
+	}
+	return binPath, nil
 }
 
-func (p *Playground) startReadyCheck(ctx context.Context, inst proc.Process, task *progressv2.Task, exitCh <-chan error) <-chan error {
-	if p == nil || inst == nil {
-		return nil
+func binaryExists(binPath string) bool {
+	if binPath == "" {
+		return false
+	}
+	st, err := os.Stat(binPath)
+	if err != nil {
+		return false
+	}
+	return !st.IsDir()
+}
+
+func (p *Playground) startReadyCheck(ctx context.Context, inst proc.Process, task progressTask, taskStarted <-chan struct{}, exitCh <-chan error) <-chan error {
+	if inst == nil {
+		return readyOKCh
+	}
+	if ctx == nil {
+		ctx = context.Background()
 	}
 
 	waiter, ok := inst.(proc.ReadyWaiter)
 	if !ok {
-		return nil
+		if task != nil {
+			go func() {
+				<-taskStarted
+				task.Done()
+			}()
+		}
+		return readyOKCh
 	}
 
 	ch := make(chan error, 1)
@@ -461,19 +613,27 @@ func (p *Playground) startReadyCheck(ctx context.Context, inst proc.Process, tas
 		// exited early).
 		cancel()
 
-		if task != nil {
-			if err != nil {
-				if errors.Cause(err) == context.Canceled {
-					task.Cancel("")
-				} else {
-					p.markStartingTaskError(inst, "", err)
-				}
-			} else {
-				task.Done()
-			}
-		}
 		ch <- err
 		close(ch)
+
+		if task == nil {
+			return
+		}
+		if err == nil {
+			go func() {
+				<-taskStarted
+				task.Done()
+			}()
+			return
+		}
+		if errors.Cause(err) == context.Canceled {
+			go func() {
+				<-taskStarted
+				task.Cancel("")
+			}()
+			return
+		}
+		p.markStartingTaskError(inst, "", err)
 	}()
 	return ch
 }

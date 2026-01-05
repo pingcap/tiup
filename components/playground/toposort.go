@@ -11,8 +11,20 @@ import (
 )
 
 func topoSortServiceIDs(serviceIDs []proc.ServiceID) ([]proc.ServiceID, error) {
+	return topoSortServiceIDsWithCompare(serviceIDs, nil)
+}
+
+type serviceIDCompareFunc func(a, b proc.ServiceID) int
+
+func topoSortServiceIDsWithCompare(serviceIDs []proc.ServiceID, cmp serviceIDCompareFunc) ([]proc.ServiceID, error) {
 	if len(serviceIDs) == 0 {
 		return nil, nil
+	}
+
+	if cmp == nil {
+		cmp = func(a, b proc.ServiceID) int {
+			return strings.Compare(a.String(), b.String())
+		}
 	}
 
 	inSet := make(map[proc.ServiceID]struct{}, len(serviceIDs))
@@ -47,7 +59,7 @@ func topoSortServiceIDs(serviceIDs []proc.ServiceID) ([]proc.ServiceID, error) {
 		}
 	}
 	slices.SortStableFunc(ready, func(a, b proc.ServiceID) int {
-		return strings.Compare(a.String(), b.String())
+		return cmp(a, b)
 	})
 
 	out := make([]proc.ServiceID, 0, len(serviceIDs))
@@ -64,7 +76,7 @@ func topoSortServiceIDs(serviceIDs []proc.ServiceID) ([]proc.ServiceID, error) {
 		}
 		if len(ready) > 1 {
 			slices.SortStableFunc(ready, func(a, b proc.ServiceID) int {
-				return strings.Compare(a.String(), b.String())
+				return cmp(a, b)
 			})
 		}
 	}
@@ -77,7 +89,7 @@ func topoSortServiceIDs(serviceIDs []proc.ServiceID) ([]proc.ServiceID, error) {
 			}
 		}
 		slices.SortStableFunc(cycle, func(a, b proc.ServiceID) int {
-			return strings.Compare(a.String(), b.String())
+			return cmp(a, b)
 		})
 		var names []string
 		for _, id := range cycle {

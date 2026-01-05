@@ -98,24 +98,3 @@ func (s *controllerState) walkProcs(fn func(serviceID proc.ServiceID, inst proc.
 	}
 	return nil
 }
-
-func (s *controllerState) rwalkProcs(fn func(serviceID proc.ServiceID, inst proc.Process) error) error {
-	if s == nil || fn == nil {
-		return nil
-	}
-
-	var ids []proc.ServiceID
-	var procs []proc.Process
-	_ = s.walkProcs(func(id proc.ServiceID, inst proc.Process) error {
-		ids = append(ids, id)
-		procs = append(procs, inst)
-		return nil
-	})
-
-	for i := len(ids); i > 0; i-- {
-		if err := fn(ids[i-1], procs[i-1]); err != nil {
-			return err
-		}
-	}
-	return nil
-}

@@ -189,7 +189,7 @@ Examples:
 				return err
 			}
 
-			port := utils.MustGetFreePort("0.0.0.0", 9527, state.options.ShOpt.PortOffset)
+			port := utils.MustGetFreePort("127.0.0.1", 9527, state.options.ShOpt.PortOffset)
 			err := dumpPort(filepath.Join(state.dataDir, "port"), port)
 			p := NewPlayground(state.dataDir, port)
 			if err != nil {
@@ -445,6 +445,9 @@ type repoDownloadProgress struct {
 
 	mu   sync.Mutex
 	task *progressv2.Task
+
+	lastUpdateAt time.Time
+	lastSize     int64
 }
 
 func (p *repoDownloadProgress) Start(rawURL string, size int64) {
@@ -465,15 +468,45 @@ func (p *repoDownloadProgress) Start(rawURL string, size int64) {
 
 	p.mu.Lock()
 	p.task = t
+	p.lastUpdateAt = time.Time{}
+	p.lastSize = 0
 	p.mu.Unlock()
 }
 
 func (p *repoDownloadProgress) SetCurrent(size int64) {
 	p.mu.Lock()
 	t := p.task
+	if t == nil {
+		p.mu.Unlock()
+		return
+	}
+
+	// Repository download callbacks can be very frequent. Throttle SetCurrent
+	// updates to avoid starving other controller work (like starting TiDB) on the
+	// progress UI mutex.
+	//
+	// This keeps the TTY UI smooth (Bubble Tea already caps redraw FPS) while
+	// reducing lock contention during large downloads.
+	now := time.Now()
+	const (
+		minInterval = 150 * time.Millisecond
+		minDelta    = 256 * 1024
+	)
+	shouldUpdate := false
+	if size < p.lastSize {
+		shouldUpdate = true
+	} else if size-p.lastSize >= minDelta {
+		shouldUpdate = true
+	} else if p.lastUpdateAt.IsZero() || now.Sub(p.lastUpdateAt) >= minInterval {
+		shouldUpdate = true
+	}
+	if shouldUpdate {
+		p.lastUpdateAt = now
+		p.lastSize = size
+	}
 	p.mu.Unlock()
 
-	if t == nil {
+	if !shouldUpdate {
 		return
 	}
 	t.SetCurrent(size)

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	stdErrors "errors"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"os/exec"
@@ -99,24 +98,9 @@ func (p *Playground) printClusterInfoCallout(tidbSucc, tiproxySucc []string) boo
 		})
 	}
 
-	blocks = append(blocks, clusterInfoMySQLConnectLines(out, mysql, "Connect TiDB:", tidbSucc))
-	blocks = append(blocks, clusterInfoMySQLConnectLines(out, mysql, "Connect TiProxy:", tiproxySucc))
-	blocks = append(blocks, p.clusterInfoDMConnectLines(out))
-
-	{
-		var rows [][2]string
-		if dashboardURL != "" {
-			rows = append(rows, [2]string{"TiDB Dashboard:", dashboardURL})
-		}
-		if grafanaURL != "" {
-			rows = append(rows, [2]string{"Grafana:", grafanaURL})
-		}
-		if len(rows) > 0 {
-			blocks = append(blocks, tuiv2output.Labels{Rows: rows}.Lines(out))
-		}
+	if rows := p.clusterInfoCalloutRows(mysql, dashboardURL, grafanaURL, tidbSucc, tiproxySucc); len(rows) > 0 {
+		blocks = append(blocks, tuiv2output.Labels{Rows: rows}.Lines(out))
 	}
-
-	blocks = append(blocks, p.clusterInfoTiKVSlimLines(out))
 
 	content := joinNonEmptyBlocks(blocks)
 	fmt.Fprint(out, tuiv2output.Callout{
@@ -125,6 +109,58 @@ func (p *Playground) printClusterInfoCallout(tidbSucc, tiproxySucc []string) boo
 		Content:    content,
 	}.Render(out))
 	return true
+}
+
+func (p *Playground) clusterInfoBasicRows() [][2]string {
+	if p == nil {
+		return nil
+	}
+
+	bootVer := utils.LatestVersionAlias
+	if p.bootOptions != nil && p.bootOptions.Version != "" {
+		bootVer = p.bootOptions.Version
+	}
+
+	var rows [][2]string
+	if bootVer != "" {
+		rows = append(rows, [2]string{"Version:", bootVer})
+	}
+	if p.dataDir != "" {
+		value := prettifyUserPath(p.dataDir)
+		if p.deleteWhenExit {
+			value += " " + colorstr.Sprintf("[yellow][bold](Destroy after exit)[reset]")
+		}
+		rows = append(rows, [2]string{"Data dir:", value})
+	}
+	return rows
+}
+
+func (p *Playground) clusterInfoCalloutRows(mysql, dashboardURL, grafanaURL string, tidbSucc, tiproxySucc []string) [][2]string {
+	if p == nil {
+		return nil
+	}
+
+	basic := p.clusterInfoBasicRows()
+
+	var rest [][2]string
+	rest = append(rest, clusterInfoMySQLConnectRows(mysql, "Connect TiDB:", tidbSucc)...)
+	rest = append(rest, clusterInfoMySQLConnectRows(mysql, "Connect TiProxy:", tiproxySucc)...)
+	rest = append(rest, p.clusterInfoDMConnectRows()...)
+	if dashboardURL != "" {
+		rest = append(rest, [2]string{"TiDB Dashboard:", dashboardURL})
+	}
+	if grafanaURL != "" {
+		rest = append(rest, [2]string{"Grafana:", grafanaURL})
+	}
+	rest = append(rest, p.clusterInfoTiKVSlimRows()...)
+
+	var rows [][2]string
+	rows = append(rows, basic...)
+	if len(basic) > 0 && len(rest) > 0 {
+		rows = append(rows, [2]string{"", ""})
+	}
+	rows = append(rows, rest...)
+	return rows
 }
 
 func joinNonEmptyBlocks(blocks [][]string) string {
@@ -163,7 +199,7 @@ func (p *Playground) clusterInfoMonitorURLs() (dashboardURL, grafanaURL string) 
 	return dashboardURL, grafanaURL
 }
 
-func clusterInfoMySQLConnectLines(out io.Writer, mysql, label string, addrs []string) []string {
+func clusterInfoMySQLConnectRows(mysql, label string, addrs []string) [][2]string {
 	var rows [][2]string
 	for _, dbAddr := range addrs {
 		host, port, err := net.SplitHostPort(dbAddr)
@@ -173,10 +209,10 @@ func clusterInfoMySQLConnectLines(out io.Writer, mysql, label string, addrs []st
 		cmd := fmt.Sprintf("%s --host %s --port %s -u root", mysql, host, port)
 		rows = append(rows, [2]string{label, cmd})
 	}
-	return tuiv2output.Labels{Rows: rows}.Lines(out)
+	return rows
 }
 
-func (p *Playground) clusterInfoDMConnectLines(out io.Writer) []string {
+func (p *Playground) clusterInfoDMConnectRows() [][2]string {
 	if p == nil {
 		return nil
 	}
@@ -190,10 +226,10 @@ func (p *Playground) clusterInfoDMConnectLines(out io.Writer) []string {
 		endpoints = append(endpoints, dmMaster.Addr())
 	}
 	cmd := fmt.Sprintf("tiup dmctl --master-addr %s", strings.Join(endpoints, ","))
-	return tuiv2output.Labels{Rows: [][2]string{{"Connect DM:", cmd}}}.Lines(out)
+	return [][2]string{{"Connect DM:", cmd}}
 }
 
-func (p *Playground) clusterInfoTiKVSlimLines(out io.Writer) []string {
+func (p *Playground) clusterInfoTiKVSlimRows() [][2]string {
 	if p == nil || p.bootOptions == nil || p.bootOptions.ShOpt.Mode != proc.ModeTiKVSlim {
 		return nil
 	}
@@ -207,16 +243,16 @@ func (p *Playground) clusterInfoTiKVSlimLines(out io.Writer) []string {
 	}
 
 	if p.bootOptions.ShOpt.PDMode != "ms" {
-		return tuiv2output.Labels{Rows: [][2]string{{"PD Endpoints:", pdAddrs(proc.ServicePD, proc.ServicePDAPI)}}}.Lines(out)
+		return [][2]string{{"PD Endpoints:", pdAddrs(proc.ServicePD, proc.ServicePDAPI)}}
 	}
 
-	return tuiv2output.Labels{Rows: [][2]string{
+	return [][2]string{
 		{"PD API Endpoints:", pdAddrs(proc.ServicePDAPI)},
 		{"PD TSO Endpoints:", pdAddrs(proc.ServicePDTSO)},
 		{"PD Scheduling Endpoints:", pdAddrs(proc.ServicePDScheduling)},
 		{"PD Router Endpoints:", pdAddrs(proc.ServicePDRouter)},
 		{"PD Resource Manager Endpoints:", pdAddrs(proc.ServicePDResourceManager)},
-	}}.Lines(out)
+	}
 }
 
 func hasDashboard(pdAddr string) bool {

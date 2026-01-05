@@ -120,14 +120,12 @@ func (p *Playground) handleScaleIn(state *controllerState, w io.Writer, req *Sca
 		return fmt.Errorf("unknown service %s", serviceID)
 	}
 
-	if hook := spec.ScaleInHook; hook != nil {
-		async, err := hook(controllerRuntime{pg: p, state: state}, w, inst, pid)
-		if err != nil {
-			return err
-		}
-		if async {
-			return nil
-		}
+	async, err := spec.ScaleInHook(controllerRuntime{pg: p, state: state}, w, inst, pid)
+	if err != nil {
+		return err
+	}
+	if async {
+		return nil
 	}
 
 	if _, ok := state.removeProcByPID(serviceID, pid); !ok {
@@ -135,7 +133,7 @@ func (p *Playground) handleScaleIn(state *controllerState, w io.Writer, req *Sca
 	}
 
 	controllerRuntime{pg: p, state: state}.ExpectExitPID(pid)
-	err := syscall.Kill(pid, syscall.SIGQUIT)
+	err = syscall.Kill(pid, syscall.SIGQUIT)
 	if err != nil && err != syscall.ESRCH {
 		return errors.AddStack(err)
 	}
@@ -219,9 +217,7 @@ func (p *Playground) handleScaleOut(state *controllerState, w io.Writer, req *Sc
 		if _, err := p.startProc(state, startCtx, inst, nil); err != nil {
 			return err
 		}
-		if post := spec.PostScaleOut; post != nil {
-			post(w, inst)
-		}
+		spec.PostScaleOut(w, inst)
 	}
 
 	controllerRuntime{pg: p, state: state}.OnProcsChanged()

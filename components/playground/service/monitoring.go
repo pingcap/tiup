@@ -17,9 +17,10 @@ func init() {
 	MustRegister(Spec{
 		ServiceID: proc.ServicePrometheus,
 		Catalog: Catalog{
-			IsEnabled:   func(ctx BootContext) bool { return ctx.MonitorEnabled() },
-			PlanConfig:  func(_ BootContext) proc.Config { return proc.Config{Num: 1} },
-			VersionBind: stripNextGenVersionSuffix,
+			IsEnabled:      func(ctx BootContext) bool { return ctx.MonitorEnabled() },
+			PlanConfig:     func(_ BootContext) proc.Config { return proc.Config{Num: 1} },
+			VersionBind:    stripNextGenVersionSuffix,
+			HideInProgress: true,
 		},
 		NewProc: func(rt ControllerRuntime, params NewProcParams) (proc.Process, error) {
 			shOpt := rt.SharedOptions()
@@ -49,7 +50,8 @@ func init() {
 				port := ctx.GrafanaPortOverride()
 				return proc.Config{Num: 1, Port: port}
 			},
-			VersionBind: stripNextGenVersionSuffix,
+			VersionBind:    stripNextGenVersionSuffix,
+			HideInProgress: true,
 		},
 		StartAfter: []proc.ServiceID{
 			proc.ServicePrometheus,
@@ -95,8 +97,9 @@ func init() {
 				}
 				return semver.Compare(baseVersion, "v5.3.0") >= 0
 			},
-			PlanConfig:  func(_ BootContext) proc.Config { return proc.Config{Num: 1} },
-			VersionBind: stripNextGenVersionSuffix,
+			PlanConfig:     func(_ BootContext) proc.Config { return proc.Config{Num: 1} },
+			VersionBind:    stripNextGenVersionSuffix,
+			HideInProgress: true,
 		},
 		StartAfter: []proc.ServiceID{
 			proc.ServicePD,

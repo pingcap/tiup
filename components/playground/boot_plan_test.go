@@ -195,3 +195,63 @@ func TestPDAPIDefaults_OverridePD(t *testing.T) {
 		t.Fatalf("unexpected pd-api port: %d", pdAPI.Port)
 	}
 }
+
+func TestBuildBootPlan_StartOrder_DoesNotDelayTiDBBehindMonitoringWhenPumpDisabled(t *testing.T) {
+	opts := &BootOptions{
+		ShOpt: proc.SharedOptions{
+			Mode:   proc.ModeCSE,
+			PDMode: "pd",
+		},
+		Version: "v7.5.0",
+		Monitor: true,
+	}
+
+	fs := newTestFlagSet()
+	registerServiceFlags(fs, opts)
+	if err := fs.Parse([]string{
+		"--pd.binpath=/tmp/pd-server",
+		"--kv.binpath=/tmp/tikv-server",
+		"--db.binpath=/tmp/tidb-server",
+	}); err != nil {
+		t.Fatalf("parse flags: %v", err)
+	}
+	if err := applyServiceDefaults(fs, opts); err != nil {
+		t.Fatalf("applyServiceDefaults: %v", err)
+	}
+	if got := opts.Service(proc.ServicePump).Num; got != 0 {
+		t.Fatalf("unexpected pump default num: %d", got)
+	}
+
+	plan, err := buildBootPlan(opts)
+	if err != nil {
+		t.Fatalf("buildBootPlan: %v", err)
+	}
+
+	idx := func(target proc.ServiceID) int {
+		for i, p := range plan.Plans {
+			if p.serviceID == target {
+				return i
+			}
+		}
+		return -1
+	}
+
+	idxTiDB := idx(proc.ServiceTiDB)
+	idxProm := idx(proc.ServicePrometheus)
+	idxGrafana := idx(proc.ServiceGrafana)
+	if idxTiDB < 0 {
+		t.Fatalf("missing %s in boot plan", proc.ServiceTiDB)
+	}
+	if idxProm < 0 {
+		t.Fatalf("missing %s in boot plan", proc.ServicePrometheus)
+	}
+	if idxGrafana < 0 {
+		t.Fatalf("missing %s in boot plan", proc.ServiceGrafana)
+	}
+	if idxTiDB > idxProm {
+		t.Fatalf("expected %s to start before %s (pump is disabled), got: tidb=%d prom=%d", proc.ServiceTiDB, proc.ServicePrometheus, idxTiDB, idxProm)
+	}
+	if idxTiDB > idxGrafana {
+		t.Fatalf("expected %s to start before %s (pump is disabled), got: tidb=%d grafana=%d", proc.ServiceTiDB, proc.ServiceGrafana, idxTiDB, idxGrafana)
+	}
+}

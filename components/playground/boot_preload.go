@@ -9,7 +9,6 @@ import (
 
 	"github.com/pingcap/tiup/components/playground/proc"
 	"github.com/pingcap/tiup/pkg/environment"
-	progressv2 "github.com/pingcap/tiup/pkg/tuiv2/progress"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -26,7 +25,7 @@ type binaryPreload struct {
 
 	// targets are the "Starting instances" tasks for instances that will use
 	// this resolved version (i.e. no user-specified BinPath).
-	targets []*progressv2.Task
+	targets []progressTask
 }
 
 type binaryPreloader struct {
@@ -68,7 +67,7 @@ func (p *binaryPreloader) constraintFor(serviceID proc.ServiceID) string {
 	return constraint
 }
 
-func (p *binaryPreloader) collect(startingTasks map[string]*progressv2.Task) {
+func (p *binaryPreloader) collect(startingTasks map[string]progressTask) {
 	if p == nil || p.pg == nil {
 		return
 	}

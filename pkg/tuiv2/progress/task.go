@@ -31,6 +31,19 @@ type Task struct {
 
 	kind   taskKind
 	status taskStatus
+	// hideIfFast hides this task in TTY mode unless it is slow or errors.
+	//
+	// This is useful for "background" tasks where the happy path is not
+	// interesting, but failures (or unusually long operations) should still be
+	// surfaced.
+	//
+	// Behavior in ModeTTY:
+	// - pending: hidden
+	// - running: shown only when running for >= revealAfter
+	// - done/skipped/canceled: hidden
+	// - error: always shown
+	hideIfFast  bool
+	revealAfter time.Duration
 	// meta holds stable, user-facing metadata for this task (e.g. component
 	// version for downloads). Unlike message, it is not overwritten by Error().
 	meta    string
@@ -51,6 +64,33 @@ type Task struct {
 
 	plainStartPrinted    bool
 	downloadStartPrinted bool
+}
+
+// SetHideIfFast configures this task to be hidden in TTY mode unless it runs for
+// at least revealAfter, or errors.
+//
+// It is useful for tasks that are usually quick and uninteresting on success
+// (e.g. background monitoring shutdown), but should still be visible when they
+// become slow or fail.
+func (t *Task) SetHideIfFast(revealAfter time.Duration) {
+	if t == nil || t.g == nil || t.g.ui == nil {
+		return
+	}
+	ui := t.g.ui
+
+	ui.mu.Lock()
+	defer ui.mu.Unlock()
+
+	if ui.closed {
+		return
+	}
+
+	if revealAfter < 0 {
+		revealAfter = 0
+	}
+	t.hideIfFast = true
+	t.revealAfter = revealAfter
+	ui.markDirtyLocked()
 }
 
 // SetKindDownload marks this task as a download task.

@@ -17,10 +17,6 @@ type readyFuture struct {
 
 func newReadyFuture(ch <-chan error) *readyFuture {
 	f := &readyFuture{done: make(chan struct{})}
-	if ch == nil {
-		close(f.done)
-		return f
-	}
 	go func() {
 		f.err = <-ch
 		close(f.done)

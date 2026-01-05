@@ -9,6 +9,7 @@ import (
 
 	"github.com/pingcap/tiup/components/playground/proc"
 	pgservice "github.com/pingcap/tiup/components/playground/service"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 type controllerEvent interface{}
@@ -93,6 +94,15 @@ type startProcResponse struct {
 	err     error
 }
 
+type startProcResolvedEvent struct {
+	ctx     context.Context
+	inst    proc.Process
+	binPath string
+	version utils.Version
+
+	readyCh chan error
+}
+
 type stopSignalEvent struct {
 	sig syscall.Signal
 }
@@ -161,32 +171,20 @@ func (p *Playground) controllerLoop(ctx context.Context) {
 func (p *Playground) handleEvent(state *controllerState, evt controllerEvent) {
 	switch e := evt.(type) {
 	case bootStateEvent:
-		if state != nil {
-			state.booting = e.booting
-		}
-		if e.ackCh != nil {
-			close(e.ackCh)
-		}
+		state.booting = e.booting
+		close(e.ackCh)
 	case bootedStateEvent:
-		if state != nil {
-			state.booted = e.booted
-		}
-		if e.ackCh != nil {
-			close(e.ackCh)
-		}
+		state.booted = e.booted
+		close(e.ackCh)
 	case setRequiredServicesEvent:
-		if state != nil {
-			state.requiredServices = make(map[proc.ServiceID]int, len(e.required))
-			for k, v := range e.required {
-				if k != "" && v > 0 {
-					state.requiredServices[k] = v
-				}
+		state.requiredServices = make(map[proc.ServiceID]int, len(e.required))
+		for k, v := range e.required {
+			if k != "" && v > 0 {
+				state.requiredServices[k] = v
 			}
-			state.criticalRunning = make(map[proc.ServiceID]int)
 		}
-		if e.ackCh != nil {
-			close(e.ackCh)
-		}
+		state.criticalRunning = make(map[proc.ServiceID]int)
+		close(e.ackCh)
 	case stopSignalEvent:
 		p.startShutdownWithControllerState(state, stopCauseSignal, e.sig)
 	case stopInternalEvent:
@@ -194,77 +192,36 @@ func (p *Playground) handleEvent(state *controllerState, evt controllerEvent) {
 	case forceKillEvent:
 		p.forceKillShutdownWithControllerState(state)
 	case procsByServiceRequest:
-		var out []proc.Process
-		if state != nil && state.procs != nil && e.serviceID != "" {
-			out = append([]proc.Process(nil), state.procs[e.serviceID]...)
-		}
-		if e.respCh != nil {
-			e.respCh <- out
-			close(e.respCh)
-		}
+		out := append([]proc.Process(nil), state.procs[e.serviceID]...)
+		e.respCh <- out
+		close(e.respCh)
 	case procsSnapshotRequest:
 		out := make(map[proc.ServiceID][]proc.Process)
-		if state != nil && state.procs != nil {
-			for id, list := range state.procs {
-				out[id] = append([]proc.Process(nil), list...)
-			}
+		for id, list := range state.procs {
+			out[id] = append([]proc.Process(nil), list...)
 		}
-		if e.respCh != nil {
-			e.respCh <- out
-			close(e.respCh)
-		}
+		e.respCh <- out
+		close(e.respCh)
 	case procRecordsSnapshotRequest:
-		var out []procRecordSnapshot
-		if state != nil {
-			out = state.snapshotProcRecords()
-		}
-		if e.respCh != nil {
-			e.respCh <- out
-			close(e.respCh)
-		}
+		e.respCh <- state.snapshotProcRecords()
+		close(e.respCh)
 	case bootedStateRequest:
-		booted := false
-		if state != nil {
-			booted = state.booted
-		}
-		if e.respCh != nil {
-			e.respCh <- booted
-			close(e.respCh)
-		}
+		e.respCh <- state.booted
+		close(e.respCh)
 	case addProcRequest:
-		var (
-			inst proc.Process
-			err  error
-		)
-		if p != nil {
-			inst, err = p.addProcInController(state, e.serviceID, e.cfg)
-		}
-		if e.respCh != nil {
-			e.respCh <- addProcResponse{inst: inst, err: err}
-			close(e.respCh)
-		}
+		inst, err := p.addProcInController(state, e.serviceID, e.cfg)
+		e.respCh <- addProcResponse{inst: inst, err: err}
+		close(e.respCh)
 	case startProcRequest:
-		var (
-			readyCh <-chan error
-			err     error
-		)
-		if p != nil {
-			readyCh, err = p.startProc(state, e.ctx, e.inst, e.preload)
-		}
-		if e.respCh != nil {
-			e.respCh <- startProcResponse{readyCh: readyCh, err: err}
-			close(e.respCh)
-		}
+		readyCh, err := p.startProc(state, e.ctx, e.inst, e.preload)
+		e.respCh <- startProcResponse{readyCh: readyCh, err: err}
+		close(e.respCh)
+	case startProcResolvedEvent:
+		p.startProcWithResolvedBinary(state, e.ctx, e.inst, e.binPath, e.version, e.readyCh)
 	case procExitedEvent:
-		booting := false
-		if state != nil {
-			booting = state.booting
-		}
-		dec := p.handleProcExited(state, e.inst, e.pid, e.err, booting)
-		if e.respCh != nil {
-			e.respCh <- dec
-			close(e.respCh)
-		}
+		dec := p.handleProcExited(state, e.inst, e.pid, e.err, state.booting)
+		e.respCh <- dec
+		close(e.respCh)
 	default:
 		if se, ok := evt.(pgservice.Event); ok && se != nil {
 			se.Handle(controllerRuntime{pg: p, state: state})
@@ -272,20 +229,15 @@ func (p *Playground) handleEvent(state *controllerState, evt controllerEvent) {
 	}
 }
 
-func (p *Playground) emitEvent(evt controllerEvent) {
+func (p *Playground) emitEvent(evt controllerEvent) bool {
 	if p == nil || p.evtCh == nil {
-		return
-	}
-	if p.controllerDoneCh == nil {
-		select {
-		case p.evtCh <- evt:
-		default:
-		}
-		return
+		return false
 	}
 	select {
 	case p.evtCh <- evt:
+		return true
 	case <-p.controllerDoneCh:
+		return false
 	}
 }
 
@@ -512,17 +464,13 @@ func (p *Playground) setControllerBooting(ctx context.Context, booting bool) {
 	if p == nil || p.evtCh == nil {
 		return
 	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
 
 	ackCh := make(chan struct{})
 	p.emitEvent(bootStateEvent{booting: booting, ackCh: ackCh})
 
-	if ackCh == nil {
-		return
-	}
-	if ctx == nil {
-		<-ackCh
-		return
-	}
 	select {
 	case <-ackCh:
 	case <-ctx.Done():
@@ -534,17 +482,13 @@ func (p *Playground) setControllerRequiredServices(ctx context.Context, required
 	if p == nil || p.evtCh == nil {
 		return
 	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
 
 	ackCh := make(chan struct{})
 	p.emitEvent(setRequiredServicesEvent{required: required, ackCh: ackCh})
 
-	if ackCh == nil {
-		return
-	}
-	if ctx == nil {
-		<-ackCh
-		return
-	}
 	select {
 	case <-ackCh:
 	case <-ctx.Done():
@@ -556,17 +500,13 @@ func (p *Playground) setControllerBooted(ctx context.Context, booted bool) {
 	if p == nil || p.evtCh == nil {
 		return
 	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
 
 	ackCh := make(chan struct{})
 	p.emitEvent(bootedStateEvent{booted: booted, ackCh: ackCh})
 
-	if ackCh == nil {
-		return
-	}
-	if ctx == nil {
-		<-ackCh
-		return
-	}
 	select {
 	case <-ackCh:
 	case <-ctx.Done():
@@ -578,55 +518,25 @@ func (p *Playground) requestStopSignal(sig syscall.Signal) {
 	if p == nil {
 		return
 	}
-	if p.evtCh == nil {
+	if !p.emitEvent(stopSignalEvent{sig: sig}) {
 		p.startShutdown(stopCauseSignal, sig)
-		return
 	}
-	if p.controllerDoneCh != nil {
-		select {
-		case <-p.controllerDoneCh:
-			p.startShutdown(stopCauseSignal, sig)
-			return
-		default:
-		}
-	}
-	p.emitEvent(stopSignalEvent{sig: sig})
 }
 
 func (p *Playground) requestStopInternal() {
 	if p == nil {
 		return
 	}
-	if p.evtCh == nil {
+	if !p.emitEvent(stopInternalEvent{}) {
 		p.startShutdown(stopCauseInternal, 0)
-		return
 	}
-	if p.controllerDoneCh != nil {
-		select {
-		case <-p.controllerDoneCh:
-			p.startShutdown(stopCauseInternal, 0)
-			return
-		default:
-		}
-	}
-	p.emitEvent(stopInternalEvent{})
 }
 
 func (p *Playground) requestForceKill() {
 	if p == nil {
 		return
 	}
-	if p.evtCh == nil {
+	if !p.emitEvent(forceKillEvent{}) {
 		p.forceKillShutdown()
-		return
 	}
-	if p.controllerDoneCh != nil {
-		select {
-		case <-p.controllerDoneCh:
-			p.forceKillShutdown()
-			return
-		default:
-		}
-	}
-	p.emitEvent(forceKillEvent{})
 }

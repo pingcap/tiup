@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
 )
@@ -22,6 +23,32 @@ type ttyRenderContext struct {
 
 type ttyGroupComponent struct {
 	group *Group
+}
+
+func ttyTaskVisible(t *Task, now time.Time) bool {
+	if t == nil {
+		return false
+	}
+	if !t.hideIfFast {
+		return true
+	}
+	switch t.status {
+	case taskStatusError:
+		return true
+	case taskStatusRunning:
+		if t.revealAfter <= 0 {
+			return true
+		}
+		if t.startAt.IsZero() {
+			// Best-effort fallback: if we don't have a start timestamp, prefer
+			// showing the task so users can see progress.
+			return true
+		}
+		return now.Sub(t.startAt) >= t.revealAfter
+	default:
+		// Hide pending/success/canceled/skipped tasks.
+		return false
+	}
 }
 
 func (c ttyGroupComponent) Lines(ctx ttyRenderContext, activeLimit int) []string {
@@ -43,9 +70,17 @@ func (c ttyGroupComponent) Lines(ctx ttyRenderContext, activeLimit int) []string
 		})
 	}
 
+	now := time.Now()
+	visibleTasks := make([]*Task, 0, len(tasks))
+	for _, t := range tasks {
+		if ttyTaskVisible(t, now) {
+			visibleTasks = append(visibleTasks, t)
+		}
+	}
+
 	active := 0
 	hasError := false
-	for _, t := range tasks {
+	for _, t := range visibleTasks {
 		if t == nil {
 			continue
 		}
@@ -103,6 +138,7 @@ func (c ttyGroupComponent) Lines(ctx ttyRenderContext, activeLimit int) []string
 	}
 
 	shown := len(tasks)
+	shown = len(visibleTasks)
 	if activeLimit >= 0 && shown > activeLimit {
 		shown = activeLimit
 	}
@@ -113,7 +149,7 @@ func (c ttyGroupComponent) Lines(ctx ttyRenderContext, activeLimit int) []string
 	// tasks (e.g. "... and N more") won't affect alignment.
 	maxTitleWidth := 0
 	for i := 0; i < shown; i++ {
-		t := tasks[i]
+		t := visibleTasks[i]
 		if t == nil {
 			continue
 		}
@@ -129,7 +165,7 @@ func (c ttyGroupComponent) Lines(ctx ttyRenderContext, activeLimit int) []string
 	maxDownloadLabelWidth := 0
 	if maxTitleWidth > 0 {
 		for i := 0; i < shown; i++ {
-			t := tasks[i]
+			t := visibleTasks[i]
 			if t == nil || t.kind != taskKindDownload {
 				continue
 			}
@@ -142,14 +178,14 @@ func (c ttyGroupComponent) Lines(ctx ttyRenderContext, activeLimit int) []string
 
 	for i := 0; i < shown; i++ {
 		lines = append(lines, ttyTaskComponent{
-			task:               tasks[i],
+			task:               visibleTasks[i],
 			guide:              guide,
 			titleWidth:         maxTitleWidth,
 			downloadLabelWidth: maxDownloadLabelWidth,
 		}.Line(ctx))
 	}
-	if len(tasks) > shown {
-		lines = append(lines, ctx.styles.clipLine(ctx.width, fmt.Sprintf("  … and %d more", len(tasks)-shown)))
+	if len(visibleTasks) > shown {
+		lines = append(lines, ctx.styles.clipLine(ctx.width, fmt.Sprintf("  … and %d more", len(visibleTasks)-shown)))
 	}
 
 	return lines

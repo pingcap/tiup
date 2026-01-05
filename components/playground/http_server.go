@@ -14,7 +14,7 @@ func (p *Playground) listenAndServeHTTP() error {
 	mux.HandleFunc("/command", p.commandHandler)
 
 	srv := &http.Server{
-		Addr:              ":" + strconv.Itoa(p.port),
+		Addr:              "127.0.0.1:" + strconv.Itoa(p.port),
 		Handler:           mux,
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,

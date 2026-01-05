@@ -15,6 +15,7 @@ import (
 
 // The duration process need to quit gracefully, or we kill the process.
 const forceKillAfterDuration = time.Second * 10
+const hideInProgressRevealAfterShutdown = 2 * time.Second
 
 type stopCause int
 
@@ -107,12 +108,16 @@ func (p *Playground) forceKillShutdownWithControllerState(state *controllerState
 	go p.terminateForceKill(p.shutdownProcRecords)
 }
 
-func (p *Playground) addWaitProc(inst proc.Process, exitCh chan error) {
+func (p *Playground) addWaitProc(inst proc.Process) chan error {
+	exitCh := make(chan error, 1)
+
 	info := (*proc.ProcessInfo)(nil)
 	name := ""
 	if inst != nil {
 		info = inst.Info()
-		name = info.Name()
+		if info != nil {
+			name = info.Name()
+		}
 	}
 
 	waiter := func() error {
@@ -128,13 +133,11 @@ func (p *Playground) addWaitProc(inst proc.Process, exitCh chan error) {
 		}
 
 		// Notify any readiness check that might be waiting so it can stop early.
-		if exitCh != nil {
-			select {
-			case exitCh <- err:
-			default:
-			}
-			close(exitCh)
+		select {
+		case exitCh <- err:
+		default:
 		}
+		close(exitCh)
 
 		pid := 0
 		if osProc != nil {
@@ -145,15 +148,13 @@ func (p *Playground) addWaitProc(inst proc.Process, exitCh chan error) {
 		p.emitEvent(procExitedEvent{inst: inst, pid: pid, err: err, respCh: decCh})
 
 		expectedExit := false
-		if decCh != nil {
-			select {
-			case dec := <-decCh:
-				expectedExit = dec.expectedExit
-			case <-p.controllerDoneCh:
-				// If the controller is gone (context canceled / shutdown), treat
-				// the exit as expected to avoid leaking errors.
-				expectedExit = true
-			}
+		select {
+		case dec := <-decCh:
+			expectedExit = dec.expectedExit
+		case <-p.controllerDoneCh:
+			// If the controller is gone (context canceled / shutdown), treat
+			// the exit as expected to avoid leaking errors.
+			expectedExit = true
 		}
 
 		if expectedExit {
@@ -170,10 +171,11 @@ func (p *Playground) addWaitProc(inst proc.Process, exitCh chan error) {
 	}
 	if p != nil && p.processGroup != nil {
 		if err := p.processGroup.Add(nameForErr, waiter); err == nil {
-			return
+			return exitCh
 		}
 	}
 	go func() { _ = waiter() }()
+	return exitCh
 }
 
 func (p *Playground) shutdownProcTitle(inst proc.Process) string {
@@ -217,10 +219,11 @@ func (p *Playground) terminateGracefully(records []procRecordSnapshot) {
 	}
 
 	type shutdownTarget struct {
-		title string
-		pid   int
-		wait  func() error
-		task  *progressv2.Task
+		serviceID proc.ServiceID
+		title     string
+		pid       int
+		wait      func() error
+		task      *progressv2.Task
 	}
 
 	p.progressMu.Lock()
@@ -260,9 +263,10 @@ func (p *Playground) terminateGracefully(records []procRecordSnapshot) {
 				serviceIDs = append(serviceIDs, serviceID)
 			}
 			byService[serviceID] = append(byService[serviceID], shutdownTarget{
-				title: p.shutdownProcTitle(inst),
-				pid:   pid,
-				wait:  osProc.Wait,
+				serviceID: serviceID,
+				title:     p.shutdownProcTitle(inst),
+				pid:       pid,
+				wait:      osProc.Wait,
 			})
 		}
 
@@ -301,6 +305,7 @@ func (p *Playground) terminateGracefully(records []procRecordSnapshot) {
 		// without implying everything is already in progress.
 		for i := range targets {
 			t := shutdownGroup.TaskPending(targets[i].title)
+			applyHideInProgressPolicy(t, targets[i].serviceID, hideInProgressRevealAfterShutdown)
 			t.SetMessage(fmt.Sprintf("pid=%d", targets[i].pid))
 			targets[i].task = t
 		}
