@@ -102,7 +102,7 @@ func (m *DMMaster) WaitReady(ctx context.Context) error {
 		if cmd == nil {
 			return fmt.Errorf("initialize command failed")
 		}
-		if state := cmd.ProcessState; state != nil && state.Exited() {
+		if state := cmd.ProcessState; state != nil {
 			return fmt.Errorf("process exited with code: %d", state.ExitCode())
 		}
 

@@ -77,7 +77,7 @@ func (p *Playground) handleDisplay(state *controllerState, r io.Writer, verbose,
 				pid = proc.Pid()
 				uptime = proc.Uptime()
 				status = "running"
-				if ps := cmd.ProcessState; ps != nil && ps.Exited() {
+				if ps := cmd.ProcessState; ps != nil {
 					status = fmt.Sprintf("exited(%d)", ps.ExitCode())
 				}
 			}
