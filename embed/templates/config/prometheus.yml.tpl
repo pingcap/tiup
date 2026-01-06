@@ -207,6 +207,7 @@ scrape_configs:
 {{- range .ResourceManagerAddrs}}
       - '{{.}}'
 {{- end}}
+{{- end}}
   - job_name: "router"
     honor_labels: true # don't overwrite job & instance labels
 {{- if .TLSEnabled}}

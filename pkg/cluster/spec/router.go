@@ -1,4 +1,4 @@
-// Copyright 2025 PingCAP, Inc.
+// Copyright 2026 PingCAP, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,8 +28,6 @@ import (
 	"github.com/pingcap/tiup/pkg/tidbver"
 	"github.com/pingcap/tiup/pkg/utils"
 )
-
-var routerService = "router"
 
 // RouterSpec represents the router router specification in topology.yaml
 type RouterSpec struct {

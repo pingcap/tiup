@@ -100,6 +100,7 @@ func (u *UpdateMeta) Execute(ctx context.Context) error {
 		routerServers = append(routerServers, topo.RouterServers[i])
 	}
 	newMeta.Topology.RouterServers = routerServers
+
 	resourceManagers := make([]*spec.ResourceManagerSpec, 0)
 	for i, instance := range (&spec.ResourceManagerComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
