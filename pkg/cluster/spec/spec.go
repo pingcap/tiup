@@ -124,6 +124,7 @@ type (
 		TSO             map[string]any    `yaml:"tso"`
 		Scheduling      map[string]any    `yaml:"scheduling"`
 		ResourceManager map[string]any    `yaml:"resource_manager"`
+		Router          map[string]any    `yaml:"router"`
 		Dashboard       map[string]any    `yaml:"tidb_dashboard"`
 		TiFlash         map[string]any    `yaml:"tiflash"`
 		TiProxy         map[string]any    `yaml:"tiproxy"`
@@ -144,6 +145,7 @@ type (
 		TSO             string `yaml:"tso,omitempty"`
 		Scheduling      string `yaml:"scheduling,omitempty"`
 		ResourceManager string `yaml:"resource_manager,omitempty"`
+		Router          string `yaml:"router,omitempty"`
 		Dashboard       string `yaml:"tidb_dashboard,omitempty"`
 		Pump            string `yaml:"pump,omitempty"`
 		Drainer         string `yaml:"drainer,omitempty"`
@@ -186,6 +188,7 @@ type (
 		TSOServers             []*TSOSpec             `yaml:"tso_servers,omitempty"`
 		SchedulingServers      []*SchedulingSpec      `yaml:"scheduling_servers,omitempty"`
 		ResourceManagerServers []*ResourceManagerSpec `yaml:"resource_manager_servers,omitempty"`
+		RouterServers          []*RouterSpec          `yaml:"router_servers,omitempty"`
 		DashboardServers       []*DashboardSpec       `yaml:"tidb_dashboard_servers,omitempty"`
 		PumpServers            []*PumpSpec            `yaml:"pump_servers,omitempty"`
 		Drainers               []*DrainerSpec         `yaml:"drainer_servers,omitempty"`
@@ -574,6 +577,7 @@ func (s *Specification) Merge(that Topology) Topology {
 		TSOServers:             append(s.TSOServers, spec.TSOServers...),
 		SchedulingServers:      append(s.SchedulingServers, spec.SchedulingServers...),
 		ResourceManagerServers: append(s.ResourceManagerServers, spec.ResourceManagerServers...),
+		RouterServers:          append(s.RouterServers, spec.RouterServers...),
 		PumpServers:            append(s.PumpServers, spec.PumpServers...),
 		Drainers:               append(s.Drainers, spec.Drainers...),
 		CDCServers:             append(s.CDCServers, spec.CDCServers...),
@@ -595,6 +599,7 @@ func (v *ComponentVersions) Merge(that ComponentVersions) ComponentVersions {
 		TSO:             utils.Ternary(that.TSO != "", that.TSO, v.TSO).(string),
 		Scheduling:      utils.Ternary(that.Scheduling != "", that.Scheduling, v.Scheduling).(string),
 		ResourceManager: utils.Ternary(that.ResourceManager != "", that.ResourceManager, v.ResourceManager).(string),
+		Router:          utils.Ternary(that.Router != "", that.Router, v.Router).(string),
 		Dashboard:       utils.Ternary(that.Dashboard != "", that.Dashboard, v.Dashboard).(string),
 		TiFlash:         utils.Ternary(that.TiFlash != "", that.TiFlash, v.TiFlash).(string),
 		TiProxy:         utils.Ternary(that.TiProxy != "", that.TiProxy, v.TiProxy).(string),
@@ -689,7 +694,7 @@ func setCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) error 
 				continue
 			}
 			host := reflect.Indirect(field).FieldByName("Host").String()
-			// `TSO` and `Scheduling` components use `Port` filed
+			// `TSO`, `Scheduling`, "Router" components use `Port` filed
 			if reflect.Indirect(field).FieldByName("Port").IsValid() {
 				port := reflect.Indirect(field).FieldByName("Port").Int()
 				// field.String() is <spec.TSOSpec Value>
@@ -811,6 +816,7 @@ func (s *Specification) ComponentsByStartOrder() (comps []Component) {
 	comps = append(comps, &PDComponent{s})
 	comps = append(comps, &TSOComponent{s})
 	comps = append(comps, &SchedulingComponent{s})
+	comps = append(comps, &RouterComponent{s})
 	comps = append(comps, &ResourceManagerComponent{s})
 	comps = append(comps, &DashboardComponent{s})
 	comps = append(comps, &TiProxyComponent{s})
@@ -834,7 +840,7 @@ func (s *Specification) ComponentsByUpdateOrder(curVer string) (comps []Componen
 	// Ref: https://github.com/pingcap/tiup/issues/2166
 	cdcUpgradeBeforePDTiKVTiDB := tidbver.TiCDCUpgradeBeforePDTiKVTiDB(curVer)
 
-	// "tiflash", <"cdc">, "pd", "tso", "scheduling", "resource-manager", "dashboard", "tiproxy", "tikv", "pump", "tidb", "drainer", <"cdc>", "prometheus", "grafana", "alertmanager"
+	// "tiflash", <"cdc">, "pd", "tso", "scheduling", "resource-manager","router", "dashboard", "tiproxy", "tikv", "pump", "tidb", "drainer", <"cdc>", "prometheus", "grafana", "alertmanager"
 	comps = append(comps, &TiFlashComponent{s})
 	if cdcUpgradeBeforePDTiKVTiDB {
 		comps = append(comps, &CDCComponent{s})
@@ -842,6 +848,7 @@ func (s *Specification) ComponentsByUpdateOrder(curVer string) (comps []Componen
 	comps = append(comps, &PDComponent{s})
 	comps = append(comps, &TSOComponent{s})
 	comps = append(comps, &SchedulingComponent{s})
+	comps = append(comps, &RouterComponent{s})
 	comps = append(comps, &ResourceManagerComponent{s})
 	comps = append(comps, &DashboardComponent{s})
 	comps = append(comps, &TiProxyComponent{s})

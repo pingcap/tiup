@@ -107,3 +107,32 @@ func TestResourceManager(t *testing.T) {
 	assert.Nil(err)
 	assert.False(strings.Contains(string(content), "--name"))
 }
+
+func TestRouter(t *testing.T) {
+	assert := require.New(t)
+	conf, err := os.CreateTemp("", "router.conf")
+	assert.Nil(err)
+	defer os.Remove(conf.Name())
+
+	cfg := &RouterScript{
+		Name:               "router-0",
+		ListenURL:          "127.0.0.1",
+		AdvertiseListenURL: "127.0.0.2",
+		BackendEndpoints:   "127.0.0.3",
+		DeployDir:          "/deploy",
+		DataDir:            "/data",
+		LogDir:             "/log",
+	}
+	err = cfg.ConfigToFile(conf.Name())
+	assert.Nil(err)
+	content, err := os.ReadFile(conf.Name())
+	assert.Nil(err)
+	assert.True(strings.Contains(string(content), "--name"))
+
+	cfg.Name = ""
+	err = cfg.ConfigToFile(conf.Name())
+	assert.Nil(err)
+	content, err = os.ReadFile(conf.Name())
+	assert.Nil(err)
+	assert.False(strings.Contains(string(content), "--name"))
+}

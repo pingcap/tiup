@@ -79,4 +79,18 @@ func TestRenderSpec(t *testing.T) {
 	dir, err = renderSpec("{{.DataDir}}", s, "test-scheduling")
 	assert.Nil(t, err)
 	assert.NotEmpty(t, dir)
+
+	s = &spec.RouterInstance{BaseInstance: spec.BaseInstance{
+		InstanceSpec: &spec.RouterSpec{
+			Host:      "172.16.5.140",
+			SSHPort:   22,
+			Name:      "router-1",
+			DeployDir: "/home/test/deploy/router-3379",
+			DataDir:   "/home/test/deploy/router-3379/data",
+		},
+	}}
+	// s.BaseInstance.InstanceSpec
+	dir, err = renderSpec("{{.DataDir}}", s, "test-scheduling")
+	assert.Nil(t, err)
+	assert.NotEmpty(t, dir)
 }
