@@ -29,11 +29,11 @@ type TestMetadata struct {
 }
 
 func (m *TestMetadata) SetVersion(s string) {
-	m.BaseMeta.Version = s
+	m.Version = s
 }
 
 func (m *TestMetadata) SetUser(s string) {
-	m.BaseMeta.User = s
+	m.User = s
 }
 
 func (m *TestMetadata) GetTopology() Topology {

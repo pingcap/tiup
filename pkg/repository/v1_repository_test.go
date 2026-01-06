@@ -194,10 +194,10 @@ func TestUpdateLocalSnapshot(t *testing.T) {
 	mirror.Resources[v1manifest.ManifestURLSnapshot] = serSnap
 	timestamp.Meta[v1manifest.ManifestURLSnapshot].Hashes[v1manifest.SHA256] = hash(serSnap)
 
-	signedTs := serialize(t, timestamp, privk)
-	mirror.Resources[v1manifest.ManifestURLTimestamp] = signedTs
+	signedTS := serialize(t, timestamp, privk)
+	mirror.Resources[v1manifest.ManifestURLTimestamp] = signedTS
 	ts := &v1manifest.Manifest{Signed: &v1manifest.Timestamp{}}
-	err := cjson.Unmarshal([]byte(signedTs), ts)
+	err := cjson.Unmarshal([]byte(signedTS), ts)
 	assert.Nil(t, err)
 	local.Manifests[v1manifest.ManifestFilenameTimestamp] = ts
 

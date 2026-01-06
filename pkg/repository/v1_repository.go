@@ -259,12 +259,8 @@ func (r *V1Repository) updateLocalSnapshot() (*v1manifest.Snapshot, error) {
 	}
 	hash256 := sha256.Sum256(bytes)
 
-	snapshotChanged := true
 	// TODO: check changed in fetchTimestamp by compared to the raw local snapshot instead of timestamp.
-	if snapshotExists && hash.Hashes[v1manifest.SHA256] == hex.EncodeToString(hash256[:]) {
-		// Nothing has changed in snapshot.json
-		snapshotChanged = false
-	}
+	snapshotChanged := !snapshotExists || hash.Hashes[v1manifest.SHA256] != hex.EncodeToString(hash256[:])
 
 	if snapshotChanged {
 		manifest, err := r.fetchManifestWithHash(v1manifest.ManifestURLSnapshot, &snapshot, &hash)
@@ -560,8 +556,8 @@ func (r *V1Repository) fetchTimestamp() (changed bool, manifest *v1manifest.Mani
 
 	hash := ts.SnapshotHash()
 
-	var localTs v1manifest.Timestamp
-	_, exists, err := r.local.LoadManifest(&localTs)
+	var localTS v1manifest.Timestamp
+	_, exists, err := r.local.LoadManifest(&localTS)
 	if err != nil {
 		return false, nil, err
 	}
@@ -569,9 +565,9 @@ func (r *V1Repository) fetchTimestamp() (changed bool, manifest *v1manifest.Mani
 	switch {
 	case !exists:
 		changed = true
-	case ts.Version < localTs.Version:
-		return false, nil, fmt.Errorf("timestamp manifest has a version number < the old manifest (%v, %v)", ts.Version, localTs.Version)
-	case hash.Hashes[v1manifest.SHA256] != localTs.SnapshotHash().Hashes[v1manifest.SHA256]:
+	case ts.Version < localTS.Version:
+		return false, nil, fmt.Errorf("timestamp manifest has a version number < the old manifest (%v, %v)", ts.Version, localTS.Version)
+	case hash.Hashes[v1manifest.SHA256] != localTS.SnapshotHash().Hashes[v1manifest.SHA256]:
 		changed = true
 	}
 

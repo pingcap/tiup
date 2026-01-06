@@ -149,7 +149,7 @@ You may read the OpenJDK doc for a reference: https://openjdk.java.net/install/
 }
 
 func (m *Manager) sshTaskBuilder(name string, topo spec.Topology, user string, gOpt operator.Options) (*task.Builder, error) {
-	var p *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
+	var p = &tui.SSHConnectionProps{}
 	if gOpt.SSHType != executor.SSHTypeNone && len(gOpt.SSHProxyHost) != 0 {
 		var err error
 		if p, err = tui.ReadIdentityFileOrPassword(gOpt.SSHProxyIdentity, gOpt.SSHProxyUsePassword); err != nil {

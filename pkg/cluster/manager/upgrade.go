@@ -218,7 +218,7 @@ This operation will upgrade %s %s cluster %s (with a concurrency of %d) to %s:%s
 		}
 	}
 
-	var sshProxyProps *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
+	var sshProxyProps = &tui.SSHConnectionProps{}
 	if opt.SSHType != executor.SSHTypeNone {
 		var err error
 		if len(opt.SSHProxyHost) != 0 {

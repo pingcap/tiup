@@ -132,8 +132,8 @@ func (m *Manager) Deploy(
 	}
 
 	var (
-		sshConnProps  *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
-		sshProxyProps *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
+		sshConnProps  = &tui.SSHConnectionProps{}
+		sshProxyProps = &tui.SSHConnectionProps{}
 	)
 	if gOpt.SSHType != executor.SSHTypeNone {
 		var err error

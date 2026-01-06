@@ -124,7 +124,7 @@ func (c *GrafanaComponent) CalculateVersion(clusterVersion string) string {
 
 // SetVersion implements Component interface.
 func (c *GrafanaComponent) SetVersion(version string) {
-	*c.Topology.BaseTopo().GrafanaVersion = version
+	*c.BaseTopo().GrafanaVersion = version
 }
 
 // Instances implements Component interface.
@@ -139,7 +139,7 @@ func (c *GrafanaComponent) Instances() []Instance {
 				Name:         c.Name(),
 				Host:         s.Host,
 				ManageHost:   s.ManageHost,
-				ListenHost:   c.Topology.BaseTopo().GlobalOptions.ListenHost,
+				ListenHost:   c.BaseTopo().GlobalOptions.ListenHost,
 				Port:         s.Port,
 				SSHP:         s.SSHPort,
 				NumaNode:     "",

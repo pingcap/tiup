@@ -254,22 +254,6 @@ func (g *Group) elapsedLocked() time.Duration {
 	return time.Since(g.startedAt)
 }
 
-func (g *Group) countLocked() (ok, err, skipped, canceled int) {
-	for _, t := range g.tasks {
-		switch t.status {
-		case taskStatusDone:
-			ok++
-		case taskStatusError:
-			err++
-		case taskStatusSkipped:
-			skipped++
-		case taskStatusCanceled:
-			canceled++
-		}
-	}
-	return ok, err, skipped, canceled
-}
-
 // SetSortTasksByTitle configures whether tasks should be shown in a stable
 // title-sorted order in the TTY Active area.
 //

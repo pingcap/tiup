@@ -62,4 +62,3 @@ func TestUIBlankLine_TTYFlushesBufferedTextThenWritesBlankLine(t *testing.T) {
 		t.Fatalf("unexpected output:\nwant %q\ngot  %q", want, string(got))
 	}
 }
-

@@ -637,7 +637,7 @@ tiflash_servers:
 		if storageSection, ok := conf["storage"]; ok {
 			if mainSection, ok := storageSection.(map[string]any)["main"]; ok {
 				if mainDirsSection, ok := mainSection.(map[string]any)["dir"]; ok {
-					var mainDirs []any = mainDirsSection.([]any)
+					mainDirs := mainDirsSection.([]any)
 					require.Equal(t, 2, len(mainDirs))
 					require.Equal(t, "/ssd0/tiflash", mainDirs[0].(string))
 					require.Equal(t, "/ssd1/tiflash", mainDirs[1].(string))
@@ -649,7 +649,7 @@ tiflash_servers:
 			}
 			if latestSection, ok := storageSection.(map[string]any)["latest"]; ok {
 				if latestDirsSection, ok := latestSection.(map[string]any)["dir"]; ok {
-					var latestDirs []any = latestDirsSection.([]any)
+					latestDirs := latestDirsSection.([]any)
 					require.Equal(t, 1, len(latestDirs))
 					require.Equal(t, "/ssd0/tiflash", latestDirs[0].(string))
 				} else {

@@ -63,7 +63,8 @@ func (inst *TiFlashInstance) getConfig() map[string]any {
 	config["flash.proxy.config"] = filepath.Join(inst.Dir, "tiflash_proxy.toml")
 	config["logger.level"] = "debug"
 
-	if inst.Service == ServiceTiFlashWrite {
+	switch inst.Service {
+	case ServiceTiFlashWrite:
 		config["storage.s3.endpoint"] = inst.ShOpt.CSE.S3Endpoint
 		config["storage.s3.bucket"] = inst.ShOpt.CSE.Bucket
 		config["storage.s3.root"] = "/tiflash-cse/"
@@ -78,7 +79,7 @@ func (inst *TiFlashInstance) getConfig() map[string]any {
 		if inst.ShOpt.Mode == ModeNextGen {
 			config["storage.api_version"] = 2
 		}
-	} else if inst.Service == ServiceTiFlashCompute {
+	case ServiceTiFlashCompute:
 		config["storage.s3.endpoint"] = inst.ShOpt.CSE.S3Endpoint
 		config["storage.s3.bucket"] = inst.ShOpt.CSE.Bucket
 		config["storage.s3.root"] = "/tiflash-cse/"
@@ -101,9 +102,10 @@ func (inst *TiFlashInstance) getConfig() map[string]any {
 
 	if inst.ShOpt.HighPerf {
 		config["logger.level"] = "info"
-		if inst.Service == ServiceTiFlashWrite {
+		switch inst.Service {
+		case ServiceTiFlashWrite:
 			config["profiles.default.cpu_thread_count_scale"] = 5.0
-		} else if inst.Service == ServiceTiFlashCompute {
+		case ServiceTiFlashCompute:
 			config["profiles.default.task_scheduler_thread_soft_limit"] = 0
 			config["profiles.default.task_scheduler_thread_hard_limit"] = 0
 		}

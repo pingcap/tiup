@@ -137,8 +137,7 @@ func (c ttyGroupComponent) Lines(ctx ttyRenderContext, activeLimit int) []string
 		guide = ctx.styles.guideSuccess
 	}
 
-	shown := len(tasks)
-	shown = len(visibleTasks)
+	shown := len(visibleTasks)
 	if activeLimit >= 0 && shown > activeLimit {
 		shown = activeLimit
 	}

@@ -67,11 +67,6 @@ func (e playgroundUnreachableError) Error() string {
 
 func (e playgroundUnreachableError) Unwrap() error { return e.err }
 
-func isPlaygroundUnreachable(err error) bool {
-	var unreachable playgroundUnreachableError
-	return stdErrors.As(err, &unreachable)
-}
-
 func shouldSuggestPlaygroundNotRunning(err error) bool {
 	if err == nil {
 		return false

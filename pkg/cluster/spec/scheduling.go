@@ -74,10 +74,7 @@ func (s *SchedulingSpec) Status(ctx context.Context, timeout time.Duration, tlsC
 		return "ERR"
 	}
 	res := "Up"
-	enableTLS := false
-	if tlsCfg != nil {
-		enableTLS = true
-	}
+	enableTLS := tlsCfg != nil
 	if s.GetAdvertiseListenURL(enableTLS) == primary {
 		res += "|P"
 	}
@@ -319,10 +316,7 @@ func (i *SchedulingInstance) IsPrimary(ctx context.Context, topo Topology, tlsCf
 	}
 
 	spec := i.InstanceSpec.(*SchedulingSpec)
-	enableTLS := false
-	if tlsCfg != nil {
-		enableTLS = true
-	}
+	enableTLS := tlsCfg != nil
 
 	return primary == spec.GetAdvertiseListenURL(enableTLS), nil
 }

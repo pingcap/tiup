@@ -1,32 +1,50 @@
-linters-settings:
-  govet:
-    enable:
-      - nilness
-  errcheck:
-    exclude-functions:
-      - (*mime/multipart.Form).RemoveAll
-  gocritic:
-    disabled-checks:
-      - ifElseChain
-
+version: "2"
 linters:
-  disable-all: true
+  default: none
   enable:
     - bodyclose
     - errcheck
-    - gofmt
-    - goimports
-    - gosimple
+    - gocritic
     - govet
     - ineffassign
-    # - interfacer
     - misspell
     - rowserrcheck
     - staticcheck
-    - typecheck
     - unconvert
     - unused
     - whitespace
-    - gocritic
-    # - goconst
-    # - gocyclo
+  settings:
+    errcheck:
+      exclude-functions:
+        - (*mime/multipart.Form).RemoveAll
+    gocritic:
+      disabled-checks:
+        - ifElseChain
+    govet:
+      enable:
+        - nilness
+    staticcheck:
+      checks:
+        - all
+        - -SA1019
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

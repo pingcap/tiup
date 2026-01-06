@@ -67,10 +67,7 @@ func (m *Manager) CleanCluster(name string, gOpt operator.Options, cleanOpt oper
 
 	m.logger.Infof("Cleanup cluster...")
 
-	sudo := true
-	if topo.BaseTopo().GlobalOptions.SystemdMode == spec.UserMode {
-		sudo = false
-	}
+	sudo := topo.BaseTopo().GlobalOptions.SystemdMode != spec.UserMode
 	b, err := m.sshTaskBuilder(name, topo, base.User, gOpt)
 	if err != nil {
 		return err

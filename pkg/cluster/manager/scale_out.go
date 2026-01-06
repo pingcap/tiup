@@ -102,8 +102,8 @@ func (m *Manager) ScaleOut(
 	}
 
 	var (
-		sshConnProps  *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
-		sshProxyProps *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
+		sshConnProps  = &tui.SSHConnectionProps{}
+		sshProxyProps = &tui.SSHConnectionProps{}
 	)
 	if gOpt.SSHType != executor.SSHTypeNone {
 		var err error
@@ -287,7 +287,7 @@ func checkScaleOutLock(m *Manager, name string, opt DeployOptions, skipConfirm b
 
 	if opt.Stage2 {
 		if !locked {
-			return fmt.Errorf("The scale-out file lock does not exist, please make sure to run 'tiup-cluster scale-out %s --stage1' first", name)
+			return fmt.Errorf("the scale-out file lock does not exist, please make sure to run 'tiup-cluster scale-out %s --stage1' first", name)
 		}
 
 		m.logger.Warnf(`The parameter '%s' is set, only start the new instances and reload configs.`, color.YellowString("--stage2"))

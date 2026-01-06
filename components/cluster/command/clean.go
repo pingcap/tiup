@@ -49,7 +49,7 @@ You can retain some nodes and roles data when cleanup the cluster, eg:
 				cleanOpt.CleanupLog = true
 			}
 
-			if !(cleanOpt.CleanupData || cleanOpt.CleanupLog || cleanOpt.CleanupAuditLog) {
+			if !cleanOpt.CleanupData && !cleanOpt.CleanupLog && !cleanOpt.CleanupAuditLog {
 				return cmd.Help()
 			}
 

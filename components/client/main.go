@@ -77,7 +77,7 @@ func connect(target string) error {
 		return fmt.Errorf("error on read files: %s", err.Error())
 	}
 	if len(endpoints) == 0 {
-		return fmt.Errorf("It seems no playground is running, execute `tiup playground` to start one")
+		return fmt.Errorf("it seems no playground is running, execute `tiup playground` to start one")
 	}
 	var ep *endpoint
 	if target == "" {

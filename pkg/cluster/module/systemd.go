@@ -53,10 +53,7 @@ type SystemdModule struct {
 // given config.
 func NewSystemdModule(config SystemdModuleConfig) *SystemdModule {
 	systemctl := "systemctl"
-	sudo := true
-	if config.SystemdMode == "user" {
-		sudo = false
-	}
+	sudo := config.SystemdMode != "user"
 	if config.Force {
 		systemctl = fmt.Sprintf("%s --force", systemctl)
 	}

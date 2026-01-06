@@ -39,7 +39,7 @@ func (m ttyModel) Init() tea.Cmd {
 	// Keep the terminal cursor visible. Bubble Tea hides it by default, which is
 	// common for fullscreen TUIs but undesirable for an inline progress display:
 	// if the program crashes, the terminal can be left in a "cursor hidden" state.
-	return func() tea.Msg { return tea.ShowCursor() }
+	return tea.ShowCursor
 }
 
 func (m ttyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {

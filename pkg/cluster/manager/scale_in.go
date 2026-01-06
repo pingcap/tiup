@@ -50,8 +50,8 @@ func (m *Manager) ScaleIn(
 	}
 
 	var (
-		force bool     = gOpt.Force
-		nodes []string = gOpt.Nodes
+		force = gOpt.Force
+		nodes = gOpt.Nodes
 	)
 
 	metadata, err := m.meta(name)
