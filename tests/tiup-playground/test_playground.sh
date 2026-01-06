@@ -75,7 +75,7 @@ function kill_all() {
 }
 
 outfile=/tmp/tiup-playground-test.out
-tiup-playground $TIDB_VERSION > $outfile 2>&1 &
+tiup-playground $TIDB_VERSION 2>&1 > $outfile &
 
 # wait $outfile generated
 sleep 3
@@ -143,7 +143,7 @@ killall -2 tiup-playground.test || killall -2 tiup-playground
 sleep 100
 
 # test restart with same data
-tiup-playground $TIDB_VERSION > $outfile 2>&1 &
+tiup-playground $TIDB_VERSION 2>&1 > $outfile &
 
 # wait $outfile generated
 sleep 3
@@ -157,7 +157,7 @@ cat $outfile | grep ":3930" | grep -q "Done"
 TAG="test_1"
 outfile_1=/tmp/tiup-playground-test_1.out
 # no TiFlash to speed up
-tiup-playground $TIDB_VERSION --tag $TAG --db 2 --tiflash 0 > $outfile_1 2>&1 &
+tiup-playground $TIDB_VERSION --tag $TAG --db 2 --tiflash 0 2>&1 > $outfile_1 &
 sleep 3
 timeout 300 grep -q "TiDB Playground Cluster is started" <(tail -f $outfile_1)
 tiup-playground --tag $TAG display | grep -qv "exit"
@@ -181,7 +181,7 @@ sleep 100
 
 # test for TiKV-CDC
 echo -e "\033[0;36m<<< Run TiKV-CDC test >>>\033[0m"
-tiup-playground $TIDB_VERSION --db 1 --pd 1 --kv 1 --tiflash 0 --kvcdc 1 --kvcdc.version v1.0.0 > $outfile 2>&1 &
+tiup-playground $TIDB_VERSION --db 1 --pd 1 --kv 1 --tiflash 0 --kvcdc 1 --kvcdc.version v1.0.0 2>&1 > $outfile &
 sleep 3
 timeout 300 grep -q "TiDB Playground Cluster is started" <(tail -f $outfile)
 tiup-playground display | grep -qv "exit"
@@ -201,7 +201,7 @@ sleep 30
 
 # test for TiProxy
 echo -e "\033[0;36m<<< Run TiProxy test >>>\033[0m"
-tiup-playground $TIDB_VERSION --db 1 --pd 1 --kv 1 --tiflash 0 --tiproxy 1 --tiproxy.version "nightly" > $outfile 2>&1 &
+tiup-playground $TIDB_VERSION --db 1 --pd 1 --kv 1 --tiflash 0 --tiproxy 1 --tiproxy.version "nightly" 2>&1 > $outfile &
 sleep 3
 timeout 300 grep -q "TiDB Playground Cluster is started" <(tail -f $outfile)
 tiup-playground display | grep -qv "exit"
