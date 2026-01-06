@@ -143,7 +143,7 @@ func Upgrade(
 
 			// Usage within the switch statement
 			switch component.Name() {
-			case spec.ComponentPD, spec.ComponentTSO, spec.ComponentScheduling, spec.ComponentRouter:
+			case spec.ComponentPD, spec.ComponentTSO, spec.ComponentScheduling, spec.ComponentResourceManager, spec.ComponentRouter:
 				// defer PD related leader/primary to be upgraded after others
 				isLeader, err := checkAndDeferPDLeader(ctx, topo, int(options.APITimeout), tlsCfg, instance)
 				if err != nil {
@@ -244,6 +244,8 @@ func checkAndDeferPDLeader(ctx context.Context, topo spec.Topology, apiTimeout i
 		isLeader, err = instance.(*spec.TSOInstance).IsPrimary(ctx, topo, tlsCfg)
 	case spec.ComponentRouter:
 		isLeader, err = instance.(*spec.RouterInstance).IsPrimary(ctx, topo, tlsCfg)
+	case spec.ComponentResourceManager:
+		isLeader, err = instance.(*spec.ResourceManagerInstance).IsPrimary(ctx, topo, tlsCfg)
 	}
 	if err != nil {
 		return false, err

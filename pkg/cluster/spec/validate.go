@@ -916,6 +916,7 @@ func (s *Specification) validateTLSEnabled() error {
 			ComponentTSO,
 			ComponentScheduling,
 			ComponentRouter,
+			ComponentResourceManager,
 			ComponentTiDB,
 			ComponentTiKV,
 			ComponentTiFlash,
@@ -1010,6 +1011,21 @@ func (s *Specification) validateRouterName() error {
 	return nil
 }
 
+func (s *Specification) validateResourceManagerNames() error {
+	resourceManagerNames := set.NewStringSet()
+	for _, rm := range s.ResourceManagerServers {
+		if rm.Name == "" {
+			continue
+		}
+
+		if resourceManagerNames.Exist(rm.Name) {
+			return errors.Errorf("component resource_manager_servers.name is not supported duplicated, the name %s is duplicated", rm.Name)
+		}
+		resourceManagerNames.Insert(rm.Name)
+	}
+	return nil
+}
+
 func (s *Specification) validateTiFlashConfigs() error {
 	c := FindComponent(s, ComponentTiFlash)
 	for _, ins := range c.Instances() {
@@ -1088,6 +1104,7 @@ func (s *Specification) Validate() error {
 		s.validateTSONames,
 		s.validateSchedulingNames,
 		s.validateRouterName,
+		s.validateResourceManagerNames,
 		s.validateTiSparkSpec,
 		s.validateTiFlashConfigs,
 		s.validateMonitorAgent,

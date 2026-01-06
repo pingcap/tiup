@@ -40,9 +40,11 @@ func (u *UpdateMeta) Execute(ctx context.Context) error {
 	newMeta := &spec.ClusterMeta{}
 	*newMeta = *u.metadata
 	newMeta.Topology = &spec.Specification{
-		GlobalOptions:    u.metadata.Topology.GlobalOptions,
-		MonitoredOptions: u.metadata.Topology.MonitoredOptions,
-		ServerConfigs:    u.metadata.Topology.ServerConfigs,
+		GlobalOptions:     u.metadata.Topology.GlobalOptions,
+		MonitoredOptions:  u.metadata.Topology.MonitoredOptions,
+		ServerConfigs:     u.metadata.Topology.ServerConfigs,
+		ComponentVersions: u.metadata.Topology.ComponentVersions,
+		ComponentSources:  u.metadata.Topology.ComponentSources,
 	}
 
 	tidbServers := make([]*spec.TiDBSpec, 0)
@@ -98,6 +100,14 @@ func (u *UpdateMeta) Execute(ctx context.Context) error {
 		routerServers = append(routerServers, topo.RouterServers[i])
 	}
 	newMeta.Topology.RouterServers = routerServers
+	resourceManagers := make([]*spec.ResourceManagerSpec, 0)
+	for i, instance := range (&spec.ResourceManagerComponent{Topology: topo}).Instances() {
+		if deleted.Exist(instance.ID()) {
+			continue
+		}
+		resourceManagers = append(resourceManagers, topo.ResourceManagerServers[i])
+	}
+	newMeta.Topology.ResourceManagerServers = resourceManagers
 
 	tiproxyServers := make([]*spec.TiProxySpec, 0)
 	for i, instance := range (&spec.TiProxyComponent{Topology: topo}).Instances() {

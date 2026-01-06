@@ -25,7 +25,13 @@ function scale_core() {
 
     tiup-cluster $client list | grep "$name"
 
-    tiup-cluster $client --yes start $name
+    if ! tiup-cluster $client --yes --wait-timeout=300 start $name; then
+        echo "start failed, dumping tidb-4000 logs on n1"
+        tiup-cluster $client exec $name -N n1 --command "systemctl status tidb-4000 --no-pager -l || true"
+        tiup-cluster $client exec $name -N n1 --command "journalctl -u tidb-4000 -n 200 --no-pager || true"
+        tiup-cluster $client exec $name -N n1 --command "tail -n 200 /home/tidb/deploy/tidb-4000/log/tidb.log 2>/dev/null || true"
+        exit 1
+    fi
 
     tiup-cluster $client _test $name writable
 

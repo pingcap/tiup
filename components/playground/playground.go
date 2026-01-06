@@ -1423,7 +1423,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			}
 
 			for _, router := range p.routers {
-				routerAddr = append(schedulingAddr, router.Addr())
+				routerAddr = append(routerAddr, router.Addr())
 			}
 
 			fmt.Printf("PD API Endpoints:   ")

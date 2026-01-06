@@ -1048,9 +1048,10 @@ func (pc *PDClient) SetLeaderPriority(name string, value int32) error {
 }
 
 const (
-	tsoStatusURI        = "status"
-	schedulingStatusURI = "status"
-	routerStatusURI     = "status"
+	tsoStatusURI             = "status"
+	schedulingStatusURI      = "status"
+	resourceManagerStatusURI = "status"
+	routerStatusURI          = "status"
 )
 
 // TSOClient is an HTTP client of the TSO server
@@ -1251,6 +1252,88 @@ func (tc *SchedulingClient) CheckHealth() error {
 	}
 
 	return nil
+}
+
+// ResourceManagerClient is an HTTP client of the resource manager server
+type ResourceManagerClient struct {
+	version    string
+	addrs      []string
+	tlsEnabled bool
+	httpClient *utils.HTTPClient
+	ctx        context.Context
+}
+
+// NewResourceManagerClient returns a new ResourceManagerClient, the context must have
+// a *logprinter.Logger as value of "logger"
+func NewResourceManagerClient(
+	ctx context.Context,
+	addrs []string,
+	timeout time.Duration,
+	tlsConfig *tls.Config,
+) *ResourceManagerClient {
+	enableTLS := false
+	if tlsConfig != nil {
+		enableTLS = true
+	}
+
+	if _, ok := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger); !ok {
+		panic("the context must have logger inside")
+	}
+
+	cli := &ResourceManagerClient{
+		addrs:      addrs,
+		tlsEnabled: enableTLS,
+		httpClient: utils.NewHTTPClient(timeout, tlsConfig),
+		ctx:        ctx,
+	}
+
+	cli.tryIdentifyVersion()
+	return cli
+}
+
+func (tc *ResourceManagerClient) tryIdentifyVersion() {
+	endpoints := tc.getEndpoints(resourceManagerStatusURI)
+	response := map[string]string{}
+	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
+		body, err := tc.httpClient.Get(tc.ctx, endpoint)
+		if err != nil {
+			return body, err
+		}
+
+		return body, json.Unmarshal(body, &response)
+	})
+	if err == nil {
+		tc.version = response["version"]
+	}
+}
+
+// GetURL builds the client URL
+func (tc *ResourceManagerClient) GetURL(addr string) string {
+	httpPrefix := "http"
+	if tc.tlsEnabled {
+		httpPrefix = "https"
+	}
+	return fmt.Sprintf("%s://%s", httpPrefix, addr)
+}
+
+func (tc *ResourceManagerClient) getEndpoints(uri string) (endpoints []string) {
+	for _, addr := range tc.addrs {
+		endpoints = append(endpoints, fmt.Sprintf("%s/%s", tc.GetURL(addr), uri))
+	}
+	return
+}
+
+// CheckHealth checks the health of resource manager node.
+func (tc *ResourceManagerClient) CheckHealth() error {
+	endpoints := tc.getEndpoints(resourceManagerStatusURI)
+	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
+		body, err := tc.httpClient.Get(tc.ctx, endpoint)
+		if err != nil {
+			return body, err
+		}
+		return body, nil
+	})
+	return err
 }
 
 // RouterClient is an HTTP client of the router server

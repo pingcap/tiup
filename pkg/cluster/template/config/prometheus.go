@@ -38,6 +38,7 @@ type PrometheusConfig struct {
 	TSOAddrs                  []string
 	SchedulingAddrs           []string
 	RouterAddrs               []string
+	ResourceManagerAddrs      []string
 	TiFlashStatusAddrs        []string
 	TiFlashLearnerStatusAddrs []string
 	PumpAddrs                 []string
@@ -117,6 +118,12 @@ func (c *PrometheusConfig) AddScheduling(ip string, port uint64) *PrometheusConf
 // AddRouter add a router address
 func (c *PrometheusConfig) AddRouter(ip string, port uint64) *PrometheusConfig {
 	c.RouterAddrs = append(c.RouterAddrs, utils.JoinHostPort(ip, int(port)))
+	return c
+}
+
+// AddResourceManager add a resource manager address
+func (c *PrometheusConfig) AddResourceManager(ip string, port uint64) *PrometheusConfig {
+	c.ResourceManagerAddrs = append(c.ResourceManagerAddrs, utils.JoinHostPort(ip, int(port)))
 	return c
 }
 
