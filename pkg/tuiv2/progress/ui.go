@@ -50,14 +50,14 @@ func New(opts Options) *UI {
 	}
 
 	requested := opts.Mode
-	cap := tuiterm.ResolveFile(out)
+	termCap := tuiterm.ResolveFile(out)
 
-	actual := resolveMode(requested, cap)
-	cap.Control = actual == ModeTTY
+	actual := resolveMode(requested, termCap)
+	termCap.Control = actual == ModeTTY
 	ui := &UI{
 		out:     out,
 		mode:    actual,
-		outMode: cap,
+		outMode: termCap,
 		writer:  &uiWriter{},
 	}
 	ui.writer.(*uiWriter).ui = ui
@@ -179,7 +179,45 @@ func (ui *UI) Writer() io.Writer {
 	return ui.writer
 }
 
-func resolveMode(requested Mode, cap tuiterm.OutputMode) Mode {
+// BlankLine prints an empty line in a UI-safe way.
+//
+// In ModeTTY, it flushes any pending partial line from UI.Writer() first, then
+// appends an empty line to the History area so subsequent callouts/hints are
+// visually separated from progress output.
+func (ui *UI) BlankLine() {
+	if ui == nil {
+		return
+	}
+
+	ui.mu.Lock()
+	closed := ui.closed
+	mode := ui.mode
+	writer := ui.writer
+	ui.mu.Unlock()
+
+	if closed {
+		return
+	}
+
+	if mode != ModeTTY {
+		if writer != nil {
+			_, _ = io.WriteString(writer, "\n")
+		}
+		return
+	}
+
+	// In TTY mode, UI.Writer() buffers until newline. If there is a pending
+	// partial line, writing a single '\n' would only flush it and would not
+	// create the intended blank line separator.
+	if w, ok := writer.(*uiWriter); ok && w != nil {
+		if line := w.drainBufferedLine(); line != "" {
+			ui.printLogLine(line)
+		}
+	}
+	ui.printLogLine("")
+}
+
+func resolveMode(requested Mode, termCap tuiterm.OutputMode) Mode {
 	if requested == ModeOff {
 		return ModeOff
 	}
@@ -187,14 +225,14 @@ func resolveMode(requested Mode, cap tuiterm.OutputMode) Mode {
 		return ModePlain
 	}
 	if requested == ModeTTY {
-		if cap.Control {
+		if termCap.Control {
 			return ModeTTY
 		}
 		return ModePlain
 	}
 
 	// ModeAuto: if we can do terminal output rewriting, use TTY mode.
-	if cap.Control {
+	if termCap.Control {
 		return ModeTTY
 	}
 	return ModePlain

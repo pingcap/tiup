@@ -12,8 +12,10 @@ import (
 )
 
 const (
+	// ServiceNGMonitoring is the service ID for NG Monitoring.
 	ServiceNGMonitoring ServiceID = "ng-monitoring"
 
+	// ComponentNGMonitoring is the repository component ID for NG Monitoring.
 	ComponentNGMonitoring RepoComponentID = "ng-monitoring"
 )
 
@@ -22,6 +24,7 @@ func init() {
 	RegisterServiceDisplayName(ServiceNGMonitoring, "NG Monitoring")
 }
 
+// NGMonitoringInstance represents a running ng-monitoring-server.
 type NGMonitoringInstance struct {
 	ProcessInfo
 
@@ -30,6 +33,7 @@ type NGMonitoringInstance struct {
 
 var _ Process = &NGMonitoringInstance{}
 
+// LogFile returns the log file path for the instance.
 func (inst *NGMonitoringInstance) LogFile() string {
 	return filepath.Join(inst.Dir, "ng-monitoring.log")
 }
@@ -50,6 +54,7 @@ func resolveSiblingBinary(baseBinPath, want string) (string, bool) {
 	return filepath.Join(filepath.Dir(baseBinPath), want), false
 }
 
+// Prepare builds the NG Monitoring process command.
 func (inst *NGMonitoringInstance) Prepare(ctx context.Context) error {
 	if inst == nil {
 		return errors.New("ng-monitoring instance is nil")

@@ -33,7 +33,7 @@ func (p *Playground) printProcExitError(inst proc.Process, err error) {
 	if p == nil || inst == nil || err == nil {
 		return
 	}
-	out := p.termWriter()
+	out := p.terminalWriter()
 	logFile := inst.LogFile()
 
 	exitCode := -1
@@ -83,7 +83,7 @@ func (p *Playground) printClusterInfoCallout(tidbSucc, tiproxySucc []string) boo
 		return false
 	}
 
-	out := p.termWriter()
+	out := p.terminalWriter()
 	mysql := mysqlCommand()
 	dashboardURL, grafanaURL := p.clusterInfoMonitorURLs()
 
@@ -296,7 +296,7 @@ func (p *Playground) updateMonitorTopology(componentID string, info MonitorInfo)
 	defer cancel()
 
 	if _, err := client.Put(ctx, "/topology/"+componentID, string(promBinary)); err != nil {
-		fmt.Fprintf(p.termWriter(), "Set the PD metrics storage failed: %v\n", err)
+		fmt.Fprintf(p.terminalWriter(), "Set the PD metrics storage failed: %v\n", err)
 	}
 }
 

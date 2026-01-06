@@ -24,8 +24,10 @@ import (
 )
 
 const (
+	// ServiceTiKVWorker is the service ID for TiKV-worker.
 	ServiceTiKVWorker ServiceID = "tikv-worker"
 
+	// ComponentTiKVWorker is the repository component ID for TiKV-worker.
 	ComponentTiKVWorker RepoComponentID = "tikv-worker"
 )
 

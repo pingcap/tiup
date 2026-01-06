@@ -92,7 +92,7 @@ func (p *Playground) validateBootOptions(ctx context.Context, options *BootOptio
 
 		// Currently we always assign region=local. Other regions are not supported.
 		if strings.Contains(rawEndpoint, "amazonaws.com") {
-			return fmt.Errorf("Currently TiUP playground only supports local S3 (like minio). S3 on AWS Regions are not supported. Contributions are welcome!")
+			return fmt.Errorf("tiup playground only supports local S3 (like minio); S3 on AWS regions is not supported")
 		}
 
 		// Preflight check whether specified object storage is available.
@@ -359,7 +359,7 @@ func (p *Playground) bootCluster(ctx context.Context, options *BootOptions) (err
 		}()
 	}
 
-	starter := newBootStarter(p, ctx, preloader, planned, required)
+	starter := newBootStarter(ctx, p, preloader, planned, required)
 	ready, err := starter.startPlanned(plan.Plans)
 	if err != nil {
 		return err
@@ -387,7 +387,11 @@ func (p *Playground) bootCluster(ctx context.Context, options *BootOptions) (err
 		return ctx.Err()
 	}
 
-	fmt.Fprintln(p.termWriter())
+	if p.ui != nil {
+		p.ui.BlankLine()
+	} else {
+		fmt.Fprintln(p.terminalWriter())
+	}
 	_ = p.printClusterInfoCallout(tidbSucc, tiproxySucc)
 
 	tidbDSN := pgservice.ProcsOf[*proc.TiDBInstance](p, proc.ServiceTiDB)
@@ -413,7 +417,7 @@ func (p *Playground) bootCluster(ctx context.Context, options *BootOptions) (err
 		// fmt.Printf("serve at :%d\n", p.port)
 		err := p.listenAndServeHTTP()
 		if err != nil {
-			fmt.Fprintf(p.termWriter(), "listenAndServeHTTP quit: %s\n", err)
+			fmt.Fprintf(p.terminalWriter(), "listenAndServeHTTP quit: %s\n", err)
 		}
 	}()
 

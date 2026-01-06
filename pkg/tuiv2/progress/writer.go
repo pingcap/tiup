@@ -79,6 +79,19 @@ func (w *uiWriter) flush() {
 	ui.printLogLineForceTTY(line)
 }
 
+func (w *uiWriter) drainBufferedLine() string {
+	if w == nil {
+		return ""
+	}
+	w.mu.Lock()
+	line := w.buf.String()
+	w.buf.Reset()
+	w.mu.Unlock()
+
+	line = strings.TrimSuffix(line, "\r")
+	return line
+}
+
 var _ io.Writer = (*uiWriter)(nil)
 var _ tuiterm.ModeProvider = (*uiWriter)(nil)
 

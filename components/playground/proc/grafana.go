@@ -14,8 +14,10 @@ import (
 )
 
 const (
+	// ServiceGrafana is the service ID for the Grafana instance.
 	ServiceGrafana ServiceID = "grafana"
 
+	// ComponentGrafana is the repository component ID for Grafana.
 	ComponentGrafana RepoComponentID = "grafana"
 )
 
@@ -24,6 +26,7 @@ func init() {
 	RegisterServiceDisplayName(ServiceGrafana, "Grafana")
 }
 
+// GrafanaInstance represents a running Grafana server.
 type GrafanaInstance struct {
 	ProcessInfo
 
@@ -32,6 +35,7 @@ type GrafanaInstance struct {
 
 var _ Process = &GrafanaInstance{}
 
+// LogFile returns the log file path for the instance.
 func (inst *GrafanaInstance) LogFile() string {
 	return filepath.Join(inst.Dir, "grafana.log")
 }
@@ -173,6 +177,7 @@ func copyGrafanaDashboards(home, dashboardDir string) error {
 	return nil
 }
 
+// Prepare builds the Grafana process command.
 func (inst *GrafanaInstance) Prepare(ctx context.Context) error {
 	if inst == nil {
 		return errors.New("grafana instance is nil")

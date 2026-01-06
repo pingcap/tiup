@@ -12,8 +12,10 @@ import (
 )
 
 const (
+	// ServiceDMMaster is the service ID for DM-master.
 	ServiceDMMaster ServiceID = "dm-master"
 
+	// ComponentDMMaster is the repository component ID for DM-master.
 	ComponentDMMaster RepoComponentID = "dm-master"
 )
 

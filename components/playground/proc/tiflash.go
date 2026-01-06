@@ -27,10 +27,14 @@ import (
 )
 
 const (
-	ServiceTiFlash        ServiceID = "tiflash"
-	ServiceTiFlashWrite   ServiceID = "tiflash-write"
+	// ServiceTiFlash is the service ID for TiFlash.
+	ServiceTiFlash ServiceID = "tiflash"
+	// ServiceTiFlashWrite is the service ID for the TiFlash write node service.
+	ServiceTiFlashWrite ServiceID = "tiflash-write"
+	// ServiceTiFlashCompute is the service ID for the TiFlash compute node service.
 	ServiceTiFlashCompute ServiceID = "tiflash-compute"
 
+	// ComponentTiFlash is the repository component ID for TiFlash.
 	ComponentTiFlash RepoComponentID = "tiflash"
 )
 

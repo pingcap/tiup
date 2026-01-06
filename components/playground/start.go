@@ -307,7 +307,7 @@ func (p *Playground) requestStartProc(ctx context.Context, inst proc.Process, pr
 	}
 }
 
-func (p *Playground) startProc(state *controllerState, ctx context.Context, inst proc.Process, preload *binaryPreloader) (readyCh <-chan error, err error) {
+func (p *Playground) startProc(ctx context.Context, state *controllerState, inst proc.Process, preload *binaryPreloader) (readyCh <-chan error, err error) {
 	if p == nil || state == nil || inst == nil {
 		return nil, fmt.Errorf("startProc: controller state is nil")
 	}
@@ -373,30 +373,30 @@ func (p *Playground) startProc(state *controllerState, ctx context.Context, inst
 				}
 			}()
 			return readyCh, nil
-		} else {
-			v, err := environment.GlobalEnv().V1Repository().ResolveComponentVersion(component, constraint)
-			if err != nil {
-				p.markStartingTaskError(inst, constraint, err)
-				return nil, err
-			}
-			forcePull := false
-			if p.bootOptions != nil {
-				forcePull = p.bootOptions.ShOpt.ForcePull
-			}
-			binPath, err := prepareComponentBinary(component, v, forcePull)
-			if err != nil {
-				p.markStartingTaskError(inst, constraint, err)
-				return nil, err
-			}
-			info.BinPath = binPath
-			info.Version = v
 		}
+
+		v, err := environment.GlobalEnv().V1Repository().ResolveComponentVersion(component, constraint)
+		if err != nil {
+			p.markStartingTaskError(inst, constraint, err)
+			return nil, err
+		}
+		forcePull := false
+		if p.bootOptions != nil {
+			forcePull = p.bootOptions.ShOpt.ForcePull
+		}
+		binPath, err := prepareComponentBinary(component, v, forcePull)
+		if err != nil {
+			p.markStartingTaskError(inst, constraint, err)
+			return nil, err
+		}
+		info.BinPath = binPath
+		info.Version = v
 	}
 
-	return p.startProcWithControllerState(state, ctx, inst)
+	return p.startProcWithControllerState(ctx, state, inst)
 }
 
-func (p *Playground) startProcWithResolvedBinary(state *controllerState, ctx context.Context, inst proc.Process, binPath string, version utils.Version, readyCh chan error) {
+func (p *Playground) startProcWithResolvedBinary(ctx context.Context, state *controllerState, inst proc.Process, binPath string, version utils.Version, readyCh chan error) {
 	if binPath == "" {
 		err := fmt.Errorf("binary not resolved")
 		p.markStartingTaskError(inst, "", err)
@@ -417,7 +417,7 @@ func (p *Playground) startProcWithResolvedBinary(state *controllerState, ctx con
 		info.Version = version
 	}
 
-	startedReadyCh, err := p.startProcWithControllerState(state, ctx, inst)
+	startedReadyCh, err := p.startProcWithControllerState(ctx, state, inst)
 	if err != nil {
 		readyCh <- err
 		close(readyCh)
@@ -429,7 +429,7 @@ func (p *Playground) startProcWithResolvedBinary(state *controllerState, ctx con
 	}()
 }
 
-func (p *Playground) startProcWithControllerState(state *controllerState, ctx context.Context, inst proc.Process) (readyCh <-chan error, err error) {
+func (p *Playground) startProcWithControllerState(ctx context.Context, state *controllerState, inst proc.Process) (readyCh <-chan error, err error) {
 	if inst == nil {
 		return nil, fmt.Errorf("instance is nil")
 	}

@@ -65,7 +65,7 @@ type bootStarter struct {
 	readySet readySet
 }
 
-func newBootStarter(pg *Playground, ctx context.Context, preload *binaryPreloader, planned map[proc.ServiceID][]proc.Process, required map[proc.ServiceID]int) *bootStarter {
+func newBootStarter(ctx context.Context, pg *Playground, preload *binaryPreloader, planned map[proc.ServiceID][]proc.Process, required map[proc.ServiceID]int) *bootStarter {
 	if ctx == nil {
 		ctx = context.Background()
 	}

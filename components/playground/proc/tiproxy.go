@@ -26,8 +26,10 @@ import (
 )
 
 const (
+	// ServiceTiProxy is the service ID for TiProxy.
 	ServiceTiProxy ServiceID = "tiproxy"
 
+	// ComponentTiProxy is the repository component ID for TiProxy.
 	ComponentTiProxy RepoComponentID = "tiproxy"
 )
 

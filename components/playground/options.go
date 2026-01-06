@@ -20,6 +20,7 @@ type BootOptions struct {
 	Services map[proc.ServiceID]*proc.Config `yaml:"services,omitempty"`
 }
 
+// Service returns the mutable per-service config, allocating it on demand.
 func (o *BootOptions) Service(serviceID proc.ServiceID) *proc.Config {
 	if o == nil || serviceID == "" {
 		return nil
@@ -35,6 +36,7 @@ func (o *BootOptions) Service(serviceID proc.ServiceID) *proc.Config {
 	return cfg
 }
 
+// ServiceConfig returns a copy of the per-service config if available.
 func (o *BootOptions) ServiceConfig(serviceID proc.ServiceID) (proc.Config, bool) {
 	if o == nil || serviceID == "" {
 		return proc.Config{}, false
@@ -46,6 +48,7 @@ func (o *BootOptions) ServiceConfig(serviceID proc.ServiceID) (proc.Config, bool
 	return *cfg, true
 }
 
+// SortedServiceIDs returns all configured service IDs in deterministic order.
 func (o *BootOptions) SortedServiceIDs() []proc.ServiceID {
 	if o == nil || len(o.Services) == 0 {
 		return nil
@@ -66,6 +69,7 @@ func (o *BootOptions) SortedServiceIDs() []proc.ServiceID {
 	return out
 }
 
+// SharedOptions returns the boot-time shared options.
 func (o *BootOptions) SharedOptions() proc.SharedOptions {
 	if o == nil {
 		return proc.SharedOptions{}
@@ -73,6 +77,7 @@ func (o *BootOptions) SharedOptions() proc.SharedOptions {
 	return o.ShOpt
 }
 
+// BootVersion returns the boot-time version constraint.
 func (o *BootOptions) BootVersion() string {
 	if o == nil {
 		return ""
@@ -80,10 +85,12 @@ func (o *BootOptions) BootVersion() string {
 	return o.Version
 }
 
+// MonitorEnabled reports whether monitoring components are enabled.
 func (o *BootOptions) MonitorEnabled() bool {
 	return o != nil && o.Monitor
 }
 
+// GrafanaPortOverride returns the configured Grafana port override.
 func (o *BootOptions) GrafanaPortOverride() int {
 	if o == nil {
 		return 0
@@ -91,6 +98,7 @@ func (o *BootOptions) GrafanaPortOverride() int {
 	return o.GrafanaPort
 }
 
+// ServiceConfigFor returns the current config snapshot for a service.
 func (o *BootOptions) ServiceConfigFor(serviceID proc.ServiceID) proc.Config {
 	if o == nil || serviceID == "" {
 		return proc.Config{}

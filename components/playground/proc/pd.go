@@ -25,13 +25,20 @@ import (
 )
 
 const (
-	ServicePD                ServiceID = "pd"
-	ServicePDAPI             ServiceID = "pd-api"
-	ServicePDTSO             ServiceID = "pd-tso"
-	ServicePDScheduling      ServiceID = "pd-scheduling"
-	ServicePDRouter          ServiceID = "pd-router"
+	// ServicePD is the service ID for PD.
+	ServicePD ServiceID = "pd"
+	// ServicePDAPI is the service ID for the PD API-only service.
+	ServicePDAPI ServiceID = "pd-api"
+	// ServicePDTSO is the service ID for the PD TSO-only service.
+	ServicePDTSO ServiceID = "pd-tso"
+	// ServicePDScheduling is the service ID for the PD Scheduling-only service.
+	ServicePDScheduling ServiceID = "pd-scheduling"
+	// ServicePDRouter is the service ID for the PD Router-only service.
+	ServicePDRouter ServiceID = "pd-router"
+	// ServicePDResourceManager is the service ID for the PD Resource Manager-only service.
 	ServicePDResourceManager ServiceID = "pd-resource-manager"
 
+	// ComponentPD is the repository component ID for PD.
 	ComponentPD RepoComponentID = "pd"
 )
 

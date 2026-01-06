@@ -89,7 +89,7 @@ func TestStartProcWithControllerState_DoesNotBlockOnProgressTask(t *testing.T) {
 	pg.controllerDoneCh = make(chan struct{})
 	close(pg.controllerDoneCh)
 
-	readyCh, err := pg.startProcWithControllerState(&controllerState{}, context.Background(), inst)
+	readyCh, err := pg.startProcWithControllerState(context.Background(), &controllerState{}, inst)
 	if err != nil {
 		t.Fatalf("startProcWithControllerState: %v", err)
 	}

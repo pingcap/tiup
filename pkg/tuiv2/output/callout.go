@@ -10,12 +10,17 @@ import (
 	tuiterm "github.com/pingcap/tiup/pkg/tui/term"
 )
 
+// CalloutStyle selects the visual style used by Callout.
 type CalloutStyle int
 
 const (
+	// CalloutDefault is the default callout style.
 	CalloutDefault CalloutStyle = iota
+	// CalloutSucceeded is the success callout style.
 	CalloutSucceeded
+	// CalloutWarning is the warning callout style.
 	CalloutWarning
+	// CalloutFailed is the failure callout style.
 	CalloutFailed
 )
 
@@ -45,6 +50,7 @@ func (c Callout) resolvedStatusText() string {
 	}
 }
 
+// Render renders the callout for the given output writer.
 func (c Callout) Render(out io.Writer) string {
 	if out == nil {
 		out = io.Discard

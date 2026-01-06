@@ -94,16 +94,19 @@ const (
 	DisplayCommandType  CommandType = "display"
 )
 
+// DisplayRequest is the request payload for the "display" command.
 type DisplayRequest struct {
 	Verbose bool `json:"verbose,omitempty"`
 	JSON    bool `json:"json,omitempty"`
 }
 
+// ScaleInRequest is the request payload for the "scale-in" command.
 type ScaleInRequest struct {
 	Name string `json:"name,omitempty"`
 	PID  int    `json:"pid,omitempty"`
 }
 
+// ScaleOutRequest is the request payload for the "scale-out" command.
 type ScaleOutRequest struct {
 	ServiceID proc.ServiceID `json:"service"`
 	Count     int            `json:"count"`

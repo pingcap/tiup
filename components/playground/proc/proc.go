@@ -360,6 +360,7 @@ type ProcessInfo struct {
 	Service         ServiceID
 }
 
+// Info returns itself so embedded ProcessInfo can satisfy Process.
 func (info *ProcessInfo) Info() *ProcessInfo { return info }
 
 // MetricAddr will be used by prometheus scrape_configs.

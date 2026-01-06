@@ -54,6 +54,7 @@ type Event interface {
 	Handle(ControllerRuntime)
 }
 
+// NewProcParams is the resolved per-instance inputs for Spec.NewProc.
 type NewProcParams struct {
 	Config proc.Config
 	ID     int
@@ -61,8 +62,10 @@ type NewProcParams struct {
 	Host   string
 }
 
+// ScaleInHookFunc runs before the generic scale-in stop path.
 type ScaleInHookFunc func(rt ControllerRuntime, w io.Writer, inst proc.Process, pid int) (async bool, err error)
 
+// PostScaleOutFunc runs after a scale-out instance is started successfully.
 type PostScaleOutFunc func(w io.Writer, inst proc.Process)
 
 // BootContext is the minimal boot-time surface that service metadata depends on.
@@ -84,6 +87,7 @@ type BootContext interface {
 	ServiceConfigFor(serviceID proc.ServiceID) proc.Config
 }
 
+// VersionBindFunc rewrites the base version before component resolution.
 type VersionBindFunc func(baseVersion string) string
 
 // Catalog is declarative metadata for a service.
@@ -231,6 +235,7 @@ type Catalog struct {
 	VersionBind VersionBindFunc
 }
 
+// Spec defines how a service is planned, started, and managed in playground.
 type Spec struct {
 	ServiceID proc.ServiceID
 	NewProc   func(rt ControllerRuntime, params NewProcParams) (proc.Process, error)
@@ -258,6 +263,7 @@ type Spec struct {
 // All registrations happen during package init, and runtime only performs reads.
 var specs = make(map[proc.ServiceID]Spec)
 
+// Register registers a Spec for later planning and orchestration.
 func Register(spec Spec) error {
 	if spec.ServiceID == "" {
 		return fmt.Errorf("serviceID is empty")
@@ -280,17 +286,20 @@ func Register(spec Spec) error {
 	return nil
 }
 
+// MustRegister is like Register but panics on error.
 func MustRegister(spec Spec) {
 	if err := Register(spec); err != nil {
 		panic(err.Error())
 	}
 }
 
+// SpecFor returns the registered Spec for the service.
 func SpecFor(serviceID proc.ServiceID) (Spec, bool) {
 	spec, ok := specs[serviceID]
 	return spec, ok
 }
 
+// AllSpecs returns all registered specs in deterministic order.
 func AllSpecs() []Spec {
 	if len(specs) == 0 {
 		return nil
@@ -309,6 +318,7 @@ func AllSpecs() []Spec {
 	return out
 }
 
+// ProcsOf returns instances of the given services, casted to the requested type.
 func ProcsOf[T proc.Process](rt Runtime, serviceIDs ...proc.ServiceID) []T {
 	if rt == nil || len(serviceIDs) == 0 {
 		return nil

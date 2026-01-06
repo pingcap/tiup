@@ -29,6 +29,7 @@ type Labels struct {
 	Gap int
 }
 
+// Lines renders the label/value rows as a list of lines.
 func (l Labels) Lines(out io.Writer) []string {
 	if out == nil {
 		out = io.Discard
@@ -104,6 +105,7 @@ func (l Labels) Lines(out io.Writer) []string {
 	return lines
 }
 
+// Render renders the label/value rows as a single string.
 func (l Labels) Render(out io.Writer) string {
 	return strings.Join(l.Lines(out), "\n")
 }

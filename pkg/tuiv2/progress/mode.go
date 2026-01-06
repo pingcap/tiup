@@ -13,9 +13,13 @@ import (
 type Mode int
 
 const (
+	// ModeAuto chooses ModeTTY when output is a TTY, otherwise ModePlain.
 	ModeAuto Mode = iota
+	// ModeTTY uses a dynamic multi-line progress display (ANSI).
 	ModeTTY
+	// ModePlain uses stable event logs with no ANSI overwrite.
 	ModePlain
+	// ModeOff disables progress output.
 	ModeOff
 )
 

@@ -23,8 +23,10 @@ import (
 )
 
 const (
+	// ServiceDrainer is the service ID for Drainer.
 	ServiceDrainer ServiceID = "drainer"
 
+	// ComponentDrainer is the repository component ID for Drainer.
 	ComponentDrainer RepoComponentID = "drainer"
 )
 

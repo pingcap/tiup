@@ -13,8 +13,10 @@ import (
 )
 
 const (
+	// ServicePrometheus is the service ID for the Prometheus instance.
 	ServicePrometheus ServiceID = "prometheus"
 
+	// ComponentPrometheus is the repository component ID for Prometheus.
 	ComponentPrometheus RepoComponentID = "prometheus"
 )
 
@@ -23,6 +25,7 @@ func init() {
 	RegisterServiceDisplayName(ServicePrometheus, "Prometheus")
 }
 
+// PrometheusInstance represents a running Prometheus server.
 type PrometheusInstance struct {
 	ProcessInfo
 
@@ -31,6 +34,7 @@ type PrometheusInstance struct {
 
 var _ Process = &PrometheusInstance{}
 
+// LogFile returns the log file path for the instance.
 func (inst *PrometheusInstance) LogFile() string {
 	return filepath.Join(inst.Dir, "prom.log")
 }
@@ -90,6 +94,7 @@ func (inst *PrometheusInstance) RenderSDFile(sid2targets map[ServiceID]MetricAdd
 	return nil
 }
 
+// Prepare builds the Prometheus process command.
 func (inst *PrometheusInstance) Prepare(ctx context.Context) error {
 	if inst == nil {
 		return errors.New("prometheus instance is nil")

@@ -40,24 +40,24 @@ type ModeProvider interface {
 // Resolve resolves the effective output mode for the given writer.
 func Resolve(out io.Writer) OutputMode {
 	if out == nil {
-		return resolveFile(nil)
+		return resolveModeForFile(nil)
 	}
 	if p, ok := out.(ModeProvider); ok && p != nil {
 		return p.TUIMode()
 	}
 	if f, ok := out.(*os.File); ok {
-		return resolveFile(f)
+		return resolveModeForFile(f)
 	}
 	// Unknown writers are treated as non-TTY by default.
-	return resolveFile(nil)
+	return resolveModeForFile(nil)
 }
 
 // ResolveFile is like Resolve but specialized for *os.File.
 func ResolveFile(out *os.File) OutputMode {
-	return resolveFile(out)
+	return resolveModeForFile(out)
 }
 
-func resolveFile(out *os.File) OutputMode {
+func resolveModeForFile(out *os.File) OutputMode {
 	if os.Getenv(EnvNoColor) != "" {
 		return OutputMode{}
 	}

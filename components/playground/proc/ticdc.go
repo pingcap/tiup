@@ -24,8 +24,10 @@ import (
 )
 
 const (
+	// ServiceTiCDC is the service ID for TiCDC.
 	ServiceTiCDC ServiceID = "ticdc"
 
+	// ComponentCDC is the repository component ID for TiCDC.
 	ComponentCDC RepoComponentID = "cdc"
 )
 

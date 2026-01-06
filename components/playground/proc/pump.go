@@ -25,8 +25,10 @@ import (
 )
 
 const (
+	// ServicePump is the service ID for Pump.
 	ServicePump ServiceID = "pump"
 
+	// ComponentPump is the repository component ID for Pump.
 	ComponentPump RepoComponentID = "pump"
 )
 

@@ -214,7 +214,7 @@ func (p *Playground) handleScaleOut(state *controllerState, w io.Writer, req *Sc
 			return err
 		}
 
-		if _, err := p.startProc(state, startCtx, inst, nil); err != nil {
+		if _, err := p.startProc(startCtx, state, inst, nil); err != nil {
 			return err
 		}
 		spec.PostScaleOut(w, inst)

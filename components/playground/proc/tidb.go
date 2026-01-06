@@ -24,9 +24,12 @@ import (
 )
 
 const (
-	ServiceTiDB       ServiceID = "tidb"
+	// ServiceTiDB is the service ID for TiDB.
+	ServiceTiDB ServiceID = "tidb"
+	// ServiceTiDBSystem is the service ID for the internal TiDB system service.
 	ServiceTiDBSystem ServiceID = "tidb-system"
 
+	// ComponentTiDB is the repository component ID for TiDB.
 	ComponentTiDB RepoComponentID = "tidb"
 )
 

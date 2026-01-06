@@ -269,9 +269,13 @@ Examples:
 					p.abandonActiveGroups()
 
 					// Print an error callout before shutdown output.
-					out := p.termWriter()
+					out := p.terminalWriter()
 
-					fmt.Fprintln(out)
+					if p.ui != nil {
+						p.ui.BlankLine()
+					} else {
+						fmt.Fprintln(out)
+					}
 					fmt.Fprint(out, tuiv2output.Callout{
 						Style:   tuiv2output.CalloutFailed,
 						Content: fmt.Sprintf("Start cluster failed: %v", bootErr),

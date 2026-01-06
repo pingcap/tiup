@@ -12,7 +12,7 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
-type controllerEvent interface{}
+type controllerEvent any
 
 type controllerState struct {
 	booting bool
@@ -213,11 +213,11 @@ func (p *Playground) handleEvent(state *controllerState, evt controllerEvent) {
 		e.respCh <- addProcResponse{inst: inst, err: err}
 		close(e.respCh)
 	case startProcRequest:
-		readyCh, err := p.startProc(state, e.ctx, e.inst, e.preload)
+		readyCh, err := p.startProc(e.ctx, state, e.inst, e.preload)
 		e.respCh <- startProcResponse{readyCh: readyCh, err: err}
 		close(e.respCh)
 	case startProcResolvedEvent:
-		p.startProcWithResolvedBinary(state, e.ctx, e.inst, e.binPath, e.version, e.readyCh)
+		p.startProcWithResolvedBinary(e.ctx, state, e.inst, e.binPath, e.version, e.readyCh)
 	case procExitedEvent:
 		dec := p.handleProcExited(state, e.inst, e.pid, e.err, state.booting)
 		e.respCh <- dec
@@ -362,11 +362,11 @@ func (p *Playground) handleProcStarted(state *controllerState, inst proc.Process
 		state.upsertProcRecord(inst)
 	}
 	serviceID := info.Service
-	min := 0
+	requiredMin := 0
 	if state != nil && state.requiredServices != nil {
-		min = state.requiredServices[serviceID]
+		requiredMin = state.requiredServices[serviceID]
 	}
-	if min <= 0 {
+	if requiredMin <= 0 {
 		return
 	}
 	if state == nil {
@@ -402,11 +402,11 @@ func (p *Playground) handleProcExited(state *controllerState, inst proc.Process,
 	}
 
 	serviceID := info.Service
-	min := 0
+	requiredMin := 0
 	if state != nil && state.requiredServices != nil {
-		min = state.requiredServices[serviceID]
+		requiredMin = state.requiredServices[serviceID]
 	}
-	if min > 0 && state != nil && state.criticalRunning != nil {
+	if requiredMin > 0 && state != nil && state.criticalRunning != nil {
 		if state.criticalRunning[serviceID] > 0 {
 			state.criticalRunning[serviceID]--
 		}
@@ -416,7 +416,7 @@ func (p *Playground) handleProcExited(state *controllerState, inst proc.Process,
 		remaining = state.criticalRunning[serviceID]
 	}
 
-	triggerAutoStop := min > 0 && remaining < min && !expectedExit
+	triggerAutoStop := requiredMin > 0 && remaining < requiredMin && !expectedExit
 
 	if !expectedExit {
 		exitErr := err
@@ -439,7 +439,7 @@ func (p *Playground) handleProcExited(state *controllerState, inst proc.Process,
 		if err != nil {
 			p.printProcExitError(inst, err)
 		} else {
-			fmt.Fprintf(p.termWriter(), "%s quit\n", p.shutdownProcTitle(inst))
+			fmt.Fprintf(p.terminalWriter(), "%s quit\n", p.shutdownProcTitle(inst))
 		}
 	}
 

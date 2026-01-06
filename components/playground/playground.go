@@ -90,7 +90,7 @@ func NewPlayground(dataDir string, port int) *Playground {
 	}
 }
 
-func (p *Playground) termWriter() io.Writer {
+func (p *Playground) terminalWriter() io.Writer {
 	if p != nil && p.ui != nil {
 		return p.ui.Writer()
 	}
@@ -114,12 +114,14 @@ type ProcessGroup struct {
 	closedCh chan struct{}
 }
 
+// NewProcessGroup creates a new ProcessGroup.
 func NewProcessGroup() *ProcessGroup {
 	return &ProcessGroup{
 		closedCh: make(chan struct{}),
 	}
 }
 
+// Add adds a new goroutine to the group.
 func (g *ProcessGroup) Add(name string, wait func() error) error {
 	if g == nil {
 		return errProcessGroupClosed
@@ -153,6 +155,7 @@ func (g *ProcessGroup) Add(name string, wait func() error) error {
 	return nil
 }
 
+// Close stops accepting new goroutines and unblocks Wait.
 func (g *ProcessGroup) Close() {
 	if g == nil {
 		return
@@ -170,6 +173,7 @@ func (g *ProcessGroup) Close() {
 	}
 }
 
+// Wait blocks until Close is called and all added goroutines finish.
 func (g *ProcessGroup) Wait() error {
 	if g == nil {
 		return nil
@@ -187,6 +191,7 @@ func (g *ProcessGroup) Wait() error {
 	return err
 }
 
+// Closed returns a channel that is closed when the group is closed.
 func (g *ProcessGroup) Closed() <-chan struct{} {
 	if g == nil || g.closedCh == nil {
 		ch := make(chan struct{})
@@ -198,6 +203,7 @@ func (g *ProcessGroup) Closed() <-chan struct{} {
 
 var _ pgservice.Runtime = (*Playground)(nil)
 
+// Booted reports whether the playground finished booting successfully.
 func (p *Playground) Booted() bool {
 	if p == nil || p.evtCh == nil {
 		return false
@@ -212,6 +218,7 @@ func (p *Playground) Booted() bool {
 	}
 }
 
+// SharedOptions returns the boot-time shared options.
 func (p *Playground) SharedOptions() proc.SharedOptions {
 	if p == nil || p.bootOptions == nil {
 		return proc.SharedOptions{}
@@ -219,6 +226,7 @@ func (p *Playground) SharedOptions() proc.SharedOptions {
 	return p.bootOptions.ShOpt
 }
 
+// DataDir returns the playground data directory.
 func (p *Playground) DataDir() string {
 	if p == nil {
 		return ""
@@ -226,6 +234,7 @@ func (p *Playground) DataDir() string {
 	return p.dataDir
 }
 
+// BootConfig returns the boot-time base config for the given service.
 func (p *Playground) BootConfig(serviceID proc.ServiceID) (proc.Config, bool) {
 	if p == nil || serviceID == "" || p.bootBaseConfigs == nil {
 		return proc.Config{}, false
@@ -234,6 +243,7 @@ func (p *Playground) BootConfig(serviceID proc.ServiceID) (proc.Config, bool) {
 	return cfg, ok
 }
 
+// Procs returns a snapshot of instances currently tracked for the service.
 func (p *Playground) Procs(serviceID proc.ServiceID) []proc.Process {
 	if p == nil || serviceID == "" || p.evtCh == nil {
 		return nil
@@ -248,6 +258,7 @@ func (p *Playground) Procs(serviceID proc.ServiceID) []proc.Process {
 	}
 }
 
+// Stopping reports whether playground shutdown has started.
 func (p *Playground) Stopping() bool {
 	if p == nil {
 		return true
@@ -264,6 +275,7 @@ func (p *Playground) Stopping() bool {
 	}
 }
 
+// EmitEvent enqueues an event for the controller goroutine.
 func (p *Playground) EmitEvent(evt any) {
 	if p == nil {
 		return
@@ -271,10 +283,12 @@ func (p *Playground) EmitEvent(evt any) {
 	p.emitEvent(evt)
 }
 
+// TermWriter returns the writer used for user-facing output.
 func (p *Playground) TermWriter() io.Writer {
-	return p.termWriter()
+	return p.terminalWriter()
 }
 
+// OnProcsChanged refreshes any derived output state after the proc set changes.
 func (p *Playground) OnProcsChanged() {
 	if p == nil {
 		return
@@ -369,9 +383,9 @@ func (rt controllerRuntime) EmitEvent(evt any) {
 
 func (rt controllerRuntime) TermWriter() io.Writer {
 	if rt.pg == nil {
-		return nil
+		return tuiv2output.Stdout.Get()
 	}
-	return rt.pg.termWriter()
+	return rt.pg.terminalWriter()
 }
 
 func (rt controllerRuntime) OnProcsChanged() {

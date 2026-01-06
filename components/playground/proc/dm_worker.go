@@ -10,8 +10,10 @@ import (
 )
 
 const (
+	// ServiceDMWorker is the service ID for DM-worker.
 	ServiceDMWorker ServiceID = "dm-worker"
 
+	// ComponentDMWorker is the repository component ID for DM-worker.
 	ComponentDMWorker RepoComponentID = "dm-worker"
 )
 
