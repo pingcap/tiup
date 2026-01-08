@@ -26,7 +26,8 @@ import (
 type PrometheusScript struct {
 	Port                int
 	WebExternalURL      string
-	Retention           string
+	RetentionSize       string
+	RetentionTime       string
 	EnableNG            bool
 	EnablePromAgentMode bool
 
