@@ -436,7 +436,14 @@ func populateDefaultOpt(flagSet *pflag.FlagSet) error {
 		defaultInt(&options.TiFlash.Num, "tiflash", 1)
 		options.ShOpt.S3.Prefix = tag
 	default:
-		return errors.Errorf("Unknown --mode %s", options.ShOpt.Mode)
+		return errors.Errorf("Unknown --mode %s. Available modes are %s", options.ShOpt.Mode, strings.Join([]string{
+			instance.ModeNormal,
+			instance.ModeNextGen,
+			instance.ModeTiKVSlim,
+			instance.ModeCSE,
+			instance.ModeDisAgg,
+			instance.ModeFTS,
+		}, ", "))
 	}
 
 	switch options.ShOpt.Mode {
