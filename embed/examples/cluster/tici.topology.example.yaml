@@ -353,10 +353,10 @@ tici_meta_servers:
     #   log.level: warn
   # - host: 10.0.1.22
     # ssh_port: 22
-    # port: 8503
-    # data_dir: "/data2/tidb-deploy/tici-meta-8503"
-    # log_dir: "/data2/tidb-deploy/tici-meta-8503/log"
-    # deploy_dir: "/data2/tidb-deploy/tici-meta-8503"
+    # port: 8500
+    # data_dir: "/data2/tidb-deploy/tici-meta-8500"
+    # log_dir: "/data2/tidb-deploy/tici-meta-8500/log"
+    # deploy_dir: "/data2/tidb-deploy/tici-meta-8500"
 
 # # Server configs are used to specify the configuration of TiCI Worker Servers.
 tici_worker_servers:
@@ -374,12 +374,12 @@ tici_worker_servers:
     # numa_node: "0,1"
     # config:
     #   log.level: warn
-  # - host:
+  # - host: 10.0.1.24
     # ssh_port: 22
-    # port: 8513
-    # data_dir: "/data2/tidb-deploy/tici-worker-8513"
-    # log_dir: "/data2/tidb-deploy/tici-worker-8513/log"
-    # deploy_dir: "/data2/tidb-deploy/tici-worker-8513"
+    # port: 8510
+    # data_dir: "/data2/tidb-deploy/tici-worker-8510"
+    # log_dir: "/data2/tidb-deploy/tici-worker-8510/log"
+    # deploy_dir: "/data2/tidb-deploy/tici-worker-8510"
     
 # # Server configs are used to specify the configuration of TiDB Dashboard Servers. Available from v6.5.0
 # tidb_dashboard_servers:

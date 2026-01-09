@@ -146,7 +146,7 @@ func (inst *TiFlashInstance) Start(ctx context.Context) error {
 		{"flash.proxy.log-file", filepath.Join(inst.Dir, "tiflash_tikv.log")},
 	}
 	if inst.shOpt.Mode == ModeFTS {
-		runtimeConfig = append(runtimeConfig, []string{"tici.reader_node.addr", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.ticReaderPort)})
+		runtimeConfig = append(runtimeConfig, []string{"tici.reader-node.addr", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.ticReaderPort)})
 	}
 
 	userConfig, err := unmarshalConfig(configPath)
