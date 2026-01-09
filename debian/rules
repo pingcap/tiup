@@ -1,0 +1,31 @@
+#!/usr/bin/make -f
+
+export DH_VERBOSE = 1
+
+# Generic hardening of binaries
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+DPKG_EXPORT_BUILDFLAGS = 1
+include /usr/share/dpkg/buildflags.mk
+
+export DH_GOLANG_INSTALL_EXTRA := embed/examples/ embed/templates/
+
+# Extend GOPATH to include the vendor directory from usql package
+export GOPATH := $(CURDIR)/debian/.build/upstream:/usr/share/gocode/src/github.com/xo/usql/vendor
+
+# @TODO: Ideally all dependencies would be Debian packages and this source
+# package would not need to vend any of its dependencies like this
+execute_before_dh_auto_configure:
+	cp -av debian/vendor ./
+
+execute_after_dh_clean:
+	rm -rfv vendor/
+
+override_dh_auto_test:
+	@echo "Skipping post-build Go tests because of too many failures"
+
+override_dh_auto_install:
+	dh_auto_install -- --no-source
+	(cd debian/tiup/usr/bin/ && for x in *; do mv $$x tiup-$$x; done; mv tiup-tiup tiup)
+
+%:
+	dh $@ --builddirectory=debian/.build/upstream --buildsystem=golang

@@ -1,0 +1,21 @@
+# This is a template from
+# https://salsa.debian.org/salsa-ci-team/pipeline/-/raw/master/recipes/salsa-ci.yml
+#
+# If this pipeline is not running at after committing and pushing this file,
+# ensure that https://salsa.debian.org/%{project_path}/-/settings/ci_cd has in
+# field "CI/CD configuration file" filename "debian/salsa-ci.yml", the filename
+# is the same as of this file, and duplicate files with similar contents but
+# different filenames have been cleaned away.
+#
+# Feel free disable and enable tests to find a good balance between extensive
+# coverage and having a consistently green pipeline where failures are rare
+# enough that they are always investigated and addressed. For documentation
+# please read https://salsa.debian.org/salsa-ci-team/pipeline
+---
+include:
+  - https://salsa.debian.org/salsa-ci-team/pipeline/raw/master/recipes/debian.yml
+
+# @TODO: Remove this before finalizing MR and uploading
+variables:
+  SALSA_CI_EXTRA_REPOSITORY: debian/ci/extra_repository.list
+  SALSA_CI_DISABLE_REPROTEST: 1
