@@ -38,14 +38,14 @@ type Severity int
 const (
 	// From /usr/include/sys/syslog.h.
 	// These are the same on Linux, BSD, and OS X.
-	LOG_EMERG Severity = iota
-	LOG_ALERT
-	LOG_CRIT
-	LOG_ERR
-	LOG_WARNING
-	LOG_NOTICE
-	LOG_INFO
-	LOG_DEBUG
+	LogEmerg Severity = iota
+	LogAlert
+	LogCrit
+	LogErr
+	LogWarning
+	LogNotice
+	LogInfo
+	LogDebug
 )
 
 //revive:enable
@@ -65,30 +65,30 @@ type Facility int
 const (
 	// From /usr/include/sys/syslog.h.
 	// These are the same up to LOG_FTP on Linux, BSD, and OS X.
-	LOG_KERN Facility = iota << 3
-	LOG_USER
-	LOG_MAIL
-	LOG_DAEMON
-	LOG_AUTH
-	LOG_SYSLOG
-	LOG_LPR
-	LOG_NEWS
-	LOG_UUCP
-	LOG_CRON
-	LOG_AUTHPRIV
-	LOG_FTP
+	LogKern Facility = iota << 3
+	LogUser
+	LogMail
+	LogDaemon
+	LogAuth
+	LogSyslog
+	LogLpr
+	LogNews
+	LogUucp
+	LogCron
+	LogAuthpriv
+	LogFtp
 	_ // unused
 	_ // unused
 	_ // unused
 	_ // unused
-	LOG_LOCAL0
-	LOG_LOCAL1
-	LOG_LOCAL2
-	LOG_LOCAL3
-	LOG_LOCAL4
-	LOG_LOCAL5
-	LOG_LOCAL6
-	LOG_LOCAL7
+	LogLocal0
+	LogLocal1
+	LogLocal2
+	LogLocal3
+	LogLocal4
+	LogLocal5
+	LogLocal6
+	LogLocal7
 )
 
 //revive:enable

@@ -464,18 +464,18 @@ func (i *WorkerInstance) ScaleConfig(
 }
 
 // GetGlobalOptions returns cluster topology
-func (topo *Specification) GetGlobalOptions() spec.GlobalOptions {
-	return topo.GlobalOptions
+func (s *Specification) GetGlobalOptions() spec.GlobalOptions {
+	return s.GlobalOptions
 }
 
 // GetMonitoredOptions returns MonitoredOptions
-func (topo *Specification) GetMonitoredOptions() *spec.MonitoredOptions {
-	return topo.MonitoredOptions
+func (s *Specification) GetMonitoredOptions() *spec.MonitoredOptions {
+	return s.MonitoredOptions
 }
 
 // ComponentsByStopOrder return component in the order need to stop.
-func (topo *Specification) ComponentsByStopOrder() (comps []Component) {
-	comps = topo.ComponentsByStartOrder()
+func (s *Specification) ComponentsByStopOrder() (comps []Component) {
+	comps = s.ComponentsByStartOrder()
 	// revert order
 	i := 0
 	j := len(comps) - 1
@@ -488,36 +488,36 @@ func (topo *Specification) ComponentsByStopOrder() (comps []Component) {
 }
 
 // ComponentsByStartOrder return component in the order need to start.
-func (topo *Specification) ComponentsByStartOrder() (comps []Component) {
+func (s *Specification) ComponentsByStartOrder() (comps []Component) {
 	// "dm-master", "dm-worker"
-	comps = append(comps, &DMMasterComponent{topo})
-	comps = append(comps, &DMWorkerComponent{topo})
-	comps = append(comps, &spec.MonitorComponent{Topology: topo}) // prometheus
-	comps = append(comps, &spec.GrafanaComponent{Topology: topo})
-	comps = append(comps, &spec.AlertManagerComponent{Topology: topo})
+	comps = append(comps, &DMMasterComponent{s})
+	comps = append(comps, &DMWorkerComponent{s})
+	comps = append(comps, &spec.MonitorComponent{Topology: s}) // prometheus
+	comps = append(comps, &spec.GrafanaComponent{Topology: s})
+	comps = append(comps, &spec.AlertManagerComponent{Topology: s})
 	return
 }
 
 // ComponentsByUpdateOrder return component in the order need to be updated.
-func (topo *Specification) ComponentsByUpdateOrder(curVer string) (comps []Component) {
+func (s *Specification) ComponentsByUpdateOrder(curVer string) (comps []Component) {
 	// "dm-master", "dm-worker"
-	comps = append(comps, &DMMasterComponent{topo})
-	comps = append(comps, &DMWorkerComponent{topo})
-	comps = append(comps, &spec.MonitorComponent{Topology: topo})
-	comps = append(comps, &spec.GrafanaComponent{Topology: topo})
-	comps = append(comps, &spec.AlertManagerComponent{Topology: topo})
+	comps = append(comps, &DMMasterComponent{s})
+	comps = append(comps, &DMWorkerComponent{s})
+	comps = append(comps, &spec.MonitorComponent{Topology: s})
+	comps = append(comps, &spec.GrafanaComponent{Topology: s})
+	comps = append(comps, &spec.AlertManagerComponent{Topology: s})
 	return
 }
 
 // IterComponent iterates all components in component starting order
-func (topo *Specification) IterComponent(fn func(comp Component)) {
-	for _, comp := range topo.ComponentsByStartOrder() {
+func (s *Specification) IterComponent(fn func(comp Component)) {
+	for _, comp := range s.ComponentsByStartOrder() {
 		fn(comp)
 	}
 }
 
 // IterInstance iterates all instances in component starting order
-func (topo *Specification) IterInstance(fn func(instance Instance), concurrency ...int) {
+func (s *Specification) IterInstance(fn func(instance Instance), concurrency ...int) {
 	maxWorkers := 1
 	wg := sync.WaitGroup{}
 	if len(concurrency) > 0 && concurrency[0] > 1 {
@@ -525,7 +525,7 @@ func (topo *Specification) IterInstance(fn func(instance Instance), concurrency 
 	}
 	workerPool := make(chan struct{}, maxWorkers)
 
-	for _, comp := range topo.ComponentsByStartOrder() {
+	for _, comp := range s.ComponentsByStartOrder() {
 		for _, inst := range comp.Instances() {
 			wg.Add(1)
 			workerPool <- struct{}{}
@@ -542,9 +542,9 @@ func (topo *Specification) IterInstance(fn func(instance Instance), concurrency 
 }
 
 // IterHost iterates one instance for each host
-func (topo *Specification) IterHost(fn func(instance Instance)) {
+func (s *Specification) IterHost(fn func(instance Instance)) {
 	hostMap := make(map[string]bool)
-	for _, comp := range topo.ComponentsByStartOrder() {
+	for _, comp := range s.ComponentsByStartOrder() {
 		for _, inst := range comp.Instances() {
 			host := inst.GetHost()
 			_, ok := hostMap[host]

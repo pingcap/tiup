@@ -49,7 +49,7 @@ func (m *Manager) Reload(name string, gOpt operator.Options, skipRestart, skipCo
 		return err
 	}
 
-	var sshProxyProps *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
+	var sshProxyProps = &tui.SSHConnectionProps{}
 	if gOpt.SSHType != executor.SSHTypeNone && len(gOpt.SSHProxyHost) != 0 {
 		var err error
 		if sshProxyProps, err = tui.ReadIdentityFileOrPassword(gOpt.SSHProxyIdentity, gOpt.SSHProxyUsePassword); err != nil {

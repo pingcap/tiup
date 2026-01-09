@@ -102,7 +102,7 @@ func (c *AlertManagerComponent) Source() string {
 // CalculateVersion implements the Component interface
 func (c *AlertManagerComponent) CalculateVersion(_ string) string {
 	// always not follow cluster version, use ""(latest) by default
-	version := c.Topology.BaseTopo().AlertManagerVersion
+	version := c.BaseTopo().AlertManagerVersion
 	if version != nil {
 		return *version
 	}
@@ -111,12 +111,12 @@ func (c *AlertManagerComponent) CalculateVersion(_ string) string {
 
 // SetVersion implements Component interface.
 func (c *AlertManagerComponent) SetVersion(version string) {
-	*c.Topology.BaseTopo().AlertManagerVersion = version
+	*c.BaseTopo().AlertManagerVersion = version
 }
 
 // Instances implements Component interface.
 func (c *AlertManagerComponent) Instances() []Instance {
-	alertmanagers := c.Topology.BaseTopo().Alertmanagers
+	alertmanagers := c.BaseTopo().Alertmanagers
 
 	ins := make([]Instance, 0, len(alertmanagers))
 
@@ -127,7 +127,7 @@ func (c *AlertManagerComponent) Instances() []Instance {
 				Name:         c.Name(),
 				Host:         s.Host,
 				ManageHost:   s.ManageHost,
-				ListenHost:   utils.Ternary(s.ListenHost != "", s.ListenHost, c.Topology.BaseTopo().GlobalOptions.ListenHost).(string),
+				ListenHost:   utils.Ternary(s.ListenHost != "", s.ListenHost, c.BaseTopo().GlobalOptions.ListenHost).(string),
 				Port:         s.WebPort,
 				SSHP:         s.SSHPort,
 				NumaNode:     s.NumaNode,

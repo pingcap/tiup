@@ -67,10 +67,7 @@ func NewPDClient(
 	timeout time.Duration,
 	tlsConfig *tls.Config,
 ) *PDClient {
-	enableTLS := false
-	if tlsConfig != nil {
-		enableTLS = true
-	}
+	enableTLS := tlsConfig != nil
 
 	if _, ok := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger); !ok {
 		panic("the context must have logger inside")
@@ -1070,10 +1067,7 @@ func NewTSOClient(
 	timeout time.Duration,
 	tlsConfig *tls.Config,
 ) *TSOClient {
-	enableTLS := false
-	if tlsConfig != nil {
-		enableTLS = true
-	}
+	enableTLS := tlsConfig != nil
 
 	if _, ok := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger); !ok {
 		panic("the context must have logger inside")
@@ -1179,10 +1173,7 @@ func NewSchedulingClient(
 	timeout time.Duration,
 	tlsConfig *tls.Config,
 ) *SchedulingClient {
-	enableTLS := false
-	if tlsConfig != nil {
-		enableTLS = true
-	}
+	enableTLS := tlsConfig != nil
 
 	if _, ok := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger); !ok {
 		panic("the context must have logger inside")

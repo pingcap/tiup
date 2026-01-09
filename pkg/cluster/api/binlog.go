@@ -206,7 +206,7 @@ func (c *BinlogClient) nodesStatus(ctx context.Context, ty string) (status []*No
 	// set timeout, otherwise it will keep retrying
 	ctx, f := context.WithTimeout(ctx, c.httpClient.Timeout)
 	defer f()
-	resp, err := c.etcdClient.KV.Get(ctx, key, clientv3.WithPrefix())
+	resp, err := c.etcdClient.Get(ctx, key, clientv3.WithPrefix())
 	if err != nil {
 		return nil, errors.AddStack(err)
 	}
@@ -228,7 +228,7 @@ func (c *BinlogClient) nodesStatus(ctx context.Context, ty string) (status []*No
 func (c *BinlogClient) nodeStatus(ctx context.Context, ty string, nodeID string) (node *NodeStatus, err error) {
 	key := fmt.Sprintf("/tidb-binlog/v1/%s/%s", ty, nodeID)
 
-	resp, err := c.etcdClient.KV.Get(ctx, key)
+	resp, err := c.etcdClient.Get(ctx, key)
 	if err != nil {
 		return nil, errors.AddStack(err)
 	}

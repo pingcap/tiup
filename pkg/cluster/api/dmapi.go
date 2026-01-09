@@ -46,10 +46,7 @@ type DMMasterClient struct {
 
 // NewDMMasterClient returns a new PDClient
 func NewDMMasterClient(addrs []string, timeout time.Duration, tlsConfig *tls.Config) *DMMasterClient {
-	enableTLS := false
-	if tlsConfig != nil {
-		enableTLS = true
-	}
+	enableTLS := tlsConfig != nil
 
 	return &DMMasterClient{
 		addrs:      addrs,

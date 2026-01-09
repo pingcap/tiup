@@ -125,7 +125,7 @@ func CheckSystemInfo(opt *CheckOptions, rawData []byte) []*CheckResult {
 		results = append(results,
 			&CheckResult{
 				Name: CheckNameNTP,
-				Err:  fmt.Errorf("The NTPd daemon or Chronyd daemon may be not installed"),
+				Err:  fmt.Errorf("the NTPd daemon or Chronyd daemon may be not installed"),
 				Warn: true,
 			},
 		)
@@ -260,7 +260,7 @@ func checkNTP(ntpInfo *insight.TimeStat) *CheckResult {
 	}
 
 	if ntpInfo.Sync == "none" {
-		result.Err = fmt.Errorf("The NTPd daemon may be not start")
+		result.Err = fmt.Errorf("the NTPd daemon may be not start")
 		result.Warn = true
 		return result
 	}
@@ -319,7 +319,7 @@ func checkCPU(opt *CheckOptions, cpuInfo *sysinfo.CPU) []*CheckResult {
 	} else {
 		results = append(results, &CheckResult{
 			Name: CheckNameCPUGovernor,
-			Err:  fmt.Errorf("Unable to determine current CPU frequency governor policy"),
+			Err:  fmt.Errorf("unable to determine current CPU frequency governor policy"),
 			Warn: true,
 		})
 	}

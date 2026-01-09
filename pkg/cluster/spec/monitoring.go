@@ -140,7 +140,7 @@ func (c *MonitorComponent) CalculateVersion(clusterVersion string) string {
 
 // SetVersion implements Component interface.
 func (c *MonitorComponent) SetVersion(version string) {
-	*c.Topology.BaseTopo().PrometheusVersion = version
+	*c.BaseTopo().PrometheusVersion = version
 }
 
 // Instances implements Component interface.
@@ -161,7 +161,7 @@ func (c *MonitorComponent) Instances() []Instance {
 			Name:         c.Name(),
 			Host:         s.Host,
 			ManageHost:   s.ManageHost,
-			ListenHost:   c.Topology.BaseTopo().GlobalOptions.ListenHost,
+			ListenHost:   c.BaseTopo().GlobalOptions.ListenHost,
 			Port:         s.Port,
 			SSHP:         s.SSHPort,
 			NumaNode:     s.NumaNode,
@@ -180,7 +180,7 @@ func (c *MonitorComponent) Instances() []Instance {
 			Component: c,
 		}, c.Topology}
 		if s.NgPort > 0 {
-			mi.BaseInstance.Ports = append(mi.BaseInstance.Ports, s.NgPort)
+			mi.Ports = append(mi.Ports, s.NgPort)
 		}
 		ins = append(ins, mi)
 	}

@@ -60,7 +60,7 @@ func (e *ValidateErr) Is(target error) bool {
 	}
 	// not supporting non-comparable values for now
 	if e.Value != nil && t.Value != nil &&
-		!(reflect.TypeOf(e.Value).Comparable() && reflect.TypeOf(t.Value).Comparable()) {
+		(!reflect.TypeOf(e.Value).Comparable() || !reflect.TypeOf(t.Value).Comparable()) {
 		return false
 	}
 	return (e.Type == t.Type || t.Type == "") &&

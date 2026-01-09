@@ -74,10 +74,7 @@ func (s *TSOSpec) Status(ctx context.Context, timeout time.Duration, tlsCfg *tls
 		return "ERR"
 	}
 	res := "Up"
-	enableTLS := false
-	if tlsCfg != nil {
-		enableTLS = true
-	}
+	enableTLS := tlsCfg != nil
 	if s.GetAdvertiseListenURL(enableTLS) == primary {
 		res += "|P"
 	}
@@ -319,10 +316,7 @@ func (i *TSOInstance) IsPrimary(ctx context.Context, topo Topology, tlsCfg *tls.
 	}
 
 	spec := i.InstanceSpec.(*TSOSpec)
-	enableTLS := false
-	if tlsCfg != nil {
-		enableTLS = true
-	}
+	enableTLS := tlsCfg != nil
 
 	return primary == spec.GetAdvertiseListenURL(enableTLS), nil
 }

@@ -67,9 +67,7 @@ func (m *Manager) TLS(name string, gOpt operator.Options, enable, cleanCertifica
 		return err
 	}
 
-	var (
-		sshProxyProps *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
-	)
+	var sshProxyProps = &tui.SSHConnectionProps{}
 	if gOpt.SSHType != executor.SSHTypeNone {
 		var err error
 		if len(gOpt.SSHProxyHost) != 0 {
@@ -134,7 +132,7 @@ func checkTLSEnv(topo spec.Topology, clusterName, version string, skipConfirm bo
 
 	if clusterSpec, ok := topo.(*spec.Specification); ok {
 		if len(clusterSpec.PDServers) != 1 {
-			return errorx.EnsureStackTrace(fmt.Errorf("Having multiple PD nodes is not supported when enable/disable TLS")).
+			return errorx.EnsureStackTrace(fmt.Errorf("having multiple PD nodes is not supported when enable/disable TLS")).
 				WithProperty(tui.SuggestionFromString("Please `scale-in` PD nodes to one and try again."))
 		}
 	}

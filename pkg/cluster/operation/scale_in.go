@@ -205,11 +205,12 @@ func ScaleInCluster(
 				// directly update pump&drainer 's state as offline in etcd.
 				if binlogClient != nil {
 					id := instance.ID()
-					if compName == spec.ComponentPump {
+					switch compName {
+					case spec.ComponentPump:
 						if err := binlogClient.UpdatePumpState(ctx, id, "offline"); err != nil {
 							logger.Warnf("failed to update %s state as offline: %v", compName, err)
 						}
-					} else if compName == spec.ComponentDrainer {
+					case spec.ComponentDrainer:
 						if err := binlogClient.UpdateDrainerState(ctx, id, "offline"); err != nil {
 							logger.Warnf("failed to update %s state as offline: %v", compName, err)
 						}

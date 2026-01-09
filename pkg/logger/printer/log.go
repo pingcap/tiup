@@ -95,6 +95,7 @@ func Debugf(format string, args ...any) {
 }
 
 // Infof output the log message to console
+//
 // Deprecated: Use zap.L().Info() instead
 func Infof(format string, args ...any) {
 	zap.L().Info(fmt.Sprintf(format, args...))
@@ -102,6 +103,7 @@ func Infof(format string, args ...any) {
 }
 
 // Warnf output the warning message to console
+//
 // Deprecated: Use zap.L().Warn() instead
 func Warnf(format string, args ...any) {
 	zap.L().Warn(fmt.Sprintf(format, args...))
@@ -109,6 +111,7 @@ func Warnf(format string, args ...any) {
 }
 
 // Errorf output the error message to console
+//
 // Deprecated: Use zap.L().Error() instead
 func Errorf(format string, args ...any) {
 	zap.L().Error(fmt.Sprintf(format, args...))

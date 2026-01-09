@@ -53,8 +53,8 @@ func (c *BackupComponent) Execute(ctx context.Context) error {
 		// NOTE: by changing the behaviour to cp instead of mv in line 45, we don't
 		// need to check "no such file" anymore, but I'm keeping it here in case
 		// we got a better way handling the backups later
-		if !(bytes.Contains(stderr, []byte("No such file or directory")) ||
-			bytes.Contains(stderr, []byte("File exists"))) {
+		if !bytes.Contains(stderr, []byte("No such file or directory")) &&
+			!bytes.Contains(stderr, []byte("File exists")) {
 			return errors.Annotate(err, cmd)
 		}
 	}
