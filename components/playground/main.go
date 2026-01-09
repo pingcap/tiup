@@ -116,7 +116,7 @@ Examples:
   $ tiup playground nightly --without-monitor       # Start a local cluster and disable monitor system
   $ tiup playground --pd.config ~/config/pd.toml    # Start a local cluster with specified configuration file
   $ tiup playground --db.binpath /xx/tidb-server    # Start a local cluster with component binary path
-  $ tiup playground --tag xx                           # Start a local cluster with data dir named 'xx' and uncleaned after exit
+  $ tiup playground --tag xx                        # Start a local cluster with data dir named 'xx' and uncleaned after exit
   $ tiup playground --mode tikv-slim                # Start a local tikv only cluster (No TiDB or TiFlash Available)
   $ tiup playground --mode tikv-slim --kv 3 --pd 3  # Start a local tikv only cluster with 6 nodes`,
 		SilenceUsage:  true,
@@ -436,7 +436,14 @@ func populateDefaultOpt(flagSet *pflag.FlagSet) error {
 		defaultInt(&options.TiFlash.Num, "tiflash", 1)
 		options.ShOpt.S3.Prefix = tag
 	default:
-		return errors.Errorf("Unknown --mode %s", options.ShOpt.Mode)
+		return errors.Errorf("Unknown --mode %s. Available modes are %s", options.ShOpt.Mode, strings.Join([]string{
+			instance.ModeNormal,
+			instance.ModeNextGen,
+			instance.ModeTiKVSlim,
+			instance.ModeCSE,
+			instance.ModeDisAgg,
+			instance.ModeFTS,
+		}, ", "))
 	}
 
 	switch options.ShOpt.Mode {

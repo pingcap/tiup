@@ -16,8 +16,8 @@ package instance
 func (inst *TiCIInstance) getWorkerConfig() map[string]any {
 	config := make(map[string]any)
 	config["s3.endpoint"] = inst.shOpt.S3.Endpoint
-	config["s3.access_key"] = inst.shOpt.S3.AccessKey
-	config["s3.secret_key"] = inst.shOpt.S3.SecretKey
+	config["s3.access-key"] = inst.shOpt.S3.AccessKey
+	config["s3.secret-key"] = inst.shOpt.S3.SecretKey
 	config["s3.bucket"] = inst.shOpt.S3.Bucket
 	config["s3.prefix"] = inst.shOpt.S3.Prefix
 	return config

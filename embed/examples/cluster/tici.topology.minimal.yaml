@@ -1,8 +1,8 @@
 global:
   user: "tidb"
   ssh_port: 22
-  deploy_dir: "/DATA/disk3/qiuyang/tidb-deploy"
-  data_dir: "/DATA/disk3/qiuyang/tidb-data"
+  deploy_dir: "/tidb-deploy"
+  data_dir: "/tidb-data"
   listen_host: 0.0.0.0
   arch: "amd64"
 
