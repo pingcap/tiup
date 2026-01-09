@@ -223,7 +223,7 @@ func (i *TiCIMetaInstance) InitConfig(
 	for _, s := range topo.TiDBServers {
 		tidbs = append(tidbs, fmt.Sprintf("mysql://root@%s", utils.JoinHostPort(s.Host, s.Port)))
 	}
-	spec.Config["tidb_server.dsns"] = tidbs
+	spec.Config["tidb-server.dsns"] = tidbs
 
 	if err := i.MergeServerConfig(ctx, e, globalConfig, spec.Config, paths); err != nil {
 		return err
@@ -256,16 +256,16 @@ func (i *TiCIMetaInstance) PrepareStart(ctx context.Context, tlsCfg *tls.Config)
 	if v, ok := spec.Config["s3.endpoint"].(string); ok {
 		endpoint = v
 	}
-	if v, ok := spec.Config["s3.access_key"].(string); ok {
+	if v, ok := spec.Config["s3.access-key"].(string); ok {
 		accessKey = v
 	}
-	if v, ok := spec.Config["s3.secret_key"].(string); ok {
+	if v, ok := spec.Config["s3.secret-key"].(string); ok {
 		secretKey = v
 	}
 	if v, ok := spec.Config["s3.region"].(string); ok {
 		endpoint = fmt.Sprintf("%s&region=%s", endpoint, v)
 	}
-	if v, ok := spec.Config["s3.use_path_style"].(bool); ok {
+	if v, ok := spec.Config["s3.use-path-style"].(bool); ok {
 		endpoint = fmt.Sprintf("%s&force-path-style=%t", endpoint, v)
 	}
 	cdcAddr := utils.JoinHostPort(topo.CDCServers[0].Host, topo.CDCServers[0].Port)

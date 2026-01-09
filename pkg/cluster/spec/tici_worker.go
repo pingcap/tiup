@@ -217,8 +217,9 @@ func (i *TiCIWorkerInstance) InitConfig(
 	}
 
 	globalConfig := topo.ServerConfigs.TiCIWorker
-	if v, ok := spec.Config["frag_writer.local_data_path"].(string); !ok || v == "" {
-		spec.Config["frag_writer.local_data_path"] = filepath.Join(spec.DataDir, "fragments")
+	// set the default data dir if not set by user
+	if v, ok := spec.Config["storage.data-dir"].(string); !ok || v == "" {
+		spec.Config["storage.data-dir"] = spec.DataDir
 	}
 	if err := i.MergeServerConfig(ctx, e, globalConfig, spec.Config, paths); err != nil {
 		return err
