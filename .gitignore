@@ -33,3 +33,5 @@ bin/
 docker/secret/
 *__failpoint_binding__.go
 *__failpoint_stash__
+
+.codex/
