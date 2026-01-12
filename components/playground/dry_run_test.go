@@ -74,6 +74,29 @@ func TestWriteDryRun_Text(t *testing.T) {
 	}
 }
 
+func TestWriteDryRun_Text_ShowsComponentHintWhenDifferent(t *testing.T) {
+	plan := BootPlan{
+		Services: []ServicePlan{
+			{
+				Name:            "ng-monitoring-0",
+				ServiceID:       proc.ServiceNGMonitoring.String(),
+				ComponentID:     proc.ComponentPrometheus.String(),
+				ResolvedVersion: "v1.0.0",
+				Shared:          ServiceSharedPlan{Host: "127.0.0.1", Port: 12020, StatusPort: 12020},
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	if err := writeDryRun(&buf, plan, "text"); err != nil {
+		t.Fatalf("writeDryRun(text): %v", err)
+	}
+
+	if got := buf.String(); !strings.Contains(got, "  + ng-monitoring-0@v1.0.0 (prometheus)\n") {
+		t.Fatalf("dry-run text missing component hint, got:\n%s", got)
+	}
+}
+
 func TestWriteDryRun_JSON(t *testing.T) {
 	plan := BootPlan{
 		DataDir:     "/data",

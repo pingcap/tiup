@@ -123,11 +123,20 @@ func renderDryRunText(out io.Writer, plan BootPlan) string {
 				continue
 			}
 
-			if ver := s.ResolvedVersion; ver != "" {
-				tokens.Fprintf(&b, "  [green]+[reset] %s[dark_gray]@%s[reset]\n", s.Name, ver)
-			} else {
-				tokens.Fprintf(&b, "  [green]+[reset] %s\n", s.Name)
+			componentHint := ""
+			if componentID := strings.TrimSpace(s.ComponentID); componentID != "" && componentID != strings.TrimSpace(s.ServiceID) {
+				componentHint = componentID
 			}
+
+			if ver := s.ResolvedVersion; ver != "" {
+				tokens.Fprintf(&b, "  [green]+[reset] %s[dark_gray]@%s[reset]", s.Name, ver)
+			} else {
+				tokens.Fprintf(&b, "  [green]+[reset] %s", s.Name)
+			}
+			if componentHint != "" {
+				tokens.Fprintf(&b, " [dark_gray](%s)[reset]", componentHint)
+			}
+			b.WriteString("\n")
 
 			if binPath := strings.TrimSpace(s.BinPath); binPath != "" {
 				tokens.Fprintf(&b, "    [dark_gray]%s[reset]\n", binPath)
