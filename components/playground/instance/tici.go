@@ -129,6 +129,9 @@ func (inst *TiCIInstance) Start(ctx context.Context) error {
 		fmt.Sprintf("--config=%s", configPath),
 		fmt.Sprintf("--log-file=%s", inst.LogFile()),
 	}
+	if inst.ticiRole == TiCIRoleWorker {
+		args = append(args, fmt.Sprintf("--data-dir=%s", filepath.Join(inst.Dir, "data")))
+	}
 
 	return inst.PrepareProcess(ctx, inst.BinPath, args, nil, inst.Dir)
 }

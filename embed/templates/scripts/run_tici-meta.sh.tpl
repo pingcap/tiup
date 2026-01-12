@@ -15,7 +15,7 @@ exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} env GODEBUG=mad
 exec env GODEBUG=madvdontneed=1 bin/tici-server \
 {{- end}}
     meta \
-    -P {{.Port}} \
+    --port {{.Port}} \
     --status-port="{{.StatusPort}}" \
     --host="{{.ListenHost}}" \
     --advertise-host="{{.AdvertiseHost}}" \

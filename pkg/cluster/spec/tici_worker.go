@@ -196,6 +196,7 @@ func (i *TiCIWorkerInstance) InitConfig(
 		AdvertiseHost: utils.Ternary(spec.AdvertiseHost != "", spec.AdvertiseHost, spec.Host).(string),
 
 		DeployDir: paths.Deploy,
+		DataDir:   paths.Data[0],
 		LogDir:    paths.Log,
 
 		NumaNode:  spec.NumaNode,
