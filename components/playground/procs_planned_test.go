@@ -51,3 +51,39 @@ func TestAddPlannedProcInController_UsesPlanSharedOptions(t *testing.T) {
 		t.Fatalf("unexpected instance dir: %q", tdb.Dir)
 	}
 }
+
+func TestAddPlannedProcInController_CreatesTiProxy(t *testing.T) {
+	plannedDir := t.TempDir()
+
+	pg := NewPlayground(t.TempDir(), 0)
+	pg.dataDir = ""
+
+	state := &controllerState{}
+
+	plan := ServicePlan{
+		ServiceID:   proc.ServiceTiProxy.String(),
+		ComponentID: proc.ComponentTiProxy.String(),
+		Shared: ServiceSharedPlan{
+			Host:       "127.0.0.1",
+			Port:       6000,
+			StatusPort: 3080,
+		},
+		TiProxy: &proc.TiProxyPlan{PDAddrs: []string{"127.0.0.1:2379"}},
+	}
+
+	inst, err := pg.addPlannedProcInController(state, plan, "/bin/tiproxy", utils.Version("v0.0.0"), proc.SharedOptions{Mode: proc.ModeNormal, PDMode: "pd"}, plannedDir)
+	if err != nil {
+		t.Fatalf("addPlannedProcInController: %v", err)
+	}
+
+	tp, ok := inst.(*proc.TiProxyInstance)
+	if !ok {
+		t.Fatalf("unexpected instance type: %T", inst)
+	}
+	if got := tp.Plan.PDAddrs; len(got) != 1 || got[0] != "127.0.0.1:2379" {
+		t.Fatalf("unexpected PDAddrs: %v", got)
+	}
+	if tp.Dir != filepath.Join(plannedDir, "tiproxy-0") {
+		t.Fatalf("unexpected instance dir: %q", tp.Dir)
+	}
+}

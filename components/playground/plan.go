@@ -83,50 +83,10 @@ type DownloadPlan struct {
 }
 
 // ServicePlan is the per-instance start plan.
-type ServicePlan struct {
-	Name      string
-	ServiceID string
-
-	StartAfterServices []string
-
-	ComponentID     string
-	ResolvedVersion string
-	BinPath         string
-
-	Shared ServiceSharedPlan
-
-	// Service-specific inputs (strong schema).
-	PD           *proc.PDPlan
-	TiKV         *proc.TiKVPlan
-	TiDB         *proc.TiDBPlan
-	TiKVWorker   *proc.TiKVWorkerPlan
-	TiFlash      *proc.TiFlashPlan
-	TiProxy      *proc.TiProxyPlan
-	Prometheus   *proc.PrometheusPlan
-	Grafana      *proc.GrafanaPlan
-	NGMonitoring *proc.NGMonitoringPlan
-	TiCDC        *proc.TiCDCPlan
-	TiKVCDC      *proc.TiKVCDCPlan
-	DMMaster     *proc.DMMasterPlan
-	DMWorker     *proc.DMWorkerPlan
-	Pump         *proc.PumpPlan
-	Drainer      *proc.DrainerPlan
-
-	// Debug fields (not part of execution semantics).
-	DebugTitle      string
-	DebugConstraint string
-}
+type ServicePlan = proc.ServicePlan
 
 // ServiceSharedPlan contains common, low-level per-instance inputs.
-type ServiceSharedPlan struct {
-	Dir        string
-	Host       string
-	Port       int
-	StatusPort int
-
-	ConfigPath string
-	UpTimeout  int
-}
+type ServiceSharedPlan = proc.ServiceSharedPlan
 
 type bootPlannerConfig struct {
 	dataDir            string

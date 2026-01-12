@@ -237,86 +237,10 @@ func (p *Playground) addPlannedProcInController(state *controllerState, plan Ser
 		info.BinPath = info.UserBinPath
 	}
 
-	var inst proc.Process
-	switch serviceID {
-	case proc.ServicePD, proc.ServicePDAPI, proc.ServicePDTSO, proc.ServicePDScheduling, proc.ServicePDRouter, proc.ServicePDResourceManager:
-		if plan.PD == nil {
-			return nil, fmt.Errorf("missing pd plan for %s", name)
-		}
-		inst = &proc.PDInstance{ShOpt: shOpt, Plan: *plan.PD, ProcessInfo: info}
-	case proc.ServiceTiKV:
-		if plan.TiKV == nil {
-			return nil, fmt.Errorf("missing tikv plan for %s", name)
-		}
-		inst = &proc.TiKVInstance{ShOpt: shOpt, Plan: *plan.TiKV, ProcessInfo: info}
-	case proc.ServiceTiDB, proc.ServiceTiDBSystem:
-		if plan.TiDB == nil {
-			return nil, fmt.Errorf("missing tidb plan for %s", name)
-		}
-		tdb := &proc.TiDBInstance{ShOpt: shOpt, Plan: *plan.TiDB, TiProxyCertDir: baseDir, ProcessInfo: info}
-		inst = tdb
-	case proc.ServiceTiKVWorker:
-		if plan.TiKVWorker == nil {
-			return nil, fmt.Errorf("missing tikv-worker plan for %s", name)
-		}
-		inst = &proc.TiKVWorkerInstance{ShOpt: shOpt, Plan: *plan.TiKVWorker, ProcessInfo: info}
-	case proc.ServiceTiFlash, proc.ServiceTiFlashWrite, proc.ServiceTiFlashCompute:
-		if plan.TiFlash == nil {
-			return nil, fmt.Errorf("missing tiflash plan for %s", name)
-		}
-		inst = &proc.TiFlashInstance{ShOpt: shOpt, Plan: *plan.TiFlash, ProcessInfo: info}
-	case proc.ServiceTiProxy:
-		if plan.TiProxy == nil {
-			return nil, fmt.Errorf("missing tiproxy plan for %s", name)
-		}
-		inst = &proc.TiProxyInstance{Plan: *plan.TiProxy, ProcessInfo: info}
-	case proc.ServicePrometheus:
-		inst = &proc.PrometheusInstance{ProcessInfo: info}
-	case proc.ServiceGrafana:
-		promURL := ""
-		if plan.Grafana != nil {
-			promURL = plan.Grafana.PrometheusURL
-		}
-		inst = &proc.GrafanaInstance{PrometheusURL: promURL, ProcessInfo: info}
-	case proc.ServiceNGMonitoring:
-		if plan.NGMonitoring == nil {
-			return nil, fmt.Errorf("missing ng-monitoring plan for %s", name)
-		}
-		inst = &proc.NGMonitoringInstance{Plan: *plan.NGMonitoring, ProcessInfo: info}
-	case proc.ServiceTiCDC:
-		if plan.TiCDC == nil {
-			return nil, fmt.Errorf("missing ticdc plan for %s", name)
-		}
-		inst = &proc.TiCDC{Plan: *plan.TiCDC, ProcessInfo: info}
-	case proc.ServiceTiKVCDC:
-		if plan.TiKVCDC == nil {
-			return nil, fmt.Errorf("missing tikv-cdc plan for %s", name)
-		}
-		inst = &proc.TiKVCDCInstance{Plan: *plan.TiKVCDC, ProcessInfo: info}
-	case proc.ServiceDMMaster:
-		if plan.DMMaster == nil {
-			return nil, fmt.Errorf("missing dm-master plan for %s", name)
-		}
-		inst = &proc.DMMaster{Plan: *plan.DMMaster, ProcessInfo: info}
-	case proc.ServiceDMWorker:
-		if plan.DMWorker == nil {
-			return nil, fmt.Errorf("missing dm-worker plan for %s", name)
-		}
-		inst = &proc.DMWorker{Plan: *plan.DMWorker, ProcessInfo: info}
-	case proc.ServicePump:
-		if plan.Pump == nil {
-			return nil, fmt.Errorf("missing pump plan for %s", name)
-		}
-		inst = &proc.Pump{Plan: *plan.Pump, ProcessInfo: info}
-	case proc.ServiceDrainer:
-		if plan.Drainer == nil {
-			return nil, fmt.Errorf("missing drainer plan for %s", name)
-		}
-		inst = &proc.Drainer{Plan: *plan.Drainer, ProcessInfo: info}
-	default:
-		return nil, fmt.Errorf("unsupported service %s", serviceID)
+	inst, err := proc.NewProcessFromPlan(plan, info, shOpt, baseDir)
+	if err != nil {
+		return nil, err
 	}
-
 	if inst == nil {
 		return nil, fmt.Errorf("failed to create instance for %s", name)
 	}
