@@ -8,7 +8,10 @@ Read doc/design/arch-playground.md to learn how playground is designed and imple
 
 ## Common Commands
 
-- Build: (under the TiUP directory) `make playground`
+Under TiUP directory:
+
+- Build: make playground
+- Lint: make lint && make check-static
 
 ## Principles to Follow when Developing TiUP Playground
 
