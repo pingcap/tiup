@@ -96,13 +96,13 @@ func renderDryRunText(out io.Writer, plan BootPlan) string {
 		if b.Len() > 0 {
 			b.WriteString("\n")
 		}
-		tokens.Fprintf(&b, "[light_magenta]==> [reset][bold]Reuse Packages:[reset]\n")
+		tokens.Fprintf(&b, "[light_magenta]==> [reset][bold]Existing Packages:[reset]\n")
 		for _, c := range reusedComponents {
 			componentID, resolved, ok := strings.Cut(c, "@")
 			if !ok || componentID == "" || resolved == "" {
 				continue
 			}
-			tokens.Fprintf(&b, "  [green]+[reset] %s[dark_gray]@%s[reset]\n", componentID, resolved)
+			tokens.Fprintf(&b, "    %s[dark_gray]@%s[reset]\n", componentID, resolved)
 		}
 	}
 
@@ -121,13 +121,14 @@ func renderDryRunText(out io.Writer, plan BootPlan) string {
 				componentHint = componentID
 			}
 
-			if ver := s.ResolvedVersion; ver != "" {
-				tokens.Fprintf(&b, "  [green]+[reset] %s[dark_gray]@%s[reset]", s.Name, ver)
-			} else {
-				tokens.Fprintf(&b, "  [green]+[reset] %s", s.Name)
-			}
+			tokens.Fprintf(&b, "  [green]+[reset] ")
 			if componentHint != "" {
-				tokens.Fprintf(&b, " [dark_gray](%s)[reset]", componentHint)
+				tokens.Fprintf(&b, "%s/", componentHint)
+			}
+			if ver := s.ResolvedVersion; ver != "" {
+				tokens.Fprintf(&b, "%s[dark_gray]@%s[reset]", s.Name, ver)
+			} else {
+				tokens.Fprintf(&b, "%s", s.Name)
 			}
 			if binPath := strings.TrimSpace(s.BinPath); binPath != "" {
 				tokens.Fprintf(&b, " [dark_gray](use %s)[reset]", binPath)
@@ -138,7 +139,7 @@ func renderDryRunText(out io.Writer, plan BootPlan) string {
 			if host != "" && s.Shared.Port > 0 {
 				addr := utils.JoinHostPort(host, s.Shared.Port)
 				if s.Shared.StatusPort > 0 && s.Shared.StatusPort != s.Shared.Port {
-					addr = fmt.Sprintf("%s,%d(status)", addr, s.Shared.StatusPort)
+					addr = fmt.Sprintf("%s,%d", addr, s.Shared.StatusPort)
 				}
 				tokens.Fprintf(&b, "    [dark_gray]%s[reset]\n", addr)
 			}

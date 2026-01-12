@@ -2,6 +2,8 @@
 
 TiUP Playground is used to start a single-node TiDB+TiKV+PD+... cluster locally, making it convenient for users (mainly developers) to try out features and run tests. It supports Linux and macOS.
 
+Read doc/design/arch-playground.md to learn how playground is designed and implemented.
+
 - **Keep AGENTS.md generic**: Put only general, reusable guidelines here; avoid rules that are specific to one feature or business workflow.
 
 ## Common Commands
