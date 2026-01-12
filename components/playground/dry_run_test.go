@@ -166,6 +166,45 @@ func TestWriteDryRun_JSON_RedactsSecrets(t *testing.T) {
 	}
 }
 
+func TestWriteDryRun_JSON_OmitsNilOneOfFields(t *testing.T) {
+	plan := BootPlan{
+		Services: []ServicePlan{
+			{
+				Name:            "pd-0",
+				ServiceID:       proc.ServicePD.String(),
+				ComponentID:     proc.ComponentPD.String(),
+				ResolvedVersion: "v1.0.0",
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	if err := writeDryRun(&buf, plan, "json"); err != nil {
+		t.Fatalf("writeDryRun(json): %v", err)
+	}
+
+	out := buf.String()
+	for _, field := range []string{
+		"\"TiKV\": null",
+		"\"TiDB\": null",
+		"\"TiKVWorker\": null",
+		"\"TiFlash\": null",
+		"\"TiProxy\": null",
+		"\"Grafana\": null",
+		"\"NGMonitoring\": null",
+		"\"TiCDC\": null",
+		"\"TiKVCDC\": null",
+		"\"DMMaster\": null",
+		"\"DMWorker\": null",
+		"\"Pump\": null",
+		"\"Drainer\": null",
+	} {
+		if strings.Contains(out, field) {
+			t.Fatalf("dry-run json should omit nil one-of field %q, got:\n%s", field, out)
+		}
+	}
+}
+
 func TestWriteDryRun_JSON_MapOrderIsStable(t *testing.T) {
 	plan := BootPlan{
 		RequiredServices: map[string]int{

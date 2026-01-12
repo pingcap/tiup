@@ -18,20 +18,20 @@ type ServicePlan struct {
 	Shared ServiceSharedPlan
 
 	// Service-specific inputs (strong schema).
-	PD           *PDPlan
-	TiKV         *TiKVPlan
-	TiDB         *TiDBPlan
-	TiKVWorker   *TiKVWorkerPlan
-	TiFlash      *TiFlashPlan
-	TiProxy      *TiProxyPlan
-	Grafana      *GrafanaPlan
-	NGMonitoring *NGMonitoringPlan
-	TiCDC        *TiCDCPlan
-	TiKVCDC      *TiKVCDCPlan
-	DMMaster     *DMMasterPlan
-	DMWorker     *DMWorkerPlan
-	Pump         *PumpPlan
-	Drainer      *DrainerPlan
+	PD           *PDPlan           `json:",omitempty"`
+	TiKV         *TiKVPlan         `json:",omitempty"`
+	TiDB         *TiDBPlan         `json:",omitempty"`
+	TiKVWorker   *TiKVWorkerPlan   `json:",omitempty"`
+	TiFlash      *TiFlashPlan      `json:",omitempty"`
+	TiProxy      *TiProxyPlan      `json:",omitempty"`
+	Grafana      *GrafanaPlan      `json:",omitempty"`
+	NGMonitoring *NGMonitoringPlan `json:",omitempty"`
+	TiCDC        *TiCDCPlan        `json:",omitempty"`
+	TiKVCDC      *TiKVCDCPlan      `json:",omitempty"`
+	DMMaster     *DMMasterPlan     `json:",omitempty"`
+	DMWorker     *DMWorkerPlan     `json:",omitempty"`
+	Pump         *PumpPlan         `json:",omitempty"`
+	Drainer      *DrainerPlan      `json:",omitempty"`
 
 	// Debug fields (not part of execution semantics).
 	DebugConstraint string
