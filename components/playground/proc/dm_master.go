@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -18,6 +19,19 @@ const (
 	// ComponentDMMaster is the repository component ID for DM-master.
 	ComponentDMMaster RepoComponentID = "dm-master"
 )
+
+// DMMasterPlan is the service-specific plan for DM-master.
+type DMMasterPlan struct {
+	InitialCluster []DMMemberPlan
+	RequireReady   bool
+}
+
+// DMMemberPlan is one member in the DM initial cluster.
+type DMMemberPlan struct {
+	Name       string
+	PeerAddr   string // host:peerPort
+	MasterAddr string // host:statusPort
+}
 
 // DMMaster represent a DM master instance.
 type DMMaster struct {
@@ -31,6 +45,17 @@ var _ ReadyWaiter = &DMMaster{}
 func init() {
 	RegisterComponentDisplayName(ComponentDMMaster, "DM-master")
 	RegisterServiceDisplayName(ServiceDMMaster, "DM-master")
+
+	registerPlannedProcessFactory(ServiceDMMaster, func(plan ServicePlan, info ProcessInfo, _ SharedOptions, _ string) (Process, error) {
+		if plan.DMMaster == nil {
+			name := info.Name()
+			if name == "" {
+				name = ServiceDMMaster.String()
+			}
+			return nil, errors.Errorf("missing dm-master plan for %s", name)
+		}
+		return &DMMaster{Plan: *plan.DMMaster, ProcessInfo: info}, nil
+	})
 }
 
 // Prepare builds the DM-master process command.

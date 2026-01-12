@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -16,6 +17,11 @@ const (
 	// ComponentDMWorker is the repository component ID for DM-worker.
 	ComponentDMWorker RepoComponentID = "dm-worker"
 )
+
+// DMWorkerPlan is the service-specific plan for DM-worker.
+type DMWorkerPlan struct {
+	MasterAddrs []string // host:statusPort
+}
 
 // DMWorker represent a DM worker instance.
 type DMWorker struct {
@@ -28,6 +34,17 @@ var _ Process = &DMWorker{}
 func init() {
 	RegisterComponentDisplayName(ComponentDMWorker, "DM-worker")
 	RegisterServiceDisplayName(ServiceDMWorker, "DM-worker")
+
+	registerPlannedProcessFactory(ServiceDMWorker, func(plan ServicePlan, info ProcessInfo, _ SharedOptions, _ string) (Process, error) {
+		if plan.DMWorker == nil {
+			name := info.Name()
+			if name == "" {
+				name = ServiceDMWorker.String()
+			}
+			return nil, errors.Errorf("missing dm-worker plan for %s", name)
+		}
+		return &DMWorker{Plan: *plan.DMWorker, ProcessInfo: info}, nil
+	})
 }
 
 // MasterAddrs return the master addresses.

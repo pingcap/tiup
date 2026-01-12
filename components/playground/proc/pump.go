@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -31,6 +32,9 @@ const (
 	// ComponentPump is the repository component ID for Pump.
 	ComponentPump RepoComponentID = "pump"
 )
+
+// PumpPlan is the service-specific plan for Pump.
+type PumpPlan struct{ PDAddrs []string }
 
 // Pump represent a pump instance.
 type Pump struct {
@@ -44,6 +48,17 @@ var _ ReadyWaiter = &Pump{}
 func init() {
 	RegisterComponentDisplayName(ComponentPump, "Pump")
 	RegisterServiceDisplayName(ServicePump, "Pump")
+
+	registerPlannedProcessFactory(ServicePump, func(plan ServicePlan, info ProcessInfo, _ SharedOptions, _ string) (Process, error) {
+		if plan.Pump == nil {
+			name := info.Name()
+			if name == "" {
+				name = ServicePump.String()
+			}
+			return nil, errors.Errorf("missing pump plan for %s", name)
+		}
+		return &Pump{Plan: *plan.Pump, ProcessInfo: info}, nil
+	})
 }
 
 // Ready return nil when pump is ready to serve.

@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -29,6 +30,9 @@ const (
 	// ComponentDrainer is the repository component ID for Drainer.
 	ComponentDrainer RepoComponentID = "drainer"
 )
+
+// DrainerPlan is the service-specific plan for Drainer.
+type DrainerPlan struct{ PDAddrs []string }
 
 // Drainer represent a drainer instance.
 type Drainer struct {
@@ -41,6 +45,17 @@ var _ Process = &Drainer{}
 func init() {
 	RegisterComponentDisplayName(ComponentDrainer, "Drainer")
 	RegisterServiceDisplayName(ServiceDrainer, "Drainer")
+
+	registerPlannedProcessFactory(ServiceDrainer, func(plan ServicePlan, info ProcessInfo, _ SharedOptions, _ string) (Process, error) {
+		if plan.Drainer == nil {
+			name := info.Name()
+			if name == "" {
+				name = ServiceDrainer.String()
+			}
+			return nil, errors.Errorf("missing drainer plan for %s", name)
+		}
+		return &Drainer{Plan: *plan.Drainer, ProcessInfo: info}, nil
+	})
 }
 
 // LogFile return the log file name.

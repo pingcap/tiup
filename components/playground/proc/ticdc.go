@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/tidbver"
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -31,6 +32,9 @@ const (
 	ComponentCDC RepoComponentID = "cdc"
 )
 
+// TiCDCPlan is the service-specific plan for TiCDC.
+type TiCDCPlan struct{ PDAddrs []string }
+
 // TiCDC represent a ticdc instance.
 type TiCDC struct {
 	ProcessInfo
@@ -42,6 +46,17 @@ var _ Process = &TiCDC{}
 func init() {
 	RegisterComponentDisplayName(ComponentCDC, "TiCDC")
 	RegisterServiceDisplayName(ServiceTiCDC, "TiCDC")
+
+	registerPlannedProcessFactory(ServiceTiCDC, func(plan ServicePlan, info ProcessInfo, _ SharedOptions, _ string) (Process, error) {
+		if plan.TiCDC == nil {
+			name := info.Name()
+			if name == "" {
+				name = ServiceTiCDC.String()
+			}
+			return nil, errors.Errorf("missing ticdc plan for %s", name)
+		}
+		return &TiCDC{Plan: *plan.TiCDC, ProcessInfo: info}, nil
+	})
 }
 
 // Prepare builds the TiCDC process command.

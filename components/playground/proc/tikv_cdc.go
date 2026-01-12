@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -29,6 +30,9 @@ const (
 	// ComponentTiKVCDC is the repository component ID for TiKV CDC.
 	ComponentTiKVCDC RepoComponentID = "tikv-cdc"
 )
+
+// TiKVCDCPlan is the service-specific plan for TiKV-CDC.
+type TiKVCDCPlan struct{ PDAddrs []string }
 
 // TiKVCDCInstance represent a TiKV-CDC instance.
 type TiKVCDCInstance struct {
@@ -41,6 +45,17 @@ var _ Process = &TiKVCDCInstance{}
 func init() {
 	RegisterComponentDisplayName(ComponentTiKVCDC, "TiKV-CDC")
 	RegisterServiceDisplayName(ServiceTiKVCDC, "TiKV-CDC")
+
+	registerPlannedProcessFactory(ServiceTiKVCDC, func(plan ServicePlan, info ProcessInfo, _ SharedOptions, _ string) (Process, error) {
+		if plan.TiKVCDC == nil {
+			name := info.Name()
+			if name == "" {
+				name = ServiceTiKVCDC.String()
+			}
+			return nil, errors.Errorf("missing tikv-cdc plan for %s", name)
+		}
+		return &TiKVCDCInstance{Plan: *plan.TiKVCDC, ProcessInfo: info}, nil
+	})
 }
 
 // Prepare builds the TiKV-CDC process command.

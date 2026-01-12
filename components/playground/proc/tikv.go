@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -32,6 +33,12 @@ const (
 	// ComponentTiKV is the repository component ID for TiKV.
 	ComponentTiKV RepoComponentID = "tikv"
 )
+
+// TiKVPlan is the service-specific plan for TiKV.
+type TiKVPlan struct {
+	PDAddrs  []string // host:statusPort
+	TSOAddrs []string // host:statusPort (ms mode)
+}
 
 // TiKVInstance represent a running tikv-server
 type TiKVInstance struct {
@@ -46,6 +53,17 @@ var _ ReadyWaiter = &TiKVInstance{}
 func init() {
 	RegisterComponentDisplayName(ComponentTiKV, "TiKV")
 	RegisterServiceDisplayName(ServiceTiKV, "TiKV")
+
+	registerPlannedProcessFactory(ServiceTiKV, func(plan ServicePlan, info ProcessInfo, shOpt SharedOptions, _ string) (Process, error) {
+		if plan.TiKV == nil {
+			name := info.Name()
+			if name == "" {
+				name = ServiceTiKV.String()
+			}
+			return nil, errors.Errorf("missing tikv plan for %s", name)
+		}
+		return &TiKVInstance{ShOpt: shOpt, Plan: *plan.TiKV, ProcessInfo: info}, nil
+	})
 }
 
 // Addr return the address of tikv.

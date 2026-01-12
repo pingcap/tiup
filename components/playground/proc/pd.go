@@ -50,6 +50,49 @@ func init() {
 	RegisterServiceDisplayName(ServicePDScheduling, "PD Scheduling")
 	RegisterServiceDisplayName(ServicePDRouter, "PD Router")
 	RegisterServiceDisplayName(ServicePDResourceManager, "PD Resource Manager")
+
+	factory := func(plan ServicePlan, info ProcessInfo, shOpt SharedOptions, _ string) (Process, error) {
+		if plan.PD == nil {
+			name := info.Name()
+			if name == "" {
+				name = ServicePD.String()
+			}
+			return nil, errors.Errorf("missing pd plan for %s", name)
+		}
+		return &PDInstance{ShOpt: shOpt, Plan: *plan.PD, ProcessInfo: info}, nil
+	}
+	for _, serviceID := range []ServiceID{
+		ServicePD,
+		ServicePDAPI,
+		ServicePDTSO,
+		ServicePDScheduling,
+		ServicePDRouter,
+		ServicePDResourceManager,
+	} {
+		registerPlannedProcessFactory(serviceID, factory)
+	}
+}
+
+// PDPlan is the service-specific plan for PD-related services.
+//
+// Fields are intentionally "static": executor should be able to start instances
+// without re-deriving endpoints from other instances.
+type PDPlan struct {
+	// InitialCluster is used by pd/pd-api (choose one of InitialCluster/JoinAddrs).
+	InitialCluster []PDMemberPlan
+	// JoinAddrs is used by pd/pd-api when joining an existing cluster.
+	JoinAddrs []string // host:peerPort
+
+	// BackendAddrs is used by pd-* microservices as backend endpoints.
+	BackendAddrs []string // host:statusPort
+
+	KVIsSingleReplica bool
+}
+
+// PDMemberPlan is one member in the pd/pd-api initial cluster.
+type PDMemberPlan struct {
+	Name     string
+	PeerAddr string // host:peerPort
 }
 
 // PDInstance represent a running pd-server

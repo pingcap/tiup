@@ -21,6 +21,22 @@ const (
 func init() {
 	RegisterComponentDisplayName(ComponentNGMonitoring, "NG Monitoring")
 	RegisterServiceDisplayName(ServiceNGMonitoring, "NG Monitoring")
+
+	registerPlannedProcessFactory(ServiceNGMonitoring, func(plan ServicePlan, info ProcessInfo, _ SharedOptions, _ string) (Process, error) {
+		if plan.NGMonitoring == nil {
+			name := info.Name()
+			if name == "" {
+				name = ServiceNGMonitoring.String()
+			}
+			return nil, errors.Errorf("missing ng-monitoring plan for %s", name)
+		}
+		return &NGMonitoringInstance{Plan: *plan.NGMonitoring, ProcessInfo: info}, nil
+	})
+}
+
+// NGMonitoringPlan is the service-specific plan for NG Monitoring.
+type NGMonitoringPlan struct {
+	PDAddrs []string
 }
 
 // NGMonitoringInstance represents a running ng-monitoring-server.

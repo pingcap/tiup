@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/crypto"
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -33,6 +34,11 @@ const (
 	ComponentTiProxy RepoComponentID = "tiproxy"
 )
 
+// TiProxyPlan is the service-specific plan for TiProxy.
+type TiProxyPlan struct {
+	PDAddrs []string
+}
+
 // TiProxyInstance represent a ticdc instance.
 type TiProxyInstance struct {
 	ProcessInfo
@@ -44,6 +50,17 @@ var _ Process = &TiProxyInstance{}
 func init() {
 	RegisterComponentDisplayName(ComponentTiProxy, "TiProxy")
 	RegisterServiceDisplayName(ServiceTiProxy, "TiProxy")
+
+	registerPlannedProcessFactory(ServiceTiProxy, func(plan ServicePlan, info ProcessInfo, _ SharedOptions, _ string) (Process, error) {
+		if plan.TiProxy == nil {
+			name := info.Name()
+			if name == "" {
+				name = ServiceTiProxy.String()
+			}
+			return nil, errors.Errorf("missing tiproxy plan for %s", name)
+		}
+		return &TiProxyInstance{Plan: *plan.TiProxy, ProcessInfo: info}, nil
+	})
 }
 
 // GenTiProxySessionCerts will create a self-signed certs for TiProxy session migration. NOTE that this cert is directly used by TiDB.

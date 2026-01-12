@@ -31,6 +31,11 @@ const (
 	ComponentTiKVWorker RepoComponentID = "tikv-worker"
 )
 
+// TiKVWorkerPlan is the service-specific plan for TiKV worker.
+type TiKVWorkerPlan struct {
+	PDAddrs []string
+}
+
 // ResolveTiKVWorkerBinPath resolves the tikv-worker binary path when a
 // tikv-server path is provided.
 func ResolveTiKVWorkerBinPath(binPath string) string {
@@ -53,6 +58,17 @@ var _ Process = &TiKVWorkerInstance{}
 func init() {
 	RegisterComponentDisplayName(ComponentTiKVWorker, "TiKV Worker")
 	RegisterServiceDisplayName(ServiceTiKVWorker, "TiKV Worker")
+
+	registerPlannedProcessFactory(ServiceTiKVWorker, func(plan ServicePlan, info ProcessInfo, shOpt SharedOptions, _ string) (Process, error) {
+		if plan.TiKVWorker == nil {
+			name := info.Name()
+			if name == "" {
+				name = ServiceTiKVWorker.String()
+			}
+			return nil, errors.Errorf("missing tikv-worker plan for %s", name)
+		}
+		return &TiKVWorkerInstance{ShOpt: shOpt, Plan: *plan.TiKVWorker, ProcessInfo: info}, nil
+	})
 }
 
 // Addr return the address of TiKVWorker.

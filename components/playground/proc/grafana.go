@@ -24,6 +24,19 @@ const (
 func init() {
 	RegisterComponentDisplayName(ComponentGrafana, "Grafana")
 	RegisterServiceDisplayName(ServiceGrafana, "Grafana")
+
+	registerPlannedProcessFactory(ServiceGrafana, func(plan ServicePlan, info ProcessInfo, _ SharedOptions, _ string) (Process, error) {
+		promURL := ""
+		if plan.Grafana != nil {
+			promURL = plan.Grafana.PrometheusURL
+		}
+		return &GrafanaInstance{PrometheusURL: promURL, ProcessInfo: info}, nil
+	})
+}
+
+// GrafanaPlan is the service-specific plan for Grafana.
+type GrafanaPlan struct {
+	PrometheusURL string // http://host:port
 }
 
 // GrafanaInstance represents a running Grafana server.

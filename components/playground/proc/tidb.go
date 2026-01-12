@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -37,6 +38,30 @@ func init() {
 	RegisterComponentDisplayName(ComponentTiDB, "TiDB")
 	RegisterServiceDisplayName(ServiceTiDB, "TiDB")
 	RegisterServiceDisplayName(ServiceTiDBSystem, "TiDB System")
+
+	factory := func(plan ServicePlan, info ProcessInfo, shOpt SharedOptions, dataDir string) (Process, error) {
+		if plan.TiDB == nil {
+			name := info.Name()
+			if name == "" {
+				name = ServiceTiDB.String()
+			}
+			return nil, errors.Errorf("missing tidb plan for %s", name)
+		}
+		return &TiDBInstance{ShOpt: shOpt, Plan: *plan.TiDB, TiProxyCertDir: dataDir, ProcessInfo: info}, nil
+	}
+	for _, serviceID := range []ServiceID{ServiceTiDB, ServiceTiDBSystem} {
+		registerPlannedProcessFactory(serviceID, factory)
+	}
+}
+
+// TiDBPlan is the service-specific plan for TiDB.
+type TiDBPlan struct {
+	PDAddrs []string
+
+	EnableBinlog bool
+
+	// TiKVWorkerURL is only used by tidb-system in NextGen mode.
+	TiKVWorkerURL string // http://host:port
 }
 
 // TiDBInstance represent a running tidb-server

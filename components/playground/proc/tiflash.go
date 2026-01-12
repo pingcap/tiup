@@ -43,6 +43,31 @@ func init() {
 	RegisterServiceDisplayName(ServiceTiFlash, "TiFlash")
 	RegisterServiceDisplayName(ServiceTiFlashCompute, "TiFlash CN")
 	RegisterServiceDisplayName(ServiceTiFlashWrite, "TiFlash WN")
+
+	factory := func(plan ServicePlan, info ProcessInfo, shOpt SharedOptions, _ string) (Process, error) {
+		if plan.TiFlash == nil {
+			name := info.Name()
+			if name == "" {
+				name = ServiceTiFlash.String()
+			}
+			return nil, errors.Errorf("missing tiflash plan for %s", name)
+		}
+		return &TiFlashInstance{ShOpt: shOpt, Plan: *plan.TiFlash, ProcessInfo: info}, nil
+	}
+	for _, serviceID := range []ServiceID{ServiceTiFlash, ServiceTiFlashWrite, ServiceTiFlashCompute} {
+		registerPlannedProcessFactory(serviceID, factory)
+	}
+}
+
+// TiFlashPlan is the service-specific plan for TiFlash.
+type TiFlashPlan struct {
+	PDAddrs []string
+
+	// ProcessInfo.Port remains the TiFlash HTTP port.
+	ServicePort     int
+	TCPPort         int
+	ProxyPort       int
+	ProxyStatusPort int
 }
 
 // TiFlashInstance represent a running TiFlash

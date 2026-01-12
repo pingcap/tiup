@@ -23,6 +23,10 @@ const (
 func init() {
 	RegisterComponentDisplayName(ComponentPrometheus, "Prometheus")
 	RegisterServiceDisplayName(ServicePrometheus, "Prometheus")
+
+	registerPlannedProcessFactory(ServicePrometheus, func(_ ServicePlan, info ProcessInfo, _ SharedOptions, _ string) (Process, error) {
+		return &PrometheusInstance{ProcessInfo: info}, nil
+	})
 }
 
 // PrometheusInstance represents a running Prometheus server.
