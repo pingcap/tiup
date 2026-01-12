@@ -219,6 +219,9 @@ func (i *TiCIWorkerInstance) InitConfig(
 	globalConfig := topo.ServerConfigs.TiCIWorker
 	// set the default data dir if not set by user
 	if v, ok := spec.Config["storage.data-dir"].(string); !ok || v == "" {
+		if spec.Config == nil {
+			spec.Config = make(map[string]any)
+		}
 		spec.Config["storage.data-dir"] = spec.DataDir
 	}
 	if err := i.MergeServerConfig(ctx, e, globalConfig, spec.Config, paths); err != nil {
