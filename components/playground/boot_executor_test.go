@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/pingcap/tiup/components/playground/proc"
+	tuiv2output "github.com/pingcap/tiup/pkg/tuiv2/output"
 )
 
 type recordingExecutorSource struct {
@@ -182,4 +184,134 @@ func TestBootExecutor_AddProcs_CachesBinaryPathByComponentVersion(t *testing.T) 
 	if got := len(src.binaryPathCalls); got != 1 {
 		t.Fatalf("expected 1 BinaryPath call, got %d: %v", got, src.binaryPathCalls)
 	}
+}
+
+func TestBootExecutor_ExecuteBootPlan_DownloadPreRunAddProcsStart(t *testing.T) {
+	oldStdout := tuiv2output.Stdout.Get()
+	tuiv2output.Stdout.Set(io.Discard)
+	defer tuiv2output.Stdout.Set(oldStdout)
+
+	dir := t.TempDir()
+	writeFakeBin := func(name string) string {
+		path := filepath.Join(dir, name)
+		data := []byte("#!/bin/sh\nset -eu\ntouch \"$0.started\"\n")
+		if err := os.WriteFile(path, data, 0o755); err != nil {
+			t.Fatalf("write fake bin %s: %v", name, err)
+		}
+		return path
+	}
+
+	promBin := writeFakeBin("prometheus-bin")
+	tiproxyBin := writeFakeBin("tiproxy-bin")
+
+	pg := NewPlayground(dir, 0)
+	pg.startController()
+	defer func() {
+		if pg.controllerCancel != nil {
+			pg.controllerCancel()
+		}
+		select {
+		case <-pg.controllerDoneCh:
+		case <-time.After(2 * time.Second):
+			t.Fatalf("controller did not stop")
+		}
+	}()
+
+	src := &recordingExecutorSource{
+		binaryPathByComponent: map[string]string{
+			proc.ComponentPrometheus.String(): promBin,
+			proc.ComponentTiProxy.String():     tiproxyBin,
+		},
+	}
+	executor := newBootExecutor(pg, src)
+
+	plan := BootPlan{
+		DataDir: dir,
+		Shared:  proc.SharedOptions{Mode: proc.ModeNormal, PDMode: "pd"},
+		Downloads: []DownloadPlan{
+			{ComponentID: proc.ComponentPrometheus.String(), ResolvedVersion: "v1.0.0"},
+			{ComponentID: proc.ComponentTiProxy.String(), ResolvedVersion: "v1.0.0"},
+		},
+		Services: []ServicePlan{
+			{
+				ServiceID:       proc.ServicePrometheus.String(),
+				ComponentID:     proc.ComponentPrometheus.String(),
+				ResolvedVersion: "v1.0.0",
+				Shared: proc.ServiceSharedPlan{
+					Dir:  filepath.Join(dir, "prometheus-0"),
+					Host: "127.0.0.1",
+					Port: 9090,
+				},
+			},
+			{
+				ServiceID:       proc.ServiceTiProxy.String(),
+				ComponentID:     proc.ComponentTiProxy.String(),
+				ResolvedVersion: "v1.0.0",
+				Shared: proc.ServiceSharedPlan{
+					Dir:        filepath.Join(dir, "tiproxy-0"),
+					Host:       "127.0.0.1",
+					Port:       6000,
+					StatusPort: 3080,
+					UpTimeout:  1,
+				},
+				TiProxy: &proc.TiProxyPlan{PDAddrs: []string{"127.0.0.1:2379"}},
+			},
+		},
+	}
+
+	if err := executor.Download(plan); err != nil {
+		t.Fatalf("Download: %v", err)
+	}
+	if got := src.ensureInstalledCalls; len(got) != 2 || got[0] != "prometheus@v1.0.0" || got[1] != "tiproxy@v1.0.0" {
+		t.Fatalf("unexpected ensureInstalled calls: %v", got)
+	}
+
+	if err := executor.PreRun(context.Background(), plan); err != nil {
+		t.Fatalf("PreRun: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "tiproxy.crt")); err != nil {
+		t.Fatalf("missing tiproxy.crt: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "tiproxy.key")); err != nil {
+		t.Fatalf("missing tiproxy.key: %v", err)
+	}
+
+	if err := executor.AddProcs(context.Background(), plan); err != nil {
+		t.Fatalf("AddProcs: %v", err)
+	}
+	if got := len(pg.Procs(proc.ServicePrometheus)); got != 1 {
+		t.Fatalf("unexpected prometheus procs: %d", got)
+	}
+	if got := len(pg.Procs(proc.ServiceTiProxy)); got != 1 {
+		t.Fatalf("unexpected tiproxy procs: %d", got)
+	}
+
+	for _, marker := range []string{promBin + ".started", tiproxyBin + ".started"} {
+		if _, err := os.Stat(marker); err == nil {
+			t.Fatalf("unexpected started marker before start: %s", marker)
+		}
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	starter := newBootStarter(ctx, pg, pg.procsSnapshot(), nil)
+	if _, err := starter.startPlanned(plannedServicesFromBootPlan(plan)); err != nil {
+		t.Fatalf("startPlanned: %v", err)
+	}
+
+	waitMarker := func(path string) {
+		deadline := time.Now().Add(2 * time.Second)
+		for {
+			if _, err := os.Stat(path); err == nil {
+				return
+			}
+			if time.Now().After(deadline) {
+				t.Fatalf("started marker not created: %s", path)
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
+	}
+	waitMarker(promBin + ".started")
+	waitMarker(tiproxyBin + ".started")
 }
