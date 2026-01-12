@@ -54,11 +54,13 @@ var points = mockPoints{m: make(map[string]any)}
 
 // On inject a failpoint
 func On(fpname string) any {
-	var ret any
-	failpoint.Inject(fpname, func() {
-		ret = points.get(fpname)
-	})
-	return ret
+	if fpname == "" {
+		return nil
+	}
+	if _, err := failpoint.Eval(failpath(fpname)); err != nil {
+		return nil
+	}
+	return points.get(fpname)
 }
 
 // With enable failpoint and provide a value
