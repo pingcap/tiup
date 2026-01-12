@@ -39,9 +39,11 @@ func TestHTTPMirrorDownload_CanCancelByContext(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = m.Close() })
 
+	targetDir := t.TempDir()
+
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- m.Download("slow.tar.gz", t.TempDir())
+		errCh <- m.Download("slow.tar.gz", targetDir)
 	}()
 
 	select {
