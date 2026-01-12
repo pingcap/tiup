@@ -119,6 +119,11 @@ func TestBootExecutor_Download_EnsuresInstalled(t *testing.T) {
 
 func TestBootExecutor_AddProcs_CachesBinaryPathByComponentVersion(t *testing.T) {
 	dir := t.TempDir()
+	tidbBin := filepath.Join(dir, "tidb-server")
+	if err := os.WriteFile(tidbBin, []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
+		t.Fatalf("write tidb bin: %v", err)
+	}
+
 	pg := NewPlayground(dir, 0)
 	pg.startController()
 	defer func() {
@@ -134,7 +139,7 @@ func TestBootExecutor_AddProcs_CachesBinaryPathByComponentVersion(t *testing.T) 
 
 	src := &recordingExecutorSource{
 		binaryPathByComponent: map[string]string{
-			proc.ComponentTiDB.String(): "/bin/tidb-server",
+			proc.ComponentTiDB.String(): tidbBin,
 		},
 	}
 	executor := newBootExecutor(pg, src)
@@ -186,6 +191,92 @@ func TestBootExecutor_AddProcs_CachesBinaryPathByComponentVersion(t *testing.T) 
 	}
 }
 
+func TestBootExecutor_AddProcs_ResolvesRequiredBinaryPath(t *testing.T) {
+	dir := t.TempDir()
+	binDir := filepath.Join(dir, "bin")
+	if err := os.MkdirAll(binDir, 0o755); err != nil {
+		t.Fatalf("mkdir bin dir: %v", err)
+	}
+
+	promBin := filepath.Join(binDir, "prometheus")
+	ngBin := filepath.Join(binDir, "ng-monitoring-server")
+	tikvServer := filepath.Join(binDir, "tikv-server")
+	tikvWorker := filepath.Join(binDir, "tikv-worker")
+	for _, path := range []string{promBin, ngBin, tikvServer, tikvWorker} {
+		if err := os.WriteFile(path, []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
+			t.Fatalf("write bin %s: %v", path, err)
+		}
+	}
+
+	pg := NewPlayground(dir, 0)
+	pg.startController()
+	defer func() {
+		if pg.controllerCancel != nil {
+			pg.controllerCancel()
+		}
+		select {
+		case <-pg.controllerDoneCh:
+		case <-time.After(2 * time.Second):
+			t.Fatalf("controller did not stop")
+		}
+	}()
+
+	src := &recordingExecutorSource{
+		binaryPathByComponent: map[string]string{
+			proc.ComponentPrometheus.String(): promBin,
+			proc.ComponentTiKV.String():       tikvServer,
+		},
+	}
+	executor := newBootExecutor(pg, src)
+
+	plan := BootPlan{
+		DataDir: dir,
+		Shared:  proc.SharedOptions{Mode: proc.ModeCSE, PDMode: "pd"},
+		Services: []ServicePlan{
+			{
+				ServiceID:       proc.ServiceNGMonitoring.String(),
+				ComponentID:     proc.ComponentPrometheus.String(),
+				ResolvedVersion: "v1.0.0",
+				Shared: proc.ServiceSharedPlan{
+					Host: "127.0.0.1",
+					Port: 12020,
+				},
+				NGMonitoring: &proc.NGMonitoringPlan{PDAddrs: []string{"127.0.0.1:2379"}},
+			},
+			{
+				ServiceID:       proc.ServiceTiKVWorker.String(),
+				ComponentID:     proc.ComponentTiKV.String(),
+				ResolvedVersion: "v1.0.0",
+				Shared: proc.ServiceSharedPlan{
+					Host: "127.0.0.1",
+					Port: 19000,
+				},
+				TiKVWorker: &proc.TiKVWorkerPlan{PDAddrs: []string{"127.0.0.1:2379"}},
+			},
+		},
+	}
+
+	if err := executor.AddProcs(context.Background(), plan); err != nil {
+		t.Fatalf("AddProcs: %v", err)
+	}
+
+	ngProcs := pg.Procs(proc.ServiceNGMonitoring)
+	if got := len(ngProcs); got != 1 {
+		t.Fatalf("unexpected ng-monitoring procs: %d", got)
+	}
+	if got := ngProcs[0].Info().BinPath; got != ngBin {
+		t.Fatalf("unexpected ng-monitoring binpath: %q", got)
+	}
+
+	workerProcs := pg.Procs(proc.ServiceTiKVWorker)
+	if got := len(workerProcs); got != 1 {
+		t.Fatalf("unexpected tikv-worker procs: %d", got)
+	}
+	if got := workerProcs[0].Info().BinPath; got != tikvWorker {
+		t.Fatalf("unexpected tikv-worker binpath: %q", got)
+	}
+}
+
 func TestBootExecutor_ExecuteBootPlan_DownloadPreRunAddProcsStart(t *testing.T) {
 	oldStdout := tuiv2output.Stdout.Get()
 	tuiv2output.Stdout.Set(io.Discard)
@@ -220,7 +311,7 @@ func TestBootExecutor_ExecuteBootPlan_DownloadPreRunAddProcsStart(t *testing.T) 
 	src := &recordingExecutorSource{
 		binaryPathByComponent: map[string]string{
 			proc.ComponentPrometheus.String(): promBin,
-			proc.ComponentTiProxy.String():     tiproxyBin,
+			proc.ComponentTiProxy.String():    tiproxyBin,
 		},
 	}
 	executor := newBootExecutor(pg, src)

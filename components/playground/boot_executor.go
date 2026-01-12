@@ -129,10 +129,13 @@ func (e *bootExecutor) AddProcs(ctx context.Context, plan BootPlan) error {
 				binPath = resolved
 				binCache[key] = resolved
 			}
-		}
 
-		if serviceID == proc.ServiceTiKVWorker {
-			binPath = proc.ResolveTiKVWorkerBinPath(binPath)
+			baseBinPath := binPath
+			required := requiredBinaryPathForService(serviceID, baseBinPath)
+			if required == "" || !binaryExists(required) {
+				return errors.Errorf("binary for service %s not found: %s (base: %s)", serviceID, required, baseBinPath)
+			}
+			binPath = required
 		}
 
 		v := utils.Version(strings.TrimSpace(svc.ResolvedVersion))
