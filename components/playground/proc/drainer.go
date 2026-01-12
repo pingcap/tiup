@@ -33,7 +33,7 @@ const (
 // Drainer represent a drainer instance.
 type Drainer struct {
 	ProcessInfo
-	PDs []*PDInstance
+	Plan DrainerPlan
 }
 
 var _ Process = &Drainer{}
@@ -56,7 +56,13 @@ func (d *Drainer) Addr() string {
 // Prepare builds the Drainer process command.
 func (d *Drainer) Prepare(ctx context.Context) error {
 	info := d.Info()
-	endpoints := pdEndpoints(d.PDs, true)
+	endpoints := make([]string, 0, len(d.Plan.PDAddrs))
+	for _, addr := range d.Plan.PDAddrs {
+		if addr == "" {
+			continue
+		}
+		endpoints = append(endpoints, "http://"+addr)
+	}
 
 	args := []string{
 		fmt.Sprintf("--node-id=%s", info.Name()),

@@ -40,10 +40,33 @@ func newTiKVInstance(rt ControllerRuntime, params NewProcParams) (proc.Process, 
 	pds := ProcsOf[*proc.PDInstance](rt, proc.ServicePD, proc.ServicePDAPI)
 	tsos := ProcsOf[*proc.PDInstance](rt, proc.ServicePDTSO)
 	shOpt := rt.SharedOptions()
+
+	pdAddrs := make([]string, 0, len(pds))
+	for _, pd := range pds {
+		if pd == nil {
+			continue
+		}
+		if addr := pd.Addr(); addr != "" {
+			pdAddrs = append(pdAddrs, addr)
+		}
+	}
+
+	tsoAddrs := make([]string, 0, len(tsos))
+	for _, tso := range tsos {
+		if tso == nil {
+			continue
+		}
+		if addr := tso.Addr(); addr != "" {
+			tsoAddrs = append(tsoAddrs, addr)
+		}
+	}
+
 	kv := &proc.TiKVInstance{
 		ShOpt: shOpt,
-		PDs:   pds,
-		TSOs:  tsos,
+		Plan: proc.TiKVPlan{
+			PDAddrs:  pdAddrs,
+			TSOAddrs: tsoAddrs,
+		},
 		ProcessInfo: proc.ProcessInfo{
 			UserBinPath:     params.Config.BinPath,
 			ID:              params.ID,

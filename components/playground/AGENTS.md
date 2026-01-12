@@ -2,13 +2,19 @@
 
 TiUP Playground is used to start a single-node TiDB+TiKV+PD+... cluster locally, making it convenient for users (mainly developers) to try out features and run tests. It supports Linux and macOS.
 
+- **Keep AGENTS.md generic**: Put only general, reusable guidelines here; avoid rules that are specific to one feature or business workflow.
+
 ## Common Commands
 
 - Build: (under the TiUP directory) `make playground`
 
 ## Principles to Follow when Developing TiUP Playground
 
-- **Keep AGENTS.md generic**: Put only general, reusable guidelines here; avoid rules that are specific to one feature or business workflow.
+This codebase will outlive you. Every shortcut you take becomes someone else's burden. Every hack compounds into technical debt that slows the whole team down.
+
+You are not just writing code. You are shaping the future of this project. The patterns you establish will be copied. The corners you cut will be cut again.
+
+Fight entropy. Leave the codebase better than you found it.
 
 ### Semantics and Abstractions
 

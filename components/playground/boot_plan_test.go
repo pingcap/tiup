@@ -2,9 +2,11 @@ package main
 
 import (
 	"io"
+	"strings"
 	"testing"
 
 	"github.com/pingcap/tiup/components/playground/proc"
+	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/pflag"
 )
 
@@ -12,6 +14,51 @@ func newTestFlagSet() *pflag.FlagSet {
 	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	return fs
+}
+
+type fakeComponentSource struct{}
+
+func (fakeComponentSource) ResolveVersion(_ string, constraint string) (string, error) {
+	constraint = strings.TrimSpace(constraint)
+	if constraint == "" {
+		constraint = utils.LatestVersionAlias
+	}
+	return constraint, nil
+}
+
+func (fakeComponentSource) PlanInstall(component, resolved string, forcePull bool) (*DownloadPlan, error) {
+	_ = component
+	_ = resolved
+	_ = forcePull
+	return nil, nil
+}
+
+func (fakeComponentSource) EnsureInstalled(component, resolved string) error {
+	_ = component
+	_ = resolved
+	return nil
+}
+
+func (fakeComponentSource) BinaryPath(component, resolved string) (string, error) {
+	_ = resolved
+	return component, nil
+}
+
+func buildPlanForTest(t *testing.T, opts *BootOptions) BootPlan {
+	t.Helper()
+	if opts != nil && opts.Host == "" {
+		opts.Host = "127.0.0.1"
+	}
+	plan, err := BuildBootPlan(opts, bootPlannerConfig{
+		dataDir:            "/tmp/tiup-playground-test-plan",
+		portConflictPolicy: PortConflictNone,
+		advertiseHost:      func(listen string) string { return listen },
+		componentSource:    fakeComponentSource{},
+	})
+	if err != nil {
+		t.Fatalf("BuildBootPlan: %v", err)
+	}
+	return plan
 }
 
 func TestTiFlashDefaultNum_DisabledOnOldVersion(t *testing.T) {
@@ -33,11 +80,8 @@ func TestTiFlashDefaultNum_DisabledOnOldVersion(t *testing.T) {
 		t.Fatalf("unexpected tiflash default num on %s: %d", opts.Version, got)
 	}
 
-	plan, err := buildBootPlan(opts)
-	if err != nil {
-		t.Fatalf("buildBootPlan: %v", err)
-	}
-	if cfg := plan.BaseConfigs[proc.ServiceTiFlash]; cfg.Num != 0 {
+	plan := buildPlanForTest(t, opts)
+	if cfg := plan.DebugServiceConfigs[proc.ServiceTiFlash.String()]; cfg.Num != 0 {
 		t.Fatalf("unexpected planned tiflash num: %d", cfg.Num)
 	}
 }
@@ -60,14 +104,11 @@ func TestTiFlashPlanWhen_RequiresTiDB(t *testing.T) {
 	// Simulate "--db 0".
 	opts.Service(proc.ServiceTiDB).Num = 0
 
-	plan, err := buildBootPlan(opts)
-	if err != nil {
-		t.Fatalf("buildBootPlan: %v", err)
-	}
-	if _, ok := plan.BaseConfigs[proc.ServiceTiFlashWrite]; ok {
+	plan := buildPlanForTest(t, opts)
+	if _, ok := plan.DebugServiceConfigs[proc.ServiceTiFlashWrite.String()]; ok {
 		t.Fatalf("unexpected planned tiflash-write when TiDB is disabled")
 	}
-	if _, ok := plan.BaseConfigs[proc.ServiceTiFlashCompute]; ok {
+	if _, ok := plan.DebugServiceConfigs[proc.ServiceTiFlashCompute.String()]; ok {
 		t.Fatalf("unexpected planned tiflash-compute when TiDB is disabled")
 	}
 }
@@ -87,17 +128,14 @@ func TestBuildBootPlan_RequiredServices(t *testing.T) {
 		t.Fatalf("applyServiceDefaults: %v", err)
 	}
 
-	plan, err := buildBootPlan(opts)
-	if err != nil {
-		t.Fatalf("buildBootPlan: %v", err)
-	}
-	if plan.RequiredServices[proc.ServicePD] <= 0 {
+	plan := buildPlanForTest(t, opts)
+	if plan.RequiredServices[proc.ServicePD.String()] <= 0 {
 		t.Fatalf("expected %s to be required", proc.ServicePD)
 	}
-	if plan.RequiredServices[proc.ServiceTiKV] <= 0 {
+	if plan.RequiredServices[proc.ServiceTiKV.String()] <= 0 {
 		t.Fatalf("expected %s to be required", proc.ServiceTiKV)
 	}
-	if plan.RequiredServices[proc.ServiceTiDB] <= 0 {
+	if plan.RequiredServices[proc.ServiceTiDB.String()] <= 0 {
 		t.Fatalf("expected %s to be required", proc.ServiceTiDB)
 	}
 }
@@ -146,17 +184,14 @@ func TestPDAPIDefaults_InheritFromPDInMicroservicesMode(t *testing.T) {
 		t.Fatalf("unexpected pd-api binpath: %q", pdAPI.BinPath)
 	}
 
-	plan, err := buildBootPlan(opts)
-	if err != nil {
-		t.Fatalf("buildBootPlan: %v", err)
-	}
-	if _, ok := plan.BaseConfigs[proc.ServicePD]; ok {
+	plan := buildPlanForTest(t, opts)
+	if _, ok := plan.DebugServiceConfigs[proc.ServicePD.String()]; ok {
 		t.Fatalf("unexpected planned pd in microservices mode")
 	}
-	if cfg := plan.BaseConfigs[proc.ServicePDAPI]; cfg.Num != 2 {
+	if cfg := plan.DebugServiceConfigs[proc.ServicePDAPI.String()]; cfg.Num != 2 {
 		t.Fatalf("unexpected planned pd-api num: %d", cfg.Num)
 	}
-	if plan.RequiredServices[proc.ServicePDAPI] <= 0 {
+	if plan.RequiredServices[proc.ServicePDAPI.String()] <= 0 {
 		t.Fatalf("expected %s to be required", proc.ServicePDAPI)
 	}
 }
@@ -222,14 +257,11 @@ func TestBuildBootPlan_StartOrder_DoesNotDelayTiDBBehindMonitoringWhenPumpDisabl
 		t.Fatalf("unexpected pump default num: %d", got)
 	}
 
-	plan, err := buildBootPlan(opts)
-	if err != nil {
-		t.Fatalf("buildBootPlan: %v", err)
-	}
+	plan := buildPlanForTest(t, opts)
 
 	idx := func(target proc.ServiceID) int {
-		for i, p := range plan.Plans {
-			if p.serviceID == target {
+		for i := range plan.Services {
+			if plan.Services[i].ServiceID == target.String() {
 				return i
 			}
 		}

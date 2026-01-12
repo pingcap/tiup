@@ -34,7 +34,7 @@ const (
 // TiCDC represent a ticdc instance.
 type TiCDC struct {
 	ProcessInfo
-	PDs []*PDInstance
+	Plan TiCDCPlan
 }
 
 var _ Process = &TiCDC{}
@@ -47,7 +47,13 @@ func init() {
 // Prepare builds the TiCDC process command.
 func (c *TiCDC) Prepare(ctx context.Context) error {
 	info := c.Info()
-	endpoints := pdEndpoints(c.PDs, true)
+	endpoints := make([]string, 0, len(c.Plan.PDAddrs))
+	for _, addr := range c.Plan.PDAddrs {
+		if addr == "" {
+			continue
+		}
+		endpoints = append(endpoints, "http://"+addr)
+	}
 
 	args := []string{
 		"server",

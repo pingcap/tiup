@@ -77,6 +77,13 @@ type addProcRequest struct {
 	respCh    chan addProcResponse
 }
 
+type addPlannedProcRequest struct {
+	plan    ServicePlan
+	binPath string
+	version utils.Version
+	respCh  chan addProcResponse
+}
+
 type addProcResponse struct {
 	inst proc.Process
 	err  error
@@ -210,6 +217,10 @@ func (p *Playground) handleEvent(state *controllerState, evt controllerEvent) {
 		close(e.respCh)
 	case addProcRequest:
 		inst, err := p.addProcInController(state, e.serviceID, e.cfg)
+		e.respCh <- addProcResponse{inst: inst, err: err}
+		close(e.respCh)
+	case addPlannedProcRequest:
+		inst, err := p.addPlannedProcInController(state, e.plan, e.binPath, e.version)
 		e.respCh <- addProcResponse{inst: inst, err: err}
 		close(e.respCh)
 	case startProcRequest:

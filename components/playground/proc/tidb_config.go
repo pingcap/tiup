@@ -17,11 +17,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-
-	"github.com/pingcap/tiup/pkg/utils"
 )
 
-func (inst *TiDBInstance) getConfig(kvwrks []*TiKVWorkerInstance) (map[string]any, error) {
+func (inst *TiDBInstance) getConfig() (map[string]any, error) {
 	config := make(map[string]any)
 	config["security.auto-tls"] = true
 
@@ -66,10 +64,10 @@ func (inst *TiDBInstance) getConfig(kvwrks []*TiKVWorkerInstance) (map[string]an
 		config["disaggregated-tiflash"] = true
 		if inst.Service == ServiceTiDBSystem {
 			config["instance.tidb_service_scope"] = "dxf_service"
-			if len(kvwrks) == 0 {
-				return nil, fmt.Errorf("tidb-system requires tikv-worker")
+			if inst.Plan.TiKVWorkerURL == "" {
+				return nil, fmt.Errorf("tidb-system requires tikv-worker-url")
 			}
-			config["tikv-worker-url"] = fmt.Sprintf("http://%s", utils.JoinHostPort(AdvertiseHost(kvwrks[0].Host), kvwrks[0].Port))
+			config["tikv-worker-url"] = inst.Plan.TiKVWorkerURL
 			config["keyspace-name"] = "SYSTEM"
 		} else {
 			config["keyspace-name"] = "keyspace1"

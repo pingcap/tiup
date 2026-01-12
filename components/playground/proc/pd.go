@@ -55,24 +55,50 @@ func init() {
 // PDInstance represent a running pd-server
 type PDInstance struct {
 	ProcessInfo
-	ShOpt             SharedOptions
-	initEndpoints     []*PDInstance
-	joinEndpoints     []*PDInstance
-	PDs               []*PDInstance
-	KVIsSingleReplica bool
+	ShOpt SharedOptions
+	Plan  PDPlan
 }
 
 var _ Process = &PDInstance{}
 
 // Join set endpoints field of PDInstance
 func (inst *PDInstance) Join(pds []*PDInstance) *PDInstance {
-	inst.joinEndpoints = pds
+	inst.Plan.InitialCluster = nil
+	inst.Plan.JoinAddrs = nil
+	for _, pd := range pds {
+		if pd == nil {
+			continue
+		}
+		host := AdvertiseHost(pd.Host)
+		if host == "" || pd.Port == 0 {
+			continue
+		}
+		inst.Plan.JoinAddrs = append(inst.Plan.JoinAddrs, utils.JoinHostPort(host, pd.Port))
+	}
 	return inst
 }
 
 // InitCluster set the init cluster instance.
 func (inst *PDInstance) InitCluster(pds []*PDInstance) *PDInstance {
-	inst.initEndpoints = pds
+	inst.Plan.JoinAddrs = nil
+	inst.Plan.InitialCluster = nil
+	for _, pd := range pds {
+		if pd == nil {
+			continue
+		}
+		info := pd.Info()
+		if info == nil {
+			continue
+		}
+		host := AdvertiseHost(pd.Host)
+		if host == "" || pd.Port == 0 {
+			continue
+		}
+		inst.Plan.InitialCluster = append(inst.Plan.InitialCluster, PDMemberPlan{
+			Name:     info.Name(),
+			PeerAddr: utils.JoinHostPort(host, pd.Port),
+		})
+	}
 	return inst
 }
 
@@ -111,24 +137,35 @@ func (inst *PDInstance) Prepare(ctx context.Context) error {
 			fmt.Sprintf("--log-file=%s", inst.LogFile()),
 		}...)
 		switch {
-		case len(inst.initEndpoints) > 0:
+		case len(inst.Plan.InitialCluster) > 0:
 			endpoints := make([]string, 0)
-			for _, pd := range inst.initEndpoints {
-				uid := pd.Info().Name()
-				endpoints = append(endpoints, fmt.Sprintf("%s=http://%s", uid, utils.JoinHostPort(AdvertiseHost(inst.Host), pd.Port)))
+			for _, m := range inst.Plan.InitialCluster {
+				if m.Name == "" || m.PeerAddr == "" {
+					continue
+				}
+				endpoints = append(endpoints, fmt.Sprintf("%s=http://%s", m.Name, m.PeerAddr))
 			}
 			args = append(args, fmt.Sprintf("--initial-cluster=%s", strings.Join(endpoints, ",")))
-		case len(inst.joinEndpoints) > 0:
+		case len(inst.Plan.JoinAddrs) > 0:
 			endpoints := make([]string, 0)
-			for _, pd := range inst.joinEndpoints {
-				endpoints = append(endpoints, fmt.Sprintf("http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), pd.Port)))
+			for _, addr := range inst.Plan.JoinAddrs {
+				if addr == "" {
+					continue
+				}
+				endpoints = append(endpoints, fmt.Sprintf("http://%s", addr))
 			}
 			args = append(args, fmt.Sprintf("--join=%s", strings.Join(endpoints, ",")))
 		default:
 			return errors.Errorf("must set the init or join instances")
 		}
 	case ServicePDTSO, ServicePDScheduling, ServicePDRouter, ServicePDResourceManager:
-		endpoints := pdEndpoints(inst.PDs, true)
+		endpoints := make([]string, 0, len(inst.Plan.BackendAddrs))
+		for _, addr := range inst.Plan.BackendAddrs {
+			if addr == "" {
+				continue
+			}
+			endpoints = append(endpoints, "http://"+addr)
+		}
 		subservice := strings.TrimPrefix(inst.Service.String(), "pd-")
 		args = []string{
 			"services",

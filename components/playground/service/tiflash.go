@@ -177,25 +177,42 @@ func newTiFlashInstance(rt ControllerRuntime, serviceID proc.ServiceID, params N
 		return nil, fmt.Errorf("unsupported tiflash disagg service in mode %s", shOpt.Mode)
 	}
 
+	pdAddrs := make([]string, 0, len(pds))
+	for _, pd := range pds {
+		if pd == nil {
+			continue
+		}
+		if addr := pd.Addr(); addr != "" {
+			pdAddrs = append(pdAddrs, addr)
+		}
+	}
+
 	httpPort := allocPort(params.Host, 0, 8123, shOpt.PortOffset)
+	statusPort := allocPort(params.Host, 0, 8234, shOpt.PortOffset)
+	tcpPort := allocPort(params.Host, 0, 9100, shOpt.PortOffset)
+	servicePort := allocPort(params.Host, 0, 3930, shOpt.PortOffset)
+	proxyPort := allocPort(params.Host, 0, 20170, shOpt.PortOffset)
+	proxyStatusPort := allocPort(params.Host, 0, 20292, shOpt.PortOffset)
 	flash := &proc.TiFlashInstance{
 		ShOpt: shOpt,
-		PDs:   pds,
+		Plan: proc.TiFlashPlan{
+			PDAddrs:         pdAddrs,
+			ServicePort:     servicePort,
+			TCPPort:         tcpPort,
+			ProxyPort:       proxyPort,
+			ProxyStatusPort: proxyStatusPort,
+		},
 		ProcessInfo: proc.ProcessInfo{
 			UserBinPath:     params.Config.BinPath,
 			ID:              params.ID,
 			Dir:             params.Dir,
 			Host:            params.Host,
 			Port:            httpPort,
-			StatusPort:      allocPort(params.Host, 0, 8234, shOpt.PortOffset),
+			StatusPort:      statusPort,
 			ConfigPath:      params.Config.ConfigPath,
 			RepoComponentID: proc.ComponentTiFlash,
 			Service:         serviceID,
 		},
-		TCPPort:         allocPort(params.Host, 0, 9100, shOpt.PortOffset),
-		ServicePort:     allocPort(params.Host, 0, 3930, shOpt.PortOffset),
-		ProxyPort:       allocPort(params.Host, 0, 20170, shOpt.PortOffset),
-		ProxyStatusPort: allocPort(params.Host, 0, 20292, shOpt.PortOffset),
 	}
 	flash.UpTimeout = params.Config.UpTimeout
 	rt.AddProc(serviceID, flash)

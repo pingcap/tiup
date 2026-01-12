@@ -151,29 +151,39 @@ Examples:
 			isRoot := cmd.Parent() == nil
 			state.deleteWhenExit = false
 
-			switch {
-			case state.tag != "":
+			// For dry-run, prefer stable default paths so the plan output is
+			// deterministic when users don't specify a tag.
+			if isRoot && state.dryRun && state.tag == "" && state.tiupDataDir == "" {
+				state.tag = "dry-run"
 				state.dataDir = filepath.Join(tiupHome, localdata.DataParentDir, state.tag)
-			case state.tiupDataDir != "":
-				state.dataDir = state.tiupDataDir
-				state.tag = filepath.Base(state.dataDir)
-			default:
-				if isRoot {
-					state.tag = utils.Base62Tag()
+				state.deleteWhenExit = false
+			} else {
+				switch {
+				case state.tag != "":
 					state.dataDir = filepath.Join(tiupHome, localdata.DataParentDir, state.tag)
-					state.deleteWhenExit = true
-				} else {
-					state.dataDir = filepath.Join(tiupHome, localdata.DataParentDir)
+				case state.tiupDataDir != "":
+					state.dataDir = state.tiupDataDir
+					state.tag = filepath.Base(state.dataDir)
+				default:
+					if isRoot {
+						state.tag = utils.Base62Tag()
+						state.dataDir = filepath.Join(tiupHome, localdata.DataParentDir, state.tag)
+						state.deleteWhenExit = true
+					} else {
+						state.dataDir = filepath.Join(tiupHome, localdata.DataParentDir)
+					}
 				}
 			}
 
 			if isRoot {
-				err := utils.MkdirAll(state.dataDir, 0755)
-				if err != nil {
-					return err
-				}
-				if out := tuiv2output.Stdout.Get(); tuiterm.Resolve(out).Control {
-					_, _ = fmt.Fprintf(out, "\033]0;TiUP Playground: %s\a", state.tag)
+				if !state.dryRun {
+					err := utils.MkdirAll(state.dataDir, 0755)
+					if err != nil {
+						return err
+					}
+					if out := tuiv2output.Stdout.Get(); tuiterm.Resolve(out).Control {
+						_, _ = fmt.Fprintf(out, "\033]0;TiUP Playground: %s\a", state.tag)
+					}
 				}
 			}
 			return nil
@@ -187,6 +197,31 @@ Examples:
 
 			if err := populateDefaultOpt(cmd.Flags(), &state.options); err != nil {
 				return err
+			}
+
+			if state.dryRun {
+				if err := normalizeBootOptionPaths(&state.options); err != nil {
+					return err
+				}
+				if err := ValidateBootOptionsPure(&state.options); err != nil {
+					return err
+				}
+
+				env, err := environment.InitEnv(repository.Options{}, repository.MirrorOptions{})
+				if err != nil {
+					return err
+				}
+				environment.SetGlobalEnv(env)
+
+				plan, err := BuildBootPlan(&state.options, bootPlannerConfig{
+					dataDir:            state.dataDir,
+					portConflictPolicy: PortConflictAllocFree,
+					componentSource:    newEnvComponentSource(env),
+				})
+				if err != nil {
+					return err
+				}
+				return writeDryRun(tuiv2output.Stdout.Get(), plan, state.dryRunOutput)
 			}
 
 			port := utils.MustGetFreePort("127.0.0.1", 9527, state.options.ShOpt.PortOffset)
@@ -329,6 +364,8 @@ Examples:
 	rootCmd.Flags().BoolVar(&state.options.ShOpt.EnableTiKVColumnar, "kv.columnar", false,
 		fmt.Sprintf("Enable TiKV columnar storage engine, only available when --mode=%s", proc.ModeCSE))
 	rootCmd.Flags().BoolVar(&state.options.ShOpt.ForcePull, "force-pull", false, "Force redownload the component. It is useful to manually refresh nightly or broken binaries")
+	rootCmd.Flags().BoolVar(&state.dryRun, "dry-run", false, "Only generate the boot plan and exit")
+	rootCmd.Flags().StringVar(&state.dryRunOutput, "dry-run-output", "text", "Dry-run output format: text|json")
 
 	rootCmd.PersistentFlags().StringVarP(&state.tag, "tag", "T", "", "Specify a tag for playground, data dir of this tag will not be removed after exit")
 	rootCmd.Flags().Bool("without-monitor", false, "Don't start prometheus and grafana component")

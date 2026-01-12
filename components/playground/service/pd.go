@@ -5,6 +5,7 @@ import (
 	"io"
 
 	"github.com/pingcap/tiup/components/playground/proc"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 func init() {
@@ -185,9 +186,10 @@ func newPDInstance(rt ControllerRuntime, serviceID proc.ServiceID, params NewPro
 
 	shOpt := rt.SharedOptions()
 	pd := &proc.PDInstance{
-		ShOpt:             shOpt,
-		PDs:               members,
-		KVIsSingleReplica: kvIsSingleReplica,
+		ShOpt: shOpt,
+		Plan: proc.PDPlan{
+			KVIsSingleReplica: kvIsSingleReplica,
+		},
 		ProcessInfo: proc.ProcessInfo{
 			UserBinPath:     params.Config.BinPath,
 			ID:              params.ID,
@@ -215,6 +217,16 @@ func newPDInstance(rt ControllerRuntime, serviceID proc.ServiceID, params NewPro
 			}
 		}
 	case proc.ServicePDTSO, proc.ServicePDScheduling, proc.ServicePDRouter, proc.ServicePDResourceManager:
+		for _, m := range members {
+			if m == nil {
+				continue
+			}
+			host := proc.AdvertiseHost(m.Host)
+			if host == "" || m.StatusPort == 0 {
+				continue
+			}
+			pd.Plan.BackendAddrs = append(pd.Plan.BackendAddrs, utils.JoinHostPort(host, m.StatusPort))
+		}
 		rt.AddProc(serviceID, pd)
 	default:
 		return nil, fmt.Errorf("unknown pd service %s", serviceID)

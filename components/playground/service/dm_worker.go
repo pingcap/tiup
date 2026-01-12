@@ -31,8 +31,19 @@ func init() {
 func newDMWorkerInstance(rt ControllerRuntime, params NewProcParams) (proc.Process, error) {
 	masters := ProcsOf[*proc.DMMaster](rt, proc.ServiceDMMaster)
 	shOpt := rt.SharedOptions()
+
+	masterAddrs := make([]string, 0, len(masters))
+	for _, master := range masters {
+		if master == nil {
+			continue
+		}
+		if addr := master.Addr(); addr != "" {
+			masterAddrs = append(masterAddrs, addr)
+		}
+	}
+
 	worker := &proc.DMWorker{
-		Masters: masters,
+		Plan: proc.DMWorkerPlan{MasterAddrs: masterAddrs},
 		ProcessInfo: proc.ProcessInfo{
 			UserBinPath:     params.Config.BinPath,
 			ID:              params.ID,

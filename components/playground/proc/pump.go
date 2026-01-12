@@ -35,7 +35,7 @@ const (
 // Pump represent a pump instance.
 type Pump struct {
 	ProcessInfo
-	PDs []*PDInstance
+	Plan PumpPlan
 }
 
 var _ Process = &Pump{}
@@ -125,7 +125,13 @@ func (p *Pump) Addr() string {
 // Prepare builds the Pump process command.
 func (p *Pump) Prepare(ctx context.Context) error {
 	info := p.Info()
-	endpoints := pdEndpoints(p.PDs, true)
+	endpoints := make([]string, 0, len(p.Plan.PDAddrs))
+	for _, addr := range p.Plan.PDAddrs {
+		if addr == "" {
+			continue
+		}
+		endpoints = append(endpoints, "http://"+addr)
+	}
 
 	args := []string{
 		fmt.Sprintf("--node-id=%s", info.Name()),

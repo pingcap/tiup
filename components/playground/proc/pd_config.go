@@ -18,7 +18,7 @@ func (inst *PDInstance) getConfig() map[string]any {
 	config["schedule.patrol-region-interval"] = "100ms"
 	config["schedule.low-space-ratio"] = 1.0
 
-	if inst.KVIsSingleReplica {
+	if inst.Plan.KVIsSingleReplica {
 		config["replication.max-replicas"] = 1
 	}
 

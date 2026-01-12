@@ -6,6 +6,7 @@ import (
 	"net"
 
 	"github.com/pingcap/tiup/components/playground/proc"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 func init() {
@@ -84,18 +85,34 @@ func enableBinlog(rt Runtime) bool {
 
 func newTiDBInstance(rt ControllerRuntime, serviceID proc.ServiceID, params NewProcParams) (proc.Process, error) {
 	pds := ProcsOf[*proc.PDInstance](rt, proc.ServicePD, proc.ServicePDAPI)
-	kvwrks := ProcsOf[*proc.TiKVWorkerInstance](rt, proc.ServiceTiKVWorker)
 	shOpt := rt.SharedOptions()
 	defaultPort := 4000
 	if serviceID == proc.ServiceTiDBSystem {
 		defaultPort = 3000
 	}
+
+	pdAddrs := make([]string, 0, len(pds))
+	for _, pd := range pds {
+		if pd == nil {
+			continue
+		}
+		if addr := pd.Addr(); addr != "" {
+			pdAddrs = append(pdAddrs, addr)
+		}
+	}
+
+	tikvWorkerURL := ""
+	if serviceID == proc.ServiceTiDBSystem {
+		kvwrks := ProcsOf[*proc.TiKVWorkerInstance](rt, proc.ServiceTiKVWorker)
+		if len(kvwrks) > 0 && kvwrks[0] != nil {
+			tikvWorkerURL = fmt.Sprintf("http://%s", utils.JoinHostPort(proc.AdvertiseHost(kvwrks[0].Host), kvwrks[0].Port))
+		}
+	}
+
 	tdb := &proc.TiDBInstance{
 		ShOpt:          shOpt,
-		PDs:            pds,
-		KVWorkers:      kvwrks,
+		Plan:           proc.TiDBPlan{PDAddrs: pdAddrs, EnableBinlog: enableBinlog(rt), TiKVWorkerURL: tikvWorkerURL},
 		TiProxyCertDir: rt.DataDir(),
-		EnableBinlog:   enableBinlog(rt),
 		ProcessInfo: proc.ProcessInfo{
 			UserBinPath:     params.Config.BinPath,
 			ID:              params.ID,

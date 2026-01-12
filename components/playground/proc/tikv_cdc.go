@@ -33,7 +33,7 @@ const (
 // TiKVCDCInstance represent a TiKV-CDC instance.
 type TiKVCDCInstance struct {
 	ProcessInfo
-	PDs []*PDInstance
+	Plan TiKVCDCPlan
 }
 
 var _ Process = &TiKVCDCInstance{}
@@ -46,7 +46,13 @@ func init() {
 // Prepare builds the TiKV-CDC process command.
 func (c *TiKVCDCInstance) Prepare(ctx context.Context) error {
 	info := c.Info()
-	endpoints := pdEndpoints(c.PDs, true)
+	endpoints := make([]string, 0, len(c.Plan.PDAddrs))
+	for _, addr := range c.Plan.PDAddrs {
+		if addr == "" {
+			continue
+		}
+		endpoints = append(endpoints, "http://"+addr)
+	}
 
 	args := []string{
 		"server",

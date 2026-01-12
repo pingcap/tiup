@@ -48,9 +48,20 @@ func newTiKVWorkerInstance(rt ControllerRuntime, params NewProcParams) (proc.Pro
 	if shOpt.Mode == proc.ModeNextGen {
 		repoComponent = proc.ComponentTiKVWorker
 	}
+
+	pdAddrs := make([]string, 0, len(pds))
+	for _, pd := range pds {
+		if pd == nil {
+			continue
+		}
+		if addr := pd.Addr(); addr != "" {
+			pdAddrs = append(pdAddrs, addr)
+		}
+	}
+
 	kvw := &proc.TiKVWorkerInstance{
 		ShOpt: shOpt,
-		PDs:   pds,
+		Plan:  proc.TiKVWorkerPlan{PDAddrs: pdAddrs},
 		ProcessInfo: proc.ProcessInfo{
 			UserBinPath:     proc.ResolveTiKVWorkerBinPath(params.Config.BinPath),
 			ID:              params.ID,

@@ -43,10 +43,8 @@ func init() {
 type TiDBInstance struct {
 	ProcessInfo
 	ShOpt          SharedOptions
-	PDs            []*PDInstance
-	KVWorkers      []*TiKVWorkerInstance
+	Plan           TiDBPlan
 	TiProxyCertDir string
-	EnableBinlog   bool
 }
 
 var _ Process = &TiDBInstance{}
@@ -55,7 +53,7 @@ var _ Process = &TiDBInstance{}
 func (inst *TiDBInstance) Prepare(ctx context.Context) error {
 	info := inst.Info()
 	configPath := filepath.Join(inst.Dir, "tidb.toml")
-	baseConfig, err := inst.getConfig(inst.KVWorkers)
+	baseConfig, err := inst.getConfig()
 	if err != nil {
 		return err
 	}
@@ -68,7 +66,7 @@ func (inst *TiDBInstance) Prepare(ctx context.Context) error {
 		return err
 	}
 
-	endpoints := pdEndpoints(inst.PDs, false)
+	endpoints := append([]string(nil), inst.Plan.PDAddrs...)
 
 	args := []string{
 		"-P", strconv.Itoa(inst.Port),
@@ -79,7 +77,7 @@ func (inst *TiDBInstance) Prepare(ctx context.Context) error {
 		fmt.Sprintf("--log-file=%s", filepath.Join(inst.Dir, "tidb.log")),
 		fmt.Sprintf("--config=%s", configPath),
 	}
-	if inst.EnableBinlog {
+	if inst.Plan.EnableBinlog {
 		args = append(args, "--enable-binlog=true")
 	}
 

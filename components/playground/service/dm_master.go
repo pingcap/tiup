@@ -5,6 +5,7 @@ import (
 	"io"
 
 	"github.com/pingcap/tiup/components/playground/proc"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 func init() {
@@ -35,7 +36,9 @@ func newDMMasterInstance(rt ControllerRuntime, params NewProcParams) (proc.Proce
 
 	shOpt := rt.SharedOptions()
 	master := &proc.DMMaster{
-		RequireReady: waitReady,
+		Plan: proc.DMMasterPlan{
+			RequireReady: waitReady,
+		},
 		ProcessInfo: proc.ProcessInfo{
 			UserBinPath:     params.Config.BinPath,
 			ID:              params.ID,
@@ -53,7 +56,29 @@ func newDMMasterInstance(rt ControllerRuntime, params NewProcParams) (proc.Proce
 
 	masters := ProcsOf[*proc.DMMaster](rt, proc.ServiceDMMaster)
 	for _, m := range masters {
-		m.InitEndpoints = masters
+		var members []proc.DMMemberPlan
+		for _, mm := range masters {
+			if mm == nil {
+				continue
+			}
+			info := mm.Info()
+			if info == nil {
+				continue
+			}
+			host := proc.AdvertiseHost(mm.Host)
+			if host == "" {
+				continue
+			}
+			if mm.Port == 0 || mm.StatusPort == 0 {
+				continue
+			}
+			members = append(members, proc.DMMemberPlan{
+				Name:       info.Name(),
+				PeerAddr:   utils.JoinHostPort(host, mm.Port),
+				MasterAddr: utils.JoinHostPort(host, mm.StatusPort),
+			})
+		}
+		m.Plan.InitialCluster = members
 	}
 	return master, nil
 }

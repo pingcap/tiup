@@ -6,14 +6,12 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
-	"time"
 
-	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/playground/proc"
 	pgservice "github.com/pingcap/tiup/components/playground/service"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/tidbver"
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -42,7 +40,7 @@ func (p *Playground) cancelBootWithCause(cause error) {
 	}
 }
 
-func (p *Playground) normalizeBootOptionPaths(options *BootOptions) error {
+func normalizeBootOptionPaths(options *BootOptions) error {
 	if options == nil {
 		return nil
 	}
@@ -52,6 +50,12 @@ func (p *Playground) normalizeBootOptionPaths(options *BootOptions) error {
 		if cfg == nil {
 			continue
 		}
+		binPath, err := getAbsolutePath(cfg.BinPath)
+		if err != nil {
+			return errors.Annotatef(err, "cannot eval absolute directory: %s", cfg.BinPath)
+		}
+		cfg.BinPath = binPath
+
 		path, err := getAbsolutePath(cfg.ConfigPath)
 		if err != nil {
 			return errors.Annotatef(err, "cannot eval absolute directory: %s", cfg.ConfigPath)
@@ -62,8 +66,12 @@ func (p *Playground) normalizeBootOptionPaths(options *BootOptions) error {
 	return nil
 }
 
-func (p *Playground) validateBootOptions(ctx context.Context, options *BootOptions) error {
-	if p == nil || options == nil {
+// ValidateBootOptionsPure performs pure validation that must be shared by both
+// dry-run and normal execution.
+//
+// It must not perform network calls or other external side effects.
+func ValidateBootOptionsPure(options *BootOptions) error {
+	if options == nil {
 		return nil
 	}
 
@@ -80,42 +88,30 @@ func (p *Playground) validateBootOptions(ctx context.Context, options *BootOptio
 		return fmt.Errorf("all components count must be great than 0 (pd=%v)", cfgPD.Num)
 	}
 
+	if options.ShOpt.PDMode == "ms" && !tidbver.PDSupportMicroservices(options.Version) {
+		return fmt.Errorf("PD cluster doesn't support microservices mode in version %s", options.Version)
+	}
+
+	switch options.ShOpt.Mode {
+	case proc.ModeCSE, proc.ModeDisAgg, proc.ModeNextGen:
+		if utils.Version(options.Version).IsValid() && !tidbver.TiFlashPlaygroundNewStartMode(options.Version) {
+			// For simplicity, currently we only implemented disagg mode when TiFlash can run without config.
+			return fmt.Errorf("TiUP playground only supports CSE/Disagg mode for TiDB cluster >= v7.1.0 (or nightly)")
+		}
+	}
+
 	switch options.ShOpt.Mode {
 	case proc.ModeCSE, proc.ModeDisAgg, proc.ModeNextGen:
 		if !strings.HasPrefix(options.ShOpt.CSE.S3Endpoint, "https://") && !strings.HasPrefix(options.ShOpt.CSE.S3Endpoint, "http://") {
 			return fmt.Errorf("require S3 endpoint to start with http:// or https://")
 		}
 
-		isSecure := strings.HasPrefix(options.ShOpt.CSE.S3Endpoint, "https://")
 		rawEndpoint := strings.TrimPrefix(options.ShOpt.CSE.S3Endpoint, "https://")
 		rawEndpoint = strings.TrimPrefix(rawEndpoint, "http://")
 
 		// Currently we always assign region=local. Other regions are not supported.
 		if strings.Contains(rawEndpoint, "amazonaws.com") {
 			return fmt.Errorf("tiup playground only supports local S3 (like minio); S3 on AWS regions is not supported")
-		}
-
-		// Preflight check whether specified object storage is available.
-		s3Client, err := minio.New(rawEndpoint, &minio.Options{
-			Creds:  credentials.NewStaticV4(options.ShOpt.CSE.AccessKey, options.ShOpt.CSE.SecretKey, ""),
-			Secure: isSecure,
-		})
-		if err != nil {
-			return errors.Annotate(err, "can not connect to S3 endpoint")
-		}
-
-		ctxCheck, cancel := context.WithTimeout(ctx, 5*time.Second)
-		defer cancel()
-
-		bucketExists, err := s3Client.BucketExists(ctxCheck, options.ShOpt.CSE.Bucket)
-		if err != nil {
-			return errors.Annotate(err, "can not connect to S3 endpoint")
-		}
-		if !bucketExists {
-			// Try to create bucket.
-			if err := s3Client.MakeBucket(ctxCheck, options.ShOpt.CSE.Bucket, minio.MakeBucketOptions{}); err != nil {
-				return fmt.Errorf("cannot create s3 bucket: Bucket %s doesn't exist and fail to create automatically (your bucket name may be invalid?)", options.ShOpt.CSE.Bucket)
-			}
 		}
 	}
 
@@ -148,69 +144,9 @@ func validateServiceCountLimits(options *BootOptions) error {
 	return nil
 }
 
-type plannedProc struct {
-	serviceID proc.ServiceID
-	cfg       proc.Config
-}
-
-type bootPlan struct {
-	Plans []plannedProc
-
-	// BaseConfigs holds the per-service config snapshot decided during planning.
-	// It is used for boot-time defaults and scale-out request sanitization.
-	BaseConfigs map[proc.ServiceID]proc.Config
-
-	// RequiredServices is the minimum running instance count for "critical"
-	// services. Controller uses it to trigger auto shutdown if critical services
-	// exit unexpectedly.
-	RequiredServices map[proc.ServiceID]int
-}
-
-func buildBootPlan(options *BootOptions) (bootPlan, error) {
-	plans, baseConfigs, err := planProcs(options)
-	if err != nil {
-		return bootPlan{}, err
-	}
-
-	if baseConfigs == nil {
-		baseConfigs = make(map[proc.ServiceID]proc.Config)
-	}
-
-	required := make(map[proc.ServiceID]int)
-	for serviceID, cfg := range baseConfigs {
-		if serviceID == "" || cfg.Num <= 0 || options == nil {
-			continue
-		}
-		spec, ok := pgservice.SpecFor(serviceID)
-		if !ok {
-			continue
-		}
-		if spec.Catalog.IsCritical != nil && spec.Catalog.IsCritical(options) {
-			required[serviceID] = 1
-		}
-	}
-
-	return bootPlan{
-		Plans:            plans,
-		BaseConfigs:      baseConfigs,
-		RequiredServices: required,
-	}, nil
-}
-
-func planProcs(options *BootOptions) ([]plannedProc, map[proc.ServiceID]proc.Config, error) {
+func planProcs(options *BootOptions) ([]proc.ServiceID, map[proc.ServiceID]proc.Config, error) {
 	if options == nil {
 		return nil, nil, nil
-	}
-
-	if options.ShOpt.PDMode == "ms" && !tidbver.PDSupportMicroservices(options.Version) {
-		return nil, nil, fmt.Errorf("PD cluster doesn't support microservices mode in version %s", options.Version)
-	}
-
-	if options.ShOpt.Mode == proc.ModeCSE || options.ShOpt.Mode == proc.ModeNextGen || options.ShOpt.Mode == proc.ModeDisAgg {
-		if utils.Version(options.Version).IsValid() && !tidbver.TiFlashPlaygroundNewStartMode(options.Version) {
-			// For simplicity, currently we only implemented disagg mode when TiFlash can run without config.
-			return nil, nil, fmt.Errorf("TiUP playground only supports CSE/Disagg mode for TiDB cluster >= v7.1.0 (or nightly)")
-		}
 	}
 
 	cfgByService := make(map[proc.ServiceID]proc.Config)
@@ -279,33 +215,13 @@ func planProcs(options *BootOptions) ([]plannedProc, map[proc.ServiceID]proc.Con
 	if err != nil {
 		return nil, nil, err
 	}
-
-	plans := make([]plannedProc, 0, len(ordered))
-	for _, serviceID := range ordered {
-		plans = append(plans, plannedProc{serviceID: serviceID, cfg: cfgByService[serviceID]})
-	}
-	return plans, cfgByService, nil
-}
-
-func (p *Playground) addPlannedProcs(ctx context.Context, plans []plannedProc) error {
-	if p == nil {
-		return nil
-	}
-	for _, plan := range plans {
-		for i := 0; i < plan.cfg.Num; i++ {
-			_, err := p.requestAddProc(ctx, plan.serviceID, plan.cfg)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return nil
+	return ordered, cfgByService, nil
 }
 
 func (p *Playground) bootCluster(ctx context.Context, options *BootOptions) (err error) {
 	defer func() { err = normalizeBootErr(ctx, err) }()
 
-	if err := p.normalizeBootOptionPaths(options); err != nil {
+	if err := normalizeBootOptionPaths(options); err != nil {
 		return err
 	}
 
@@ -316,51 +232,62 @@ func (p *Playground) bootCluster(ctx context.Context, options *BootOptions) (err
 	p.setControllerBooting(ctx, true)
 	defer p.setControllerBooting(context.Background(), false)
 
-	if err := p.validateBootOptions(ctx, options); err != nil {
+	if err := ValidateBootOptionsPure(options); err != nil {
 		return err
 	}
 
-	plan, err := buildBootPlan(options)
+	src := newEnvComponentSource(environment.GlobalEnv())
+	plan, err := BuildBootPlan(options, bootPlannerConfig{
+		dataDir:            p.dataDir,
+		portConflictPolicy: PortConflictAllocFree,
+		componentSource:    src,
+	})
 	if err != nil {
 		return err
 	}
+	p.bootBaseConfigs = make(map[proc.ServiceID]proc.Config, len(plan.DebugServiceConfigs))
+	for serviceID, cfg := range plan.DebugServiceConfigs {
+		id := proc.ServiceID(serviceID)
+		if id == "" {
+			continue
+		}
+		p.bootBaseConfigs[id] = cfg
+	}
 
-	p.bootBaseConfigs = plan.BaseConfigs
-	required := plan.RequiredServices
+	required := make(map[proc.ServiceID]int, len(plan.RequiredServices))
+	for serviceID, min := range plan.RequiredServices {
+		id := proc.ServiceID(serviceID)
+		if id == "" || min <= 0 {
+			continue
+		}
+		required[id] = min
+	}
 	p.setControllerRequiredServices(ctx, required)
 
-	if err := p.addPlannedProcs(ctx, plan.Plans); err != nil {
+	executor := newBootExecutor(p, src)
+	if err := executor.Download(plan); err != nil {
+		return err
+	}
+	if len(plan.Downloads) > 0 {
+		p.progressMu.Lock()
+		downloadGroup := p.downloadGroup
+		p.progressMu.Unlock()
+		if downloadGroup != nil {
+			downloadGroup.Close()
+		}
+	}
+	if err := executor.PreRun(ctx, plan); err != nil {
+		return err
+	}
+	if err := executor.AddProcs(ctx, plan); err != nil {
 		return err
 	}
 
 	planned := p.procsSnapshot()
-	startingTasks := p.initBootStartingTasks()
+	p.initBootStartingTasks()
 
-	p.progressMu.Lock()
-	downloadGroup := p.downloadGroup
-	p.progressMu.Unlock()
-
-	// Kick off component downloads early so "Downloading components" and
-	// "Starting instances" can overlap.
-	//
-	// Playground knows the full component set upfront. Prefetching binaries here
-	// avoids the previous "start some instances -> download -> start more"
-	// behavior.
-	preloader := newBinaryPreloader(ctx, p, p.bootOptions.Version, p.bootOptions.ShOpt.ForcePull)
-	preloader.collect(startingTasks)
-	preloader.start()
-
-	// Close the download group once all prefetches finish. This lets the UI
-	// collapse successful downloads while instance startup continues.
-	if downloadGroup != nil && len(preloader.items) > 0 {
-		go func() {
-			<-preloader.allDone()
-			downloadGroup.Close()
-		}()
-	}
-
-	starter := newBootStarter(ctx, p, preloader, planned, required)
-	ready, err := starter.startPlanned(plan.Plans)
+	starter := newBootStarter(ctx, p, nil, planned, required)
+	ready, err := starter.startPlanned(plannedServicesFromBootPlan(plan))
 	if err != nil {
 		return err
 	}

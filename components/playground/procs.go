@@ -109,6 +109,29 @@ func (p *Playground) requestAddProc(ctx context.Context, serviceID proc.ServiceI
 	}
 }
 
+func (p *Playground) requestAddPlannedProc(ctx context.Context, plan ServicePlan, binPath string, version utils.Version) (proc.Process, error) {
+	if p == nil {
+		return nil, context.Canceled
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if p.evtCh == nil {
+		return nil, fmt.Errorf("controller not started")
+	}
+
+	respCh := make(chan addProcResponse, 1)
+	p.emitEvent(addPlannedProcRequest{plan: plan, binPath: binPath, version: version, respCh: respCh})
+	select {
+	case resp := <-respCh:
+		return resp.inst, resp.err
+	case <-p.controllerDoneCh:
+		return nil, fmt.Errorf("playground is stopping")
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+}
+
 func (p *Playground) addProcInController(state *controllerState, serviceID proc.ServiceID, cfg proc.Config) (ins proc.Process, err error) {
 	if p == nil || state == nil {
 		return nil, fmt.Errorf("playground controller state is nil")
@@ -147,6 +170,145 @@ func (p *Playground) addProcInController(state *controllerState, serviceID proc.
 	}
 
 	return spec.NewProc(controllerRuntime{pg: p, state: state}, pgservice.NewProcParams{Config: cfg, ID: id, Dir: dir, Host: host})
+}
+
+func (p *Playground) addPlannedProcInController(state *controllerState, plan ServicePlan, binPath string, version utils.Version) (proc.Process, error) {
+	if p == nil || state == nil {
+		return nil, fmt.Errorf("playground controller state is nil")
+	}
+
+	serviceID := proc.ServiceID(strings.TrimSpace(plan.ServiceID))
+	if serviceID == "" {
+		return nil, fmt.Errorf("planned service id is empty")
+	}
+
+	id := state.allocID(serviceID)
+	name := fmt.Sprintf("%s-%d", serviceID, id)
+	if plan.Name != "" && plan.Name != name {
+		return nil, fmt.Errorf("planned name mismatch: expect %q, got %q", name, plan.Name)
+	}
+
+	dir := filepath.Join(p.dataDir, name)
+	if plan.Shared.Dir != "" && plan.Shared.Dir != dir {
+		return nil, fmt.Errorf("planned dir mismatch: expect %q, got %q", dir, plan.Shared.Dir)
+	}
+	if err := utils.MkdirAll(dir, 0o755); err != nil {
+		return nil, err
+	}
+
+	host := strings.TrimSpace(plan.Shared.Host)
+	if host == "" {
+		return nil, fmt.Errorf("planned host is empty for %s", name)
+	}
+
+	info := proc.ProcessInfo{
+		ID:              id,
+		Dir:             dir,
+		Host:            host,
+		Port:            plan.Shared.Port,
+		StatusPort:      plan.Shared.StatusPort,
+		UpTimeout:       plan.Shared.UpTimeout,
+		ConfigPath:      plan.Shared.ConfigPath,
+		UserBinPath:     plan.BinPath,
+		BinPath:         binPath,
+		Version:         version,
+		RepoComponentID: proc.RepoComponentID(plan.ComponentID),
+		Service:         serviceID,
+	}
+	if info.BinPath == "" && info.UserBinPath != "" {
+		info.BinPath = info.UserBinPath
+	}
+
+	shOpt := proc.SharedOptions{}
+	if p.bootOptions != nil {
+		shOpt = p.bootOptions.ShOpt
+	}
+
+	var inst proc.Process
+	switch serviceID {
+	case proc.ServicePD, proc.ServicePDAPI, proc.ServicePDTSO, proc.ServicePDScheduling, proc.ServicePDRouter, proc.ServicePDResourceManager:
+		if plan.PD == nil {
+			return nil, fmt.Errorf("missing pd plan for %s", name)
+		}
+		inst = &proc.PDInstance{ShOpt: shOpt, Plan: *plan.PD, ProcessInfo: info}
+	case proc.ServiceTiKV:
+		if plan.TiKV == nil {
+			return nil, fmt.Errorf("missing tikv plan for %s", name)
+		}
+		inst = &proc.TiKVInstance{ShOpt: shOpt, Plan: *plan.TiKV, ProcessInfo: info}
+	case proc.ServiceTiDB, proc.ServiceTiDBSystem:
+		if plan.TiDB == nil {
+			return nil, fmt.Errorf("missing tidb plan for %s", name)
+		}
+		tdb := &proc.TiDBInstance{ShOpt: shOpt, Plan: *plan.TiDB, TiProxyCertDir: p.dataDir, ProcessInfo: info}
+		inst = tdb
+	case proc.ServiceTiKVWorker:
+		if plan.TiKVWorker == nil {
+			return nil, fmt.Errorf("missing tikv-worker plan for %s", name)
+		}
+		inst = &proc.TiKVWorkerInstance{ShOpt: shOpt, Plan: *plan.TiKVWorker, ProcessInfo: info}
+	case proc.ServiceTiFlash, proc.ServiceTiFlashWrite, proc.ServiceTiFlashCompute:
+		if plan.TiFlash == nil {
+			return nil, fmt.Errorf("missing tiflash plan for %s", name)
+		}
+		inst = &proc.TiFlashInstance{ShOpt: shOpt, Plan: *plan.TiFlash, ProcessInfo: info}
+	case proc.ServiceTiProxy:
+		if plan.TiProxy == nil {
+			return nil, fmt.Errorf("missing tiproxy plan for %s", name)
+		}
+		inst = &proc.TiProxyInstance{Plan: *plan.TiProxy, ProcessInfo: info}
+	case proc.ServicePrometheus:
+		inst = &proc.PrometheusInstance{ProcessInfo: info}
+	case proc.ServiceGrafana:
+		promURL := ""
+		if plan.Grafana != nil {
+			promURL = plan.Grafana.PrometheusURL
+		}
+		inst = &proc.GrafanaInstance{PrometheusURL: promURL, ProcessInfo: info}
+	case proc.ServiceNGMonitoring:
+		if plan.NGMonitoring == nil {
+			return nil, fmt.Errorf("missing ng-monitoring plan for %s", name)
+		}
+		inst = &proc.NGMonitoringInstance{Plan: *plan.NGMonitoring, ProcessInfo: info}
+	case proc.ServiceTiCDC:
+		if plan.TiCDC == nil {
+			return nil, fmt.Errorf("missing ticdc plan for %s", name)
+		}
+		inst = &proc.TiCDC{Plan: *plan.TiCDC, ProcessInfo: info}
+	case proc.ServiceTiKVCDC:
+		if plan.TiKVCDC == nil {
+			return nil, fmt.Errorf("missing tikv-cdc plan for %s", name)
+		}
+		inst = &proc.TiKVCDCInstance{Plan: *plan.TiKVCDC, ProcessInfo: info}
+	case proc.ServiceDMMaster:
+		if plan.DMMaster == nil {
+			return nil, fmt.Errorf("missing dm-master plan for %s", name)
+		}
+		inst = &proc.DMMaster{Plan: *plan.DMMaster, ProcessInfo: info}
+	case proc.ServiceDMWorker:
+		if plan.DMWorker == nil {
+			return nil, fmt.Errorf("missing dm-worker plan for %s", name)
+		}
+		inst = &proc.DMWorker{Plan: *plan.DMWorker, ProcessInfo: info}
+	case proc.ServicePump:
+		if plan.Pump == nil {
+			return nil, fmt.Errorf("missing pump plan for %s", name)
+		}
+		inst = &proc.Pump{Plan: *plan.Pump, ProcessInfo: info}
+	case proc.ServiceDrainer:
+		if plan.Drainer == nil {
+			return nil, fmt.Errorf("missing drainer plan for %s", name)
+		}
+		inst = &proc.Drainer{Plan: *plan.Drainer, ProcessInfo: info}
+	default:
+		return nil, fmt.Errorf("unsupported service %s", serviceID)
+	}
+
+	if inst == nil {
+		return nil, fmt.Errorf("failed to create instance for %s", name)
+	}
+	state.appendProc(serviceID, inst)
+	return inst, nil
 }
 
 func (p *Playground) versionConstraintForService(serviceID proc.ServiceID, bootVersion string) string {

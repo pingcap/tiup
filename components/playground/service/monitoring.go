@@ -114,8 +114,18 @@ func init() {
 				return nil, fmt.Errorf("ng-monitoring requires PD")
 			}
 
+			pdAddrs := make([]string, 0, len(pds))
+			for _, pd := range pds {
+				if pd == nil {
+					continue
+				}
+				if addr := pd.Addr(); addr != "" {
+					pdAddrs = append(pdAddrs, addr)
+				}
+			}
+
 			ngm := &proc.NGMonitoringInstance{
-				PDs: pds,
+				Plan: proc.NGMonitoringPlan{PDAddrs: pdAddrs},
 				ProcessInfo: proc.ProcessInfo{
 					UserBinPath:     params.Config.BinPath,
 					ID:              params.ID,

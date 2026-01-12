@@ -36,7 +36,7 @@ const (
 // TiProxyInstance represent a ticdc instance.
 type TiProxyInstance struct {
 	ProcessInfo
-	PDs []*PDInstance
+	Plan TiProxyPlan
 }
 
 var _ Process = &TiProxyInstance{}
@@ -89,7 +89,7 @@ func (c *TiProxyInstance) MetricAddr() (r MetricAddr) {
 // Prepare builds the TiProxy process command.
 func (c *TiProxyInstance) Prepare(ctx context.Context) error {
 	info := c.Info()
-	endpoints := pdEndpoints(c.PDs, false)
+	endpoints := append([]string(nil), c.Plan.PDAddrs...)
 
 	configPath := filepath.Join(c.Dir, "config", "proxy.toml")
 	if err := prepareConfig(configPath, c.ConfigPath, nil, map[string]any{

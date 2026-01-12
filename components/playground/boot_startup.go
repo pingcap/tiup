@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
+	"strings"
 
 	"github.com/pingcap/tiup/components/playground/proc"
-	pgservice "github.com/pingcap/tiup/components/playground/service"
 )
 
 type readyFuture struct {
@@ -55,6 +55,11 @@ type readyAddr struct {
 
 type readySet map[proc.ServiceID][]readyAddr
 
+type plannedService struct {
+	serviceID  proc.ServiceID
+	startAfter []proc.ServiceID
+}
+
 type bootStarter struct {
 	pg       *Playground
 	ctx      context.Context
@@ -87,16 +92,18 @@ func (b *bootStarter) isRequiredService(serviceID proc.ServiceID) bool {
 	return b.required[serviceID] > 0
 }
 
-func (b *bootStarter) waitStartAfter(serviceID proc.ServiceID) error {
+func (b *bootStarter) waitStartAfter(serviceID proc.ServiceID, deps []proc.ServiceID) error {
 	if b == nil || b.pg == nil {
 		return nil
 	}
-	spec, ok := pgservice.SpecFor(serviceID)
-	if !ok || len(spec.StartAfter) == 0 {
+	if len(deps) == 0 {
 		return nil
 	}
 
-	for _, dep := range spec.StartAfter {
+	for _, dep := range deps {
+		if dep == "" {
+			continue
+		}
 		if len(b.planned[dep]) == 0 {
 			continue
 		}
@@ -219,7 +226,7 @@ func (b *bootStarter) waitRequiredReady() error {
 	return nil
 }
 
-func (b *bootStarter) startPlanned(plans []plannedProc) (readySet, error) {
+func (b *bootStarter) startPlanned(plans []plannedService) (readySet, error) {
 	if b == nil || b.pg == nil {
 		return nil, nil
 	}
@@ -227,7 +234,7 @@ func (b *bootStarter) startPlanned(plans []plannedProc) (readySet, error) {
 	for _, plan := range plans {
 		serviceID := plan.serviceID
 
-		if err := b.waitStartAfter(serviceID); err != nil {
+		if err := b.waitStartAfter(serviceID, plan.startAfter); err != nil {
 			if b.isRequiredService(serviceID) {
 				return nil, err
 			}
@@ -249,6 +256,34 @@ func (b *bootStarter) startPlanned(plans []plannedProc) (readySet, error) {
 	}
 
 	return b.readySet, nil
+}
+
+func plannedServicesFromBootPlan(plan BootPlan) []plannedService {
+	seen := make(map[proc.ServiceID]struct{})
+	var out []plannedService
+
+	for _, svc := range plan.Services {
+		serviceID := proc.ServiceID(strings.TrimSpace(svc.ServiceID))
+		if serviceID == "" {
+			continue
+		}
+		if _, ok := seen[serviceID]; ok {
+			continue
+		}
+		seen[serviceID] = struct{}{}
+
+		var deps []proc.ServiceID
+		for _, dep := range svc.StartAfterServices {
+			d := proc.ServiceID(strings.TrimSpace(dep))
+			if d == "" {
+				continue
+			}
+			deps = append(deps, d)
+		}
+		out = append(out, plannedService{serviceID: serviceID, startAfter: deps})
+	}
+
+	return out
 }
 
 func (b *bootStarter) waitReadyAddrs(rs []readyAddr) (succ []string) {

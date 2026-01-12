@@ -321,17 +321,25 @@ func (p *Playground) startProc(ctx context.Context, state *controllerState, inst
 	// mutations of ProcessInfo.
 	if bin := info.UserBinPath; bin != "" {
 		info.BinPath = bin
-		bootVer := ""
-		if p.bootOptions != nil {
-			bootVer = p.bootOptions.Version
+		// Use the planned/resolved version when available. This is important for
+		// plan-based execution: executor should fully decide the inputs (including
+		// feature gates) without startProc re-reading global flags.
+		//
+		// Fall back to the boot version constraint only when the instance has no
+		// version assigned.
+		if info.Version.IsEmpty() {
+			bootVer := ""
+			if p.bootOptions != nil {
+				bootVer = p.bootOptions.Version
+			}
+			constraint := p.versionConstraintForService(info.Service, bootVer)
+			if constraint == "" {
+				constraint = utils.LatestVersionAlias
+			}
+			// Use the version constraint directly for feature gates to avoid blocking
+			// local binaries on repository downloads.
+			info.Version = utils.Version(constraint)
 		}
-		constraint := p.versionConstraintForService(info.Service, bootVer)
-		if constraint == "" {
-			constraint = utils.LatestVersionAlias
-		}
-		// Use the version constraint directly for feature gates to avoid blocking
-		// local binaries on repository downloads.
-		info.Version = utils.Version(constraint)
 	} else if info.BinPath == "" {
 		component := info.RepoComponentID.String()
 		bootVer := ""

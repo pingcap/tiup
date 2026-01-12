@@ -20,7 +20,7 @@ const (
 // DMWorker represent a DM worker instance.
 type DMWorker struct {
 	ProcessInfo
-	Masters []*DMMaster
+	Plan DMWorkerPlan
 }
 
 var _ Process = &DMWorker{}
@@ -32,11 +32,7 @@ func init() {
 
 // MasterAddrs return the master addresses.
 func (w *DMWorker) MasterAddrs() []string {
-	var addrs []string
-	for _, master := range w.Masters {
-		addrs = append(addrs, utils.JoinHostPort(AdvertiseHost(master.Host), master.StatusPort))
-	}
-	return addrs
+	return append([]string(nil), w.Plan.MasterAddrs...)
 }
 
 // Prepare builds the DM-worker process command.

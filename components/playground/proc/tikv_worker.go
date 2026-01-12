@@ -45,7 +45,7 @@ func ResolveTiKVWorkerBinPath(binPath string) string {
 type TiKVWorkerInstance struct {
 	ProcessInfo
 	ShOpt SharedOptions
-	PDs   []*PDInstance
+	Plan  TiKVWorkerPlan
 }
 
 var _ Process = &TiKVWorkerInstance{}
@@ -82,7 +82,13 @@ func (inst *TiKVWorkerInstance) Prepare(ctx context.Context) error {
 		return err
 	}
 
-	endpoints := pdEndpoints(inst.PDs, true)
+	endpoints := make([]string, 0, len(inst.Plan.PDAddrs))
+	for _, addr := range inst.Plan.PDAddrs {
+		if addr == "" {
+			continue
+		}
+		endpoints = append(endpoints, "http://"+addr)
+	}
 	args := []string{
 		fmt.Sprintf("--addr=%s", utils.JoinHostPort(inst.Host, inst.Port)),
 		fmt.Sprintf("--log-file=%s", inst.LogFile()),

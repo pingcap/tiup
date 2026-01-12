@@ -48,19 +48,15 @@ func init() {
 // TiFlashInstance represent a running TiFlash
 type TiFlashInstance struct {
 	ProcessInfo
-	ShOpt           SharedOptions
-	TCPPort         int
-	ServicePort     int
-	ProxyPort       int
-	ProxyStatusPort int
-	PDs             []*PDInstance
+	ShOpt SharedOptions
+	Plan  TiFlashPlan
 }
 
 var _ Process = &TiFlashInstance{}
 
 // Addr return the address of tiflash
 func (inst *TiFlashInstance) Addr() string {
-	return utils.JoinHostPort(AdvertiseHost(inst.Host), inst.ServicePort)
+	return utils.JoinHostPort(AdvertiseHost(inst.Host), inst.Plan.ServicePort)
 }
 
 // WaitReady implements ReadyWaiter.
@@ -71,7 +67,7 @@ func (inst *TiFlashInstance) WaitReady(ctx context.Context) error {
 	ctx, cancel := withTimeoutSeconds(ctx, inst.UpTimeout)
 	defer cancel()
 
-	endpoints := pdEndpoints(inst.PDs, false)
+	endpoints := append([]string(nil), inst.Plan.PDAddrs...)
 	pdClient := api.NewPDClient(ctx, endpoints, 10*time.Second, nil)
 
 	ticker := time.NewTicker(time.Second)
@@ -109,7 +105,7 @@ func (inst *TiFlashInstance) WaitReady(ctx context.Context) error {
 // MetricAddr returns the address(es) to pull metrics.
 func (inst *TiFlashInstance) MetricAddr() (r MetricAddr) {
 	r.Targets = append(r.Targets, utils.JoinHostPort(inst.Host, inst.StatusPort))
-	r.Targets = append(r.Targets, utils.JoinHostPort(inst.Host, inst.ProxyStatusPort))
+	r.Targets = append(r.Targets, utils.JoinHostPort(inst.Host, inst.Plan.ProxyStatusPort))
 	return
 }
 
@@ -140,7 +136,7 @@ func (inst *TiFlashInstance) Prepare(ctx context.Context) error {
 		return err
 	}
 
-	endpoints := pdEndpoints(inst.PDs, false)
+	endpoints := append([]string(nil), inst.Plan.PDAddrs...)
 
 	args := []string{
 		"server",
@@ -153,11 +149,11 @@ func (inst *TiFlashInstance) Prepare(ctx context.Context) error {
 		{"logger.log", inst.LogFile()},
 		{"logger.errorlog", filepath.Join(inst.Dir, "tiflash_error.log")},
 		{"status.metrics_port", fmt.Sprintf("%d", inst.StatusPort)},
-		{"flash.service_addr", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.ServicePort)},
+		{"flash.service_addr", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.Plan.ServicePort)},
 		{"raft.pd_addr", strings.Join(endpoints, ",")},
-		{"flash.proxy.addr", utils.JoinHostPort(inst.Host, inst.ProxyPort)},
-		{"flash.proxy.advertise-addr", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.ProxyPort)},
-		{"flash.proxy.status-addr", utils.JoinHostPort(inst.Host, inst.ProxyStatusPort)},
+		{"flash.proxy.addr", utils.JoinHostPort(inst.Host, inst.Plan.ProxyPort)},
+		{"flash.proxy.advertise-addr", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.Plan.ProxyPort)},
+		{"flash.proxy.status-addr", utils.JoinHostPort(inst.Host, inst.Plan.ProxyStatusPort)},
 		{"flash.proxy.data-dir", filepath.Join(inst.Dir, "proxy_data")},
 		{"flash.proxy.log-file", filepath.Join(inst.Dir, "tiflash_tikv.log")},
 	}
@@ -209,5 +205,5 @@ func (inst *TiFlashInstance) LogFile() string {
 
 // StoreAddr return the store address of TiFlash
 func (inst *TiFlashInstance) StoreAddr() string {
-	return utils.JoinHostPort(AdvertiseHost(inst.Host), inst.ServicePort)
+	return utils.JoinHostPort(AdvertiseHost(inst.Host), inst.Plan.ServicePort)
 }

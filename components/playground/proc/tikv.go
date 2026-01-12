@@ -37,8 +37,7 @@ const (
 type TiKVInstance struct {
 	ProcessInfo
 	ShOpt SharedOptions
-	PDs   []*PDInstance
-	TSOs  []*PDInstance
+	Plan  TiKVPlan
 }
 
 var _ Process = &TiKVInstance{}
@@ -68,7 +67,13 @@ func (inst *TiKVInstance) Prepare(ctx context.Context) error {
 		return err
 	}
 
-	endpoints := pdEndpoints(inst.PDs, true)
+	endpoints := make([]string, 0, len(inst.Plan.PDAddrs))
+	for _, addr := range inst.Plan.PDAddrs {
+		if addr == "" {
+			continue
+		}
+		endpoints = append(endpoints, "http://"+addr)
+	}
 	args := []string{
 		fmt.Sprintf("--addr=%s", utils.JoinHostPort(inst.Host, inst.Port)),
 		fmt.Sprintf("--advertise-addr=%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.Port)),
@@ -104,15 +109,7 @@ func (inst *TiKVInstance) WaitReady(ctx context.Context) error {
 	ctx, cancel := withTimeoutSeconds(ctx, timeoutSec)
 	defer cancel()
 
-	var tsoAddrs []string
-	for _, tso := range inst.TSOs {
-		if tso == nil {
-			continue
-		}
-		if addr := tso.Addr(); addr != "" {
-			tsoAddrs = append(tsoAddrs, addr)
-		}
-	}
+	tsoAddrs := append([]string(nil), inst.Plan.TSOAddrs...)
 	if len(tsoAddrs) == 0 {
 		return fmt.Errorf("no pd-tso instance available")
 	}

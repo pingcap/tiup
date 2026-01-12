@@ -27,8 +27,19 @@ func newTiKVCDCInstance(rt ControllerRuntime, params NewProcParams) (proc.Proces
 	pds := ProcsOf[*proc.PDInstance](rt, proc.ServicePD, proc.ServicePDAPI)
 	shOpt := rt.SharedOptions()
 	port := allocPort(params.Host, 0, 8600, shOpt.PortOffset)
+
+	pdAddrs := make([]string, 0, len(pds))
+	for _, pd := range pds {
+		if pd == nil {
+			continue
+		}
+		if addr := pd.Addr(); addr != "" {
+			pdAddrs = append(pdAddrs, addr)
+		}
+	}
+
 	kvcdc := &proc.TiKVCDCInstance{
-		PDs: pds,
+		Plan: proc.TiKVCDCPlan{PDAddrs: pdAddrs},
 		ProcessInfo: proc.ProcessInfo{
 			UserBinPath:     params.Config.BinPath,
 			ID:              params.ID,

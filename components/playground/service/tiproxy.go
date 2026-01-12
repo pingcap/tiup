@@ -36,13 +36,30 @@ func init() {
 }
 
 func newTiProxyInstance(rt ControllerRuntime, params NewProcParams) (proc.Process, error) {
-	if err := proc.GenTiProxySessionCerts(rt.DataDir()); err != nil {
-		return nil, err
-	}
 	pds := ProcsOf[*proc.PDInstance](rt, proc.ServicePD, proc.ServicePDAPI)
 	shOpt := rt.SharedOptions()
+
+	// TiProxy session certs are used by TiDB for session token signing. During
+	// plan-based boot they are generated in Executor.PreRun; keep scale-out
+	// behavior by ensuring they exist once the playground is already booted.
+	if rt.Booted() {
+		if err := proc.GenTiProxySessionCerts(rt.DataDir()); err != nil {
+			return nil, err
+		}
+	}
+
+	pdAddrs := make([]string, 0, len(pds))
+	for _, pd := range pds {
+		if pd == nil {
+			continue
+		}
+		if addr := pd.Addr(); addr != "" {
+			pdAddrs = append(pdAddrs, addr)
+		}
+	}
+
 	proxy := &proc.TiProxyInstance{
-		PDs: pds,
+		Plan: proc.TiProxyPlan{PDAddrs: pdAddrs},
 		ProcessInfo: proc.ProcessInfo{
 			UserBinPath:     params.Config.BinPath,
 			ID:              params.ID,

@@ -136,6 +136,9 @@ type cliState struct {
 	tiupDataDir    string
 	dataDir        string
 	deleteWhenExit bool
+
+	dryRun       bool
+	dryRunOutput string
 }
 
 func newCLIState() *cliState {

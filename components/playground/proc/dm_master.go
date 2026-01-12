@@ -22,8 +22,7 @@ const (
 // DMMaster represent a DM master instance.
 type DMMaster struct {
 	ProcessInfo
-	InitEndpoints []*DMMaster
-	RequireReady  bool
+	Plan DMMasterPlan
 }
 
 var _ Process = &DMMaster{}
@@ -37,18 +36,42 @@ func init() {
 // Prepare builds the DM-master process command.
 func (m *DMMaster) Prepare(ctx context.Context) error {
 	info := m.Info()
+	advertiseMaster := utils.JoinHostPort(AdvertiseHost(m.Host), m.StatusPort)
+	advertisePeer := utils.JoinHostPort(AdvertiseHost(m.Host), m.Port)
+	selfName := ""
+	if info != nil {
+		selfName = info.Name()
+	}
+	if selfName != "" {
+		for _, member := range m.Plan.InitialCluster {
+			if member.Name != selfName {
+				continue
+			}
+			if member.MasterAddr != "" {
+				advertiseMaster = member.MasterAddr
+			}
+			if member.PeerAddr != "" {
+				advertisePeer = member.PeerAddr
+			}
+			break
+		}
+	}
+
 	args := []string{
 		fmt.Sprintf("--name=%s", info.Name()),
 		fmt.Sprintf("--master-addr=http://%s", utils.JoinHostPort(m.Host, m.StatusPort)),
-		fmt.Sprintf("--advertise-addr=http://%s", utils.JoinHostPort(AdvertiseHost(m.Host), m.StatusPort)),
+		fmt.Sprintf("--advertise-addr=http://%s", advertiseMaster),
 		fmt.Sprintf("--peer-urls=http://%s", utils.JoinHostPort(m.Host, m.Port)),
-		fmt.Sprintf("--advertise-peer-urls=http://%s", utils.JoinHostPort(AdvertiseHost(m.Host), m.Port)),
+		fmt.Sprintf("--advertise-peer-urls=http://%s", advertisePeer),
 		fmt.Sprintf("--log-file=%s", m.LogFile()),
 	}
 
-	endpoints := make([]string, 0)
-	for _, master := range m.InitEndpoints {
-		endpoints = append(endpoints, fmt.Sprintf("%s=http://%s", master.Info().Name(), utils.JoinHostPort(master.Host, master.Port)))
+	endpoints := make([]string, 0, len(m.Plan.InitialCluster))
+	for _, member := range m.Plan.InitialCluster {
+		if member.Name == "" || member.PeerAddr == "" {
+			continue
+		}
+		endpoints = append(endpoints, fmt.Sprintf("%s=http://%s", member.Name, member.PeerAddr))
 	}
 	args = append(args, fmt.Sprintf("--initial-cluster=%s", strings.Join(endpoints, ",")))
 
@@ -67,23 +90,36 @@ func (m *DMMaster) LogFile() string {
 
 // Addr return the address of the instance.
 func (m *DMMaster) Addr() string {
-	return utils.JoinHostPort(m.Host, m.StatusPort)
+	info := m.Info()
+	if info != nil {
+		name := info.Name()
+		if name != "" {
+			for _, member := range m.Plan.InitialCluster {
+				if member.Name == name && member.MasterAddr != "" {
+					return member.MasterAddr
+				}
+			}
+		}
+	}
+	return utils.JoinHostPort(AdvertiseHost(m.Host), m.StatusPort)
 }
 
 // WaitReady implements ReadyWaiter.
 //
 // DM-master is considered ready when it is active (or leader) in the DM cluster.
 func (m *DMMaster) WaitReady(ctx context.Context) error {
-	if m == nil || !m.RequireReady {
+	if m == nil || !m.Plan.RequireReady {
 		return nil
 	}
 
 	ctx, cancel := withTimeoutSeconds(ctx, m.UpTimeout)
 	defer cancel()
 
-	addrs := make([]string, 0, len(m.InitEndpoints))
-	for _, master := range m.InitEndpoints {
-		addrs = append(addrs, master.Addr())
+	addrs := make([]string, 0, len(m.Plan.InitialCluster))
+	for _, member := range m.Plan.InitialCluster {
+		if member.MasterAddr != "" {
+			addrs = append(addrs, member.MasterAddr)
+		}
 	}
 	if len(addrs) == 0 {
 		addrs = append(addrs, m.Addr())

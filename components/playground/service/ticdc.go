@@ -29,8 +29,19 @@ func newTiCDCInstance(rt ControllerRuntime, params NewProcParams) (proc.Process,
 	pds := ProcsOf[*proc.PDInstance](rt, proc.ServicePD, proc.ServicePDAPI)
 	shOpt := rt.SharedOptions()
 	port := allocPort(params.Host, params.Config.Port, 8300, shOpt.PortOffset)
+
+	pdAddrs := make([]string, 0, len(pds))
+	for _, pd := range pds {
+		if pd == nil {
+			continue
+		}
+		if addr := pd.Addr(); addr != "" {
+			pdAddrs = append(pdAddrs, addr)
+		}
+	}
+
 	cdc := &proc.TiCDC{
-		PDs: pds,
+		Plan: proc.TiCDCPlan{PDAddrs: pdAddrs},
 		ProcessInfo: proc.ProcessInfo{
 			UserBinPath:     params.Config.BinPath,
 			ID:              params.ID,

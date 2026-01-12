@@ -28,7 +28,7 @@ func init() {
 type NGMonitoringInstance struct {
 	ProcessInfo
 
-	PDs []*PDInstance
+	Plan NGMonitoringPlan
 }
 
 var _ Process = &NGMonitoringInstance{}
@@ -80,10 +80,7 @@ func (inst *NGMonitoringInstance) Prepare(ctx context.Context) error {
 		}
 	}
 
-	var endpoints []string
-	for _, pd := range inst.PDs {
-		endpoints = append(endpoints, utils.JoinHostPort(pd.Host, pd.StatusPort))
-	}
+	endpoints := append([]string(nil), inst.Plan.PDAddrs...)
 
 	addr := utils.JoinHostPort(inst.Host, inst.Port)
 	args := []string{
