@@ -2,10 +2,12 @@ package proc
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/pingcap/errors"
@@ -14,17 +16,30 @@ import (
 )
 
 const (
+	// ServicePrometheus is the service ID for the Prometheus instance.
+	ServicePrometheus ServiceID = "prometheus"
 	// ServiceGrafana is the service ID for the Grafana instance.
 	ServiceGrafana ServiceID = "grafana"
+	// ServiceNGMonitoring is the service ID for NG Monitoring.
+	ServiceNGMonitoring ServiceID = "ng-monitoring"
 
+	// ComponentPrometheus is the repository component ID for Prometheus.
+	ComponentPrometheus RepoComponentID = "prometheus"
 	// ComponentGrafana is the repository component ID for Grafana.
 	ComponentGrafana RepoComponentID = "grafana"
+	// ComponentNGMonitoring is the repository component ID for NG Monitoring.
+	ComponentNGMonitoring RepoComponentID = "ng-monitoring"
 )
 
 func init() {
+	RegisterComponentDisplayName(ComponentPrometheus, "Prometheus")
+	RegisterServiceDisplayName(ServicePrometheus, "Prometheus")
+	registerPlannedProcessFactory(ServicePrometheus, func(_ ServicePlan, info ProcessInfo, _ SharedOptions, _ string) (Process, error) {
+		return &PrometheusInstance{ProcessInfo: info}, nil
+	})
+
 	RegisterComponentDisplayName(ComponentGrafana, "Grafana")
 	RegisterServiceDisplayName(ServiceGrafana, "Grafana")
-
 	registerPlannedProcessFactory(ServiceGrafana, func(plan ServicePlan, info ProcessInfo, _ SharedOptions, _ string) (Process, error) {
 		promURL := ""
 		if plan.Grafana != nil {
@@ -32,6 +47,150 @@ func init() {
 		}
 		return &GrafanaInstance{PrometheusURL: promURL, ProcessInfo: info}, nil
 	})
+
+	RegisterComponentDisplayName(ComponentNGMonitoring, "NG Monitoring")
+	RegisterServiceDisplayName(ServiceNGMonitoring, "NG Monitoring")
+	registerPlannedProcessFactory(ServiceNGMonitoring, func(plan ServicePlan, info ProcessInfo, _ SharedOptions, _ string) (Process, error) {
+		if plan.NGMonitoring == nil {
+			name := info.Name()
+			if name == "" {
+				name = ServiceNGMonitoring.String()
+			}
+			return nil, errors.Errorf("missing ng-monitoring plan for %s", name)
+		}
+		return &NGMonitoringInstance{Plan: *plan.NGMonitoring, ProcessInfo: info}, nil
+	})
+}
+
+// PrometheusInstance represents a running Prometheus server.
+type PrometheusInstance struct {
+	ProcessInfo
+
+	sdFile string
+}
+
+var _ Process = &PrometheusInstance{}
+
+// LogFile returns the log file path for the instance.
+func (inst *PrometheusInstance) LogFile() string {
+	return filepath.Join(inst.Dir, "prom.log")
+}
+
+// RenderSDFile writes Prometheus file_sd targets for all instances.
+// ref: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#file_sd_config
+func (inst *PrometheusInstance) RenderSDFile(sid2targets map[ServiceID]MetricAddr) error {
+	if inst == nil {
+		return nil
+	}
+
+	if inst.sdFile == "" {
+		inst.sdFile = filepath.Join(inst.Dir, "targets.json")
+	}
+	if sid2targets == nil {
+		sid2targets = make(map[ServiceID]MetricAddr)
+	}
+
+	sid2targets[ServicePrometheus] = MetricAddr{Targets: []string{utils.JoinHostPort(inst.Host, inst.Port)}}
+
+	var orderedIDs []ServiceID
+	for id, t := range sid2targets {
+		if len(t.Targets) == 0 {
+			continue
+		}
+		orderedIDs = append(orderedIDs, id)
+	}
+	slices.SortStableFunc(orderedIDs, func(a, b ServiceID) int {
+		return strings.Compare(a.String(), b.String())
+	})
+
+	items := make([]MetricAddr, 0, len(orderedIDs))
+	for _, id := range orderedIDs {
+		t := sid2targets[id]
+
+		targets := append([]string(nil), t.Targets...)
+		slices.Sort(targets)
+		targets = slices.Compact(targets)
+
+		it := MetricAddr{
+			Targets: targets,
+			Labels:  map[string]string{"job": id.String()},
+		}
+		for k, v := range t.Labels {
+			it.Labels[k] = v
+		}
+		items = append(items, it)
+	}
+
+	data, err := json.MarshalIndent(&items, "", "\t")
+	if err != nil {
+		return errors.AddStack(err)
+	}
+	if err := utils.WriteFile(inst.sdFile, data, 0644); err != nil {
+		return errors.AddStack(err)
+	}
+	return nil
+}
+
+// Prepare builds the Prometheus process command.
+func (inst *PrometheusInstance) Prepare(ctx context.Context) error {
+	if inst == nil {
+		return errors.New("prometheus instance is nil")
+	}
+	if inst.Dir == "" {
+		return errors.New("prometheus dir is empty")
+	}
+	if inst.BinPath == "" {
+		return errors.New("prometheus binary not resolved")
+	}
+	if err := utils.MkdirAll(inst.Dir, 0755); err != nil {
+		return errors.AddStack(err)
+	}
+
+	addr := utils.JoinHostPort(inst.Host, inst.Port)
+
+	tmpl := `
+global:
+  scrape_interval:     15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
+  evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
+  # scrape_timeout is set to the global default (10s).
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+  - static_configs:
+    - targets:
+      # - alertmanager:9093
+
+# Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+# A scrape configuration containing exactly one endpoint to scrape:
+# Here it's Prometheus itself.
+scrape_configs:
+  - job_name: 'cluster'
+    file_sd_configs:
+    - files:
+      - targets.json
+
+`
+
+	configPath := filepath.Join(inst.Dir, "prometheus.yml")
+	if err := utils.WriteFile(configPath, []byte(tmpl), 0644); err != nil {
+		return errors.AddStack(err)
+	}
+	inst.sdFile = filepath.Join(inst.Dir, "targets.json")
+	_ = utils.WriteFile(inst.sdFile, []byte("[]"), 0644)
+
+	args := []string{
+		fmt.Sprintf("--config.file=%s", configPath),
+		fmt.Sprintf("--web.external-url=http://%s", addr),
+		fmt.Sprintf("--web.listen-address=%s", utils.JoinHostPort(inst.Host, inst.Port)),
+		fmt.Sprintf("--storage.tsdb.path=%s", filepath.Join(inst.Dir, "data")),
+	}
+	inst.Proc = &cmdProcess{cmd: PrepareCommand(ctx, inst.BinPath, args, nil, inst.Dir)}
+	return nil
 }
 
 // GrafanaPlan is the service-specific plan for Grafana.
@@ -273,3 +432,64 @@ http_port = %d
 	info.Proc = &cmdProcess{cmd: PrepareCommand(ctx, inst.BinPath, args, nil, home)}
 	return nil
 }
+
+// NGMonitoringPlan is the service-specific plan for NG Monitoring.
+type NGMonitoringPlan struct {
+	PDAddrs []string
+}
+
+// NGMonitoringInstance represents a running ng-monitoring-server.
+type NGMonitoringInstance struct {
+	ProcessInfo
+
+	Plan NGMonitoringPlan
+}
+
+var _ Process = &NGMonitoringInstance{}
+
+// LogFile returns the log file path for the instance.
+func (inst *NGMonitoringInstance) LogFile() string {
+	return filepath.Join(inst.Dir, "ng-monitoring.log")
+}
+
+// Prepare builds the NG Monitoring process command.
+func (inst *NGMonitoringInstance) Prepare(ctx context.Context) error {
+	if inst == nil {
+		return errors.New("ng-monitoring instance is nil")
+	}
+	info := inst.Info()
+	if inst.Dir == "" {
+		return errors.New("ng-monitoring dir is empty")
+	}
+	if inst.BinPath == "" {
+		return errors.New("ng-monitoring binary not resolved")
+	}
+
+	if err := utils.MkdirAll(inst.Dir, 0755); err != nil {
+		return errors.AddStack(err)
+	}
+
+	binPath := inst.BinPath
+	if filepath.Base(binPath) != "ng-monitoring-server" {
+		if alt, ok := ResolveSiblingBinary(binPath, "ng-monitoring-server"); ok {
+			binPath = alt
+		} else {
+			return errors.Errorf("ng-monitoring-server not found near %s", inst.BinPath)
+		}
+	}
+
+	endpoints := append([]string(nil), inst.Plan.PDAddrs...)
+
+	addr := utils.JoinHostPort(inst.Host, inst.Port)
+	args := []string{
+		fmt.Sprintf("--pd.endpoints=%s", strings.Join(endpoints, ",")),
+		fmt.Sprintf("--address=%s", addr),
+		fmt.Sprintf("--advertise-address=%s", addr),
+		fmt.Sprintf("--storage.path=%s", filepath.Join(inst.Dir, "data")),
+		fmt.Sprintf("--log.path=%s", filepath.Join(inst.Dir, "logs")),
+	}
+
+	info.Proc = &cmdProcess{cmd: PrepareCommand(ctx, binPath, args, nil, inst.Dir)}
+	return nil
+}
+

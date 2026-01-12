@@ -33,6 +33,7 @@ Fight entropy. Leave the codebase better than you found it.
 - **DRY**: Don’t copy and paste large blocks of identical logic; wherever `for` loops/table-driven approaches/unified helpers can be used, duplication must be eliminated.
 - **No subset helpers**: If the functionality of `A()` is a subset of `B()` (and has almost no extra semantics), delete `A()` and standardize on `B()`.
 - **Keep component code cohesive**: Try to keep `tiflash.go`/`tidb.go`/`tikv.go` to one file each (extra `*_config.go` files are allowed). Avoid a scattered structure like “5 files each mixing tiflash/tidb/tikv”.
+- **Prefer a coarse-grained file layout**: In `components/playground/proc` and `components/playground/service`, prefer “`<component>.go` + optional `<component>_config.go` + a few cross-cutting files” over many tiny files. Avoid < 100 LOC files unless they are required (e.g. OS/build-tag specific files).
 - **Maintainable ordering**: Avoid manually writing and maintaining things like “service traversal order/priority lists”, which are easy to miss. Prefer deterministic ordering (e.g., sorting by key) or explicit dependencies (e.g., `StartAfter`).
 
 ### Concurrency Model (Actor)

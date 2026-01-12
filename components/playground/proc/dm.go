@@ -15,9 +15,13 @@ import (
 const (
 	// ServiceDMMaster is the service ID for DM-master.
 	ServiceDMMaster ServiceID = "dm-master"
+	// ServiceDMWorker is the service ID for DM-worker.
+	ServiceDMWorker ServiceID = "dm-worker"
 
 	// ComponentDMMaster is the repository component ID for DM-master.
 	ComponentDMMaster RepoComponentID = "dm-master"
+	// ComponentDMWorker is the repository component ID for DM-worker.
+	ComponentDMWorker RepoComponentID = "dm-worker"
 )
 
 // DMMasterPlan is the service-specific plan for DM-master.
@@ -33,6 +37,11 @@ type DMMemberPlan struct {
 	MasterAddr string // host:statusPort
 }
 
+// DMWorkerPlan is the service-specific plan for DM-worker.
+type DMWorkerPlan struct {
+	MasterAddrs []string // host:statusPort
+}
+
 // DMMaster represent a DM master instance.
 type DMMaster struct {
 	ProcessInfo
@@ -42,9 +51,19 @@ type DMMaster struct {
 var _ Process = &DMMaster{}
 var _ ReadyWaiter = &DMMaster{}
 
+// DMWorker represent a DM worker instance.
+type DMWorker struct {
+	ProcessInfo
+	Plan DMWorkerPlan
+}
+
+var _ Process = &DMWorker{}
+
 func init() {
 	RegisterComponentDisplayName(ComponentDMMaster, "DM-master")
 	RegisterServiceDisplayName(ServiceDMMaster, "DM-master")
+	RegisterComponentDisplayName(ComponentDMWorker, "DM-worker")
+	RegisterServiceDisplayName(ServiceDMWorker, "DM-worker")
 
 	registerPlannedProcessFactory(ServiceDMMaster, func(plan ServicePlan, info ProcessInfo, _ SharedOptions, _ string) (Process, error) {
 		if plan.DMMaster == nil {
@@ -55,6 +74,16 @@ func init() {
 			return nil, errors.Errorf("missing dm-master plan for %s", name)
 		}
 		return &DMMaster{Plan: *plan.DMMaster, ProcessInfo: info}, nil
+	})
+	registerPlannedProcessFactory(ServiceDMWorker, func(plan ServicePlan, info ProcessInfo, _ SharedOptions, _ string) (Process, error) {
+		if plan.DMWorker == nil {
+			name := info.Name()
+			if name == "" {
+				name = ServiceDMWorker.String()
+			}
+			return nil, errors.Errorf("missing dm-worker plan for %s", name)
+		}
+		return &DMWorker{Plan: *plan.DMWorker, ProcessInfo: info}, nil
 	})
 }
 
@@ -183,3 +212,33 @@ func (m *DMMaster) WaitReady(ctx context.Context) error {
 		}
 	}
 }
+
+// MasterAddrs return the master addresses.
+func (w *DMWorker) MasterAddrs() []string {
+	return append([]string(nil), w.Plan.MasterAddrs...)
+}
+
+// Prepare builds the DM-worker process command.
+func (w *DMWorker) Prepare(ctx context.Context) error {
+	info := w.Info()
+	args := []string{
+		fmt.Sprintf("--name=%s", info.Name()),
+		fmt.Sprintf("--worker-addr=%s", utils.JoinHostPort(w.Host, w.Port)),
+		fmt.Sprintf("--advertise-addr=%s", utils.JoinHostPort(AdvertiseHost(w.Host), w.Port)),
+		fmt.Sprintf("--join=%s", strings.Join(w.MasterAddrs(), ",")),
+		fmt.Sprintf("--log-file=%s", w.LogFile()),
+	}
+
+	if w.ConfigPath != "" {
+		args = append(args, fmt.Sprintf("--config=%s", w.ConfigPath))
+	}
+
+	info.Proc = &cmdProcess{cmd: PrepareCommand(ctx, w.BinPath, args, nil, w.Dir)}
+	return nil
+}
+
+// LogFile return the log file of the instance.
+func (w *DMWorker) LogFile() string {
+	return filepath.Join(w.Dir, "dm-worker.log")
+}
+

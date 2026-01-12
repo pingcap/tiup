@@ -28,13 +28,20 @@ import (
 const (
 	// ServicePump is the service ID for Pump.
 	ServicePump ServiceID = "pump"
+	// ServiceDrainer is the service ID for Drainer.
+	ServiceDrainer ServiceID = "drainer"
 
 	// ComponentPump is the repository component ID for Pump.
 	ComponentPump RepoComponentID = "pump"
+	// ComponentDrainer is the repository component ID for Drainer.
+	ComponentDrainer RepoComponentID = "drainer"
 )
 
 // PumpPlan is the service-specific plan for Pump.
 type PumpPlan struct{ PDAddrs []string }
+
+// DrainerPlan is the service-specific plan for Drainer.
+type DrainerPlan struct{ PDAddrs []string }
 
 // Pump represent a pump instance.
 type Pump struct {
@@ -45,9 +52,19 @@ type Pump struct {
 var _ Process = &Pump{}
 var _ ReadyWaiter = &Pump{}
 
+// Drainer represent a drainer instance.
+type Drainer struct {
+	ProcessInfo
+	Plan DrainerPlan
+}
+
+var _ Process = &Drainer{}
+
 func init() {
 	RegisterComponentDisplayName(ComponentPump, "Pump")
 	RegisterServiceDisplayName(ServicePump, "Pump")
+	RegisterComponentDisplayName(ComponentDrainer, "Drainer")
+	RegisterServiceDisplayName(ServiceDrainer, "Drainer")
 
 	registerPlannedProcessFactory(ServicePump, func(plan ServicePlan, info ProcessInfo, _ SharedOptions, _ string) (Process, error) {
 		if plan.Pump == nil {
@@ -58,6 +75,16 @@ func init() {
 			return nil, errors.Errorf("missing pump plan for %s", name)
 		}
 		return &Pump{Plan: *plan.Pump, ProcessInfo: info}, nil
+	})
+	registerPlannedProcessFactory(ServiceDrainer, func(plan ServicePlan, info ProcessInfo, _ SharedOptions, _ string) (Process, error) {
+		if plan.Drainer == nil {
+			name := info.Name()
+			if name == "" {
+				name = ServiceDrainer.String()
+			}
+			return nil, errors.Errorf("missing drainer plan for %s", name)
+		}
+		return &Drainer{Plan: *plan.Drainer, ProcessInfo: info}, nil
 	})
 }
 
@@ -167,3 +194,40 @@ func (p *Pump) Prepare(ctx context.Context) error {
 func (p *Pump) LogFile() string {
 	return filepath.Join(p.Dir, "pump.log")
 }
+
+// LogFile return the log file name.
+func (d *Drainer) LogFile() string {
+	return filepath.Join(d.Dir, "drainer.log")
+}
+
+// Addr return the address of Drainer.
+func (d *Drainer) Addr() string {
+	return utils.JoinHostPort(AdvertiseHost(d.Host), d.Port)
+}
+
+// Prepare builds the Drainer process command.
+func (d *Drainer) Prepare(ctx context.Context) error {
+	info := d.Info()
+	endpoints := make([]string, 0, len(d.Plan.PDAddrs))
+	for _, addr := range d.Plan.PDAddrs {
+		if addr == "" {
+			continue
+		}
+		endpoints = append(endpoints, "http://"+addr)
+	}
+
+	args := []string{
+		fmt.Sprintf("--node-id=%s", info.Name()),
+		fmt.Sprintf("--addr=%s", utils.JoinHostPort(d.Host, d.Port)),
+		fmt.Sprintf("--advertise-addr=%s", utils.JoinHostPort(AdvertiseHost(d.Host), d.Port)),
+		fmt.Sprintf("--pd-urls=%s", strings.Join(endpoints, ",")),
+		fmt.Sprintf("--log-file=%s", d.LogFile()),
+	}
+	if d.ConfigPath != "" {
+		args = append(args, fmt.Sprintf("--config=%s", d.ConfigPath))
+	}
+
+	info.Proc = &cmdProcess{cmd: PrepareCommand(ctx, d.BinPath, args, nil, d.Dir)}
+	return nil
+}
+
