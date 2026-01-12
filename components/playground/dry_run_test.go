@@ -42,6 +42,14 @@ func TestWriteDryRun_Text(t *testing.T) {
 				StartAfterServices: []string{proc.ServiceTiKV.String()},
 				Shared:             ServiceSharedPlan{Dir: "/data/pd-0", Host: "127.0.0.1", Port: 2380, StatusPort: 2379},
 			},
+			{
+				Name:            "tidb-0",
+				ServiceID:       proc.ServiceTiDB.String(),
+				ComponentID:     proc.ComponentTiDB.String(),
+				ResolvedVersion: "v1.0.0",
+				BinPath:         "/usr/local/bin/tidb-server",
+				Shared:          ServiceSharedPlan{Dir: "/data/tidb-0", Host: "127.0.0.1", Port: 4000, StatusPort: 10080},
+			},
 		},
 	}
 
@@ -53,14 +61,15 @@ func TestWriteDryRun_Text(t *testing.T) {
 	out := buf.String()
 	for _, want := range []string{
 		"==> Download Packages:\n",
-		"  + tidb@v1.0.0 (missing_binary)\n",
-		"    /home/tidb-server\n",
+		"  + tidb@v1.0.0\n",
 		"==> Reuse Packages:\n",
 		"  + pd@v1.0.0\n",
 		"==> Start Services:\n",
 		"  + pd-0@v1.0.0\n",
 		"    127.0.0.1:2380,2379(status)\n",
 		"    Start after: tikv\n",
+		"  + tidb-0@v1.0.0 (use /usr/local/bin/tidb-server)\n",
+		"    127.0.0.1:4000,10080(status)\n",
 	} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("dry-run text missing %q, got:\n%s", want, out)
