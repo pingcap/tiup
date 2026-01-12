@@ -95,6 +95,12 @@ func TestWriteDryRun_Text_ShowsComponentHintWhenDifferent(t *testing.T) {
 	if got := buf.String(); !strings.Contains(got, "  + ng-monitoring-0@v1.0.0 (prometheus)\n") {
 		t.Fatalf("dry-run text missing component hint, got:\n%s", got)
 	}
+	if got := buf.String(); !strings.Contains(got, "    127.0.0.1:12020\n") {
+		t.Fatalf("dry-run text missing address, got:\n%s", got)
+	}
+	if got := buf.String(); strings.Contains(got, "(status)") {
+		t.Fatalf("dry-run text should not include status port suffix when the ports are equal, got:\n%s", got)
+	}
 }
 
 func TestWriteDryRun_JSON(t *testing.T) {

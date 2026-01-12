@@ -145,12 +145,8 @@ func renderDryRunText(out io.Writer, plan BootPlan) string {
 			host := strings.TrimSpace(s.Shared.Host)
 			if host != "" && s.Shared.Port > 0 {
 				addr := utils.JoinHostPort(host, s.Shared.Port)
-				if s.Shared.StatusPort > 0 {
-					if s.Shared.StatusPort != s.Shared.Port {
-						addr = fmt.Sprintf("%s,%d(status)", addr, s.Shared.StatusPort)
-					} else {
-						addr = fmt.Sprintf("%s(status)", addr)
-					}
+				if s.Shared.StatusPort > 0 && s.Shared.StatusPort != s.Shared.Port {
+					addr = fmt.Sprintf("%s,%d(status)", addr, s.Shared.StatusPort)
 				}
 				tokens.Fprintf(&b, "    [dark_gray]%s[reset]\n", addr)
 			}
