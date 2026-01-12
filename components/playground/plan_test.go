@@ -263,3 +263,53 @@ func TestBuildBootPlan_Downloads_SkipsWhenUserProvidesBinPath(t *testing.T) {
 		}
 	}
 }
+
+func TestBuildBootPlan_StartAfterServices_FiltersUnplannedDependencies(t *testing.T) {
+	opts := &BootOptions{
+		ShOpt: proc.SharedOptions{
+			Mode:   proc.ModeNormal,
+			PDMode: "pd",
+		},
+		Version: "nightly",
+		Host:    "127.0.0.1",
+		Monitor: false,
+	}
+
+	fs := newTestFlagSet()
+	registerServiceFlags(fs, opts)
+	if err := applyServiceDefaults(fs, opts); err != nil {
+		t.Fatalf("applyServiceDefaults: %v", err)
+	}
+
+	plan, err := BuildBootPlan(opts, bootPlannerConfig{
+		dataDir:            "/tmp/tiup-playground-test-plan",
+		portConflictPolicy: PortConflictNone,
+		advertiseHost:      func(listen string) string { return listen },
+		componentSource:    fakeComponentSource{},
+	})
+	if err != nil {
+		t.Fatalf("BuildBootPlan: %v", err)
+	}
+
+	var deps []string
+	for _, svc := range plan.Services {
+		if svc.ServiceID == proc.ServiceTiKV.String() {
+			deps = svc.StartAfterServices
+			break
+		}
+	}
+	if deps == nil {
+		t.Fatalf("missing %s in plan", proc.ServiceTiKV)
+	}
+
+	// PD microservices are not planned in PDMode=pd, so they should not appear in
+	// start_after.
+	for _, sid := range []proc.ServiceID{proc.ServicePDAPI, proc.ServicePDTSO} {
+		if slices.Contains(deps, sid.String()) {
+			t.Fatalf("unexpected %s in %s start_after: %v", sid, proc.ServiceTiKV, deps)
+		}
+	}
+	if !slices.Contains(deps, proc.ServicePD.String()) {
+		t.Fatalf("expected %s in %s start_after: %v", proc.ServicePD, proc.ServiceTiKV, deps)
+	}
+}

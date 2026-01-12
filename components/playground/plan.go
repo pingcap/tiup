@@ -322,6 +322,13 @@ func BuildBootPlan(options *BootOptions, cfg bootPlannerConfig) (BootPlan, error
 			if dep == "" {
 				continue
 			}
+			// Only include dependencies that are actually planned (num > 0).
+			// Executor/runtime already treats missing deps as absent, so keeping
+			// them here only adds noise to dry-run output without affecting
+			// execution semantics.
+			if baseConfigs[dep].Num <= 0 {
+				continue
+			}
 			startAfter = append(startAfter, dep.String())
 		}
 		slices.Sort(startAfter)
