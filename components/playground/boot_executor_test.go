@@ -5,11 +5,13 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
 	"github.com/pingcap/tiup/components/playground/proc"
 	tuiv2output "github.com/pingcap/tiup/pkg/tuiv2/output"
+	"github.com/stretchr/testify/require"
 )
 
 type recordingExecutorSource struct {
@@ -405,4 +407,33 @@ func TestBootExecutor_ExecuteBootPlan_DownloadPreRunAddProcsStart(t *testing.T) 
 	}
 	waitMarker(promBin + ".started")
 	waitMarker(tiproxyBin + ".started")
+}
+
+func TestBootExecutor_PreRun_HandlersRunOnceInSortedOrder(t *testing.T) {
+	oldHandlers := servicePreRunHandlers
+	t.Cleanup(func() { servicePreRunHandlers = oldHandlers })
+
+	var got []string
+	servicePreRunHandlers = map[proc.ServiceID]preRunHandler{
+		"b": func(_ context.Context, _ BootPlan, services []ServicePlan) error {
+			got = append(got, "b:"+strconv.Itoa(len(services)))
+			return nil
+		},
+		"a": func(_ context.Context, _ BootPlan, services []ServicePlan) error {
+			got = append(got, "a:"+strconv.Itoa(len(services)))
+			return nil
+		},
+	}
+
+	executor := newBootExecutor(nil, nil)
+	plan := BootPlan{
+		Shared: proc.SharedOptions{Mode: proc.ModeNormal},
+		Services: []ServicePlan{
+			{ServiceID: "b"},
+			{ServiceID: "a"},
+			{ServiceID: "a"},
+		},
+	}
+	require.NoError(t, executor.PreRun(context.Background(), plan))
+	require.Equal(t, []string{"a:2", "b:1"}, got)
 }

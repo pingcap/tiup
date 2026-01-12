@@ -23,10 +23,10 @@ func newBootExecutor(pg *Playground, src ComponentSource) *bootExecutor {
 	return &bootExecutor{pg: pg, src: src}
 }
 
-type preRunHandler func(ctx context.Context, plan BootPlan) error
+type preRunHandler func(ctx context.Context, plan BootPlan, services []ServicePlan) error
 
-var servicePreRunHandlers = map[string]preRunHandler{
-	proc.ServiceTiProxy.String(): func(_ context.Context, plan BootPlan) error {
+var servicePreRunHandlers = map[proc.ServiceID]preRunHandler{
+	proc.ServiceTiProxy: func(_ context.Context, plan BootPlan, _ []ServicePlan) error {
 		return proc.GenTiProxySessionCerts(plan.DataDir)
 	},
 }
@@ -58,30 +58,35 @@ func (e *bootExecutor) PreRun(ctx context.Context, plan BootPlan) error {
 		return err
 	}
 
-	enabledServices := make(map[string]struct{}, len(plan.Services))
+	enabledServices := make(map[proc.ServiceID][]ServicePlan, len(plan.Services))
 	for _, svc := range plan.Services {
-		if id := strings.TrimSpace(svc.ServiceID); id != "" {
-			enabledServices[id] = struct{}{}
+		id := proc.ServiceID(strings.TrimSpace(svc.ServiceID))
+		if id == "" {
+			continue
 		}
+		enabledServices[id] = append(enabledServices[id], svc)
 	}
 
-	handlerKeys := make([]string, 0, len(servicePreRunHandlers))
+	handlerKeys := make([]proc.ServiceID, 0, len(servicePreRunHandlers))
 	for serviceID := range servicePreRunHandlers {
 		if serviceID != "" {
 			handlerKeys = append(handlerKeys, serviceID)
 		}
 	}
-	slices.Sort(handlerKeys)
+	slices.SortFunc(handlerKeys, func(a, b proc.ServiceID) int {
+		return strings.Compare(a.String(), b.String())
+	})
 
 	for _, serviceID := range handlerKeys {
-		if _, ok := enabledServices[serviceID]; !ok {
+		servicePlans := enabledServices[serviceID]
+		if len(servicePlans) == 0 {
 			continue
 		}
 		h := servicePreRunHandlers[serviceID]
 		if h == nil {
 			continue
 		}
-		if err := h(ctx, plan); err != nil {
+		if err := h(ctx, plan, servicePlans); err != nil {
 			return err
 		}
 	}

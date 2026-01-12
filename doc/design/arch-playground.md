@@ -100,19 +100,27 @@ Key steps in `components/playground/boot.go:bootCluster` (in order):
 1. Normalize paths: `normalizeBootOptionPaths` (convert `*.ConfigPath` to absolute paths).
 2. Start controller: `p.startController()`.
 3. Set booting state: `setControllerBooting(true)`.
-4. Validate: `validateBootOptions` (e.g. PD count; S3 preflight for CSE/Disagg/NG, etc.).
-5. Plan: `buildBootPlan(options)` → `planProcs` (iterate `service.AllSpecs()`, decide enabled/count/critical via `Catalog`, then topo-sort).
+4. Validate (pure): `ValidateBootOptionsPure` (e.g. PD count; mode/version gates; CSE endpoint parsing; etc.).
+5. Plan: `planProcs(options)` + `buildBootPlanWithProcs(...)` to produce a `BootPlan`.
+   - Port allocation happens in planning (policy: `alloc_free` for real runs; `none` for tests/dry-run determinism).
+   - Version resolution and “needs download?” decisions are done via `ComponentSource` and saved into `plan.Downloads`.
 6. Save `bootBaseConfigs` (default config snapshots for runtime scale-out).
-7. Create instance objects without starting: `addPlannedProcs` (send `addProcRequest` per planned instance; `spec.NewProc(...)` creates `proc.Process`; create `dataDir/<service>-<id>` directory).
-8. Preload binaries: `binaryPreloader` (deduplicate by `component+constraint`, then ResolveVersion + EnsureBinary ahead of time).
-9. Start instances: `bootStarter.startPlanned` (honor `Spec.StartAfter`, send `startProcRequest` via controller).
-10. Wait for critical ready: `bootStarter.waitRequiredReady()`.
-11. Close the “Starting instances” progress group and print Cluster info.
-12. Write `dsn` file: `dumpDSN(dataDir/dsn, ...)`.
-13. Generate Prometheus targets: `renderSDFile()` (write `prometheus-*/targets.json`).
-14. Write monitor topology into PD etcd: `updateMonitorTopology`.
-15. Mark booted: `setControllerBooted(true)` (after this, scale-out uses join logic).
-16. Start local HTTP server: `listenAndServeHTTP()`.
+7. Execute plan (no more flag/env reads in executor):
+   - `bootExecutor.Download(plan)`: install missing components from `plan.Downloads` (can be canceled via boot ctx).
+   - `bootExecutor.PreRun(plan)`: execution-time preflight (e.g. S3 bucket check/create in CSE/Disagg/NextGen)
+     and per-service pre-run hooks (e.g. TiProxy session cert generation).
+   - `bootExecutor.AddProcs(plan)`: create `proc.Process` instances from `plan.Services` and add them into controller state.
+8. Start instances: `bootStarter.startPlanned` (honor `Spec.StartAfter`, send `startProcRequest` via controller).
+9. Wait for critical ready: `bootStarter.waitRequiredReady()`.
+10. Close the “Starting instances” progress group and print Cluster info.
+11. Write `dsn` file: `dumpDSN(dataDir/dsn, ...)`.
+12. Generate Prometheus targets: `renderSDFile()` (write `prometheus-*/targets.json`).
+13. Write monitor topology into PD etcd: `updateMonitorTopology`.
+14. Mark booted: `setControllerBooted(true)` (after this, scale-out uses join logic).
+15. Start local HTTP server: `listenAndServeHTTP()`.
+
+Dry-run entry: `components/playground/main.go` uses the same planner to produce a `BootPlan` and renders it
+(`--dry-run-output=text|json`), without entering the execute stages above.
 
 ## 4. Runtime Control Plane (HTTP + Command)
 
