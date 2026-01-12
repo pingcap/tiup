@@ -65,8 +65,8 @@ func TestBuildBootPlan_DefaultNightly_NoLocalComponents(t *testing.T) {
 	require.Equal(t, "127.0.0.1", plan.Services[0].Shared.Host)
 	require.Equal(t, 2380, plan.Services[0].Shared.Port)
 	require.Equal(t, 2379, plan.Services[0].Shared.StatusPort)
-	require.Equal(t, 2380, plan.Services[0].Shared.Ports["port"])
-	require.Equal(t, 2379, plan.Services[0].Shared.Ports["statusPort"])
+	require.Equal(t, 2380, plan.Services[0].Shared.Ports[proc.PortNamePort])
+	require.Equal(t, 2379, plan.Services[0].Shared.Ports[proc.PortNameStatusPort])
 	require.NotNil(t, plan.Services[0].PD)
 	require.Len(t, plan.Services[0].PD.InitialCluster, 1)
 	require.Equal(t, "pd-0", plan.Services[0].PD.InitialCluster[0].Name)
@@ -95,8 +95,8 @@ func TestBuildBootPlan_DefaultNightly_NoLocalComponents(t *testing.T) {
 	require.Equal(t, []string{proc.ServicePD.String(), proc.ServiceTiKV.String()}, plan.Services[2].StartAfterServices)
 	require.Equal(t, 4000, plan.Services[2].Shared.Port)
 	require.Equal(t, 10080, plan.Services[2].Shared.StatusPort)
-	require.Equal(t, 4000, plan.Services[2].Shared.Ports["port"])
-	require.Equal(t, 10080, plan.Services[2].Shared.Ports["statusPort"])
+	require.Equal(t, 4000, plan.Services[2].Shared.Ports[proc.PortNamePort])
+	require.Equal(t, 10080, plan.Services[2].Shared.Ports[proc.PortNameStatusPort])
 	require.NotNil(t, plan.Services[2].TiDB)
 	require.Equal(t, []string{"127.0.0.1:2379"}, plan.Services[2].TiDB.PDAddrs)
 	require.False(t, plan.Services[2].TiDB.EnableBinlog)
@@ -123,8 +123,8 @@ func TestBuildBootPlan_DefaultNightly_NoLocalComponents(t *testing.T) {
 	require.Equal(t, []string{}, plan.Services[4].StartAfterServices)
 	require.Equal(t, 9090, plan.Services[4].Shared.Port)
 	require.Equal(t, 9090, plan.Services[4].Shared.StatusPort)
-	require.Equal(t, 9090, plan.Services[4].Shared.Ports["port"])
-	require.Equal(t, 9090, plan.Services[4].Shared.Ports["statusPort"])
+	require.Equal(t, 9090, plan.Services[4].Shared.Ports[proc.PortNamePort])
+	require.Equal(t, 9090, plan.Services[4].Shared.Ports[proc.PortNameStatusPort])
 
 	// grafana-0
 	require.Equal(t, "grafana-0", plan.Services[5].Name)
@@ -146,8 +146,8 @@ func TestBuildBootPlan_DefaultNightly_NoLocalComponents(t *testing.T) {
 	require.Equal(t, []string{proc.ServicePD.String(), proc.ServiceTiKV.String()}, plan.Services[6].StartAfterServices)
 	require.Equal(t, 8123, plan.Services[6].Shared.Port)
 	require.Equal(t, 8234, plan.Services[6].Shared.StatusPort)
-	require.Equal(t, 8123, plan.Services[6].Shared.Ports["port"])
-	require.Equal(t, 8234, plan.Services[6].Shared.Ports["statusPort"])
+	require.Equal(t, 8123, plan.Services[6].Shared.Ports[proc.PortNamePort])
+	require.Equal(t, 8234, plan.Services[6].Shared.Ports[proc.PortNameStatusPort])
 	require.Equal(t, 3930, plan.Services[6].Shared.Ports["servicePort"])
 	require.Equal(t, 9100, plan.Services[6].Shared.Ports["tcpPort"])
 	require.Equal(t, 20170, plan.Services[6].Shared.Ports["proxyPort"])
@@ -589,8 +589,8 @@ func TestBuildBootPlan_PDModeMS_PlansMicroservicePortsWithStatusAlias(t *testing
 	}
 	require.NotNil(t, tso)
 	require.Equal(t, tso.Shared.StatusPort, tso.Shared.Port)
-	require.Equal(t, tso.Shared.StatusPort, tso.Shared.Ports["statusPort"])
-	require.Equal(t, tso.Shared.Port, tso.Shared.Ports["port"])
+	require.Equal(t, tso.Shared.StatusPort, tso.Shared.Ports[proc.PortNameStatusPort])
+	require.Equal(t, tso.Shared.Port, tso.Shared.Ports[proc.PortNamePort])
 }
 
 func TestPDAPIDefaults_OverridePD(t *testing.T) {

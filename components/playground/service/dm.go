@@ -26,8 +26,8 @@ func init() {
 			AllowModifyPort: true,
 			DefaultPort:     dmStatusPortBase,
 			Ports: []PortSpec{
-				{Name: "port", Base: dmPeerPortBase},
-				{Name: "statusPort", Base: dmStatusPortBase, FromConfigPort: true},
+				{Name: proc.PortNamePort, Base: dmPeerPortBase},
+				{Name: proc.PortNameStatusPort, Base: dmStatusPortBase, FromConfigPort: true},
 			},
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
@@ -65,7 +65,7 @@ func init() {
 			AllowModifyPort: true,
 			DefaultPort:     dmWorkerPortBase,
 			Ports: []PortSpec{
-				{Name: "port", Base: dmWorkerPortBase, FromConfigPort: true},
+				{Name: proc.PortNamePort, Base: dmWorkerPortBase, FromConfigPort: true},
 			},
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,

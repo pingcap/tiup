@@ -22,8 +22,8 @@ func init() {
 			AllowModifyNum: true,
 			DefaultPort:    pumpPortBase,
 			Ports: []PortSpec{
-				{Name: "port", Base: pumpPortBase},
-				{Name: "statusPort", AliasOf: "port"},
+				{Name: proc.PortNamePort, Base: pumpPortBase},
+				{Name: proc.PortNameStatusPort, AliasOf: proc.PortNamePort},
 			},
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
@@ -57,8 +57,8 @@ func init() {
 			AllowModifyNum: true,
 			DefaultPort:    drainerPortBase,
 			Ports: []PortSpec{
-				{Name: "port", Base: drainerPortBase},
-				{Name: "statusPort", AliasOf: "port"},
+				{Name: proc.PortNamePort, Base: drainerPortBase},
+				{Name: proc.PortNameStatusPort, AliasOf: proc.PortNamePort},
 			},
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,

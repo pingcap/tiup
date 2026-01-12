@@ -19,8 +19,8 @@ func init() {
 			AllowModifyPort: true,
 			DefaultPort:     ticdcPortBase,
 			Ports: []PortSpec{
-				{Name: "port", Base: ticdcPortBase, FromConfigPort: true},
-				{Name: "statusPort", AliasOf: "port"},
+				{Name: proc.PortNamePort, Base: ticdcPortBase, FromConfigPort: true},
+				{Name: proc.PortNameStatusPort, AliasOf: proc.PortNamePort},
 			},
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
@@ -56,8 +56,8 @@ func init() {
 			AllowModifyVersion: true,
 			DefaultPort:        tikvcdcPortBase,
 			Ports: []PortSpec{
-				{Name: "port", Base: tikvcdcPortBase},
-				{Name: "statusPort", AliasOf: "port"},
+				{Name: proc.PortNamePort, Base: tikvcdcPortBase},
+				{Name: proc.PortNameStatusPort, AliasOf: proc.PortNamePort},
 			},
 			DefaultNum:    func(_ BootContext) int { return 0 },
 			IsEnabled:     func(_ BootContext) bool { return true },

@@ -20,8 +20,8 @@ const (
 )
 
 var tiflashPortSpecs = []PortSpec{
-	{Name: "port", Base: tiflashHTTPPortBase},
-	{Name: "statusPort", Base: tiflashStatusPortBase},
+	{Name: proc.PortNamePort, Base: tiflashHTTPPortBase},
+	{Name: proc.PortNameStatusPort, Base: tiflashStatusPortBase},
 	{Name: "tcpPort", Base: tiflashTCPPortBase},
 	{Name: "servicePort", Base: tiflashServicePortBase},
 	{Name: "proxyPort", Base: tiflashProxyPortBase},

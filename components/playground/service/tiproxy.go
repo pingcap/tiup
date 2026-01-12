@@ -20,8 +20,8 @@ func init() {
 			AllowModifyPort: true,
 			DefaultPort:     6000,
 			Ports: []PortSpec{
-				{Name: "port", Base: 6000, FromConfigPort: true},
-				{Name: "statusPort", Base: tiproxyStatusPortBase},
+				{Name: proc.PortNamePort, Base: 6000, FromConfigPort: true},
+				{Name: proc.PortNameStatusPort, Base: tiproxyStatusPortBase},
 			},
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,

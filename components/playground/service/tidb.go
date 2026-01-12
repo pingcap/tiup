@@ -37,8 +37,8 @@ func init() {
 			AllowModifyPort: true,
 			DefaultPort:     tidbSystemPortBase,
 			Ports: []PortSpec{
-				{Name: "port", Base: tidbSystemPortBase, FromConfigPort: true},
-				{Name: "statusPort", Base: tidbStatusPortBase, Host: "0.0.0.0"},
+				{Name: proc.PortNamePort, Base: tidbSystemPortBase, FromConfigPort: true},
+				{Name: proc.PortNameStatusPort, Base: tidbStatusPortBase, Host: "0.0.0.0"},
 			},
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
@@ -94,8 +94,8 @@ func init() {
 			AllowModifyPort: true,
 			DefaultPort:     tidbPortBase,
 			Ports: []PortSpec{
-				{Name: "port", Base: tidbPortBase, FromConfigPort: true},
-				{Name: "statusPort", Base: tidbStatusPortBase, Host: "0.0.0.0"},
+				{Name: proc.PortNamePort, Base: tidbPortBase, FromConfigPort: true},
+				{Name: proc.PortNameStatusPort, Base: tidbStatusPortBase, Host: "0.0.0.0"},
 			},
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,

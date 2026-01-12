@@ -25,8 +25,8 @@ func init() {
 			AllowModifyPort: true,
 			DefaultPort:     tikvPortBase,
 			Ports: []PortSpec{
-				{Name: "port", Base: tikvPortBase, FromConfigPort: true},
-				{Name: "statusPort", Base: tikvStatusPortBase},
+				{Name: proc.PortNamePort, Base: tikvPortBase, FromConfigPort: true},
+				{Name: proc.PortNameStatusPort, Base: tikvStatusPortBase},
 			},
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
@@ -76,7 +76,7 @@ func init() {
 			AllowModifyPort: true,
 			DefaultPort:     tikvWorkerPortBase,
 			Ports: []PortSpec{
-				{Name: "port", Base: tikvWorkerPortBase, FromConfigPort: true},
+				{Name: proc.PortNamePort, Base: tikvWorkerPortBase, FromConfigPort: true},
 			},
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,

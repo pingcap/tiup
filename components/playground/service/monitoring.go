@@ -28,8 +28,8 @@ func init() {
 			VersionBind:    stripNextGenVersionSuffix,
 			HideInProgress: true,
 			Ports: []PortSpec{
-				{Name: "port", Base: prometheusPortBase, FromConfigPort: true},
-				{Name: "statusPort", AliasOf: "port"},
+				{Name: proc.PortNamePort, Base: prometheusPortBase, FromConfigPort: true},
+				{Name: proc.PortNameStatusPort, AliasOf: proc.PortNamePort},
 			},
 		},
 		NewProc: func(rt ControllerRuntime, params NewProcParams) (proc.Process, error) {
@@ -67,7 +67,7 @@ func init() {
 			VersionBind:    stripNextGenVersionSuffix,
 			HideInProgress: true,
 			Ports: []PortSpec{
-				{Name: "port", Base: grafanaPortBase, FromConfigPort: true},
+				{Name: proc.PortNamePort, Base: grafanaPortBase, FromConfigPort: true},
 			},
 		},
 		StartAfter: []proc.ServiceID{
@@ -135,8 +135,8 @@ func init() {
 			VersionBind:    stripNextGenVersionSuffix,
 			HideInProgress: true,
 			Ports: []PortSpec{
-				{Name: "port", Base: ngMonitoringPortBase, FromConfigPort: true},
-				{Name: "statusPort", AliasOf: "port"},
+				{Name: proc.PortNamePort, Base: ngMonitoringPortBase, FromConfigPort: true},
+				{Name: proc.PortNameStatusPort, AliasOf: proc.PortNamePort},
 			},
 		},
 		StartAfter: []proc.ServiceID{

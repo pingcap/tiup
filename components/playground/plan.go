@@ -688,10 +688,10 @@ func fillPlannedPorts(alloc pgservice.PortAllocator, cfg proc.Config, plan *proc
 	}
 
 	plan.Shared.Ports = ports
-	if v, ok := ports["port"]; ok {
+	if v, ok := ports[proc.PortNamePort]; ok {
 		plan.Shared.Port = v
 	}
-	if v, ok := ports["statusPort"]; ok {
+	if v, ok := ports[proc.PortNameStatusPort]; ok {
 		plan.Shared.StatusPort = v
 	}
 	return nil

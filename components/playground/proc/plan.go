@@ -45,6 +45,15 @@ type ServicePlan struct {
 	DebugConstraint string
 }
 
+const (
+	// PortNamePort is the standard key for the main listen port in
+	// ServiceSharedPlan.Ports.
+	PortNamePort = "port"
+	// PortNameStatusPort is the standard key for the status/metrics port in
+	// ServiceSharedPlan.Ports.
+	PortNameStatusPort = "statusPort"
+)
+
 // ServiceSharedPlan contains common, low-level per-instance inputs.
 type ServiceSharedPlan struct {
 	Dir        string

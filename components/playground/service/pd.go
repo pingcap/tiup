@@ -16,13 +16,13 @@ const (
 )
 
 var pdPortSpecs = []PortSpec{
-	{Name: "port", Base: pdPeerPortBase},
-	{Name: "statusPort", Base: pdStatusPortBase, FromConfigPort: true},
+	{Name: proc.PortNamePort, Base: pdPeerPortBase},
+	{Name: proc.PortNameStatusPort, Base: pdStatusPortBase, FromConfigPort: true},
 }
 
 var pdMicroservicePortSpecs = []PortSpec{
-	{Name: "statusPort", Base: pdStatusPortBase},
-	{Name: "port", AliasOf: "statusPort"},
+	{Name: proc.PortNameStatusPort, Base: pdStatusPortBase},
+	{Name: proc.PortNamePort, AliasOf: proc.PortNameStatusPort},
 }
 
 func init() {
