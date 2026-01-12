@@ -3,7 +3,6 @@ package proc
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -38,22 +37,6 @@ func (inst *NGMonitoringInstance) LogFile() string {
 	return filepath.Join(inst.Dir, "ng-monitoring.log")
 }
 
-func resolveSiblingBinary(baseBinPath, want string) (string, bool) {
-	dir := filepath.Dir(baseBinPath)
-	for i := 0; i < 4; i++ {
-		path := filepath.Join(dir, want)
-		if _, err := os.Stat(path); err == nil {
-			return path, true
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			break
-		}
-		dir = parent
-	}
-	return filepath.Join(filepath.Dir(baseBinPath), want), false
-}
-
 // Prepare builds the NG Monitoring process command.
 func (inst *NGMonitoringInstance) Prepare(ctx context.Context) error {
 	if inst == nil {
@@ -73,7 +56,7 @@ func (inst *NGMonitoringInstance) Prepare(ctx context.Context) error {
 
 	binPath := inst.BinPath
 	if filepath.Base(binPath) != "ng-monitoring-server" {
-		if alt, ok := resolveSiblingBinary(binPath, "ng-monitoring-server"); ok {
+		if alt, ok := ResolveSiblingBinary(binPath, "ng-monitoring-server"); ok {
 			binPath = alt
 		} else {
 			return errors.Errorf("ng-monitoring-server not found near %s", inst.BinPath)

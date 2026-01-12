@@ -1,7 +1,6 @@
 package main
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -31,22 +30,6 @@ func (s *envComponentSource) ResolveVersion(component, constraint string) (strin
 	return v.String(), nil
 }
 
-func resolveSiblingBinaryPath(baseBinPath, want string) (string, bool) {
-	dir := filepath.Dir(baseBinPath)
-	for i := 0; i < 4; i++ {
-		path := filepath.Join(dir, want)
-		if _, err := os.Stat(path); err == nil {
-			return path, true
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			break
-		}
-		dir = parent
-	}
-	return filepath.Join(filepath.Dir(baseBinPath), want), false
-}
-
 func requiredBinaryPathForService(serviceID proc.ServiceID, baseBinPath string) string {
 	baseBinPath = strings.TrimSpace(baseBinPath)
 	if baseBinPath == "" {
@@ -60,7 +43,7 @@ func requiredBinaryPathForService(serviceID proc.ServiceID, baseBinPath string) 
 		if filepath.Base(baseBinPath) == "ng-monitoring-server" {
 			return baseBinPath
 		}
-		path, _ := resolveSiblingBinaryPath(baseBinPath, "ng-monitoring-server")
+		path, _ := proc.ResolveSiblingBinary(baseBinPath, "ng-monitoring-server")
 		return path
 	default:
 		return baseBinPath
