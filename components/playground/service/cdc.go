@@ -13,11 +13,15 @@ func init() {
 	MustRegister(Spec{
 		ServiceID: proc.ServiceTiCDC,
 		Catalog: Catalog{
-			FlagPrefix:         "ticdc",
-			AllowModifyNum:     true,
-			AllowModifyHost:    true,
-			AllowModifyPort:    true,
-			DefaultPort:        ticdcPortBase,
+			FlagPrefix:      "ticdc",
+			AllowModifyNum:  true,
+			AllowModifyHost: true,
+			AllowModifyPort: true,
+			DefaultPort:     ticdcPortBase,
+			Ports: []PortSpec{
+				{Name: "port", Base: ticdcPortBase, FromConfigPort: true},
+				{Name: "statusPort", AliasOf: "port"},
+			},
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
 			DefaultNum:         func(_ BootContext) int { return 0 },
@@ -29,21 +33,8 @@ func init() {
 			proc.ServicePDAPI,
 		},
 		NewProc: newTiCDCInstance,
-		PlanInstance: func(_ BootContext, cfg proc.Config, alloc PortAllocator, plan *proc.ServicePlan) error {
-			host := plan.Shared.Host
-
-			portBase := ticdcPortBase
-			if cfg.Port > 0 {
-				portBase = cfg.Port
-			}
-			port, err := alloc(host, portBase)
-			if err != nil {
-				return err
-			}
-
+		PlanInstance: func(_ BootContext, _ proc.Config, plan *proc.ServicePlan) error {
 			plan.ComponentID = proc.ComponentCDC.String()
-			plan.Shared.Port = port
-			plan.Shared.StatusPort = port
 			return nil
 		},
 		FillServicePlans: func(_ BootContext, _ map[proc.ServiceID]proc.Config, byService map[proc.ServiceID][]*proc.ServicePlan, advertise func(listen string) string, plans []*proc.ServicePlan) error {
@@ -64,26 +55,21 @@ func init() {
 			AllowModifyBinPath: true,
 			AllowModifyVersion: true,
 			DefaultPort:        tikvcdcPortBase,
-			DefaultNum:         func(_ BootContext) int { return 0 },
-			IsEnabled:          func(_ BootContext) bool { return true },
-			AllowScaleOut:      true,
+			Ports: []PortSpec{
+				{Name: "port", Base: tikvcdcPortBase},
+				{Name: "statusPort", AliasOf: "port"},
+			},
+			DefaultNum:    func(_ BootContext) int { return 0 },
+			IsEnabled:     func(_ BootContext) bool { return true },
+			AllowScaleOut: true,
 		},
 		StartAfter: []proc.ServiceID{
 			proc.ServicePD,
 			proc.ServicePDAPI,
 		},
 		NewProc: newTiKVCDCInstance,
-		PlanInstance: func(_ BootContext, _ proc.Config, alloc PortAllocator, plan *proc.ServicePlan) error {
-			host := plan.Shared.Host
-
-			port, err := alloc(host, tikvcdcPortBase)
-			if err != nil {
-				return err
-			}
-
+		PlanInstance: func(_ BootContext, _ proc.Config, plan *proc.ServicePlan) error {
 			plan.ComponentID = proc.ComponentTiKVCDC.String()
-			plan.Shared.Port = port
-			plan.Shared.StatusPort = port
 			return nil
 		},
 		FillServicePlans: func(_ BootContext, _ map[proc.ServiceID]proc.Config, byService map[proc.ServiceID][]*proc.ServicePlan, advertise func(listen string) string, plans []*proc.ServicePlan) error {

@@ -52,6 +52,13 @@ type ServiceSharedPlan struct {
 	Port       int
 	StatusPort int
 
+	// Ports holds additional named ports allocated during planning.
+	//
+	// It is a low-level, per-instance detail: planner fills it based on service
+	// catalog definitions and executor/proc implementations may read it when a
+	// service needs more than the standard Port/StatusPort pair (e.g. TiFlash).
+	Ports map[string]int `json:",omitempty"`
+
 	ConfigPath string
 	UpTimeout  int
 }

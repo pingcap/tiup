@@ -20,11 +20,15 @@ func init() {
 	MustRegister(Spec{
 		ServiceID: proc.ServiceDMMaster,
 		Catalog: Catalog{
-			FlagPrefix:         "dm-master",
-			AllowModifyNum:     true,
-			AllowModifyHost:    true,
-			AllowModifyPort:    true,
-			DefaultPort:        dmStatusPortBase,
+			FlagPrefix:      "dm-master",
+			AllowModifyNum:  true,
+			AllowModifyHost: true,
+			AllowModifyPort: true,
+			DefaultPort:     dmStatusPortBase,
+			Ports: []PortSpec{
+				{Name: "port", Base: dmPeerPortBase},
+				{Name: "statusPort", Base: dmStatusPortBase, FromConfigPort: true},
+			},
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
 			DefaultNum:         func(_ BootContext) int { return 0 },
@@ -33,25 +37,8 @@ func init() {
 		},
 		NewProc:     newDMMasterInstance,
 		ScaleInHook: scaleInDMMaster,
-		PlanInstance: func(_ BootContext, cfg proc.Config, alloc PortAllocator, plan *proc.ServicePlan) error {
-			host := plan.Shared.Host
-
-			peerPort, err := alloc(host, dmPeerPortBase)
-			if err != nil {
-				return err
-			}
-			statusPortBase := dmStatusPortBase
-			if cfg.Port > 0 {
-				statusPortBase = cfg.Port
-			}
-			statusPort, err := alloc(host, statusPortBase)
-			if err != nil {
-				return err
-			}
-
+		PlanInstance: func(_ BootContext, _ proc.Config, plan *proc.ServicePlan) error {
 			plan.ComponentID = proc.ComponentDMMaster.String()
-			plan.Shared.Port = peerPort
-			plan.Shared.StatusPort = statusPort
 			return nil
 		},
 		FillServicePlans: func(_ BootContext, baseConfigs map[proc.ServiceID]proc.Config, byService map[proc.ServiceID][]*proc.ServicePlan, advertise func(listen string) string, plans []*proc.ServicePlan) error {
@@ -72,11 +59,14 @@ func init() {
 	MustRegister(Spec{
 		ServiceID: proc.ServiceDMWorker,
 		Catalog: Catalog{
-			FlagPrefix:         "dm-worker",
-			AllowModifyNum:     true,
-			AllowModifyHost:    true,
-			AllowModifyPort:    true,
-			DefaultPort:        dmWorkerPortBase,
+			FlagPrefix:      "dm-worker",
+			AllowModifyNum:  true,
+			AllowModifyHost: true,
+			AllowModifyPort: true,
+			DefaultPort:     dmWorkerPortBase,
+			Ports: []PortSpec{
+				{Name: "port", Base: dmWorkerPortBase, FromConfigPort: true},
+			},
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
 			DefaultNum:         func(_ BootContext) int { return 0 },
@@ -86,20 +76,8 @@ func init() {
 		NewProc:     newDMWorkerInstance,
 		StartAfter:  []proc.ServiceID{proc.ServiceDMMaster},
 		ScaleInHook: scaleInDMWorker,
-		PlanInstance: func(_ BootContext, cfg proc.Config, alloc PortAllocator, plan *proc.ServicePlan) error {
-			host := plan.Shared.Host
-
-			portBase := dmWorkerPortBase
-			if cfg.Port > 0 {
-				portBase = cfg.Port
-			}
-			port, err := alloc(host, portBase)
-			if err != nil {
-				return err
-			}
-
+		PlanInstance: func(_ BootContext, _ proc.Config, plan *proc.ServicePlan) error {
 			plan.ComponentID = proc.ComponentDMWorker.String()
-			plan.Shared.Port = port
 			return nil
 		},
 		FillServicePlans: func(_ BootContext, _ map[proc.ServiceID]proc.Config, byService map[proc.ServiceID][]*proc.ServicePlan, advertise func(listen string) string, plans []*proc.ServicePlan) error {

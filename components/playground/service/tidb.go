@@ -30,12 +30,16 @@ func init() {
 			return newTiDBInstance(rt, proc.ServiceTiDBSystem, params)
 		},
 		Catalog: Catalog{
-			FlagPrefix:         "db.system",
-			AllowModifyNum:     true,
-			MaxNum:             1,
-			AllowModifyHost:    true,
-			AllowModifyPort:    true,
-			DefaultPort:        tidbSystemPortBase,
+			FlagPrefix:      "db.system",
+			AllowModifyNum:  true,
+			MaxNum:          1,
+			AllowModifyHost: true,
+			AllowModifyPort: true,
+			DefaultPort:     tidbSystemPortBase,
+			Ports: []PortSpec{
+				{Name: "port", Base: tidbSystemPortBase, FromConfigPort: true},
+				{Name: "statusPort", Base: tidbStatusPortBase, Host: "0.0.0.0"},
+			},
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
 			DefaultNum: func(ctx BootContext) int {
@@ -49,25 +53,8 @@ func init() {
 			IsCritical:         func(ctx BootContext) bool { return ctx.SharedOptions().Mode == proc.ModeNextGen },
 		},
 		StartAfter: startAfter,
-		PlanInstance: func(_ BootContext, cfg proc.Config, alloc PortAllocator, plan *proc.ServicePlan) error {
-			host := plan.Shared.Host
-
-			portBase := tidbSystemPortBase
-			if cfg.Port > 0 {
-				portBase = cfg.Port
-			}
-			port, err := alloc(host, portBase)
-			if err != nil {
-				return err
-			}
-			statusPort, err := alloc("0.0.0.0", tidbStatusPortBase)
-			if err != nil {
-				return err
-			}
-
+		PlanInstance: func(_ BootContext, _ proc.Config, plan *proc.ServicePlan) error {
 			plan.ComponentID = proc.ComponentTiDB.String()
-			plan.Shared.Port = port
-			plan.Shared.StatusPort = statusPort
 			return nil
 		},
 		FillServicePlans: func(_ BootContext, baseConfigs map[proc.ServiceID]proc.Config, byService map[proc.ServiceID][]*proc.ServicePlan, advertise func(listen string) string, plans []*proc.ServicePlan) error {
@@ -101,11 +88,15 @@ func init() {
 			return newTiDBInstance(rt, proc.ServiceTiDB, params)
 		},
 		Catalog: Catalog{
-			FlagPrefix:         "db",
-			AllowModifyNum:     true,
-			AllowModifyHost:    true,
-			AllowModifyPort:    true,
-			DefaultPort:        tidbPortBase,
+			FlagPrefix:      "db",
+			AllowModifyNum:  true,
+			AllowModifyHost: true,
+			AllowModifyPort: true,
+			DefaultPort:     tidbPortBase,
+			Ports: []PortSpec{
+				{Name: "port", Base: tidbPortBase, FromConfigPort: true},
+				{Name: "statusPort", Base: tidbStatusPortBase, Host: "0.0.0.0"},
+			},
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
 			AllowModifyTimeout: true,
@@ -122,25 +113,8 @@ func init() {
 		},
 		StartAfter:   append([]proc.ServiceID{proc.ServiceTiDBSystem}, startAfter...),
 		PostScaleOut: postScaleOutTiDB,
-		PlanInstance: func(_ BootContext, cfg proc.Config, alloc PortAllocator, plan *proc.ServicePlan) error {
-			host := plan.Shared.Host
-
-			portBase := tidbPortBase
-			if cfg.Port > 0 {
-				portBase = cfg.Port
-			}
-			port, err := alloc(host, portBase)
-			if err != nil {
-				return err
-			}
-			statusPort, err := alloc("0.0.0.0", tidbStatusPortBase)
-			if err != nil {
-				return err
-			}
-
+		PlanInstance: func(_ BootContext, _ proc.Config, plan *proc.ServicePlan) error {
 			plan.ComponentID = proc.ComponentTiDB.String()
-			plan.Shared.Port = port
-			plan.Shared.StatusPort = statusPort
 			return nil
 		},
 		FillServicePlans: func(_ BootContext, baseConfigs map[proc.ServiceID]proc.Config, byService map[proc.ServiceID][]*proc.ServicePlan, advertise func(listen string) string, plans []*proc.ServicePlan) error {

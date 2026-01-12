@@ -18,9 +18,13 @@ func init() {
 	MustRegister(Spec{
 		ServiceID: proc.ServicePump,
 		Catalog: Catalog{
-			FlagPrefix:         "pump",
-			AllowModifyNum:     true,
-			DefaultPort:        pumpPortBase,
+			FlagPrefix:     "pump",
+			AllowModifyNum: true,
+			DefaultPort:    pumpPortBase,
+			Ports: []PortSpec{
+				{Name: "port", Base: pumpPortBase},
+				{Name: "statusPort", AliasOf: "port"},
+			},
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
 			DefaultNum:         func(_ BootContext) int { return 0 },
@@ -33,16 +37,8 @@ func init() {
 		},
 		NewProc:     newPumpInstance,
 		ScaleInHook: scaleInPumpByOffline,
-		PlanInstance: func(_ BootContext, _ proc.Config, alloc PortAllocator, plan *proc.ServicePlan) error {
-			host := plan.Shared.Host
-
-			port, err := alloc(host, pumpPortBase)
-			if err != nil {
-				return err
-			}
+		PlanInstance: func(_ BootContext, _ proc.Config, plan *proc.ServicePlan) error {
 			plan.ComponentID = proc.ComponentPump.String()
-			plan.Shared.Port = port
-			plan.Shared.StatusPort = port
 			return nil
 		},
 		FillServicePlans: func(_ BootContext, _ map[proc.ServiceID]proc.Config, byService map[proc.ServiceID][]*proc.ServicePlan, advertise func(listen string) string, plans []*proc.ServicePlan) error {
@@ -57,9 +53,13 @@ func init() {
 	MustRegister(Spec{
 		ServiceID: proc.ServiceDrainer,
 		Catalog: Catalog{
-			FlagPrefix:         "drainer",
-			AllowModifyNum:     true,
-			DefaultPort:        drainerPortBase,
+			FlagPrefix:     "drainer",
+			AllowModifyNum: true,
+			DefaultPort:    drainerPortBase,
+			Ports: []PortSpec{
+				{Name: "port", Base: drainerPortBase},
+				{Name: "statusPort", AliasOf: "port"},
+			},
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
 			DefaultNum:         func(_ BootContext) int { return 0 },
@@ -72,16 +72,8 @@ func init() {
 		},
 		NewProc:     newDrainerInstance,
 		ScaleInHook: scaleInDrainerByOffline,
-		PlanInstance: func(_ BootContext, _ proc.Config, alloc PortAllocator, plan *proc.ServicePlan) error {
-			host := plan.Shared.Host
-
-			port, err := alloc(host, drainerPortBase)
-			if err != nil {
-				return err
-			}
+		PlanInstance: func(_ BootContext, _ proc.Config, plan *proc.ServicePlan) error {
 			plan.ComponentID = proc.ComponentDrainer.String()
-			plan.Shared.Port = port
-			plan.Shared.StatusPort = port
 			return nil
 		},
 		FillServicePlans: func(_ BootContext, _ map[proc.ServiceID]proc.Config, byService map[proc.ServiceID][]*proc.ServicePlan, advertise func(listen string) string, plans []*proc.ServicePlan) error {

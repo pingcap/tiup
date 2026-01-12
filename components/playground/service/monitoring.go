@@ -27,6 +27,10 @@ func init() {
 			PlanConfig:     func(_ BootContext) proc.Config { return proc.Config{Num: 1} },
 			VersionBind:    stripNextGenVersionSuffix,
 			HideInProgress: true,
+			Ports: []PortSpec{
+				{Name: "port", Base: prometheusPortBase, FromConfigPort: true},
+				{Name: "statusPort", AliasOf: "port"},
+			},
 		},
 		NewProc: func(rt ControllerRuntime, params NewProcParams) (proc.Process, error) {
 			shOpt := rt.SharedOptions()
@@ -46,21 +50,8 @@ func init() {
 			rt.AddProc(proc.ServicePrometheus, prom)
 			return prom, nil
 		},
-		PlanInstance: func(_ BootContext, cfg proc.Config, alloc PortAllocator, plan *proc.ServicePlan) error {
-			host := plan.Shared.Host
-
-			portBase := prometheusPortBase
-			if cfg.Port > 0 {
-				portBase = cfg.Port
-			}
-			port, err := alloc(host, portBase)
-			if err != nil {
-				return err
-			}
-
+		PlanInstance: func(_ BootContext, _ proc.Config, plan *proc.ServicePlan) error {
 			plan.ComponentID = proc.ComponentPrometheus.String()
-			plan.Shared.Port = port
-			plan.Shared.StatusPort = port
 			return nil
 		},
 	})
@@ -75,6 +66,9 @@ func init() {
 			},
 			VersionBind:    stripNextGenVersionSuffix,
 			HideInProgress: true,
+			Ports: []PortSpec{
+				{Name: "port", Base: grafanaPortBase, FromConfigPort: true},
+			},
 		},
 		StartAfter: []proc.ServiceID{
 			proc.ServicePrometheus,
@@ -103,20 +97,8 @@ func init() {
 			rt.AddProc(proc.ServiceGrafana, grafana)
 			return grafana, nil
 		},
-		PlanInstance: func(_ BootContext, cfg proc.Config, alloc PortAllocator, plan *proc.ServicePlan) error {
-			host := plan.Shared.Host
-
-			portBase := grafanaPortBase
-			if cfg.Port > 0 {
-				portBase = cfg.Port
-			}
-			port, err := alloc(host, portBase)
-			if err != nil {
-				return err
-			}
-
+		PlanInstance: func(_ BootContext, _ proc.Config, plan *proc.ServicePlan) error {
 			plan.ComponentID = proc.ComponentGrafana.String()
-			plan.Shared.Port = port
 			return nil
 		},
 		FillServicePlans: func(_ BootContext, _ map[proc.ServiceID]proc.Config, byService map[proc.ServiceID][]*proc.ServicePlan, advertise func(listen string) string, plans []*proc.ServicePlan) error {
@@ -152,6 +134,10 @@ func init() {
 			PlanConfig:     func(_ BootContext) proc.Config { return proc.Config{Num: 1} },
 			VersionBind:    stripNextGenVersionSuffix,
 			HideInProgress: true,
+			Ports: []PortSpec{
+				{Name: "port", Base: ngMonitoringPortBase, FromConfigPort: true},
+				{Name: "statusPort", AliasOf: "port"},
+			},
 		},
 		StartAfter: []proc.ServiceID{
 			proc.ServicePD,
@@ -192,23 +178,10 @@ func init() {
 			rt.AddProc(proc.ServiceNGMonitoring, ngm)
 			return ngm, nil
 		},
-		PlanInstance: func(_ BootContext, cfg proc.Config, alloc PortAllocator, plan *proc.ServicePlan) error {
-			host := plan.Shared.Host
-
-			portBase := ngMonitoringPortBase
-			if cfg.Port > 0 {
-				portBase = cfg.Port
-			}
-			port, err := alloc(host, portBase)
-			if err != nil {
-				return err
-			}
-
+		PlanInstance: func(_ BootContext, _ proc.Config, plan *proc.ServicePlan) error {
 			// NOTE: ng-monitoring-server is shipped alongside prometheus in TiUP.
 			// Keep using prometheus as the repository identity for this service.
 			plan.ComponentID = proc.ComponentPrometheus.String()
-			plan.Shared.Port = port
-			plan.Shared.StatusPort = port
 			return nil
 		},
 		FillServicePlans: func(_ BootContext, _ map[proc.ServiceID]proc.Config, byService map[proc.ServiceID][]*proc.ServicePlan, advertise func(listen string) string, plans []*proc.ServicePlan) error {

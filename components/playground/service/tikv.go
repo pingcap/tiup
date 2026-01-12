@@ -19,11 +19,15 @@ func init() {
 	MustRegister(Spec{
 		ServiceID: proc.ServiceTiKV,
 		Catalog: Catalog{
-			FlagPrefix:         "kv",
-			AllowModifyNum:     true,
-			AllowModifyHost:    true,
-			AllowModifyPort:    true,
-			DefaultPort:        tikvPortBase,
+			FlagPrefix:      "kv",
+			AllowModifyNum:  true,
+			AllowModifyHost: true,
+			AllowModifyPort: true,
+			DefaultPort:     tikvPortBase,
+			Ports: []PortSpec{
+				{Name: "port", Base: tikvPortBase, FromConfigPort: true},
+				{Name: "statusPort", Base: tikvStatusPortBase},
+			},
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
 			DefaultNum:         func(_ BootContext) int { return 1 },
@@ -40,25 +44,8 @@ func init() {
 		},
 		NewProc:     newTiKVInstance,
 		ScaleInHook: scaleInTiKVByTombstone,
-		PlanInstance: func(_ BootContext, cfg proc.Config, alloc PortAllocator, plan *proc.ServicePlan) error {
-			host := plan.Shared.Host
-
-			portBase := tikvPortBase
-			if cfg.Port > 0 {
-				portBase = cfg.Port
-			}
-			port, err := alloc(host, portBase)
-			if err != nil {
-				return err
-			}
-			statusPort, err := alloc(host, tikvStatusPortBase)
-			if err != nil {
-				return err
-			}
-
+		PlanInstance: func(_ BootContext, _ proc.Config, plan *proc.ServicePlan) error {
 			plan.ComponentID = proc.ComponentTiKV.String()
-			plan.Shared.Port = port
-			plan.Shared.StatusPort = statusPort
 			return nil
 		},
 		FillServicePlans: func(ctx BootContext, _ map[proc.ServiceID]proc.Config, byService map[proc.ServiceID][]*proc.ServicePlan, advertise func(listen string) string, plans []*proc.ServicePlan) error {
@@ -82,12 +69,15 @@ func init() {
 	MustRegister(Spec{
 		ServiceID: proc.ServiceTiKVWorker,
 		Catalog: Catalog{
-			FlagPrefix:         "kv.worker",
-			AllowModifyNum:     true,
-			MaxNum:             1,
-			AllowModifyHost:    true,
-			AllowModifyPort:    true,
-			DefaultPort:        tikvWorkerPortBase,
+			FlagPrefix:      "kv.worker",
+			AllowModifyNum:  true,
+			MaxNum:          1,
+			AllowModifyHost: true,
+			AllowModifyPort: true,
+			DefaultPort:     tikvWorkerPortBase,
+			Ports: []PortSpec{
+				{Name: "port", Base: tikvWorkerPortBase, FromConfigPort: true},
+			},
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
 			DefaultNum: func(ctx BootContext) int {
@@ -114,9 +104,7 @@ func init() {
 			proc.ServicePDAPI,
 		},
 		NewProc: newTiKVWorkerInstance,
-		PlanInstance: func(ctx BootContext, cfg proc.Config, alloc PortAllocator, plan *proc.ServicePlan) error {
-			host := plan.Shared.Host
-
+		PlanInstance: func(ctx BootContext, _ proc.Config, plan *proc.ServicePlan) error {
 			component := proc.ComponentTiKV
 			if ctx.SharedOptions().Mode == proc.ModeNextGen {
 				component = proc.ComponentTiKVWorker
@@ -124,17 +112,7 @@ func init() {
 
 			plan.BinPath = proc.ResolveTiKVWorkerBinPath(plan.BinPath)
 
-			portBase := tikvWorkerPortBase
-			if cfg.Port > 0 {
-				portBase = cfg.Port
-			}
-			port, err := alloc(host, portBase)
-			if err != nil {
-				return err
-			}
-
 			plan.ComponentID = component.String()
-			plan.Shared.Port = port
 			return nil
 		},
 		FillServicePlans: func(_ BootContext, _ map[proc.ServiceID]proc.Config, byService map[proc.ServiceID][]*proc.ServicePlan, advertise func(listen string) string, plans []*proc.ServicePlan) error {

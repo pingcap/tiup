@@ -74,15 +74,41 @@ type PostScaleOutFunc func(w io.Writer, inst proc.Process)
 // tests) while still allowing the default OS-probing behavior in real runs.
 type PortAllocator func(host string, base int) (int, error)
 
+// PortSpec declares one named port to be allocated for a planned service
+// instance.
+//
+// Planner fills the allocated port into plan.Shared.Ports[Name].
+type PortSpec struct {
+	// Name is the key used in plan.Shared.Ports.
+	Name string
+	// Base is the default base port used for allocation when AliasOf is empty.
+	Base int
+	// Host overrides the listen host used during allocation.
+	//
+	// When empty, planner uses plan.Shared.Host. A common value is "0.0.0.0" for
+	// ports that listen on all interfaces (and should conflict with every host
+	// under PortConflictNone semantics).
+	Host string
+
+	// FromConfigPort makes planner prefer cfg.Port (when > 0) over Base.
+	FromConfigPort bool
+
+	// AliasOf makes this port reuse the value of another named port.
+	//
+	// When set, Base/Host/FromConfigPort are ignored, and planner copies the
+	// referenced port into plan.Shared.Ports[Name].
+	AliasOf string
+}
+
 // PlanInstanceFunc fills per-instance fields of a planned service entry.
 //
 // It is invoked during planning for each service instance. Implementations are
 // expected to:
 //   - set plan.ComponentID (repository component identity);
-//   - allocate and fill plan.Shared ports;
-//   - fill any service-specific port fields (e.g. TiFlashPlan extra ports);
+//   - read planned ports from plan.Shared (already allocated by planner);
+//   - fill any service-specific port fields derived from plan.Shared.Ports (e.g. TiFlashPlan extra ports);
 //   - normalize plan.BinPath when needed (e.g. tikv-worker).
-type PlanInstanceFunc func(ctx BootContext, cfg proc.Config, alloc PortAllocator, plan *proc.ServicePlan) error
+type PlanInstanceFunc func(ctx BootContext, cfg proc.Config, plan *proc.ServicePlan) error
 
 // FillServicePlansFunc fills service-specific plan fields after all service
 // entries are created.
@@ -167,6 +193,13 @@ type Catalog struct {
 	// value is useful when a service wants to surface a concrete default port in
 	// help output.
 	DefaultPort int
+	// Ports declares which named ports should be allocated for each planned
+	// instance of this service.
+	//
+	// Ports are stored into plan.Shared.Ports. The standard names "port" and
+	// "statusPort" are also copied into plan.Shared.Port/StatusPort for
+	// compatibility and for dry-run rendering.
+	Ports []PortSpec
 	// AllowModifyConfig indicates the service exposes a config file path flag
 	// (`--<FlagPrefix>.config`), stored into proc.Config.ConfigPath.
 	AllowModifyConfig bool

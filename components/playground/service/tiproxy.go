@@ -14,11 +14,15 @@ func init() {
 	MustRegister(Spec{
 		ServiceID: proc.ServiceTiProxy,
 		Catalog: Catalog{
-			FlagPrefix:         "tiproxy",
-			AllowModifyNum:     true,
-			AllowModifyHost:    true,
-			AllowModifyPort:    true,
-			DefaultPort:        6000,
+			FlagPrefix:      "tiproxy",
+			AllowModifyNum:  true,
+			AllowModifyHost: true,
+			AllowModifyPort: true,
+			DefaultPort:     6000,
+			Ports: []PortSpec{
+				{Name: "port", Base: 6000, FromConfigPort: true},
+				{Name: "statusPort", Base: tiproxyStatusPortBase},
+			},
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
 			AllowModifyTimeout: true,
@@ -34,25 +38,8 @@ func init() {
 		},
 		NewProc:      newTiProxyInstance,
 		PostScaleOut: postScaleOutTiProxy,
-		PlanInstance: func(_ BootContext, cfg proc.Config, alloc PortAllocator, plan *proc.ServicePlan) error {
-			host := plan.Shared.Host
-
-			portBase := 6000
-			if cfg.Port > 0 {
-				portBase = cfg.Port
-			}
-			port, err := alloc(host, portBase)
-			if err != nil {
-				return err
-			}
-			statusPort, err := alloc(host, tiproxyStatusPortBase)
-			if err != nil {
-				return err
-			}
-
+		PlanInstance: func(_ BootContext, _ proc.Config, plan *proc.ServicePlan) error {
 			plan.ComponentID = proc.ComponentTiProxy.String()
-			plan.Shared.Port = port
-			plan.Shared.StatusPort = statusPort
 			return nil
 		},
 		FillServicePlans: func(_ BootContext, _ map[proc.ServiceID]proc.Config, byService map[proc.ServiceID][]*proc.ServicePlan, advertise func(listen string) string, plans []*proc.ServicePlan) error {

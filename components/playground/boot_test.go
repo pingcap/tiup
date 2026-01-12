@@ -18,6 +18,7 @@ func TestValidateBootOptionsPure_ModeNormal_AllowsEmptyCSEOptions(t *testing.T) 
 			PDMode: "pd",
 		},
 		Version: "nightly",
+		Host:    "127.0.0.1",
 	}
 	opts.Service(proc.ServicePD).Num = 1
 
@@ -35,6 +36,7 @@ func TestValidateBootOptionsPure_ModeCSE_RequiresBucket(t *testing.T) {
 			},
 		},
 		Version: "nightly",
+		Host:    "127.0.0.1",
 	}
 	opts.Service(proc.ServicePD).Num = 1
 
@@ -54,6 +56,7 @@ func TestValidateBootOptionsPure_ModeCSE_RequiresEndpointHost(t *testing.T) {
 			},
 		},
 		Version: "nightly",
+		Host:    "127.0.0.1",
 	}
 	opts.Service(proc.ServicePD).Num = 1
 
@@ -73,6 +76,7 @@ func TestValidateBootOptionsPure_ModeCSE_AllowsTrailingSlashInEndpoint(t *testin
 			},
 		},
 		Version: "nightly",
+		Host:    "127.0.0.1",
 	}
 	opts.Service(proc.ServicePD).Num = 1
 
@@ -90,6 +94,7 @@ func TestValidateBootOptionsPure_ModeCSE_RejectsEndpointWithPath(t *testing.T) {
 			},
 		},
 		Version: "nightly",
+		Host:    "127.0.0.1",
 	}
 	opts.Service(proc.ServicePD).Num = 1
 
@@ -105,6 +110,7 @@ func TestValidateBootOptionsPure_PDModeMS_AllowsLatestAlias(t *testing.T) {
 			PDMode: "ms",
 		},
 		Version: utils.LatestVersionAlias,
+		Host:    "127.0.0.1",
 	}
 
 	require.NoError(t, ValidateBootOptionsPure(opts))
@@ -117,6 +123,7 @@ func TestValidateBootOptionsPure_PDModeMS_RejectsOldVersion(t *testing.T) {
 			PDMode: "ms",
 		},
 		Version: "v6.5.0",
+		Host:    "127.0.0.1",
 	}
 
 	err := ValidateBootOptionsPure(opts)

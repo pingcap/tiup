@@ -19,37 +19,42 @@ const (
 	tiflashProxyStatusPortBase = 20292
 )
 
-func planTiFlashInstance(_ BootContext, _ proc.Config, alloc PortAllocator, plan *proc.ServicePlan) error {
-	host := plan.Shared.Host
+var tiflashPortSpecs = []PortSpec{
+	{Name: "port", Base: tiflashHTTPPortBase},
+	{Name: "statusPort", Base: tiflashStatusPortBase},
+	{Name: "tcpPort", Base: tiflashTCPPortBase},
+	{Name: "servicePort", Base: tiflashServicePortBase},
+	{Name: "proxyPort", Base: tiflashProxyPortBase},
+	{Name: "proxyStatusPort", Base: tiflashProxyStatusPortBase},
+}
 
-	httpPort, err := alloc(host, tiflashHTTPPortBase)
+func planTiFlashInstance(_ BootContext, _ proc.Config, plan *proc.ServicePlan) error {
+	ports := plan.Shared.Ports
+	getPort := func(name string) (int, error) {
+		v := ports[name]
+		if v <= 0 {
+			return 0, fmt.Errorf("missing planned port %q for tiflash", name)
+		}
+		return v, nil
+	}
+	servicePort, err := getPort("servicePort")
 	if err != nil {
 		return err
 	}
-	statusPort, err := alloc(host, tiflashStatusPortBase)
+	tcpPort, err := getPort("tcpPort")
 	if err != nil {
 		return err
 	}
-	tcpPort, err := alloc(host, tiflashTCPPortBase)
+	proxyPort, err := getPort("proxyPort")
 	if err != nil {
 		return err
 	}
-	servicePort, err := alloc(host, tiflashServicePortBase)
-	if err != nil {
-		return err
-	}
-	proxyPort, err := alloc(host, tiflashProxyPortBase)
-	if err != nil {
-		return err
-	}
-	proxyStatusPort, err := alloc(host, tiflashProxyStatusPortBase)
+	proxyStatusPort, err := getPort("proxyStatusPort")
 	if err != nil {
 		return err
 	}
 
 	plan.ComponentID = proc.ComponentTiFlash.String()
-	plan.Shared.Port = httpPort
-	plan.Shared.StatusPort = statusPort
 	plan.TiFlash = &proc.TiFlashPlan{
 		ServicePort:     servicePort,
 		TCPPort:         tcpPort,
@@ -87,6 +92,7 @@ func init() {
 			AllowModifyBinPath: true,
 			AllowModifyTimeout: true,
 			DefaultTimeout:     120,
+			Ports:              tiflashPortSpecs,
 			DefaultNum: func(ctx BootContext) int {
 				switch ctx.SharedOptions().Mode {
 				case proc.ModeNormal, proc.ModeCSE, proc.ModeDisAgg:
@@ -120,6 +126,7 @@ func init() {
 			AllowModifyNum:     true,
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
+			Ports:              tiflashPortSpecs,
 			DefaultNum: func(ctx BootContext) int {
 				switch ctx.SharedOptions().Mode {
 				case proc.ModeCSE, proc.ModeNextGen, proc.ModeDisAgg:
@@ -160,6 +167,7 @@ func init() {
 			AllowModifyNum:     true,
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
+			Ports:              tiflashPortSpecs,
 			DefaultNum: func(ctx BootContext) int {
 				switch ctx.SharedOptions().Mode {
 				case proc.ModeCSE, proc.ModeNextGen, proc.ModeDisAgg:

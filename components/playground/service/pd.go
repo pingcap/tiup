@@ -15,6 +15,16 @@ const (
 	pdStatusPortBase = 2379
 )
 
+var pdPortSpecs = []PortSpec{
+	{Name: "port", Base: pdPeerPortBase},
+	{Name: "statusPort", Base: pdStatusPortBase, FromConfigPort: true},
+}
+
+var pdMicroservicePortSpecs = []PortSpec{
+	{Name: "statusPort", Base: pdStatusPortBase},
+	{Name: "port", AliasOf: "statusPort"},
+}
+
 func init() {
 	for _, item := range []struct {
 		serviceID  proc.ServiceID
@@ -31,6 +41,7 @@ func init() {
 				AllowModifyHost:    true,
 				AllowModifyPort:    true,
 				DefaultPort:        pdStatusPortBase,
+				Ports:              pdPortSpecs,
 				AllowModifyConfig:  true,
 				AllowModifyBinPath: true,
 				DefaultNum:         func(_ BootContext) int { return 1 },
@@ -48,6 +59,7 @@ func init() {
 				AllowModifyHost:    true,
 				AllowModifyPort:    true,
 				DefaultPort:        pdStatusPortBase,
+				Ports:              pdPortSpecs,
 				AllowModifyConfig:  true,
 				AllowModifyBinPath: true,
 				DefaultNum: func(ctx BootContext) int {
@@ -75,6 +87,7 @@ func init() {
 				FlagPrefix:         "pd.tso",
 				AllowModifyNum:     true,
 				AllowModifyHost:    true,
+				Ports:              pdMicroservicePortSpecs,
 				AllowModifyConfig:  true,
 				AllowModifyBinPath: true,
 				DefaultNum: func(ctx BootContext) int {
@@ -97,6 +110,7 @@ func init() {
 				FlagPrefix:         "pd.sched",
 				AllowModifyNum:     true,
 				AllowModifyHost:    true,
+				Ports:              pdMicroservicePortSpecs,
 				AllowModifyConfig:  true,
 				AllowModifyBinPath: true,
 				DefaultNum: func(ctx BootContext) int {
@@ -119,6 +133,7 @@ func init() {
 				FlagPrefix:            "pd.router",
 				AllowModifyNum:        true,
 				AllowModifyHost:       true,
+				Ports:                 pdMicroservicePortSpecs,
 				AllowModifyConfig:     true,
 				AllowModifyBinPath:    true,
 				DefaultNum:            func(_ BootContext) int { return 0 },
@@ -135,6 +150,7 @@ func init() {
 				FlagPrefix:            "pd.res",
 				AllowModifyNum:        true,
 				AllowModifyHost:       true,
+				Ports:                 pdMicroservicePortSpecs,
 				AllowModifyConfig:     true,
 				AllowModifyBinPath:    true,
 				DefaultNum:            func(_ BootContext) int { return 0 },
@@ -158,25 +174,8 @@ func registerPDService(serviceID proc.ServiceID, startAfter []proc.ServiceID, sc
 		Catalog:     catalog,
 		StartAfter:  startAfter,
 		ScaleInHook: scaleIn,
-		PlanInstance: func(_ BootContext, cfg proc.Config, alloc PortAllocator, plan *proc.ServicePlan) error {
-			host := plan.Shared.Host
-
-			peerPort, err := alloc(host, pdPeerPortBase)
-			if err != nil {
-				return err
-			}
-			statusPortBase := pdStatusPortBase
-			if cfg.Port > 0 {
-				statusPortBase = cfg.Port
-			}
-			statusPort, err := alloc(host, statusPortBase)
-			if err != nil {
-				return err
-			}
-
+		PlanInstance: func(_ BootContext, _ proc.Config, plan *proc.ServicePlan) error {
 			plan.ComponentID = proc.ComponentPD.String()
-			plan.Shared.Port = peerPort
-			plan.Shared.StatusPort = statusPort
 			return nil
 		},
 		FillServicePlans: func(_ BootContext, baseConfigs map[proc.ServiceID]proc.Config, byService map[proc.ServiceID][]*proc.ServicePlan, advertise func(listen string) string, plans []*proc.ServicePlan) error {
