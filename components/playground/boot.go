@@ -4,6 +4,7 @@ import (
 	"context"
 	stdErrors "errors"
 	"fmt"
+	"net/url"
 	"path/filepath"
 	"strings"
 
@@ -15,6 +16,41 @@ import (
 	"github.com/pingcap/tiup/pkg/tidbver"
 	"github.com/pingcap/tiup/pkg/utils"
 )
+
+func parseS3Endpoint(endpoint string) (host string, secure bool, hostname string, err error) {
+	endpoint = strings.TrimSpace(endpoint)
+	if !strings.HasPrefix(endpoint, "https://") && !strings.HasPrefix(endpoint, "http://") {
+		return "", false, "", fmt.Errorf("require S3 endpoint to start with http:// or https://")
+	}
+
+	u, err := url.Parse(endpoint)
+	if err != nil {
+		return "", false, "", fmt.Errorf("invalid S3 endpoint: %w", err)
+	}
+	if u.Host == "" {
+		return "", false, "", fmt.Errorf("require S3 endpoint to include a host")
+	}
+	if u.Path != "" && u.Path != "/" {
+		return "", false, "", fmt.Errorf("require S3 endpoint to not include a path")
+	}
+	if u.RawQuery != "" {
+		return "", false, "", fmt.Errorf("require S3 endpoint to not include query parameters")
+	}
+	if u.Fragment != "" {
+		return "", false, "", fmt.Errorf("require S3 endpoint to not include fragment")
+	}
+
+	switch u.Scheme {
+	case "http":
+		secure = false
+	case "https":
+		secure = true
+	default:
+		return "", false, "", fmt.Errorf("require S3 endpoint to start with http:// or https://")
+	}
+
+	return u.Host, secure, u.Hostname(), nil
+}
 
 func normalizeBootErr(ctx context.Context, err error) error {
 	if err == nil || ctx == nil {
@@ -102,23 +138,17 @@ func ValidateBootOptionsPure(options *BootOptions) error {
 
 	switch options.ShOpt.Mode {
 	case proc.ModeCSE, proc.ModeDisAgg, proc.ModeNextGen:
-		endpoint := strings.TrimSpace(options.ShOpt.CSE.S3Endpoint)
 		bucket := strings.TrimSpace(options.ShOpt.CSE.Bucket)
 		if bucket == "" {
 			return fmt.Errorf("require S3 bucket to be non-empty")
 		}
-		if !strings.HasPrefix(endpoint, "https://") && !strings.HasPrefix(endpoint, "http://") {
-			return fmt.Errorf("require S3 endpoint to start with http:// or https://")
-		}
-
-		rawEndpoint := strings.TrimPrefix(endpoint, "https://")
-		rawEndpoint = strings.TrimPrefix(rawEndpoint, "http://")
-		if strings.TrimSpace(rawEndpoint) == "" {
-			return fmt.Errorf("require S3 endpoint to include a host")
+		_, _, hostname, err := parseS3Endpoint(options.ShOpt.CSE.S3Endpoint)
+		if err != nil {
+			return err
 		}
 
 		// Currently we always assign region=local. Other regions are not supported.
-		if strings.Contains(rawEndpoint, "amazonaws.com") {
+		if strings.Contains(hostname, "amazonaws.com") {
 			return fmt.Errorf("tiup playground only supports local S3 (like minio); S3 on AWS regions is not supported")
 		}
 	}

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"strings"
 	"time"
@@ -48,6 +49,9 @@ func (e *bootExecutor) Download(plan BootPlan) error {
 func (e *bootExecutor) PreRun(ctx context.Context, plan BootPlan) error {
 	if e == nil {
 		return nil
+	}
+	if ctx == nil {
+		ctx = context.Background()
 	}
 
 	if err := preflightBootPlan(ctx, plan); err != nil {
@@ -145,16 +149,24 @@ func (e *bootExecutor) AddProcs(ctx context.Context, plan BootPlan) error {
 }
 
 func preflightBootPlan(ctx context.Context, plan BootPlan) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	switch plan.Shared.Mode {
 	case proc.ModeCSE, proc.ModeDisAgg, proc.ModeNextGen:
 	default:
 		return nil
 	}
 
-	endpoint := plan.Shared.CSE.S3Endpoint
-	isSecure := strings.HasPrefix(endpoint, "https://")
-	rawEndpoint := strings.TrimPrefix(endpoint, "https://")
-	rawEndpoint = strings.TrimPrefix(rawEndpoint, "http://")
+	bucket := strings.TrimSpace(plan.Shared.CSE.Bucket)
+	if bucket == "" {
+		return fmt.Errorf("missing s3 bucket")
+	}
+
+	rawEndpoint, isSecure, _, err := parseS3Endpoint(plan.Shared.CSE.S3Endpoint)
+	if err != nil {
+		return err
+	}
 
 	s3Client, err := minio.New(rawEndpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(plan.Shared.CSE.AccessKey, plan.Shared.CSE.SecretKey, ""),
@@ -174,8 +186,8 @@ func preflightBootPlan(ctx context.Context, plan BootPlan) error {
 	if bucketExists {
 		return nil
 	}
-	if err := s3Client.MakeBucket(ctxCheck, plan.Shared.CSE.Bucket, minio.MakeBucketOptions{}); err != nil {
-		return errors.Errorf("cannot create s3 bucket: Bucket %s doesn't exist and fail to create automatically (your bucket name may be invalid?)", plan.Shared.CSE.Bucket)
+	if err := s3Client.MakeBucket(ctxCheck, bucket, minio.MakeBucketOptions{}); err != nil {
+		return errors.Errorf("cannot create s3 bucket: Bucket %s doesn't exist and fail to create automatically (your bucket name may be invalid?)", bucket)
 	}
 	return nil
 }
