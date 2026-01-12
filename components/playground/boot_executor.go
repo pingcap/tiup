@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"time"
 
@@ -19,6 +20,14 @@ type bootExecutor struct {
 
 func newBootExecutor(pg *Playground, src ComponentSource) *bootExecutor {
 	return &bootExecutor{pg: pg, src: src}
+}
+
+type preRunHandler func(ctx context.Context, plan BootPlan) error
+
+var servicePreRunHandlers = map[string]preRunHandler{
+	proc.ServiceTiProxy.String(): func(_ context.Context, plan BootPlan) error {
+		return proc.GenTiProxySessionCerts(plan.DataDir)
+	},
 }
 
 func (e *bootExecutor) Download(plan BootPlan) error {
@@ -45,15 +54,30 @@ func (e *bootExecutor) PreRun(ctx context.Context, plan BootPlan) error {
 		return err
 	}
 
-	needsTiProxyCert := false
+	enabledServices := make(map[string]struct{}, len(plan.Services))
 	for _, svc := range plan.Services {
-		if svc.ServiceID == proc.ServiceTiProxy.String() {
-			needsTiProxyCert = true
-			break
+		if id := strings.TrimSpace(svc.ServiceID); id != "" {
+			enabledServices[id] = struct{}{}
 		}
 	}
-	if needsTiProxyCert {
-		if err := proc.GenTiProxySessionCerts(plan.DataDir); err != nil {
+
+	handlerKeys := make([]string, 0, len(servicePreRunHandlers))
+	for serviceID := range servicePreRunHandlers {
+		if serviceID != "" {
+			handlerKeys = append(handlerKeys, serviceID)
+		}
+	}
+	slices.Sort(handlerKeys)
+
+	for _, serviceID := range handlerKeys {
+		if _, ok := enabledServices[serviceID]; !ok {
+			continue
+		}
+		h := servicePreRunHandlers[serviceID]
+		if h == nil {
+			continue
+		}
+		if err := h(ctx, plan); err != nil {
 			return err
 		}
 	}
