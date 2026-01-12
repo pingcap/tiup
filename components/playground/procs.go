@@ -254,21 +254,5 @@ func (p *Playground) versionConstraintForService(serviceID proc.ServiceID, bootV
 	if p == nil {
 		return constraint
 	}
-
-	spec, ok := pgservice.SpecFor(serviceID)
-	if !ok {
-		return constraint
-	}
-
-	if spec.Catalog.AllowModifyVersion && p.bootOptions != nil {
-		if cfg := p.bootOptions.Service(serviceID); cfg != nil && cfg.Version != "" {
-			constraint = cfg.Version
-		}
-	}
-
-	if bind := spec.Catalog.VersionBind; bind != nil {
-		constraint = bind(constraint)
-	}
-
-	return constraint
+	return serviceVersionConstraint(serviceID, bootVersion, p.bootOptions)
 }

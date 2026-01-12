@@ -183,16 +183,7 @@ func resolveVersionConstraint(serviceID proc.ServiceID, options *BootOptions) (s
 		return "", nil
 	}
 
-	constraint := options.Version
-	spec, ok := pgservice.SpecFor(serviceID)
-	if ok && spec.Catalog.AllowModifyVersion {
-		if cfg := options.Service(serviceID); cfg != nil && cfg.Version != "" {
-			constraint = cfg.Version
-		}
-	}
-	if ok && spec.Catalog.VersionBind != nil {
-		constraint = spec.Catalog.VersionBind(constraint)
-	}
+	constraint := serviceVersionConstraint(serviceID, options.Version, options)
 	if strings.TrimSpace(constraint) == "" {
 		constraint = utils.LatestVersionAlias
 	}
