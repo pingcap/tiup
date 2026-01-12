@@ -78,7 +78,13 @@ func applyServiceDefaults(flagSet *pflag.FlagSet, opts *BootOptions) error {
 	switch opts.ShOpt.Mode {
 	case proc.ModeNormal, proc.ModeNextGen, proc.ModeTiKVSlim, proc.ModeCSE, proc.ModeDisAgg:
 	default:
-		return errors.Errorf("Unknown --mode %s", opts.ShOpt.Mode)
+		return errors.Errorf("Unknown --mode %s. Available modes are %s", opts.ShOpt.Mode, strings.Join([]string{
+			proc.ModeNormal,
+			proc.ModeNextGen,
+			proc.ModeTiKVSlim,
+			proc.ModeCSE,
+			proc.ModeDisAgg,
+		}, ", "))
 	}
 
 	switch opts.ShOpt.PDMode {
