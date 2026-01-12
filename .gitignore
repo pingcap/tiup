@@ -35,3 +35,4 @@ docker/secret/
 *__failpoint_stash__
 
 .codex/
+AGENTS.override.md
