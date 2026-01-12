@@ -114,7 +114,7 @@ func (e *bootExecutor) AddProcs(ctx context.Context, plan BootPlan) error {
 			v = utils.Version(strings.TrimSpace(svc.DebugConstraint))
 		}
 
-		if _, err := e.pg.requestAddPlannedProc(ctx, svc, binPath, v); err != nil {
+		if _, err := e.pg.requestAddPlannedProc(ctx, svc, binPath, v, plan.Shared, plan.DataDir); err != nil {
 			return err
 		}
 	}

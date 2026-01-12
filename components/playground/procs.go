@@ -109,7 +109,7 @@ func (p *Playground) requestAddProc(ctx context.Context, serviceID proc.ServiceI
 	}
 }
 
-func (p *Playground) requestAddPlannedProc(ctx context.Context, plan ServicePlan, binPath string, version utils.Version) (proc.Process, error) {
+func (p *Playground) requestAddPlannedProc(ctx context.Context, plan ServicePlan, binPath string, version utils.Version, shared proc.SharedOptions, dataDir string) (proc.Process, error) {
 	if p == nil {
 		return nil, context.Canceled
 	}
@@ -121,7 +121,14 @@ func (p *Playground) requestAddPlannedProc(ctx context.Context, plan ServicePlan
 	}
 
 	respCh := make(chan addProcResponse, 1)
-	p.emitEvent(addPlannedProcRequest{plan: plan, binPath: binPath, version: version, respCh: respCh})
+	p.emitEvent(addPlannedProcRequest{
+		plan:    plan,
+		shared:  shared,
+		dataDir: dataDir,
+		binPath: binPath,
+		version: version,
+		respCh:  respCh,
+	})
 	select {
 	case resp := <-respCh:
 		return resp.inst, resp.err
@@ -172,7 +179,7 @@ func (p *Playground) addProcInController(state *controllerState, serviceID proc.
 	return spec.NewProc(controllerRuntime{pg: p, state: state}, pgservice.NewProcParams{Config: cfg, ID: id, Dir: dir, Host: host})
 }
 
-func (p *Playground) addPlannedProcInController(state *controllerState, plan ServicePlan, binPath string, version utils.Version) (proc.Process, error) {
+func (p *Playground) addPlannedProcInController(state *controllerState, plan ServicePlan, binPath string, version utils.Version, shOpt proc.SharedOptions, dataDir string) (proc.Process, error) {
 	if p == nil || state == nil {
 		return nil, fmt.Errorf("playground controller state is nil")
 	}
@@ -188,7 +195,18 @@ func (p *Playground) addPlannedProcInController(state *controllerState, plan Ser
 		return nil, fmt.Errorf("planned name mismatch: expect %q, got %q", name, plan.Name)
 	}
 
-	dir := filepath.Join(p.dataDir, name)
+	baseDir := strings.TrimSpace(dataDir)
+	if baseDir == "" {
+		baseDir = p.dataDir
+	}
+	if baseDir == "" {
+		return nil, fmt.Errorf("planned data dir is empty for %s", name)
+	}
+	if p.dataDir != "" && strings.TrimSpace(dataDir) != "" && filepath.Clean(p.dataDir) != filepath.Clean(dataDir) {
+		return nil, fmt.Errorf("planned data dir mismatch: runtime=%q planned=%q", p.dataDir, dataDir)
+	}
+
+	dir := filepath.Join(baseDir, name)
 	if plan.Shared.Dir != "" && plan.Shared.Dir != dir {
 		return nil, fmt.Errorf("planned dir mismatch: expect %q, got %q", dir, plan.Shared.Dir)
 	}
@@ -219,11 +237,6 @@ func (p *Playground) addPlannedProcInController(state *controllerState, plan Ser
 		info.BinPath = info.UserBinPath
 	}
 
-	shOpt := proc.SharedOptions{}
-	if p.bootOptions != nil {
-		shOpt = p.bootOptions.ShOpt
-	}
-
 	var inst proc.Process
 	switch serviceID {
 	case proc.ServicePD, proc.ServicePDAPI, proc.ServicePDTSO, proc.ServicePDScheduling, proc.ServicePDRouter, proc.ServicePDResourceManager:
@@ -240,7 +253,7 @@ func (p *Playground) addPlannedProcInController(state *controllerState, plan Ser
 		if plan.TiDB == nil {
 			return nil, fmt.Errorf("missing tidb plan for %s", name)
 		}
-		tdb := &proc.TiDBInstance{ShOpt: shOpt, Plan: *plan.TiDB, TiProxyCertDir: p.dataDir, ProcessInfo: info}
+		tdb := &proc.TiDBInstance{ShOpt: shOpt, Plan: *plan.TiDB, TiProxyCertDir: baseDir, ProcessInfo: info}
 		inst = tdb
 	case proc.ServiceTiKVWorker:
 		if plan.TiKVWorker == nil {

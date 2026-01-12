@@ -78,7 +78,13 @@ type addProcRequest struct {
 }
 
 type addPlannedProcRequest struct {
-	plan    ServicePlan
+	plan ServicePlan
+
+	// These must come from the BootPlan (executor input). The controller must
+	// not "secretly" read bootOptions to decide execution semantics.
+	shared  proc.SharedOptions
+	dataDir string
+
 	binPath string
 	version utils.Version
 	respCh  chan addProcResponse
@@ -220,7 +226,7 @@ func (p *Playground) handleEvent(state *controllerState, evt controllerEvent) {
 		e.respCh <- addProcResponse{inst: inst, err: err}
 		close(e.respCh)
 	case addPlannedProcRequest:
-		inst, err := p.addPlannedProcInController(state, e.plan, e.binPath, e.version)
+		inst, err := p.addPlannedProcInController(state, e.plan, e.binPath, e.version, e.shared, e.dataDir)
 		e.respCh <- addProcResponse{inst: inst, err: err}
 		close(e.respCh)
 	case startProcRequest:
