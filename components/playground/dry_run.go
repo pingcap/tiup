@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 )
 
@@ -49,7 +50,58 @@ func renderDryRunText(plan BootPlan) string {
 			if d.ComponentID == "" || d.ResolvedVersion == "" {
 				continue
 			}
-			fmt.Fprintf(&b, "- Install %s@%s\n", d.ComponentID, d.ResolvedVersion)
+			fmt.Fprintf(&b, "- Install %s@%s", d.ComponentID, d.ResolvedVersion)
+			if d.DebugReason != "" {
+				fmt.Fprintf(&b, " reason=%s", d.DebugReason)
+			}
+			if d.DebugBinPath != "" {
+				fmt.Fprintf(&b, " binpath=%s", d.DebugBinPath)
+			}
+			if d.DebugSourceURL != "" {
+				fmt.Fprintf(&b, " source=%s", d.DebugSourceURL)
+			}
+			if d.DebugInstallDir != "" {
+				fmt.Fprintf(&b, " install_dir=%s", d.DebugInstallDir)
+			}
+			if d.DebugConstraint != "" {
+				fmt.Fprintf(&b, " constraint=%s", d.DebugConstraint)
+			}
+			b.WriteString("\n")
+		}
+	}
+
+	var reusedComponents []string
+	if len(plan.Services) > 0 {
+		downloaded := make(map[string]struct{}, len(plan.Downloads))
+		for _, d := range plan.Downloads {
+			if d.ComponentID == "" || d.ResolvedVersion == "" {
+				continue
+			}
+			downloaded[d.ComponentID+"@"+d.ResolvedVersion] = struct{}{}
+		}
+
+		seen := make(map[string]struct{})
+		for _, s := range plan.Services {
+			if s.BinPath != "" || s.ComponentID == "" || s.ResolvedVersion == "" {
+				continue
+			}
+			key := s.ComponentID + "@" + s.ResolvedVersion
+			if _, ok := downloaded[key]; ok {
+				continue
+			}
+			if _, ok := seen[key]; ok {
+				continue
+			}
+			seen[key] = struct{}{}
+			reusedComponents = append(reusedComponents, key)
+		}
+		slices.Sort(reusedComponents)
+	}
+
+	if len(reusedComponents) > 0 {
+		b.WriteString("\nReused:\n")
+		for _, c := range reusedComponents {
+			fmt.Fprintf(&b, "- Reuse %s\n", c)
 		}
 	}
 

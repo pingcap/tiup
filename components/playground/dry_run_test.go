@@ -17,7 +17,7 @@ func TestWriteDryRun_Text(t *testing.T) {
 		Shared:      proc.SharedOptions{Mode: proc.ModeNormal, PDMode: "pd", PortOffset: 123},
 		Monitor:     true,
 		Downloads: []DownloadPlan{
-			{ComponentID: "tidb", ResolvedVersion: "v1.0.0"},
+			{ComponentID: "tidb", ResolvedVersion: "v1.0.0", DebugReason: "missing_binary", DebugBinPath: "/home/tidb-server"},
 		},
 		Services: []ServicePlan{
 			{
@@ -42,7 +42,9 @@ func TestWriteDryRun_Text(t *testing.T) {
 		"Version: nightly\n",
 		"Host: 127.0.0.1\n",
 		"Downloads:\n",
-		"- Install tidb@v1.0.0\n",
+		"- Install tidb@v1.0.0 reason=missing_binary binpath=/home/tidb-server\n",
+		"Reused:\n",
+		"- Reuse pd@v1.0.0\n",
 		"Services:\n",
 		"- Start pd(pd-0): host=127.0.0.1 port=2380 status_port=2379 dir=/data/pd-0",
 	} {
