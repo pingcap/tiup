@@ -3,7 +3,6 @@ package main
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/pingcap/tiup/components/playground/proc"
@@ -22,9 +21,7 @@ func TestValidateBootOptionsPure_ModeNormal_AllowsEmptyCSEOptions(t *testing.T) 
 	}
 	opts.Service(proc.ServicePD).Num = 1
 
-	if err := ValidateBootOptionsPure(opts); err != nil {
-		t.Fatalf("ValidateBootOptionsPure: %v", err)
-	}
+	require.NoError(t, ValidateBootOptionsPure(opts))
 }
 
 func TestValidateBootOptionsPure_ModeCSE_RequiresBucket(t *testing.T) {
@@ -42,12 +39,8 @@ func TestValidateBootOptionsPure_ModeCSE_RequiresBucket(t *testing.T) {
 	opts.Service(proc.ServicePD).Num = 1
 
 	err := ValidateBootOptionsPure(opts)
-	if err == nil {
-		t.Fatalf("expected error, got nil")
-	}
-	if !strings.Contains(err.Error(), "bucket") {
-		t.Fatalf("expected bucket error, got: %v", err)
-	}
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "bucket")
 }
 
 func TestValidateBootOptionsPure_ModeCSE_RequiresEndpointHost(t *testing.T) {
@@ -65,12 +58,8 @@ func TestValidateBootOptionsPure_ModeCSE_RequiresEndpointHost(t *testing.T) {
 	opts.Service(proc.ServicePD).Num = 1
 
 	err := ValidateBootOptionsPure(opts)
-	if err == nil {
-		t.Fatalf("expected error, got nil")
-	}
-	if !strings.Contains(err.Error(), "endpoint") {
-		t.Fatalf("expected endpoint error, got: %v", err)
-	}
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "endpoint")
 }
 
 func TestValidateBootOptionsPure_ModeCSE_AllowsTrailingSlashInEndpoint(t *testing.T) {
@@ -87,9 +76,7 @@ func TestValidateBootOptionsPure_ModeCSE_AllowsTrailingSlashInEndpoint(t *testin
 	}
 	opts.Service(proc.ServicePD).Num = 1
 
-	if err := ValidateBootOptionsPure(opts); err != nil {
-		t.Fatalf("ValidateBootOptionsPure: %v", err)
-	}
+	require.NoError(t, ValidateBootOptionsPure(opts))
 }
 
 func TestValidateBootOptionsPure_ModeCSE_RejectsEndpointWithPath(t *testing.T) {
@@ -107,12 +94,8 @@ func TestValidateBootOptionsPure_ModeCSE_RejectsEndpointWithPath(t *testing.T) {
 	opts.Service(proc.ServicePD).Num = 1
 
 	err := ValidateBootOptionsPure(opts)
-	if err == nil {
-		t.Fatalf("expected error, got nil")
-	}
-	if !strings.Contains(err.Error(), "path") {
-		t.Fatalf("expected path error, got: %v", err)
-	}
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "path")
 }
 
 func TestValidateBootOptionsPure_PDModeMS_AllowsLatestAlias(t *testing.T) {
@@ -124,9 +107,7 @@ func TestValidateBootOptionsPure_PDModeMS_AllowsLatestAlias(t *testing.T) {
 		Version: utils.LatestVersionAlias,
 	}
 
-	if err := ValidateBootOptionsPure(opts); err != nil {
-		t.Fatalf("ValidateBootOptionsPure: %v", err)
-	}
+	require.NoError(t, ValidateBootOptionsPure(opts))
 }
 
 func TestValidateBootOptionsPure_PDModeMS_RejectsOldVersion(t *testing.T) {
@@ -139,27 +120,19 @@ func TestValidateBootOptionsPure_PDModeMS_RejectsOldVersion(t *testing.T) {
 	}
 
 	err := ValidateBootOptionsPure(opts)
-	if err == nil {
-		t.Fatalf("expected error, got nil")
-	}
-	if !strings.Contains(err.Error(), "microservices") {
-		t.Fatalf("expected microservices error, got: %v", err)
-	}
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "microservices")
 }
 
 func TestBootOptionsService_AllocatesAndReturnsStablePointer(t *testing.T) {
 	opts := &BootOptions{}
 
 	cfg1 := opts.Service(proc.ServicePD)
-	if cfg1 == nil {
-		t.Fatalf("expected non-nil config")
-	}
+	require.NotNil(t, cfg1)
 	cfg2 := opts.Service(proc.ServicePD)
-	if cfg1 != cfg2 {
-		t.Fatalf("expected Service to return stable pointer")
-	}
+	require.Same(t, cfg1, cfg2)
 	if got := opts.Service(""); got != nil {
-		t.Fatalf("expected nil for empty service ID, got %+v", got)
+		require.FailNowf(t, "expected nil for empty service ID", "got %+v", got)
 	}
 }
 
@@ -168,17 +141,11 @@ func TestBootOptionsServiceConfig_ReturnsCopy(t *testing.T) {
 	opts.Service(proc.ServicePD).Num = 3
 
 	cfg, ok := opts.ServiceConfig(proc.ServicePD)
-	if !ok {
-		t.Fatalf("expected config to exist")
-	}
-	if cfg.Num != 3 {
-		t.Fatalf("unexpected config num: %d", cfg.Num)
-	}
+	require.True(t, ok)
+	require.Equal(t, 3, cfg.Num)
 
 	cfg.Num = 100
-	if got := opts.Service(proc.ServicePD).Num; got != 3 {
-		t.Fatalf("expected stored config to be unchanged, got %d", got)
-	}
+	require.Equal(t, 3, opts.Service(proc.ServicePD).Num)
 }
 
 func TestBootOptionsSortedServiceIDs_DeterministicOrder(t *testing.T) {
@@ -188,13 +155,9 @@ func TestBootOptionsSortedServiceIDs_DeterministicOrder(t *testing.T) {
 	opts.Service(proc.ServiceTiKV)
 
 	got := opts.SortedServiceIDs()
-	if len(got) != 3 {
-		t.Fatalf("unexpected length: %d", len(got))
-	}
+	require.Len(t, got, 3)
 	for i := 1; i < len(got); i++ {
-		if got[i-1] > got[i] {
-			t.Fatalf("expected sorted order, got %v", got)
-		}
+		require.False(t, got[i-1] > got[i], "expected sorted order, got %v", got)
 	}
 }
 
@@ -205,60 +168,40 @@ func TestValidateServiceCountLimits_EnforcedMaxNum(t *testing.T) {
 		},
 	}
 	err := validateServiceCountLimits(opts)
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-	if !strings.Contains(err.Error(), "at most 1") {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !strings.Contains(err.Error(), "TiKV Worker") {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "at most 1")
+	require.Contains(t, err.Error(), "TiKV Worker")
 }
 
 func TestPlanInstallByResolvedBinaryPath_TiKVWorker_MissingBinary(t *testing.T) {
 	dir := t.TempDir()
 	base := filepath.Join(dir, "tikv-server")
-	if err := os.WriteFile(base, []byte("bin"), 0o755); err != nil {
-		t.Fatalf("write base binary: %v", err)
-	}
+	require.NoError(t, os.WriteFile(base, []byte("bin"), 0o755))
 
 	dp := planInstallByResolvedBinaryPath(proc.ServiceTiKVWorker, "tikv", "v1.0.0", base, nil, false)
-	if dp == nil || dp.DebugReason != "missing_binary" {
-		t.Fatalf("expected missing_binary download plan, got: %+v", dp)
-	}
-	if want := filepath.Join(dir, "tikv-worker"); dp.DebugBinPath != want {
-		t.Fatalf("unexpected debug bin path: %q", dp.DebugBinPath)
-	}
+	require.NotNil(t, dp)
+	require.Equal(t, "missing_binary", dp.DebugReason)
+	require.Equal(t, filepath.Join(dir, "tikv-worker"), dp.DebugBinPath)
 
-	if err := os.WriteFile(filepath.Join(dir, "tikv-worker"), []byte("bin"), 0o755); err != nil {
-		t.Fatalf("write required binary: %v", err)
-	}
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "tikv-worker"), []byte("bin"), 0o755))
 	if dp := planInstallByResolvedBinaryPath(proc.ServiceTiKVWorker, "tikv", "v1.0.0", base, nil, false); dp != nil {
-		t.Fatalf("expected nil download plan when binary exists, got: %+v", dp)
+		require.FailNowf(t, "expected nil download plan when binary exists", "got: %+v", dp)
 	}
 }
 
 func TestPlanInstallByResolvedBinaryPath_NGMonitoring_MissingBinary(t *testing.T) {
 	dir := t.TempDir()
 	base := filepath.Join(dir, "prometheus")
-	if err := os.WriteFile(base, []byte("bin"), 0o755); err != nil {
-		t.Fatalf("write base binary: %v", err)
-	}
+	require.NoError(t, os.WriteFile(base, []byte("bin"), 0o755))
 
 	dp := planInstallByResolvedBinaryPath(proc.ServiceNGMonitoring, "prometheus", "v1.0.0", base, nil, false)
-	if dp == nil || dp.DebugReason != "missing_binary" {
-		t.Fatalf("expected missing_binary download plan, got: %+v", dp)
-	}
-	if want := filepath.Join(dir, "ng-monitoring-server"); dp.DebugBinPath != want {
-		t.Fatalf("unexpected debug bin path: %q", dp.DebugBinPath)
-	}
+	require.NotNil(t, dp)
+	require.Equal(t, "missing_binary", dp.DebugReason)
+	require.Equal(t, filepath.Join(dir, "ng-monitoring-server"), dp.DebugBinPath)
 
-	if err := os.WriteFile(filepath.Join(dir, "ng-monitoring-server"), []byte("bin"), 0o755); err != nil {
-		t.Fatalf("write required binary: %v", err)
-	}
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "ng-monitoring-server"), []byte("bin"), 0o755))
 	if dp := planInstallByResolvedBinaryPath(proc.ServiceNGMonitoring, "prometheus", "v1.0.0", base, nil, false); dp != nil {
-		t.Fatalf("expected nil download plan when binary exists, got: %+v", dp)
+		require.FailNowf(t, "expected nil download plan when binary exists", "got: %+v", dp)
 	}
 }
 
@@ -267,9 +210,7 @@ func ensureTestServiceSpec(t *testing.T, spec pgservice.Spec) {
 	if _, ok := pgservice.SpecFor(spec.ServiceID); ok {
 		return
 	}
-	if err := pgservice.Register(spec); err != nil {
-		t.Fatalf("register %s: %v", spec.ServiceID, err)
-	}
+	require.NoErrorf(t, pgservice.Register(spec), "register %s", spec.ServiceID)
 }
 
 func TestTopoSortServiceIDs_StableOrder(t *testing.T) {
@@ -298,9 +239,7 @@ func TestTopoSortServiceIDs_StableOrder(t *testing.T) {
 	})
 
 	got, err := topoSortServiceIDs([]proc.ServiceID{c, b, a})
-	if err != nil {
-		t.Fatalf("topoSortServiceIDs: %v", err)
-	}
+	require.NoError(t, err)
 	want := []proc.ServiceID{a, b, c}
 	require.Equal(t, want, got)
 }
@@ -325,10 +264,6 @@ func TestTopoSortServiceIDs_Cycle(t *testing.T) {
 	})
 
 	_, err := topoSortServiceIDs([]proc.ServiceID{x, y})
-	if err == nil {
-		t.Fatalf("expected cycle error")
-	}
-	if !strings.Contains(err.Error(), "service dependency cycle detected") {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "service dependency cycle detected")
 }

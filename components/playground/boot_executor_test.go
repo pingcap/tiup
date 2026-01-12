@@ -57,16 +57,12 @@ func TestBootExecutor_PreRun_GeneratesTiProxyCerts(t *testing.T) {
 	}
 
 	executor := newBootExecutor(nil, nil)
-	if err := executor.PreRun(context.Background(), plan); err != nil {
-		t.Fatalf("PreRun: %v", err)
-	}
+	require.NoError(t, executor.PreRun(context.Background(), plan))
 
-	if _, err := os.Stat(filepath.Join(dir, "tiproxy.crt")); err != nil {
-		t.Fatalf("missing tiproxy.crt: %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(dir, "tiproxy.key")); err != nil {
-		t.Fatalf("missing tiproxy.key: %v", err)
-	}
+	_, err := os.Stat(filepath.Join(dir, "tiproxy.crt"))
+	require.NoError(t, err)
+	_, err = os.Stat(filepath.Join(dir, "tiproxy.key"))
+	require.NoError(t, err)
 }
 
 func TestBootExecutor_PreRun_SkipsTiProxyCertsWhenDisabled(t *testing.T) {
@@ -79,16 +75,12 @@ func TestBootExecutor_PreRun_SkipsTiProxyCertsWhenDisabled(t *testing.T) {
 	}
 
 	executor := newBootExecutor(nil, nil)
-	if err := executor.PreRun(context.Background(), plan); err != nil {
-		t.Fatalf("PreRun: %v", err)
-	}
+	require.NoError(t, executor.PreRun(context.Background(), plan))
 
-	if _, err := os.Stat(filepath.Join(dir, "tiproxy.crt")); err == nil {
-		t.Fatalf("unexpected tiproxy.crt generated")
-	}
-	if _, err := os.Stat(filepath.Join(dir, "tiproxy.key")); err == nil {
-		t.Fatalf("unexpected tiproxy.key generated")
-	}
+	_, err := os.Stat(filepath.Join(dir, "tiproxy.crt"))
+	require.ErrorIs(t, err, os.ErrNotExist)
+	_, err = os.Stat(filepath.Join(dir, "tiproxy.key"))
+	require.ErrorIs(t, err, os.ErrNotExist)
 }
 
 func TestBootExecutor_Download_EnsuresInstalled(t *testing.T) {
@@ -104,27 +96,14 @@ func TestBootExecutor_Download_EnsuresInstalled(t *testing.T) {
 		},
 	}
 
-	if err := executor.Download(plan); err != nil {
-		t.Fatalf("Download: %v", err)
-	}
-
-	if got := len(src.ensureInstalledCalls); got != 2 {
-		t.Fatalf("unexpected ensureInstalled calls: %v", src.ensureInstalledCalls)
-	}
-	if src.ensureInstalledCalls[0] != "tidb@v1.0.0" {
-		t.Fatalf("unexpected ensureInstalled[0]: %q", src.ensureInstalledCalls[0])
-	}
-	if src.ensureInstalledCalls[1] != "tikv@v1.0.0" {
-		t.Fatalf("unexpected ensureInstalled[1]: %q", src.ensureInstalledCalls[1])
-	}
+	require.NoError(t, executor.Download(plan))
+	require.Equal(t, []string{"tidb@v1.0.0", "tikv@v1.0.0"}, src.ensureInstalledCalls)
 }
 
 func TestBootExecutor_AddProcs_CachesBinaryPathByComponentVersion(t *testing.T) {
 	dir := t.TempDir()
 	tidbBin := filepath.Join(dir, "tidb-server")
-	if err := os.WriteFile(tidbBin, []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
-		t.Fatalf("write tidb bin: %v", err)
-	}
+	require.NoError(t, os.WriteFile(tidbBin, []byte("#!/bin/sh\nexit 0\n"), 0o755))
 
 	pg := NewPlayground(dir, 0)
 	pg.startController()
@@ -135,7 +114,7 @@ func TestBootExecutor_AddProcs_CachesBinaryPathByComponentVersion(t *testing.T) 
 		select {
 		case <-pg.controllerDoneCh:
 		case <-time.After(2 * time.Second):
-			t.Fatalf("controller did not stop")
+			require.FailNow(t, "controller did not stop")
 		}
 	}()
 
@@ -179,35 +158,25 @@ func TestBootExecutor_AddProcs_CachesBinaryPathByComponentVersion(t *testing.T) 
 		},
 	}
 
-	if err := executor.AddProcs(context.Background(), plan); err != nil {
-		t.Fatalf("AddProcs: %v", err)
-	}
+	require.NoError(t, executor.AddProcs(context.Background(), plan))
 
 	procs := pg.Procs(proc.ServiceTiDB)
-	if got := len(procs); got != 2 {
-		t.Fatalf("unexpected tidb procs: %d", got)
-	}
+	require.Len(t, procs, 2)
 
-	if got := len(src.binaryPathCalls); got != 1 {
-		t.Fatalf("expected 1 BinaryPath call, got %d: %v", got, src.binaryPathCalls)
-	}
+	require.Len(t, src.binaryPathCalls, 1)
 }
 
 func TestBootExecutor_AddProcs_ResolvesRequiredBinaryPath(t *testing.T) {
 	dir := t.TempDir()
 	binDir := filepath.Join(dir, "bin")
-	if err := os.MkdirAll(binDir, 0o755); err != nil {
-		t.Fatalf("mkdir bin dir: %v", err)
-	}
+	require.NoError(t, os.MkdirAll(binDir, 0o755))
 
 	promBin := filepath.Join(binDir, "prometheus")
 	ngBin := filepath.Join(binDir, "ng-monitoring-server")
 	tikvServer := filepath.Join(binDir, "tikv-server")
 	tikvWorker := filepath.Join(binDir, "tikv-worker")
 	for _, path := range []string{promBin, ngBin, tikvServer, tikvWorker} {
-		if err := os.WriteFile(path, []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
-			t.Fatalf("write bin %s: %v", path, err)
-		}
+		require.NoErrorf(t, os.WriteFile(path, []byte("#!/bin/sh\nexit 0\n"), 0o755), "write bin %s", path)
 	}
 
 	pg := NewPlayground(dir, 0)
@@ -219,7 +188,7 @@ func TestBootExecutor_AddProcs_ResolvesRequiredBinaryPath(t *testing.T) {
 		select {
 		case <-pg.controllerDoneCh:
 		case <-time.After(2 * time.Second):
-			t.Fatalf("controller did not stop")
+			require.FailNow(t, "controller did not stop")
 		}
 	}()
 
@@ -258,25 +227,15 @@ func TestBootExecutor_AddProcs_ResolvesRequiredBinaryPath(t *testing.T) {
 		},
 	}
 
-	if err := executor.AddProcs(context.Background(), plan); err != nil {
-		t.Fatalf("AddProcs: %v", err)
-	}
+	require.NoError(t, executor.AddProcs(context.Background(), plan))
 
 	ngProcs := pg.Procs(proc.ServiceNGMonitoring)
-	if got := len(ngProcs); got != 1 {
-		t.Fatalf("unexpected ng-monitoring procs: %d", got)
-	}
-	if got := ngProcs[0].Info().BinPath; got != ngBin {
-		t.Fatalf("unexpected ng-monitoring binpath: %q", got)
-	}
+	require.Len(t, ngProcs, 1)
+	require.Equal(t, ngBin, ngProcs[0].Info().BinPath)
 
 	workerProcs := pg.Procs(proc.ServiceTiKVWorker)
-	if got := len(workerProcs); got != 1 {
-		t.Fatalf("unexpected tikv-worker procs: %d", got)
-	}
-	if got := workerProcs[0].Info().BinPath; got != tikvWorker {
-		t.Fatalf("unexpected tikv-worker binpath: %q", got)
-	}
+	require.Len(t, workerProcs, 1)
+	require.Equal(t, tikvWorker, workerProcs[0].Info().BinPath)
 }
 
 func TestBootExecutor_ExecuteBootPlan_DownloadPreRunAddProcsStart(t *testing.T) {
@@ -288,9 +247,7 @@ func TestBootExecutor_ExecuteBootPlan_DownloadPreRunAddProcsStart(t *testing.T) 
 	writeFakeBin := func(name string) string {
 		path := filepath.Join(dir, name)
 		data := []byte("#!/bin/sh\nset -eu\ntouch \"$0.started\"\n")
-		if err := os.WriteFile(path, data, 0o755); err != nil {
-			t.Fatalf("write fake bin %s: %v", name, err)
-		}
+		require.NoErrorf(t, os.WriteFile(path, data, 0o755), "write fake bin %s", name)
 		return path
 	}
 
@@ -306,7 +263,7 @@ func TestBootExecutor_ExecuteBootPlan_DownloadPreRunAddProcsStart(t *testing.T) 
 		select {
 		case <-pg.controllerDoneCh:
 		case <-time.After(2 * time.Second):
-			t.Fatalf("controller did not stop")
+			require.FailNow(t, "controller did not stop")
 		}
 	}()
 
@@ -352,61 +309,36 @@ func TestBootExecutor_ExecuteBootPlan_DownloadPreRunAddProcsStart(t *testing.T) 
 		},
 	}
 
-	if err := executor.Download(plan); err != nil {
-		t.Fatalf("Download: %v", err)
-	}
-	if got := src.ensureInstalledCalls; len(got) != 2 || got[0] != "prometheus@v1.0.0" || got[1] != "tiproxy@v1.0.0" {
-		t.Fatalf("unexpected ensureInstalled calls: %v", got)
-	}
+	require.NoError(t, executor.Download(plan))
+	require.Equal(t, []string{"prometheus@v1.0.0", "tiproxy@v1.0.0"}, src.ensureInstalledCalls)
 
-	if err := executor.PreRun(context.Background(), plan); err != nil {
-		t.Fatalf("PreRun: %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(dir, "tiproxy.crt")); err != nil {
-		t.Fatalf("missing tiproxy.crt: %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(dir, "tiproxy.key")); err != nil {
-		t.Fatalf("missing tiproxy.key: %v", err)
-	}
+	require.NoError(t, executor.PreRun(context.Background(), plan))
+	_, err := os.Stat(filepath.Join(dir, "tiproxy.crt"))
+	require.NoError(t, err)
+	_, err = os.Stat(filepath.Join(dir, "tiproxy.key"))
+	require.NoError(t, err)
 
-	if err := executor.AddProcs(context.Background(), plan); err != nil {
-		t.Fatalf("AddProcs: %v", err)
-	}
-	if got := len(pg.Procs(proc.ServicePrometheus)); got != 1 {
-		t.Fatalf("unexpected prometheus procs: %d", got)
-	}
-	if got := len(pg.Procs(proc.ServiceTiProxy)); got != 1 {
-		t.Fatalf("unexpected tiproxy procs: %d", got)
-	}
+	require.NoError(t, executor.AddProcs(context.Background(), plan))
+	require.Len(t, pg.Procs(proc.ServicePrometheus), 1)
+	require.Len(t, pg.Procs(proc.ServiceTiProxy), 1)
 
 	for _, marker := range []string{promBin + ".started", tiproxyBin + ".started"} {
-		if _, err := os.Stat(marker); err == nil {
-			t.Fatalf("unexpected started marker before start: %s", marker)
-		}
+		_, err := os.Stat(marker)
+		require.ErrorIs(t, err, os.ErrNotExist, "unexpected started marker before start: %s", marker)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
 	starter := newBootStarter(ctx, pg, pg.procsSnapshot(), nil)
-	if _, err := starter.startPlanned(plannedServicesFromBootPlan(plan)); err != nil {
-		t.Fatalf("startPlanned: %v", err)
+	_, err = starter.startPlanned(plannedServicesFromBootPlan(plan))
+	require.NoError(t, err)
+	for _, marker := range []string{promBin + ".started", tiproxyBin + ".started"} {
+		require.Eventually(t, func() bool {
+			_, err := os.Stat(marker)
+			return err == nil
+		}, 2*time.Second, 10*time.Millisecond, "started marker not created: %s", marker)
 	}
-
-	waitMarker := func(path string) {
-		deadline := time.Now().Add(2 * time.Second)
-		for {
-			if _, err := os.Stat(path); err == nil {
-				return
-			}
-			if time.Now().After(deadline) {
-				t.Fatalf("started marker not created: %s", path)
-			}
-			time.Sleep(10 * time.Millisecond)
-		}
-	}
-	waitMarker(promBin + ".started")
-	waitMarker(tiproxyBin + ".started")
 }
 
 func TestBootExecutor_PreRun_HandlersRunOnceInSortedOrder(t *testing.T) {
