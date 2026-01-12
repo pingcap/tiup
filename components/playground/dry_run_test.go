@@ -53,7 +53,8 @@ func TestWriteDryRun_Text(t *testing.T) {
 	out := buf.String()
 	for _, want := range []string{
 		"==> Download Packages:\n",
-		"  + tidb@v1.0.0\n",
+		"  + tidb@v1.0.0 (missing_binary)\n",
+		"    /home/tidb-server\n",
 		"==> Reuse Packages:\n",
 		"  + pd@v1.0.0\n",
 		"==> Start Services:\n",

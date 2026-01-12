@@ -60,7 +60,14 @@ func renderDryRunText(out io.Writer, plan BootPlan) string {
 			if d.ComponentID == "" || d.ResolvedVersion == "" {
 				continue
 			}
-			tokens.Fprintf(&b, "  [green]+[reset] %s[dark_gray]@%s[reset]\n", d.ComponentID, d.ResolvedVersion)
+			tokens.Fprintf(&b, "  [green]+[reset] %s[dark_gray]@%s[reset]", d.ComponentID, d.ResolvedVersion)
+			if reason := strings.TrimSpace(d.DebugReason); reason != "" {
+				tokens.Fprintf(&b, " [dark_gray](%s)[reset]", reason)
+			}
+			b.WriteString("\n")
+			if binPath := strings.TrimSpace(d.DebugBinPath); binPath != "" {
+				tokens.Fprintf(&b, "    [dark_gray]%s[reset]\n", binPath)
+			}
 		}
 	}
 
