@@ -183,3 +183,27 @@ func TestBuildBootPlan_StartAfterServices_SortedAndDeduped(t *testing.T) {
 		t.Fatalf("missing tidb service in plan")
 	}
 }
+
+func TestPortPlanner_PortConflictNone_WildcardConflictsWithSpecificHost(t *testing.T) {
+	p := newPortPlanner(PortConflictNone)
+
+	a, err := p.alloc("127.0.0.1", 10080, 0)
+	if err != nil {
+		t.Fatalf("alloc: %v", err)
+	}
+	b, err := p.alloc("0.0.0.0", 10080, 0)
+	if err != nil {
+		t.Fatalf("alloc: %v", err)
+	}
+	if b == a {
+		t.Fatalf("expected wildcard host port to avoid conflicts, got: %d", b)
+	}
+
+	c, err := p.alloc("127.0.0.1", 10080, 0)
+	if err != nil {
+		t.Fatalf("alloc: %v", err)
+	}
+	if c == a || c == b {
+		t.Fatalf("expected per-host port to avoid wildcard conflicts, got: %d", c)
+	}
+}

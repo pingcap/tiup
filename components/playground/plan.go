@@ -19,6 +19,10 @@ const (
 	// PortConflictNone makes planner allocate ports deterministically without
 	// probing the OS. It guarantees uniqueness within the generated plan, but it
 	// does not guarantee the ports are actually free on the host machine.
+	//
+	// Uniqueness is scoped by host, except that "0.0.0.0" is treated as a
+	// wildcard host that conflicts with all other hosts (matching typical OS
+	// listen semantics).
 	PortConflictNone PortConflictPolicy = "none"
 	// PortConflictAllocFree makes planner allocate ports by probing the OS (the
 	// current behavior of playground).
@@ -172,15 +176,40 @@ func (p *portPlanner) alloc(host string, base, portOffset int) (int, error) {
 		if p.used == nil {
 			p.used = make(map[string]map[int]struct{})
 		}
+
+		const wildcardHost = "0.0.0.0"
 		if p.used[host] == nil {
 			p.used[host] = make(map[int]struct{})
 		}
+
 		port := want
 		for {
-			if _, ok := p.used[host][port]; !ok {
-				break
+			if host == wildcardHost {
+				conflict := false
+				for _, usedPorts := range p.used {
+					if _, ok := usedPorts[port]; ok {
+						conflict = true
+						break
+					}
+				}
+				if !conflict {
+					break
+				}
+				port++
+				continue
 			}
-			port++
+
+			if _, ok := p.used[host][port]; ok {
+				port++
+				continue
+			}
+			if usedPorts := p.used[wildcardHost]; usedPorts != nil {
+				if _, ok := usedPorts[port]; ok {
+					port++
+					continue
+				}
+			}
+			break
 		}
 		p.used[host][port] = struct{}{}
 		return port, nil
