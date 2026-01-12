@@ -1,9 +1,17 @@
 package main
 
 import (
+	"bytes"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
+	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/playground/proc"
+	"github.com/pingcap/tiup/pkg/utils"
+	"github.com/spf13/pflag"
 	"github.com/stretchr/testify/require"
 )
 
@@ -624,4 +632,505 @@ func TestBuildBootPlan_ModeNextGen_Defaults(t *testing.T) {
 
 	require.Equal(t, proc.ServiceTiDBSystem.String(), plan.Services[3].ServiceID)
 	require.Equal(t, proc.ServiceTiDB.String(), plan.Services[4].ServiceID)
+}
+
+func TestPortPlanner_PortConflictNone_WildcardConflictsWithSpecificHost(t *testing.T) {
+	p := newPortPlanner(PortConflictNone)
+
+	a, err := p.alloc("127.0.0.1", 10080, 0)
+	require.NoError(t, err)
+
+	b, err := p.alloc("0.0.0.0", 10080, 0)
+	require.NoError(t, err)
+	require.NotEqual(t, a, b)
+
+	c, err := p.alloc("127.0.0.1", 10080, 0)
+	require.NoError(t, err)
+	require.NotEqual(t, a, c)
+	require.NotEqual(t, b, c)
+}
+
+func TestBuildBootPlan_PortConflictNone_UniquePDPorts(t *testing.T) {
+	opts := &BootOptions{
+		ShOpt: proc.SharedOptions{
+			Mode:   proc.ModeNormal,
+			PDMode: "pd",
+		},
+		Version: "nightly",
+		Host:    "127.0.0.1",
+		Monitor: false,
+	}
+	applyServiceDefaultsForTest(t, opts, "--pd=2")
+
+	plan := buildBootPlanForTest(t, opts, nil)
+
+	require.Len(t, plan.Services, 5)
+	require.Equal(t, "pd-0", plan.Services[0].Name)
+	require.Equal(t, proc.ServicePD.String(), plan.Services[0].ServiceID)
+	require.Equal(t, 2380, plan.Services[0].Shared.Port)
+	require.Equal(t, 2379, plan.Services[0].Shared.StatusPort)
+
+	require.Equal(t, "pd-1", plan.Services[1].Name)
+	require.Equal(t, proc.ServicePD.String(), plan.Services[1].ServiceID)
+	require.Equal(t, 2381, plan.Services[1].Shared.Port)
+	require.Equal(t, 2382, plan.Services[1].Shared.StatusPort)
+}
+
+func TestWriteDryRun_Text(t *testing.T) {
+	plan := BootPlan{
+		DataDir:     "/data",
+		BootVersion: "nightly",
+		Host:        "127.0.0.1",
+		Shared: proc.SharedOptions{
+			Mode:               proc.ModeCSE,
+			PDMode:             "pd",
+			PortOffset:         123,
+			HighPerf:           true,
+			EnableTiKVColumnar: true,
+			ForcePull:          true,
+			CSE: proc.CSEOptions{
+				S3Endpoint: "https://s3.example.com",
+				Bucket:     "my-bucket",
+				AccessKey:  "fake-access-key",
+				SecretKey:  "fake-secret-key",
+			},
+		},
+		Monitor:     true,
+		GrafanaPort: 3000,
+		Downloads: []DownloadPlan{
+			{ComponentID: "tidb", ResolvedVersion: "v1.0.0", DebugReason: "missing_binary", DebugBinPath: "/home/tidb-server"},
+		},
+		Services: []ServicePlan{
+			{
+				Name:               "pd-0",
+				ServiceID:          proc.ServicePD.String(),
+				ComponentID:        proc.ComponentPD.String(),
+				ResolvedVersion:    "v1.0.0",
+				StartAfterServices: []string{proc.ServiceTiKV.String()},
+				Shared:             ServiceSharedPlan{Dir: "/data/pd-0", Host: "127.0.0.1", Port: 2380, StatusPort: 2379},
+			},
+			{
+				Name:            "tidb-0",
+				ServiceID:       proc.ServiceTiDB.String(),
+				ComponentID:     proc.ComponentTiDB.String(),
+				ResolvedVersion: "v1.0.0",
+				BinPath:         "/usr/local/bin/tidb-server",
+				Shared:          ServiceSharedPlan{Dir: "/data/tidb-0", Host: "127.0.0.1", Port: 4000, StatusPort: 10080},
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	require.NoError(t, writeDryRun(&buf, plan, "text"))
+	require.Equal(t, `==> Download Packages:
+  + tidb@v1.0.0
+
+==> Existing Packages:
+    pd@v1.0.0
+
+==> Start Services:
+  + pd-0@v1.0.0
+    127.0.0.1:2380,2379
+    Start after: tikv
+  + tidb-0@v1.0.0 (use /usr/local/bin/tidb-server)
+    127.0.0.1:4000,10080
+`, buf.String())
+}
+
+func TestWriteDryRun_Text_ShowsComponentHintWhenDifferent(t *testing.T) {
+	plan := BootPlan{
+		Services: []ServicePlan{
+			{
+				Name:            "ng-monitoring-0",
+				ServiceID:       proc.ServiceNGMonitoring.String(),
+				ComponentID:     proc.ComponentPrometheus.String(),
+				ResolvedVersion: "v1.0.0",
+				Shared:          ServiceSharedPlan{Host: "127.0.0.1", Port: 12020, StatusPort: 12020},
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	require.NoError(t, writeDryRun(&buf, plan, "text"))
+	require.Equal(t, `==> Existing Packages:
+    prometheus@v1.0.0
+
+==> Start Services:
+  + prometheus/ng-monitoring-0@v1.0.0
+    127.0.0.1:12020
+`, buf.String())
+}
+
+func TestWriteDryRun_JSON(t *testing.T) {
+	plan := BootPlan{
+		DataDir:     "/data",
+		BootVersion: "nightly",
+		Host:        "127.0.0.1",
+		Shared:      proc.SharedOptions{Mode: proc.ModeNormal, PDMode: "pd"},
+	}
+
+	var buf bytes.Buffer
+	require.NoError(t, writeDryRun(&buf, plan, "json"))
+	require.Equal(t, `{
+  "DataDir": "/data",
+  "BootVersion": "nightly",
+  "Host": "127.0.0.1",
+  "Shared": {
+    "HighPerf": false,
+    "CSE": {
+      "S3Endpoint": "",
+      "Bucket": "",
+      "AccessKey": "",
+      "SecretKey": ""
+    },
+    "PDMode": "pd",
+    "Mode": "tidb",
+    "PortOffset": 0,
+    "EnableTiKVColumnar": false,
+    "ForcePull": false
+  },
+  "Monitor": false,
+  "GrafanaPort": 0,
+  "Downloads": null,
+  "Services": null,
+  "RequiredServices": null,
+  "DebugServiceConfigs": null
+}
+`, buf.String())
+}
+
+func TestWriteDryRun_JSON_RedactsSecrets(t *testing.T) {
+	plan := BootPlan{
+		Shared: proc.SharedOptions{
+			Mode: proc.ModeCSE,
+			CSE: proc.CSEOptions{
+				AccessKey: "access-KEY-123",
+				SecretKey: "secret-KEY-456",
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	require.NoError(t, writeDryRun(&buf, plan, "json"))
+	require.Equal(t, `{
+  "DataDir": "",
+  "BootVersion": "",
+  "Host": "",
+  "Shared": {
+    "HighPerf": false,
+    "CSE": {
+      "S3Endpoint": "",
+      "Bucket": "",
+      "AccessKey": "***",
+      "SecretKey": "***"
+    },
+    "PDMode": "",
+    "Mode": "tidb-cse",
+    "PortOffset": 0,
+    "EnableTiKVColumnar": false,
+    "ForcePull": false
+  },
+  "Monitor": false,
+  "GrafanaPort": 0,
+  "Downloads": null,
+  "Services": null,
+  "RequiredServices": null,
+  "DebugServiceConfigs": null
+}
+`, buf.String())
+}
+
+func TestWriteDryRun_JSON_OmitsNilOneOfFields(t *testing.T) {
+	plan := BootPlan{
+		Services: []ServicePlan{
+			{
+				Name:            "pd-0",
+				ServiceID:       proc.ServicePD.String(),
+				ComponentID:     proc.ComponentPD.String(),
+				ResolvedVersion: "v1.0.0",
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	require.NoError(t, writeDryRun(&buf, plan, "json"))
+	require.Equal(t, `{
+  "DataDir": "",
+  "BootVersion": "",
+  "Host": "",
+  "Shared": {
+    "HighPerf": false,
+    "CSE": {
+      "S3Endpoint": "",
+      "Bucket": "",
+      "AccessKey": "",
+      "SecretKey": ""
+    },
+    "PDMode": "",
+    "Mode": "",
+    "PortOffset": 0,
+    "EnableTiKVColumnar": false,
+    "ForcePull": false
+  },
+  "Monitor": false,
+  "GrafanaPort": 0,
+  "Downloads": null,
+  "Services": [
+    {
+      "Name": "pd-0",
+      "ServiceID": "pd",
+      "StartAfterServices": null,
+      "ComponentID": "pd",
+      "ResolvedVersion": "v1.0.0",
+      "BinPath": "",
+      "Shared": {
+        "Dir": "",
+        "Host": "",
+        "Port": 0,
+        "StatusPort": 0,
+        "ConfigPath": "",
+        "UpTimeout": 0
+      },
+      "DebugConstraint": ""
+    }
+  ],
+  "RequiredServices": null,
+  "DebugServiceConfigs": null
+}
+`, buf.String())
+}
+
+func TestWriteDryRun_JSON_MapOrderIsStable(t *testing.T) {
+	plan := BootPlan{
+		RequiredServices: map[string]int{
+			"zzz": 1,
+			"aaa": 2,
+		},
+		DebugServiceConfigs: map[string]proc.Config{
+			"zzz_cfg": {Num: 1},
+			"aaa_cfg": {Num: 2},
+		},
+	}
+
+	var buf bytes.Buffer
+	require.NoError(t, writeDryRun(&buf, plan, "json"))
+	require.Equal(t, `{
+  "DataDir": "",
+  "BootVersion": "",
+  "Host": "",
+  "Shared": {
+    "HighPerf": false,
+    "CSE": {
+      "S3Endpoint": "",
+      "Bucket": "",
+      "AccessKey": "",
+      "SecretKey": ""
+    },
+    "PDMode": "",
+    "Mode": "",
+    "PortOffset": 0,
+    "EnableTiKVColumnar": false,
+    "ForcePull": false
+  },
+  "Monitor": false,
+  "GrafanaPort": 0,
+  "Downloads": null,
+  "Services": null,
+  "RequiredServices": {
+    "aaa": 2,
+    "zzz": 1
+  },
+  "DebugServiceConfigs": {
+    "aaa_cfg": {
+      "ConfigPath": "",
+      "BinPath": "",
+      "Num": 2,
+      "Host": "",
+      "Port": 0,
+      "UpTimeout": 0,
+      "Version": ""
+    },
+    "zzz_cfg": {
+      "ConfigPath": "",
+      "BinPath": "",
+      "Num": 1,
+      "Host": "",
+      "Port": 0,
+      "UpTimeout": 0,
+      "Version": ""
+    }
+  }
+}
+`, buf.String())
+}
+
+func TestWriteDryRun_UnknownFormat(t *testing.T) {
+	var buf bytes.Buffer
+	require.Error(t, writeDryRun(&buf, BootPlan{}, "xml"))
+}
+
+func TestWriteDryRun_NilWriter(t *testing.T) {
+	require.Error(t, writeDryRun(nil, BootPlan{}, "text"))
+}
+
+func TestResolveVersionConstraint_UsesLatestAliasByDefault(t *testing.T) {
+	options := &BootOptions{}
+	got, err := resolveVersionConstraint(proc.ServiceTiProxy, options)
+	require.NoError(t, err)
+	require.Equal(t, utils.LatestVersionAlias, got)
+}
+
+func TestResolveVersionConstraint_ServiceOverrideAndBind(t *testing.T) {
+	options := &BootOptions{Version: "latest-" + utils.NextgenVersionAlias}
+	options.Service(proc.ServiceTiProxy).Version = "v9.9.9"
+	options.Service(proc.ServicePrometheus).Version = "v0.0.0-should-be-ignored"
+
+	got, err := resolveVersionConstraint(proc.ServiceTiProxy, options)
+	require.NoError(t, err)
+	require.Equal(t, "v9.9.9", got)
+
+	got, err = resolveVersionConstraint(proc.ServicePrometheus, options)
+	require.NoError(t, err)
+	require.Equal(t, utils.LatestVersionAlias, got)
+}
+
+func newTestFlagSet() *pflag.FlagSet {
+	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	return fs
+}
+
+func applyServiceDefaultsForTest(t *testing.T, opts *BootOptions, args ...string) {
+	t.Helper()
+
+	fs := newTestFlagSet()
+	registerServiceFlags(fs, opts)
+	require.NoError(t, fs.Parse(args))
+	require.NoError(t, applyServiceDefaults(fs, opts))
+}
+
+func buildBootPlanForTest(t *testing.T, opts *BootOptions, src ComponentSource) BootPlan {
+	t.Helper()
+
+	plan, err := BuildBootPlan(opts, bootPlannerConfig{
+		dataDir:            t.TempDir(),
+		portConflictPolicy: PortConflictNone,
+		advertiseHost:      func(listen string) string { return listen },
+		componentSource:    src,
+	})
+	require.NoError(t, err)
+	return plan
+}
+
+type testComponentSource struct {
+	t *testing.T
+
+	root string
+
+	installed map[string]bool // key: component@resolved
+
+	// resolvedByConstraint maps "constraint" -> "resolved". When absent, the
+	// constraint itself is treated as resolved.
+	resolvedByConstraint map[string]string
+}
+
+func newTestComponentSource(t *testing.T, resolvedByConstraint map[string]string) *testComponentSource {
+	t.Helper()
+	if resolvedByConstraint == nil {
+		resolvedByConstraint = make(map[string]string)
+	}
+	return &testComponentSource{
+		t:                    t,
+		root:                 t.TempDir(),
+		installed:            make(map[string]bool),
+		resolvedByConstraint: resolvedByConstraint,
+	}
+}
+
+func (s *testComponentSource) ResolveVersion(component, constraint string) (string, error) {
+	_ = component
+
+	c := strings.TrimSpace(constraint)
+	if c == "" {
+		return "", nil
+	}
+	if resolved := s.resolvedByConstraint[c]; resolved != "" {
+		return resolved, nil
+	}
+	return c, nil
+}
+
+func (s *testComponentSource) PlanInstall(serviceID proc.ServiceID, component, resolved string, forcePull bool) (*DownloadPlan, error) {
+	if component == "" {
+		return nil, errors.New("component is empty")
+	}
+	if resolved == "" {
+		return nil, errors.Errorf("component %s resolved version is empty", component)
+	}
+
+	baseBinPath, err := s.BinaryPath(component, resolved)
+	return planInstallByResolvedBinaryPath(serviceID, component, resolved, baseBinPath, err, forcePull), nil
+}
+
+func (s *testComponentSource) EnsureInstalled(component, resolved string) error {
+	_ = component
+	_ = resolved
+	return nil
+}
+
+func (s *testComponentSource) BinaryPath(component, resolved string) (string, error) {
+	if component == "" {
+		return "", errors.New("component is empty")
+	}
+	if resolved == "" {
+		return "", errors.Errorf("component %s resolved version is empty", component)
+	}
+
+	if !s.installed[component+"@"+resolved] {
+		return "", errors.New("not installed")
+	}
+
+	return filepath.Join(s.root, component, resolved, baseBinaryNameForComponent(component)), nil
+}
+
+func (s *testComponentSource) InstallComponent(component, resolved string, extraBinaries ...string) {
+	if s == nil || s.t == nil {
+		return
+	}
+
+	s.t.Helper()
+
+	s.installed[component+"@"+resolved] = true
+
+	dir := filepath.Join(s.root, component, resolved)
+	require.NoError(s.t, os.MkdirAll(dir, 0o755))
+
+	base := filepath.Join(dir, baseBinaryNameForComponent(component))
+	require.NoError(s.t, os.WriteFile(base, []byte("bin"), 0o755))
+
+	for _, name := range extraBinaries {
+		require.NoError(s.t, os.WriteFile(filepath.Join(dir, name), []byte("bin"), 0o755))
+	}
+}
+
+func baseBinaryNameForComponent(component string) string {
+	switch strings.TrimSpace(component) {
+	case proc.ComponentPD.String():
+		return "pd-server"
+	case proc.ComponentTiKV.String():
+		return "tikv-server"
+	case proc.ComponentTiDB.String():
+		return "tidb-server"
+	case proc.ComponentTiFlash.String():
+		return "tiflash"
+	case proc.ComponentPrometheus.String():
+		return "prometheus"
+	case proc.ComponentGrafana.String():
+		return "grafana-server"
+	case proc.ComponentTiKVWorker.String():
+		return "tikv-worker"
+	default:
+		// Best effort fallback for tests that don't care about the exact binary name.
+		return component
+	}
 }

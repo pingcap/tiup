@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"os"
 	"os/exec"
@@ -50,10 +51,10 @@ func TestHandleDisplay_JSON_VerboseStatusAndFields(t *testing.T) {
 					pid = exitCmd.Process.Pid
 				}
 			}
-			info.Proc = &stubOSProcess{pid: pid, cmd: cmd, uptime: "1s"}
+			info.Proc = &displayOSProcess{pid: pid, cmd: cmd, uptime: "1s"}
 		}
-		base := &stubProcess{info: info, logFile: "/tmp/log"}
-		return &stubAddrProcess{stubProcess: base, addr: "127.0.0.1:1234"}
+		base := &displayProcess{info: info, logFile: "/tmp/log"}
+		return &displayAddrProcess{displayProcess: base, addr: "127.0.0.1:1234"}
 	}
 
 	state := &controllerState{
@@ -110,3 +111,32 @@ func TestPrettifyUserPath(t *testing.T) {
 		t.Fatalf("unexpected other path: %q", got)
 	}
 }
+
+type displayAddrProcess struct {
+	*displayProcess
+	addr string
+}
+
+func (p *displayAddrProcess) Addr() string { return p.addr }
+
+type displayOSProcess struct {
+	pid    int
+	cmd    *exec.Cmd
+	uptime string
+}
+
+func (p *displayOSProcess) Start() error                     { return nil }
+func (p *displayOSProcess) Wait() error                      { return nil }
+func (p *displayOSProcess) Pid() int                         { return p.pid }
+func (p *displayOSProcess) Uptime() string                   { return p.uptime }
+func (p *displayOSProcess) SetOutputFile(fname string) error { return nil }
+func (p *displayOSProcess) Cmd() *exec.Cmd                   { return p.cmd }
+
+type displayProcess struct {
+	info    *proc.ProcessInfo
+	logFile string
+}
+
+func (p *displayProcess) Info() *proc.ProcessInfo           { return p.info }
+func (p *displayProcess) Prepare(ctx context.Context) error { return nil }
+func (p *displayProcess) LogFile() string                   { return p.logFile }

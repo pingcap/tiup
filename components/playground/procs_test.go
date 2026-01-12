@@ -87,3 +87,11 @@ func TestAddPlannedProcInController_CreatesTiProxy(t *testing.T) {
 		t.Fatalf("unexpected instance dir: %q", tp.Dir)
 	}
 }
+
+func TestPlaygroundVersionConstraintForService_NoImplicitDefault(t *testing.T) {
+	pg := &Playground{bootOptions: &BootOptions{}}
+	got := pg.versionConstraintForService(proc.ServiceTiProxy, "")
+	if got != "" {
+		t.Fatalf("unexpected version constraint: %q", got)
+	}
+}
