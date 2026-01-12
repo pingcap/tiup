@@ -3,8 +3,9 @@ package proc
 import (
 	"context"
 	"path/filepath"
-	"slices"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestTiKVInstancePrepare_PropagatesEndpointsAndMALLOCConfEnv(t *testing.T) {
@@ -23,13 +24,9 @@ func TestTiKVInstancePrepare_PropagatesEndpointsAndMALLOCConfEnv(t *testing.T) {
 		},
 	}
 
-	if err := inst.Prepare(context.Background()); err != nil {
-		t.Fatalf("Prepare: %v", err)
-	}
+	require.NoError(t, inst.Prepare(context.Background()))
 	cmd := inst.Info().Proc.Cmd()
-	if cmd == nil {
-		t.Fatalf("missing cmd")
-	}
+	require.NotNil(t, cmd)
 
 	want := []string{
 		"/bin/tikv-server",
@@ -41,10 +38,6 @@ func TestTiKVInstancePrepare_PropagatesEndpointsAndMALLOCConfEnv(t *testing.T) {
 		"--data-dir=" + filepath.Join(dir, "data"),
 		"--log-file=" + filepath.Join(dir, "tikv.log"),
 	}
-	if !slices.Equal(cmd.Args, want) {
-		t.Fatalf("unexpected args:\n  got:  %v\n  want: %v", cmd.Args, want)
-	}
-	if !slices.Contains(cmd.Env, "MALLOC_CONF=prof:true,prof_active:false") {
-		t.Fatalf("unexpected env: %v", cmd.Env)
-	}
+	require.Equal(t, want, cmd.Args)
+	require.Contains(t, cmd.Env, "MALLOC_CONF=prof:true,prof_active:false")
 }

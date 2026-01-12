@@ -3,10 +3,10 @@ package proc
 import (
 	"context"
 	"path/filepath"
-	"slices"
 	"testing"
 
 	"github.com/pingcap/tiup/pkg/utils"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTiDBInstancePrepare_PropagatesEndpointsAndBinlogFlag(t *testing.T) {
@@ -29,13 +29,9 @@ func TestTiDBInstancePrepare_PropagatesEndpointsAndBinlogFlag(t *testing.T) {
 		TiProxyCertDir: dir,
 	}
 
-	if err := inst.Prepare(context.Background()); err != nil {
-		t.Fatalf("Prepare: %v", err)
-	}
+	require.NoError(t, inst.Prepare(context.Background()))
 	cmd := inst.Info().Proc.Cmd()
-	if cmd == nil {
-		t.Fatalf("missing cmd")
-	}
+	require.NotNil(t, cmd)
 
 	want := []string{
 		"/bin/tidb-server",
@@ -48,7 +44,5 @@ func TestTiDBInstancePrepare_PropagatesEndpointsAndBinlogFlag(t *testing.T) {
 		"--config=" + filepath.Join(dir, "tidb.toml"),
 		"--enable-binlog=true",
 	}
-	if !slices.Equal(cmd.Args, want) {
-		t.Fatalf("unexpected args:\n  got:  %v\n  want: %v", cmd.Args, want)
-	}
+	require.Equal(t, want, cmd.Args)
 }

@@ -3,13 +3,13 @@ package main
 import (
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"testing"
 
 	"github.com/pingcap/tiup/components/playground/proc"
 	pgservice "github.com/pingcap/tiup/components/playground/service"
 	"github.com/pingcap/tiup/pkg/utils"
+	"github.com/stretchr/testify/require"
 )
 
 func TestValidateBootOptionsPure_ModeNormal_AllowsEmptyCSEOptions(t *testing.T) {
@@ -302,9 +302,7 @@ func TestTopoSortServiceIDs_StableOrder(t *testing.T) {
 		t.Fatalf("topoSortServiceIDs: %v", err)
 	}
 	want := []proc.ServiceID{a, b, c}
-	if !slices.Equal(got, want) {
-		t.Fatalf("unexpected order: got %v want %v", got, want)
-	}
+	require.Equal(t, want, got)
 }
 
 func TestTopoSortServiceIDs_Cycle(t *testing.T) {

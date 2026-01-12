@@ -3,10 +3,10 @@ package proc
 import (
 	"context"
 	"path/filepath"
-	"slices"
 	"testing"
 
 	"github.com/pingcap/tiup/pkg/utils"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPDInstancePrepare_Microservice_OldVersionOmitsName(t *testing.T) {
@@ -25,13 +25,9 @@ func TestPDInstancePrepare_Microservice_OldVersionOmitsName(t *testing.T) {
 		},
 	}
 
-	if err := inst.Prepare(context.Background()); err != nil {
-		t.Fatalf("Prepare: %v", err)
-	}
+	require.NoError(t, inst.Prepare(context.Background()))
 	cmd := inst.Info().Proc.Cmd()
-	if cmd == nil {
-		t.Fatalf("missing cmd")
-	}
+	require.NotNil(t, cmd)
 
 	want := []string{
 		"/bin/pd-server",
@@ -43,9 +39,7 @@ func TestPDInstancePrepare_Microservice_OldVersionOmitsName(t *testing.T) {
 		"--log-file=" + inst.LogFile(),
 		"--config=" + filepath.Join(dir, "pd-tso.toml"),
 	}
-	if !slices.Equal(cmd.Args, want) {
-		t.Fatalf("unexpected args:\n  got:  %v\n  want: %v", cmd.Args, want)
-	}
+	require.Equal(t, want, cmd.Args)
 }
 
 func TestPDInstancePrepare_Microservice_NewVersionAddsName(t *testing.T) {
@@ -64,13 +58,9 @@ func TestPDInstancePrepare_Microservice_NewVersionAddsName(t *testing.T) {
 		},
 	}
 
-	if err := inst.Prepare(context.Background()); err != nil {
-		t.Fatalf("Prepare: %v", err)
-	}
+	require.NoError(t, inst.Prepare(context.Background()))
 	cmd := inst.Info().Proc.Cmd()
-	if cmd == nil {
-		t.Fatalf("missing cmd")
-	}
+	require.NotNil(t, cmd)
 
 	want := []string{
 		"/bin/pd-server",
@@ -83,7 +73,5 @@ func TestPDInstancePrepare_Microservice_NewVersionAddsName(t *testing.T) {
 		"--config=" + filepath.Join(dir, "pd-tso.toml"),
 		"--name=pd-tso-0",
 	}
-	if !slices.Equal(cmd.Args, want) {
-		t.Fatalf("unexpected args:\n  got:  %v\n  want: %v", cmd.Args, want)
-	}
+	require.Equal(t, want, cmd.Args)
 }

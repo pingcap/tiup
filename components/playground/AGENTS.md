@@ -27,13 +27,14 @@ Fight entropy. Leave the codebase better than you found it.
 ### Testability
 
 - **Avoid over-abstraction for tests**: Prefer simple policy knobs/configuration to stabilize tests over introducing heavy test-only injection layers. Unit-test OS-dependent helpers separately.
+- **Use `testify/require` for assertions**: Prefer `require.Equal`/`require.NoError`/`require.Contains` etc over hand-written assertion blocks like `if !slices.Equal(...) { t.Fatalf(...) }`.
 
 ### DRY and Structural Organization
 
 - **DRY**: Don’t copy and paste large blocks of identical logic; wherever `for` loops/table-driven approaches/unified helpers can be used, duplication must be eliminated.
 - **No subset helpers**: If the functionality of `A()` is a subset of `B()` (and has almost no extra semantics), delete `A()` and standardize on `B()`.
 - **Keep component code cohesive**: Try to keep `tiflash.go`/`tidb.go`/`tikv.go` to one file each (extra `*_config.go` files are allowed). Avoid a scattered structure like “5 files each mixing tiflash/tidb/tikv”.
-- **Prefer a coarse-grained file layout**: In `components/playground` (top-level), `components/playground/proc` and `components/playground/service`, prefer a few semantically cohesive files over many tiny ones. Avoid < 100 LOC files unless they are required (e.g. OS/build-tag specific files); aim for ~200-700 LOC per file when it keeps readability.
+- **Prefer a coarse-grained file layout**: In `components/playground` (top-level), `components/playground/proc` and `components/playground/service`, prefer a few semantically cohesive files over many tiny ones. Avoid < 100 LOC files unless they are required (e.g. OS/build-tag specific files); aim for ~200-700 LOC per file when it keeps readability. However, don't merge multiple unrelated components/services into one file.
 - **Maintainable ordering**: Avoid manually writing and maintaining things like “service traversal order/priority lists”, which are easy to miss. Prefer deterministic ordering (e.g., sorting by key) or explicit dependencies (e.g., `StartAfter`).
 
 ### Concurrency Model (Actor)

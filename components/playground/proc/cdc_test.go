@@ -3,10 +3,10 @@ package proc
 import (
 	"context"
 	"path/filepath"
-	"slices"
 	"testing"
 
 	"github.com/pingcap/tiup/pkg/utils"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTiCDCPrepare_V4013_UsesSortDir(t *testing.T) {
@@ -28,13 +28,9 @@ func TestTiCDCPrepare_V4013_UsesSortDir(t *testing.T) {
 		},
 	}
 
-	if err := inst.Prepare(context.Background()); err != nil {
-		t.Fatalf("Prepare: %v", err)
-	}
+	require.NoError(t, inst.Prepare(context.Background()))
 	cmd := inst.Info().Proc.Cmd()
-	if cmd == nil {
-		t.Fatalf("missing cmd")
-	}
+	require.NotNil(t, cmd)
 
 	sortDir := "--sort-dir=" + filepath.Join(dir, "data") + "/tmp/sorter"
 	want := []string{
@@ -47,9 +43,7 @@ func TestTiCDCPrepare_V4013_UsesSortDir(t *testing.T) {
 		"--config=" + cfgPath,
 		sortDir,
 	}
-	if !slices.Equal(cmd.Args, want) {
-		t.Fatalf("unexpected args:\n  got:  %v\n  want: %v", cmd.Args, want)
-	}
+	require.Equal(t, want, cmd.Args)
 }
 
 func TestTiCDCPrepare_V4014_UsesDataDir(t *testing.T) {
@@ -71,13 +65,9 @@ func TestTiCDCPrepare_V4014_UsesDataDir(t *testing.T) {
 		},
 	}
 
-	if err := inst.Prepare(context.Background()); err != nil {
-		t.Fatalf("Prepare: %v", err)
-	}
+	require.NoError(t, inst.Prepare(context.Background()))
 	cmd := inst.Info().Proc.Cmd()
-	if cmd == nil {
-		t.Fatalf("missing cmd")
-	}
+	require.NotNil(t, cmd)
 
 	dataDir := "--data-dir=" + filepath.Join(dir, "data")
 	want := []string{
@@ -90,9 +80,7 @@ func TestTiCDCPrepare_V4014_UsesDataDir(t *testing.T) {
 		"--config=" + cfgPath,
 		dataDir,
 	}
-	if !slices.Equal(cmd.Args, want) {
-		t.Fatalf("unexpected args:\n  got:  %v\n  want: %v", cmd.Args, want)
-	}
+	require.Equal(t, want, cmd.Args)
 }
 
 func TestTiCDCPrepare_OldVersion_OmitsConfigAndDirFlags(t *testing.T) {
@@ -114,13 +102,9 @@ func TestTiCDCPrepare_OldVersion_OmitsConfigAndDirFlags(t *testing.T) {
 		},
 	}
 
-	if err := inst.Prepare(context.Background()); err != nil {
-		t.Fatalf("Prepare: %v", err)
-	}
+	require.NoError(t, inst.Prepare(context.Background()))
 	cmd := inst.Info().Proc.Cmd()
-	if cmd == nil {
-		t.Fatalf("missing cmd")
-	}
+	require.NotNil(t, cmd)
 
 	want := []string{
 		"/bin/ticdc",
@@ -130,7 +114,5 @@ func TestTiCDCPrepare_OldVersion_OmitsConfigAndDirFlags(t *testing.T) {
 		"--pd=http://127.0.0.1:2379",
 		"--log-file=" + filepath.Join(dir, "ticdc.log"),
 	}
-	if !slices.Equal(cmd.Args, want) {
-		t.Fatalf("unexpected args:\n  got:  %v\n  want: %v", cmd.Args, want)
-	}
+	require.Equal(t, want, cmd.Args)
 }
