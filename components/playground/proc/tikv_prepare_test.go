@@ -2,6 +2,7 @@ package proc
 
 import (
 	"context"
+	"path/filepath"
 	"slices"
 	"testing"
 )
@@ -29,8 +30,19 @@ func TestTiKVInstancePrepare_PropagatesEndpointsAndMALLOCConfEnv(t *testing.T) {
 	if cmd == nil {
 		t.Fatalf("missing cmd")
 	}
-	if !slices.Contains(cmd.Args, "--pd-endpoints=http://127.0.0.1:2379") {
-		t.Fatalf("unexpected args: %v", cmd.Args)
+
+	want := []string{
+		"/bin/tikv-server",
+		"--addr=127.0.0.1:20160",
+		"--advertise-addr=127.0.0.1:20160",
+		"--status-addr=127.0.0.1:20180",
+		"--pd-endpoints=http://127.0.0.1:2379",
+		"--config=" + filepath.Join(dir, "tikv.toml"),
+		"--data-dir=" + filepath.Join(dir, "data"),
+		"--log-file=" + filepath.Join(dir, "tikv.log"),
+	}
+	if !slices.Equal(cmd.Args, want) {
+		t.Fatalf("unexpected args:\n  got:  %v\n  want: %v", cmd.Args, want)
 	}
 	if !slices.Contains(cmd.Env, "MALLOC_CONF=prof:true,prof_active:false") {
 		t.Fatalf("unexpected env: %v", cmd.Env)

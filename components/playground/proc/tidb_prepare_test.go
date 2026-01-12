@@ -2,6 +2,7 @@ package proc
 
 import (
 	"context"
+	"path/filepath"
 	"slices"
 	"testing"
 
@@ -35,10 +36,19 @@ func TestTiDBInstancePrepare_PropagatesEndpointsAndBinlogFlag(t *testing.T) {
 	if cmd == nil {
 		t.Fatalf("missing cmd")
 	}
-	if !slices.Contains(cmd.Args, "--path=127.0.0.1:2379") {
-		t.Fatalf("unexpected args: %v", cmd.Args)
+
+	want := []string{
+		"/bin/tidb-server",
+		"-P", "4000",
+		"--store=tikv",
+		"--host=127.0.0.1",
+		"--status=10080",
+		"--path=127.0.0.1:2379",
+		"--log-file=" + filepath.Join(dir, "tidb.log"),
+		"--config=" + filepath.Join(dir, "tidb.toml"),
+		"--enable-binlog=true",
 	}
-	if !slices.Contains(cmd.Args, "--enable-binlog=true") {
-		t.Fatalf("unexpected args: %v", cmd.Args)
+	if !slices.Equal(cmd.Args, want) {
+		t.Fatalf("unexpected args:\n  got:  %v\n  want: %v", cmd.Args, want)
 	}
 }

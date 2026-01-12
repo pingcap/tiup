@@ -2,6 +2,7 @@ package proc
 
 import (
 	"context"
+	"path/filepath"
 	"slices"
 	"testing"
 
@@ -31,14 +32,19 @@ func TestPDInstancePrepare_Microservice_OldVersionOmitsName(t *testing.T) {
 	if cmd == nil {
 		t.Fatalf("missing cmd")
 	}
-	if len(cmd.Args) < 3 || cmd.Args[1] != "services" || cmd.Args[2] != "tso" {
-		t.Fatalf("unexpected args: %v", cmd.Args)
+
+	want := []string{
+		"/bin/pd-server",
+		"services",
+		"tso",
+		"--listen-addr=http://127.0.0.1:1234",
+		"--advertise-listen-addr=http://127.0.0.1:1234",
+		"--backend-endpoints=http://127.0.0.1:2379",
+		"--log-file=" + inst.LogFile(),
+		"--config=" + filepath.Join(dir, "pd-tso.toml"),
 	}
-	if !slices.Contains(cmd.Args, "--backend-endpoints=http://127.0.0.1:2379") {
-		t.Fatalf("unexpected args: %v", cmd.Args)
-	}
-	if slices.Contains(cmd.Args, "--name=pd-tso-0") {
-		t.Fatalf("unexpected --name on old version: %v", cmd.Args)
+	if !slices.Equal(cmd.Args, want) {
+		t.Fatalf("unexpected args:\n  got:  %v\n  want: %v", cmd.Args, want)
 	}
 }
 
@@ -65,7 +71,19 @@ func TestPDInstancePrepare_Microservice_NewVersionAddsName(t *testing.T) {
 	if cmd == nil {
 		t.Fatalf("missing cmd")
 	}
-	if !slices.Contains(cmd.Args, "--name=pd-tso-0") {
-		t.Fatalf("expected --name on new version, got: %v", cmd.Args)
+
+	want := []string{
+		"/bin/pd-server",
+		"services",
+		"tso",
+		"--listen-addr=http://127.0.0.1:1234",
+		"--advertise-listen-addr=http://127.0.0.1:1234",
+		"--backend-endpoints=http://127.0.0.1:2379",
+		"--log-file=" + inst.LogFile(),
+		"--config=" + filepath.Join(dir, "pd-tso.toml"),
+		"--name=pd-tso-0",
+	}
+	if !slices.Equal(cmd.Args, want) {
+		t.Fatalf("unexpected args:\n  got:  %v\n  want: %v", cmd.Args, want)
 	}
 }

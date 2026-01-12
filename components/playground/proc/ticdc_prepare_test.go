@@ -36,20 +36,19 @@ func TestTiCDCPrepare_V4013_UsesSortDir(t *testing.T) {
 		t.Fatalf("missing cmd")
 	}
 
-	expectedSortDir := "--sort-dir=" + filepath.Join(dir, "data") + "/tmp/sorter"
-	expectedDataDir := "--data-dir=" + filepath.Join(dir, "data")
-
-	if !slices.Contains(cmd.Args, "--pd=http://127.0.0.1:2379") {
-		t.Fatalf("unexpected args: %v", cmd.Args)
+	sortDir := "--sort-dir=" + filepath.Join(dir, "data") + "/tmp/sorter"
+	want := []string{
+		"/bin/ticdc",
+		"server",
+		"--addr=127.0.0.1:8300",
+		"--advertise-addr=127.0.0.1:8300",
+		"--pd=http://127.0.0.1:2379",
+		"--log-file=" + filepath.Join(dir, "ticdc.log"),
+		"--config=" + cfgPath,
+		sortDir,
 	}
-	if !slices.Contains(cmd.Args, "--config="+cfgPath) {
-		t.Fatalf("unexpected args: %v", cmd.Args)
-	}
-	if !slices.Contains(cmd.Args, expectedSortDir) {
-		t.Fatalf("unexpected args: %v", cmd.Args)
-	}
-	if slices.Contains(cmd.Args, expectedDataDir) {
-		t.Fatalf("unexpected args: %v", cmd.Args)
+	if !slices.Equal(cmd.Args, want) {
+		t.Fatalf("unexpected args:\n  got:  %v\n  want: %v", cmd.Args, want)
 	}
 }
 
@@ -80,17 +79,19 @@ func TestTiCDCPrepare_V4014_UsesDataDir(t *testing.T) {
 		t.Fatalf("missing cmd")
 	}
 
-	expectedSortDir := "--sort-dir=" + filepath.Join(dir, "data") + "/tmp/sorter"
-	expectedDataDir := "--data-dir=" + filepath.Join(dir, "data")
-
-	if !slices.Contains(cmd.Args, "--config="+cfgPath) {
-		t.Fatalf("unexpected args: %v", cmd.Args)
+	dataDir := "--data-dir=" + filepath.Join(dir, "data")
+	want := []string{
+		"/bin/ticdc",
+		"server",
+		"--addr=127.0.0.1:8300",
+		"--advertise-addr=127.0.0.1:8300",
+		"--pd=http://127.0.0.1:2379",
+		"--log-file=" + filepath.Join(dir, "ticdc.log"),
+		"--config=" + cfgPath,
+		dataDir,
 	}
-	if !slices.Contains(cmd.Args, expectedDataDir) {
-		t.Fatalf("unexpected args: %v", cmd.Args)
-	}
-	if slices.Contains(cmd.Args, expectedSortDir) {
-		t.Fatalf("unexpected args: %v", cmd.Args)
+	if !slices.Equal(cmd.Args, want) {
+		t.Fatalf("unexpected args:\n  got:  %v\n  want: %v", cmd.Args, want)
 	}
 }
 
@@ -121,13 +122,15 @@ func TestTiCDCPrepare_OldVersion_OmitsConfigAndDirFlags(t *testing.T) {
 		t.Fatalf("missing cmd")
 	}
 
-	if slices.Contains(cmd.Args, "--config="+cfgPath) {
-		t.Fatalf("unexpected args: %v", cmd.Args)
+	want := []string{
+		"/bin/ticdc",
+		"server",
+		"--addr=127.0.0.1:8300",
+		"--advertise-addr=127.0.0.1:8300",
+		"--pd=http://127.0.0.1:2379",
+		"--log-file=" + filepath.Join(dir, "ticdc.log"),
 	}
-	if slices.Contains(cmd.Args, "--data-dir="+filepath.Join(dir, "data")) {
-		t.Fatalf("unexpected args: %v", cmd.Args)
-	}
-	if slices.Contains(cmd.Args, "--sort-dir="+filepath.Join(dir, "data")+"/tmp/sorter") {
-		t.Fatalf("unexpected args: %v", cmd.Args)
+	if !slices.Equal(cmd.Args, want) {
+		t.Fatalf("unexpected args:\n  got:  %v\n  want: %v", cmd.Args, want)
 	}
 }
