@@ -6,6 +6,8 @@ import (
 	"io"
 	"slices"
 	"strings"
+
+	"github.com/pingcap/tiup/components/playground/proc"
 )
 
 func writeDryRun(w io.Writer, plan BootPlan, format string) error {
@@ -42,7 +44,21 @@ func renderDryRunText(plan BootPlan) string {
 	fmt.Fprintf(&b, "Mode: %s\n", plan.Shared.Mode)
 	fmt.Fprintf(&b, "PDMode: %s\n", plan.Shared.PDMode)
 	fmt.Fprintf(&b, "PortOffset: %d\n", plan.Shared.PortOffset)
+	fmt.Fprintf(&b, "HighPerf: %t\n", plan.Shared.HighPerf)
+	fmt.Fprintf(&b, "EnableTiKVColumnar: %t\n", plan.Shared.EnableTiKVColumnar)
+	fmt.Fprintf(&b, "ForcePull: %t\n", plan.Shared.ForcePull)
 	fmt.Fprintf(&b, "Monitor: %t\n", plan.Monitor)
+	fmt.Fprintf(&b, "GrafanaPort: %d\n", plan.GrafanaPort)
+
+	switch plan.Shared.Mode {
+	case proc.ModeCSE, proc.ModeDisAgg, proc.ModeNextGen:
+		if endpoint := strings.TrimSpace(plan.Shared.CSE.S3Endpoint); endpoint != "" {
+			fmt.Fprintf(&b, "CSE.S3Endpoint: %s\n", endpoint)
+		}
+		if bucket := strings.TrimSpace(plan.Shared.CSE.Bucket); bucket != "" {
+			fmt.Fprintf(&b, "CSE.Bucket: %s\n", bucket)
+		}
+	}
 
 	if len(plan.Downloads) > 0 {
 		b.WriteString("\nDownloads:\n")

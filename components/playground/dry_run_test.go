@@ -14,8 +14,22 @@ func TestWriteDryRun_Text(t *testing.T) {
 		DataDir:     "/data",
 		BootVersion: "nightly",
 		Host:        "127.0.0.1",
-		Shared:      proc.SharedOptions{Mode: proc.ModeNormal, PDMode: "pd", PortOffset: 123},
+		Shared: proc.SharedOptions{
+			Mode:               proc.ModeCSE,
+			PDMode:             "pd",
+			PortOffset:         123,
+			HighPerf:           true,
+			EnableTiKVColumnar: true,
+			ForcePull:          true,
+			CSE: proc.CSEOptions{
+				S3Endpoint: "https://s3.example.com",
+				Bucket:     "my-bucket",
+				AccessKey:  "fake-access-key",
+				SecretKey:  "fake-secret-key",
+			},
+		},
 		Monitor:     true,
+		GrafanaPort: 3000,
 		Downloads: []DownloadPlan{
 			{ComponentID: "tidb", ResolvedVersion: "v1.0.0", DebugReason: "missing_binary", DebugBinPath: "/home/tidb-server"},
 		},
@@ -41,6 +55,13 @@ func TestWriteDryRun_Text(t *testing.T) {
 		"DataDir: /data\n",
 		"Version: nightly\n",
 		"Host: 127.0.0.1\n",
+		"Mode: tidb-cse\n",
+		"HighPerf: true\n",
+		"EnableTiKVColumnar: true\n",
+		"ForcePull: true\n",
+		"GrafanaPort: 3000\n",
+		"CSE.S3Endpoint: https://s3.example.com\n",
+		"CSE.Bucket: my-bucket\n",
 		"Downloads:\n",
 		"- Install tidb@v1.0.0 reason=missing_binary binpath=/home/tidb-server\n",
 		"Reused:\n",
@@ -50,6 +71,12 @@ func TestWriteDryRun_Text(t *testing.T) {
 	} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("dry-run text missing %q, got:\n%s", want, out)
+		}
+	}
+
+	for _, secret := range []string{"fake-access-key", "fake-secret-key"} {
+		if strings.Contains(out, secret) {
+			t.Fatalf("dry-run text should not include secret %q, got:\n%s", secret, out)
 		}
 	}
 }
