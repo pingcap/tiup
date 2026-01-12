@@ -103,6 +103,38 @@ func TestWriteDryRun_JSON(t *testing.T) {
 	}
 }
 
+func TestWriteDryRun_JSON_RedactsSecrets(t *testing.T) {
+	plan := BootPlan{
+		Shared: proc.SharedOptions{
+			Mode: proc.ModeCSE,
+			CSE: proc.CSEOptions{
+				AccessKey: "access-KEY-123",
+				SecretKey: "secret-KEY-456",
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	if err := writeDryRun(&buf, plan, "json"); err != nil {
+		t.Fatalf("writeDryRun(json): %v", err)
+	}
+
+	out := buf.String()
+	for _, secret := range []string{"access-KEY-123", "secret-KEY-456"} {
+		if strings.Contains(out, secret) {
+			t.Fatalf("dry-run json should redact secret %q, got:\n%s", secret, out)
+		}
+	}
+
+	var got BootPlan
+	if err := json.Unmarshal(buf.Bytes(), &got); err != nil {
+		t.Fatalf("unmarshal dry-run json: %v", err)
+	}
+	if got.Shared.CSE.AccessKey != "***" || got.Shared.CSE.SecretKey != "***" {
+		t.Fatalf("unexpected json secret values: %+v", got.Shared.CSE)
+	}
+}
+
 func TestWriteDryRun_UnknownFormat(t *testing.T) {
 	var buf bytes.Buffer
 	if err := writeDryRun(&buf, BootPlan{}, "xml"); err == nil {

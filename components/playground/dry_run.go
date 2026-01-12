@@ -24,7 +24,15 @@ func writeDryRun(w io.Writer, plan BootPlan, format string) error {
 		_, err := io.WriteString(w, renderDryRunText(plan))
 		return err
 	case "json":
-		data, err := json.MarshalIndent(plan, "", "  ")
+		redacted := plan
+		if strings.TrimSpace(redacted.Shared.CSE.AccessKey) != "" {
+			redacted.Shared.CSE.AccessKey = "***"
+		}
+		if strings.TrimSpace(redacted.Shared.CSE.SecretKey) != "" {
+			redacted.Shared.CSE.SecretKey = "***"
+		}
+
+		data, err := json.MarshalIndent(redacted, "", "  ")
 		if err != nil {
 			return err
 		}
