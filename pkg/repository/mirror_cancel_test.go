@@ -5,9 +5,35 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
+
+func TestHTTPMirrorDownload_DoesNotStartWhenContextCanceled(t *testing.T) {
+	var requests int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&requests, 1)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	m := NewMirror(server.URL, MirrorOptions{Context: ctx, Progress: DisableProgress{}})
+	if err := m.Open(); err != nil {
+		t.Fatalf("open mirror: %v", err)
+	}
+	t.Cleanup(func() { _ = m.Close() })
+
+	if err := m.Download("slow.tar.gz", t.TempDir()); err == nil {
+		t.Fatalf("expected download to be canceled")
+	}
+	if got := atomic.LoadInt32(&requests); got != 0 {
+		t.Fatalf("expected no request to be sent, got %d", got)
+	}
+}
 
 func TestHTTPMirrorDownload_CanCancelByContext(t *testing.T) {
 	var startedOnce sync.Once

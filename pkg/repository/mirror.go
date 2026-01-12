@@ -312,6 +312,14 @@ func (l *httpMirror) downloadFile(url string, to string, maxSize int64) (io.Read
 		logprinter.Verbose("Download resource %s in %s", url, time.Since(start))
 	}(time.Now())
 
+	if l.options.Context != nil {
+		select {
+		case <-l.options.Context.Done():
+			return nil, errors.Trace(l.options.Context.Err())
+		default:
+		}
+	}
+
 	client := grab.NewClient()
 
 	// workaround to resolve cdn error "tls: protocol version not supported"
@@ -363,7 +371,12 @@ L:
 			progress.SetCurrent(resp.BytesComplete())
 		case <-ctxDone:
 			_ = resp.Cancel()
-			ctxDone = nil
+			progress.SetCurrent(resp.BytesComplete())
+			progress.Finish()
+			if l.options.Context != nil {
+				return nil, errors.Trace(l.options.Context.Err())
+			}
+			return nil, errors.Trace(context.Canceled)
 		case <-resp.Done:
 			progress.SetCurrent(resp.BytesComplete())
 			progress.Finish()
