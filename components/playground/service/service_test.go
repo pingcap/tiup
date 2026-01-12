@@ -33,6 +33,41 @@ func TestValidatePortSpecs(t *testing.T) {
 		require.Contains(t, err.Error(), "aliases unknown")
 	})
 
+	t.Run("alias with base", func(t *testing.T) {
+		err := validatePortSpecs([]PortSpec{
+			{Name: proc.PortNamePort, Base: 1},
+			{Name: proc.PortNameStatusPort, AliasOf: proc.PortNamePort, Base: 2},
+		})
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "base must be 0")
+	})
+
+	t.Run("alias with host", func(t *testing.T) {
+		err := validatePortSpecs([]PortSpec{
+			{Name: proc.PortNamePort, Base: 1},
+			{Name: proc.PortNameStatusPort, AliasOf: proc.PortNamePort, Host: "127.0.0.1"},
+		})
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "host must be empty")
+	})
+
+	t.Run("alias with FromConfigPort", func(t *testing.T) {
+		err := validatePortSpecs([]PortSpec{
+			{Name: proc.PortNamePort, Base: 1},
+			{Name: proc.PortNameStatusPort, AliasOf: proc.PortNamePort, FromConfigPort: true},
+		})
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "FromConfigPort")
+	})
+
+	t.Run("host with spaces", func(t *testing.T) {
+		err := validatePortSpecs([]PortSpec{
+			{Name: proc.PortNamePort, Base: 1, Host: " 0.0.0.0"},
+		})
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "leading/trailing spaces")
+	})
+
 	t.Run("base invalid", func(t *testing.T) {
 		err := validatePortSpecs([]PortSpec{{Name: proc.PortNamePort, Base: 0}})
 		require.Error(t, err)

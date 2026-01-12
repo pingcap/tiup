@@ -380,12 +380,24 @@ func validatePortSpecs(specs []PortSpec) error {
 			if _, ok := seen[alias]; !ok {
 				return fmt.Errorf("port %q aliases unknown port %q", name, alias)
 			}
+			if ps.Base != 0 {
+				return fmt.Errorf("port %q is an alias of %q: base must be 0", name, alias)
+			}
+			if strings.TrimSpace(ps.Host) != "" {
+				return fmt.Errorf("port %q is an alias of %q: host must be empty", name, alias)
+			}
+			if ps.FromConfigPort {
+				return fmt.Errorf("port %q is an alias of %q: FromConfigPort must be false", name, alias)
+			}
 			seen[name] = struct{}{}
 			continue
 		}
 
 		if ps.Base <= 0 {
 			return fmt.Errorf("port %q base must be > 0", name)
+		}
+		if strings.TrimSpace(ps.Host) != ps.Host {
+			return fmt.Errorf("port %q host has leading/trailing spaces: %q", name, ps.Host)
 		}
 		seen[name] = struct{}{}
 	}
