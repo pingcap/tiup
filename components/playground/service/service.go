@@ -334,6 +334,9 @@ func Register(spec Spec) error {
 	if spec.NewProc == nil {
 		return fmt.Errorf("service %s newProc is nil", spec.ServiceID)
 	}
+	if err := validatePortSpecs(spec.Catalog.Ports); err != nil {
+		return fmt.Errorf("service %s ports: %w", spec.ServiceID, err)
+	}
 	if spec.ScaleInHook == nil {
 		spec.ScaleInHook = func(rt ControllerRuntime, w io.Writer, inst proc.Process, pid int) (bool, error) {
 			return false, nil
@@ -346,6 +349,46 @@ func Register(spec Spec) error {
 		return fmt.Errorf("duplicate service spec: %s", spec.ServiceID)
 	}
 	specs[spec.ServiceID] = spec
+	return nil
+}
+
+func validatePortSpecs(specs []PortSpec) error {
+	if len(specs) == 0 {
+		return nil
+	}
+
+	seen := make(map[string]struct{}, len(specs))
+	for i, ps := range specs {
+		name := strings.TrimSpace(ps.Name)
+		if name == "" {
+			return fmt.Errorf("port[%d] name is empty", i)
+		}
+		if name != ps.Name {
+			return fmt.Errorf("port[%d] name has leading/trailing spaces: %q", i, ps.Name)
+		}
+		if _, ok := seen[name]; ok {
+			return fmt.Errorf("duplicate port name %q", name)
+		}
+
+		if alias := strings.TrimSpace(ps.AliasOf); alias != "" {
+			if alias != ps.AliasOf {
+				return fmt.Errorf("port[%d] alias has leading/trailing spaces: %q", i, ps.AliasOf)
+			}
+			if alias == name {
+				return fmt.Errorf("port %q aliases itself", name)
+			}
+			if _, ok := seen[alias]; !ok {
+				return fmt.Errorf("port %q aliases unknown port %q", name, alias)
+			}
+			seen[name] = struct{}{}
+			continue
+		}
+
+		if ps.Base <= 0 {
+			return fmt.Errorf("port %q base must be > 0", name)
+		}
+		seen[name] = struct{}{}
+	}
 	return nil
 }
 

@@ -639,6 +639,9 @@ func fillPlannedPorts(alloc pgservice.PortAllocator, cfg proc.Config, plan *proc
 	if plan == nil || len(specs) == 0 {
 		return nil
 	}
+	if alloc == nil {
+		return errors.New("port allocator is nil")
+	}
 
 	host := strings.TrimSpace(plan.Shared.Host)
 	if host == "" {
