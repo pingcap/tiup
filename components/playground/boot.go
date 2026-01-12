@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/pingcap/errors"
@@ -13,9 +14,114 @@ import (
 	pgservice "github.com/pingcap/tiup/components/playground/service"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/environment"
+	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/tidbver"
 	"github.com/pingcap/tiup/pkg/utils"
 )
+
+// BootOptions is the topology and options used to start a playground cluster.
+//
+// Per-service options are stored in Services to avoid the "add a service, update
+// N different field lists" failure mode.
+type BootOptions struct {
+	ShOpt       proc.SharedOptions `yaml:"shared_opt"`
+	Version     string             `yaml:"version"`
+	Host        string             `yaml:"host"`
+	Monitor     bool               `yaml:"monitor"`
+	GrafanaPort int                `yaml:"grafana_port"`
+
+	Services map[proc.ServiceID]*proc.Config `yaml:"services,omitempty"`
+}
+
+// Service returns the mutable per-service config, allocating it on demand.
+func (o *BootOptions) Service(serviceID proc.ServiceID) *proc.Config {
+	if o == nil || serviceID == "" {
+		return nil
+	}
+	if o.Services == nil {
+		o.Services = make(map[proc.ServiceID]*proc.Config)
+	}
+	if cfg := o.Services[serviceID]; cfg != nil {
+		return cfg
+	}
+	cfg := &proc.Config{}
+	o.Services[serviceID] = cfg
+	return cfg
+}
+
+// ServiceConfig returns a copy of the per-service config if available.
+func (o *BootOptions) ServiceConfig(serviceID proc.ServiceID) (proc.Config, bool) {
+	if o == nil || serviceID == "" {
+		return proc.Config{}, false
+	}
+	cfg := o.Service(serviceID)
+	if cfg == nil {
+		return proc.Config{}, false
+	}
+	return *cfg, true
+}
+
+// SortedServiceIDs returns all configured service IDs in deterministic order.
+func (o *BootOptions) SortedServiceIDs() []proc.ServiceID {
+	if o == nil || len(o.Services) == 0 {
+		return nil
+	}
+	out := make([]proc.ServiceID, 0, len(o.Services))
+	for id := range o.Services {
+		out = append(out, id)
+	}
+	slices.SortStableFunc(out, func(a, b proc.ServiceID) int {
+		if a < b {
+			return -1
+		}
+		if a > b {
+			return 1
+		}
+		return 0
+	})
+	return out
+}
+
+// SharedOptions returns the boot-time shared options.
+func (o *BootOptions) SharedOptions() proc.SharedOptions {
+	if o == nil {
+		return proc.SharedOptions{}
+	}
+	return o.ShOpt
+}
+
+// BootVersion returns the boot-time version constraint.
+func (o *BootOptions) BootVersion() string {
+	if o == nil {
+		return ""
+	}
+	return o.Version
+}
+
+// MonitorEnabled reports whether monitoring components are enabled.
+func (o *BootOptions) MonitorEnabled() bool {
+	return o != nil && o.Monitor
+}
+
+// GrafanaPortOverride returns the configured Grafana port override.
+func (o *BootOptions) GrafanaPortOverride() int {
+	if o == nil {
+		return 0
+	}
+	return o.GrafanaPort
+}
+
+// ServiceConfigFor returns the current config snapshot for a service.
+func (o *BootOptions) ServiceConfigFor(serviceID proc.ServiceID) proc.Config {
+	if o == nil || serviceID == "" {
+		return proc.Config{}
+	}
+	cfg := o.Service(serviceID)
+	if cfg == nil {
+		return proc.Config{}
+	}
+	return *cfg
+}
 
 func parseS3Endpoint(endpoint string) (host string, secure bool, hostname string, err error) {
 	endpoint = strings.TrimSpace(endpoint)
@@ -256,6 +362,118 @@ func planProcs(options *BootOptions) ([]proc.ServiceID, map[proc.ServiceID]proc.
 	return ordered, cfgByService, nil
 }
 
+type envComponentSource struct {
+	env *environment.Environment
+}
+
+func newEnvComponentSource(env *environment.Environment) *envComponentSource {
+	return &envComponentSource{env: env}
+}
+
+func (s *envComponentSource) ResolveVersion(component, constraint string) (string, error) {
+	if s == nil || s.env == nil {
+		return "", errors.New("environment not initialized")
+	}
+	v, err := s.env.V1Repository().ResolveComponentVersion(component, constraint)
+	if err != nil {
+		return "", err
+	}
+	return v.String(), nil
+}
+
+func requiredBinaryPathForService(serviceID proc.ServiceID, baseBinPath string) string {
+	baseBinPath = strings.TrimSpace(baseBinPath)
+	if baseBinPath == "" {
+		return ""
+	}
+
+	switch serviceID {
+	case proc.ServiceTiKVWorker:
+		return proc.ResolveTiKVWorkerBinPath(baseBinPath)
+	case proc.ServiceNGMonitoring:
+		if filepath.Base(baseBinPath) == "ng-monitoring-server" {
+			return baseBinPath
+		}
+		path, _ := proc.ResolveSiblingBinary(baseBinPath, "ng-monitoring-server")
+		return path
+	default:
+		return baseBinPath
+	}
+}
+
+func planInstallByResolvedBinaryPath(serviceID proc.ServiceID, component, resolved, baseBinPath string, binPathErr error, forcePull bool) *DownloadPlan {
+	// PlanInstall treats any binary path error as "not installed": it should
+	// produce a download plan rather than failing planning.
+	if binPathErr == nil && !forcePull {
+		checkPath := requiredBinaryPathForService(serviceID, baseBinPath)
+		if binaryExists(checkPath) {
+			return nil
+		}
+	}
+
+	reason := "not_installed"
+	if forcePull {
+		reason = "force_pull"
+	} else if binPathErr == nil {
+		reason = "missing_binary"
+	}
+
+	debugBinPath := strings.TrimSpace(baseBinPath)
+	if binPathErr == nil {
+		debugBinPath = strings.TrimSpace(requiredBinaryPathForService(serviceID, baseBinPath))
+	}
+
+	return &DownloadPlan{
+		ComponentID:     component,
+		ResolvedVersion: resolved,
+		DebugReason:     reason,
+		DebugBinPath:    debugBinPath,
+	}
+}
+
+func (s *envComponentSource) PlanInstall(serviceID proc.ServiceID, component, resolved string, forcePull bool) (*DownloadPlan, error) {
+	if s == nil || s.env == nil {
+		return nil, errors.New("environment not initialized")
+	}
+	if component == "" {
+		return nil, errors.New("component is empty")
+	}
+	if resolved == "" {
+		return nil, errors.Errorf("component %s resolved version is empty", component)
+	}
+
+	v := utils.Version(resolved)
+	binPath, err := s.env.BinaryPath(component, v)
+	return planInstallByResolvedBinaryPath(serviceID, component, resolved, binPath, err, forcePull), nil
+}
+
+func (s *envComponentSource) EnsureInstalled(component, resolved string) error {
+	if s == nil || s.env == nil {
+		return errors.New("environment not initialized")
+	}
+	if component == "" {
+		return errors.New("component is empty")
+	}
+	if resolved == "" {
+		return errors.Errorf("component %s resolved version is empty", component)
+	}
+	spec := repository.ComponentSpec{ID: component, Version: resolved, Force: true}
+	return s.env.V1Repository().UpdateComponents([]repository.ComponentSpec{spec})
+}
+
+func (s *envComponentSource) BinaryPath(component, resolved string) (string, error) {
+	if s == nil || s.env == nil {
+		return "", errors.New("environment not initialized")
+	}
+	if component == "" {
+		return "", errors.New("component is empty")
+	}
+	if resolved == "" {
+		return "", errors.Errorf("component %s resolved version is empty", component)
+	}
+	return s.env.BinaryPath(component, utils.Version(resolved))
+}
+
 func (p *Playground) bootCluster(ctx context.Context, options *BootOptions) (err error) {
 	defer func() { err = normalizeBootErr(ctx, err) }()
 
@@ -391,4 +609,95 @@ func (p *Playground) bootCluster(ctx context.Context, options *BootOptions) (err
 	}()
 
 	return nil
+}
+
+func topoSortServiceIDs(serviceIDs []proc.ServiceID) ([]proc.ServiceID, error) {
+	return topoSortServiceIDsWithCompare(serviceIDs, nil)
+}
+
+type serviceIDCompareFunc func(a, b proc.ServiceID) int
+
+func topoSortServiceIDsWithCompare(serviceIDs []proc.ServiceID, cmp serviceIDCompareFunc) ([]proc.ServiceID, error) {
+	if len(serviceIDs) == 0 {
+		return nil, nil
+	}
+
+	if cmp == nil {
+		cmp = func(a, b proc.ServiceID) int {
+			return strings.Compare(a.String(), b.String())
+		}
+	}
+
+	inSet := make(map[proc.ServiceID]struct{}, len(serviceIDs))
+	for _, id := range serviceIDs {
+		inSet[id] = struct{}{}
+	}
+
+	indegree := make(map[proc.ServiceID]int, len(serviceIDs))
+	deps := make(map[proc.ServiceID][]proc.ServiceID, len(serviceIDs))
+	for _, id := range serviceIDs {
+		indegree[id] = 0
+	}
+
+	for _, id := range serviceIDs {
+		spec, ok := pgservice.SpecFor(id)
+		if !ok {
+			continue
+		}
+		for _, dep := range spec.StartAfter {
+			if _, ok := inSet[dep]; !ok {
+				continue
+			}
+			deps[dep] = append(deps[dep], id)
+			indegree[id]++
+		}
+	}
+
+	var ready []proc.ServiceID
+	for _, id := range serviceIDs {
+		if indegree[id] == 0 {
+			ready = append(ready, id)
+		}
+	}
+	slices.SortStableFunc(ready, func(a, b proc.ServiceID) int {
+		return cmp(a, b)
+	})
+
+	out := make([]proc.ServiceID, 0, len(serviceIDs))
+	for len(ready) > 0 {
+		id := ready[0]
+		ready = ready[1:]
+		out = append(out, id)
+
+		for _, next := range deps[id] {
+			indegree[next]--
+			if indegree[next] == 0 {
+				ready = append(ready, next)
+			}
+		}
+		if len(ready) > 1 {
+			slices.SortStableFunc(ready, func(a, b proc.ServiceID) int {
+				return cmp(a, b)
+			})
+		}
+	}
+
+	if len(out) != len(serviceIDs) {
+		var cycle []proc.ServiceID
+		for _, id := range serviceIDs {
+			if indegree[id] > 0 {
+				cycle = append(cycle, id)
+			}
+		}
+		slices.SortStableFunc(cycle, func(a, b proc.ServiceID) int {
+			return cmp(a, b)
+		})
+		var names []string
+		for _, id := range cycle {
+			names = append(names, id.String())
+		}
+		return nil, fmt.Errorf("service dependency cycle detected: %s", strings.Join(names, ", "))
+	}
+
+	return out, nil
 }

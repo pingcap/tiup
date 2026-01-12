@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -143,6 +145,81 @@ type cliState struct {
 
 func newCLIState() *cliState {
 	return &cliState{options: BootOptions{Monitor: true}}
+}
+
+func resolvePlaygroundTarget(explicitTag, tiupDataDir, dataDir string) (playgroundTarget, error) {
+	// If the caller provides an explicit target (tag or TIUP_INSTANCE_DATA_DIR),
+	// do not guess.
+	if explicitTag != "" || tiupDataDir != "" {
+		port, err := loadPort(dataDir)
+		if err != nil {
+			tag := explicitTag
+			if tag == "" {
+				tag = filepath.Base(dataDir)
+			}
+			return playgroundTarget{}, playgroundNotRunningError{err: errors.Annotatef(err, "no playground running for tag %q", tag)}
+		}
+		tag := explicitTag
+		if tag == "" {
+			tag = filepath.Base(dataDir)
+		}
+		return playgroundTarget{tag: tag, dir: dataDir, port: port}, nil
+	}
+
+	baseDir := dataDir
+	if baseDir == "" {
+		return playgroundTarget{}, playgroundNotRunningError{err: errors.Errorf("no playground running")}
+	}
+
+	targets, err := listPlaygroundTargets(baseDir)
+	if err != nil {
+		return playgroundTarget{}, errors.AddStack(err)
+	}
+	if len(targets) == 0 {
+		return playgroundTarget{}, playgroundNotRunningError{err: errors.Errorf("no playground running")}
+	}
+	if len(targets) == 1 {
+		// Single running playground: implicit selection is unambiguous.
+		return targets[0], nil
+	}
+
+	var items []string
+	for _, t := range targets {
+		items = append(items, fmt.Sprintf("%s(%d)", t.tag, t.port))
+	}
+	slices.Sort(items)
+	return playgroundTarget{}, errors.Errorf("multiple playgrounds found: %s; please specify --tag", strings.Join(items, ", "))
+}
+
+type playgroundTarget struct {
+	tag  string
+	dir  string
+	port int
+}
+
+func listPlaygroundTargets(baseDir string) ([]playgroundTarget, error) {
+	entries, err := os.ReadDir(baseDir)
+	if err != nil {
+		return nil, errors.AddStack(err)
+	}
+
+	var out []playgroundTarget
+	for _, ent := range entries {
+		if !ent.IsDir() {
+			continue
+		}
+		dir := filepath.Join(baseDir, ent.Name())
+		port, err := loadPort(dir)
+		if err != nil || port <= 0 {
+			continue
+		}
+		out = append(out, playgroundTarget{tag: ent.Name(), dir: dir, port: port})
+	}
+
+	slices.SortStableFunc(out, func(a, b playgroundTarget) int {
+		return strings.Compare(a.tag, b.tag)
+	})
+	return out, nil
 }
 
 func scaleOutServiceIDs() []proc.ServiceID {
@@ -479,4 +556,74 @@ func sendCommandsAndPrintResult(out io.Writer, cmds []Command, addr string) erro
 	}
 
 	return nil
+}
+
+func (p *Playground) listenAndServeHTTP() error {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/command", p.commandHandler)
+
+	srv := &http.Server{
+		Addr:              "127.0.0.1:" + strconv.Itoa(p.port),
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       time.Minute,
+	}
+
+	go func() {
+		if p == nil || p.processGroup == nil {
+			return
+		}
+		<-p.processGroup.Closed()
+		_ = srv.Close()
+	}()
+
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		return err
+	}
+	return nil
+}
+
+func (p *Playground) commandHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		_ = json.NewEncoder(w).Encode(CommandReply{OK: false, Error: "method not allowed"})
+		return
+	}
+
+	if !strings.Contains(r.Header.Get("Content-Type"), "application/json") {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(CommandReply{OK: false, Error: "content-type must be application/json"})
+		return
+	}
+
+	var cmd Command
+	const maxBodyBytes = 1024 * 1024
+	r.Body = http.MaxBytesReader(w, r.Body, maxBodyBytes)
+
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	err := dec.Decode(&cmd)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(CommandReply{OK: false, Error: err.Error()})
+		return
+	}
+	if err := dec.Decode(&struct{}{}); err != io.EOF {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(CommandReply{OK: false, Error: "invalid JSON payload"})
+		return
+	}
+
+	output, err := p.doCommand(r.Context(), &cmd)
+
+	reply := CommandReply{OK: err == nil, Message: string(output)}
+	if err != nil {
+		reply.Error = err.Error()
+		w.WriteHeader(http.StatusBadRequest)
+	}
+	_ = json.NewEncoder(w).Encode(&reply)
 }
