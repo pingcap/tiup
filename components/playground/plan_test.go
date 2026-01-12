@@ -207,3 +207,59 @@ func TestPortPlanner_PortConflictNone_WildcardConflictsWithSpecificHost(t *testi
 		t.Fatalf("expected per-host port to avoid wildcard conflicts, got: %d", c)
 	}
 }
+
+func TestBuildBootPlan_Downloads_SkipsWhenUserProvidesBinPath(t *testing.T) {
+	opts := &BootOptions{
+		ShOpt: proc.SharedOptions{
+			Mode:   proc.ModeNormal,
+			PDMode: "pd",
+		},
+		Version: "nightly",
+		Host:    "127.0.0.1",
+		Monitor: false,
+	}
+
+	fs := newTestFlagSet()
+	registerServiceFlags(fs, opts)
+	if err := fs.Parse([]string{
+		"--db.binpath=/tmp/tidb-server",
+		"--tiflash=0",
+	}); err != nil {
+		t.Fatalf("parse flags: %v", err)
+	}
+	if err := applyServiceDefaults(fs, opts); err != nil {
+		t.Fatalf("applyServiceDefaults: %v", err)
+	}
+
+	src := &recordingSource{resolvedVersion: "v1.0.0"}
+	plan, err := BuildBootPlan(opts, bootPlannerConfig{
+		dataDir:            "/tmp/tiup-playground-test-plan",
+		portConflictPolicy: PortConflictNone,
+		advertiseHost:      func(listen string) string { return listen },
+		componentSource:    src,
+	})
+	if err != nil {
+		t.Fatalf("BuildBootPlan: %v", err)
+	}
+
+	foundTiDB := false
+	for _, svc := range plan.Services {
+		if svc.ServiceID != proc.ServiceTiDB.String() {
+			continue
+		}
+		foundTiDB = true
+		if svc.BinPath != "/tmp/tidb-server" {
+			t.Fatalf("unexpected tidb binpath: %q", svc.BinPath)
+		}
+		break
+	}
+	if !foundTiDB {
+		t.Fatalf("missing %s service in plan", proc.ServiceTiDB)
+	}
+
+	for _, dl := range plan.Downloads {
+		if dl.ComponentID == proc.ComponentTiDB.String() {
+			t.Fatalf("unexpected download plan for %s when user provides binpath: %+v", proc.ComponentTiDB, dl)
+		}
+	}
+}

@@ -92,6 +92,10 @@ func TestTiFlashPlanWhen_RequiresTiDB(t *testing.T) {
 		ShOpt: proc.SharedOptions{
 			Mode:   proc.ModeCSE,
 			PDMode: "pd",
+			CSE: proc.CSEOptions{
+				S3Endpoint: "http://127.0.0.1:9000",
+				Bucket:     "tiflash",
+			},
 		},
 		Version: "nightly",
 	}
@@ -237,6 +241,10 @@ func TestBuildBootPlan_StartOrder_DoesNotDelayTiDBBehindMonitoringWhenPumpDisabl
 		ShOpt: proc.SharedOptions{
 			Mode:   proc.ModeCSE,
 			PDMode: "pd",
+			CSE: proc.CSEOptions{
+				S3Endpoint: "http://127.0.0.1:9000",
+				Bucket:     "tiflash",
+			},
 		},
 		Version: "v7.5.0",
 		Monitor: true,
@@ -286,5 +294,212 @@ func TestBuildBootPlan_StartOrder_DoesNotDelayTiDBBehindMonitoringWhenPumpDisabl
 	}
 	if idxTiDB > idxGrafana {
 		t.Fatalf("expected %s to start before %s (pump is disabled), got: tidb=%d grafana=%d", proc.ServiceTiDB, proc.ServiceGrafana, idxTiDB, idxGrafana)
+	}
+}
+
+func TestBuildBootPlan_MonitorDisabled_ExcludesMonitoringServices(t *testing.T) {
+	opts := &BootOptions{
+		ShOpt: proc.SharedOptions{
+			Mode:   proc.ModeNormal,
+			PDMode: "pd",
+		},
+		Version: "nightly",
+		Host:    "127.0.0.1",
+		Monitor: false,
+	}
+
+	fs := newTestFlagSet()
+	registerServiceFlags(fs, opts)
+	if err := applyServiceDefaults(fs, opts); err != nil {
+		t.Fatalf("applyServiceDefaults: %v", err)
+	}
+
+	plan := buildPlanForTest(t, opts)
+	if plan.Monitor {
+		t.Fatalf("unexpected planned monitor state: %v", plan.Monitor)
+	}
+
+	have := make(map[string]struct{})
+	for _, svc := range plan.Services {
+		have[svc.ServiceID] = struct{}{}
+	}
+
+	for _, sid := range []proc.ServiceID{proc.ServicePrometheus, proc.ServiceGrafana, proc.ServiceNGMonitoring} {
+		if _, ok := have[sid.String()]; ok {
+			t.Fatalf("unexpected %s in boot plan when monitor is disabled", sid)
+		}
+	}
+	for _, sid := range []proc.ServiceID{proc.ServicePD, proc.ServiceTiKV} {
+		if _, ok := have[sid.String()]; !ok {
+			t.Fatalf("missing %s in boot plan", sid)
+		}
+	}
+}
+
+func TestBuildBootPlan_ModeTiKVSlim_DisablesTiDBAndTiFlash(t *testing.T) {
+	opts := &BootOptions{
+		ShOpt: proc.SharedOptions{
+			Mode:   proc.ModeTiKVSlim,
+			PDMode: "pd",
+		},
+		Version: "nightly",
+		Host:    "127.0.0.1",
+		Monitor: false,
+	}
+
+	fs := newTestFlagSet()
+	registerServiceFlags(fs, opts)
+	if err := applyServiceDefaults(fs, opts); err != nil {
+		t.Fatalf("applyServiceDefaults: %v", err)
+	}
+
+	plan := buildPlanForTest(t, opts)
+	if plan.Shared.Mode != proc.ModeTiKVSlim {
+		t.Fatalf("unexpected planned mode: %q", plan.Shared.Mode)
+	}
+
+	have := make(map[string]struct{})
+	for _, svc := range plan.Services {
+		have[svc.ServiceID] = struct{}{}
+	}
+
+	for _, sid := range []proc.ServiceID{proc.ServiceTiDB, proc.ServiceTiFlash, proc.ServiceTiFlashWrite, proc.ServiceTiFlashCompute} {
+		if _, ok := have[sid.String()]; ok {
+			t.Fatalf("unexpected %s in boot plan for %s mode", sid, proc.ModeTiKVSlim)
+		}
+	}
+	for _, sid := range []proc.ServiceID{proc.ServicePD, proc.ServiceTiKV} {
+		if _, ok := have[sid.String()]; !ok {
+			t.Fatalf("missing %s in boot plan", sid)
+		}
+	}
+	if got := plan.RequiredServices[proc.ServiceTiDB.String()]; got > 0 {
+		t.Fatalf("unexpected required %s count in %s mode: %d", proc.ServiceTiDB, proc.ModeTiKVSlim, got)
+	}
+}
+
+func TestBuildBootPlan_ModeCSE_EnablesTiKVWorkerAndTiFlashDisaggServices(t *testing.T) {
+	opts := &BootOptions{
+		ShOpt: proc.SharedOptions{
+			Mode:   proc.ModeCSE,
+			PDMode: "pd",
+			CSE: proc.CSEOptions{
+				S3Endpoint: "http://127.0.0.1:9000",
+				Bucket:     "tiflash",
+			},
+		},
+		Version: "nightly",
+		Host:    "127.0.0.1",
+		Monitor: false,
+	}
+
+	fs := newTestFlagSet()
+	registerServiceFlags(fs, opts)
+	if err := applyServiceDefaults(fs, opts); err != nil {
+		t.Fatalf("applyServiceDefaults: %v", err)
+	}
+
+	plan := buildPlanForTest(t, opts)
+	if plan.Shared.Mode != proc.ModeCSE {
+		t.Fatalf("unexpected planned mode: %q", plan.Shared.Mode)
+	}
+	if plan.Shared.CSE.S3Endpoint != "http://127.0.0.1:9000" || plan.Shared.CSE.Bucket != "tiflash" {
+		t.Fatalf("unexpected planned cse opts: %+v", plan.Shared.CSE)
+	}
+
+	have := make(map[string]struct{})
+	for _, svc := range plan.Services {
+		have[svc.ServiceID] = struct{}{}
+	}
+
+	for _, sid := range []proc.ServiceID{proc.ServiceTiKVWorker, proc.ServiceTiFlashWrite, proc.ServiceTiFlashCompute} {
+		if _, ok := have[sid.String()]; !ok {
+			t.Fatalf("missing %s in boot plan for %s mode", sid, proc.ModeCSE)
+		}
+	}
+	if _, ok := have[proc.ServiceTiFlash.String()]; ok {
+		t.Fatalf("unexpected %s in boot plan for %s mode", proc.ServiceTiFlash, proc.ModeCSE)
+	}
+}
+
+func TestBuildBootPlan_ModeDisAgg_EnablesTiFlashDisaggServicesButNoTiKVWorker(t *testing.T) {
+	opts := &BootOptions{
+		ShOpt: proc.SharedOptions{
+			Mode:   proc.ModeDisAgg,
+			PDMode: "pd",
+			CSE: proc.CSEOptions{
+				S3Endpoint: "http://127.0.0.1:9000",
+				Bucket:     "tiflash",
+			},
+		},
+		Version: "nightly",
+		Host:    "127.0.0.1",
+		Monitor: false,
+	}
+
+	fs := newTestFlagSet()
+	registerServiceFlags(fs, opts)
+	if err := applyServiceDefaults(fs, opts); err != nil {
+		t.Fatalf("applyServiceDefaults: %v", err)
+	}
+
+	plan := buildPlanForTest(t, opts)
+	if plan.Shared.Mode != proc.ModeDisAgg {
+		t.Fatalf("unexpected planned mode: %q", plan.Shared.Mode)
+	}
+
+	have := make(map[string]struct{})
+	for _, svc := range plan.Services {
+		have[svc.ServiceID] = struct{}{}
+	}
+
+	for _, sid := range []proc.ServiceID{proc.ServiceTiFlashWrite, proc.ServiceTiFlashCompute} {
+		if _, ok := have[sid.String()]; !ok {
+			t.Fatalf("missing %s in boot plan for %s mode", sid, proc.ModeDisAgg)
+		}
+	}
+	if _, ok := have[proc.ServiceTiKVWorker.String()]; ok {
+		t.Fatalf("unexpected %s in boot plan for %s mode", proc.ServiceTiKVWorker, proc.ModeDisAgg)
+	}
+	if _, ok := have[proc.ServiceTiFlash.String()]; ok {
+		t.Fatalf("unexpected %s in boot plan for %s mode", proc.ServiceTiFlash, proc.ModeDisAgg)
+	}
+}
+
+func TestBuildBootPlan_ModeNextGen_EnablesTiDBSystem(t *testing.T) {
+	opts := &BootOptions{
+		ShOpt: proc.SharedOptions{
+			Mode:   proc.ModeNextGen,
+			PDMode: "pd",
+			CSE: proc.CSEOptions{
+				S3Endpoint: "http://127.0.0.1:9000",
+				Bucket:     "tiflash",
+			},
+		},
+		Version: "nightly",
+		Host:    "127.0.0.1",
+		Monitor: false,
+	}
+
+	fs := newTestFlagSet()
+	registerServiceFlags(fs, opts)
+	if err := applyServiceDefaults(fs, opts); err != nil {
+		t.Fatalf("applyServiceDefaults: %v", err)
+	}
+
+	plan := buildPlanForTest(t, opts)
+	if plan.Shared.Mode != proc.ModeNextGen {
+		t.Fatalf("unexpected planned mode: %q", plan.Shared.Mode)
+	}
+
+	have := make(map[string]struct{})
+	for _, svc := range plan.Services {
+		have[svc.ServiceID] = struct{}{}
+	}
+
+	for _, sid := range []proc.ServiceID{proc.ServiceTiDBSystem, proc.ServiceTiKVWorker} {
+		if _, ok := have[sid.String()]; !ok {
+			t.Fatalf("missing %s in boot plan for %s mode", sid, proc.ModeNextGen)
+		}
 	}
 }
