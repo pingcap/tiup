@@ -24,7 +24,6 @@ type ServicePlan struct {
 	TiKVWorker   *TiKVWorkerPlan
 	TiFlash      *TiFlashPlan
 	TiProxy      *TiProxyPlan
-	Prometheus   *PrometheusPlan
 	Grafana      *GrafanaPlan
 	NGMonitoring *NGMonitoringPlan
 	TiCDC        *TiCDCPlan
@@ -35,7 +34,6 @@ type ServicePlan struct {
 	Drainer      *DrainerPlan
 
 	// Debug fields (not part of execution semantics).
-	DebugTitle      string
 	DebugConstraint string
 }
 

@@ -69,9 +69,6 @@ type GrafanaPlan struct {
 	PrometheusURL string // http://host:port
 }
 
-// PrometheusPlan is the service-specific plan for Prometheus.
-type PrometheusPlan struct{}
-
 // TiCDCPlan is the service-specific plan for TiCDC.
 type TiCDCPlan struct{ PDAddrs []string }
 

@@ -353,7 +353,6 @@ func BuildBootPlan(options *BootOptions, cfg bootPlannerConfig) (BootPlan, error
 				ComponentID:        componentID.String(),
 				BinPath:            svcCfg.BinPath,
 				DebugConstraint:    constraint,
-				DebugTitle:         fmt.Sprintf("%s %d", proc.ServiceDisplayName(serviceID), i),
 				ResolvedVersion:    constraint, // overwritten when resolved from repo
 				Shared:             ServiceSharedPlan{Dir: dir, Host: host, ConfigPath: svcCfg.ConfigPath, UpTimeout: svcCfg.UpTimeout},
 			}
@@ -766,8 +765,6 @@ func BuildBootPlan(options *BootOptions, cfg bootPlannerConfig) (BootPlan, error
 			sp.NGMonitoring = &proc.NGMonitoringPlan{PDAddrs: pdBackendAddrs}
 		case proc.ServiceGrafana:
 			sp.Grafana = &proc.GrafanaPlan{PrometheusURL: promURL}
-		case proc.ServicePrometheus:
-			sp.Prometheus = &proc.PrometheusPlan{}
 		case proc.ServiceTiCDC:
 			sp.TiCDC = &proc.TiCDCPlan{PDAddrs: pdBackendAddrs}
 		case proc.ServiceTiKVCDC:
