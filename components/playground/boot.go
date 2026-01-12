@@ -124,7 +124,7 @@ func ValidateBootOptionsPure(options *BootOptions) error {
 		return fmt.Errorf("all components count must be great than 0 (pd=%v)", cfgPD.Num)
 	}
 
-	if options.ShOpt.PDMode == "ms" && !tidbver.PDSupportMicroservices(options.Version) {
+	if options.ShOpt.PDMode == "ms" && utils.Version(options.Version).IsValid() && !tidbver.PDSupportMicroservices(options.Version) {
 		return fmt.Errorf("PD cluster doesn't support microservices mode in version %s", options.Version)
 	}
 

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/pingcap/tiup/components/playground/proc"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 func TestValidateBootOptionsPure_ModeNormal_AllowsEmptyCSEOptions(t *testing.T) {
@@ -107,5 +108,37 @@ func TestValidateBootOptionsPure_ModeCSE_RejectsEndpointWithPath(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "path") {
 		t.Fatalf("expected path error, got: %v", err)
+	}
+}
+
+func TestValidateBootOptionsPure_PDModeMS_AllowsLatestAlias(t *testing.T) {
+	opts := &BootOptions{
+		ShOpt: proc.SharedOptions{
+			Mode:   proc.ModeNormal,
+			PDMode: "ms",
+		},
+		Version: utils.LatestVersionAlias,
+	}
+
+	if err := ValidateBootOptionsPure(opts); err != nil {
+		t.Fatalf("ValidateBootOptionsPure: %v", err)
+	}
+}
+
+func TestValidateBootOptionsPure_PDModeMS_RejectsOldVersion(t *testing.T) {
+	opts := &BootOptions{
+		ShOpt: proc.SharedOptions{
+			Mode:   proc.ModeNormal,
+			PDMode: "ms",
+		},
+		Version: "v6.5.0",
+	}
+
+	err := ValidateBootOptionsPure(opts)
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "microservices") {
+		t.Fatalf("expected microservices error, got: %v", err)
 	}
 }

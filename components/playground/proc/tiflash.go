@@ -112,8 +112,8 @@ func (inst *TiFlashInstance) MetricAddr() (r MetricAddr) {
 // Prepare builds the TiFlash process command.
 func (inst *TiFlashInstance) Prepare(ctx context.Context) error {
 	info := inst.Info()
-	if v := inst.Version.String(); v != "" && !tidbver.TiFlashPlaygroundNewStartMode(v) {
-		return fmt.Errorf("tiflash is only supported in TiDB >= v7.1.0 (or nightly), got %s", v)
+	if inst.Version.IsValid() && !tidbver.TiFlashPlaygroundNewStartMode(inst.Version.String()) {
+		return fmt.Errorf("tiflash is only supported in TiDB >= v7.1.0 (or nightly), got %s", inst.Version.String())
 	}
 
 	proxyConfigPath := filepath.Join(inst.Dir, "tiflash_proxy.toml")
