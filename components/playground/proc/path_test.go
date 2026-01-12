@@ -36,4 +36,3 @@ func TestResolveSiblingBinary(t *testing.T) {
 		t.Fatalf("unexpected resolve: ok=%v path=%q", ok, got)
 	}
 }
-

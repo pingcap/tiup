@@ -86,29 +86,6 @@ func (p *Playground) procRecordsSnapshot() []procRecordSnapshot {
 	}
 }
 
-func (p *Playground) requestAddProc(ctx context.Context, serviceID proc.ServiceID, cfg proc.Config) (proc.Process, error) {
-	if p == nil {
-		return nil, context.Canceled
-	}
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	if p.evtCh == nil {
-		return nil, fmt.Errorf("controller not started")
-	}
-
-	respCh := make(chan addProcResponse, 1)
-	p.emitEvent(addProcRequest{serviceID: serviceID, cfg: cfg, respCh: respCh})
-	select {
-	case resp := <-respCh:
-		return resp.inst, resp.err
-	case <-p.controllerDoneCh:
-		return nil, fmt.Errorf("playground is stopping")
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	}
-}
-
 func (p *Playground) requestAddPlannedProc(ctx context.Context, plan ServicePlan, binPath string, version utils.Version, shared proc.SharedOptions, dataDir string) (proc.Process, error) {
 	if p == nil {
 		return nil, context.Canceled
@@ -215,9 +192,6 @@ func (p *Playground) addPlannedProcInController(state *controllerState, plan Ser
 	}
 
 	host := strings.TrimSpace(plan.Shared.Host)
-	if host == "" {
-		return nil, fmt.Errorf("planned host is empty for %s", name)
-	}
 
 	info := proc.ProcessInfo{
 		ID:              id,

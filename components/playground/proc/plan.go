@@ -120,4 +120,3 @@ func ResolveSiblingBinary(baseBinPath, want string) (string, bool) {
 	}
 	return filepath.Join(filepath.Dir(baseBinPath), want), false
 }
-

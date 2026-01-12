@@ -9,6 +9,12 @@ import (
 	"golang.org/x/mod/semver"
 )
 
+const (
+	prometheusPortBase   = 9090
+	grafanaPortBase      = 3000
+	ngMonitoringPortBase = 12020
+)
+
 func stripNextGenVersionSuffix(version string) string {
 	return strings.TrimSuffix(version, "-"+utils.NextgenVersionAlias)
 }
@@ -24,7 +30,7 @@ func init() {
 		},
 		NewProc: func(rt ControllerRuntime, params NewProcParams) (proc.Process, error) {
 			shOpt := rt.SharedOptions()
-			port := allocPort(params.Host, params.Config.Port, 9090, shOpt.PortOffset)
+			port := allocPort(params.Host, params.Config.Port, prometheusPortBase, shOpt.PortOffset)
 			prom := &proc.PrometheusInstance{
 				ProcessInfo: proc.ProcessInfo{
 					UserBinPath:     params.Config.BinPath,
@@ -39,6 +45,23 @@ func init() {
 			}
 			rt.AddProc(proc.ServicePrometheus, prom)
 			return prom, nil
+		},
+		PlanInstance: func(_ BootContext, cfg proc.Config, alloc PortAllocator, plan *proc.ServicePlan) error {
+			host := plan.Shared.Host
+
+			portBase := prometheusPortBase
+			if cfg.Port > 0 {
+				portBase = cfg.Port
+			}
+			port, err := alloc(host, portBase)
+			if err != nil {
+				return err
+			}
+
+			plan.ComponentID = proc.ComponentPrometheus.String()
+			plan.Shared.Port = port
+			plan.Shared.StatusPort = port
+			return nil
 		},
 	})
 
@@ -58,7 +81,7 @@ func init() {
 		},
 		NewProc: func(rt ControllerRuntime, params NewProcParams) (proc.Process, error) {
 			shOpt := rt.SharedOptions()
-			port := allocPort(params.Host, params.Config.Port, 3000, shOpt.PortOffset)
+			port := allocPort(params.Host, params.Config.Port, grafanaPortBase, shOpt.PortOffset)
 
 			promURL := ""
 			if ps := ProcsOf[*proc.PrometheusInstance](rt, proc.ServicePrometheus); len(ps) > 0 && ps[0] != nil {
@@ -79,6 +102,35 @@ func init() {
 			}
 			rt.AddProc(proc.ServiceGrafana, grafana)
 			return grafana, nil
+		},
+		PlanInstance: func(_ BootContext, cfg proc.Config, alloc PortAllocator, plan *proc.ServicePlan) error {
+			host := plan.Shared.Host
+
+			portBase := grafanaPortBase
+			if cfg.Port > 0 {
+				portBase = cfg.Port
+			}
+			port, err := alloc(host, portBase)
+			if err != nil {
+				return err
+			}
+
+			plan.ComponentID = proc.ComponentGrafana.String()
+			plan.Shared.Port = port
+			return nil
+		},
+		FillServicePlans: func(_ BootContext, _ map[proc.ServiceID]proc.Config, byService map[proc.ServiceID][]*proc.ServicePlan, advertise func(listen string) string, plans []*proc.ServicePlan) error {
+			promURL := ""
+			ps := byService[proc.ServicePrometheus]
+			if len(ps) > 0 {
+				host := advertise(ps[0].Shared.Host)
+				promURL = fmt.Sprintf("http://%s", utils.JoinHostPort(host, ps[0].Shared.Port))
+			}
+
+			for _, sp := range plans {
+				sp.Grafana = &proc.GrafanaPlan{PrometheusURL: promURL}
+			}
+			return nil
 		},
 	})
 
@@ -107,7 +159,7 @@ func init() {
 		},
 		NewProc: func(rt ControllerRuntime, params NewProcParams) (proc.Process, error) {
 			shOpt := rt.SharedOptions()
-			port := allocPort(params.Host, params.Config.Port, 12020, shOpt.PortOffset)
+			port := allocPort(params.Host, params.Config.Port, ngMonitoringPortBase, shOpt.PortOffset)
 
 			pds := ProcsOf[*proc.PDInstance](rt, proc.ServicePD, proc.ServicePDAPI)
 			if len(pds) == 0 {
@@ -139,6 +191,32 @@ func init() {
 			}
 			rt.AddProc(proc.ServiceNGMonitoring, ngm)
 			return ngm, nil
+		},
+		PlanInstance: func(_ BootContext, cfg proc.Config, alloc PortAllocator, plan *proc.ServicePlan) error {
+			host := plan.Shared.Host
+
+			portBase := ngMonitoringPortBase
+			if cfg.Port > 0 {
+				portBase = cfg.Port
+			}
+			port, err := alloc(host, portBase)
+			if err != nil {
+				return err
+			}
+
+			// NOTE: ng-monitoring-server is shipped alongside prometheus in TiUP.
+			// Keep using prometheus as the repository identity for this service.
+			plan.ComponentID = proc.ComponentPrometheus.String()
+			plan.Shared.Port = port
+			plan.Shared.StatusPort = port
+			return nil
+		},
+		FillServicePlans: func(_ BootContext, _ map[proc.ServiceID]proc.Config, byService map[proc.ServiceID][]*proc.ServicePlan, advertise func(listen string) string, plans []*proc.ServicePlan) error {
+			pdBackendAddrs := plannedStatusAddrs(byService, advertise, proc.ServicePD, proc.ServicePDAPI)
+			for _, sp := range plans {
+				sp.NGMonitoring = &proc.NGMonitoringPlan{PDAddrs: pdBackendAddrs}
+			}
+			return nil
 		},
 	})
 }

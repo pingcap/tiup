@@ -8,6 +8,13 @@ import (
 	"github.com/pingcap/tiup/components/playground/proc"
 )
 
+const (
+	tikvPortBase       = 20160
+	tikvStatusPortBase = 20180
+
+	tikvWorkerPortBase = 19000
+)
+
 func init() {
 	MustRegister(Spec{
 		ServiceID: proc.ServiceTiKV,
@@ -16,7 +23,7 @@ func init() {
 			AllowModifyNum:     true,
 			AllowModifyHost:    true,
 			AllowModifyPort:    true,
-			DefaultPort:        20160,
+			DefaultPort:        tikvPortBase,
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
 			DefaultNum:         func(_ BootContext) int { return 1 },
@@ -33,6 +40,43 @@ func init() {
 		},
 		NewProc:     newTiKVInstance,
 		ScaleInHook: scaleInTiKVByTombstone,
+		PlanInstance: func(_ BootContext, cfg proc.Config, alloc PortAllocator, plan *proc.ServicePlan) error {
+			host := plan.Shared.Host
+
+			portBase := tikvPortBase
+			if cfg.Port > 0 {
+				portBase = cfg.Port
+			}
+			port, err := alloc(host, portBase)
+			if err != nil {
+				return err
+			}
+			statusPort, err := alloc(host, tikvStatusPortBase)
+			if err != nil {
+				return err
+			}
+
+			plan.ComponentID = proc.ComponentTiKV.String()
+			plan.Shared.Port = port
+			plan.Shared.StatusPort = statusPort
+			return nil
+		},
+		FillServicePlans: func(ctx BootContext, _ map[proc.ServiceID]proc.Config, byService map[proc.ServiceID][]*proc.ServicePlan, advertise func(listen string) string, plans []*proc.ServicePlan) error {
+			pdBackendAddrs := plannedStatusAddrs(byService, advertise, proc.ServicePD, proc.ServicePDAPI)
+
+			var tsoAddrs []string
+			if ctx.SharedOptions().PDMode == "ms" {
+				tsoAddrs = plannedStatusAddrs(byService, advertise, proc.ServicePDTSO)
+			}
+
+			for _, sp := range plans {
+				sp.TiKV = &proc.TiKVPlan{
+					PDAddrs:  pdBackendAddrs,
+					TSOAddrs: tsoAddrs,
+				}
+			}
+			return nil
+		},
 	})
 
 	MustRegister(Spec{
@@ -43,7 +87,7 @@ func init() {
 			MaxNum:             1,
 			AllowModifyHost:    true,
 			AllowModifyPort:    true,
-			DefaultPort:        19000,
+			DefaultPort:        tikvWorkerPortBase,
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
 			DefaultNum: func(ctx BootContext) int {
@@ -70,6 +114,36 @@ func init() {
 			proc.ServicePDAPI,
 		},
 		NewProc: newTiKVWorkerInstance,
+		PlanInstance: func(ctx BootContext, cfg proc.Config, alloc PortAllocator, plan *proc.ServicePlan) error {
+			host := plan.Shared.Host
+
+			component := proc.ComponentTiKV
+			if ctx.SharedOptions().Mode == proc.ModeNextGen {
+				component = proc.ComponentTiKVWorker
+			}
+
+			plan.BinPath = proc.ResolveTiKVWorkerBinPath(plan.BinPath)
+
+			portBase := tikvWorkerPortBase
+			if cfg.Port > 0 {
+				portBase = cfg.Port
+			}
+			port, err := alloc(host, portBase)
+			if err != nil {
+				return err
+			}
+
+			plan.ComponentID = component.String()
+			plan.Shared.Port = port
+			return nil
+		},
+		FillServicePlans: func(_ BootContext, _ map[proc.ServiceID]proc.Config, byService map[proc.ServiceID][]*proc.ServicePlan, advertise func(listen string) string, plans []*proc.ServicePlan) error {
+			pdBackendAddrs := plannedStatusAddrs(byService, advertise, proc.ServicePD, proc.ServicePDAPI)
+			for _, sp := range plans {
+				sp.TiKVWorker = &proc.TiKVWorkerPlan{PDAddrs: pdBackendAddrs}
+			}
+			return nil
+		},
 	})
 }
 
@@ -109,8 +183,8 @@ func newTiKVInstance(rt ControllerRuntime, params NewProcParams) (proc.Process, 
 			ID:              params.ID,
 			Dir:             params.Dir,
 			Host:            params.Host,
-			Port:            allocPort(params.Host, params.Config.Port, 20160, shOpt.PortOffset),
-			StatusPort:      allocPort(params.Host, 0, 20180, shOpt.PortOffset),
+			Port:            allocPort(params.Host, params.Config.Port, tikvPortBase, shOpt.PortOffset),
+			StatusPort:      allocPort(params.Host, 0, tikvStatusPortBase, shOpt.PortOffset),
 			ConfigPath:      params.Config.ConfigPath,
 			RepoComponentID: proc.ComponentTiKV,
 			Service:         proc.ServiceTiKV,
@@ -179,7 +253,7 @@ func newTiKVWorkerInstance(rt ControllerRuntime, params NewProcParams) (proc.Pro
 			ID:              params.ID,
 			Dir:             params.Dir,
 			Host:            params.Host,
-			Port:            allocPort(params.Host, params.Config.Port, 19000, shOpt.PortOffset),
+			Port:            allocPort(params.Host, params.Config.Port, tikvWorkerPortBase, shOpt.PortOffset),
 			ConfigPath:      params.Config.ConfigPath,
 			RepoComponentID: repoComponent,
 			Service:         proc.ServiceTiKVWorker,

@@ -529,22 +529,6 @@ func AdvertiseHost(listen string) string {
 	return listen
 }
 
-func pdEndpoints(pds []*PDInstance, isHTTP bool) []string {
-	var endpoints []string
-	for _, pd := range pds {
-		switch pd.Service {
-		case ServicePDTSO, ServicePDScheduling, ServicePDRouter, ServicePDResourceManager:
-			continue
-		}
-		if isHTTP {
-			endpoints = append(endpoints, "http://"+utils.JoinHostPort(AdvertiseHost(pd.Host), pd.StatusPort))
-		} else {
-			endpoints = append(endpoints, utils.JoinHostPort(AdvertiseHost(pd.Host), pd.StatusPort))
-		}
-	}
-	return endpoints
-}
-
 // prepareConfig writes a merged config to outputConfigPath.
 //
 // Merge order:

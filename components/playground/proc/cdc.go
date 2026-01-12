@@ -156,4 +156,3 @@ func (c *TiKVCDCInstance) Prepare(ctx context.Context) error {
 func (c *TiKVCDCInstance) LogFile() string {
 	return filepath.Join(c.Dir, "tikv_cdc.log")
 }
-

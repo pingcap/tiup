@@ -241,4 +241,3 @@ func (w *DMWorker) Prepare(ctx context.Context) error {
 func (w *DMWorker) LogFile() string {
 	return filepath.Join(w.Dir, "dm-worker.log")
 }
-

@@ -120,6 +120,8 @@ func marshalOrderedStringMap[T any](m map[string]T) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
+// MarshalJSON implements json.Marshaler and keeps the output stable for tests
+// and dry-run diffing.
 func (p BootPlan) MarshalJSON() ([]byte, error) {
 	type bootPlanAlias BootPlan
 	stable := struct {
@@ -323,9 +325,6 @@ func (p *portPlanner) alloc(host string, base, portOffset int) (int, error) {
 	if p == nil {
 		return 0, errors.New("port planner is nil")
 	}
-	if host == "" {
-		return 0, errors.New("host is empty")
-	}
 	if base <= 0 {
 		return 0, errors.New("base port is invalid")
 	}
@@ -416,53 +415,6 @@ func resolveVersionConstraint(serviceID proc.ServiceID, options *BootOptions) (s
 	return constraint, nil
 }
 
-func repoComponentForService(serviceID proc.ServiceID, shOpt proc.SharedOptions) (proc.RepoComponentID, error) {
-	switch serviceID {
-	case proc.ServicePD,
-		proc.ServicePDAPI,
-		proc.ServicePDTSO,
-		proc.ServicePDScheduling,
-		proc.ServicePDRouter,
-		proc.ServicePDResourceManager:
-		return proc.ComponentPD, nil
-	case proc.ServiceTiKV:
-		return proc.ComponentTiKV, nil
-	case proc.ServiceTiDB, proc.ServiceTiDBSystem:
-		return proc.ComponentTiDB, nil
-	case proc.ServiceTiKVWorker:
-		if shOpt.Mode == proc.ModeNextGen {
-			return proc.ComponentTiKVWorker, nil
-		}
-		return proc.ComponentTiKV, nil
-	case proc.ServiceTiFlash, proc.ServiceTiFlashWrite, proc.ServiceTiFlashCompute:
-		return proc.ComponentTiFlash, nil
-	case proc.ServiceTiProxy:
-		return proc.ComponentTiProxy, nil
-	case proc.ServicePrometheus:
-		return proc.ComponentPrometheus, nil
-	case proc.ServiceGrafana:
-		return proc.ComponentGrafana, nil
-	case proc.ServiceNGMonitoring:
-		// NOTE: ng-monitoring-server is shipped alongside prometheus in TiUP.
-		// Keep using prometheus as the repository identity for this service.
-		return proc.ComponentPrometheus, nil
-	case proc.ServiceTiCDC:
-		return proc.ComponentCDC, nil
-	case proc.ServiceTiKVCDC:
-		return proc.ComponentTiKVCDC, nil
-	case proc.ServiceDMMaster:
-		return proc.ComponentDMMaster, nil
-	case proc.ServiceDMWorker:
-		return proc.ComponentDMWorker, nil
-	case proc.ServicePump:
-		return proc.ComponentPump, nil
-	case proc.ServiceDrainer:
-		return proc.ComponentDrainer, nil
-	default:
-		return "", errors.Errorf("unknown service %s", serviceID)
-	}
-}
-
 // BuildBootPlan builds a deterministic BootPlan from BootOptions and the
 // current local environment state (via ComponentSource).
 func BuildBootPlan(options *BootOptions, cfg bootPlannerConfig) (BootPlan, error) {
@@ -517,6 +469,9 @@ func buildBootPlanWithProcs(options *BootOptions, cfg bootPlannerConfig, ordered
 	downloadCache := make(map[string]*DownloadPlan) // key: component@resolved
 
 	servicePlans := make([]ServicePlan, 0, len(orderedServiceIDs))
+	allocPort := func(host string, base int) (int, error) {
+		return pports.alloc(host, base, options.ShOpt.PortOffset)
+	}
 
 	for _, serviceID := range orderedServiceIDs {
 		svcCfg := baseConfigs[serviceID]
@@ -527,11 +482,6 @@ func buildBootPlanWithProcs(options *BootOptions, cfg bootPlannerConfig, ordered
 		spec, ok := pgservice.SpecFor(serviceID)
 		if !ok {
 			return BootPlan{}, errors.Errorf("unknown service %s", serviceID)
-		}
-
-		componentID, err := repoComponentForService(serviceID, options.ShOpt)
-		if err != nil {
-			return BootPlan{}, err
 		}
 
 		constraint, err := resolveVersionConstraint(serviceID, options)
@@ -556,9 +506,9 @@ func buildBootPlanWithProcs(options *BootOptions, cfg bootPlannerConfig, ordered
 		slices.Sort(startAfter)
 		startAfter = slices.Compact(startAfter)
 
-		host := options.Host
-		if svcCfg.Host != "" {
-			host = svcCfg.Host
+		host := strings.TrimSpace(options.Host)
+		if h := strings.TrimSpace(svcCfg.Host); h != "" {
+			host = h
 		}
 
 		for i := 0; i < svcCfg.Num; i++ {
@@ -572,15 +522,20 @@ func buildBootPlanWithProcs(options *BootOptions, cfg bootPlannerConfig, ordered
 				Name:               name,
 				ServiceID:          serviceID.String(),
 				StartAfterServices: startAfter,
-				ComponentID:        componentID.String(),
 				BinPath:            svcCfg.BinPath,
 				DebugConstraint:    constraint,
 				ResolvedVersion:    constraint, // overwritten when resolved from repo
 				Shared:             ServiceSharedPlan{Dir: dir, Host: host, ConfigPath: svcCfg.ConfigPath, UpTimeout: svcCfg.UpTimeout},
 			}
 
-			if err := planServicePorts(serviceID, svcCfg, options, host, pports, &sp); err != nil {
+			if spec.PlanInstance == nil {
+				return BootPlan{}, errors.Errorf("missing planner rules for %s", serviceID)
+			}
+			if err := spec.PlanInstance(options, svcCfg, allocPort, &sp); err != nil {
 				return BootPlan{}, err
+			}
+			if strings.TrimSpace(sp.ComponentID) == "" {
+				return BootPlan{}, errors.Errorf("planned component id is empty for %s", serviceID)
 			}
 
 			if cfg.componentSource != nil && sp.BinPath == "" {
@@ -612,7 +567,36 @@ func buildBootPlanWithProcs(options *BootOptions, cfg bootPlannerConfig, ordered
 		}
 	}
 
-	fillServiceSpecificPlans(servicePlans, baseConfigs, cfg.advertiseHost, options)
+	byService := make(map[proc.ServiceID][]*ServicePlan)
+	for i := range servicePlans {
+		sp := &servicePlans[i]
+		serviceID := proc.ServiceID(strings.TrimSpace(sp.ServiceID))
+		if serviceID == "" {
+			continue
+		}
+		byService[serviceID] = append(byService[serviceID], sp)
+	}
+
+	plannedServiceIDs := make([]proc.ServiceID, 0, len(byService))
+	for serviceID := range byService {
+		plannedServiceIDs = append(plannedServiceIDs, serviceID)
+	}
+	slices.SortStableFunc(plannedServiceIDs, func(a, b proc.ServiceID) int {
+		return strings.Compare(a.String(), b.String())
+	})
+
+	for _, serviceID := range plannedServiceIDs {
+		spec, ok := pgservice.SpecFor(serviceID)
+		if !ok {
+			return BootPlan{}, errors.Errorf("unknown service %s", serviceID)
+		}
+		if spec.FillServicePlans == nil {
+			continue
+		}
+		if err := spec.FillServicePlans(options, baseConfigs, byService, cfg.advertiseHost, byService[serviceID]); err != nil {
+			return BootPlan{}, err
+		}
+	}
 
 	// Finalize downloads list: stable order, de-duped by component@resolved.
 	downloads := make([]DownloadPlan, 0, len(downloadCache))

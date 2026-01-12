@@ -9,6 +9,12 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
+const (
+	tidbPortBase       = 4000
+	tidbSystemPortBase = 3000
+	tidbStatusPortBase = 10080
+)
+
 func init() {
 	startAfter := []proc.ServiceID{
 		proc.ServicePD,
@@ -29,7 +35,7 @@ func init() {
 			MaxNum:             1,
 			AllowModifyHost:    true,
 			AllowModifyPort:    true,
-			DefaultPort:        3000,
+			DefaultPort:        tidbSystemPortBase,
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
 			DefaultNum: func(ctx BootContext) int {
@@ -43,6 +49,50 @@ func init() {
 			IsCritical:         func(ctx BootContext) bool { return ctx.SharedOptions().Mode == proc.ModeNextGen },
 		},
 		StartAfter: startAfter,
+		PlanInstance: func(_ BootContext, cfg proc.Config, alloc PortAllocator, plan *proc.ServicePlan) error {
+			host := plan.Shared.Host
+
+			portBase := tidbSystemPortBase
+			if cfg.Port > 0 {
+				portBase = cfg.Port
+			}
+			port, err := alloc(host, portBase)
+			if err != nil {
+				return err
+			}
+			statusPort, err := alloc("0.0.0.0", tidbStatusPortBase)
+			if err != nil {
+				return err
+			}
+
+			plan.ComponentID = proc.ComponentTiDB.String()
+			plan.Shared.Port = port
+			plan.Shared.StatusPort = statusPort
+			return nil
+		},
+		FillServicePlans: func(_ BootContext, baseConfigs map[proc.ServiceID]proc.Config, byService map[proc.ServiceID][]*proc.ServicePlan, advertise func(listen string) string, plans []*proc.ServicePlan) error {
+			pdBackendAddrs := plannedStatusAddrs(byService, advertise, proc.ServicePD, proc.ServicePDAPI)
+
+			enableBinlog := false
+			if c, ok := baseConfigs[proc.ServicePump]; ok && c.Num > 0 {
+				enableBinlog = true
+			}
+
+			tikvWorkerURL := ""
+			if ws := byService[proc.ServiceTiKVWorker]; len(ws) > 0 {
+				host := advertise(ws[0].Shared.Host)
+				tikvWorkerURL = fmt.Sprintf("http://%s", utils.JoinHostPort(host, ws[0].Shared.Port))
+			}
+
+			for _, sp := range plans {
+				sp.TiDB = &proc.TiDBPlan{
+					PDAddrs:       pdBackendAddrs,
+					EnableBinlog:  enableBinlog,
+					TiKVWorkerURL: tikvWorkerURL,
+				}
+			}
+			return nil
+		},
 	})
 
 	MustRegister(Spec{
@@ -55,7 +105,7 @@ func init() {
 			AllowModifyNum:     true,
 			AllowModifyHost:    true,
 			AllowModifyPort:    true,
-			DefaultPort:        4000,
+			DefaultPort:        tidbPortBase,
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
 			AllowModifyTimeout: true,
@@ -72,6 +122,43 @@ func init() {
 		},
 		StartAfter:   append([]proc.ServiceID{proc.ServiceTiDBSystem}, startAfter...),
 		PostScaleOut: postScaleOutTiDB,
+		PlanInstance: func(_ BootContext, cfg proc.Config, alloc PortAllocator, plan *proc.ServicePlan) error {
+			host := plan.Shared.Host
+
+			portBase := tidbPortBase
+			if cfg.Port > 0 {
+				portBase = cfg.Port
+			}
+			port, err := alloc(host, portBase)
+			if err != nil {
+				return err
+			}
+			statusPort, err := alloc("0.0.0.0", tidbStatusPortBase)
+			if err != nil {
+				return err
+			}
+
+			plan.ComponentID = proc.ComponentTiDB.String()
+			plan.Shared.Port = port
+			plan.Shared.StatusPort = statusPort
+			return nil
+		},
+		FillServicePlans: func(_ BootContext, baseConfigs map[proc.ServiceID]proc.Config, byService map[proc.ServiceID][]*proc.ServicePlan, advertise func(listen string) string, plans []*proc.ServicePlan) error {
+			pdBackendAddrs := plannedStatusAddrs(byService, advertise, proc.ServicePD, proc.ServicePDAPI)
+
+			enableBinlog := false
+			if c, ok := baseConfigs[proc.ServicePump]; ok && c.Num > 0 {
+				enableBinlog = true
+			}
+
+			for _, sp := range plans {
+				sp.TiDB = &proc.TiDBPlan{
+					PDAddrs:      pdBackendAddrs,
+					EnableBinlog: enableBinlog,
+				}
+			}
+			return nil
+		},
 	})
 }
 
@@ -86,9 +173,9 @@ func enableBinlog(rt Runtime) bool {
 func newTiDBInstance(rt ControllerRuntime, serviceID proc.ServiceID, params NewProcParams) (proc.Process, error) {
 	pds := ProcsOf[*proc.PDInstance](rt, proc.ServicePD, proc.ServicePDAPI)
 	shOpt := rt.SharedOptions()
-	defaultPort := 4000
+	defaultPort := tidbPortBase
 	if serviceID == proc.ServiceTiDBSystem {
-		defaultPort = 3000
+		defaultPort = tidbSystemPortBase
 	}
 
 	pdAddrs := make([]string, 0, len(pds))
@@ -119,7 +206,7 @@ func newTiDBInstance(rt ControllerRuntime, serviceID proc.ServiceID, params NewP
 			Dir:             params.Dir,
 			Host:            params.Host,
 			Port:            allocPort(params.Host, params.Config.Port, defaultPort, shOpt.PortOffset),
-			StatusPort:      allocPort("0.0.0.0", 0, 10080, shOpt.PortOffset),
+			StatusPort:      allocPort("0.0.0.0", 0, tidbStatusPortBase, shOpt.PortOffset),
 			ConfigPath:      params.Config.ConfigPath,
 			RepoComponentID: proc.ComponentTiDB,
 			Service:         serviceID,

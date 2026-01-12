@@ -3,9 +3,17 @@ package service
 import (
 	"fmt"
 	"io"
+	"slices"
+	"strings"
 
 	"github.com/pingcap/tiup/components/playground/proc"
 	"github.com/pingcap/tiup/pkg/utils"
+)
+
+const (
+	dmPeerPortBase   = 8291
+	dmStatusPortBase = 8261
+	dmWorkerPortBase = 8262
 )
 
 func init() {
@@ -16,7 +24,7 @@ func init() {
 			AllowModifyNum:     true,
 			AllowModifyHost:    true,
 			AllowModifyPort:    true,
-			DefaultPort:        8261,
+			DefaultPort:        dmStatusPortBase,
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
 			DefaultNum:         func(_ BootContext) int { return 0 },
@@ -25,6 +33,40 @@ func init() {
 		},
 		NewProc:     newDMMasterInstance,
 		ScaleInHook: scaleInDMMaster,
+		PlanInstance: func(_ BootContext, cfg proc.Config, alloc PortAllocator, plan *proc.ServicePlan) error {
+			host := plan.Shared.Host
+
+			peerPort, err := alloc(host, dmPeerPortBase)
+			if err != nil {
+				return err
+			}
+			statusPortBase := dmStatusPortBase
+			if cfg.Port > 0 {
+				statusPortBase = cfg.Port
+			}
+			statusPort, err := alloc(host, statusPortBase)
+			if err != nil {
+				return err
+			}
+
+			plan.ComponentID = proc.ComponentDMMaster.String()
+			plan.Shared.Port = peerPort
+			plan.Shared.StatusPort = statusPort
+			return nil
+		},
+		FillServicePlans: func(_ BootContext, baseConfigs map[proc.ServiceID]proc.Config, byService map[proc.ServiceID][]*proc.ServicePlan, advertise func(listen string) string, plans []*proc.ServicePlan) error {
+			members := plannedDMMembers(byService, advertise)
+
+			waitReady := false
+			if c, ok := baseConfigs[proc.ServiceDMWorker]; ok && c.Num > 0 {
+				waitReady = true
+			}
+
+			for _, sp := range plans {
+				sp.DMMaster = &proc.DMMasterPlan{InitialCluster: members, RequireReady: waitReady}
+			}
+			return nil
+		},
 	})
 
 	MustRegister(Spec{
@@ -34,7 +76,7 @@ func init() {
 			AllowModifyNum:     true,
 			AllowModifyHost:    true,
 			AllowModifyPort:    true,
-			DefaultPort:        8262,
+			DefaultPort:        dmWorkerPortBase,
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
 			DefaultNum:         func(_ BootContext) int { return 0 },
@@ -44,7 +86,64 @@ func init() {
 		NewProc:     newDMWorkerInstance,
 		StartAfter:  []proc.ServiceID{proc.ServiceDMMaster},
 		ScaleInHook: scaleInDMWorker,
+		PlanInstance: func(_ BootContext, cfg proc.Config, alloc PortAllocator, plan *proc.ServicePlan) error {
+			host := plan.Shared.Host
+
+			portBase := dmWorkerPortBase
+			if cfg.Port > 0 {
+				portBase = cfg.Port
+			}
+			port, err := alloc(host, portBase)
+			if err != nil {
+				return err
+			}
+
+			plan.ComponentID = proc.ComponentDMWorker.String()
+			plan.Shared.Port = port
+			return nil
+		},
+		FillServicePlans: func(_ BootContext, _ map[proc.ServiceID]proc.Config, byService map[proc.ServiceID][]*proc.ServicePlan, advertise func(listen string) string, plans []*proc.ServicePlan) error {
+			members := plannedDMMembers(byService, advertise)
+			var addrs []string
+			for _, m := range members {
+				if m.MasterAddr != "" {
+					addrs = append(addrs, m.MasterAddr)
+				}
+			}
+			slices.Sort(addrs)
+			addrs = slices.Compact(addrs)
+
+			for _, sp := range plans {
+				sp.DMWorker = &proc.DMWorkerPlan{MasterAddrs: addrs}
+			}
+			return nil
+		},
 	})
+}
+
+func plannedDMMembers(byService map[proc.ServiceID][]*proc.ServicePlan, advertise func(listen string) string) []proc.DMMemberPlan {
+	if byService == nil {
+		return nil
+	}
+	if advertise == nil {
+		advertise = proc.AdvertiseHost
+	}
+
+	var members []proc.DMMemberPlan
+	for _, sp := range byService[proc.ServiceDMMaster] {
+		if sp.Name == "" || sp.Shared.Port <= 0 || sp.Shared.StatusPort <= 0 {
+			continue
+		}
+		host := advertise(sp.Shared.Host)
+		members = append(members, proc.DMMemberPlan{
+			Name:       sp.Name,
+			PeerAddr:   utils.JoinHostPort(host, sp.Shared.Port),
+			MasterAddr: utils.JoinHostPort(host, sp.Shared.StatusPort),
+		})
+	}
+
+	slices.SortFunc(members, func(a, b proc.DMMemberPlan) int { return strings.Compare(a.Name, b.Name) })
+	return members
 }
 
 func newDMMasterInstance(rt ControllerRuntime, params NewProcParams) (proc.Process, error) {
@@ -63,8 +162,8 @@ func newDMMasterInstance(rt ControllerRuntime, params NewProcParams) (proc.Proce
 			ID:              params.ID,
 			Dir:             params.Dir,
 			Host:            params.Host,
-			Port:            allocPort(params.Host, 0, 8291, shOpt.PortOffset),
-			StatusPort:      allocPort(params.Host, params.Config.Port, 8261, shOpt.PortOffset),
+			Port:            allocPort(params.Host, 0, dmPeerPortBase, shOpt.PortOffset),
+			StatusPort:      allocPort(params.Host, params.Config.Port, dmStatusPortBase, shOpt.PortOffset),
 			ConfigPath:      params.Config.ConfigPath,
 			RepoComponentID: proc.ComponentDMMaster,
 			Service:         proc.ServiceDMMaster,
@@ -85,9 +184,6 @@ func newDMMasterInstance(rt ControllerRuntime, params NewProcParams) (proc.Proce
 				continue
 			}
 			host := proc.AdvertiseHost(mm.Host)
-			if host == "" {
-				continue
-			}
 			if mm.Port == 0 || mm.StatusPort == 0 {
 				continue
 			}
@@ -152,7 +248,7 @@ func newDMWorkerInstance(rt ControllerRuntime, params NewProcParams) (proc.Proce
 			ID:              params.ID,
 			Dir:             params.Dir,
 			Host:            params.Host,
-			Port:            allocPort(params.Host, params.Config.Port, 8262, shOpt.PortOffset),
+			Port:            allocPort(params.Host, params.Config.Port, dmWorkerPortBase, shOpt.PortOffset),
 			ConfigPath:      params.Config.ConfigPath,
 			RepoComponentID: proc.ComponentDMWorker,
 			Service:         proc.ServiceDMWorker,
@@ -191,4 +287,3 @@ func scaleInDMWorker(rt ControllerRuntime, w io.Writer, inst proc.Process, pid i
 	}
 	return false, nil
 }
-

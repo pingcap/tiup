@@ -217,6 +217,10 @@ func ValidateBootOptionsPure(options *BootOptions) error {
 		return nil
 	}
 
+	if strings.TrimSpace(options.Host) == "" {
+		return fmt.Errorf("host is empty")
+	}
+
 	cfgPD := options.Service(proc.ServicePD)
 	cfgDMMaster := options.Service(proc.ServiceDMMaster)
 

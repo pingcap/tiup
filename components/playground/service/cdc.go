@@ -1,6 +1,13 @@
 package service
 
-import "github.com/pingcap/tiup/components/playground/proc"
+import (
+	"github.com/pingcap/tiup/components/playground/proc"
+)
+
+const (
+	ticdcPortBase   = 8300
+	tikvcdcPortBase = 8600
+)
 
 func init() {
 	MustRegister(Spec{
@@ -10,7 +17,7 @@ func init() {
 			AllowModifyNum:     true,
 			AllowModifyHost:    true,
 			AllowModifyPort:    true,
-			DefaultPort:        8300,
+			DefaultPort:        ticdcPortBase,
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
 			DefaultNum:         func(_ BootContext) int { return 0 },
@@ -22,6 +29,30 @@ func init() {
 			proc.ServicePDAPI,
 		},
 		NewProc: newTiCDCInstance,
+		PlanInstance: func(_ BootContext, cfg proc.Config, alloc PortAllocator, plan *proc.ServicePlan) error {
+			host := plan.Shared.Host
+
+			portBase := ticdcPortBase
+			if cfg.Port > 0 {
+				portBase = cfg.Port
+			}
+			port, err := alloc(host, portBase)
+			if err != nil {
+				return err
+			}
+
+			plan.ComponentID = proc.ComponentCDC.String()
+			plan.Shared.Port = port
+			plan.Shared.StatusPort = port
+			return nil
+		},
+		FillServicePlans: func(_ BootContext, _ map[proc.ServiceID]proc.Config, byService map[proc.ServiceID][]*proc.ServicePlan, advertise func(listen string) string, plans []*proc.ServicePlan) error {
+			pdBackendAddrs := plannedStatusAddrs(byService, advertise, proc.ServicePD, proc.ServicePDAPI)
+			for _, sp := range plans {
+				sp.TiCDC = &proc.TiCDCPlan{PDAddrs: pdBackendAddrs}
+			}
+			return nil
+		},
 	})
 
 	MustRegister(Spec{
@@ -32,6 +63,7 @@ func init() {
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
 			AllowModifyVersion: true,
+			DefaultPort:        tikvcdcPortBase,
 			DefaultNum:         func(_ BootContext) int { return 0 },
 			IsEnabled:          func(_ BootContext) bool { return true },
 			AllowScaleOut:      true,
@@ -41,13 +73,33 @@ func init() {
 			proc.ServicePDAPI,
 		},
 		NewProc: newTiKVCDCInstance,
+		PlanInstance: func(_ BootContext, _ proc.Config, alloc PortAllocator, plan *proc.ServicePlan) error {
+			host := plan.Shared.Host
+
+			port, err := alloc(host, tikvcdcPortBase)
+			if err != nil {
+				return err
+			}
+
+			plan.ComponentID = proc.ComponentTiKVCDC.String()
+			plan.Shared.Port = port
+			plan.Shared.StatusPort = port
+			return nil
+		},
+		FillServicePlans: func(_ BootContext, _ map[proc.ServiceID]proc.Config, byService map[proc.ServiceID][]*proc.ServicePlan, advertise func(listen string) string, plans []*proc.ServicePlan) error {
+			pdBackendAddrs := plannedStatusAddrs(byService, advertise, proc.ServicePD, proc.ServicePDAPI)
+			for _, sp := range plans {
+				sp.TiKVCDC = &proc.TiKVCDCPlan{PDAddrs: pdBackendAddrs}
+			}
+			return nil
+		},
 	})
 }
 
 func newTiCDCInstance(rt ControllerRuntime, params NewProcParams) (proc.Process, error) {
 	pds := ProcsOf[*proc.PDInstance](rt, proc.ServicePD, proc.ServicePDAPI)
 	shOpt := rt.SharedOptions()
-	port := allocPort(params.Host, params.Config.Port, 8300, shOpt.PortOffset)
+	port := allocPort(params.Host, params.Config.Port, ticdcPortBase, shOpt.PortOffset)
 
 	pdAddrs := make([]string, 0, len(pds))
 	for _, pd := range pds {
@@ -81,7 +133,7 @@ func newTiCDCInstance(rt ControllerRuntime, params NewProcParams) (proc.Process,
 func newTiKVCDCInstance(rt ControllerRuntime, params NewProcParams) (proc.Process, error) {
 	pds := ProcsOf[*proc.PDInstance](rt, proc.ServicePD, proc.ServicePDAPI)
 	shOpt := rt.SharedOptions()
-	port := allocPort(params.Host, 0, 8600, shOpt.PortOffset)
+	port := allocPort(params.Host, 0, tikvcdcPortBase, shOpt.PortOffset)
 
 	pdAddrs := make([]string, 0, len(pds))
 	for _, pd := range pds {
@@ -111,4 +163,3 @@ func newTiKVCDCInstance(rt ControllerRuntime, params NewProcParams) (proc.Proces
 	rt.AddProc(proc.ServiceTiKVCDC, kvcdc)
 	return kvcdc, nil
 }
-

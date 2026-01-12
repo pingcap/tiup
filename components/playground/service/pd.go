@@ -3,9 +3,16 @@ package service
 import (
 	"fmt"
 	"io"
+	"slices"
+	"strings"
 
 	"github.com/pingcap/tiup/components/playground/proc"
 	"github.com/pingcap/tiup/pkg/utils"
+)
+
+const (
+	pdPeerPortBase   = 2380
+	pdStatusPortBase = 2379
 )
 
 func init() {
@@ -23,7 +30,7 @@ func init() {
 				AllowModifyNum:     true,
 				AllowModifyHost:    true,
 				AllowModifyPort:    true,
-				DefaultPort:        2379,
+				DefaultPort:        pdStatusPortBase,
 				AllowModifyConfig:  true,
 				AllowModifyBinPath: true,
 				DefaultNum:         func(_ BootContext) int { return 1 },
@@ -40,7 +47,7 @@ func init() {
 				AllowModifyNum:     true,
 				AllowModifyHost:    true,
 				AllowModifyPort:    true,
-				DefaultPort:        2379,
+				DefaultPort:        pdStatusPortBase,
 				AllowModifyConfig:  true,
 				AllowModifyBinPath: true,
 				DefaultNum: func(ctx BootContext) int {
@@ -151,6 +158,65 @@ func registerPDService(serviceID proc.ServiceID, startAfter []proc.ServiceID, sc
 		Catalog:     catalog,
 		StartAfter:  startAfter,
 		ScaleInHook: scaleIn,
+		PlanInstance: func(_ BootContext, cfg proc.Config, alloc PortAllocator, plan *proc.ServicePlan) error {
+			host := plan.Shared.Host
+
+			peerPort, err := alloc(host, pdPeerPortBase)
+			if err != nil {
+				return err
+			}
+			statusPortBase := pdStatusPortBase
+			if cfg.Port > 0 {
+				statusPortBase = cfg.Port
+			}
+			statusPort, err := alloc(host, statusPortBase)
+			if err != nil {
+				return err
+			}
+
+			plan.ComponentID = proc.ComponentPD.String()
+			plan.Shared.Port = peerPort
+			plan.Shared.StatusPort = statusPort
+			return nil
+		},
+		FillServicePlans: func(_ BootContext, baseConfigs map[proc.ServiceID]proc.Config, byService map[proc.ServiceID][]*proc.ServicePlan, advertise func(listen string) string, plans []*proc.ServicePlan) error {
+			var members []proc.PDMemberPlan
+			for _, sid := range []proc.ServiceID{proc.ServicePD, proc.ServicePDAPI} {
+				for _, sp := range byService[sid] {
+					host := advertise(sp.Shared.Host)
+					members = append(members, proc.PDMemberPlan{
+						Name:     sp.Name,
+						PeerAddr: utils.JoinHostPort(host, sp.Shared.Port),
+					})
+				}
+			}
+			slices.SortFunc(members, func(a, b proc.PDMemberPlan) int { return strings.Compare(a.Name, b.Name) })
+
+			backendAddrs := plannedStatusAddrs(byService, advertise, proc.ServicePD, proc.ServicePDAPI)
+
+			kvSingle := false
+			if c, ok := baseConfigs[proc.ServiceTiKV]; ok && c.Num == 1 {
+				kvSingle = true
+			}
+
+			for _, sp := range plans {
+				switch serviceID {
+				case proc.ServicePD, proc.ServicePDAPI:
+					sp.PD = &proc.PDPlan{
+						InitialCluster:    members,
+						KVIsSingleReplica: kvSingle,
+					}
+				case proc.ServicePDTSO, proc.ServicePDScheduling, proc.ServicePDRouter, proc.ServicePDResourceManager:
+					sp.PD = &proc.PDPlan{
+						BackendAddrs:      backendAddrs,
+						KVIsSingleReplica: kvSingle,
+					}
+				default:
+					return fmt.Errorf("unknown pd service %s", serviceID)
+				}
+			}
+			return nil
+		},
 	})
 }
 
@@ -195,8 +261,8 @@ func newPDInstance(rt ControllerRuntime, serviceID proc.ServiceID, params NewPro
 			ID:              params.ID,
 			Dir:             params.Dir,
 			Host:            params.Host,
-			Port:            allocPort(params.Host, 0, 2380, shOpt.PortOffset),
-			StatusPort:      allocPort(params.Host, params.Config.Port, 2379, shOpt.PortOffset),
+			Port:            allocPort(params.Host, 0, pdPeerPortBase, shOpt.PortOffset),
+			StatusPort:      allocPort(params.Host, params.Config.Port, pdStatusPortBase, shOpt.PortOffset),
 			ConfigPath:      params.Config.ConfigPath,
 			RepoComponentID: proc.ComponentPD,
 			Service:         serviceID,
@@ -222,9 +288,6 @@ func newPDInstance(rt ControllerRuntime, serviceID proc.ServiceID, params NewPro
 				continue
 			}
 			host := proc.AdvertiseHost(m.Host)
-			if host == "" || m.StatusPort == 0 {
-				continue
-			}
 			pd.Plan.BackendAddrs = append(pd.Plan.BackendAddrs, utils.JoinHostPort(host, m.StatusPort))
 		}
 		rt.AddProc(serviceID, pd)

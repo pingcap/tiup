@@ -230,4 +230,3 @@ func (d *Drainer) Prepare(ctx context.Context) error {
 	info.Proc = &cmdProcess{cmd: PrepareCommand(ctx, d.BinPath, args, nil, d.Dir)}
 	return nil
 }
-

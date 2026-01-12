@@ -9,12 +9,18 @@ import (
 	"github.com/pingcap/tiup/components/playground/proc"
 )
 
+const (
+	pumpPortBase    = 8249
+	drainerPortBase = 8250
+)
+
 func init() {
 	MustRegister(Spec{
 		ServiceID: proc.ServicePump,
 		Catalog: Catalog{
 			FlagPrefix:         "pump",
 			AllowModifyNum:     true,
+			DefaultPort:        pumpPortBase,
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
 			DefaultNum:         func(_ BootContext) int { return 0 },
@@ -27,6 +33,25 @@ func init() {
 		},
 		NewProc:     newPumpInstance,
 		ScaleInHook: scaleInPumpByOffline,
+		PlanInstance: func(_ BootContext, _ proc.Config, alloc PortAllocator, plan *proc.ServicePlan) error {
+			host := plan.Shared.Host
+
+			port, err := alloc(host, pumpPortBase)
+			if err != nil {
+				return err
+			}
+			plan.ComponentID = proc.ComponentPump.String()
+			plan.Shared.Port = port
+			plan.Shared.StatusPort = port
+			return nil
+		},
+		FillServicePlans: func(_ BootContext, _ map[proc.ServiceID]proc.Config, byService map[proc.ServiceID][]*proc.ServicePlan, advertise func(listen string) string, plans []*proc.ServicePlan) error {
+			pdBackendAddrs := plannedStatusAddrs(byService, advertise, proc.ServicePD, proc.ServicePDAPI)
+			for _, sp := range plans {
+				sp.Pump = &proc.PumpPlan{PDAddrs: pdBackendAddrs}
+			}
+			return nil
+		},
 	})
 
 	MustRegister(Spec{
@@ -34,6 +59,7 @@ func init() {
 		Catalog: Catalog{
 			FlagPrefix:         "drainer",
 			AllowModifyNum:     true,
+			DefaultPort:        drainerPortBase,
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
 			DefaultNum:         func(_ BootContext) int { return 0 },
@@ -46,13 +72,32 @@ func init() {
 		},
 		NewProc:     newDrainerInstance,
 		ScaleInHook: scaleInDrainerByOffline,
+		PlanInstance: func(_ BootContext, _ proc.Config, alloc PortAllocator, plan *proc.ServicePlan) error {
+			host := plan.Shared.Host
+
+			port, err := alloc(host, drainerPortBase)
+			if err != nil {
+				return err
+			}
+			plan.ComponentID = proc.ComponentDrainer.String()
+			plan.Shared.Port = port
+			plan.Shared.StatusPort = port
+			return nil
+		},
+		FillServicePlans: func(_ BootContext, _ map[proc.ServiceID]proc.Config, byService map[proc.ServiceID][]*proc.ServicePlan, advertise func(listen string) string, plans []*proc.ServicePlan) error {
+			pdBackendAddrs := plannedStatusAddrs(byService, advertise, proc.ServicePD, proc.ServicePDAPI)
+			for _, sp := range plans {
+				sp.Drainer = &proc.DrainerPlan{PDAddrs: pdBackendAddrs}
+			}
+			return nil
+		},
 	})
 }
 
 func newPumpInstance(rt ControllerRuntime, params NewProcParams) (proc.Process, error) {
 	pds := ProcsOf[*proc.PDInstance](rt, proc.ServicePD, proc.ServicePDAPI)
 	shOpt := rt.SharedOptions()
-	port := allocPort(params.Host, 0, 8249, shOpt.PortOffset)
+	port := allocPort(params.Host, 0, pumpPortBase, shOpt.PortOffset)
 
 	pdAddrs := make([]string, 0, len(pds))
 	for _, pd := range pds {
@@ -123,7 +168,7 @@ func scaleInPumpByOffline(rt ControllerRuntime, w io.Writer, inst proc.Process, 
 func newDrainerInstance(rt ControllerRuntime, params NewProcParams) (proc.Process, error) {
 	pds := ProcsOf[*proc.PDInstance](rt, proc.ServicePD, proc.ServicePDAPI)
 	shOpt := rt.SharedOptions()
-	port := allocPort(params.Host, 0, 8250, shOpt.PortOffset)
+	port := allocPort(params.Host, 0, drainerPortBase, shOpt.PortOffset)
 
 	pdAddrs := make([]string, 0, len(pds))
 	for _, pd := range pds {
@@ -190,4 +235,3 @@ func scaleInDrainerByOffline(rt ControllerRuntime, w io.Writer, inst proc.Proces
 	}
 	return true, nil
 }
-

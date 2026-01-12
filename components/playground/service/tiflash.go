@@ -10,6 +10,63 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
+const (
+	tiflashHTTPPortBase        = 8123
+	tiflashStatusPortBase      = 8234
+	tiflashTCPPortBase         = 9100
+	tiflashServicePortBase     = 3930
+	tiflashProxyPortBase       = 20170
+	tiflashProxyStatusPortBase = 20292
+)
+
+func planTiFlashInstance(_ BootContext, _ proc.Config, alloc PortAllocator, plan *proc.ServicePlan) error {
+	host := plan.Shared.Host
+
+	httpPort, err := alloc(host, tiflashHTTPPortBase)
+	if err != nil {
+		return err
+	}
+	statusPort, err := alloc(host, tiflashStatusPortBase)
+	if err != nil {
+		return err
+	}
+	tcpPort, err := alloc(host, tiflashTCPPortBase)
+	if err != nil {
+		return err
+	}
+	servicePort, err := alloc(host, tiflashServicePortBase)
+	if err != nil {
+		return err
+	}
+	proxyPort, err := alloc(host, tiflashProxyPortBase)
+	if err != nil {
+		return err
+	}
+	proxyStatusPort, err := alloc(host, tiflashProxyStatusPortBase)
+	if err != nil {
+		return err
+	}
+
+	plan.ComponentID = proc.ComponentTiFlash.String()
+	plan.Shared.Port = httpPort
+	plan.Shared.StatusPort = statusPort
+	plan.TiFlash = &proc.TiFlashPlan{
+		ServicePort:     servicePort,
+		TCPPort:         tcpPort,
+		ProxyPort:       proxyPort,
+		ProxyStatusPort: proxyStatusPort,
+	}
+	return nil
+}
+
+func fillTiFlashPlans(_ BootContext, _ map[proc.ServiceID]proc.Config, byService map[proc.ServiceID][]*proc.ServicePlan, advertise func(listen string) string, plans []*proc.ServicePlan) error {
+	pdBackendAddrs := plannedStatusAddrs(byService, advertise, proc.ServicePD, proc.ServicePDAPI)
+	for _, sp := range plans {
+		sp.TiFlash.PDAddrs = pdBackendAddrs
+	}
+	return nil
+}
+
 func init() {
 	hasTiDB := func(ctx BootContext) bool {
 		return ctx.ServiceConfigFor(proc.ServiceTiDB).Num > 0
@@ -51,7 +108,9 @@ func init() {
 		NewProc: func(rt ControllerRuntime, params NewProcParams) (proc.Process, error) {
 			return newTiFlashInstance(rt, proc.ServiceTiFlash, params)
 		},
-		ScaleInHook: scaleInTiFlashByTombstone,
+		ScaleInHook:      scaleInTiFlashByTombstone,
+		PlanInstance:     planTiFlashInstance,
+		FillServicePlans: fillTiFlashPlans,
 	})
 
 	MustRegister(Spec{
@@ -89,7 +148,9 @@ func init() {
 		NewProc: func(rt ControllerRuntime, params NewProcParams) (proc.Process, error) {
 			return newTiFlashInstance(rt, proc.ServiceTiFlashWrite, params)
 		},
-		ScaleInHook: scaleInTiFlashByTombstone,
+		ScaleInHook:      scaleInTiFlashByTombstone,
+		PlanInstance:     planTiFlashInstance,
+		FillServicePlans: fillTiFlashPlans,
 	})
 
 	MustRegister(Spec{
@@ -127,7 +188,9 @@ func init() {
 		NewProc: func(rt ControllerRuntime, params NewProcParams) (proc.Process, error) {
 			return newTiFlashInstance(rt, proc.ServiceTiFlashCompute, params)
 		},
-		ScaleInHook: scaleInTiFlashByTombstone,
+		ScaleInHook:      scaleInTiFlashByTombstone,
+		PlanInstance:     planTiFlashInstance,
+		FillServicePlans: fillTiFlashPlans,
 	})
 }
 
@@ -187,12 +250,12 @@ func newTiFlashInstance(rt ControllerRuntime, serviceID proc.ServiceID, params N
 		}
 	}
 
-	httpPort := allocPort(params.Host, 0, 8123, shOpt.PortOffset)
-	statusPort := allocPort(params.Host, 0, 8234, shOpt.PortOffset)
-	tcpPort := allocPort(params.Host, 0, 9100, shOpt.PortOffset)
-	servicePort := allocPort(params.Host, 0, 3930, shOpt.PortOffset)
-	proxyPort := allocPort(params.Host, 0, 20170, shOpt.PortOffset)
-	proxyStatusPort := allocPort(params.Host, 0, 20292, shOpt.PortOffset)
+	httpPort := allocPort(params.Host, 0, tiflashHTTPPortBase, shOpt.PortOffset)
+	statusPort := allocPort(params.Host, 0, tiflashStatusPortBase, shOpt.PortOffset)
+	tcpPort := allocPort(params.Host, 0, tiflashTCPPortBase, shOpt.PortOffset)
+	servicePort := allocPort(params.Host, 0, tiflashServicePortBase, shOpt.PortOffset)
+	proxyPort := allocPort(params.Host, 0, tiflashProxyPortBase, shOpt.PortOffset)
+	proxyStatusPort := allocPort(params.Host, 0, tiflashProxyStatusPortBase, shOpt.PortOffset)
 	flash := &proc.TiFlashInstance{
 		ShOpt: shOpt,
 		Plan: proc.TiFlashPlan{

@@ -113,9 +113,6 @@ func (inst *PDInstance) Join(pds []*PDInstance) *PDInstance {
 			continue
 		}
 		host := AdvertiseHost(pd.Host)
-		if host == "" || pd.Port == 0 {
-			continue
-		}
 		inst.Plan.JoinAddrs = append(inst.Plan.JoinAddrs, utils.JoinHostPort(host, pd.Port))
 	}
 	return inst
@@ -134,15 +131,87 @@ func (inst *PDInstance) InitCluster(pds []*PDInstance) *PDInstance {
 			continue
 		}
 		host := AdvertiseHost(pd.Host)
-		if host == "" || pd.Port == 0 {
-			continue
-		}
 		inst.Plan.InitialCluster = append(inst.Plan.InitialCluster, PDMemberPlan{
 			Name:     info.Name(),
 			PeerAddr: utils.JoinHostPort(host, pd.Port),
 		})
 	}
 	return inst
+}
+
+func (inst *PDInstance) prepareNormalArgs(configPath, uid string) ([]string, error) {
+	if inst == nil {
+		return nil, errors.New("pd instance is nil")
+	}
+
+	args := make([]string, 0, 16)
+	if inst.Service == ServicePDAPI {
+		args = append(args, "services", "api")
+	}
+	args = append(args,
+		"--name="+uid,
+		fmt.Sprintf("--config=%s", configPath),
+		fmt.Sprintf("--data-dir=%s", filepath.Join(inst.Dir, "data")),
+		fmt.Sprintf("--peer-urls=http://%s", utils.JoinHostPort(inst.Host, inst.Port)),
+		fmt.Sprintf("--advertise-peer-urls=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.Port)),
+		fmt.Sprintf("--client-urls=http://%s", utils.JoinHostPort(inst.Host, inst.StatusPort)),
+		fmt.Sprintf("--advertise-client-urls=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.StatusPort)),
+		fmt.Sprintf("--log-file=%s", inst.LogFile()),
+	)
+
+	switch {
+	case len(inst.Plan.InitialCluster) > 0:
+		endpoints := make([]string, 0, len(inst.Plan.InitialCluster))
+		for _, m := range inst.Plan.InitialCluster {
+			if m.Name == "" || m.PeerAddr == "" {
+				continue
+			}
+			endpoints = append(endpoints, fmt.Sprintf("%s=http://%s", m.Name, m.PeerAddr))
+		}
+		args = append(args, fmt.Sprintf("--initial-cluster=%s", strings.Join(endpoints, ",")))
+	case len(inst.Plan.JoinAddrs) > 0:
+		endpoints := make([]string, 0, len(inst.Plan.JoinAddrs))
+		for _, addr := range inst.Plan.JoinAddrs {
+			if addr == "" {
+				continue
+			}
+			endpoints = append(endpoints, fmt.Sprintf("http://%s", addr))
+		}
+		args = append(args, fmt.Sprintf("--join=%s", strings.Join(endpoints, ",")))
+	default:
+		return nil, errors.Errorf("must set the init or join instances")
+	}
+
+	return args, nil
+}
+
+func (inst *PDInstance) prepareMicroserviceArgs(configPath, uid string) ([]string, error) {
+	if inst == nil {
+		return nil, errors.New("pd instance is nil")
+	}
+
+	endpoints := make([]string, 0, len(inst.Plan.BackendAddrs))
+	for _, addr := range inst.Plan.BackendAddrs {
+		if addr == "" {
+			continue
+		}
+		endpoints = append(endpoints, "http://"+addr)
+	}
+
+	subservice := strings.TrimPrefix(inst.Service.String(), "pd-")
+	args := []string{
+		"services",
+		subservice,
+		fmt.Sprintf("--listen-addr=http://%s", utils.JoinHostPort(inst.Host, inst.StatusPort)),
+		fmt.Sprintf("--advertise-listen-addr=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.StatusPort)),
+		fmt.Sprintf("--backend-endpoints=%s", strings.Join(endpoints, ",")),
+		fmt.Sprintf("--log-file=%s", inst.LogFile()),
+		fmt.Sprintf("--config=%s", configPath),
+	}
+	if tidbver.PDSupportMicroservicesWithName(inst.Version.String()) {
+		args = append(args, fmt.Sprintf("--name=%s", uid))
+	}
+	return args, nil
 }
 
 // Prepare builds the PD process command.
@@ -163,67 +232,20 @@ func (inst *PDInstance) Prepare(ctx context.Context) error {
 	}
 
 	uid := info.Name()
-	var args []string
+	var (
+		args []string
+		err  error
+	)
 	switch inst.Service {
 	case ServicePD, ServicePDAPI:
-		if inst.Service == ServicePDAPI {
-			args = []string{"services", "api"}
-		}
-		args = append(args, []string{
-			"--name=" + uid,
-			fmt.Sprintf("--config=%s", configPath),
-			fmt.Sprintf("--data-dir=%s", filepath.Join(inst.Dir, "data")),
-			fmt.Sprintf("--peer-urls=http://%s", utils.JoinHostPort(inst.Host, inst.Port)),
-			fmt.Sprintf("--advertise-peer-urls=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.Port)),
-			fmt.Sprintf("--client-urls=http://%s", utils.JoinHostPort(inst.Host, inst.StatusPort)),
-			fmt.Sprintf("--advertise-client-urls=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.StatusPort)),
-			fmt.Sprintf("--log-file=%s", inst.LogFile()),
-		}...)
-		switch {
-		case len(inst.Plan.InitialCluster) > 0:
-			endpoints := make([]string, 0)
-			for _, m := range inst.Plan.InitialCluster {
-				if m.Name == "" || m.PeerAddr == "" {
-					continue
-				}
-				endpoints = append(endpoints, fmt.Sprintf("%s=http://%s", m.Name, m.PeerAddr))
-			}
-			args = append(args, fmt.Sprintf("--initial-cluster=%s", strings.Join(endpoints, ",")))
-		case len(inst.Plan.JoinAddrs) > 0:
-			endpoints := make([]string, 0)
-			for _, addr := range inst.Plan.JoinAddrs {
-				if addr == "" {
-					continue
-				}
-				endpoints = append(endpoints, fmt.Sprintf("http://%s", addr))
-			}
-			args = append(args, fmt.Sprintf("--join=%s", strings.Join(endpoints, ",")))
-		default:
-			return errors.Errorf("must set the init or join instances")
-		}
+		args, err = inst.prepareNormalArgs(configPath, uid)
 	case ServicePDTSO, ServicePDScheduling, ServicePDRouter, ServicePDResourceManager:
-		endpoints := make([]string, 0, len(inst.Plan.BackendAddrs))
-		for _, addr := range inst.Plan.BackendAddrs {
-			if addr == "" {
-				continue
-			}
-			endpoints = append(endpoints, "http://"+addr)
-		}
-		subservice := strings.TrimPrefix(inst.Service.String(), "pd-")
-		args = []string{
-			"services",
-			subservice,
-			fmt.Sprintf("--listen-addr=http://%s", utils.JoinHostPort(inst.Host, inst.StatusPort)),
-			fmt.Sprintf("--advertise-listen-addr=http://%s", utils.JoinHostPort(AdvertiseHost(inst.Host), inst.StatusPort)),
-			fmt.Sprintf("--backend-endpoints=%s", strings.Join(endpoints, ",")),
-			fmt.Sprintf("--log-file=%s", inst.LogFile()),
-			fmt.Sprintf("--config=%s", configPath),
-		}
-		if tidbver.PDSupportMicroservicesWithName(inst.Version.String()) {
-			args = append(args, fmt.Sprintf("--name=%s", uid))
-		}
+		args, err = inst.prepareMicroserviceArgs(configPath, uid)
 	default:
 		return errors.Errorf("unknown pd service %s", inst.Service)
+	}
+	if err != nil {
+		return err
 	}
 
 	info.Proc = &cmdProcess{cmd: PrepareCommand(ctx, inst.BinPath, args, nil, inst.Dir)}

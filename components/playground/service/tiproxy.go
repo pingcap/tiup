@@ -8,6 +8,8 @@ import (
 	"github.com/pingcap/tiup/components/playground/proc"
 )
 
+const tiproxyStatusPortBase = 3080
+
 func init() {
 	MustRegister(Spec{
 		ServiceID: proc.ServiceTiProxy,
@@ -32,6 +34,34 @@ func init() {
 		},
 		NewProc:      newTiProxyInstance,
 		PostScaleOut: postScaleOutTiProxy,
+		PlanInstance: func(_ BootContext, cfg proc.Config, alloc PortAllocator, plan *proc.ServicePlan) error {
+			host := plan.Shared.Host
+
+			portBase := 6000
+			if cfg.Port > 0 {
+				portBase = cfg.Port
+			}
+			port, err := alloc(host, portBase)
+			if err != nil {
+				return err
+			}
+			statusPort, err := alloc(host, tiproxyStatusPortBase)
+			if err != nil {
+				return err
+			}
+
+			plan.ComponentID = proc.ComponentTiProxy.String()
+			plan.Shared.Port = port
+			plan.Shared.StatusPort = statusPort
+			return nil
+		},
+		FillServicePlans: func(_ BootContext, _ map[proc.ServiceID]proc.Config, byService map[proc.ServiceID][]*proc.ServicePlan, advertise func(listen string) string, plans []*proc.ServicePlan) error {
+			pdBackendAddrs := plannedStatusAddrs(byService, advertise, proc.ServicePD, proc.ServicePDAPI)
+			for _, sp := range plans {
+				sp.TiProxy = &proc.TiProxyPlan{PDAddrs: pdBackendAddrs}
+			}
+			return nil
+		},
 	})
 }
 
@@ -66,7 +96,7 @@ func newTiProxyInstance(rt ControllerRuntime, params NewProcParams) (proc.Proces
 			Dir:             params.Dir,
 			Host:            params.Host,
 			Port:            allocPort(params.Host, params.Config.Port, 6000, shOpt.PortOffset),
-			StatusPort:      allocPort(params.Host, 0, 3080, shOpt.PortOffset),
+			StatusPort:      allocPort(params.Host, 0, tiproxyStatusPortBase, shOpt.PortOffset),
 			ConfigPath:      params.Config.ConfigPath,
 			RepoComponentID: proc.ComponentTiProxy,
 			Service:         proc.ServiceTiProxy,

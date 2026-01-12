@@ -492,4 +492,3 @@ func (inst *NGMonitoringInstance) Prepare(ctx context.Context) error {
 	info.Proc = &cmdProcess{cmd: PrepareCommand(ctx, binPath, args, nil, inst.Dir)}
 	return nil
 }
-

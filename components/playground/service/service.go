@@ -68,6 +68,30 @@ type ScaleInHookFunc func(rt ControllerRuntime, w io.Writer, inst proc.Process, 
 // PostScaleOutFunc runs after a scale-out instance is started successfully.
 type PostScaleOutFunc func(w io.Writer, inst proc.Process)
 
+// PortAllocator allocates a port based on the given base port.
+//
+// It is used by the planner to keep port allocation deterministic (e.g. in
+// tests) while still allowing the default OS-probing behavior in real runs.
+type PortAllocator func(host string, base int) (int, error)
+
+// PlanInstanceFunc fills per-instance fields of a planned service entry.
+//
+// It is invoked during planning for each service instance. Implementations are
+// expected to:
+//   - set plan.ComponentID (repository component identity);
+//   - allocate and fill plan.Shared ports;
+//   - fill any service-specific port fields (e.g. TiFlashPlan extra ports);
+//   - normalize plan.BinPath when needed (e.g. tikv-worker).
+type PlanInstanceFunc func(ctx BootContext, cfg proc.Config, alloc PortAllocator, plan *proc.ServicePlan) error
+
+// FillServicePlansFunc fills service-specific plan fields after all service
+// entries are created.
+//
+// It is invoked once per service ID (in deterministic order). Implementations
+// should only mutate the provided `plans` slice, but may read other planned
+// services from `byService` to build stable dependency fields.
+type FillServicePlansFunc func(ctx BootContext, baseConfigs map[proc.ServiceID]proc.Config, byService map[proc.ServiceID][]*proc.ServicePlan, advertise func(listen string) string, plans []*proc.ServicePlan) error
+
 // BootContext is the minimal boot-time surface that service metadata depends on.
 //
 // It is implemented by *main.BootOptions.
@@ -257,6 +281,12 @@ type Spec struct {
 
 	// PostScaleOut is invoked after a scale-out instance is started successfully.
 	PostScaleOut PostScaleOutFunc
+
+	// PlanInstance is invoked during planning for each instance of this service.
+	PlanInstance PlanInstanceFunc
+	// FillServicePlans is invoked after all service plans are created, to fill
+	// service-specific dependency fields.
+	FillServicePlans FillServicePlansFunc
 }
 
 // specs is intentionally treated as immutable after init() finishes.
@@ -457,4 +487,21 @@ func allocPort(host string, configured, defaultBase, portOffset int) int {
 		base = defaultBase
 	}
 	return utils.MustGetFreePort(host, base, portOffset)
+}
+
+func plannedStatusAddrs(byService map[proc.ServiceID][]*proc.ServicePlan, advertise func(listen string) string, serviceIDs ...proc.ServiceID) []string {
+	var out []string
+	for _, sid := range serviceIDs {
+		for _, sp := range byService[sid] {
+			if sp.Shared.StatusPort <= 0 {
+				continue
+			}
+			host := advertise(sp.Shared.Host)
+			out = append(out, utils.JoinHostPort(host, sp.Shared.StatusPort))
+		}
+	}
+
+	slices.Sort(out)
+	out = slices.Compact(out)
+	return out
 }
