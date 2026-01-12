@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -10,19 +11,24 @@ import (
 	"time"
 
 	"github.com/pingcap/tiup/components/playground/proc"
+	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/repository"
 	progressv2 "github.com/pingcap/tiup/pkg/tuiv2/progress"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
 type fakeComponentBinaryInstaller struct {
-	binPath string
+	binPath    string
+	binPathErr error
 
 	updateSpecs [][]repository.ComponentSpec
 	onUpdate    func(specs []repository.ComponentSpec) error
 }
 
 func (f *fakeComponentBinaryInstaller) BinaryPath(component string, v utils.Version) (string, error) {
+	if f.binPathErr != nil {
+		return "", f.binPathErr
+	}
 	return f.binPath, nil
 }
 
@@ -54,6 +60,38 @@ func TestPrepareComponentBinaryWithInstaller_BinaryExistsSkipsUpdate(t *testing.
 	}
 }
 
+func TestPrepareComponentBinaryWithInstaller_ForcePullForcesUpdate(t *testing.T) {
+	dir := t.TempDir()
+	binPath := filepath.Join(dir, "bin")
+	if err := os.WriteFile(binPath, []byte("ok"), 0o755); err != nil {
+		t.Fatalf("write bin: %v", err)
+	}
+
+	inst := &fakeComponentBinaryInstaller{
+		binPath: binPath,
+		onUpdate: func(specs []repository.ComponentSpec) error {
+			if len(specs) != 1 {
+				t.Fatalf("unexpected specs: %+v", specs)
+			}
+			if !specs[0].Force {
+				t.Fatalf("expected Force=true, got %+v", specs[0])
+			}
+			return nil
+		},
+	}
+
+	out, err := prepareComponentBinaryWithInstaller(inst, proc.ServicePrometheus, "prometheus", utils.Version("v1.0.0"), true)
+	if err != nil {
+		t.Fatalf("prepareComponentBinaryWithInstaller: %v", err)
+	}
+	if out != binPath {
+		t.Fatalf("unexpected binary path: %q", out)
+	}
+	if len(inst.updateSpecs) != 1 {
+		t.Fatalf("expected 1 UpdateComponents call, got %d", len(inst.updateSpecs))
+	}
+}
+
 func TestPrepareComponentBinaryWithInstaller_BinaryMissingForcesUpdate(t *testing.T) {
 	dir := t.TempDir()
 	binPath := filepath.Join(dir, "bin")
@@ -80,6 +118,55 @@ func TestPrepareComponentBinaryWithInstaller_BinaryMissingForcesUpdate(t *testin
 	}
 	if out != binPath {
 		t.Fatalf("unexpected binary path: %q", out)
+	}
+	if len(inst.updateSpecs) != 1 {
+		t.Fatalf("expected 1 UpdateComponents call, got %d", len(inst.updateSpecs))
+	}
+}
+
+func TestPrepareComponentBinaryWithInstaller_BinaryPathErrorStillUpdates(t *testing.T) {
+	dir := t.TempDir()
+	binPath := filepath.Join(dir, "bin")
+
+	inst := &fakeComponentBinaryInstaller{binPathErr: errors.New("boom")}
+	inst.onUpdate = func(specs []repository.ComponentSpec) error {
+		if len(specs) != 1 {
+			t.Fatalf("unexpected specs: %+v", specs)
+		}
+		if !specs[0].Force {
+			t.Fatalf("expected Force=true, got %+v", specs[0])
+		}
+		if err := os.WriteFile(binPath, []byte("ok"), 0o755); err != nil {
+			t.Fatalf("write bin: %v", err)
+		}
+		inst.binPathErr = nil
+		inst.binPath = binPath
+		return nil
+	}
+
+	out, err := prepareComponentBinaryWithInstaller(inst, proc.ServicePrometheus, "prometheus", utils.Version("v1.0.0"), false)
+	if err != nil {
+		t.Fatalf("prepareComponentBinaryWithInstaller: %v", err)
+	}
+	if out != binPath {
+		t.Fatalf("unexpected binary path: %q", out)
+	}
+	if len(inst.updateSpecs) != 1 {
+		t.Fatalf("expected 1 UpdateComponents call, got %d", len(inst.updateSpecs))
+	}
+}
+
+func TestPrepareComponentBinaryWithInstaller_UpdateComponentsErrorReturnsError(t *testing.T) {
+	inst := &fakeComponentBinaryInstaller{
+		binPath: "",
+		onUpdate: func(specs []repository.ComponentSpec) error {
+			return errors.New("update failed")
+		},
+	}
+
+	_, err := prepareComponentBinaryWithInstaller(inst, proc.ServicePrometheus, "prometheus", utils.Version("v1.0.0"), false)
+	if err == nil || err.Error() != "update failed" {
+		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(inst.updateSpecs) != 1 {
 		t.Fatalf("expected 1 UpdateComponents call, got %d", len(inst.updateSpecs))
@@ -231,6 +318,79 @@ func (p *fakeProcess) Prepare(ctx context.Context) error {
 }
 
 func (p *fakeProcess) LogFile() string { return p.logFile }
+
+func TestStartProc_UserBinPath_DoesNotDependOnGlobalEnv(t *testing.T) {
+	oldEnv := environment.GlobalEnv()
+	environment.SetGlobalEnv(nil)
+	defer environment.SetGlobalEnv(oldEnv)
+
+	osProc := newFakeOSProcess()
+	info := &proc.ProcessInfo{
+		Service:     proc.ServiceTiDB,
+		ID:          0,
+		UserBinPath: "/tmp/tidb-server",
+	}
+	inst := &fakeProcess{
+		info:    info,
+		osProc:  osProc,
+		logFile: filepath.Join(t.TempDir(), "tidb.log"),
+	}
+
+	pg := NewPlayground(t.TempDir(), 0)
+	pg.controllerDoneCh = make(chan struct{})
+	close(pg.controllerDoneCh)
+
+	readyCh, err := pg.startProc(context.Background(), &controllerState{}, inst)
+	if err != nil {
+		t.Fatalf("startProc: %v", err)
+	}
+	if info.BinPath != info.UserBinPath {
+		t.Fatalf("unexpected BinPath: %q", info.BinPath)
+	}
+	if info.Version != utils.Version(utils.LatestVersionAlias) {
+		t.Fatalf("unexpected Version: %q", info.Version)
+	}
+
+	select {
+	case <-readyCh:
+	default:
+		t.Fatalf("expected readyCh to be closed for non-ReadyWaiter instance")
+	}
+}
+
+func TestStartProc_UserBinPath_PreservesPlannedVersion(t *testing.T) {
+	oldEnv := environment.GlobalEnv()
+	environment.SetGlobalEnv(nil)
+	defer environment.SetGlobalEnv(oldEnv)
+
+	osProc := newFakeOSProcess()
+	info := &proc.ProcessInfo{
+		Service:     proc.ServiceTiDB,
+		ID:          0,
+		UserBinPath: "/tmp/tidb-server",
+		Version:     utils.Version("v7.5.0"),
+	}
+	inst := &fakeProcess{
+		info:    info,
+		osProc:  osProc,
+		logFile: filepath.Join(t.TempDir(), "tidb.log"),
+	}
+
+	pg := NewPlayground(t.TempDir(), 0)
+	pg.controllerDoneCh = make(chan struct{})
+	close(pg.controllerDoneCh)
+
+	_, err := pg.startProc(context.Background(), &controllerState{}, inst)
+	if err != nil {
+		t.Fatalf("startProc: %v", err)
+	}
+	if info.BinPath != info.UserBinPath {
+		t.Fatalf("unexpected BinPath: %q", info.BinPath)
+	}
+	if info.Version != utils.Version("v7.5.0") {
+		t.Fatalf("unexpected Version: %q", info.Version)
+	}
+}
 
 func TestStartProcWithControllerState_DoesNotBlockOnProgressTask(t *testing.T) {
 	blockCh := make(chan struct{})
