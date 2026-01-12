@@ -274,16 +274,17 @@ func (p *Playground) bootCluster(ctx context.Context, options *BootOptions) (err
 		return err
 	}
 
-	src := newEnvComponentSource(environment.GlobalEnv())
-	plan, err := BuildBootPlan(options, bootPlannerConfig{
-		dataDir:            p.dataDir,
-		portConflictPolicy: PortConflictAllocFree,
-		componentSource:    src,
-	})
+	orderedServiceIDs, baseConfigs, err := planProcs(options)
 	if err != nil {
 		return err
 	}
-	_, baseConfigs, err := planProcs(options)
+
+	src := newEnvComponentSource(environment.GlobalEnv())
+	plan, err := buildBootPlanWithProcs(options, bootPlannerConfig{
+		dataDir:            p.dataDir,
+		portConflictPolicy: PortConflictAllocFree,
+		componentSource:    src,
+	}, orderedServiceIDs, baseConfigs)
 	if err != nil {
 		return err
 	}

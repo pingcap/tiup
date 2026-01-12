@@ -249,9 +249,14 @@ func BuildBootPlan(options *BootOptions, cfg bootPlannerConfig) (BootPlan, error
 	if err != nil {
 		return BootPlan{}, err
 	}
-	if baseConfigs == nil {
-		baseConfigs = make(map[proc.ServiceID]proc.Config)
+	return buildBootPlanWithProcs(options, cfg, orderedServiceIDs, baseConfigs)
+}
+
+func buildBootPlanWithProcs(options *BootOptions, cfg bootPlannerConfig, orderedServiceIDs []proc.ServiceID, baseConfigs map[proc.ServiceID]proc.Config) (BootPlan, error) {
+	if options == nil {
+		return BootPlan{}, nil
 	}
+	cfg = cfg.normalize()
 
 	required := make(map[string]int)
 	for serviceID, c := range baseConfigs {
