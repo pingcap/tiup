@@ -127,6 +127,37 @@ func TestWriteDryRun_JSON_RedactsSecrets(t *testing.T) {
 	}
 }
 
+func TestWriteDryRun_JSON_MapOrderIsStable(t *testing.T) {
+	plan := BootPlan{
+		RequiredServices: map[string]int{
+			"zzz": 1,
+			"aaa": 2,
+		},
+		DebugServiceConfigs: map[string]proc.Config{
+			"zzz_cfg": {Num: 1},
+			"aaa_cfg": {Num: 2},
+		},
+	}
+
+	var buf bytes.Buffer
+	if err := writeDryRun(&buf, plan, "json"); err != nil {
+		t.Fatalf("writeDryRun(json): %v", err)
+	}
+
+	out := buf.String()
+	idxAAA := strings.Index(out, "\"aaa\":")
+	idxZZZ := strings.Index(out, "\"zzz\":")
+	if idxAAA < 0 || idxZZZ < 0 || idxAAA > idxZZZ {
+		t.Fatalf("unexpected RequiredServices json order, got:\n%s", out)
+	}
+
+	idxAAACfg := strings.Index(out, "\"aaa_cfg\":")
+	idxZZZCfg := strings.Index(out, "\"zzz_cfg\":")
+	if idxAAACfg < 0 || idxZZZCfg < 0 || idxAAACfg > idxZZZCfg {
+		t.Fatalf("unexpected DebugServiceConfigs json order, got:\n%s", out)
+	}
+}
+
 func TestWriteDryRun_UnknownFormat(t *testing.T) {
 	var buf bytes.Buffer
 	if err := writeDryRun(&buf, BootPlan{}, "xml"); err == nil {
