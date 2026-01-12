@@ -392,7 +392,7 @@ func (p *Playground) startProc(ctx context.Context, state *controllerState, inst
 		if p.bootOptions != nil {
 			forcePull = p.bootOptions.ShOpt.ForcePull
 		}
-		binPath, err := prepareComponentBinary(component, v, forcePull)
+		binPath, err := prepareComponentBinary(info.Service, component, v, forcePull)
 		if err != nil {
 			p.markStartingTaskError(inst, constraint, err)
 			return nil, err
@@ -496,12 +496,12 @@ func (p *Playground) startProcWithControllerState(ctx context.Context, state *co
 //
 // It intentionally does not print "not installed; downloading..." messages.
 // Playground already owns the download UX via the unified progress UI.
-func prepareComponentBinary(component string, v utils.Version, forcePull bool) (string, error) {
+func prepareComponentBinary(serviceID proc.ServiceID, component string, v utils.Version, forcePull bool) (string, error) {
 	env := environment.GlobalEnv()
 	if env == nil {
 		return "", errors.New("global environment not initialized")
 	}
-	return prepareComponentBinaryWithInstaller(envComponentBinaryInstaller{env: env}, component, v, forcePull)
+	return prepareComponentBinaryWithInstaller(envComponentBinaryInstaller{env: env}, serviceID, component, v, forcePull)
 }
 
 type componentBinaryInstaller interface {
@@ -527,7 +527,7 @@ func (e envComponentBinaryInstaller) UpdateComponents(specs []repository.Compone
 	return e.env.V1Repository().UpdateComponents(specs)
 }
 
-func prepareComponentBinaryWithInstaller(inst componentBinaryInstaller, component string, v utils.Version, forcePull bool) (string, error) {
+func prepareComponentBinaryWithInstaller(inst componentBinaryInstaller, serviceID proc.ServiceID, component string, v utils.Version, forcePull bool) (string, error) {
 	if inst == nil {
 		return "", errors.New("component binary installer is nil")
 	}
@@ -538,28 +538,30 @@ func prepareComponentBinaryWithInstaller(inst componentBinaryInstaller, componen
 		return "", errors.Errorf("component `%s` version is empty", component)
 	}
 
-	binPath, err := inst.BinaryPath(component, v)
-	if err == nil && !forcePull && binaryExists(binPath) {
-		return binPath, nil
+	baseBinPath, err := inst.BinaryPath(component, v)
+	requiredBinPath := requiredBinaryPathForService(serviceID, baseBinPath)
+	if err == nil && !forcePull && binaryExists(requiredBinPath) {
+		return requiredBinPath, nil
 	}
 
 	spec := repository.ComponentSpec{
 		ID:      component,
 		Version: v.String(),
-		Force:   forcePull || !binaryExists(binPath),
+		Force:   forcePull || !binaryExists(requiredBinPath),
 	}
 	if err := inst.UpdateComponents([]repository.ComponentSpec{spec}); err != nil {
 		return "", err
 	}
 
-	binPath, err = inst.BinaryPath(component, v)
+	baseBinPath, err = inst.BinaryPath(component, v)
 	if err != nil {
 		return "", err
 	}
-	if !binaryExists(binPath) {
-		return "", errors.Errorf("component `%s:%s` installed but binary not found at %s", component, v.String(), binPath)
+	requiredBinPath = requiredBinaryPathForService(serviceID, baseBinPath)
+	if !binaryExists(requiredBinPath) {
+		return "", errors.Errorf("component `%s:%s` installed but binary not found at %s", component, v.String(), requiredBinPath)
 	}
-	return binPath, nil
+	return requiredBinPath, nil
 }
 
 func binaryExists(binPath string) bool {

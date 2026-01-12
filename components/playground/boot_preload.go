@@ -138,7 +138,7 @@ func (p *binaryPreloader) start() {
 				v, err = environment.GlobalEnv().V1Repository().ResolveComponentVersion(key.component, key.constraint)
 				item.version = v
 				if err == nil {
-					item.binPath, err = prepareComponentBinary(key.component, v, p.forcePull)
+					item.binPath, err = prepareComponentBinary("", key.component, v, p.forcePull)
 				}
 				item.err = err
 
