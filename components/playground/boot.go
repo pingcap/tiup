@@ -102,12 +102,20 @@ func ValidateBootOptionsPure(options *BootOptions) error {
 
 	switch options.ShOpt.Mode {
 	case proc.ModeCSE, proc.ModeDisAgg, proc.ModeNextGen:
-		if !strings.HasPrefix(options.ShOpt.CSE.S3Endpoint, "https://") && !strings.HasPrefix(options.ShOpt.CSE.S3Endpoint, "http://") {
+		endpoint := strings.TrimSpace(options.ShOpt.CSE.S3Endpoint)
+		bucket := strings.TrimSpace(options.ShOpt.CSE.Bucket)
+		if bucket == "" {
+			return fmt.Errorf("require S3 bucket to be non-empty")
+		}
+		if !strings.HasPrefix(endpoint, "https://") && !strings.HasPrefix(endpoint, "http://") {
 			return fmt.Errorf("require S3 endpoint to start with http:// or https://")
 		}
 
-		rawEndpoint := strings.TrimPrefix(options.ShOpt.CSE.S3Endpoint, "https://")
+		rawEndpoint := strings.TrimPrefix(endpoint, "https://")
 		rawEndpoint = strings.TrimPrefix(rawEndpoint, "http://")
+		if strings.TrimSpace(rawEndpoint) == "" {
+			return fmt.Errorf("require S3 endpoint to include a host")
+		}
 
 		// Currently we always assign region=local. Other regions are not supported.
 		if strings.Contains(rawEndpoint, "amazonaws.com") {
