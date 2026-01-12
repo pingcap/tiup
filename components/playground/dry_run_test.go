@@ -52,22 +52,14 @@ func TestWriteDryRun_Text(t *testing.T) {
 
 	out := buf.String()
 	for _, want := range []string{
-		"DataDir: /data\n",
-		"Version: nightly\n",
-		"Host: 127.0.0.1\n",
-		"Mode: tidb-cse\n",
-		"HighPerf: true\n",
-		"EnableTiKVColumnar: true\n",
-		"ForcePull: true\n",
-		"GrafanaPort: 3000\n",
-		"CSE.S3Endpoint: https://s3.example.com\n",
-		"CSE.Bucket: my-bucket\n",
-		"Downloads:\n",
-		"- Install tidb@v1.0.0 reason=missing_binary binpath=/home/tidb-server\n",
-		"Reused:\n",
-		"- Reuse pd@v1.0.0\n",
-		"Services:\n",
-		"- Start pd(pd-0): host=127.0.0.1 port=2380 status_port=2379 dir=/data/pd-0",
+		"==> Download Packages:\n",
+		"  + tidb@v1.0.0\n",
+		"==> Reuse Packages:\n",
+		"  + pd@v1.0.0\n",
+		"==> Start Services:\n",
+		"  + pd-0@v1.0.0\n",
+		"    127.0.0.1:2380,2379(status)\n",
+		"    Start after: tikv\n",
 	} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("dry-run text missing %q, got:\n%s", want, out)
