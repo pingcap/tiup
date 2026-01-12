@@ -1,7 +1,12 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/components/playground/proc"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/utils"
@@ -26,7 +31,73 @@ func (s *envComponentSource) ResolveVersion(component, constraint string) (strin
 	return v.String(), nil
 }
 
-func (s *envComponentSource) PlanInstall(component, resolved string, forcePull bool) (*DownloadPlan, error) {
+func resolveSiblingBinaryPath(baseBinPath, want string) (string, bool) {
+	dir := filepath.Dir(baseBinPath)
+	for i := 0; i < 4; i++ {
+		path := filepath.Join(dir, want)
+		if _, err := os.Stat(path); err == nil {
+			return path, true
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+	return filepath.Join(filepath.Dir(baseBinPath), want), false
+}
+
+func requiredBinaryPathForService(serviceID proc.ServiceID, baseBinPath string) string {
+	baseBinPath = strings.TrimSpace(baseBinPath)
+	if baseBinPath == "" {
+		return ""
+	}
+
+	switch serviceID {
+	case proc.ServiceTiKVWorker:
+		return proc.ResolveTiKVWorkerBinPath(baseBinPath)
+	case proc.ServiceNGMonitoring:
+		if filepath.Base(baseBinPath) == "ng-monitoring-server" {
+			return baseBinPath
+		}
+		path, _ := resolveSiblingBinaryPath(baseBinPath, "ng-monitoring-server")
+		return path
+	default:
+		return baseBinPath
+	}
+}
+
+func planInstallByResolvedBinaryPath(serviceID proc.ServiceID, component, resolved, baseBinPath string, binPathErr error, forcePull bool) *DownloadPlan {
+	// PlanInstall treats any binary path error as "not installed": it should
+	// produce a download plan rather than failing planning.
+	if binPathErr == nil && !forcePull {
+		checkPath := requiredBinaryPathForService(serviceID, baseBinPath)
+		if binaryExists(checkPath) {
+			return nil
+		}
+	}
+
+	reason := "not_installed"
+	if forcePull {
+		reason = "force_pull"
+	} else if binPathErr == nil {
+		reason = "missing_binary"
+	}
+
+	debugBinPath := strings.TrimSpace(baseBinPath)
+	if binPathErr == nil {
+		debugBinPath = strings.TrimSpace(requiredBinaryPathForService(serviceID, baseBinPath))
+	}
+
+	return &DownloadPlan{
+		ComponentID:     component,
+		ResolvedVersion: resolved,
+		DebugReason:     reason,
+		DebugBinPath:    debugBinPath,
+	}
+}
+
+func (s *envComponentSource) PlanInstall(serviceID proc.ServiceID, component, resolved string, forcePull bool) (*DownloadPlan, error) {
 	if s == nil || s.env == nil {
 		return nil, errors.New("environment not initialized")
 	}
@@ -39,24 +110,7 @@ func (s *envComponentSource) PlanInstall(component, resolved string, forcePull b
 
 	v := utils.Version(resolved)
 	binPath, err := s.env.BinaryPath(component, v)
-	if err == nil && !forcePull && binaryExists(binPath) {
-		return nil, nil
-	}
-
-	reason := "not_installed"
-	if err == nil && binPath != "" && !binaryExists(binPath) {
-		reason = "missing_binary"
-	}
-	if forcePull {
-		reason = "force_pull"
-	}
-
-	return &DownloadPlan{
-		ComponentID:     component,
-		ResolvedVersion: resolved,
-		DebugReason:     reason,
-		DebugBinPath:    binPath,
-	}, nil
+	return planInstallByResolvedBinaryPath(serviceID, component, resolved, binPath, err, forcePull), nil
 }
 
 func (s *envComponentSource) EnsureInstalled(component, resolved string) error {

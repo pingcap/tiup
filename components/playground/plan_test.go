@@ -21,7 +21,8 @@ func (s *recordingSource) ResolveVersion(component, constraint string) (string, 
 	return "v0.0.0", nil
 }
 
-func (s *recordingSource) PlanInstall(component, resolved string, forcePull bool) (*DownloadPlan, error) {
+func (s *recordingSource) PlanInstall(serviceID proc.ServiceID, component, resolved string, forcePull bool) (*DownloadPlan, error) {
+	_ = serviceID
 	_ = forcePull
 	return &DownloadPlan{
 		ComponentID:     component,

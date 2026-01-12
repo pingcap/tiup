@@ -26,7 +26,8 @@ func (fakeComponentSource) ResolveVersion(_ string, constraint string) (string, 
 	return constraint, nil
 }
 
-func (fakeComponentSource) PlanInstall(component, resolved string, forcePull bool) (*DownloadPlan, error) {
+func (fakeComponentSource) PlanInstall(serviceID proc.ServiceID, component, resolved string, forcePull bool) (*DownloadPlan, error) {
+	_ = serviceID
 	_ = component
 	_ = resolved
 	_ = forcePull

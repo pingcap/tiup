@@ -29,7 +29,7 @@ const (
 // build and execute a BootPlan.
 type ComponentSource interface {
 	ResolveVersion(component, constraint string) (resolved string, err error)
-	PlanInstall(component, resolved string, forcePull bool) (*DownloadPlan, error)
+	PlanInstall(serviceID proc.ServiceID, component, resolved string, forcePull bool) (*DownloadPlan, error)
 	EnsureInstalled(component, resolved string) error
 	BinaryPath(component, resolved string) (string, error)
 }
@@ -578,7 +578,7 @@ func BuildBootPlan(options *BootOptions, cfg bootPlannerConfig) (BootPlan, error
 				}
 				sp.ResolvedVersion = resolved
 
-				dp, err := cfg.componentSource.PlanInstall(sp.ComponentID, resolved, options.ShOpt.ForcePull)
+				dp, err := cfg.componentSource.PlanInstall(serviceID, sp.ComponentID, resolved, options.ShOpt.ForcePull)
 				if err != nil {
 					return BootPlan{}, err
 				}
