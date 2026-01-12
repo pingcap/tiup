@@ -63,21 +63,19 @@ type plannedService struct {
 type bootStarter struct {
 	pg       *Playground
 	ctx      context.Context
-	preload  *binaryPreloader
 	planned  map[proc.ServiceID][]proc.Process
 	required map[proc.ServiceID]int
 	readyMap map[proc.ServiceID][]*readyFuture
 	readySet readySet
 }
 
-func newBootStarter(ctx context.Context, pg *Playground, preload *binaryPreloader, planned map[proc.ServiceID][]proc.Process, required map[proc.ServiceID]int) *bootStarter {
+func newBootStarter(ctx context.Context, pg *Playground, planned map[proc.ServiceID][]proc.Process, required map[proc.ServiceID]int) *bootStarter {
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	return &bootStarter{
 		pg:       pg,
 		ctx:      ctx,
-		preload:  preload,
 		planned:  planned,
 		required: required,
 		readyMap: make(map[proc.ServiceID][]*readyFuture),
@@ -172,7 +170,7 @@ func (b *bootStarter) startProc(serviceID proc.ServiceID, inst proc.Process) (*r
 
 	critical := b.isRequiredService(serviceID)
 
-	readyCh, err := b.pg.requestStartProc(b.ctx, inst, b.preload)
+	readyCh, err := b.pg.requestStartProc(b.ctx, inst)
 	if err != nil {
 		if critical {
 			return nil, err

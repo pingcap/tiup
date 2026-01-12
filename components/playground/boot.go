@@ -286,7 +286,7 @@ func (p *Playground) bootCluster(ctx context.Context, options *BootOptions) (err
 	planned := p.procsSnapshot()
 	p.initBootStartingTasks()
 
-	starter := newBootStarter(ctx, p, nil, planned, required)
+	starter := newBootStarter(ctx, p, planned, required)
 	ready, err := starter.startPlanned(plannedServicesFromBootPlan(plan))
 	if err != nil {
 		return err

@@ -96,24 +96,14 @@ type addProcResponse struct {
 }
 
 type startProcRequest struct {
-	ctx     context.Context
-	inst    proc.Process
-	preload *binaryPreloader
-	respCh  chan startProcResponse
+	ctx    context.Context
+	inst   proc.Process
+	respCh chan startProcResponse
 }
 
 type startProcResponse struct {
 	readyCh <-chan error
 	err     error
-}
-
-type startProcResolvedEvent struct {
-	ctx     context.Context
-	inst    proc.Process
-	binPath string
-	version utils.Version
-
-	readyCh chan error
 }
 
 type stopSignalEvent struct {
@@ -230,11 +220,9 @@ func (p *Playground) handleEvent(state *controllerState, evt controllerEvent) {
 		e.respCh <- addProcResponse{inst: inst, err: err}
 		close(e.respCh)
 	case startProcRequest:
-		readyCh, err := p.startProc(e.ctx, state, e.inst, e.preload)
+		readyCh, err := p.startProc(e.ctx, state, e.inst)
 		e.respCh <- startProcResponse{readyCh: readyCh, err: err}
 		close(e.respCh)
-	case startProcResolvedEvent:
-		p.startProcWithResolvedBinary(e.ctx, state, e.inst, e.binPath, e.version, e.readyCh)
 	case procExitedEvent:
 		dec := p.handleProcExited(state, e.inst, e.pid, e.err, state.booting)
 		e.respCh <- dec
