@@ -53,4 +53,3 @@ func TestPlanInstallByResolvedBinaryPath_NGMonitoring_MissingBinary(t *testing.T
 		t.Fatalf("expected nil download plan when binary exists, got: %+v", dp)
 	}
 }
-

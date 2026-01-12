@@ -22,7 +22,7 @@ func TestAddPlannedProcInController_UsesPlanSharedOptions(t *testing.T) {
 
 	shared := proc.SharedOptions{Mode: proc.ModeNextGen, PDMode: "pd", PortOffset: 42, ForcePull: true}
 	plan := ServicePlan{
-		ServiceID: proc.ServiceTiDB.String(),
+		ServiceID:   proc.ServiceTiDB.String(),
 		ComponentID: proc.ComponentTiDB.String(),
 		Shared: ServiceSharedPlan{
 			Host:       "127.0.0.1",
