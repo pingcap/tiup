@@ -15,6 +15,7 @@ import (
 	"github.com/pingcap/tiup/pkg/repository"
 	progressv2 "github.com/pingcap/tiup/pkg/tuiv2/progress"
 	"github.com/pingcap/tiup/pkg/utils"
+	"github.com/stretchr/testify/require"
 )
 
 type fakeComponentBinaryInstaller struct {
@@ -43,53 +44,33 @@ func (f *fakeComponentBinaryInstaller) UpdateComponents(specs []repository.Compo
 func TestPrepareComponentBinaryWithInstaller_BinaryExistsSkipsUpdate(t *testing.T) {
 	dir := t.TempDir()
 	binPath := filepath.Join(dir, "bin")
-	if err := os.WriteFile(binPath, []byte("ok"), 0o755); err != nil {
-		t.Fatalf("write bin: %v", err)
-	}
+	require.NoError(t, os.WriteFile(binPath, []byte("ok"), 0o755))
 
 	inst := &fakeComponentBinaryInstaller{binPath: binPath}
 	out, err := prepareComponentBinaryWithInstaller(inst, proc.ServicePrometheus, "prometheus", utils.Version("v1.0.0"), false)
-	if err != nil {
-		t.Fatalf("prepareComponentBinaryWithInstaller: %v", err)
-	}
-	if out != binPath {
-		t.Fatalf("unexpected binary path: %q", out)
-	}
-	if len(inst.updateSpecs) != 0 {
-		t.Fatalf("unexpected UpdateComponents calls: %d", len(inst.updateSpecs))
-	}
+	require.NoError(t, err)
+	require.Equal(t, binPath, out)
+	require.Empty(t, inst.updateSpecs)
 }
 
 func TestPrepareComponentBinaryWithInstaller_ForcePullForcesUpdate(t *testing.T) {
 	dir := t.TempDir()
 	binPath := filepath.Join(dir, "bin")
-	if err := os.WriteFile(binPath, []byte("ok"), 0o755); err != nil {
-		t.Fatalf("write bin: %v", err)
-	}
+	require.NoError(t, os.WriteFile(binPath, []byte("ok"), 0o755))
 
 	inst := &fakeComponentBinaryInstaller{
 		binPath: binPath,
 		onUpdate: func(specs []repository.ComponentSpec) error {
-			if len(specs) != 1 {
-				t.Fatalf("unexpected specs: %+v", specs)
-			}
-			if !specs[0].Force {
-				t.Fatalf("expected Force=true, got %+v", specs[0])
-			}
+			require.Len(t, specs, 1)
+			require.True(t, specs[0].Force)
 			return nil
 		},
 	}
 
 	out, err := prepareComponentBinaryWithInstaller(inst, proc.ServicePrometheus, "prometheus", utils.Version("v1.0.0"), true)
-	if err != nil {
-		t.Fatalf("prepareComponentBinaryWithInstaller: %v", err)
-	}
-	if out != binPath {
-		t.Fatalf("unexpected binary path: %q", out)
-	}
-	if len(inst.updateSpecs) != 1 {
-		t.Fatalf("expected 1 UpdateComponents call, got %d", len(inst.updateSpecs))
-	}
+	require.NoError(t, err)
+	require.Equal(t, binPath, out)
+	require.Len(t, inst.updateSpecs, 1)
 }
 
 func TestPrepareComponentBinaryWithInstaller_BinaryMissingForcesUpdate(t *testing.T) {
@@ -99,29 +80,17 @@ func TestPrepareComponentBinaryWithInstaller_BinaryMissingForcesUpdate(t *testin
 	inst := &fakeComponentBinaryInstaller{
 		binPath: binPath,
 		onUpdate: func(specs []repository.ComponentSpec) error {
-			if len(specs) != 1 {
-				t.Fatalf("unexpected specs: %+v", specs)
-			}
-			if !specs[0].Force {
-				t.Fatalf("expected Force=true, got %+v", specs[0])
-			}
-			if err := os.WriteFile(binPath, []byte("ok"), 0o755); err != nil {
-				t.Fatalf("write bin: %v", err)
-			}
+			require.Len(t, specs, 1)
+			require.True(t, specs[0].Force)
+			require.NoError(t, os.WriteFile(binPath, []byte("ok"), 0o755))
 			return nil
 		},
 	}
 
 	out, err := prepareComponentBinaryWithInstaller(inst, proc.ServicePrometheus, "prometheus", utils.Version("v1.0.0"), false)
-	if err != nil {
-		t.Fatalf("prepareComponentBinaryWithInstaller: %v", err)
-	}
-	if out != binPath {
-		t.Fatalf("unexpected binary path: %q", out)
-	}
-	if len(inst.updateSpecs) != 1 {
-		t.Fatalf("expected 1 UpdateComponents call, got %d", len(inst.updateSpecs))
-	}
+	require.NoError(t, err)
+	require.Equal(t, binPath, out)
+	require.Len(t, inst.updateSpecs, 1)
 }
 
 func TestPrepareComponentBinaryWithInstaller_BinaryPathErrorStillUpdates(t *testing.T) {
@@ -130,30 +99,18 @@ func TestPrepareComponentBinaryWithInstaller_BinaryPathErrorStillUpdates(t *test
 
 	inst := &fakeComponentBinaryInstaller{binPathErr: errors.New("boom")}
 	inst.onUpdate = func(specs []repository.ComponentSpec) error {
-		if len(specs) != 1 {
-			t.Fatalf("unexpected specs: %+v", specs)
-		}
-		if !specs[0].Force {
-			t.Fatalf("expected Force=true, got %+v", specs[0])
-		}
-		if err := os.WriteFile(binPath, []byte("ok"), 0o755); err != nil {
-			t.Fatalf("write bin: %v", err)
-		}
+		require.Len(t, specs, 1)
+		require.True(t, specs[0].Force)
+		require.NoError(t, os.WriteFile(binPath, []byte("ok"), 0o755))
 		inst.binPathErr = nil
 		inst.binPath = binPath
 		return nil
 	}
 
 	out, err := prepareComponentBinaryWithInstaller(inst, proc.ServicePrometheus, "prometheus", utils.Version("v1.0.0"), false)
-	if err != nil {
-		t.Fatalf("prepareComponentBinaryWithInstaller: %v", err)
-	}
-	if out != binPath {
-		t.Fatalf("unexpected binary path: %q", out)
-	}
-	if len(inst.updateSpecs) != 1 {
-		t.Fatalf("expected 1 UpdateComponents call, got %d", len(inst.updateSpecs))
-	}
+	require.NoError(t, err)
+	require.Equal(t, binPath, out)
+	require.Len(t, inst.updateSpecs, 1)
 }
 
 func TestPrepareComponentBinaryWithInstaller_UpdateComponentsErrorReturnsError(t *testing.T) {
@@ -165,12 +122,8 @@ func TestPrepareComponentBinaryWithInstaller_UpdateComponentsErrorReturnsError(t
 	}
 
 	_, err := prepareComponentBinaryWithInstaller(inst, proc.ServicePrometheus, "prometheus", utils.Version("v1.0.0"), false)
-	if err == nil || err.Error() != "update failed" {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if len(inst.updateSpecs) != 1 {
-		t.Fatalf("expected 1 UpdateComponents call, got %d", len(inst.updateSpecs))
-	}
+	require.EqualError(t, err, "update failed")
+	require.Len(t, inst.updateSpecs, 1)
 }
 
 func TestPrepareComponentBinaryWithInstaller_AfterUpdateStillMissingReturnsError(t *testing.T) {
@@ -185,86 +138,54 @@ func TestPrepareComponentBinaryWithInstaller_AfterUpdateStillMissingReturnsError
 	}
 
 	_, err := prepareComponentBinaryWithInstaller(inst, proc.ServicePrometheus, "prometheus", utils.Version("v1.0.0"), false)
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-	if len(inst.updateSpecs) != 1 {
-		t.Fatalf("expected 1 UpdateComponents call, got %d", len(inst.updateSpecs))
-	}
+	require.Error(t, err)
+	require.Len(t, inst.updateSpecs, 1)
 }
 
 func TestPrepareComponentBinaryWithInstaller_MissingRequiredBinaryForService_ForcesUpdate(t *testing.T) {
 	dir := t.TempDir()
 	baseBinPath := filepath.Join(dir, "tikv-server")
-	if err := os.WriteFile(baseBinPath, []byte("ok"), 0o755); err != nil {
-		t.Fatalf("write tikv-server: %v", err)
-	}
+	require.NoError(t, os.WriteFile(baseBinPath, []byte("ok"), 0o755))
 
 	requiredBinPath := filepath.Join(dir, "tikv-worker")
 
 	inst := &fakeComponentBinaryInstaller{
 		binPath: baseBinPath,
 		onUpdate: func(specs []repository.ComponentSpec) error {
-			if len(specs) != 1 {
-				t.Fatalf("unexpected specs: %+v", specs)
-			}
-			if !specs[0].Force {
-				t.Fatalf("expected Force=true, got %+v", specs[0])
-			}
-			if err := os.WriteFile(requiredBinPath, []byte("ok"), 0o755); err != nil {
-				t.Fatalf("write tikv-worker: %v", err)
-			}
+			require.Len(t, specs, 1)
+			require.True(t, specs[0].Force)
+			require.NoError(t, os.WriteFile(requiredBinPath, []byte("ok"), 0o755))
 			return nil
 		},
 	}
 
 	out, err := prepareComponentBinaryWithInstaller(inst, proc.ServiceTiKVWorker, "tikv", utils.Version("v1.0.0"), false)
-	if err != nil {
-		t.Fatalf("prepareComponentBinaryWithInstaller: %v", err)
-	}
-	if out != requiredBinPath {
-		t.Fatalf("unexpected binary path: %q", out)
-	}
-	if len(inst.updateSpecs) != 1 {
-		t.Fatalf("expected 1 UpdateComponents call, got %d", len(inst.updateSpecs))
-	}
+	require.NoError(t, err)
+	require.Equal(t, requiredBinPath, out)
+	require.Len(t, inst.updateSpecs, 1)
 }
 
 func TestPrepareComponentBinaryWithInstaller_NGMonitoring_UsesSiblingBinary(t *testing.T) {
 	dir := t.TempDir()
 	baseBinPath := filepath.Join(dir, "prometheus")
-	if err := os.WriteFile(baseBinPath, []byte("ok"), 0o755); err != nil {
-		t.Fatalf("write prometheus: %v", err)
-	}
+	require.NoError(t, os.WriteFile(baseBinPath, []byte("ok"), 0o755))
 
 	requiredBinPath := filepath.Join(dir, "ng-monitoring-server")
 
 	inst := &fakeComponentBinaryInstaller{
 		binPath: baseBinPath,
 		onUpdate: func(specs []repository.ComponentSpec) error {
-			if len(specs) != 1 {
-				t.Fatalf("unexpected specs: %+v", specs)
-			}
-			if !specs[0].Force {
-				t.Fatalf("expected Force=true, got %+v", specs[0])
-			}
-			if err := os.WriteFile(requiredBinPath, []byte("ok"), 0o755); err != nil {
-				t.Fatalf("write ng-monitoring-server: %v", err)
-			}
+			require.Len(t, specs, 1)
+			require.True(t, specs[0].Force)
+			require.NoError(t, os.WriteFile(requiredBinPath, []byte("ok"), 0o755))
 			return nil
 		},
 	}
 
 	out, err := prepareComponentBinaryWithInstaller(inst, proc.ServiceNGMonitoring, "prometheus", utils.Version("v1.0.0"), false)
-	if err != nil {
-		t.Fatalf("prepareComponentBinaryWithInstaller: %v", err)
-	}
-	if out != requiredBinPath {
-		t.Fatalf("unexpected binary path: %q", out)
-	}
-	if len(inst.updateSpecs) != 1 {
-		t.Fatalf("expected 1 UpdateComponents call, got %d", len(inst.updateSpecs))
-	}
+	require.NoError(t, err)
+	require.Equal(t, requiredBinPath, out)
+	require.Len(t, inst.updateSpecs, 1)
 }
 
 type blockingProgressTask struct {
@@ -341,20 +262,14 @@ func TestStartProc_UserBinPath_DoesNotDependOnGlobalEnv(t *testing.T) {
 	close(pg.controllerDoneCh)
 
 	readyCh, err := pg.startProc(context.Background(), &controllerState{}, inst)
-	if err != nil {
-		t.Fatalf("startProc: %v", err)
-	}
-	if info.BinPath != info.UserBinPath {
-		t.Fatalf("unexpected BinPath: %q", info.BinPath)
-	}
-	if info.Version != utils.Version(utils.LatestVersionAlias) {
-		t.Fatalf("unexpected Version: %q", info.Version)
-	}
+	require.NoError(t, err)
+	require.Equal(t, info.UserBinPath, info.BinPath)
+	require.Equal(t, utils.Version(utils.LatestVersionAlias), info.Version)
 
 	select {
 	case <-readyCh:
 	default:
-		t.Fatalf("expected readyCh to be closed for non-ReadyWaiter instance")
+		require.FailNow(t, "expected readyCh to be closed for non-ReadyWaiter instance")
 	}
 }
 
@@ -381,15 +296,9 @@ func TestStartProc_UserBinPath_PreservesPlannedVersion(t *testing.T) {
 	close(pg.controllerDoneCh)
 
 	_, err := pg.startProc(context.Background(), &controllerState{}, inst)
-	if err != nil {
-		t.Fatalf("startProc: %v", err)
-	}
-	if info.BinPath != info.UserBinPath {
-		t.Fatalf("unexpected BinPath: %q", info.BinPath)
-	}
-	if info.Version != utils.Version("v7.5.0") {
-		t.Fatalf("unexpected Version: %q", info.Version)
-	}
+	require.NoError(t, err)
+	require.Equal(t, info.UserBinPath, info.BinPath)
+	require.Equal(t, utils.Version("v7.5.0"), info.Version)
 }
 
 func TestStartProcWithControllerState_DoesNotBlockOnProgressTask(t *testing.T) {
@@ -418,24 +327,22 @@ func TestStartProcWithControllerState_DoesNotBlockOnProgressTask(t *testing.T) {
 	close(pg.controllerDoneCh)
 
 	readyCh, err := pg.startProcWithControllerState(context.Background(), &controllerState{}, inst)
-	if err != nil {
-		t.Fatalf("startProcWithControllerState: %v", err)
-	}
+	require.NoError(t, err)
 	select {
 	case <-readyCh:
 	default:
-		t.Fatalf("expected readyCh to be closed for non-ReadyWaiter instance")
+		require.FailNow(t, "expected readyCh to be closed for non-ReadyWaiter instance")
 	}
 
 	select {
 	case <-osProc.startedCh:
 	case <-time.After(time.Second):
-		t.Fatalf("process Start() did not run while progress task is blocked")
+		require.FailNow(t, "process Start() did not run while progress task is blocked")
 	}
 
 	select {
 	case <-task.doneCh:
-		t.Fatalf("unexpected task.Done() before progress task is started")
+		require.FailNow(t, "unexpected task.Done() before progress task is started")
 	default:
 	}
 
@@ -444,6 +351,6 @@ func TestStartProcWithControllerState_DoesNotBlockOnProgressTask(t *testing.T) {
 	select {
 	case <-task.doneCh:
 	case <-time.After(time.Second):
-		t.Fatalf("task.Done() not invoked after progress task unblocked")
+		require.FailNow(t, "task.Done() not invoked after progress task unblocked")
 	}
 }
