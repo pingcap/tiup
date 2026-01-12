@@ -179,7 +179,7 @@ func preflightBootPlan(ctx context.Context, plan BootPlan) error {
 	ctxCheck, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	bucketExists, err := s3Client.BucketExists(ctxCheck, plan.Shared.CSE.Bucket)
+	bucketExists, err := s3Client.BucketExists(ctxCheck, bucket)
 	if err != nil {
 		return errors.Annotate(err, "can not connect to S3 endpoint")
 	}
