@@ -245,13 +245,16 @@ func (p *Playground) bootCluster(ctx context.Context, options *BootOptions) (err
 	if err != nil {
 		return err
 	}
-	p.bootBaseConfigs = make(map[proc.ServiceID]proc.Config, len(plan.DebugServiceConfigs))
-	for serviceID, cfg := range plan.DebugServiceConfigs {
-		id := proc.ServiceID(serviceID)
-		if id == "" {
+	_, baseConfigs, err := planProcs(options)
+	if err != nil {
+		return err
+	}
+	p.bootBaseConfigs = make(map[proc.ServiceID]proc.Config, len(baseConfigs))
+	for serviceID, cfg := range baseConfigs {
+		if serviceID == "" {
 			continue
 		}
-		p.bootBaseConfigs[id] = cfg
+		p.bootBaseConfigs[serviceID] = cfg
 	}
 
 	required := make(map[proc.ServiceID]int, len(plan.RequiredServices))
