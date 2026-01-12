@@ -337,6 +337,21 @@ func Register(spec Spec) error {
 	if err := validatePortSpecs(spec.Catalog.Ports); err != nil {
 		return fmt.Errorf("service %s ports: %w", spec.ServiceID, err)
 	}
+	if spec.Catalog.AllowModifyPort {
+		if len(spec.Catalog.Ports) == 0 {
+			return fmt.Errorf("service %s ports: AllowModifyPort requires ports to be configured", spec.ServiceID)
+		}
+		hasFromConfigPort := false
+		for _, portSpec := range spec.Catalog.Ports {
+			if portSpec.FromConfigPort {
+				hasFromConfigPort = true
+				break
+			}
+		}
+		if !hasFromConfigPort {
+			return fmt.Errorf("service %s ports: AllowModifyPort requires at least one port to set FromConfigPort", spec.ServiceID)
+		}
+	}
 	if spec.ScaleInHook == nil {
 		spec.ScaleInHook = func(rt ControllerRuntime, w io.Writer, inst proc.Process, pid int) (bool, error) {
 			return false, nil
