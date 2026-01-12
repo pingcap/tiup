@@ -133,9 +133,7 @@ func (e *bootExecutor) AddProcs(ctx context.Context, plan BootPlan) error {
 
 		v := utils.Version(strings.TrimSpace(svc.ResolvedVersion))
 		if v.IsEmpty() {
-			// For user binaries, we may only know the configured constraint.
-			// It is still important for feature gates during execution.
-			v = utils.Version(strings.TrimSpace(svc.DebugConstraint))
+			return errors.Errorf("missing planned version for service %s(%s)", svc.ServiceID, svc.Name)
 		}
 
 		if _, err := e.pg.requestAddPlannedProc(ctx, svc, binPath, v, plan.Shared, plan.DataDir); err != nil {
