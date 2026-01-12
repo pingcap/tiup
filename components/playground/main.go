@@ -472,7 +472,10 @@ func newEtcdClient(endpoint string) (*clientv3.Client, error) {
 }
 
 func newRepoDownloadProgress(g *progressv2.Group) repository.DownloadProgress {
-	return &repoDownloadProgress{group: g}
+	return &repoDownloadProgress{
+		group: g,
+		now:   time.Now,
+	}
 }
 
 // repoDownloadProgress adapts repository download callbacks into the unified
@@ -485,6 +488,8 @@ type repoDownloadProgress struct {
 
 	mu   sync.Mutex
 	task *progressv2.Task
+
+	now func() time.Time
 
 	lastUpdateAt time.Time
 	lastSize     int64
@@ -527,7 +532,7 @@ func (p *repoDownloadProgress) SetCurrent(size int64) {
 	//
 	// This keeps the TTY UI smooth (Bubble Tea already caps redraw FPS) while
 	// reducing lock contention during large downloads.
-	now := time.Now()
+	now := p.now()
 	const (
 		minInterval = 150 * time.Millisecond
 		minDelta    = 256 * 1024
