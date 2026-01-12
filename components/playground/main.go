@@ -243,14 +243,6 @@ Examples:
 			restore := attachUIOutput(ui)
 			defer restore()
 
-			env, err := environment.InitEnv(repository.Options{}, repository.MirrorOptions{
-				Progress: newRepoDownloadProgress(downloadGroup),
-			})
-			if err != nil {
-				return err
-			}
-			environment.SetGlobalEnv(env)
-
 			var (
 				booted      uint32
 				sigReceived uint32
@@ -259,6 +251,15 @@ Examples:
 			ctx = context.WithValue(ctx, logprinter.ContextKeyLogger, log)
 			defer cancel(nil)
 			p.bootCancel = cancel
+
+			env, err := environment.InitEnv(repository.Options{}, repository.MirrorOptions{
+				Context:  ctx,
+				Progress: newRepoDownloadProgress(downloadGroup),
+			})
+			if err != nil {
+				return err
+			}
+			environment.SetGlobalEnv(env)
 
 			go func() {
 				sc := make(chan os.Signal, 1)
@@ -272,10 +273,8 @@ Examples:
 				sig := (<-sc).(syscall.Signal)
 				atomic.StoreUint32(&sigReceived, 1)
 
-				// if bootCluster is not done we just cancel context to make it
-				// clean up and return ASAP and exit directly after timeout.
-				// Note now bootCluster can not learn the context is done and return quickly now
-				// like while it's downloading component.
+				// If bootCluster is not done we just cancel context to make it
+				// clean up and return ASAP (including interrupting downloads).
 				if atomic.LoadUint32(&booted) == 0 {
 					cancel(nil)
 				}
