@@ -13,6 +13,8 @@ Under TiUP directory:
 - Build: make playground
 - Lint: make lint && make check-static
 
+After making changes, ensure build and lint pass before committing.
+
 ## Principles to Follow when Developing TiUP Playground
 
 This codebase will outlive you. Every shortcut you take becomes someone else's burden. Every hack compounds into technical debt that slows the whole team down.
