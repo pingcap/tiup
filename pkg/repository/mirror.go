@@ -246,6 +246,10 @@ func (l *localFilesystem) Download(resource, targetDir string) error {
 		src = &contextReader{ctx: l.ctx, r: reader}
 	}
 	_, err = io.Copy(writer, src)
+	if err != nil {
+		_ = writer.Close()
+		_ = os.Remove(outPath)
+	}
 	return err
 }
 
@@ -312,13 +316,19 @@ func (l *httpMirror) downloadFile(url string, to string, maxSize int64) (io.Read
 		logprinter.Verbose("Download resource %s in %s", url, time.Since(start))
 	}(time.Now())
 
-	if l.options.Context != nil {
+	baseCtx := l.options.Context
+	if baseCtx != nil {
 		select {
-		case <-l.options.Context.Done():
-			return nil, errors.Trace(l.options.Context.Err())
+		case <-baseCtx.Done():
+			return nil, errors.Trace(baseCtx.Err())
 		default:
 		}
+	} else {
+		baseCtx = context.Background()
 	}
+
+	ctx, cancel := context.WithCancel(baseCtx)
+	defer cancel()
 
 	client := grab.NewClient()
 
@@ -337,9 +347,7 @@ func (l *httpMirror) downloadFile(url string, to string, maxSize int64) (io.Read
 	if len(to) == 0 {
 		req.NoStore = true
 	}
-	if l.options.Context != nil {
-		req = req.WithContext(l.options.Context)
-	}
+	req = req.WithContext(ctx)
 
 	resp := client.Do(req)
 
@@ -355,28 +363,27 @@ func (l *httpMirror) downloadFile(url string, to string, maxSize int64) (io.Read
 	}
 	progress.Start(url, resp.Size())
 
-	ctxDone := (<-chan struct{})(nil)
-	if l.options.Context != nil {
-		ctxDone = l.options.Context.Done()
-	}
+	ctxDone := ctx.Done()
 
 L:
 	for {
 		select {
 		case <-t.C:
 			if maxSize > 0 && resp.BytesComplete() > maxSize {
-				_ = resp.Cancel()
+				cancel()
+				progress.SetCurrent(resp.BytesComplete())
+				progress.Finish()
 				return nil, errors.Errorf("download from %s failed, resp size %d exceeds maximum size %d", url, resp.BytesComplete(), maxSize)
 			}
 			progress.SetCurrent(resp.BytesComplete())
 		case <-ctxDone:
-			_ = resp.Cancel()
 			progress.SetCurrent(resp.BytesComplete())
 			progress.Finish()
-			if l.options.Context != nil {
-				return nil, errors.Trace(l.options.Context.Err())
+			select {
+			case <-resp.Done:
+			case <-time.After(200 * time.Millisecond):
 			}
-			return nil, errors.Trace(context.Canceled)
+			return nil, errors.Trace(baseCtx.Err())
 		case <-resp.Done:
 			progress.SetCurrent(resp.BytesComplete())
 			progress.Finish()
