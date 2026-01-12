@@ -2,11 +2,10 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
-	"strings"
 	"testing"
 
 	"github.com/pingcap/tiup/components/playground/proc"
+	"github.com/stretchr/testify/require"
 )
 
 func TestWriteDryRun_Text(t *testing.T) {
@@ -54,33 +53,20 @@ func TestWriteDryRun_Text(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := writeDryRun(&buf, plan, "text"); err != nil {
-		t.Fatalf("writeDryRun(text): %v", err)
-	}
+	require.NoError(t, writeDryRun(&buf, plan, "text"))
+	require.Equal(t, `==> Download Packages:
+  + tidb@v1.0.0
 
-	out := buf.String()
-	for _, want := range []string{
-		"==> Download Packages:\n",
-		"  + tidb@v1.0.0\n",
-		"==> Reuse Packages:\n",
-		"  + pd@v1.0.0\n",
-		"==> Start Services:\n",
-		"  + pd-0@v1.0.0\n",
-		"    127.0.0.1:2380,2379(status)\n",
-		"    Start after: tikv\n",
-		"  + tidb-0@v1.0.0 (use /usr/local/bin/tidb-server)\n",
-		"    127.0.0.1:4000,10080(status)\n",
-	} {
-		if !strings.Contains(out, want) {
-			t.Fatalf("dry-run text missing %q, got:\n%s", want, out)
-		}
-	}
+==> Existing Packages:
+    pd@v1.0.0
 
-	for _, secret := range []string{"fake-access-key", "fake-secret-key"} {
-		if strings.Contains(out, secret) {
-			t.Fatalf("dry-run text should not include secret %q, got:\n%s", secret, out)
-		}
-	}
+==> Start Services:
+  + pd-0@v1.0.0
+    127.0.0.1:2380,2379
+    Start after: tikv
+  + tidb-0@v1.0.0 (use /usr/local/bin/tidb-server)
+    127.0.0.1:4000,10080
+`, buf.String())
 }
 
 func TestWriteDryRun_Text_ShowsComponentHintWhenDifferent(t *testing.T) {
@@ -97,19 +83,14 @@ func TestWriteDryRun_Text_ShowsComponentHintWhenDifferent(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := writeDryRun(&buf, plan, "text"); err != nil {
-		t.Fatalf("writeDryRun(text): %v", err)
-	}
+	require.NoError(t, writeDryRun(&buf, plan, "text"))
+	require.Equal(t, `==> Existing Packages:
+    prometheus@v1.0.0
 
-	if got := buf.String(); !strings.Contains(got, "  + ng-monitoring-0@v1.0.0 (prometheus)\n") {
-		t.Fatalf("dry-run text missing component hint, got:\n%s", got)
-	}
-	if got := buf.String(); !strings.Contains(got, "    127.0.0.1:12020\n") {
-		t.Fatalf("dry-run text missing address, got:\n%s", got)
-	}
-	if got := buf.String(); strings.Contains(got, "(status)") {
-		t.Fatalf("dry-run text should not include status port suffix when the ports are equal, got:\n%s", got)
-	}
+==> Start Services:
+  + prometheus/ng-monitoring-0@v1.0.0
+    127.0.0.1:12020
+`, buf.String())
 }
 
 func TestWriteDryRun_JSON(t *testing.T) {
@@ -121,17 +102,33 @@ func TestWriteDryRun_JSON(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := writeDryRun(&buf, plan, "json"); err != nil {
-		t.Fatalf("writeDryRun(json): %v", err)
-	}
-
-	var got BootPlan
-	if err := json.Unmarshal(buf.Bytes(), &got); err != nil {
-		t.Fatalf("unmarshal dry-run json: %v", err)
-	}
-	if got.DataDir != plan.DataDir || got.BootVersion != plan.BootVersion || got.Host != plan.Host {
-		t.Fatalf("unexpected json plan: %+v", got)
-	}
+	require.NoError(t, writeDryRun(&buf, plan, "json"))
+	require.Equal(t, `{
+  "DataDir": "/data",
+  "BootVersion": "nightly",
+  "Host": "127.0.0.1",
+  "Shared": {
+    "HighPerf": false,
+    "CSE": {
+      "S3Endpoint": "",
+      "Bucket": "",
+      "AccessKey": "",
+      "SecretKey": ""
+    },
+    "PDMode": "pd",
+    "Mode": "tidb",
+    "PortOffset": 0,
+    "EnableTiKVColumnar": false,
+    "ForcePull": false
+  },
+  "Monitor": false,
+  "GrafanaPort": 0,
+  "Downloads": null,
+  "Services": null,
+  "RequiredServices": null,
+  "DebugServiceConfigs": null
+}
+`, buf.String())
 }
 
 func TestWriteDryRun_JSON_RedactsSecrets(t *testing.T) {
@@ -146,24 +143,33 @@ func TestWriteDryRun_JSON_RedactsSecrets(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := writeDryRun(&buf, plan, "json"); err != nil {
-		t.Fatalf("writeDryRun(json): %v", err)
-	}
-
-	out := buf.String()
-	for _, secret := range []string{"access-KEY-123", "secret-KEY-456"} {
-		if strings.Contains(out, secret) {
-			t.Fatalf("dry-run json should redact secret %q, got:\n%s", secret, out)
-		}
-	}
-
-	var got BootPlan
-	if err := json.Unmarshal(buf.Bytes(), &got); err != nil {
-		t.Fatalf("unmarshal dry-run json: %v", err)
-	}
-	if got.Shared.CSE.AccessKey != "***" || got.Shared.CSE.SecretKey != "***" {
-		t.Fatalf("unexpected json secret values: %+v", got.Shared.CSE)
-	}
+	require.NoError(t, writeDryRun(&buf, plan, "json"))
+	require.Equal(t, `{
+  "DataDir": "",
+  "BootVersion": "",
+  "Host": "",
+  "Shared": {
+    "HighPerf": false,
+    "CSE": {
+      "S3Endpoint": "",
+      "Bucket": "",
+      "AccessKey": "***",
+      "SecretKey": "***"
+    },
+    "PDMode": "",
+    "Mode": "tidb-cse",
+    "PortOffset": 0,
+    "EnableTiKVColumnar": false,
+    "ForcePull": false
+  },
+  "Monitor": false,
+  "GrafanaPort": 0,
+  "Downloads": null,
+  "Services": null,
+  "RequiredServices": null,
+  "DebugServiceConfigs": null
+}
+`, buf.String())
 }
 
 func TestWriteDryRun_JSON_OmitsNilOneOfFields(t *testing.T) {
@@ -179,30 +185,51 @@ func TestWriteDryRun_JSON_OmitsNilOneOfFields(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := writeDryRun(&buf, plan, "json"); err != nil {
-		t.Fatalf("writeDryRun(json): %v", err)
-	}
-
-	out := buf.String()
-	for _, field := range []string{
-		"\"TiKV\": null",
-		"\"TiDB\": null",
-		"\"TiKVWorker\": null",
-		"\"TiFlash\": null",
-		"\"TiProxy\": null",
-		"\"Grafana\": null",
-		"\"NGMonitoring\": null",
-		"\"TiCDC\": null",
-		"\"TiKVCDC\": null",
-		"\"DMMaster\": null",
-		"\"DMWorker\": null",
-		"\"Pump\": null",
-		"\"Drainer\": null",
-	} {
-		if strings.Contains(out, field) {
-			t.Fatalf("dry-run json should omit nil one-of field %q, got:\n%s", field, out)
-		}
-	}
+	require.NoError(t, writeDryRun(&buf, plan, "json"))
+	require.Equal(t, `{
+  "DataDir": "",
+  "BootVersion": "",
+  "Host": "",
+  "Shared": {
+    "HighPerf": false,
+    "CSE": {
+      "S3Endpoint": "",
+      "Bucket": "",
+      "AccessKey": "",
+      "SecretKey": ""
+    },
+    "PDMode": "",
+    "Mode": "",
+    "PortOffset": 0,
+    "EnableTiKVColumnar": false,
+    "ForcePull": false
+  },
+  "Monitor": false,
+  "GrafanaPort": 0,
+  "Downloads": null,
+  "Services": [
+    {
+      "Name": "pd-0",
+      "ServiceID": "pd",
+      "StartAfterServices": null,
+      "ComponentID": "pd",
+      "ResolvedVersion": "v1.0.0",
+      "BinPath": "",
+      "Shared": {
+        "Dir": "",
+        "Host": "",
+        "Port": 0,
+        "StatusPort": 0,
+        "ConfigPath": "",
+        "UpTimeout": 0
+      },
+      "DebugConstraint": ""
+    }
+  ],
+  "RequiredServices": null,
+  "DebugServiceConfigs": null
+}
+`, buf.String())
 }
 
 func TestWriteDryRun_JSON_MapOrderIsStable(t *testing.T) {
@@ -218,27 +245,62 @@ func TestWriteDryRun_JSON_MapOrderIsStable(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := writeDryRun(&buf, plan, "json"); err != nil {
-		t.Fatalf("writeDryRun(json): %v", err)
-	}
-
-	out := buf.String()
-	idxAAA := strings.Index(out, "\"aaa\":")
-	idxZZZ := strings.Index(out, "\"zzz\":")
-	if idxAAA < 0 || idxZZZ < 0 || idxAAA > idxZZZ {
-		t.Fatalf("unexpected RequiredServices json order, got:\n%s", out)
-	}
-
-	idxAAACfg := strings.Index(out, "\"aaa_cfg\":")
-	idxZZZCfg := strings.Index(out, "\"zzz_cfg\":")
-	if idxAAACfg < 0 || idxZZZCfg < 0 || idxAAACfg > idxZZZCfg {
-		t.Fatalf("unexpected DebugServiceConfigs json order, got:\n%s", out)
-	}
+	require.NoError(t, writeDryRun(&buf, plan, "json"))
+	require.Equal(t, `{
+  "DataDir": "",
+  "BootVersion": "",
+  "Host": "",
+  "Shared": {
+    "HighPerf": false,
+    "CSE": {
+      "S3Endpoint": "",
+      "Bucket": "",
+      "AccessKey": "",
+      "SecretKey": ""
+    },
+    "PDMode": "",
+    "Mode": "",
+    "PortOffset": 0,
+    "EnableTiKVColumnar": false,
+    "ForcePull": false
+  },
+  "Monitor": false,
+  "GrafanaPort": 0,
+  "Downloads": null,
+  "Services": null,
+  "RequiredServices": {
+    "aaa": 2,
+    "zzz": 1
+  },
+  "DebugServiceConfigs": {
+    "aaa_cfg": {
+      "ConfigPath": "",
+      "BinPath": "",
+      "Num": 2,
+      "Host": "",
+      "Port": 0,
+      "UpTimeout": 0,
+      "Version": ""
+    },
+    "zzz_cfg": {
+      "ConfigPath": "",
+      "BinPath": "",
+      "Num": 1,
+      "Host": "",
+      "Port": 0,
+      "UpTimeout": 0,
+      "Version": ""
+    }
+  }
+}
+`, buf.String())
 }
 
 func TestWriteDryRun_UnknownFormat(t *testing.T) {
 	var buf bytes.Buffer
-	if err := writeDryRun(&buf, BootPlan{}, "xml"); err == nil {
-		t.Fatalf("expected error for unknown format")
-	}
+	require.Error(t, writeDryRun(&buf, BootPlan{}, "xml"))
+}
+
+func TestWriteDryRun_NilWriter(t *testing.T) {
+	require.Error(t, writeDryRun(nil, BootPlan{}, "text"))
 }
