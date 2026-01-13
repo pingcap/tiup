@@ -10,38 +10,22 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
-const (
-	tiflashHTTPPortBase        = 8123
-	tiflashStatusPortBase      = 8234
-	tiflashTCPPortBase         = 9100
-	tiflashServicePortBase     = 3930
-	tiflashProxyPortBase       = 20170
-	tiflashProxyStatusPortBase = 20292
-)
-
-const (
-	tiflashPortNameTCP         = "tcpPort"
-	tiflashPortNameService     = "servicePort"
-	tiflashPortNameProxy       = "proxyPort"
-	tiflashPortNameProxyStatus = "proxyStatusPort"
-)
-
 var tiflashPortSpecs = []PortSpec{
-	{Name: proc.PortNamePort, Base: tiflashHTTPPortBase},
-	{Name: proc.PortNameStatusPort, Base: tiflashStatusPortBase},
-	{Name: tiflashPortNameTCP, Base: tiflashTCPPortBase},
-	{Name: tiflashPortNameService, Base: tiflashServicePortBase},
-	{Name: tiflashPortNameProxy, Base: tiflashProxyPortBase},
-	{Name: tiflashPortNameProxyStatus, Base: tiflashProxyStatusPortBase},
+	{Name: proc.PortNamePort, Base: 8123},
+	{Name: proc.PortNameStatusPort, Base: 8234},
+	{Name: "tcp", Base: 9100},
+	{Name: "service", Base: 3930},
+	{Name: "proxy", Base: 20170},
+	{Name: "proxyStatus", Base: 20292},
 }
 
 func planTiFlashInstance(_ BootContext, _ proc.Config, plan *proc.ServicePlan) error {
 	ports := plan.Shared.Ports
 	for _, name := range []string{
-		tiflashPortNameService,
-		tiflashPortNameTCP,
-		tiflashPortNameProxy,
-		tiflashPortNameProxyStatus,
+		"service",
+		"tcp",
+		"proxy",
+		"proxyStatus",
 	} {
 		if ports[name] <= 0 {
 			return fmt.Errorf("missing planned port %q for tiflash", name)
@@ -50,10 +34,10 @@ func planTiFlashInstance(_ BootContext, _ proc.Config, plan *proc.ServicePlan) e
 
 	plan.ComponentID = proc.ComponentTiFlash.String()
 	plan.TiFlash = &proc.TiFlashPlan{
-		ServicePort:     ports[tiflashPortNameService],
-		TCPPort:         ports[tiflashPortNameTCP],
-		ProxyPort:       ports[tiflashPortNameProxy],
-		ProxyStatusPort: ports[tiflashPortNameProxyStatus],
+		ServicePort:     ports["service"],
+		TCPPort:         ports["tcp"],
+		ProxyPort:       ports["proxy"],
+		ProxyStatusPort: ports["proxyStatus"],
 	}
 	return nil
 }
@@ -258,10 +242,10 @@ func newTiFlashInstance(rt ControllerRuntime, serviceID proc.ServiceID, params N
 	}
 	httpPort := shared.Port
 	statusPort := shared.StatusPort
-	tcpPort := shared.Ports[tiflashPortNameTCP]
-	servicePort := shared.Ports[tiflashPortNameService]
-	proxyPort := shared.Ports[tiflashPortNameProxy]
-	proxyStatusPort := shared.Ports[tiflashPortNameProxyStatus]
+	tcpPort := shared.Ports["tcp"]
+	servicePort := shared.Ports["service"]
+	proxyPort := shared.Ports["proxy"]
+	proxyStatusPort := shared.Ports["proxyStatus"]
 	flash := &proc.TiFlashInstance{
 		ShOpt: shOpt,
 		Plan: proc.TiFlashPlan{

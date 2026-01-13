@@ -9,8 +9,7 @@ import (
 )
 
 const (
-	tikvPortBase       = 20160
-	tikvStatusPortBase = 20180
+	tikvPortBase = 20160
 
 	tikvWorkerPortBase = 19000
 )
@@ -26,7 +25,7 @@ func init() {
 			DefaultPort:     tikvPortBase,
 			Ports: []PortSpec{
 				{Name: proc.PortNamePort, Base: tikvPortBase, FromConfigPort: true},
-				{Name: proc.PortNameStatusPort, Base: tikvStatusPortBase},
+				{Name: proc.PortNameStatusPort, Base: 20180},
 			},
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,

@@ -63,7 +63,7 @@ func TestValidatePortSpecs(t *testing.T) {
 	t.Run("multiple FromConfigPort", func(t *testing.T) {
 		err := validatePortSpecs([]PortSpec{
 			{Name: proc.PortNamePort, Base: 1, FromConfigPort: true},
-			{Name: "servicePort", Base: 2, FromConfigPort: true},
+			{Name: "service", Base: 2, FromConfigPort: true},
 		})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "FromConfigPort")
@@ -214,8 +214,8 @@ func TestFillPlannedPorts(t *testing.T) {
 		specs := []PortSpec{
 			{Name: proc.PortNamePort, Base: 4000, FromConfigPort: true},
 			{Name: proc.PortNameStatusPort, Base: 10080, Host: "0.0.0.0"},
-			{Name: "servicePort", Base: 3930},
-			{Name: "aliasPort", AliasOf: "servicePort"},
+			{Name: "service", Base: 3930},
+			{Name: "alias", AliasOf: "service"},
 		}
 		require.NoError(t, FillPlannedPorts(alloc, cfg, &plan, specs))
 
@@ -224,8 +224,8 @@ func TestFillPlannedPorts(t *testing.T) {
 		require.Equal(t, map[string]int{
 			proc.PortNamePort:       5000,
 			proc.PortNameStatusPort: 10080,
-			"servicePort":           3930,
-			"aliasPort":             3930,
+			"service":               3930,
+			"alias":                 3930,
 		}, plan.Shared.Ports)
 		require.Equal(t, []string{"127.0.0.1", "0.0.0.0", "127.0.0.1"}, allocCalls)
 	})

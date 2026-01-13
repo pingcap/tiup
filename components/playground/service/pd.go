@@ -11,12 +11,11 @@ import (
 )
 
 const (
-	pdPeerPortBase   = 2380
 	pdStatusPortBase = 2379
 )
 
 var pdPortSpecs = []PortSpec{
-	{Name: proc.PortNamePort, Base: pdPeerPortBase},
+	{Name: proc.PortNamePort, Base: 2380},
 	{Name: proc.PortNameStatusPort, Base: pdStatusPortBase, FromConfigPort: true},
 }
 

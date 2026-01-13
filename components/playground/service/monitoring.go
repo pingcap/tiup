@@ -9,12 +9,6 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-const (
-	prometheusPortBase   = 9090
-	grafanaPortBase      = 3000
-	ngMonitoringPortBase = 12020
-)
-
 func stripNextGenVersionSuffix(version string) string {
 	return strings.TrimSuffix(version, "-"+utils.NextgenVersionAlias)
 }
@@ -28,7 +22,7 @@ func init() {
 			VersionBind:    stripNextGenVersionSuffix,
 			HideInProgress: true,
 			Ports: []PortSpec{
-				{Name: proc.PortNamePort, Base: prometheusPortBase, FromConfigPort: true},
+				{Name: proc.PortNamePort, Base: 9090, FromConfigPort: true},
 				{Name: proc.PortNameStatusPort, AliasOf: proc.PortNamePort},
 			},
 		},
@@ -70,7 +64,7 @@ func init() {
 			VersionBind:    stripNextGenVersionSuffix,
 			HideInProgress: true,
 			Ports: []PortSpec{
-				{Name: proc.PortNamePort, Base: grafanaPortBase, FromConfigPort: true},
+				{Name: proc.PortNamePort, Base: 3000, FromConfigPort: true},
 			},
 		},
 		StartAfter: []proc.ServiceID{
@@ -142,7 +136,7 @@ func init() {
 			VersionBind:    stripNextGenVersionSuffix,
 			HideInProgress: true,
 			Ports: []PortSpec{
-				{Name: proc.PortNamePort, Base: ngMonitoringPortBase, FromConfigPort: true},
+				{Name: proc.PortNamePort, Base: 12020, FromConfigPort: true},
 				{Name: proc.PortNameStatusPort, AliasOf: proc.PortNamePort},
 			},
 		},

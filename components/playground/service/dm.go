@@ -11,7 +11,6 @@ import (
 )
 
 const (
-	dmPeerPortBase   = 8291
 	dmStatusPortBase = 8261
 	dmWorkerPortBase = 8262
 )
@@ -26,7 +25,7 @@ func init() {
 			AllowModifyPort: true,
 			DefaultPort:     dmStatusPortBase,
 			Ports: []PortSpec{
-				{Name: proc.PortNamePort, Base: dmPeerPortBase},
+				{Name: proc.PortNamePort, Base: 8291},
 				{Name: proc.PortNameStatusPort, Base: dmStatusPortBase, FromConfigPort: true},
 			},
 			AllowModifyConfig:  true,

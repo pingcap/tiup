@@ -37,6 +37,12 @@ Fight entropy. Leave the codebase better than you found it.
 - **Centralize cross-module keys**: When data is exchanged via maps or loosely typed fields, define keys/constants once and reuse them everywhere; do not scatter magic strings.
 - **Validate early, fail early**: Prefer validating spec/schema declarations at registration/init time instead of letting invalid state surface deep in planning/execution.
 
+### Naming and Literals
+
+- **Avoid “single-use constants”**: Don’t extract a constant if it is used only once and does not carry real semantic meaning; prefer inlining to keep the local code readable.
+- **Keys should be semantic, not redundant**: When defining internal map keys, pick concise names that describe the concept; avoid redundant suffixes/prefixes implied by the container (e.g. avoid `*Port` when the map already represents ports).
+- **Only constantize stable contracts**: Use shared constants when a key becomes a cross-module contract or is used widely; otherwise, local string literals are often clearer than long, low-value constants.
+
 ### Testability
 
 - **Avoid over-abstraction for tests**: Prefer simple policy knobs/configuration to stabilize tests over introducing heavy test-only injection layers. Unit-test OS-dependent helpers separately.

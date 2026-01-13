@@ -5,8 +5,7 @@ import (
 )
 
 const (
-	ticdcPortBase   = 8300
-	tikvcdcPortBase = 8600
+	ticdcPortBase = 8300
 )
 
 func init() {
@@ -55,7 +54,7 @@ func init() {
 			AllowModifyBinPath: true,
 			AllowModifyVersion: true,
 			Ports: []PortSpec{
-				{Name: proc.PortNamePort, Base: tikvcdcPortBase},
+				{Name: proc.PortNamePort, Base: 8600},
 				{Name: proc.PortNameStatusPort, AliasOf: proc.PortNamePort},
 			},
 			DefaultNum:    func(_ BootContext) int { return 0 },

@@ -9,11 +9,6 @@ import (
 	"github.com/pingcap/tiup/components/playground/proc"
 )
 
-const (
-	pumpPortBase    = 8249
-	drainerPortBase = 8250
-)
-
 func init() {
 	MustRegister(Spec{
 		ServiceID: proc.ServicePump,
@@ -21,7 +16,7 @@ func init() {
 			FlagPrefix:     "pump",
 			AllowModifyNum: true,
 			Ports: []PortSpec{
-				{Name: proc.PortNamePort, Base: pumpPortBase},
+				{Name: proc.PortNamePort, Base: 8249},
 				{Name: proc.PortNameStatusPort, AliasOf: proc.PortNamePort},
 			},
 			AllowModifyConfig:  true,
@@ -55,7 +50,7 @@ func init() {
 			FlagPrefix:     "drainer",
 			AllowModifyNum: true,
 			Ports: []PortSpec{
-				{Name: proc.PortNamePort, Base: drainerPortBase},
+				{Name: proc.PortNamePort, Base: 8250},
 				{Name: proc.PortNameStatusPort, AliasOf: proc.PortNamePort},
 			},
 			AllowModifyConfig:  true,

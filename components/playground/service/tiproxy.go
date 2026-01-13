@@ -8,8 +8,6 @@ import (
 	"github.com/pingcap/tiup/components/playground/proc"
 )
 
-const tiproxyStatusPortBase = 3080
-
 func init() {
 	MustRegister(Spec{
 		ServiceID: proc.ServiceTiProxy,
@@ -21,7 +19,7 @@ func init() {
 			DefaultPort:     6000,
 			Ports: []PortSpec{
 				{Name: proc.PortNamePort, Base: 6000, FromConfigPort: true},
-				{Name: proc.PortNameStatusPort, Base: tiproxyStatusPortBase},
+				{Name: proc.PortNameStatusPort, Base: 3080},
 			},
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
