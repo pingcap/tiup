@@ -27,7 +27,7 @@ mkdir -p $TIUP_INSTANCE_DATA_DIR
 
 mkdir -p $TEST_DIR/cover
 
-function tiup-playground() {
+function tiup-playground-ng() {
 set +x
     # echo "in function"
     if [ -f "$TEST_DIR/bin/tiup-playground-ng.test" ]; then
