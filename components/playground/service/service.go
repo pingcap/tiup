@@ -373,6 +373,7 @@ func validatePortSpecs(specs []PortSpec) error {
 	}
 
 	seen := make(map[string]struct{}, len(specs))
+	fromConfigPort := ""
 	for i, ps := range specs {
 		name := strings.TrimSpace(ps.Name)
 		if name == "" {
@@ -413,6 +414,12 @@ func validatePortSpecs(specs []PortSpec) error {
 		}
 		if strings.TrimSpace(ps.Host) != ps.Host {
 			return fmt.Errorf("port %q host has leading/trailing spaces: %q", name, ps.Host)
+		}
+		if ps.FromConfigPort {
+			if fromConfigPort != "" {
+				return fmt.Errorf("ports %q and %q both set FromConfigPort", fromConfigPort, name)
+			}
+			fromConfigPort = name
 		}
 		seen[name] = struct{}{}
 	}

@@ -60,6 +60,15 @@ func TestValidatePortSpecs(t *testing.T) {
 		require.Contains(t, err.Error(), "FromConfigPort")
 	})
 
+	t.Run("multiple FromConfigPort", func(t *testing.T) {
+		err := validatePortSpecs([]PortSpec{
+			{Name: proc.PortNamePort, Base: 1, FromConfigPort: true},
+			{Name: "servicePort", Base: 2, FromConfigPort: true},
+		})
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "FromConfigPort")
+	})
+
 	t.Run("host with spaces", func(t *testing.T) {
 		err := validatePortSpecs([]PortSpec{
 			{Name: proc.PortNamePort, Base: 1, Host: " 0.0.0.0"},
