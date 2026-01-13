@@ -59,17 +59,17 @@ func init() {
 				enableBinlog = true
 			}
 
-			tikvWorkerURL := ""
-			if ws := byService[proc.ServiceTiKVWorker]; len(ws) > 0 {
-				host := advertise(ws[0].Shared.Host)
-				tikvWorkerURL = fmt.Sprintf("http://%s", utils.JoinHostPort(host, ws[0].Shared.Port))
+			ws := byService[proc.ServiceTiKVWorker]
+			tikvWorkerURLs := make([]string, 0, len(ws))
+			for _, ws := range ws {
+				tikvWorkerURLs = append(tikvWorkerURLs, utils.JoinHostPort(advertise(ws.Shared.Host), ws.Shared.Port))
 			}
 
 			for _, sp := range plans {
 				sp.TiDB = &proc.TiDBPlan{
-					PDAddrs:       pdBackendAddrs,
-					EnableBinlog:  enableBinlog,
-					TiKVWorkerURL: tikvWorkerURL,
+					PDAddrs:        pdBackendAddrs,
+					EnableBinlog:   enableBinlog,
+					TiKVWorkerURLs: tikvWorkerURLs,
 				}
 			}
 			return nil
@@ -156,17 +156,18 @@ func newTiDBInstance(rt ControllerRuntime, serviceID proc.ServiceID, params NewP
 		}
 	}
 
-	tikvWorkerURL := ""
-	if serviceID == proc.ServiceTiDBSystem {
+	var tikvWorkerURLs []string
+	if serviceID == proc.ServiceTiDBSystem || rt.SharedOptions().Mode == proc.ModeCSE {
 		kvwrks := ProcsOf[*proc.TiKVWorkerInstance](rt, proc.ServiceTiKVWorker)
-		if len(kvwrks) > 0 && kvwrks[0] != nil {
-			tikvWorkerURL = fmt.Sprintf("http://%s", utils.JoinHostPort(proc.AdvertiseHost(kvwrks[0].Host), kvwrks[0].Port))
+		tikvWorkerURLs := make([]string, 0, len(kvwrks))
+		for _, kvwrk := range kvwrks {
+			tikvWorkerURLs = append(tikvWorkerURLs, utils.JoinHostPort(proc.AdvertiseHost(kvwrk.Host), kvwrk.Port))
 		}
 	}
 
 	tdb := &proc.TiDBInstance{
 		ShOpt:          shOpt,
-		Plan:           proc.TiDBPlan{PDAddrs: pdAddrs, EnableBinlog: enableBinlog(rt), TiKVWorkerURL: tikvWorkerURL},
+		Plan:           proc.TiDBPlan{PDAddrs: pdAddrs, EnableBinlog: enableBinlog(rt), TiKVWorkerURLs: tikvWorkerURLs},
 		TiProxyCertDir: rt.DataDir(),
 		ProcessInfo: proc.ProcessInfo{
 			UserBinPath:     params.Config.BinPath,

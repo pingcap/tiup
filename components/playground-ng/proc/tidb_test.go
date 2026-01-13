@@ -22,9 +22,9 @@ func TestTiDBInstancePrepare_PropagatesEndpointsAndBinlogFlag(t *testing.T) {
 			Service:    ServiceTiDB,
 		},
 		Plan: TiDBPlan{
-			PDAddrs:       []string{"127.0.0.1:2379"},
-			EnableBinlog:  true,
-			TiKVWorkerURL: "",
+			PDAddrs:        []string{"127.0.0.1:2379"},
+			EnableBinlog:   true,
+			TiKVWorkerURLs: []string{},
 		},
 		TiProxyCertDir: dir,
 	}

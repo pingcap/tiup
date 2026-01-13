@@ -60,8 +60,7 @@ type TiDBPlan struct {
 
 	EnableBinlog bool
 
-	// TiKVWorkerURL is only used by tidb-system in NextGen mode.
-	TiKVWorkerURL string // http://host:port
+	TiKVWorkerURLs []string // host:port
 }
 
 // TiDBInstance represent a running tidb-server

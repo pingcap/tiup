@@ -100,7 +100,7 @@ func TestBuildBootPlan_DefaultNightly_NoLocalComponents(t *testing.T) {
 	require.NotNil(t, plan.Services[2].TiDB)
 	require.Equal(t, []string{"127.0.0.1:2379"}, plan.Services[2].TiDB.PDAddrs)
 	require.False(t, plan.Services[2].TiDB.EnableBinlog)
-	require.Equal(t, "", plan.Services[2].TiDB.TiKVWorkerURL)
+	require.Equal(t, 0, len(plan.Services[2].TiDB.TiKVWorkerURLs))
 
 	// ng-monitoring-0
 	require.Equal(t, "ng-monitoring-0", plan.Services[3].Name)

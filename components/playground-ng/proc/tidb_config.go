@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func (inst *TiDBInstance) getConfig() (map[string]any, error) {
@@ -54,6 +55,13 @@ func (inst *TiDBInstance) getConfig() (map[string]any, error) {
 		config["tiflash-replicas.group-id"] = "enable_s3_wn_region"
 		config["tiflash-replicas.extra-s3-rule"] = false
 		config["tiflash-replicas.min-count"] = 1
+		if len(inst.Plan.TiKVWorkerURLs) != 0 {
+			config["tiflash-server-addr"] = strings.Join(inst.Plan.TiKVWorkerURLs, ",")
+		}
+		config["force-enable-fulltext-index"] = true
+		if inst.ShOpt.EnableTiKVColumnar {
+			config["cse.columnar-store-type"] = "columnar"
+		}
 	case ModeDisAgg:
 		config["use-autoscaler"] = false
 		config["disaggregated-tiflash"] = true
@@ -64,10 +72,10 @@ func (inst *TiDBInstance) getConfig() (map[string]any, error) {
 		config["disaggregated-tiflash"] = true
 		if inst.Service == ServiceTiDBSystem {
 			config["instance.tidb_service_scope"] = "dxf_service"
-			if inst.Plan.TiKVWorkerURL == "" {
+			if len(inst.Plan.TiKVWorkerURLs) == 0 {
 				return nil, fmt.Errorf("tidb-system requires tikv-worker-url")
 			}
-			config["tikv-worker-url"] = inst.Plan.TiKVWorkerURL
+			config["tikv-worker-url"] = strings.Join(inst.Plan.TiKVWorkerURLs, ",")
 			config["keyspace-name"] = "SYSTEM"
 		} else {
 			config["keyspace-name"] = "keyspace1"
