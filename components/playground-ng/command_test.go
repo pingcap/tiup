@@ -209,6 +209,25 @@ func TestTargetTag_ExplicitProbeUnexpectedResponseIsUnreachable(t *testing.T) {
 	require.Contains(t, err.Error(), "probe playground")
 }
 
+func TestTargetTag_ExplicitConnRefusedIsNotRunning(t *testing.T) {
+	base := t.TempDir()
+
+	dir := filepath.Join(base, "refused")
+	require.NoError(t, os.MkdirAll(dir, 0o755))
+
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	port := ln.Addr().(*net.TCPAddr).Port
+	require.NoError(t, ln.Close())
+	require.NoError(t, dumpPort(filepath.Join(dir, "port"), port))
+
+	_, err = resolvePlaygroundTarget("refused", "", dir)
+	require.Error(t, err)
+	var notRunning playgroundNotRunningError
+	require.ErrorAs(t, err, &notRunning)
+	require.True(t, shouldSuggestPlaygroundNotRunning(err))
+}
+
 func TestTargetTag_ExplicitMissingTagIsNotRunning(t *testing.T) {
 	base := t.TempDir()
 

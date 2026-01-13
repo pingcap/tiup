@@ -180,8 +180,6 @@ func resolvePlaygroundTarget(explicitTag, tiupDataDir, dataDir string) (playgrou
 			tag = filepath.Base(dataDir)
 		}
 		switch {
-		case probeErr == nil:
-			return playgroundTarget{}, playgroundNotRunningError{err: errors.Errorf("no playground running for tag %q", tag)}
 		case isTimeoutErr(probeErr):
 			return playgroundTarget{}, playgroundUnreachableError{err: errors.Annotatef(probeErr, "probe playground %q command server timed out (port=%d)", tag, port)}
 		case stdErrors.Is(probeErr, syscall.ECONNREFUSED):
