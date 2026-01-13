@@ -241,6 +241,8 @@ tiflash_servers:
     flash_proxy_status_port: 20292
     # # Prometheus pulls the TiFlash metrics port.
     metrics_port: 8234
+    # # TiCI Reader service port.
+    tici_reader_node_port: 8520
     # # TiFlash Server deployment file, startup script, configuration file storage directory.
     deploy_dir: /data1/tidb-deploy/tiflash-9000
     ## With cluster version >= v4.0.9 and you want to deploy a multi-disk TiFlash node, it is recommended to
@@ -264,6 +266,7 @@ tiflash_servers:
     flash_proxy_port: 20171
     flash_proxy_status_port: 20293
     metrics_port: 8235
+    tici_reader_node_port: 8521
     deploy_dir: /data2/tidb-deploy/tiflash-9001
     data_dir: /data2/tidb-data/tiflash-9001
     log_dir: /data2/tidb-deploy/tiflash-9001/log
@@ -276,6 +279,7 @@ tiflash_servers:
     flash_proxy_port: 20170
     flash_proxy_status_port: 20292
     metrics_port: 8234
+    tici_reader_node_port: 8520
     deploy_dir: /data1/tidb-deploy/tiflash-9000
     data_dir: /data1/tidb-data/tiflash-9000
     log_dir: /data1/tidb-deploy/tiflash-9000/log
@@ -288,26 +292,12 @@ tiflash_servers:
     flash_proxy_port: 20171
     flash_proxy_status_port: 20293
     metrics_port: 8235
+    tici_reader_node_port: 8521
     deploy_dir: /data2/tidb-deploy/tiflash-9001
     data_dir: /data2/tidb-data/tiflash-9001
     log_dir: /data2/tidb-deploy/tiflash-9001/log
     # config:
       # logger.level: info
-
-# # Server configs are used to specify the configuration of TiKV-CDC Servers.
-# kvcdc_servers:
-  # - host: 10.0.1.20
-    # # SSH port of the server.
-    # ssh_port: 22
-    # # TiKV-CDC Server communication port.
-    # port: 8600
-    # # TiKV-CDC Server data storage directory.
-    # data_dir: "/data1/tidb-data/tikv-cdc-8600"
-    # # TiKV-CDC Server log file storage directory.
-    # log_dir: "/data1/tidb-deploy/tikv-cdc-8600/log"
-  # - host: 10.0.1.21
-    # data_dir: "/data1/tidb-data/tikv-cdc-8600"
-    # log_dir: "/data1/tidb-deploy/tikv-cdc-8600/log"
 
 # # Server configs are used to specify the configuration of TiCDC Servers.  
 cdc_servers:

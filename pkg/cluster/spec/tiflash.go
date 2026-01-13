@@ -542,8 +542,7 @@ func (i *TiFlashInstance) initTiFlashConfig(ctx context.Context, version string,
 	var ticiConfig string
 	if version == utils.FTSVersionAlias {
 		ticiConfig = fmt.Sprintf(
-			`
-	tici.reader-node.addr: "%s"
+			`tici.reader-node.addr: "%s"
     tici.reader-node.advertise-addr: "%s"
 `,
 			utils.JoinHostPort("0.0.0.0", spec.TiCIReaderNodePort),
