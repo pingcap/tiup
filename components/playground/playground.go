@@ -845,7 +845,8 @@ func (p *Playground) addInstance(componentID string, role string, cfg instance.C
 	case spec.ComponentPD:
 		inst := instance.NewPDInstance(role, p.bootOptions.ShOpt, cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, cfg.Port, p.bootOptions.TiKV.Num == 1)
 		ins = inst
-		if role == instance.PDRoleNormal || role == instance.PDRoleAPI {
+		switch role {
+		case instance.PDRoleNormal, instance.PDRoleAPI:
 			if p.booted {
 				inst.Join(p.pds)
 				p.pds = append(p.pds, inst)
@@ -855,13 +856,13 @@ func (p *Playground) addInstance(componentID string, role string, cfg instance.C
 					pd.InitCluster(p.pds)
 				}
 			}
-		} else if role == instance.PDRoleTSO {
+		case instance.PDRoleTSO:
 			p.tsos = append(p.tsos, inst)
-		} else if role == instance.PDRoleScheduling {
+		case instance.PDRoleScheduling:
 			p.schedulings = append(p.schedulings, inst)
-		} else if role == instance.PDRoleRouter {
+		case instance.PDRoleRouter:
 			p.routers = append(p.routers, inst)
-		} else if role == instance.PDRoleResourceManager {
+		case instance.PDRoleResourceManager:
 			p.resourceManagers = append(p.resourceManagers, inst)
 		}
 	case spec.ComponentTSO:
@@ -1170,7 +1171,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 		// Currently we always assign region=local. Other regions are not supported.
 		if strings.Contains(rawEndpoint, "amazonaws.com") {
-			return fmt.Errorf("Currently TiUP playground only supports local S3 (like minio). S3 on AWS Regions are not supported. Contributions are welcome!")
+			return fmt.Errorf("tiup playground only supports local S3 (like minio); S3 on AWS regions is not supported (contributions are welcome)")
 		}
 
 		// Preflight check whether specified object storage is available.
@@ -1206,9 +1207,10 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 	// add pd
 	var instances []InstancePair
-	if options.ShOpt.PDMode == "pd" {
+	switch options.ShOpt.PDMode {
+	case "pd":
 		instances = append(instances, InstancePair{spec.ComponentPD, instance.PDRoleNormal, options.PD})
-	} else if options.ShOpt.PDMode == "ms" {
+	case "ms":
 		if !tidbver.PDSupportMicroservices(options.Version) {
 			return fmt.Errorf("PD cluster doesn't support microservices mode in version %s", options.Version)
 		}
@@ -1254,11 +1256,12 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		InstancePair{spec.ComponentDMWorker, "", options.DMWorker},
 	)
 
-	if options.ShOpt.Mode == instance.ModeNormal {
+	switch options.ShOpt.Mode {
+	case instance.ModeNormal:
 		instances = append(instances,
 			InstancePair{spec.ComponentTiFlash, instance.TiFlashRoleNormal, options.TiFlash},
 		)
-	} else if options.ShOpt.Mode == instance.ModeCSE || options.ShOpt.Mode == instance.ModeNextGen || options.ShOpt.Mode == instance.ModeDisAgg {
+	case instance.ModeCSE, instance.ModeNextGen, instance.ModeDisAgg:
 		if utils.Version(options.Version).IsValid() && !tidbver.TiFlashPlaygroundNewStartMode(options.Version) {
 			// For simplicity, currently we only implemented disagg mode when TiFlash can run without config.
 			return fmt.Errorf("TiUP playground only supports CSE/Disagg mode for TiDB cluster >= v7.1.0 (or nightly)")

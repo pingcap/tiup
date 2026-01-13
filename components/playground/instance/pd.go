@@ -107,11 +107,12 @@ func (inst *PDInstance) Name() string {
 // Start calls set inst.cmd and Start
 func (inst *PDInstance) Start(ctx context.Context) error {
 	var configFile string
-	if inst.role == PDRoleNormal || inst.role == PDRoleAPI {
+	switch inst.role {
+	case PDRoleNormal, PDRoleAPI:
 		configFile = "pd.toml"
-	} else if inst.role == PDRoleResourceManager {
+	case PDRoleResourceManager:
 		configFile = "resource_manager.toml"
-	} else {
+	default:
 		configFile = fmt.Sprintf("%s.toml", inst.role)
 	}
 	configPath := filepath.Join(inst.Dir, configFile)
