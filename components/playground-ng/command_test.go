@@ -149,6 +149,66 @@ func TestTargetTag_StalePortIsFiltered(t *testing.T) {
 	require.Equal(t, port, target.port)
 }
 
+func TestTargetTag_ExplicitProbeTimeoutIsUnreachable(t *testing.T) {
+	base := t.TempDir()
+
+	dir := filepath.Join(base, "slow")
+	require.NoError(t, os.MkdirAll(dir, 0o755))
+
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/command" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		time.Sleep(time.Second)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		_ = json.NewEncoder(w).Encode(CommandReply{OK: false, Error: "method not allowed"})
+	}))
+	defer s.Close()
+	u, err := url.Parse(s.URL)
+	require.NoError(t, err)
+	port, err := strconv.Atoi(u.Port())
+	require.NoError(t, err)
+	require.NoError(t, dumpPort(filepath.Join(dir, "port"), port))
+
+	_, err = resolvePlaygroundTarget("slow", "", dir)
+	require.Error(t, err)
+	var unreachable playgroundUnreachableError
+	require.ErrorAs(t, err, &unreachable)
+	require.False(t, shouldSuggestPlaygroundNotRunning(err))
+	require.Contains(t, err.Error(), "timed out")
+}
+
+func TestTargetTag_ExplicitProbeUnexpectedResponseIsUnreachable(t *testing.T) {
+	base := t.TempDir()
+
+	dir := filepath.Join(base, "invalid")
+	require.NoError(t, os.MkdirAll(dir, 0o755))
+
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/command" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	}))
+	defer s.Close()
+	u, err := url.Parse(s.URL)
+	require.NoError(t, err)
+	port, err := strconv.Atoi(u.Port())
+	require.NoError(t, err)
+	require.NoError(t, dumpPort(filepath.Join(dir, "port"), port))
+
+	_, err = resolvePlaygroundTarget("invalid", "", dir)
+	require.Error(t, err)
+	var unreachable playgroundUnreachableError
+	require.ErrorAs(t, err, &unreachable)
+	require.False(t, shouldSuggestPlaygroundNotRunning(err))
+	require.Contains(t, err.Error(), "probe playground")
+}
+
 func TestTargetTag_ExplicitMissingTagIsNotRunning(t *testing.T) {
 	base := t.TempDir()
 
