@@ -2,9 +2,10 @@ package main
 
 import (
 	"errors"
-	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestProcessGroupWait_BlocksUntilClose(t *testing.T) {
@@ -15,7 +16,7 @@ func TestProcessGroupWait_BlocksUntilClose(t *testing.T) {
 
 	select {
 	case err := <-doneCh:
-		t.Fatalf("Wait returned early: %v", err)
+		require.FailNow(t, "Wait returned early", "err=%v", err)
 	case <-time.After(100 * time.Millisecond):
 	}
 
@@ -23,11 +24,9 @@ func TestProcessGroupWait_BlocksUntilClose(t *testing.T) {
 
 	select {
 	case err := <-doneCh:
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
+		require.NoError(t, err)
 	case <-time.After(time.Second):
-		t.Fatalf("Wait did not return after Close")
+		require.FailNow(t, "Wait did not return after Close")
 	}
 }
 
@@ -35,12 +34,11 @@ func TestProcessGroupWait_WaitsForTasks(t *testing.T) {
 	g := NewProcessGroup()
 
 	blockCh := make(chan struct{})
-	if err := g.Add("block", func() error {
+	err := g.Add("block", func() error {
 		<-blockCh
 		return nil
-	}); err != nil {
-		t.Fatalf("Add: %v", err)
-	}
+	})
+	require.NoError(t, err)
 
 	doneCh := make(chan error, 1)
 	go func() { doneCh <- g.Wait() }()
@@ -49,7 +47,7 @@ func TestProcessGroupWait_WaitsForTasks(t *testing.T) {
 
 	select {
 	case <-doneCh:
-		t.Fatalf("Wait returned before task completed")
+		require.FailNow(t, "Wait returned before task completed")
 	case <-time.After(100 * time.Millisecond):
 	}
 
@@ -57,42 +55,32 @@ func TestProcessGroupWait_WaitsForTasks(t *testing.T) {
 
 	select {
 	case err := <-doneCh:
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
+		require.NoError(t, err)
 	case <-time.After(time.Second):
-		t.Fatalf("Wait did not return after task completed")
+		require.FailNow(t, "Wait did not return after task completed")
 	}
 }
 
 func TestProcessGroupAdd_AfterCloseRejected(t *testing.T) {
 	g := NewProcessGroup()
 	g.Close()
-	if err := g.Add("x", func() error { return nil }); !errors.Is(err, errProcessGroupClosed) {
-		t.Fatalf("expected errProcessGroupClosed, got %v", err)
-	}
+	require.ErrorIs(t, g.Add("x", func() error { return nil }), errProcessGroupClosed)
 }
 
 func TestProcessGroupAdd_NilWaitFuncRejected(t *testing.T) {
 	g := NewProcessGroup()
-	if err := g.Add("x", nil); err == nil {
-		t.Fatalf("expected error")
-	}
+	require.Error(t, g.Add("x", nil))
 }
 
 func TestProcessGroupWait_ReturnsFirstError(t *testing.T) {
 	g := NewProcessGroup()
 
 	blockCh := make(chan struct{})
-	if err := g.Add("first", func() error { return errors.New("boom") }); err != nil {
-		t.Fatalf("Add first: %v", err)
-	}
-	if err := g.Add("second", func() error {
+	require.NoError(t, g.Add("first", func() error { return errors.New("boom") }))
+	require.NoError(t, g.Add("second", func() error {
 		<-blockCh
 		return errors.New("late")
-	}); err != nil {
-		t.Fatalf("Add second: %v", err)
-	}
+	}))
 
 	deadline := time.Now().Add(time.Second)
 	for {
@@ -103,7 +91,7 @@ func TestProcessGroupWait_ReturnsFirstError(t *testing.T) {
 			break
 		}
 		if time.Now().After(deadline) {
-			t.Fatalf("timeout waiting for firstErr to be set")
+			require.FailNow(t, "timeout waiting for firstErr to be set")
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
@@ -116,13 +104,10 @@ func TestProcessGroupWait_ReturnsFirstError(t *testing.T) {
 
 	select {
 	case err := <-doneCh:
-		if err == nil {
-			t.Fatalf("expected error")
-		}
-		if !strings.Contains(err.Error(), "first:") || !strings.Contains(err.Error(), "boom") {
-			t.Fatalf("unexpected error: %v", err)
-		}
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "first:")
+		require.Contains(t, err.Error(), "boom")
 	case <-time.After(time.Second):
-		t.Fatalf("Wait did not return")
+		require.FailNow(t, "Wait did not return")
 	}
 }

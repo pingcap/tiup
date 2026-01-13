@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	tuiv2output "github.com/pingcap/tiup/pkg/tuiv2/output"
+	"github.com/stretchr/testify/require"
 )
 
 func TestClusterInfoBasicRows(t *testing.T) {
@@ -13,16 +14,9 @@ func TestClusterInfoBasicRows(t *testing.T) {
 	pg.bootOptions = &BootOptions{Version: "v7.5.0"}
 
 	rows := pg.clusterInfoBasicRows()
-	if len(rows) < 2 {
-		t.Fatalf("expected at least 2 rows, got %d", len(rows))
-	}
-
-	if rows[0][0] != "Version:" || rows[0][1] != "v7.5.0" {
-		t.Fatalf("unexpected version row: %v", rows[0])
-	}
-	if rows[1][0] != "Data dir:" || rows[1][1] != "/tmp/tiup-playground-test" {
-		t.Fatalf("unexpected data dir row: %v", rows[1])
-	}
+	require.GreaterOrEqual(t, len(rows), 2)
+	require.Equal(t, [2]string{"Version:", "v7.5.0"}, rows[0])
+	require.Equal(t, [2]string{"Data dir:", "/tmp/tiup-playground-test"}, rows[1])
 }
 
 func TestClusterInfoBasicRows_DataDirHintWhenDeleteAfterExit(t *testing.T) {
@@ -31,18 +25,10 @@ func TestClusterInfoBasicRows_DataDirHintWhenDeleteAfterExit(t *testing.T) {
 	pg.deleteWhenExit = true
 
 	rows := pg.clusterInfoBasicRows()
-	if len(rows) < 2 {
-		t.Fatalf("expected at least 2 rows, got %d", len(rows))
-	}
-	if rows[1][0] != "Data dir:" {
-		t.Fatalf("unexpected data dir label: %v", rows[1])
-	}
-	if !strings.Contains(rows[1][1], "/tmp/tiup-playground-test") {
-		t.Fatalf("unexpected data dir value: %q", rows[1][1])
-	}
-	if !strings.Contains(rows[1][1], "Destroy after exit") {
-		t.Fatalf("expected destroy hint in data dir value: %q", rows[1][1])
-	}
+	require.GreaterOrEqual(t, len(rows), 2)
+	require.Equal(t, "Data dir:", rows[1][0])
+	require.Contains(t, rows[1][1], "/tmp/tiup-playground-test")
+	require.Contains(t, rows[1][1], "Destroy after exit")
 }
 
 func TestClusterInfoCalloutRows_AlignedWithSeparatorRow(t *testing.T) {
@@ -56,13 +42,9 @@ func TestClusterInfoCalloutRows_AlignedWithSeparatorRow(t *testing.T) {
 		[]string{"127.0.0.1:4000"},
 		nil,
 	)
-	if len(rows) < 6 {
-		t.Fatalf("expected at least 6 rows, got %d", len(rows))
-	}
+	require.GreaterOrEqual(t, len(rows), 6)
 
-	if rows[2] != [2]string{"", ""} {
-		t.Fatalf("expected empty separator row at index 2, got %v", rows[2])
-	}
+	require.Equal(t, [2]string{"", ""}, rows[2])
 
 	lines := tuiv2output.Labels{Rows: rows}.Lines(io.Discard)
 	var versionLine, connectLine string
@@ -74,16 +56,12 @@ func TestClusterInfoCalloutRows_AlignedWithSeparatorRow(t *testing.T) {
 			connectLine = line
 		}
 	}
-	if versionLine == "" || connectLine == "" {
-		t.Fatalf("missing version/connect lines: %q / %q", versionLine, connectLine)
-	}
+	require.NotEmpty(t, versionLine)
+	require.NotEmpty(t, connectLine)
 
 	idxVer := strings.Index(versionLine, "v7.5.0")
 	idxMySQL := strings.Index(connectLine, "mysql")
-	if idxVer < 0 || idxMySQL < 0 {
-		t.Fatalf("expected values not found:\n%s\n%s", versionLine, connectLine)
-	}
-	if idxVer != idxMySQL {
-		t.Fatalf("value columns not aligned: version=%d mysql=%d\n%s\n%s", idxVer, idxMySQL, versionLine, connectLine)
-	}
+	require.NotEqual(t, -1, idxVer, "expected values not found:\n%s\n%s", versionLine, connectLine)
+	require.NotEqual(t, -1, idxMySQL, "expected values not found:\n%s\n%s", versionLine, connectLine)
+	require.Equal(t, idxVer, idxMySQL, "value columns not aligned:\n%s\n%s", versionLine, connectLine)
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/pingcap/tiup/components/playground/proc"
 	"github.com/pingcap/tiup/pkg/utils"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAddPlannedProcInController_UsesPlanSharedOptions(t *testing.T) {
@@ -33,23 +34,13 @@ func TestAddPlannedProcInController_UsesPlanSharedOptions(t *testing.T) {
 	}
 
 	inst, err := pg.addPlannedProcInController(state, plan, "/bin/tidb", utils.Version("v0.0.0"), shared, plannedDir)
-	if err != nil {
-		t.Fatalf("addPlannedProcInController: %v", err)
-	}
+	require.NoError(t, err)
 
 	tdb, ok := inst.(*proc.TiDBInstance)
-	if !ok {
-		t.Fatalf("unexpected instance type: %T", inst)
-	}
-	if tdb.ShOpt != shared {
-		t.Fatalf("unexpected ShOpt: %+v", tdb.ShOpt)
-	}
-	if tdb.TiProxyCertDir != plannedDir {
-		t.Fatalf("unexpected TiProxyCertDir: %q", tdb.TiProxyCertDir)
-	}
-	if tdb.Dir != filepath.Join(plannedDir, "tidb-0") {
-		t.Fatalf("unexpected instance dir: %q", tdb.Dir)
-	}
+	require.True(t, ok, "unexpected instance type: %T", inst)
+	require.Equal(t, shared, tdb.ShOpt)
+	require.Equal(t, plannedDir, tdb.TiProxyCertDir)
+	require.Equal(t, filepath.Join(plannedDir, "tidb-0"), tdb.Dir)
 }
 
 func TestAddPlannedProcInController_CreatesTiProxy(t *testing.T) {
@@ -72,26 +63,16 @@ func TestAddPlannedProcInController_CreatesTiProxy(t *testing.T) {
 	}
 
 	inst, err := pg.addPlannedProcInController(state, plan, "/bin/tiproxy", utils.Version("v0.0.0"), proc.SharedOptions{Mode: proc.ModeNormal, PDMode: "pd"}, plannedDir)
-	if err != nil {
-		t.Fatalf("addPlannedProcInController: %v", err)
-	}
+	require.NoError(t, err)
 
 	tp, ok := inst.(*proc.TiProxyInstance)
-	if !ok {
-		t.Fatalf("unexpected instance type: %T", inst)
-	}
-	if got := tp.Plan.PDAddrs; len(got) != 1 || got[0] != "127.0.0.1:2379" {
-		t.Fatalf("unexpected PDAddrs: %v", got)
-	}
-	if tp.Dir != filepath.Join(plannedDir, "tiproxy-0") {
-		t.Fatalf("unexpected instance dir: %q", tp.Dir)
-	}
+	require.True(t, ok, "unexpected instance type: %T", inst)
+	require.Equal(t, []string{"127.0.0.1:2379"}, tp.Plan.PDAddrs)
+	require.Equal(t, filepath.Join(plannedDir, "tiproxy-0"), tp.Dir)
 }
 
 func TestPlaygroundVersionConstraintForService_NoImplicitDefault(t *testing.T) {
 	pg := &Playground{bootOptions: &BootOptions{}}
 	got := pg.versionConstraintForService(proc.ServiceTiProxy, "")
-	if got != "" {
-		t.Fatalf("unexpected version constraint: %q", got)
-	}
+	require.Equal(t, "", got)
 }

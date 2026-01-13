@@ -8,6 +8,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTTYTaskMetaAlignmentForCanceledTasks(t *testing.T) {
@@ -23,24 +24,19 @@ func TestTTYTaskMetaAlignmentForCanceledTasks(t *testing.T) {
 		spinner: "⠦",
 	}
 	lines := ttyGroupComponent{group: g}.Lines(ctx, 1_000_000)
-	if len(lines) < 3 {
-		t.Fatalf("expected at least 3 lines (header + 2 tasks), got %d", len(lines))
-	}
+	require.GreaterOrEqual(t, len(lines), 3, "expected at least 3 lines (header + 2 tasks)")
 
 	lineLong := ansi.Strip(lines[1])
 	lineShort := ansi.Strip(lines[2])
 
 	idxLong := strings.Index(lineLong, "meta-long")
 	idxShort := strings.Index(lineShort, "meta-short")
-	if idxLong < 0 || idxShort < 0 {
-		t.Fatalf("meta strings not found:\n%s\n%s", lineLong, lineShort)
-	}
+	require.NotEqual(t, -1, idxLong, "meta strings not found:\n%s\n%s", lineLong, lineShort)
+	require.NotEqual(t, -1, idxShort, "meta strings not found:\n%s\n%s", lineLong, lineShort)
 
 	posLong := lipgloss.Width(lineLong[:idxLong])
 	posShort := lipgloss.Width(lineShort[:idxShort])
-	if posLong != posShort {
-		t.Fatalf("meta columns not aligned: long=%d short=%d\n%s\n%s", posLong, posShort, lineLong, lineShort)
-	}
+	require.Equal(t, posLong, posShort, "meta columns not aligned:\n%s\n%s", lineLong, lineShort)
 }
 
 func TestTTYTaskHideIfFast(t *testing.T) {
@@ -61,12 +57,8 @@ func TestTTYTaskHideIfFast(t *testing.T) {
 
 		lines := ttyGroupComponent{group: g}.Lines(ctx, 1_000_000)
 		got := ansi.Strip(strings.Join(lines, "\n"))
-		if strings.Contains(got, "Grafana") {
-			t.Fatalf("expected Grafana to be hidden, got:\n%s", got)
-		}
-		if !strings.Contains(got, "PD") {
-			t.Fatalf("expected PD to be visible, got:\n%s", got)
-		}
+		require.NotContains(t, got, "Grafana")
+		require.Contains(t, got, "PD")
 	})
 
 	t.Run("show-error", func(t *testing.T) {
@@ -78,9 +70,7 @@ func TestTTYTaskHideIfFast(t *testing.T) {
 
 		lines := ttyGroupComponent{group: g}.Lines(ctx, 1_000_000)
 		got := ansi.Strip(strings.Join(lines, "\n"))
-		if !strings.Contains(got, "Grafana") {
-			t.Fatalf("expected Grafana error to be visible, got:\n%s", got)
-		}
+		require.Contains(t, got, "Grafana")
 	})
 
 	t.Run("reveal-running-only-when-slow", func(t *testing.T) {
@@ -91,15 +81,11 @@ func TestTTYTaskHideIfFast(t *testing.T) {
 
 		lines := ttyGroupComponent{group: g}.Lines(ctx, 1_000_000)
 		got := ansi.Strip(strings.Join(lines, "\n"))
-		if strings.Contains(got, "Grafana") {
-			t.Fatalf("expected Grafana to be hidden before revealAfter, got:\n%s", got)
-		}
+		require.NotContains(t, got, "Grafana")
 
 		g.tasks[0].revealAfter = 1 * time.Second
 		lines = ttyGroupComponent{group: g}.Lines(ctx, 1_000_000)
 		got = ansi.Strip(strings.Join(lines, "\n"))
-		if !strings.Contains(got, "Grafana") {
-			t.Fatalf("expected Grafana to be visible after revealAfter, got:\n%s", got)
-		}
+		require.Contains(t, got, "Grafana")
 	})
 }

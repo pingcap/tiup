@@ -4,15 +4,15 @@ import (
 	"io"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestUIBlankLine_TTYWritesSingleNewlineWhenNoBufferedText(t *testing.T) {
 	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatalf("pipe: %v", err)
-	}
-	defer func() { _ = r.Close() }()
-	defer func() { _ = w.Close() }()
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = r.Close() })
+	t.Cleanup(func() { _ = w.Close() })
 
 	ui := &UI{out: w, mode: ModeTTY}
 	uw := &uiWriter{ui: ui}
@@ -22,43 +22,31 @@ func TestUIBlankLine_TTYWritesSingleNewlineWhenNoBufferedText(t *testing.T) {
 
 	_ = w.Close()
 	got, err := io.ReadAll(r)
-	if err != nil {
-		t.Fatalf("read: %v", err)
-	}
+	require.NoError(t, err)
 
-	if string(got) != "\n" {
-		t.Fatalf("unexpected output:\n%q", string(got))
-	}
+	require.Equal(t, "\n", string(got))
 }
 
 func TestUIBlankLine_TTYFlushesBufferedTextThenWritesBlankLine(t *testing.T) {
 	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatalf("pipe: %v", err)
-	}
-	defer func() { _ = r.Close() }()
-	defer func() { _ = w.Close() }()
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = r.Close() })
+	t.Cleanup(func() { _ = w.Close() })
 
 	ui := &UI{out: w, mode: ModeTTY}
 	uw := &uiWriter{ui: ui}
 	ui.writer = uw
 
-	if _, err := io.WriteString(ui.Writer(), "hello"); err != nil {
-		t.Fatalf("write: %v", err)
-	}
+	_, err = io.WriteString(ui.Writer(), "hello")
+	require.NoError(t, err)
 	ui.BlankLine()
-	if _, err := io.WriteString(ui.Writer(), "next\n"); err != nil {
-		t.Fatalf("write: %v", err)
-	}
+	_, err = io.WriteString(ui.Writer(), "next\n")
+	require.NoError(t, err)
 
 	_ = w.Close()
 	got, err := io.ReadAll(r)
-	if err != nil {
-		t.Fatalf("read: %v", err)
-	}
+	require.NoError(t, err)
 
 	want := "hello\n\nnext\n"
-	if string(got) != want {
-		t.Fatalf("unexpected output:\nwant %q\ngot  %q", want, string(got))
-	}
+	require.Equal(t, want, string(got))
 }

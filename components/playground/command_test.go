@@ -3,13 +3,14 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	stdErrors "errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestSendCommandsAndPrintResult_FailedCommandDoesNotDuplicateErrorOutput(t *testing.T) {
@@ -26,15 +27,12 @@ func TestSendCommandsAndPrintResult_FailedCommandDoesNotDuplicateErrorOutput(t *
 
 	var buf bytes.Buffer
 	err := sendCommandsAndPrintResult(&buf, []Command{{Type: DisplayCommandType}}, addr)
-	if err == nil {
-		t.Fatalf("expected error")
-	}
+	require.Error(t, err)
 	printDisplayFailureWarning(&buf, err)
 
 	out := buf.String()
-	if got := strings.Count(out, "boom"); got != 1 {
-		t.Fatalf("expected error text printed once, got %d:\n%s", got, out)
-	}
+	got := strings.Count(out, "boom")
+	require.Equal(t, 1, got, "output:\n%s", out)
 }
 
 func TestScaleInHelp_DoesNotUseBackquotedUsageAsPlaceholder(t *testing.T) {
@@ -44,84 +42,48 @@ func TestScaleInHelp_DoesNotUseBackquotedUsageAsPlaceholder(t *testing.T) {
 	cmd.SetOut(&buf)
 	cmd.SetErr(&buf)
 
-	if err := cmd.Help(); err != nil {
-		t.Fatalf("help: %v", err)
-	}
+	require.NoError(t, cmd.Help())
 
 	out := buf.String()
-	if strings.Contains(out, "--name tiup playground display") {
-		t.Fatalf("unexpected --name placeholder derived from usage backquotes:\n%s", out)
-	}
-	if strings.Contains(out, "--pid tiup playground display --verbose") {
-		t.Fatalf("unexpected --pid placeholder derived from usage backquotes:\n%s", out)
-	}
+	require.NotContains(t, out, "--name tiup playground display")
+	require.NotContains(t, out, "--pid tiup playground display --verbose")
 }
 
 func TestTargetTag_SingleAutoSelect(t *testing.T) {
 	base := t.TempDir()
 
 	dir := filepath.Join(base, "only")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
-	if err := dumpPort(filepath.Join(dir, "port"), 12345); err != nil {
-		t.Fatalf("dumpPort: %v", err)
-	}
+	require.NoError(t, os.MkdirAll(dir, 0o755))
+	require.NoError(t, dumpPort(filepath.Join(dir, "port"), 12345))
 
 	target, err := resolvePlaygroundTarget("", "", base)
-	if err != nil {
-		t.Fatalf("resolvePlaygroundTarget: %v", err)
-	}
-	if target.port != 12345 {
-		t.Fatalf("unexpected port: %d", target.port)
-	}
-	if target.tag != "only" {
-		t.Fatalf("unexpected tag: %q", target.tag)
-	}
-	if target.dir != dir {
-		t.Fatalf("unexpected dir: %q", target.dir)
-	}
+	require.NoError(t, err)
+	require.Equal(t, 12345, target.port)
+	require.Equal(t, "only", target.tag)
+	require.Equal(t, dir, target.dir)
 }
 
 func TestTargetTag_MultipleRequireExplicitTag(t *testing.T) {
 	base := t.TempDir()
 
-	if err := os.MkdirAll(filepath.Join(base, "a"), 0o755); err != nil {
-		t.Fatalf("mkdir a: %v", err)
-	}
-	if err := dumpPort(filepath.Join(base, "a", "port"), 1); err != nil {
-		t.Fatalf("dumpPort a: %v", err)
-	}
-	if err := os.MkdirAll(filepath.Join(base, "b"), 0o755); err != nil {
-		t.Fatalf("mkdir b: %v", err)
-	}
-	if err := dumpPort(filepath.Join(base, "b", "port"), 2); err != nil {
-		t.Fatalf("dumpPort b: %v", err)
-	}
+	require.NoError(t, os.MkdirAll(filepath.Join(base, "a"), 0o755))
+	require.NoError(t, dumpPort(filepath.Join(base, "a", "port"), 1))
+	require.NoError(t, os.MkdirAll(filepath.Join(base, "b"), 0o755))
+	require.NoError(t, dumpPort(filepath.Join(base, "b", "port"), 2))
 
 	_, err := resolvePlaygroundTarget("", "", base)
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-	if shouldSuggestPlaygroundNotRunning(err) {
-		t.Fatalf("should not suggest not running: %v", err)
-	}
-	if !strings.Contains(err.Error(), "multiple playgrounds found") {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	require.Error(t, err)
+	require.False(t, shouldSuggestPlaygroundNotRunning(err))
+	require.Contains(t, err.Error(), "multiple playgrounds found")
 }
 
 func TestTargetTag_ExplicitMissingTagIsNotRunning(t *testing.T) {
 	base := t.TempDir()
 
 	_, err := resolvePlaygroundTarget("missing", "", filepath.Join(base, "missing"))
-	if err == nil {
-		t.Fatalf("expected error")
-	}
+	require.Error(t, err)
 	var notRunning playgroundNotRunningError
-	if !stdErrors.As(err, &notRunning) {
-		t.Fatalf("expected playgroundNotRunningError, got %T: %v", err, err)
-	}
+	require.ErrorAs(t, err, &notRunning)
 }
 
 func TestCommandHandler_MethodNotAllowed(t *testing.T) {
@@ -131,9 +93,7 @@ func TestCommandHandler_MethodNotAllowed(t *testing.T) {
 
 	p.commandHandler(w, r)
 
-	if w.Result().StatusCode != http.StatusMethodNotAllowed {
-		t.Fatalf("status=%d", w.Result().StatusCode)
-	}
+	require.Equal(t, http.StatusMethodNotAllowed, w.Result().StatusCode)
 }
 
 func TestCommandHandler_InvalidJSON(t *testing.T) {
@@ -145,19 +105,11 @@ func TestCommandHandler_InvalidJSON(t *testing.T) {
 
 	p.commandHandler(w, r)
 
-	if w.Result().StatusCode != http.StatusBadRequest {
-		t.Fatalf("status=%d body=%q", w.Result().StatusCode, w.Body.String())
-	}
+	require.Equal(t, http.StatusBadRequest, w.Result().StatusCode, "body=%q", w.Body.String())
 	var reply CommandReply
-	if err := json.Unmarshal(w.Body.Bytes(), &reply); err != nil {
-		t.Fatalf("unmarshal reply: %v (%q)", err, w.Body.String())
-	}
-	if reply.OK {
-		t.Fatalf("unexpected ok reply: %+v", reply)
-	}
-	if reply.Error == "" {
-		t.Fatalf("missing error reply: %+v", reply)
-	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &reply), "body=%q", w.Body.String())
+	require.False(t, reply.OK)
+	require.NotEmpty(t, reply.Error)
 }
 
 func TestCommandHandler_UnknownFieldsRejected(t *testing.T) {
@@ -169,16 +121,10 @@ func TestCommandHandler_UnknownFieldsRejected(t *testing.T) {
 
 	p.commandHandler(w, r)
 
-	if w.Result().StatusCode != http.StatusBadRequest {
-		t.Fatalf("status=%d body=%q", w.Result().StatusCode, w.Body.String())
-	}
+	require.Equal(t, http.StatusBadRequest, w.Result().StatusCode, "body=%q", w.Body.String())
 	var reply CommandReply
-	if err := json.Unmarshal(w.Body.Bytes(), &reply); err != nil {
-		t.Fatalf("unmarshal reply: %v (%q)", err, w.Body.String())
-	}
-	if reply.Error == "" {
-		t.Fatalf("missing error reply: %+v", reply)
-	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &reply), "body=%q", w.Body.String())
+	require.NotEmpty(t, reply.Error)
 }
 
 func TestCommandHandler_TrailingDataRejected(t *testing.T) {
@@ -191,16 +137,10 @@ func TestCommandHandler_TrailingDataRejected(t *testing.T) {
 
 	p.commandHandler(w, r)
 
-	if w.Result().StatusCode != http.StatusBadRequest {
-		t.Fatalf("status=%d body=%q", w.Result().StatusCode, w.Body.String())
-	}
+	require.Equal(t, http.StatusBadRequest, w.Result().StatusCode, "body=%q", w.Body.String())
 	var reply CommandReply
-	if err := json.Unmarshal(w.Body.Bytes(), &reply); err != nil {
-		t.Fatalf("unmarshal reply: %v (%q)", err, w.Body.String())
-	}
-	if reply.Error != "invalid JSON payload" {
-		t.Fatalf("unexpected error: %+v", reply)
-	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &reply), "body=%q", w.Body.String())
+	require.Equal(t, "invalid JSON payload", reply.Error)
 }
 
 func TestCommandHandler_MaxBodyBytes(t *testing.T) {
@@ -213,14 +153,8 @@ func TestCommandHandler_MaxBodyBytes(t *testing.T) {
 
 	p.commandHandler(w, r)
 
-	if w.Result().StatusCode != http.StatusBadRequest {
-		t.Fatalf("status=%d body=%q", w.Result().StatusCode, w.Body.String())
-	}
+	require.Equal(t, http.StatusBadRequest, w.Result().StatusCode, "body=%q", w.Body.String())
 	var reply CommandReply
-	if err := json.Unmarshal(w.Body.Bytes(), &reply); err != nil {
-		t.Fatalf("unmarshal reply: %v (%q)", err, w.Body.String())
-	}
-	if reply.Error == "" {
-		t.Fatalf("missing error reply: %+v", reply)
-	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &reply), "body=%q", w.Body.String())
+	require.NotEmpty(t, reply.Error)
 }

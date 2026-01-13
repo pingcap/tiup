@@ -33,7 +33,7 @@ LDFLAGS += -X "$(REPO)/pkg/version.GitHash=$(COMMIT)"
 LDFLAGS += -X "$(REPO)/pkg/version.GitRef=$(GITREF)"
 LDFLAGS += $(EXTRA_LDFLAGS)
 
-FILES   := $$(find . -name "*.go")
+FILES   := $$(git ls-files --cached --others --exclude-standard '*.go' | while read -r f; do test -f "$$f" && echo "$$f"; done)
 
 FAILPOINT_ENABLE  := $$(go tool github.com/pingcap/failpoint/failpoint-ctl enable)
 FAILPOINT_DISABLE := $$(go tool github.com/pingcap/failpoint/failpoint-ctl disable)

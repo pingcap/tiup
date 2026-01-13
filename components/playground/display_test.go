@@ -12,6 +12,7 @@ import (
 
 	"github.com/pingcap/tiup/components/playground/proc"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
+	"github.com/stretchr/testify/require"
 )
 
 func TestHelperProcess_ExitWithCode(t *testing.T) {
@@ -67,27 +68,21 @@ func TestHandleDisplay_JSON_VerboseStatusAndFields(t *testing.T) {
 	pg := NewPlayground(t.TempDir(), 0)
 
 	var buf bytes.Buffer
-	if err := pg.handleDisplay(state, &buf, true, true); err != nil {
-		t.Fatalf("handleDisplay: %v", err)
-	}
+	require.NoError(t, pg.handleDisplay(state, &buf, true, true))
 
 	var items []displayItem
-	if err := json.Unmarshal(buf.Bytes(), &items); err != nil {
-		t.Fatalf("unmarshal json: %v", err)
-	}
-	if len(items) != 3 {
-		t.Fatalf("unexpected items length: %d", len(items))
-	}
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &items))
+	require.Len(t, items, 3)
 
-	if items[0].ServiceID != "svc-a" || items[0].Status != "not started" {
-		t.Fatalf("unexpected item[0]: %+v", items[0])
-	}
-	if items[1].ServiceID != "svc-b" || items[1].Status != "running" || items[1].PID <= 0 {
-		t.Fatalf("unexpected item[1]: %+v", items[1])
-	}
-	if items[2].ServiceID != "svc-c" || items[2].Status != "exited(3)" {
-		t.Fatalf("unexpected item[2]: %+v", items[2])
-	}
+	require.Equal(t, "svc-a", items[0].ServiceID)
+	require.Equal(t, "not started", items[0].Status)
+
+	require.Equal(t, "svc-b", items[1].ServiceID)
+	require.Equal(t, "running", items[1].Status)
+	require.Greater(t, items[1].PID, 0)
+
+	require.Equal(t, "svc-c", items[2].ServiceID)
+	require.Equal(t, "exited(3)", items[2].Status)
 }
 
 func TestPrettifyUserPath(t *testing.T) {
@@ -96,20 +91,12 @@ func TestPrettifyUserPath(t *testing.T) {
 		t.Skipf("os.UserHomeDir unavailable: %v", err)
 	}
 
-	if got := prettifyUserPath(""); got != "" {
-		t.Fatalf("unexpected empty path: %q", got)
-	}
-	if got := prettifyUserPath(home); got != "~" {
-		t.Fatalf("unexpected home path: %q", got)
-	}
+	require.Equal(t, "", prettifyUserPath(""))
+	require.Equal(t, "~", prettifyUserPath(home))
 	nested := filepath.Join(home, "a", "b")
 	wantNested := "~" + string(os.PathSeparator) + "a" + string(os.PathSeparator) + "b"
-	if got := prettifyUserPath(nested); got != wantNested {
-		t.Fatalf("unexpected nested path: %q", got)
-	}
-	if got := prettifyUserPath("/tmp/a"); got != "/tmp/a" {
-		t.Fatalf("unexpected other path: %q", got)
-	}
+	require.Equal(t, wantNested, prettifyUserPath(nested))
+	require.Equal(t, "/tmp/a", prettifyUserPath("/tmp/a"))
 }
 
 type displayAddrProcess struct {

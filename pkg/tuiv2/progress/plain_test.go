@@ -3,23 +3,21 @@ package progress
 import (
 	"io"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/pingcap/tiup/pkg/tui/colorstr"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPlainOutput_IsStableAndNoANSI(t *testing.T) {
 	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatalf("pipe: %v", err)
-	}
-	defer r.Close()
-	defer w.Close()
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = r.Close() })
+	t.Cleanup(func() { _ = w.Close() })
 
 	ui := New(Options{Mode: ModePlain, Out: w})
-	defer ui.Close()
+	t.Cleanup(func() { _ = ui.Close() })
 
 	g := ui.Group("Waiting for things")
 	t1 := g.Task("task-ok")
@@ -32,36 +30,28 @@ func TestPlainOutput_IsStableAndNoANSI(t *testing.T) {
 
 	_ = w.Close()
 	out, err := io.ReadAll(r)
-	if err != nil {
-		t.Fatalf("read: %v", err)
-	}
+	require.NoError(t, err)
 	got := string(out)
 
-	if strings.Contains(got, "\033[") {
-		t.Fatalf("plain output must not contain ANSI sequences, got: %q", got)
-	}
+	require.NotContains(t, got, "\033[", "plain output must not contain ANSI sequences")
 	for _, want := range []string{
 		"==> Waiting for things\n",
 		"Waiting task-ok\n",
 		"Waiting task-err\n",
 		"ERR - task-err: boom (",
 	} {
-		if !strings.Contains(got, want) {
-			t.Fatalf("missing %q in output: %q", want, got)
-		}
+		require.Contains(t, got, want)
 	}
 }
 
 func TestDownloadTask_Plain(t *testing.T) {
 	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatalf("pipe: %v", err)
-	}
-	defer r.Close()
-	defer w.Close()
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = r.Close() })
+	t.Cleanup(func() { _ = w.Close() })
 
 	ui := New(Options{Mode: ModePlain, Out: w})
-	defer ui.Close()
+	t.Cleanup(func() { _ = ui.Close() })
 
 	g := ui.Group("Downloading components")
 	t1 := g.Task("TiDB")
@@ -75,22 +65,16 @@ func TestDownloadTask_Plain(t *testing.T) {
 
 	_ = w.Close()
 	out, err := io.ReadAll(r)
-	if err != nil {
-		t.Fatalf("read: %v", err)
-	}
+	require.NoError(t, err)
 	got := string(out)
 
-	if strings.Contains(got, "\033[") {
-		t.Fatalf("plain output must not contain ANSI sequences, got: %q", got)
-	}
+	require.NotContains(t, got, "\033[", "plain output must not contain ANSI sequences")
 	for _, want := range []string{
 		"==> Downloading components\n",
 		"Downloading TiDB v7.5.0 (1.0MiB)\n",
 		"Downloaded  TiDB v7.5.0 (1.0MiB, ",
 	} {
-		if !strings.Contains(got, want) {
-			t.Fatalf("missing %q in output: %q", want, got)
-		}
+		require.Contains(t, got, want)
 	}
 }
 
@@ -98,14 +82,12 @@ func TestPlainOutput_FORCE_COLOR_EmitsANSI(t *testing.T) {
 	t.Setenv("FORCE_COLOR", "1")
 
 	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatalf("pipe: %v", err)
-	}
-	defer r.Close()
-	defer w.Close()
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = r.Close() })
+	t.Cleanup(func() { _ = w.Close() })
 
 	ui := New(Options{Mode: ModePlain, Out: w})
-	defer ui.Close()
+	t.Cleanup(func() { _ = ui.Close() })
 
 	g := ui.Group("Waiting for things")
 	t1 := g.Task("task-err")
@@ -115,24 +97,16 @@ func TestPlainOutput_FORCE_COLOR_EmitsANSI(t *testing.T) {
 
 	_ = w.Close()
 	out, err := io.ReadAll(r)
-	if err != nil {
-		t.Fatalf("read: %v", err)
-	}
+	require.NoError(t, err)
 	got := string(out)
 
-	if !strings.Contains(got, "\033[") {
-		t.Fatalf("expected ANSI sequences with FORCE_COLOR, got: %q", got)
-	}
+	require.Contains(t, got, "\033[", "expected ANSI sequences with FORCE_COLOR")
 
 	tokens := colorstr.DefaultTokens
 	tokens.Disable = false
 
-	if !strings.Contains(got, tokens.Sprintf("[bold][light_magenta]==> Waiting for things[reset]")) {
-		t.Fatalf("expected colored group header, got: %q", got)
-	}
-	if !strings.Contains(got, tokens.Sprintf("[bold][light_red]ERR[reset]")) {
-		t.Fatalf("expected colored ERR label, got: %q", got)
-	}
+	require.Contains(t, got, tokens.Sprintf("[bold][light_magenta]==> Waiting for things[reset]"), "expected colored group header")
+	require.Contains(t, got, tokens.Sprintf("[bold][light_red]ERR[reset]"), "expected colored ERR label")
 }
 
 func TestGroupElapsed_FreezeWhenAllTasksDone(t *testing.T) {
@@ -144,7 +118,5 @@ func TestGroupElapsed_FreezeWhenAllTasksDone(t *testing.T) {
 		{status: taskStatusDone, startAt: start, endAt: end},
 	}
 
-	if got := g.elapsedLocked(); got != 10*time.Second {
-		t.Fatalf("unexpected elapsed: %v", got)
-	}
+	require.Equal(t, 10*time.Second, g.elapsedLocked())
 }

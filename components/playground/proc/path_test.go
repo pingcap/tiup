@@ -4,35 +4,29 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestResolveSiblingBinary(t *testing.T) {
 	root := t.TempDir()
 	baseDir := filepath.Join(root, "a", "b", "c")
-	if err := os.MkdirAll(baseDir, 0o755); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
+	require.NoError(t, os.MkdirAll(baseDir, 0o755))
 
 	baseBin := filepath.Join(baseDir, "prometheus")
-	if err := os.WriteFile(baseBin, []byte("bin"), 0o644); err != nil {
-		t.Fatalf("write base: %v", err)
-	}
+	require.NoError(t, os.WriteFile(baseBin, []byte("bin"), 0o644))
 
 	want := "ng-monitoring-server"
 	// Search should find in parent dirs.
 	parentBin := filepath.Join(root, want)
-	if err := os.WriteFile(parentBin, []byte("bin"), 0o644); err != nil {
-		t.Fatalf("write want: %v", err)
-	}
-	if got, ok := ResolveSiblingBinary(baseBin, want); !ok || got != parentBin {
-		t.Fatalf("unexpected resolve: ok=%v path=%q", ok, got)
-	}
+	require.NoError(t, os.WriteFile(parentBin, []byte("bin"), 0o644))
+	got, ok := ResolveSiblingBinary(baseBin, want)
+	require.True(t, ok)
+	require.Equal(t, parentBin, got)
 
 	// If not found, it should return the default sibling path and ok=false.
-	if err := os.Remove(parentBin); err != nil {
-		t.Fatalf("remove want: %v", err)
-	}
-	if got, ok := ResolveSiblingBinary(baseBin, want); ok || got != filepath.Join(baseDir, want) {
-		t.Fatalf("unexpected resolve: ok=%v path=%q", ok, got)
-	}
+	require.NoError(t, os.Remove(parentBin))
+	got, ok = ResolveSiblingBinary(baseBin, want)
+	require.False(t, ok)
+	require.Equal(t, filepath.Join(baseDir, want), got)
 }

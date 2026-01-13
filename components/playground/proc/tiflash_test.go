@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/pingcap/tiup/pkg/utils"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTiFlashInstancePrepare_AllowsLatestAlias(t *testing.T) {
@@ -26,9 +27,7 @@ func TestTiFlashInstancePrepare_AllowsLatestAlias(t *testing.T) {
 		},
 	}
 
-	if err := inst.Prepare(context.Background()); err != nil {
-		t.Fatalf("Prepare: %v", err)
-	}
+	require.NoError(t, inst.Prepare(context.Background()))
 }
 
 func TestTiFlashInstancePrepare_RejectsOldSemver(t *testing.T) {
@@ -39,7 +38,5 @@ func TestTiFlashInstancePrepare_RejectsOldSemver(t *testing.T) {
 		},
 	}
 
-	if err := inst.Prepare(context.Background()); err == nil {
-		t.Fatalf("expected error, got nil")
-	}
+	require.Error(t, inst.Prepare(context.Background()))
 }
