@@ -1,113 +1,114 @@
+// Copyright 2020 PingCAP, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package main
 
 import (
-	"errors"
+	"os"
+	"path/filepath"
 	"testing"
-	"time"
 
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestProcessGroupWait_BlocksUntilClose(t *testing.T) {
-	g := NewProcessGroup()
+func TestPlaygroundAbsDir(t *testing.T) {
+	tmpdir := t.TempDir()
+	err := os.Chdir(tmpdir)
+	assert.Nil(t, err)
 
-	doneCh := make(chan error, 1)
-	go func() { doneCh <- g.Wait() }()
+	a, err := getAbsolutePath("./a")
+	assert.Nil(t, err)
+	assert.Equal(t, filepath.Join(tmpdir, "a"), a)
 
-	select {
-	case err := <-doneCh:
-		require.FailNow(t, "Wait returned early", "err=%v", err)
-	case <-time.After(100 * time.Millisecond):
-	}
+	b, err := getAbsolutePath("../b")
+	assert.Nil(t, err)
+	assert.Equal(t, filepath.Join(filepath.Dir(tmpdir), "b"), b)
 
-	g.Close()
-
-	select {
-	case err := <-doneCh:
-		require.NoError(t, err)
-	case <-time.After(time.Second):
-		require.FailNow(t, "Wait did not return after Close")
-	}
+	h, err := os.UserHomeDir()
+	assert.Nil(t, err)
+	c, err := getAbsolutePath("~/c/d/e")
+	assert.Nil(t, err)
+	assert.Equal(t, filepath.Join(h, "c/d/e"), c)
 }
 
-func TestProcessGroupWait_WaitsForTasks(t *testing.T) {
-	g := NewProcessGroup()
-
-	blockCh := make(chan struct{})
-	err := g.Add("block", func() error {
-		<-blockCh
-		return nil
-	})
-	require.NoError(t, err)
-
-	doneCh := make(chan error, 1)
-	go func() { doneCh <- g.Wait() }()
-
-	g.Close()
-
-	select {
-	case <-doneCh:
-		require.FailNow(t, "Wait returned before task completed")
-	case <-time.After(100 * time.Millisecond):
+func TestParseMysqlCommand(t *testing.T) {
+	cases := []struct {
+		version string
+		vMaj    int
+		vMin    int
+		vPatch  int
+		err     bool
+	}{
+		{
+			"mysql  Ver 8.2.0 for Linux on x86_64 (MySQL Community Server - GPL)",
+			8,
+			2,
+			0,
+			false,
+		},
+		{
+			"mysql  Ver 8.0.34 for Linux on x86_64 (MySQL Community Server - GPL)",
+			8,
+			0,
+			34,
+			false,
+		},
+		{
+			"mysql  Ver 8.0.34-foobar for Linux on x86_64 (MySQL Community Server - GPL)",
+			8,
+			0,
+			34,
+			false,
+		},
+		{
+			"foobar",
+			0,
+			0,
+			0,
+			true,
+		},
+		{
+			"mysql  Ver 14.14 Distrib 5.7.36, for linux-glibc2.12 (x86_64) using  EditLine wrapper",
+			5,
+			7,
+			36,
+			false,
+		},
+		{
+			"mysql  Ver 15.1 Distrib 10.3.37-MariaDB, for Linux (x86_64) using readline 5.1",
+			10,
+			3,
+			37,
+			false,
+		},
+		{
+			"/bin/mysql from 11.2.2-MariaDB, client 15.2 for linux-systemd (x86_64) using readline 5.1",
+			11,
+			2,
+			2,
+			false,
+		},
 	}
 
-	close(blockCh)
-
-	select {
-	case err := <-doneCh:
-		require.NoError(t, err)
-	case <-time.After(time.Second):
-		require.FailNow(t, "Wait did not return after task completed")
-	}
-}
-
-func TestProcessGroupAdd_AfterCloseRejected(t *testing.T) {
-	g := NewProcessGroup()
-	g.Close()
-	require.ErrorIs(t, g.Add("x", func() error { return nil }), errProcessGroupClosed)
-}
-
-func TestProcessGroupAdd_NilWaitFuncRejected(t *testing.T) {
-	g := NewProcessGroup()
-	require.Error(t, g.Add("x", nil))
-}
-
-func TestProcessGroupWait_ReturnsFirstError(t *testing.T) {
-	g := NewProcessGroup()
-
-	blockCh := make(chan struct{})
-	require.NoError(t, g.Add("first", func() error { return errors.New("boom") }))
-	require.NoError(t, g.Add("second", func() error {
-		<-blockCh
-		return errors.New("late")
-	}))
-
-	deadline := time.Now().Add(time.Second)
-	for {
-		g.mu.Lock()
-		seen := g.firstErr
-		g.mu.Unlock()
-		if seen != nil {
-			break
+	for _, tc := range cases {
+		vMaj, vMin, vPatch, err := parseMysqlVersion(tc.version)
+		if tc.err {
+			assert.NotNil(t, err)
+		} else {
+			assert.Nil(t, err)
 		}
-		if time.Now().After(deadline) {
-			require.FailNow(t, "timeout waiting for firstErr to be set")
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-
-	doneCh := make(chan error, 1)
-	go func() { doneCh <- g.Wait() }()
-
-	g.Close()
-	close(blockCh)
-
-	select {
-	case err := <-doneCh:
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "first:")
-		require.Contains(t, err.Error(), "boom")
-	case <-time.After(time.Second):
-		require.FailNow(t, "Wait did not return")
+		assert.Equal(t, vMaj, tc.vMaj)
+		assert.Equal(t, vMin, tc.vMin)
+		assert.Equal(t, vPatch, tc.vPatch)
 	}
 }

@@ -4,31 +4,31 @@ name: integrate-playground
 on:
   schedule:
     # times are in UTC
-    - cron: '19 21 * * *'
+    - cron: "19 21 * * *"
   pull_request:
     branches:
       - master
       - release-*
       - feature/*
     paths-ignore:
-      - '**.html'
-      - '**.md'
-      - 'CNAME'
-      - 'LICENSE'
-      - 'doc/**'
-      - 'embed/templates/examples/**'
-      - 'embed/templates/examples/**'
-      - 'components/client/**'
-      - 'components/ctl/**'
-      - 'components/cluster/**'
-      - 'components/doc/**'
-      - 'components/errdoc/**'
-      - 'components/dm/**'
-      - 'server/**'
-      - 'pkg/version/version.go'
-      - '.github/workflows/integrate-cluster**'
-      - '.github/workflows/integrate-dm**'
-      - '.github/workflows/integrate-tiup**'
+      - "**.html"
+      - "**.md"
+      - "CNAME"
+      - "LICENSE"
+      - "doc/**"
+      - "embed/templates/examples/**"
+      - "embed/templates/examples/**"
+      - "components/client/**"
+      - "components/ctl/**"
+      - "components/cluster/**"
+      - "components/doc/**"
+      - "components/errdoc/**"
+      - "components/dm/**"
+      - "server/**"
+      - "pkg/version/version.go"
+      - ".github/workflows/integrate-cluster**"
+      - ".github/workflows/integrate-dm**"
+      - ".github/workflows/integrate-tiup**"
 
 jobs:
   playground:
@@ -62,6 +62,7 @@ jobs:
         run: |
           export PATH=$PATH:$PWD/bin/
           bash ./tests/tiup-playground/${{ matrix.cases }}.sh
+          bash ./tests/tiup-playground-ng/${{ matrix.cases }}.sh
 
       - name: Collect component log
         if: ${{ failure() }}

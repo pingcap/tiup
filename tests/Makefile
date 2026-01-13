@@ -7,6 +7,10 @@ build_tiup_playground_test: failpoint-enable
 		-coverpkg=github.com/pingcap/tiup/... \
 		-o tests/tiup-playground/bin/tiup-playground.test \
 		github.com/pingcap/tiup/components/playground
+	$(GOTEST) -c -cover -covermode=count \
+		-coverpkg=github.com/pingcap/tiup/... \
+		-o tests/tiup-playground/bin/tiup-playground-ng.test \
+		github.com/pingcap/tiup/components/playground-ng
 	@$(FAILPOINT_DISABLE)
 
 build_tiup_cluster_test: failpoint-enable

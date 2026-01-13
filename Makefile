@@ -61,6 +61,7 @@ tiup:
 playground:
 	@# Target: build tiup-playground component
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-playground ./components/playground
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-playground-ng ./components/playground-ng
 
 .PHONY: client
 client:
