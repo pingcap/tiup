@@ -150,7 +150,7 @@ jobs:
           ${TAR} -C bin -czf package/cluster-${REL_VER}-${ARCH}.tar.gz tiup-cluster
           ${TAR} -C bin -czf package/dm-${REL_VER}-${ARCH}.tar.gz tiup-dm
           ${TAR} -C bin -czf package/playground-${REL_VER}-${ARCH}.tar.gz tiup-playground
-          [ -e tiup-playground-ng ] && ${TAR} -C bin -czf package/playground-ng-${REL_VER}-${ARCH}.tar.gz tiup-playground-ng
+          [ -e bin/tiup-playground-ng ] && ${TAR} -C bin -czf package/playground-ng-${REL_VER}-${ARCH}.tar.gz tiup-playground-ng
           ${TAR} -C bin -czf package/client-${REL_VER}-${ARCH}.tar.gz tiup-client
           ${TAR} -C bin -czf package/server-${REL_VER}-${ARCH}.tar.gz tiup-server
 
