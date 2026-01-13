@@ -114,3 +114,31 @@ func TestRegister_AllowModifyPortRequiresPorts(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "AllowModifyPort")
 }
+
+func TestRegister_DefaultPortRequiresAllowModifyPort(t *testing.T) {
+	err := Register(Spec{
+		ServiceID: "test-service-default-port-without-allow-port",
+		NewProc: func(rt ControllerRuntime, params NewProcParams) (proc.Process, error) {
+			return nil, nil
+		},
+		Catalog: Catalog{
+			DefaultPort: 4000,
+		},
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "DefaultPort")
+}
+
+func TestRegister_DefaultPortFromRequiresAllowModifyPort(t *testing.T) {
+	err := Register(Spec{
+		ServiceID: "test-service-default-port-from-without-allow-port",
+		NewProc: func(rt ControllerRuntime, params NewProcParams) (proc.Process, error) {
+			return nil, nil
+		},
+		Catalog: Catalog{
+			DefaultPortFrom: proc.ServicePD,
+		},
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "DefaultPortFrom")
+}

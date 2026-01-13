@@ -334,6 +334,14 @@ func Register(spec Spec) error {
 	if spec.NewProc == nil {
 		return fmt.Errorf("service %s newProc is nil", spec.ServiceID)
 	}
+	if !spec.Catalog.AllowModifyPort {
+		if spec.Catalog.DefaultPort != 0 {
+			return fmt.Errorf("service %s DefaultPort requires AllowModifyPort", spec.ServiceID)
+		}
+		if spec.Catalog.DefaultPortFrom != "" {
+			return fmt.Errorf("service %s DefaultPortFrom requires AllowModifyPort", spec.ServiceID)
+		}
+	}
 	if err := validatePortSpecs(spec.Catalog.Ports); err != nil {
 		return fmt.Errorf("service %s ports: %w", spec.ServiceID, err)
 	}

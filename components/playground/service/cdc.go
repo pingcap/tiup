@@ -54,7 +54,6 @@ func init() {
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
 			AllowModifyVersion: true,
-			DefaultPort:        tikvcdcPortBase,
 			Ports: []PortSpec{
 				{Name: proc.PortNamePort, Base: tikvcdcPortBase},
 				{Name: proc.PortNameStatusPort, AliasOf: proc.PortNamePort},

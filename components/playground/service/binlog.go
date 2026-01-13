@@ -20,7 +20,6 @@ func init() {
 		Catalog: Catalog{
 			FlagPrefix:     "pump",
 			AllowModifyNum: true,
-			DefaultPort:    pumpPortBase,
 			Ports: []PortSpec{
 				{Name: proc.PortNamePort, Base: pumpPortBase},
 				{Name: proc.PortNameStatusPort, AliasOf: proc.PortNamePort},
@@ -55,7 +54,6 @@ func init() {
 		Catalog: Catalog{
 			FlagPrefix:     "drainer",
 			AllowModifyNum: true,
-			DefaultPort:    drainerPortBase,
 			Ports: []PortSpec{
 				{Name: proc.PortNamePort, Base: drainerPortBase},
 				{Name: proc.PortNameStatusPort, AliasOf: proc.PortNamePort},
