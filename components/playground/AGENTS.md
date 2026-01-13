@@ -29,6 +29,14 @@ Fight entropy. Leave the codebase better than you found it.
 - **Don’t treat “looks similar” as “equivalent”**: Different concepts should not be treated as equivalent even if their fields/strings are the same; abstractions must correspond to real semantics.
 - **Abstractions must be meaningful**: Introduce an abstraction only when it reduces cognitive load/error probability/repetition and has clear semantics; otherwise, prefer straightforward, intuitive code.
 
+### Plan/Runtime Consistency
+
+- **Single source of truth**: If a value is derivable from a declaration/schema, do not maintain a second handwritten implementation elsewhere. Prefer one canonical representation and shared helpers so plan-time and runtime behavior cannot drift.
+- **No parallel “ways of doing the same thing”**: Avoid having multiple allocation/normalization/construction paths for the same kind of data; choose one path and delete the others.
+- **Align boot and scale-out semantics**: Boot-time creation and runtime scale-out should follow the same rules. If scale-out cannot consume a pre-built plan, it should reuse the exact same planning helper(s) used for plans.
+- **Centralize cross-module keys**: When data is exchanged via maps or loosely typed fields, define keys/constants once and reuse them everywhere; do not scatter magic strings.
+- **Validate early, fail early**: Prefer validating spec/schema declarations at registration/init time instead of letting invalid state surface deep in planning/execution.
+
 ### Testability
 
 - **Avoid over-abstraction for tests**: Prefer simple policy knobs/configuration to stabilize tests over introducing heavy test-only injection layers. Unit-test OS-dependent helpers separately.
