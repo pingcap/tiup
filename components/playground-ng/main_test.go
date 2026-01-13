@@ -15,7 +15,7 @@ import (
 // To build:
 // see build_integration_test in Makefile
 // To run:
-// tiup-playground.test -test.coverprofile={file} __DEVEL--i-heard-you-like-tests
+// tiup-playground-ng.test -test.coverprofile={file} __DEVEL--i-heard-you-like-tests
 func TestMain(t *testing.T) {
 	var (
 		args []string

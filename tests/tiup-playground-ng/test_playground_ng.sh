@@ -96,7 +96,7 @@ function kill_all() {
 }
 
 function stop_playground() {
-    if killall -2 tiup-playground.test 2>/dev/null; then
+    if killall -2 tiup-playground-ng.test 2>/dev/null; then
         return 0
     fi
     if killall -2 tiup-playground-ng 2>/dev/null; then
