@@ -255,7 +255,7 @@ func newScaleOut(state *cliState) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "scale-out",
 		Short:   "Scale out instances in a running playground",
-		Example: "tiup playground scale-out --service tidb --count 1",
+		Example: "tiup playground-ng scale-out --service tidb --count 1",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var reqs []ScaleOutRequest
 			switch {
@@ -321,7 +321,7 @@ func newScaleOut(state *cliState) *cobra.Command {
 	cmd.Flags().StringVar(&cfg.BinPath, "binpath", "", "Binary path for new instances (default: inherit from boot config)")
 	cmd.Flags().IntVar(&cfg.UpTimeout, "timeout", 0, "Max wait time in seconds for starting, 0 means no limit")
 
-	// LEGACY: tiup playground scale-out --db 1 --kv 2 ...
+	// LEGACY: tiup playground-ng scale-out --db 1 --kv 2 ...
 	legacy = registerLegacyScaleOutFlags(cmd)
 
 	return cmd
@@ -334,7 +334,7 @@ func newScaleIn(state *cliState) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "scale-in",
 		Short:   "Scale in one or more instances by name or pid",
-		Example: "  tiup playground scale-in --name tidb-0\n  tiup playground scale-in --pid 12345",
+		Example: "  tiup playground-ng scale-in --name tidb-0\n  tiup playground-ng scale-in --pid 12345",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(names) == 0 && len(pids) == 0 {
 				return cmd.Help()
@@ -373,8 +373,8 @@ func newScaleIn(state *cliState) *cobra.Command {
 		Hidden: false,
 	}
 
-	cmd.Flags().StringSliceVar(&names, "name", nil, "Instance name(s) to scale in (get from tiup playground display)")
-	cmd.Flags().IntSliceVar(&pids, "pid", nil, "Instance PID(s) to scale in (get from tiup playground display --verbose)")
+	cmd.Flags().StringSliceVar(&names, "name", nil, "Instance name(s) to scale in (get from tiup playground-ng display)")
+	cmd.Flags().IntSliceVar(&pids, "pid", nil, "Instance PID(s) to scale in (get from tiup playground-ng display --verbose)")
 
 	return cmd
 }

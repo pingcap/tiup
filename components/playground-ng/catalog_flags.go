@@ -179,7 +179,7 @@ func applyServiceDefaults(flagSet *pflag.FlagSet, opts *BootOptions) error {
 // --- Legacy scale-out flag compatibility ------------------------------------
 //
 // This block implements the legacy usage:
-//   tiup playground scale-out --db 1 --kv 2 ...
+//   tiup playground-ng scale-out --db 1 --kv 2 ...
 //
 // It intentionally lives in one place so the modern --service/--count codepath
 // stays readable.

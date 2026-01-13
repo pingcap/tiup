@@ -127,14 +127,14 @@ func execute(state *cliState) error {
 if you don't specified a version.
 
 Examples:
-  $ tiup playground nightly                         # Start a TiDB nightly version local cluster
-  $ tiup playground v5.0.1 --db 3 --pd 3 --kv 3     # Start a local cluster with 10 nodes
-  $ tiup playground nightly --without-monitor       # Start a local cluster and disable monitor system
-  $ tiup playground --pd.config ~/config/pd.toml    # Start a local cluster with specified configuration file
-  $ tiup playground --db.binpath /xx/tidb-server    # Start a local cluster with component binary path
-  $ tiup playground --tag xx                        # Start a local cluster with data dir named 'xx' and uncleaned after exit
-  $ tiup playground --mode tikv-slim                # Start a local tikv only cluster (No TiDB or TiFlash Available)
-  $ tiup playground --mode tikv-slim --kv 3 --pd 3  # Start a local tikv only cluster with 6 nodes`,
+  $ tiup playground-ng nightly                         # Start a TiDB nightly version local cluster
+  $ tiup playground-ng v5.0.1 --db 3 --pd 3 --kv 3     # Start a local cluster with 10 nodes
+  $ tiup playground-ng nightly --without-monitor       # Start a local cluster and disable monitor system
+  $ tiup playground-ng --pd.config ~/config/pd.toml    # Start a local cluster with specified configuration file
+  $ tiup playground-ng --db.binpath /xx/tidb-server    # Start a local cluster with component binary path
+  $ tiup playground-ng --tag xx                        # Start a local cluster with data dir named 'xx' and uncleaned after exit
+  $ tiup playground-ng --mode tikv-slim                # Start a local tikv only cluster (No TiDB or TiFlash Available)
+  $ tiup playground-ng --mode tikv-slim --kv 3 --pd 3  # Start a local tikv only cluster with 6 nodes`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Version:       version.NewTiUPVersion().String(),

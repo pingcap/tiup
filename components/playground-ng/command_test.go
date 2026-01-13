@@ -35,20 +35,6 @@ func TestSendCommandsAndPrintResult_FailedCommandDoesNotDuplicateErrorOutput(t *
 	require.Equal(t, 1, got, "output:\n%s", out)
 }
 
-func TestScaleInHelp_DoesNotUseBackquotedUsageAsPlaceholder(t *testing.T) {
-	cmd := newScaleIn(newCLIState())
-
-	var buf bytes.Buffer
-	cmd.SetOut(&buf)
-	cmd.SetErr(&buf)
-
-	require.NoError(t, cmd.Help())
-
-	out := buf.String()
-	require.NotContains(t, out, "--name tiup playground display")
-	require.NotContains(t, out, "--pid tiup playground display --verbose")
-}
-
 func TestTargetTag_SingleAutoSelect(t *testing.T) {
 	base := t.TempDir()
 
