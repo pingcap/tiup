@@ -215,7 +215,7 @@ Examples:
 
 				plan, err := BuildBootPlan(&state.options, bootPlannerConfig{
 					dataDir:            state.dataDir,
-					portConflictPolicy: PortConflictAllocFree,
+					portConflictPolicy: PortConflictNone,
 					componentSource:    newEnvComponentSource(env),
 				})
 				if err != nil {
