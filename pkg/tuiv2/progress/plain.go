@@ -2,7 +2,6 @@ package progress
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/pingcap/tiup/pkg/tui/colorstr"
 )
@@ -21,6 +20,18 @@ func (ui *UI) plainSprintf(format string, args ...any) string {
 	return tokens.Sprintf(format, args...)
 }
 
+func (ui *UI) printPlainGroupHeaderLocked(title string) {
+	if ui == nil || ui.mode != ModePlain {
+		return
+	}
+
+	if ui.plainPrintedGroup {
+		ui.printPlainLineLocked("")
+	}
+	ui.plainPrintedGroup = true
+	ui.printPlainLineLocked(ui.plainGroupHeader(title))
+}
+
 func (ui *UI) printPlainLineLocked(format string, args ...any) {
 	if ui == nil || ui.out == nil || ui.mode != ModePlain {
 		return
@@ -37,13 +48,6 @@ func (ui *UI) printPlainTaskStartLocked(t *Task) {
 		return
 	}
 
-	verb := "Running"
-	if g := t.g; g != nil {
-		if fields := strings.Fields(g.title); len(fields) > 0 {
-			verb = fields[0]
-		}
-	}
-
 	title := t.title
 	if t.meta != "" {
 		title += " " + t.meta
@@ -51,35 +55,15 @@ func (ui *UI) printPlainTaskStartLocked(t *Task) {
 	if t.message != "" {
 		title += " " + t.message
 	}
-	ui.printPlainLineLocked("%s %s", verb, title)
+	ui.printPlainLineLocked(ui.plainSprintf(" [green]+[reset] %s", title))
 }
 
 func (ui *UI) printPlainTaskDoneLocked(t *Task) {
 	if ui == nil || ui.mode != ModePlain || t == nil {
 		return
 	}
-
-	// Generic tasks already emitted a start event in plain mode.
-	// Keep the log compact by only printing completion details for downloads.
-	if t.kind != taskKindDownload {
-		return
-	}
-
-	elapsed := t.endAt.Sub(t.startAt)
-	title := t.title
-	if t.meta != "" {
-		title += " " + t.meta
-	}
-	switch t.kind {
-	case taskKindDownload:
-		size := t.total
-		if size <= 0 {
-			size = t.current
-		}
-		ui.printPlainLineLocked("Downloaded  %s (%s, %s, %s)", title, formatBytes(size), formatDuration(elapsed), formatSpeed(t.speedBps))
-	default:
-		ui.printPlainLineLocked("OK  - %s (%s)", title, formatDuration(elapsed))
-	}
+	// Plain mode is designed to be compact and stable (append-only logs).
+	// We only emit task start events by default.
 }
 
 func (ui *UI) printPlainTaskErrorLocked(t *Task) {
@@ -148,5 +132,5 @@ func (ui *UI) printPlainDownloadStartLocked(t *Task) {
 	if t.meta != "" {
 		title += " " + t.meta
 	}
-	ui.printPlainLineLocked("Downloading %s (%s)", title, size)
+	ui.printPlainLineLocked(ui.plainSprintf(" [green]+[reset] %s (%s)", title, size))
 }

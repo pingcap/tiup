@@ -119,7 +119,7 @@ func runBackgroundStarter(state *cliState) error {
 			if ok && probeErr == nil {
 				cancelTail()
 				out := tuiv2output.Stdout.Get()
-				fmt.Fprintf(out, "\nPlayground started in background.\n\nTag: %s\nPort: %d\nData dir: %s\n\nTo stop:    tiup playground-ng stop --tag %s\nTo display: tiup playground-ng display --tag %s\n", state.tag, port, state.dataDir, state.tag, state.tag)
+				fmt.Fprintf(out, "\nCluster running in background. To stop: tiup playground-ng stop --tag %s\n", state.tag)
 				return nil
 			}
 		}

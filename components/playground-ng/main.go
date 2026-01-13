@@ -135,6 +135,8 @@ Examples:
   $ tiup playground-ng --tag xx                        # Start a local cluster with data dir named 'xx' and uncleaned after exit
   $ tiup playground-ng --background --tag xx           # Start a local cluster in background (daemon mode)
   $ tiup playground-ng stop --tag xx                   # Stop the cluster started with --tag xx
+  $ tiup playground-ng stop-all                        # Stop all running playground-ng instances
+  $ tiup playground-ng ps                              # List all running playground-ng instances
   $ tiup playground-ng --mode tikv-slim                # Start a local tikv only cluster (No TiDB or TiFlash Available)
   $ tiup playground-ng --mode tikv-slim --kv 3 --pd 3  # Start a local tikv only cluster with 6 nodes`,
 		SilenceUsage:  true,
@@ -252,10 +254,10 @@ Examples:
 			ui := progressv2.New(progressv2.Options{Mode: progressv2.ModeAuto, Out: os.Stderr})
 			defer ui.Close()
 			p.ui = ui
-			p.downloadGroup = ui.Group("Downloading components")
+			p.downloadGroup = ui.Group("Download components")
 			p.downloadGroup.SetHideDetailsOnSuccess(true)
 			p.downloadGroup.SetSortTasksByTitle(true)
-			p.startingGroup = ui.Group("Starting instances")
+			p.startingGroup = ui.Group("Start instances")
 			downloadGroup := p.downloadGroup
 			restore := attachUIOutput(ui)
 			defer restore()
@@ -409,6 +411,8 @@ Examples:
 	rootCmd.AddCommand(newScaleOut(state))
 	rootCmd.AddCommand(newScaleIn(state))
 	rootCmd.AddCommand(newStop(state))
+	rootCmd.AddCommand(newStopAll(state))
+	rootCmd.AddCommand(newPS(state))
 
 	return rootCmd.Execute()
 }

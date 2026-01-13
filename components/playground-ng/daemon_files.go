@@ -37,7 +37,9 @@ func isTimeoutErr(err error) bool {
 }
 
 type pidFile struct {
-	pid int
+	pid       int
+	startedAt time.Time
+	tag       string
 }
 
 func readPIDFile(path string) (pidFile, error) {
@@ -46,27 +48,48 @@ func readPIDFile(path string) (pidFile, error) {
 		return pidFile{}, err
 	}
 
+	var out pidFile
+	seenPID := false
+
 	lines := strings.Split(string(data), "\n")
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue
 		}
-		if !strings.HasPrefix(line, "pid=") {
-			continue
+
+		switch {
+		case strings.HasPrefix(line, "pid="):
+			raw := strings.TrimSpace(strings.TrimPrefix(line, "pid="))
+			if raw == "" {
+				return pidFile{}, fmt.Errorf("pid is empty")
+			}
+			pid, err := strconv.Atoi(raw)
+			if err != nil {
+				return pidFile{}, fmt.Errorf("invalid pid %q: %w", raw, err)
+			}
+			out.pid = pid
+			seenPID = true
+		case strings.HasPrefix(line, "started_at="):
+			raw := strings.TrimSpace(strings.TrimPrefix(line, "started_at="))
+			if raw == "" {
+				continue
+			}
+			startedAt, err := time.Parse(time.RFC3339, raw)
+			if err != nil {
+				return pidFile{}, fmt.Errorf("invalid started_at %q: %w", raw, err)
+			}
+			out.startedAt = startedAt
+		case strings.HasPrefix(line, "tag="):
+			out.tag = strings.TrimSpace(strings.TrimPrefix(line, "tag="))
 		}
-		raw := strings.TrimSpace(strings.TrimPrefix(line, "pid="))
-		if raw == "" {
-			return pidFile{}, fmt.Errorf("pid is empty")
-		}
-		pid, err := strconv.Atoi(raw)
-		if err != nil {
-			return pidFile{}, fmt.Errorf("invalid pid %q: %w", raw, err)
-		}
-		return pidFile{pid: pid}, nil
 	}
 
-	return pidFile{}, fmt.Errorf("missing pid field")
+	if !seenPID {
+		return pidFile{}, fmt.Errorf("missing pid field")
+	}
+
+	return out, nil
 }
 
 func isPIDRunning(pid int) (running bool, err error) {

@@ -40,6 +40,10 @@ type UI struct {
 	ttyStyles  ttyStyles
 
 	writer io.Writer
+
+	// plainPrintedGroup indicates at least one group header has been printed in
+	// ModePlain. It is used to insert a blank line between groups for readability.
+	plainPrintedGroup bool
 }
 
 // New creates a new progress UI.

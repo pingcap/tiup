@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +15,20 @@ import (
 
 	"github.com/stretchr/testify/require"
 )
+
+func TestReadPIDFile_ParsesStartedAtAndTag(t *testing.T) {
+	base := t.TempDir()
+	pidPath := filepath.Join(base, playgroundPIDFileName)
+
+	startedAt := "2026-01-13T20:00:00Z"
+	require.NoError(t, os.WriteFile(pidPath, []byte(fmt.Sprintf("pid=123\nstarted_at=%s\ntag=my-cluster\n", startedAt)), 0o644))
+
+	got, err := readPIDFile(pidPath)
+	require.NoError(t, err)
+	require.Equal(t, 123, got.pid)
+	require.Equal(t, "my-cluster", got.tag)
+	require.Equal(t, time.Date(2026, 1, 13, 20, 0, 0, 0, time.UTC), got.startedAt)
+}
 
 func TestClaimPlaygroundPIDFile_CreatesAndReleases(t *testing.T) {
 	base := t.TempDir()

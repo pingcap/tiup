@@ -129,7 +129,7 @@ func (t *Task) Start() {
 
 	if ui.mode == ModePlain && !t.g.plainBegun {
 		t.g.plainBegun = true
-		ui.printPlainLineLocked(ui.plainGroupHeader(t.g.title))
+		ui.printPlainGroupHeaderLocked(t.g.title)
 	}
 	if t.g.startedAt.IsZero() {
 		t.g.startedAt = now

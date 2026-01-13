@@ -115,7 +115,7 @@ func (g *Group) Task(title string) *Task {
 	}
 	if ui.mode == ModePlain && !g.plainBegun {
 		g.plainBegun = true
-		ui.printPlainLineLocked(ui.plainGroupHeader(g.title))
+		ui.printPlainGroupHeaderLocked(g.title)
 	}
 
 	t := &Task{
@@ -154,7 +154,7 @@ func (g *Group) TaskPending(title string) *Task {
 	}
 	if ui.mode == ModePlain && !g.plainBegun {
 		g.plainBegun = true
-		ui.printPlainLineLocked(ui.plainGroupHeader(g.title))
+		ui.printPlainGroupHeaderLocked(g.title)
 	}
 
 	t := &Task{
