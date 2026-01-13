@@ -733,7 +733,7 @@ func isKnownGOARCH(goarch string) bool {
 var _ repository.DownloadProgress = (*repoDownloadProgress)(nil)
 
 func main() {
-	tui.RegisterArg0("tiup playground")
+	tui.RegisterArg0("tiup playground-ng")
 
 	state := newCLIState()
 

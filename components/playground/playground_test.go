@@ -23,16 +23,19 @@ import (
 
 func TestPlaygroundAbsDir(t *testing.T) {
 	tmpdir := t.TempDir()
-	err := os.Chdir(tmpdir)
+	tmpdirReal, err := filepath.EvalSymlinks(tmpdir)
+	assert.Nil(t, err)
+
+	err = os.Chdir(tmpdir)
 	assert.Nil(t, err)
 
 	a, err := getAbsolutePath("./a")
 	assert.Nil(t, err)
-	assert.Equal(t, filepath.Join(tmpdir, "a"), a)
+	assert.Equal(t, filepath.Join(tmpdirReal, "a"), a)
 
 	b, err := getAbsolutePath("../b")
 	assert.Nil(t, err)
-	assert.Equal(t, filepath.Join(filepath.Dir(tmpdir), "b"), b)
+	assert.Equal(t, filepath.Join(filepath.Dir(tmpdirReal), "b"), b)
 
 	h, err := os.UserHomeDir()
 	assert.Nil(t, err)
