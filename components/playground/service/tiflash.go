@@ -240,28 +240,22 @@ func newTiFlashInstance(rt ControllerRuntime, serviceID proc.ServiceID, params N
 	if err != nil {
 		return nil, err
 	}
-	httpPort := shared.Port
-	statusPort := shared.StatusPort
-	tcpPort := shared.Ports["tcp"]
-	servicePort := shared.Ports["service"]
-	proxyPort := shared.Ports["proxy"]
-	proxyStatusPort := shared.Ports["proxyStatus"]
 	flash := &proc.TiFlashInstance{
 		ShOpt: shOpt,
 		Plan: proc.TiFlashPlan{
 			PDAddrs:         pdAddrs,
-			ServicePort:     servicePort,
-			TCPPort:         tcpPort,
-			ProxyPort:       proxyPort,
-			ProxyStatusPort: proxyStatusPort,
+			ServicePort:     shared.Ports["service"],
+			TCPPort:         shared.Ports["tcp"],
+			ProxyPort:       shared.Ports["proxy"],
+			ProxyStatusPort: shared.Ports["proxyStatus"],
 		},
 		ProcessInfo: proc.ProcessInfo{
 			UserBinPath:     params.Config.BinPath,
 			ID:              params.ID,
 			Dir:             params.Dir,
 			Host:            params.Host,
-			Port:            httpPort,
-			StatusPort:      statusPort,
+			Port:            shared.Port,
+			StatusPort:      shared.StatusPort,
 			ConfigPath:      params.Config.ConfigPath,
 			RepoComponentID: proc.ComponentTiFlash,
 			Service:         serviceID,

@@ -39,7 +39,8 @@ Fight entropy. Leave the codebase better than you found it.
 
 ### Naming and Literals
 
-- **Avoid “single-use constants”**: Don’t extract a constant if it is used only once and does not carry real semantic meaning; prefer inlining to keep the local code readable.
+- **Avoid low-value constants**: Don’t extract constants just to wrap literals (even if used a few times). Only extract when it meaningfully improves readability, expresses semantics, or represents a shared contract.
+- **Avoid no-value locals**: Don’t introduce local variables that simply mirror a field/map lookup and are used once; inline the expression unless the name adds essential semantics.
 - **Keys should be semantic, not redundant**: When defining internal map keys, pick concise names that describe the concept; avoid redundant suffixes/prefixes implied by the container (e.g. avoid `*Port` when the map already represents ports).
 - **Only constantize stable contracts**: Use shared constants when a key becomes a cross-module contract or is used widely; otherwise, local string literals are often clearer than long, low-value constants.
 

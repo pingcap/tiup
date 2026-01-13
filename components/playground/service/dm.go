@@ -10,11 +10,6 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
-const (
-	dmStatusPortBase = 8261
-	dmWorkerPortBase = 8262
-)
-
 func init() {
 	MustRegister(Spec{
 		ServiceID: proc.ServiceDMMaster,
@@ -23,10 +18,10 @@ func init() {
 			AllowModifyNum:  true,
 			AllowModifyHost: true,
 			AllowModifyPort: true,
-			DefaultPort:     dmStatusPortBase,
+			DefaultPort:     8261,
 			Ports: []PortSpec{
 				{Name: proc.PortNamePort, Base: 8291},
-				{Name: proc.PortNameStatusPort, Base: dmStatusPortBase, FromConfigPort: true},
+				{Name: proc.PortNameStatusPort, Base: 8261, FromConfigPort: true},
 			},
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
@@ -62,9 +57,9 @@ func init() {
 			AllowModifyNum:  true,
 			AllowModifyHost: true,
 			AllowModifyPort: true,
-			DefaultPort:     dmWorkerPortBase,
+			DefaultPort:     8262,
 			Ports: []PortSpec{
-				{Name: proc.PortNamePort, Base: dmWorkerPortBase, FromConfigPort: true},
+				{Name: proc.PortNamePort, Base: 8262, FromConfigPort: true},
 			},
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,

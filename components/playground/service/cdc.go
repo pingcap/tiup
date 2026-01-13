@@ -4,10 +4,6 @@ import (
 	"github.com/pingcap/tiup/components/playground/proc"
 )
 
-const (
-	ticdcPortBase = 8300
-)
-
 func init() {
 	MustRegister(Spec{
 		ServiceID: proc.ServiceTiCDC,
@@ -16,9 +12,9 @@ func init() {
 			AllowModifyNum:  true,
 			AllowModifyHost: true,
 			AllowModifyPort: true,
-			DefaultPort:     ticdcPortBase,
+			DefaultPort:     8300,
 			Ports: []PortSpec{
-				{Name: proc.PortNamePort, Base: ticdcPortBase, FromConfigPort: true},
+				{Name: proc.PortNamePort, Base: 8300, FromConfigPort: true},
 				{Name: proc.PortNameStatusPort, AliasOf: proc.PortNamePort},
 			},
 			AllowModifyConfig:  true,

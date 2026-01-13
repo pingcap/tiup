@@ -8,12 +8,6 @@ import (
 	"github.com/pingcap/tiup/components/playground/proc"
 )
 
-const (
-	tikvPortBase = 20160
-
-	tikvWorkerPortBase = 19000
-)
-
 func init() {
 	MustRegister(Spec{
 		ServiceID: proc.ServiceTiKV,
@@ -22,9 +16,9 @@ func init() {
 			AllowModifyNum:  true,
 			AllowModifyHost: true,
 			AllowModifyPort: true,
-			DefaultPort:     tikvPortBase,
+			DefaultPort:     20160,
 			Ports: []PortSpec{
-				{Name: proc.PortNamePort, Base: tikvPortBase, FromConfigPort: true},
+				{Name: proc.PortNamePort, Base: 20160, FromConfigPort: true},
 				{Name: proc.PortNameStatusPort, Base: 20180},
 			},
 			AllowModifyConfig:  true,
@@ -73,9 +67,9 @@ func init() {
 			MaxNum:          1,
 			AllowModifyHost: true,
 			AllowModifyPort: true,
-			DefaultPort:     tikvWorkerPortBase,
+			DefaultPort:     19000,
 			Ports: []PortSpec{
-				{Name: proc.PortNamePort, Base: tikvWorkerPortBase, FromConfigPort: true},
+				{Name: proc.PortNamePort, Base: 19000, FromConfigPort: true},
 			},
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,

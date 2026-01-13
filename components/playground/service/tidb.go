@@ -9,12 +9,6 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
-const (
-	tidbPortBase       = 4000
-	tidbSystemPortBase = 3000
-	tidbStatusPortBase = 10080
-)
-
 func init() {
 	startAfter := []proc.ServiceID{
 		proc.ServicePD,
@@ -35,10 +29,10 @@ func init() {
 			MaxNum:          1,
 			AllowModifyHost: true,
 			AllowModifyPort: true,
-			DefaultPort:     tidbSystemPortBase,
+			DefaultPort:     3000,
 			Ports: []PortSpec{
-				{Name: proc.PortNamePort, Base: tidbSystemPortBase, FromConfigPort: true},
-				{Name: proc.PortNameStatusPort, Base: tidbStatusPortBase, Host: "0.0.0.0"},
+				{Name: proc.PortNamePort, Base: 3000, FromConfigPort: true},
+				{Name: proc.PortNameStatusPort, Base: 10080, Host: "0.0.0.0"},
 			},
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,
@@ -92,10 +86,10 @@ func init() {
 			AllowModifyNum:  true,
 			AllowModifyHost: true,
 			AllowModifyPort: true,
-			DefaultPort:     tidbPortBase,
+			DefaultPort:     4000,
 			Ports: []PortSpec{
-				{Name: proc.PortNamePort, Base: tidbPortBase, FromConfigPort: true},
-				{Name: proc.PortNameStatusPort, Base: tidbStatusPortBase, Host: "0.0.0.0"},
+				{Name: proc.PortNamePort, Base: 4000, FromConfigPort: true},
+				{Name: proc.PortNameStatusPort, Base: 10080, Host: "0.0.0.0"},
 			},
 			AllowModifyConfig:  true,
 			AllowModifyBinPath: true,

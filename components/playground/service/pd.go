@@ -10,17 +10,13 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
-const (
-	pdStatusPortBase = 2379
-)
-
 var pdPortSpecs = []PortSpec{
 	{Name: proc.PortNamePort, Base: 2380},
-	{Name: proc.PortNameStatusPort, Base: pdStatusPortBase, FromConfigPort: true},
+	{Name: proc.PortNameStatusPort, Base: 2379, FromConfigPort: true},
 }
 
 var pdMicroservicePortSpecs = []PortSpec{
-	{Name: proc.PortNameStatusPort, Base: pdStatusPortBase},
+	{Name: proc.PortNameStatusPort, Base: 2379},
 	{Name: proc.PortNamePort, AliasOf: proc.PortNameStatusPort},
 }
 
@@ -39,7 +35,7 @@ func init() {
 				AllowModifyNum:     true,
 				AllowModifyHost:    true,
 				AllowModifyPort:    true,
-				DefaultPort:        pdStatusPortBase,
+				DefaultPort:        2379,
 				Ports:              pdPortSpecs,
 				AllowModifyConfig:  true,
 				AllowModifyBinPath: true,
@@ -57,7 +53,7 @@ func init() {
 				AllowModifyNum:     true,
 				AllowModifyHost:    true,
 				AllowModifyPort:    true,
-				DefaultPort:        pdStatusPortBase,
+				DefaultPort:        2379,
 				Ports:              pdPortSpecs,
 				AllowModifyConfig:  true,
 				AllowModifyBinPath: true,
