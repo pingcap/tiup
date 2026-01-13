@@ -31,6 +31,7 @@ type TiCIWorkerScript struct {
 	AdvertiseHost string
 
 	DeployDir string
+	DataDir   string
 	LogDir    string
 
 	NumaNode  string

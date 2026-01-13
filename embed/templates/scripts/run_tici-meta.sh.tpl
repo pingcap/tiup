@@ -15,11 +15,12 @@ exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} env GODEBUG=mad
 exec env GODEBUG=madvdontneed=1 bin/tici-server \
 {{- end}}
     meta \
-    -P {{.Port}} \
+    --port {{.Port}} \
     --status-port="{{.StatusPort}}" \
     --host="{{.ListenHost}}" \
     --advertise-host="{{.AdvertiseHost}}" \
     --pd-addr="{{.PD}}" \
     --config=conf/tici-meta.toml \
     --log-file="{{.LogDir}}/tici-meta.log" \
+    --tidb-addr="{{.TiDBAddr}}" \
     2>> "{{.LogDir}}/tici-meta_stderr.log"

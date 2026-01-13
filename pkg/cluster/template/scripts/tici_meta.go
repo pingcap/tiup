@@ -29,6 +29,7 @@ type TiCIMetaScript struct {
 	ListenHost    string
 	PD            string
 	AdvertiseHost string
+	TiDBAddr      string
 
 	DeployDir string
 	LogDir    string

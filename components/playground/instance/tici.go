@@ -129,6 +129,18 @@ func (inst *TiCIInstance) Start(ctx context.Context) error {
 		fmt.Sprintf("--config=%s", configPath),
 		fmt.Sprintf("--log-file=%s", inst.LogFile()),
 	}
+	switch inst.ticiRole {
+	case TiCIRoleMeta:
+		// MetaServer specific args
+		tidbDsns := make([]string, 0, len(inst.dbs))
+		for _, db := range inst.dbs {
+			tidbDsns = append(tidbDsns, db.DSN())
+		}
+		args = append(args, fmt.Sprintf("--tidb-addr=%s", strings.Join(tidbDsns, ",")))
+	case TiCIRoleWorker:
+		// WorkerNode specific args
+		args = append(args, fmt.Sprintf("--data-dir=%s", filepath.Join(inst.Dir, "data")))
+	}
 
 	return inst.PrepareProcess(ctx, inst.BinPath, args, nil, inst.Dir)
 }

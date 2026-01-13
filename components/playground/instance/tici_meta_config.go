@@ -15,11 +15,6 @@ package instance
 
 func (inst *TiCIInstance) getMetaConfig() map[string]any {
 	config := make(map[string]any)
-	tidbServers := make([]string, 0, len(inst.dbs))
-	for _, db := range inst.dbs {
-		tidbServers = append(tidbServers, db.DSN())
-	}
-	config["tidb-server.dsns"] = tidbServers
 	config["s3.endpoint"] = inst.shOpt.S3.Endpoint
 	config["s3.access-key"] = inst.shOpt.S3.AccessKey
 	config["s3.secret-key"] = inst.shOpt.S3.SecretKey

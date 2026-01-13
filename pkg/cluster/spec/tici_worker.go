@@ -196,6 +196,7 @@ func (i *TiCIWorkerInstance) InitConfig(
 		AdvertiseHost: utils.Ternary(spec.AdvertiseHost != "", spec.AdvertiseHost, spec.Host).(string),
 
 		DeployDir: paths.Deploy,
+		DataDir:   paths.Data[0],
 		LogDir:    paths.Log,
 
 		NumaNode:  spec.NumaNode,
@@ -217,9 +218,6 @@ func (i *TiCIWorkerInstance) InitConfig(
 	}
 
 	globalConfig := topo.ServerConfigs.TiCIWorker
-	if v, ok := spec.Config["frag_writer.local_data_path"].(string); !ok || v == "" {
-		spec.Config["frag_writer.local_data_path"] = filepath.Join(spec.DataDir, "fragments")
-	}
 	if err := i.MergeServerConfig(ctx, e, globalConfig, spec.Config, paths); err != nil {
 		return err
 	}

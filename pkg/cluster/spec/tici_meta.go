@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
@@ -187,13 +186,18 @@ func (i *TiCIMetaInstance) InitConfig(
 	for _, pdspec := range topo.PDServers {
 		pds = append(pds, utils.JoinHostPort(pdspec.Host, pdspec.ClientPort))
 	}
-
+	// TODO: Remove it after TiCI support detecting TiDB servers automatically
+	tidbs := []string{}
+	for _, s := range topo.TiDBServers {
+		tidbs = append(tidbs, fmt.Sprintf("mysql://root@%s", utils.JoinHostPort(s.Host, s.Port)))
+	}
 	cfg := &scripts.TiCIMetaScript{
 		Port:          spec.Port,
 		StatusPort:    spec.StatusPort,
 		ListenHost:    i.GetListenHost(),
 		PD:            strings.Join(pds, ","),
 		AdvertiseHost: utils.Ternary(spec.AdvertiseHost != "", spec.AdvertiseHost, spec.Host).(string),
+		TiDBAddr:      strings.Join(tidbs, ","),
 
 		DeployDir: paths.Deploy,
 		LogDir:    paths.Log,
@@ -218,13 +222,6 @@ func (i *TiCIMetaInstance) InitConfig(
 
 	globalConfig := topo.ServerConfigs.TiCIMeta
 
-	// Add the TiDB servers to the config
-	tidbs := []string{}
-	for _, s := range topo.TiDBServers {
-		tidbs = append(tidbs, fmt.Sprintf("mysql://root@%s", utils.JoinHostPort(s.Host, s.Port)))
-	}
-	spec.Config["tidb_server.dsns"] = tidbs
-
 	if err := i.MergeServerConfig(ctx, e, globalConfig, spec.Config, paths); err != nil {
 		return err
 	}
@@ -238,39 +235,7 @@ func (i *TiCIMetaInstance) PrepareStart(ctx context.Context, tlsCfg *tls.Config)
 	if len(topo.CDCServers) == 0 {
 		return errors.New("TiCDC is required for TiCI, please add at least one TiCDC instance")
 	}
-	spec := i.InstanceSpec.(*TiCIMetaSpec)
-	var (
-		bucket        = "ticidefaultbucket"
-		prefix        = "tici_default_prefix"
-		endpoint      = "http://localhost:9000"
-		accessKey     = ""
-		secretKey     = ""
-		flushInterval = "5s" // make it configurable later
-	)
-	if v, ok := spec.Config["s3.bucket"].(string); ok {
-		bucket = v
-	}
-	if v, ok := spec.Config["s3.prefix"].(string); ok {
-		prefix = v
-	}
-	if v, ok := spec.Config["s3.endpoint"].(string); ok {
-		endpoint = v
-	}
-	if v, ok := spec.Config["s3.access_key"].(string); ok {
-		accessKey = v
-	}
-	if v, ok := spec.Config["s3.secret_key"].(string); ok {
-		secretKey = v
-	}
-	if v, ok := spec.Config["s3.region"].(string); ok {
-		endpoint = fmt.Sprintf("%s&region=%s", endpoint, v)
-	}
-	if v, ok := spec.Config["s3.use_path_style"].(bool); ok {
-		endpoint = fmt.Sprintf("%s&force-path-style=%t", endpoint, v)
-	}
-	cdcAddr := utils.JoinHostPort(topo.CDCServers[0].Host, topo.CDCServers[0].Port)
-	cdcClient := api.NewCDCOpenAPIClient(ctx, []string{cdcAddr}, 10*time.Second, nil)
-	return cdcClient.CreateChangefeed(bucket, prefix, endpoint, accessKey, secretKey, flushInterval)
+	return nil
 }
 
 // ScaleConfig deploy temporary config on scaling

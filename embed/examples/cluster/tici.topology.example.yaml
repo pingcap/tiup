@@ -241,6 +241,8 @@ tiflash_servers:
     flash_proxy_status_port: 20292
     # # Prometheus pulls the TiFlash metrics port.
     metrics_port: 8234
+    # # TiCI Reader service port.
+    tici_reader_node_port: 8520
     # # TiFlash Server deployment file, startup script, configuration file storage directory.
     deploy_dir: /data1/tidb-deploy/tiflash-9000
     ## With cluster version >= v4.0.9 and you want to deploy a multi-disk TiFlash node, it is recommended to
@@ -264,6 +266,7 @@ tiflash_servers:
     flash_proxy_port: 20171
     flash_proxy_status_port: 20293
     metrics_port: 8235
+    tici_reader_node_port: 8521
     deploy_dir: /data2/tidb-deploy/tiflash-9001
     data_dir: /data2/tidb-data/tiflash-9001
     log_dir: /data2/tidb-deploy/tiflash-9001/log
@@ -276,6 +279,7 @@ tiflash_servers:
     flash_proxy_port: 20170
     flash_proxy_status_port: 20292
     metrics_port: 8234
+    tici_reader_node_port: 8520
     deploy_dir: /data1/tidb-deploy/tiflash-9000
     data_dir: /data1/tidb-data/tiflash-9000
     log_dir: /data1/tidb-deploy/tiflash-9000/log
@@ -288,26 +292,12 @@ tiflash_servers:
     flash_proxy_port: 20171
     flash_proxy_status_port: 20293
     metrics_port: 8235
+    tici_reader_node_port: 8521
     deploy_dir: /data2/tidb-deploy/tiflash-9001
     data_dir: /data2/tidb-data/tiflash-9001
     log_dir: /data2/tidb-deploy/tiflash-9001/log
     # config:
       # logger.level: info
-
-# # Server configs are used to specify the configuration of TiKV-CDC Servers.
-# kvcdc_servers:
-  # - host: 10.0.1.20
-    # # SSH port of the server.
-    # ssh_port: 22
-    # # TiKV-CDC Server communication port.
-    # port: 8600
-    # # TiKV-CDC Server data storage directory.
-    # data_dir: "/data1/tidb-data/tikv-cdc-8600"
-    # # TiKV-CDC Server log file storage directory.
-    # log_dir: "/data1/tidb-deploy/tikv-cdc-8600/log"
-  # - host: 10.0.1.21
-    # data_dir: "/data1/tidb-data/tikv-cdc-8600"
-    # log_dir: "/data1/tidb-deploy/tikv-cdc-8600/log"
 
 # # Server configs are used to specify the configuration of TiCDC Servers.  
 cdc_servers:
@@ -342,21 +332,24 @@ tici_meta_servers:
     # ssh_port: 22
     # # TiCI Meta Server communication port.
     # port: 8500
+    # # Communication port for reporting TiCI Meta Server status.
+    # status_port: 8501
+    # # TiCI Meta Server deployment file, startup script, configuration file storage directory.
+    # deploy_dir: "/data1/tidb-deploy/tici-meta-8500"
     # # TiCI Meta Server data storage directory.
     # data_dir: "/data1/tidb-deploy/tici-meta-8500"
     # # TiCI Meta Server log file storage directory.
     # log_dir: "/data1/tidb-deploy/tici-meta-8500/log"
-    # # TiCI Meta Server deployment file, startup script, configuration file storage directory.
-    # deploy_dir: "/data1/tidb-deploy/tici-meta-8500"
     # numa_node: "0,1"
     # config:
     #   log.level: warn
   # - host: 10.0.1.22
     # ssh_port: 22
     # port: 8500
+    # status_port: 8501
+    # deploy_dir: "/data2/tidb-deploy/tici-meta-8500"
     # data_dir: "/data2/tidb-deploy/tici-meta-8500"
     # log_dir: "/data2/tidb-deploy/tici-meta-8500/log"
-    # deploy_dir: "/data2/tidb-deploy/tici-meta-8500"
 
 # # Server configs are used to specify the configuration of TiCI Worker Servers.
 tici_worker_servers:
@@ -365,21 +358,24 @@ tici_worker_servers:
     # ssh_port: 22
     # # TiCI Worker Server communication port.
     # port: 8510
+    # # Communication port for reporting TiCI Worker Server status.
+    # status_port: 8511
+    # # TiCI Worker Server deployment file, startup script, configuration file storage directory.
+    # deploy_dir: "/data1/tidb-deploy/tici-worker-8510"
     # # TiCI Worker Server data storage directory.
     # data_dir: "/data1/tidb-deploy/tici-worker-8510"
     # # TiCI Worker Server log file storage directory.
     # log_dir: "/data1/tidb-deploy/tici-worker-8510/log"
-    # # TiCI Worker Server deployment file, startup script, configuration file storage directory.
-    # deploy_dir: "/data1/tidb-deploy/tici-worker-8510"
     # numa_node: "0,1"
     # config:
     #   log.level: warn
   # - host: 10.0.1.24
     # ssh_port: 22
     # port: 8510
+    # status_port: 8511
+    # deploy_dir: "/data2/tidb-deploy/tici-worker-8510"
     # data_dir: "/data2/tidb-deploy/tici-worker-8510"
     # log_dir: "/data2/tidb-deploy/tici-worker-8510/log"
-    # deploy_dir: "/data2/tidb-deploy/tici-worker-8510"
     
 # # Server configs are used to specify the configuration of TiDB Dashboard Servers. Available from v6.5.0
 # tidb_dashboard_servers:
@@ -406,7 +402,7 @@ monitoring_servers:
     # ssh_port: 22
     # # Prometheus Service communication port.
     # port: 9090
-    # # ng-monitoring servive communication port
+    # # ng-monitoring service communication port
     # ng_port: 12020
     # # Prometheus deployment file, startup script, configuration file storage directory.
     # deploy_dir: "/tidb-deploy/prometheus-8249"
