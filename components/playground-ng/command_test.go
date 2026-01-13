@@ -149,6 +149,16 @@ func TestTargetTag_StalePortIsFiltered(t *testing.T) {
 	require.Equal(t, port, target.port)
 }
 
+func TestTargetTag_MissingBaseDirIsNotRunning(t *testing.T) {
+	base := filepath.Join(t.TempDir(), "missing")
+
+	_, err := resolvePlaygroundTarget("", "", base)
+	require.Error(t, err)
+	var notRunning playgroundNotRunningError
+	require.ErrorAs(t, err, &notRunning)
+	require.True(t, shouldSuggestPlaygroundNotRunning(err))
+}
+
 func TestTargetTag_ExplicitProbeTimeoutIsUnreachable(t *testing.T) {
 	base := t.TempDir()
 

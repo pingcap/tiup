@@ -223,6 +223,9 @@ type playgroundTarget struct {
 func listPlaygroundTargets(baseDir string) ([]playgroundTarget, error) {
 	entries, err := os.ReadDir(baseDir)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
 		return nil, errors.AddStack(err)
 	}
 
