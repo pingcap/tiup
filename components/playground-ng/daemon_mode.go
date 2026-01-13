@@ -119,7 +119,7 @@ func runBackgroundStarter(state *cliState) error {
 			if ok && probeErr == nil {
 				cancelTail()
 				out := tuiv2output.Stdout.Get()
-				fmt.Fprintf(out, "\nPlayground started in background.\n\nTag: %s\nData dir: %s\n\nTo stop:    tiup playground-ng stop --tag %s\nTo display: tiup playground-ng display --tag %s\n", state.tag, state.dataDir, state.tag, state.tag)
+				fmt.Fprintf(out, "\nPlayground started in background.\n\nTag: %s\nPort: %d\nData dir: %s\n\nTo stop:    tiup playground-ng stop --tag %s\nTo display: tiup playground-ng display --tag %s\n", state.tag, port, state.dataDir, state.tag, state.tag)
 				return nil
 			}
 		}
@@ -147,12 +147,23 @@ func daemonEnv() []string {
 }
 
 func buildDaemonArgs(tag string) []string {
-	var out []string
-	for _, arg := range os.Args[1:] {
+	rawArgs := os.Args[1:]
+	out := make([]string, 0, len(rawArgs)+3)
+	for i := 0; i < len(rawArgs); i++ {
+		arg := rawArgs[i]
 		switch {
-		case arg == "--background", arg == "-d", strings.HasPrefix(arg, "--background="):
+		case arg == "--background" || arg == "-d" || strings.HasPrefix(arg, "--background="):
 			continue
-		case arg == "--run-as-daemon", strings.HasPrefix(arg, "--run-as-daemon="):
+		case arg == "--run-as-daemon" || strings.HasPrefix(arg, "--run-as-daemon="):
+			continue
+		case arg == "--tag" || arg == "-T":
+			if i+1 < len(rawArgs) {
+				i++
+			}
+			continue
+		case strings.HasPrefix(arg, "--tag="):
+			continue
+		case strings.HasPrefix(arg, "-T") && len(arg) > 2:
 			continue
 		default:
 			out = append(out, arg)
