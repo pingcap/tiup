@@ -3,12 +3,15 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -143,4 +146,43 @@ func TestCommandHandler_MaxBodyBytes(t *testing.T) {
 	var reply CommandReply
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &reply), "body=%q", w.Body.String())
 	require.NotEmpty(t, reply.Error)
+}
+
+func TestListenAndServeHTTP_StopsAfterProcessGroupClose(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	port := ln.Addr().(*net.TCPAddr).Port
+	require.NoError(t, ln.Close())
+
+	p := &Playground{
+		port:         port,
+		processGroup: NewProcessGroup(),
+	}
+	require.NoError(t, p.processGroup.Add("command server", p.listenAndServeHTTP))
+
+	url := fmt.Sprintf("http://127.0.0.1:%d/command", port)
+	deadline := time.Now().Add(time.Second)
+	for {
+		resp, err := http.Get(url)
+		if err == nil {
+			_ = resp.Body.Close()
+			require.Equal(t, http.StatusMethodNotAllowed, resp.StatusCode)
+			break
+		}
+		if time.Now().After(deadline) {
+			require.FailNow(t, "timeout waiting for command server to be ready", "lastErr=%v", err)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	doneCh := make(chan error, 1)
+	go func() { doneCh <- p.processGroup.Wait() }()
+	p.processGroup.Close()
+
+	select {
+	case err := <-doneCh:
+		require.NoError(t, err)
+	case <-time.After(time.Second):
+		require.FailNow(t, "timeout waiting for process group to stop")
+	}
 }

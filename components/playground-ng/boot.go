@@ -613,13 +613,24 @@ func (p *Playground) bootCluster(ctx context.Context, options *BootOptions) (err
 
 	// Start the HTTP command server last, after all post-start
 	// artifacts (sd file, dsn, topology hints) are ready.
-	go func() {
-		// fmt.Printf("serve at :%d\n", p.port)
-		err := p.listenAndServeHTTP()
-		if err != nil {
-			fmt.Fprintf(p.terminalWriter(), "listenAndServeHTTP quit: %s\n", err)
-		}
-	}()
+	if p.processGroup != nil {
+		_ = p.processGroup.Add("command server", func() error {
+			// fmt.Printf("serve at :%d\n", p.port)
+			err := p.listenAndServeHTTP()
+			if err != nil {
+				fmt.Fprintf(p.terminalWriter(), "listenAndServeHTTP quit: %s\n", err)
+			}
+			return err
+		})
+	} else {
+		go func() {
+			// fmt.Printf("serve at :%d\n", p.port)
+			err := p.listenAndServeHTTP()
+			if err != nil {
+				fmt.Fprintf(p.terminalWriter(), "listenAndServeHTTP quit: %s\n", err)
+			}
+		}()
+	}
 
 	return nil
 }
