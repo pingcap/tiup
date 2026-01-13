@@ -4,11 +4,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -43,11 +46,29 @@ func TestTargetTag_SingleAutoSelect(t *testing.T) {
 
 	dir := filepath.Join(base, "only")
 	require.NoError(t, os.MkdirAll(dir, 0o755))
-	require.NoError(t, dumpPort(filepath.Join(dir, "port"), 12345))
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/command" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			_ = json.NewEncoder(w).Encode(CommandReply{OK: false, Error: "method not allowed"})
+			return
+		}
+		_ = json.NewEncoder(w).Encode(CommandReply{OK: true})
+	}))
+	defer s.Close()
+	u, err := url.Parse(s.URL)
+	require.NoError(t, err)
+	port, err := strconv.Atoi(u.Port())
+	require.NoError(t, err)
+	require.NoError(t, dumpPort(filepath.Join(dir, "port"), port))
 
 	target, err := resolvePlaygroundTarget("", "", base)
 	require.NoError(t, err)
-	require.Equal(t, 12345, target.port)
+	require.Equal(t, port, target.port)
 	require.Equal(t, "only", target.tag)
 	require.Equal(t, dir, target.dir)
 }
@@ -56,14 +77,76 @@ func TestTargetTag_MultipleRequireExplicitTag(t *testing.T) {
 	base := t.TempDir()
 
 	require.NoError(t, os.MkdirAll(filepath.Join(base, "a"), 0o755))
-	require.NoError(t, dumpPort(filepath.Join(base, "a", "port"), 1))
-	require.NoError(t, os.MkdirAll(filepath.Join(base, "b"), 0o755))
-	require.NoError(t, dumpPort(filepath.Join(base, "b", "port"), 2))
+	s1 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/command" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		_ = json.NewEncoder(w).Encode(CommandReply{OK: false, Error: "method not allowed"})
+	}))
+	defer s1.Close()
+	u1, err := url.Parse(s1.URL)
+	require.NoError(t, err)
+	p1, err := strconv.Atoi(u1.Port())
+	require.NoError(t, err)
+	require.NoError(t, dumpPort(filepath.Join(base, "a", "port"), p1))
 
-	_, err := resolvePlaygroundTarget("", "", base)
+	require.NoError(t, os.MkdirAll(filepath.Join(base, "b"), 0o755))
+	s2 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/command" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		_ = json.NewEncoder(w).Encode(CommandReply{OK: false, Error: "method not allowed"})
+	}))
+	defer s2.Close()
+	u2, err := url.Parse(s2.URL)
+	require.NoError(t, err)
+	p2, err := strconv.Atoi(u2.Port())
+	require.NoError(t, err)
+	require.NoError(t, dumpPort(filepath.Join(base, "b", "port"), p2))
+
+	_, err = resolvePlaygroundTarget("", "", base)
 	require.Error(t, err)
 	require.False(t, shouldSuggestPlaygroundNotRunning(err))
 	require.Contains(t, err.Error(), "multiple playgrounds found")
+}
+
+func TestTargetTag_StalePortIsFiltered(t *testing.T) {
+	base := t.TempDir()
+
+	require.NoError(t, os.MkdirAll(filepath.Join(base, "stale"), 0o755))
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	stalePort := ln.Addr().(*net.TCPAddr).Port
+	require.NoError(t, ln.Close())
+	require.NoError(t, dumpPort(filepath.Join(base, "stale", "port"), stalePort))
+
+	require.NoError(t, os.MkdirAll(filepath.Join(base, "good"), 0o755))
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/command" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		_ = json.NewEncoder(w).Encode(CommandReply{OK: false, Error: "method not allowed"})
+	}))
+	defer s.Close()
+	u, err := url.Parse(s.URL)
+	require.NoError(t, err)
+	port, err := strconv.Atoi(u.Port())
+	require.NoError(t, err)
+	require.NoError(t, dumpPort(filepath.Join(base, "good", "port"), port))
+
+	target, err := resolvePlaygroundTarget("", "", base)
+	require.NoError(t, err)
+	require.Equal(t, "good", target.tag)
+	require.Equal(t, port, target.port)
 }
 
 func TestTargetTag_ExplicitMissingTagIsNotRunning(t *testing.T) {
@@ -154,7 +237,9 @@ func TestListenAndServeHTTP_StopsAfterProcessGroupClose(t *testing.T) {
 	port := ln.Addr().(*net.TCPAddr).Port
 	require.NoError(t, ln.Close())
 
+	dataDir := t.TempDir()
 	p := &Playground{
+		dataDir:      dataDir,
 		port:         port,
 		processGroup: NewProcessGroup(),
 	}
@@ -175,6 +260,8 @@ func TestListenAndServeHTTP_StopsAfterProcessGroupClose(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 	}
 
+	require.FileExists(t, filepath.Join(dataDir, playgroundPortFileName))
+
 	doneCh := make(chan error, 1)
 	go func() { doneCh <- p.processGroup.Wait() }()
 	p.processGroup.Close()
@@ -185,4 +272,67 @@ func TestListenAndServeHTTP_StopsAfterProcessGroupClose(t *testing.T) {
 	case <-time.After(time.Second):
 		require.FailNow(t, "timeout waiting for process group to stop")
 	}
+
+	_, err = os.Stat(filepath.Join(dataDir, playgroundPortFileName))
+	require.True(t, os.IsNotExist(err))
+}
+
+func TestStop_WaitsForPIDFileRemoval(t *testing.T) {
+	base := t.TempDir()
+	dir := filepath.Join(base, "only")
+	require.NoError(t, os.MkdirAll(dir, 0o755))
+
+	pidPath := filepath.Join(dir, playgroundPIDFileName)
+	require.NoError(t, os.WriteFile(pidPath, []byte("pid="+strconv.Itoa(os.Getpid())+"\n"), 0o644))
+
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/command" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			_ = json.NewEncoder(w).Encode(CommandReply{OK: false, Error: "method not allowed"})
+			return
+		}
+
+		var cmd Command
+		if err := json.NewDecoder(r.Body).Decode(&cmd); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			_ = json.NewEncoder(w).Encode(CommandReply{OK: false, Error: err.Error()})
+			return
+		}
+		if cmd.Type != StopCommandType {
+			w.WriteHeader(http.StatusBadRequest)
+			_ = json.NewEncoder(w).Encode(CommandReply{OK: false, Error: "unexpected command"})
+			return
+		}
+
+		_ = json.NewEncoder(w).Encode(CommandReply{OK: true, Message: "Stopping playground...\n"})
+		if f, ok := w.(http.Flusher); ok {
+			f.Flush()
+		}
+
+		go func() {
+			time.Sleep(200 * time.Millisecond)
+			_ = os.Remove(pidPath)
+			_ = os.Remove(filepath.Join(dir, playgroundPortFileName))
+		}()
+	}))
+	defer s.Close()
+
+	u, err := url.Parse(s.URL)
+	require.NoError(t, err)
+	port, err := strconv.Atoi(u.Port())
+	require.NoError(t, err)
+	require.NoError(t, dumpPort(filepath.Join(dir, playgroundPortFileName), port))
+
+	state := &cliState{
+		tag:     "only",
+		dataDir: dir,
+	}
+	require.NoError(t, stop(io.Discard, 2*time.Second, state))
+	_, err = os.Stat(pidPath)
+	require.True(t, os.IsNotExist(err))
 }

@@ -133,6 +133,8 @@ Examples:
   $ tiup playground-ng --pd.config ~/config/pd.toml    # Start a local cluster with specified configuration file
   $ tiup playground-ng --db.binpath /xx/tidb-server    # Start a local cluster with component binary path
   $ tiup playground-ng --tag xx                        # Start a local cluster with data dir named 'xx' and uncleaned after exit
+  $ tiup playground-ng --background --tag xx           # Start a local cluster in background (daemon mode)
+  $ tiup playground-ng stop --tag xx                   # Stop the cluster started with --tag xx
   $ tiup playground-ng --mode tikv-slim                # Start a local tikv only cluster (No TiDB or TiFlash Available)
   $ tiup playground-ng --mode tikv-slim --kv 3 --pd 3  # Start a local tikv only cluster with 6 nodes`,
 		SilenceUsage:  true,
@@ -155,6 +157,15 @@ Examples:
 			// deterministic when users don't specify a tag.
 			if isRoot && state.dryRun && state.tag == "" && state.tiupDataDir == "" {
 				state.tag = "dry-run"
+				state.dataDir = filepath.Join(tiupHome, localdata.DataParentDir, state.tag)
+				state.deleteWhenExit = false
+			} else if isRoot && (state.background || state.runAsDaemon) {
+				// In daemon mode, the data directory must not depend on
+				// TIUP_INSTANCE_DATA_DIR (it may be cleaned by the TiUP runner when the
+				// starter exits).
+				if state.tag == "" {
+					state.tag = utils.Base62Tag()
+				}
 				state.dataDir = filepath.Join(tiupHome, localdata.DataParentDir, state.tag)
 				state.deleteWhenExit = false
 			} else {
@@ -189,6 +200,10 @@ Examples:
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if state.background && !state.runAsDaemon {
+				return runBackgroundStarter(state)
+			}
+
 			if len(args) > 0 {
 				state.options.Version = args[0]
 			} else if state.options.ShOpt.Mode == proc.ModeNextGen {
@@ -225,11 +240,13 @@ Examples:
 			}
 
 			port := utils.MustGetFreePort("127.0.0.1", 9527, state.options.ShOpt.PortOffset)
-			err := dumpPort(filepath.Join(state.dataDir, "port"), port)
-			p := NewPlayground(state.dataDir, port)
+			releasePID, err := claimPlaygroundPIDFile(state.dataDir, state.tag)
 			if err != nil {
 				return err
 			}
+			defer releasePID()
+
+			p := NewPlayground(state.dataDir, port)
 			p.deleteWhenExit = state.deleteWhenExit
 
 			ui := progressv2.New(progressv2.Options{Mode: progressv2.ModeAuto, Out: os.Stderr})
@@ -340,7 +357,10 @@ Examples:
 			return nil
 		},
 		PostRunE: func(cmd *cobra.Command, args []string) error {
-			return environment.GlobalEnv().Close()
+			if env := environment.GlobalEnv(); env != nil {
+				return env.Close()
+			}
+			return nil
 		},
 	}
 
@@ -370,6 +390,9 @@ Examples:
 	rootCmd.Flags().BoolVar(&state.options.ShOpt.ForcePull, "force-pull", false, "Force redownload the component. It is useful to manually refresh nightly or broken binaries")
 	rootCmd.Flags().BoolVar(&state.dryRun, "dry-run", false, "Only generate the boot plan and exit")
 	rootCmd.Flags().StringVar(&state.dryRunOutput, "dry-run-output", "text", "Dry-run output format: text|json")
+	rootCmd.Flags().BoolVarP(&state.background, "background", "d", false, "Start playground-ng in background (daemon mode)")
+	rootCmd.Flags().BoolVar(&state.runAsDaemon, "run-as-daemon", false, "INTERNAL: run as daemon")
+	_ = rootCmd.Flags().MarkHidden("run-as-daemon")
 
 	rootCmd.PersistentFlags().StringVarP(&state.tag, "tag", "T", "", "Specify a tag for playground, data dir of this tag will not be removed after exit")
 	rootCmd.Flags().Bool("without-monitor", false, "Don't start prometheus and grafana component")
@@ -385,6 +408,7 @@ Examples:
 	rootCmd.AddCommand(newDisplay(state))
 	rootCmd.AddCommand(newScaleOut(state))
 	rootCmd.AddCommand(newScaleIn(state))
+	rootCmd.AddCommand(newStop(state))
 
 	return rootCmd.Execute()
 }

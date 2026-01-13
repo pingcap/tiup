@@ -1,0 +1,237 @@
+package main
+
+import (
+	"context"
+	"encoding/json"
+	stdErrors "errors"
+	"fmt"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"syscall"
+	"time"
+
+	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/utils"
+)
+
+const (
+	playgroundPIDFileName   = "pid"
+	playgroundPortFileName  = "port"
+	playgroundDaemonLogName = "daemon.log"
+)
+
+type pidFile struct {
+	pid int
+}
+
+func readPIDFile(path string) (pidFile, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return pidFile{}, err
+	}
+
+	lines := strings.Split(string(data), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		if !strings.HasPrefix(line, "pid=") {
+			continue
+		}
+		raw := strings.TrimSpace(strings.TrimPrefix(line, "pid="))
+		if raw == "" {
+			return pidFile{}, fmt.Errorf("pid is empty")
+		}
+		pid, err := strconv.Atoi(raw)
+		if err != nil {
+			return pidFile{}, fmt.Errorf("invalid pid %q: %w", raw, err)
+		}
+		return pidFile{pid: pid}, nil
+	}
+
+	return pidFile{}, fmt.Errorf("missing pid field")
+}
+
+func isPIDRunning(pid int) (running bool, err error) {
+	if pid <= 0 {
+		return false, fmt.Errorf("invalid pid %d", pid)
+	}
+	err = syscall.Kill(pid, 0)
+	if err == nil || err == syscall.EPERM {
+		return true, nil
+	}
+	if err == syscall.ESRCH {
+		return false, nil
+	}
+	return false, err
+}
+
+func probePlaygroundCommandServer(ctx context.Context, port int) (bool, error) {
+	if port <= 0 {
+		return false, fmt.Errorf("invalid port %d", port)
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("http://127.0.0.1:%d/command", port), nil)
+	if err != nil {
+		return false, errors.AddStack(err)
+	}
+
+	resp, err := (&http.Client{}).Do(req)
+	if err != nil {
+		return false, err
+	}
+	defer resp.Body.Close()
+
+	var reply CommandReply
+	if err := json.NewDecoder(resp.Body).Decode(&reply); err != nil {
+		return false, err
+	}
+
+	if resp.StatusCode != http.StatusMethodNotAllowed {
+		return false, fmt.Errorf("unexpected probe status: %s", resp.Status)
+	}
+
+	if !reply.OK && reply.Error == "method not allowed" {
+		return true, nil
+	}
+
+	return false, fmt.Errorf("unexpected probe response")
+}
+
+func cleanupStaleRuntimeFiles(dataDir string) error {
+	if strings.TrimSpace(dataDir) == "" {
+		return fmt.Errorf("data dir is empty")
+	}
+
+	pidPath := filepath.Join(dataDir, playgroundPIDFileName)
+	portPath := filepath.Join(dataDir, playgroundPortFileName)
+
+	pid, err := readPIDFile(pidPath)
+	if err == nil {
+		running, runErr := isPIDRunning(pid.pid)
+		if runErr != nil {
+			return errors.Annotatef(runErr, "check pid %d", pid.pid)
+		}
+		if running {
+			return fmt.Errorf("playground already running (pid=%d)", pid.pid)
+		}
+		_ = os.Remove(pidPath)
+		_ = os.Remove(portPath)
+		return nil
+	}
+	if !os.IsNotExist(err) {
+		return errors.AddStack(err)
+	}
+
+	port, err := loadPort(dataDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return errors.AddStack(err)
+	}
+	if port <= 0 {
+		return nil
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+	ok, probeErr := probePlaygroundCommandServer(ctx, port)
+	if ok && probeErr == nil {
+		return fmt.Errorf("playground already running (port=%d)", port)
+	}
+
+	// Stale port file: cleanup only when it is clearly unreachable. Avoid
+	// deleting the file on timeouts or ambiguous errors.
+	if probeErr == nil {
+		_ = os.Remove(portPath)
+		return nil
+	}
+	if stdErrors.Is(probeErr, syscall.ECONNREFUSED) {
+		_ = os.Remove(portPath)
+		return nil
+	}
+	var netErr interface{ Timeout() bool }
+	if stdErrors.As(probeErr, &netErr) && netErr.Timeout() {
+		return nil
+	}
+	_ = os.Remove(portPath)
+	return nil
+}
+
+func claimPlaygroundPIDFile(dataDir, tag string) (release func(), err error) {
+	if strings.TrimSpace(dataDir) == "" {
+		return nil, fmt.Errorf("data dir is empty")
+	}
+	if strings.TrimSpace(tag) == "" {
+		return nil, fmt.Errorf("tag is empty")
+	}
+	if err := utils.MkdirAll(dataDir, 0o755); err != nil {
+		return nil, err
+	}
+
+	pidPath := filepath.Join(dataDir, playgroundPIDFileName)
+	for {
+		f, err := os.OpenFile(pidPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+		if err == nil {
+			now := time.Now().UTC().Format(time.RFC3339)
+			_, writeErr := fmt.Fprintf(f, "pid=%d\nstarted_at=%s\ntag=%s\n", os.Getpid(), now, tag)
+			closeErr := f.Close()
+			if writeErr != nil {
+				_ = os.Remove(pidPath)
+				return nil, errors.AddStack(writeErr)
+			}
+			if closeErr != nil {
+				_ = os.Remove(pidPath)
+				return nil, errors.AddStack(closeErr)
+			}
+			return func() { _ = os.Remove(pidPath) }, nil
+		}
+
+		if !os.IsExist(err) {
+			return nil, errors.AddStack(err)
+		}
+		if err := cleanupStaleRuntimeFiles(dataDir); err != nil {
+			return nil, errors.Annotatef(err, "tag %q is already in use", tag)
+		}
+	}
+}
+
+func waitPlaygroundStopped(dataDir string, timeout time.Duration) error {
+	if strings.TrimSpace(dataDir) == "" {
+		return fmt.Errorf("data dir is empty")
+	}
+	if timeout <= 0 {
+		timeout = 60 * time.Second
+	}
+
+	deadline := time.Now().Add(timeout)
+	pidPath := filepath.Join(dataDir, playgroundPIDFileName)
+
+	for {
+		pid, err := readPIDFile(pidPath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				return nil
+			}
+		} else {
+			running, runErr := isPIDRunning(pid.pid)
+			if runErr == nil && !running {
+				_ = os.Remove(pidPath)
+				return nil
+			}
+		}
+
+		if time.Now().After(deadline) {
+			return fmt.Errorf("timeout waiting for playground to stop")
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+}
