@@ -92,6 +92,14 @@ func TestPS_NoInstances_PrintsWarning(t *testing.T) {
 	require.Contains(t, buf.String(), "No running playground-ng instances found.")
 }
 
+func TestPS_NoDataDir_PrintsWarning(t *testing.T) {
+	state := &cliState{dataDir: filepath.Join(t.TempDir(), "missing")}
+
+	var buf bytes.Buffer
+	require.NoError(t, ps(&buf, state))
+	require.Contains(t, buf.String(), "No running playground-ng instances found.")
+}
+
 func TestStopAll_StopsAllPlaygrounds(t *testing.T) {
 	base := t.TempDir()
 
@@ -187,4 +195,12 @@ func TestStopAll_RejectsTag(t *testing.T) {
 	err := stopAll(io.Discard, time.Second, state)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "does not accept")
+}
+
+func TestStopAll_NoDataDir_PrintsWarning(t *testing.T) {
+	state := &cliState{dataDir: filepath.Join(t.TempDir(), "missing")}
+
+	var buf bytes.Buffer
+	require.NoError(t, stopAll(&buf, time.Second, state))
+	require.Contains(t, buf.String(), "No running playground-ng instances found.")
 }
