@@ -11,7 +11,7 @@ For general Go development guidelines shared by the whole repository, see `AGENT
 
 Note: Playground NG binary is named `tiup-playground-ng` to distinguish it from the existing `tiup-playground`. NG is the new generation of playground.
 
-## Principles to Follow when Developing TiUP Playground
+## Principles to Follow when Developing TiUP Playground-NG
 
 This codebase will outlive you. Every shortcut you take becomes someone else's burden. Every hack compounds into technical debt that slows the whole team down.
 

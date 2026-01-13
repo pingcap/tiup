@@ -126,7 +126,7 @@ type CommandReply struct {
 	Error   string `json:"error,omitempty"`
 }
 
-// cliState holds process-level CLI state for both "tiup playground" (boot) and
+// cliState holds process-level CLI state for both "tiup playground-ng" (boot) and
 // its subcommands (display/scale-in/scale-out).
 //
 // It intentionally avoids package-level mutable globals so tests and helpers can
@@ -483,7 +483,7 @@ func printDisplayFailureWarning(out io.Writer, err error) {
 
 	var lines []string
 	if shouldSuggestPlaygroundNotRunning(err) {
-		lines = append(lines, colorstr.Sprintf("[bold]Looks like no TiUP Playground is running?[reset]"))
+		lines = append(lines, colorstr.Sprintf("[bold]Looks like no tiup playground-ng is running?[reset]"))
 	}
 	lines = append(lines, fmt.Sprintf("Error: %v", err))
 

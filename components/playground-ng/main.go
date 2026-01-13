@@ -182,7 +182,7 @@ Examples:
 						return err
 					}
 					if out := tuiv2output.Stdout.Get(); tuiterm.Resolve(out).Control {
-						_, _ = fmt.Fprintf(out, "\033]0;TiUP Playground: %s\a", state.tag)
+						_, _ = fmt.Fprintf(out, "\033]0;TiUP Playground-NG: %s\a", state.tag)
 					}
 				}
 			}
@@ -354,7 +354,7 @@ Examples:
 	tui.AddColorFunctionsForCobra()
 	tui.BeautifyCobraUsageAndHelp(rootCmd)
 
-	rootCmd.Flags().StringVar(&state.options.ShOpt.Mode, "mode", "tidb", fmt.Sprintf("TiUP playground mode: '%s', '%s', '%s', '%s', '%s'", proc.ModeNormal, proc.ModeCSE, proc.ModeNextGen, proc.ModeDisAgg, proc.ModeTiKVSlim))
+	rootCmd.Flags().StringVar(&state.options.ShOpt.Mode, "mode", "tidb", fmt.Sprintf("tiup playground-ng mode: '%s', '%s', '%s', '%s', '%s'", proc.ModeNormal, proc.ModeCSE, proc.ModeNextGen, proc.ModeDisAgg, proc.ModeTiKVSlim))
 	rootCmd.Flags().StringVar(&state.options.ShOpt.PDMode, "pd.mode", "pd", "PD mode: 'pd', 'ms'")
 	rootCmd.Flags().StringVar(&state.options.ShOpt.CSE.S3Endpoint, "cse.s3_endpoint", "http://127.0.0.1:9000",
 		fmt.Sprintf("Object store URL for --mode=%s, --mode=%s, --mode=%s", proc.ModeCSE, proc.ModeDisAgg, proc.ModeNextGen))

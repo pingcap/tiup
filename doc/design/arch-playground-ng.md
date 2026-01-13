@@ -124,7 +124,7 @@ Dry-run entry: `components/playground-ng/main.go` uses the same planner to produ
 
 ## 4. Runtime Control Plane (HTTP + Command)
 
-- server: `components/playground-ng/http_server.go`
+- server: `components/playground-ng/command.go` (`(*Playground).listenAndServeHTTP` + `commandHandler`)
 
   - Listens on `127.0.0.1:<port>`, exposes `POST /command`
   - Strict JSON validation: `DisallowUnknownFields`, with a body size limit.
@@ -132,7 +132,7 @@ Dry-run entry: `components/playground-ng/main.go` uses the same planner to produ
 - client (subcommands): `components/playground-ng/command.go`
   - `display/scale-in/scale-out` first locate the target via `resolvePlaygroundTarget`, then request `/command`.
 
-Target selection rules (for multiple co-existing playground-ngs): `components/playground-ng/env.go`
+Target selection rules (for multiple co-existing playground-ngs): `components/playground-ng/command.go` (`resolvePlaygroundTarget`)
 
 - If `--tag` or `TIUP_INSTANCE_DATA_DIR` is explicitly specified: read only the corresponding `dataDir/port`, no guessing.
 - Otherwise scan `<tiupHome>/data/*/port`:

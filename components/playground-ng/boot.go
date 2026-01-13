@@ -242,7 +242,7 @@ func ValidateBootOptionsPure(options *BootOptions) error {
 	case proc.ModeCSE, proc.ModeDisAgg, proc.ModeNextGen:
 		if utils.Version(options.Version).IsValid() && !tidbver.TiFlashPlaygroundNewStartMode(options.Version) {
 			// For simplicity, currently we only implemented disagg mode when TiFlash can run without config.
-			return fmt.Errorf("TiUP playground only supports CSE/Disagg mode for TiDB cluster >= v7.1.0 (or nightly)")
+			return fmt.Errorf("tiup playground-ng only supports CSE/Disagg mode for TiDB cluster >= v7.1.0 (or nightly)")
 		}
 	}
 
@@ -259,7 +259,7 @@ func ValidateBootOptionsPure(options *BootOptions) error {
 
 		// Currently we always assign region=local. Other regions are not supported.
 		if strings.Contains(hostname, "amazonaws.com") {
-			return fmt.Errorf("tiup playground only supports local S3 (like minio); S3 on AWS regions is not supported")
+			return fmt.Errorf("tiup playground-ng only supports local S3 (like minio); S3 on AWS regions is not supported")
 		}
 	}
 
