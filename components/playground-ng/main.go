@@ -153,6 +153,12 @@ Examples:
 			}
 
 			isRoot := cmd.Parent() == nil
+			if !isRoot {
+				dataParent := filepath.Join(tiupHome, localdata.DataParentDir)
+				if shouldIgnoreSubcommandInstanceDataDir(state.tiupDataDir, dataParent) {
+					state.tiupDataDir = ""
+				}
+			}
 			state.deleteWhenExit = false
 
 			// For dry-run, prefer stable default paths so the plan output is
@@ -473,6 +479,57 @@ func loadPort(dir string) (port int, err error) {
 
 	port, err = strconv.Atoi(strings.TrimSpace(string(data)))
 	return
+}
+
+func shouldIgnoreSubcommandInstanceDataDir(instanceDir, dataParentDir string) bool {
+	instanceDir = strings.TrimSpace(instanceDir)
+	dataParentDir = strings.TrimSpace(dataParentDir)
+	if instanceDir == "" || dataParentDir == "" {
+		return false
+	}
+
+	instanceDir = filepath.Clean(instanceDir)
+	dataParentDir = filepath.Clean(dataParentDir)
+
+	// Only ignore paths under the default TiUP data directory to avoid surprising
+	// users who explicitly set TIUP_INSTANCE_DATA_DIR to a custom location.
+	sep := string(os.PathSeparator)
+	if instanceDir == dataParentDir || !strings.HasPrefix(instanceDir, dataParentDir+sep) {
+		return false
+	}
+
+	// When users run subcommands (e.g. `tiup playground-ng display`) without a
+	// global --tag, the TiUP runner generates a temporary tag and sets
+	// TIUP_INSTANCE_DATA_DIR to an empty directory for that invocation. Treat
+	// such directories as non-explicit targets so playground-ng can auto-discover
+	// running instances under $TIUP_HOME/data.
+	tag := filepath.Base(instanceDir)
+	if len(tag) < 7 {
+		return false
+	}
+	for _, r := range tag {
+		switch {
+		case r >= '0' && r <= '9':
+		case r >= 'A' && r <= 'Z':
+		case r >= 'a' && r <= 'z':
+		default:
+			return false
+		}
+	}
+
+	entries, err := os.ReadDir(instanceDir)
+	if err != nil {
+		return false
+	}
+	for _, ent := range entries {
+		name := ent.Name()
+		if name == "" || name == ".DS_Store" {
+			continue
+		}
+		return false
+	}
+
+	return true
 }
 
 func dumpDSN(fname string, dbs []*proc.TiDBInstance, tdbs []*proc.TiProxyInstance) {
