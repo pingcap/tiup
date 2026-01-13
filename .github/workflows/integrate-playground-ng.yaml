@@ -1,5 +1,5 @@
 ---
-name: integrate-playground
+name: integrate-playground-ng
 
 on:
   schedule:
@@ -34,11 +34,6 @@ jobs:
   playground:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    strategy:
-      fail-fast: true
-      matrix:
-        cases:
-          - "test_playground"
     steps:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v3
@@ -61,13 +56,13 @@ jobs:
         id: test
         run: |
           export PATH=$PATH:$PWD/bin/
-          bash ./tests/tiup-playground/${{ matrix.cases }}.sh
+          bash ./tests/tiup-playground-ng/test_playground_ng.sh
 
       - name: Collect component log
         if: ${{ failure() }}
         run: |
           # ignore the rocksdb
-          find ./tests/tiup-playground/_tmp/home/data -type f -name "*.log" | grep -vE '/data/(raft|db|region-meta)/' | xargs cp {} ./logs
+          find ./tests/tiup-playground-ng/_tmp/home/data -type f -name "*.log" | grep -vE '/data/(raft|db|region-meta)/' | xargs cp {} ./logs
 
       - name: Upload component log
         if: ${{ failure() }}
@@ -81,11 +76,11 @@ jobs:
         if: ${{ failure() }}
         # if: always()
         run: |
-          for f in $(find ./tests/tiup-playground/_tmp/home/data -type f -name "*.log" | grep -vE '/data/(raft|db|region-meta)/'); do echo "${f}" && cat "${f}"; done
+          for f in $(find ./tests/tiup-playground-ng/_tmp/home/data -type f -name "*.log" | grep -vE '/data/(raft|db|region-meta)/'); do echo "${f}" && cat "${f}"; done
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
-          files: ./tests/tiup-playground/cover/*.out
+          files: ./tests/tiup-playground-ng/cover/*.out
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
