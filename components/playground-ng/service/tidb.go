@@ -159,7 +159,7 @@ func newTiDBInstance(rt ControllerRuntime, serviceID proc.ServiceID, params NewP
 	var tikvWorkerURLs []string
 	if serviceID == proc.ServiceTiDBSystem || rt.SharedOptions().Mode == proc.ModeCSE {
 		kvwrks := ProcsOf[*proc.TiKVWorkerInstance](rt, proc.ServiceTiKVWorker)
-		tikvWorkerURLs := make([]string, 0, len(kvwrks))
+		tikvWorkerURLs = make([]string, 0, len(kvwrks))
 		for _, kvwrk := range kvwrks {
 			tikvWorkerURLs = append(tikvWorkerURLs, utils.JoinHostPort(proc.AdvertiseHost(kvwrk.Host), kvwrk.Port))
 		}
