@@ -33,6 +33,7 @@ Fight entropy. Leave the codebase better than you found it.
 
 - **Single source of truth**: If a value is derivable from a declaration/schema, do not maintain a second handwritten implementation elsewhere. Prefer one canonical representation and shared helpers so plan-time and runtime behavior cannot drift.
 - **No parallel “ways of doing the same thing”**: Avoid having multiple allocation/normalization/construction paths for the same kind of data; choose one path and delete the others.
+- **Normalize once, reuse everywhere**: If an input must be normalized/canonicalized (trim, sanitize, defaulting rules), compute the canonical value once at the boundary and use it consistently for allocation, stored state, and rendering—never mix raw and normalized forms.
 - **Align boot and scale-out semantics**: Boot-time creation and runtime scale-out should follow the same rules. If scale-out cannot consume a pre-built plan, it should reuse the exact same planning helper(s) used for plans.
 - **Centralize cross-module keys**: When data is exchanged via maps or loosely typed fields, define keys/constants once and reuse them everywhere; do not scatter magic strings.
 - **Validate early, fail early**: Prefer validating spec/schema declarations at registration/init time instead of letting invalid state surface deep in planning/execution.

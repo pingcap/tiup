@@ -83,7 +83,7 @@ func newTiProxyInstance(rt ControllerRuntime, params NewProcParams) (proc.Proces
 			UserBinPath:     params.Config.BinPath,
 			ID:              params.ID,
 			Dir:             params.Dir,
-			Host:            params.Host,
+			Host:            shared.Host,
 			Port:            shared.Port,
 			StatusPort:      shared.StatusPort,
 			ConfigPath:      params.Config.ConfigPath,

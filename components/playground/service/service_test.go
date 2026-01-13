@@ -239,3 +239,21 @@ func TestFillPlannedPorts(t *testing.T) {
 		require.Contains(t, err.Error(), "planned host is empty")
 	})
 }
+
+func TestAllocPortsForNewProc_NormalizesAndValidatesHost(t *testing.T) {
+	serviceID := proc.ServiceID("test-service-alloc-ports-for-new-proc")
+	require.NoError(t, Register(Spec{
+		ServiceID: serviceID,
+		NewProc: func(rt ControllerRuntime, params NewProcParams) (proc.Process, error) {
+			return nil, nil
+		},
+	}))
+
+	shared, err := allocPortsForNewProc(serviceID, NewProcParams{Host: " 127.0.0.1 "}, 0)
+	require.NoError(t, err)
+	require.Equal(t, "127.0.0.1", shared.Host)
+
+	_, err = allocPortsForNewProc(serviceID, NewProcParams{Host: "  "}, 0)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "host is empty")
+}

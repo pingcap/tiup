@@ -258,7 +258,7 @@ func newPDInstance(rt ControllerRuntime, serviceID proc.ServiceID, params NewPro
 			UserBinPath:     params.Config.BinPath,
 			ID:              params.ID,
 			Dir:             params.Dir,
-			Host:            params.Host,
+			Host:            shared.Host,
 			Port:            shared.Port,
 			StatusPort:      shared.StatusPort,
 			ConfigPath:      params.Config.ConfigPath,

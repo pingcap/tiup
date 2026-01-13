@@ -686,7 +686,7 @@ func allocPortsForNewProc(serviceID proc.ServiceID, params NewProcParams, portOf
 
 	allocHost := strings.TrimSpace(params.Host)
 	if allocHost == "" {
-		allocHost = "0.0.0.0"
+		return proc.ServiceSharedPlan{}, fmt.Errorf("service %s host is empty", serviceID)
 	}
 
 	plan := proc.ServicePlan{Shared: proc.ServiceSharedPlan{Host: allocHost}}
