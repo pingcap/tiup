@@ -175,16 +175,6 @@ func resolvePlaygroundTarget(explicitTag, tiupDataDir, dataDir string) (playgrou
 			return playgroundTarget{tag: tag, dir: dataDir, port: port}, nil
 		}
 
-		// Keep stale targets from being selected repeatedly when users keep using
-		// --tag. If the target is reachable but is not a playground command server,
-		// avoid deleting the file.
-		if probeErr != nil {
-			var netErr interface{ Timeout() bool }
-			if !stdErrors.As(probeErr, &netErr) || !netErr.Timeout() {
-				_ = os.Remove(filepath.Join(dataDir, playgroundPortFileName))
-			}
-		}
-
 		tag := explicitTag
 		if tag == "" {
 			tag = filepath.Base(dataDir)
@@ -246,14 +236,6 @@ func listPlaygroundTargets(baseDir string) ([]playgroundTarget, error) {
 		if ok && probeErr == nil {
 			out = append(out, playgroundTarget{tag: ent.Name(), dir: dir, port: port})
 			continue
-		}
-		// Stale port file, best-effort cleanup to keep discovery deterministic.
-		// Avoid deleting on timeouts to reduce false positives on overloaded machines.
-		if probeErr != nil {
-			var netErr interface{ Timeout() bool }
-			if !stdErrors.As(probeErr, &netErr) || !netErr.Timeout() {
-				_ = os.Remove(filepath.Join(dir, playgroundPortFileName))
-			}
 		}
 	}
 
