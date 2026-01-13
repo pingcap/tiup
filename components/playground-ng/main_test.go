@@ -82,6 +82,42 @@ func TestLoadPort_TrimsWhitespace(t *testing.T) {
 	require.Equal(t, 12345, port)
 }
 
+func TestShouldIgnoreSubcommandInstanceDataDir(t *testing.T) {
+	base := t.TempDir()
+	dataParent := filepath.Join(base, "data")
+	require.NoError(t, os.MkdirAll(dataParent, 0o755))
+
+	t.Run("EmptyInstanceDir", func(t *testing.T) {
+		require.False(t, shouldIgnoreSubcommandInstanceDataDir("", dataParent))
+	})
+
+	t.Run("OutsideDataParent", func(t *testing.T) {
+		dir := filepath.Join(base, "other", "V8CMwY9")
+		require.NoError(t, os.MkdirAll(dir, 0o755))
+		require.False(t, shouldIgnoreSubcommandInstanceDataDir(dir, dataParent))
+	})
+
+	t.Run("NotBase62Tag", func(t *testing.T) {
+		dir := filepath.Join(dataParent, "my-cluster")
+		require.NoError(t, os.MkdirAll(dir, 0o755))
+		require.False(t, shouldIgnoreSubcommandInstanceDataDir(dir, dataParent))
+	})
+
+	t.Run("NonEmptyDir", func(t *testing.T) {
+		dir := filepath.Join(dataParent, "V8CMwY8")
+		require.NoError(t, os.MkdirAll(dir, 0o755))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "port"), []byte("12345"), 0o644))
+		require.False(t, shouldIgnoreSubcommandInstanceDataDir(dir, dataParent))
+	})
+
+	t.Run("OnlyDSStore", func(t *testing.T) {
+		dir := filepath.Join(dataParent, "V8CMwY9")
+		require.NoError(t, os.MkdirAll(dir, 0o755))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, ".DS_Store"), []byte(""), 0o644))
+		require.True(t, shouldIgnoreSubcommandInstanceDataDir(dir, dataParent))
+	})
+}
+
 func TestDownloadTitle(t *testing.T) {
 	require.Equal(t,
 		"tidb-v7.1.0-linux-amd64.tar.gz",

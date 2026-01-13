@@ -84,6 +84,14 @@ func TestPS_ListsRunningPlaygrounds(t *testing.T) {
 	require.Contains(t, out, "running")
 }
 
+func TestPS_NoInstances_PrintsWarning(t *testing.T) {
+	state := &cliState{dataDir: t.TempDir()}
+
+	var buf bytes.Buffer
+	require.NoError(t, ps(&buf, state))
+	require.Contains(t, buf.String(), "No running playground-ng instances found.")
+}
+
 func TestStopAll_StopsAllPlaygrounds(t *testing.T) {
 	base := t.TempDir()
 

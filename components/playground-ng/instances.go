@@ -68,6 +68,13 @@ func ps(out io.Writer, state *cliState) error {
 	if err != nil {
 		return err
 	}
+	if len(targets) == 0 {
+		fmt.Fprint(out, tuiv2output.Callout{
+			Style:   tuiv2output.CalloutWarning,
+			Content: "No running playground-ng instances found.",
+		}.Render(out))
+		return nil
+	}
 
 	summaries := make([]playgroundInstanceSummary, 0, len(targets))
 	for _, target := range targets {
