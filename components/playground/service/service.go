@@ -334,6 +334,18 @@ func Register(spec Spec) error {
 	if spec.NewProc == nil {
 		return fmt.Errorf("service %s newProc is nil", spec.ServiceID)
 	}
+	if !spec.Catalog.AllowModifyBinPath && spec.Catalog.DefaultBinPathFrom != "" {
+		return fmt.Errorf("service %s DefaultBinPathFrom requires AllowModifyBinPath", spec.ServiceID)
+	}
+	if !spec.Catalog.AllowModifyConfig && spec.Catalog.DefaultConfigPathFrom != "" {
+		return fmt.Errorf("service %s DefaultConfigPathFrom requires AllowModifyConfig", spec.ServiceID)
+	}
+	if !spec.Catalog.AllowModifyHost && spec.Catalog.DefaultHostFrom != "" {
+		return fmt.Errorf("service %s DefaultHostFrom requires AllowModifyHost", spec.ServiceID)
+	}
+	if !spec.Catalog.AllowModifyTimeout && spec.Catalog.DefaultTimeout != 0 {
+		return fmt.Errorf("service %s DefaultTimeout requires AllowModifyTimeout", spec.ServiceID)
+	}
 	if !spec.Catalog.AllowModifyPort {
 		if spec.Catalog.DefaultPort != 0 {
 			return fmt.Errorf("service %s DefaultPort requires AllowModifyPort", spec.ServiceID)

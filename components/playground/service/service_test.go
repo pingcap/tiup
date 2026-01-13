@@ -142,3 +142,59 @@ func TestRegister_DefaultPortFromRequiresAllowModifyPort(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "DefaultPortFrom")
 }
+
+func TestRegister_DefaultBinPathFromRequiresAllowModifyBinPath(t *testing.T) {
+	err := Register(Spec{
+		ServiceID: "test-service-default-binpath-from-without-allow-binpath",
+		NewProc: func(rt ControllerRuntime, params NewProcParams) (proc.Process, error) {
+			return nil, nil
+		},
+		Catalog: Catalog{
+			DefaultBinPathFrom: proc.ServicePD,
+		},
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "DefaultBinPathFrom")
+}
+
+func TestRegister_DefaultConfigPathFromRequiresAllowModifyConfig(t *testing.T) {
+	err := Register(Spec{
+		ServiceID: "test-service-default-config-from-without-allow-config",
+		NewProc: func(rt ControllerRuntime, params NewProcParams) (proc.Process, error) {
+			return nil, nil
+		},
+		Catalog: Catalog{
+			DefaultConfigPathFrom: proc.ServicePD,
+		},
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "DefaultConfigPathFrom")
+}
+
+func TestRegister_DefaultHostFromRequiresAllowModifyHost(t *testing.T) {
+	err := Register(Spec{
+		ServiceID: "test-service-default-host-from-without-allow-host",
+		NewProc: func(rt ControllerRuntime, params NewProcParams) (proc.Process, error) {
+			return nil, nil
+		},
+		Catalog: Catalog{
+			DefaultHostFrom: proc.ServicePD,
+		},
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "DefaultHostFrom")
+}
+
+func TestRegister_DefaultTimeoutRequiresAllowModifyTimeout(t *testing.T) {
+	err := Register(Spec{
+		ServiceID: "test-service-default-timeout-without-allow-timeout",
+		NewProc: func(rt ControllerRuntime, params NewProcParams) (proc.Process, error) {
+			return nil, nil
+		},
+		Catalog: Catalog{
+			DefaultTimeout: 1,
+		},
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "DefaultTimeout")
+}
