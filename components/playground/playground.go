@@ -1594,12 +1594,12 @@ func (p *Playground) terminate(sig syscall.Signal) {
 	}
 	for _, inst := range p.routers {
 		if inst.Process() != nil && inst.Process().Cmd() != nil && inst.Process().Cmd().Process != nil {
-			kill(inst.Component(), inst.Process().Pid(), inst.Wait)
+			kill(inst.Name(), inst.Process().Pid(), inst.Wait)
 		}
 	}
 	for _, inst := range p.resourceManagers {
 		if inst.Process() != nil && inst.Process().Cmd() != nil && inst.Process().Cmd().Process != nil {
-			kill(inst.Component(), inst.Process().Pid(), inst.Wait)
+			kill(inst.Name(), inst.Process().Pid(), inst.Wait)
 		}
 	}
 	for _, inst := range p.tiproxys {
