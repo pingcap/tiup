@@ -186,13 +186,18 @@ func (i *TiCIMetaInstance) InitConfig(
 	for _, pdspec := range topo.PDServers {
 		pds = append(pds, utils.JoinHostPort(pdspec.Host, pdspec.ClientPort))
 	}
-
+	// TODO: Remove it after TiCI support detecting TiDB servers automatically
+	tidbs := []string{}
+	for _, s := range topo.TiDBServers {
+		tidbs = append(tidbs, fmt.Sprintf("mysql://root@%s", utils.JoinHostPort(s.Host, s.Port)))
+	}
 	cfg := &scripts.TiCIMetaScript{
 		Port:          spec.Port,
 		StatusPort:    spec.StatusPort,
 		ListenHost:    i.GetListenHost(),
 		PD:            strings.Join(pds, ","),
 		AdvertiseHost: utils.Ternary(spec.AdvertiseHost != "", spec.AdvertiseHost, spec.Host).(string),
+		TiDBAddr:      strings.Join(tidbs, ","),
 
 		DeployDir: paths.Deploy,
 		LogDir:    paths.Log,
@@ -216,20 +221,6 @@ func (i *TiCIMetaInstance) InitConfig(
 	}
 
 	globalConfig := topo.ServerConfigs.TiCIMeta
-
-	// Add the TiDB servers to the config
-	// FIXME: this should be config in the `run_tici-meta.sh` script like the pd addresses.
-	//        Or more wisely, TiCI detect the tidb servers from PD directly.
-	tidbs := []string{}
-	for _, s := range topo.TiDBServers {
-		tidbs = append(tidbs, fmt.Sprintf("mysql://root@%s", utils.JoinHostPort(s.Host, s.Port)))
-	}
-	if len(tidbs) > 0 {
-		if spec.Config == nil {
-			spec.Config = make(map[string]any)
-		}
-		spec.Config["tidb-server.dsns"] = tidbs
-	}
 
 	if err := i.MergeServerConfig(ctx, e, globalConfig, spec.Config, paths); err != nil {
 		return err

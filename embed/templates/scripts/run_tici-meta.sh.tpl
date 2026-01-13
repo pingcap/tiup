@@ -22,4 +22,5 @@ exec env GODEBUG=madvdontneed=1 bin/tici-server \
     --pd-addr="{{.PD}}" \
     --config=conf/tici-meta.toml \
     --log-file="{{.LogDir}}/tici-meta.log" \
+    --tidb-addr="{{.TiDBAddr}}" \
     2>> "{{.LogDir}}/tici-meta_stderr.log"
