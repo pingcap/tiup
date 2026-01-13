@@ -1,7 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"net"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -30,6 +34,33 @@ func TestClaimPlaygroundPIDFile_RunningPIDRejects(t *testing.T) {
 	_, err := claimPlaygroundPIDFile(base, "test")
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "already in use")
+}
+
+func TestClaimPlaygroundPIDFile_PortOnlyRunningRejects(t *testing.T) {
+	base := t.TempDir()
+
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/command" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		_ = json.NewEncoder(w).Encode(CommandReply{OK: false, Error: "method not allowed"})
+	}))
+	defer s.Close()
+
+	u, err := url.Parse(s.URL)
+	require.NoError(t, err)
+	port, err := strconv.Atoi(u.Port())
+	require.NoError(t, err)
+	require.NoError(t, dumpPort(filepath.Join(base, playgroundPortFileName), port))
+
+	_, err = claimPlaygroundPIDFile(base, "test")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "already in use")
+	_, err = os.Stat(filepath.Join(base, playgroundPIDFileName))
+	require.True(t, os.IsNotExist(err))
 }
 
 func TestCleanupStaleRuntimeFiles_RemovesStalePIDAndPort(t *testing.T) {

@@ -177,6 +177,10 @@ func claimPlaygroundPIDFile(dataDir, tag string) (release func(), err error) {
 		return nil, err
 	}
 
+	if err := cleanupStaleRuntimeFiles(dataDir); err != nil {
+		return nil, errors.Annotatef(err, "tag %q is already in use", tag)
+	}
+
 	pidPath := filepath.Join(dataDir, playgroundPIDFileName)
 	for {
 		f, err := os.OpenFile(pidPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
