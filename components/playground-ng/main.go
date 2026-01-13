@@ -467,7 +467,7 @@ func loadPort(dir string) (port int, err error) {
 		return 0, err
 	}
 
-	port, err = strconv.Atoi(string(data))
+	port, err = strconv.Atoi(strings.TrimSpace(string(data)))
 	return
 }
 

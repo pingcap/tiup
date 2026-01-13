@@ -73,6 +73,15 @@ func TestGetAbsolutePath(t *testing.T) {
 	})
 }
 
+func TestLoadPort_TrimsWhitespace(t *testing.T) {
+	base := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(base, "port"), []byte(" 12345 \n"), 0o644))
+
+	port, err := loadPort(base)
+	require.NoError(t, err)
+	require.Equal(t, 12345, port)
+}
+
 func TestDownloadTitle(t *testing.T) {
 	require.Equal(t,
 		"tidb-v7.1.0-linux-amd64.tar.gz",
