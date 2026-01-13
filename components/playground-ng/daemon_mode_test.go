@@ -55,3 +55,28 @@ func TestBuildDaemonArgs_FiltersShortTagForms(t *testing.T) {
 		"--run-as-daemon",
 	}, got)
 }
+
+func TestBuildDaemonArgs_FiltersEqualsFormsAndKeepsPositionals(t *testing.T) {
+	oldArgs := os.Args
+	t.Cleanup(func() { os.Args = oldArgs })
+
+	os.Args = []string{
+		"tiup-playground-ng",
+		"--background=true",
+		"--run-as-daemon=true",
+		"--tag=old",
+		"v8.5.4",
+		"--host",
+		"127.0.0.1",
+	}
+
+	got := buildDaemonArgs("final")
+	require.Equal(t, []string{
+		"v8.5.4",
+		"--host",
+		"127.0.0.1",
+		"--tag",
+		"final",
+		"--run-as-daemon",
+	}, got)
+}
