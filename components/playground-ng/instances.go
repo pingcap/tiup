@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -119,10 +118,7 @@ func stopAll(out io.Writer, timeout time.Duration, state *cliState) error {
 
 	targets, err := listPlaygroundTargets(state.dataDir)
 	if err != nil {
-		if !os.IsNotExist(errors.Cause(err)) {
-			return errors.AddStack(err)
-		}
-		targets = nil
+		return err
 	}
 	if len(targets) == 0 {
 		fmt.Fprint(out, tuiv2output.Callout{
@@ -183,10 +179,7 @@ func psTargets(state *cliState) ([]playgroundTarget, error) {
 
 	targets, err := listPlaygroundTargets(state.dataDir)
 	if err != nil {
-		if os.IsNotExist(errors.Cause(err)) {
-			return nil, nil
-		}
-		return nil, errors.AddStack(err)
+		return nil, err
 	}
 	return targets, nil
 }
