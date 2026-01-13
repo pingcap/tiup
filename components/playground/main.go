@@ -252,7 +252,7 @@ Examples:
 			defer cancel(nil)
 			p.bootCancel = cancel
 
-			downloadProgress := newRepoDownloadProgress(downloadGroup)
+			downloadProgress := newRepoDownloadProgress(ctx, downloadGroup)
 			if rp, ok := downloadProgress.(*repoDownloadProgress); ok {
 				p.downloadProgress = rp
 			}
@@ -476,8 +476,9 @@ func newEtcdClient(endpoint string) (*clientv3.Client, error) {
 	return client, nil
 }
 
-func newRepoDownloadProgress(g *progressv2.Group) repository.DownloadProgress {
+func newRepoDownloadProgress(ctx context.Context, g *progressv2.Group) repository.DownloadProgress {
 	return &repoDownloadProgress{
+		ctx:   ctx,
 		group: g,
 		now:   time.Now,
 	}
@@ -489,6 +490,7 @@ func newRepoDownloadProgress(g *progressv2.Group) repository.DownloadProgress {
 // It intentionally lives in playground (not tuiv2) so tuiv2 stays free of any
 // repository-specific conventions (like tarball naming rules).
 type repoDownloadProgress struct {
+	ctx   context.Context
 	group *progressv2.Group
 
 	mu   sync.Mutex
@@ -621,9 +623,14 @@ func (p *repoDownloadProgress) Finish() {
 	p.mu.Lock()
 	t := p.task
 	p.task = nil
+	ctx := p.ctx
 	p.mu.Unlock()
 
 	if t == nil {
+		return
+	}
+	if ctx != nil && ctx.Err() != nil {
+		t.Cancel("")
 		return
 	}
 	t.Done()

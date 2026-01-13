@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -135,7 +136,7 @@ func TestDownloadDisplay(t *testing.T) {
 
 func TestRepoDownloadProgress_SetCurrent_Throttles(t *testing.T) {
 	g := &progressv2.Group{}
-	progress := newRepoDownloadProgress(g)
+	progress := newRepoDownloadProgress(context.Background(), g)
 
 	p, ok := progress.(*repoDownloadProgress)
 	require.True(t, ok)
@@ -181,7 +182,7 @@ func TestRepoDownloadProgress_SetCurrent_Throttles(t *testing.T) {
 
 func TestRepoDownloadProgress_Start_ReusesExpectedPendingTask(t *testing.T) {
 	g := &progressv2.Group{}
-	progress := newRepoDownloadProgress(g)
+	progress := newRepoDownloadProgress(context.Background(), g)
 
 	p, ok := progress.(*repoDownloadProgress)
 	require.True(t, ok)
@@ -205,7 +206,7 @@ func TestRepoDownloadProgress_Start_ReusesExpectedPendingTask(t *testing.T) {
 
 func TestRepoDownloadProgress_Start_UnexpectedDownloadCreatesNewTask(t *testing.T) {
 	g := &progressv2.Group{}
-	progress := newRepoDownloadProgress(g)
+	progress := newRepoDownloadProgress(context.Background(), g)
 
 	p, ok := progress.(*repoDownloadProgress)
 	require.True(t, ok)
@@ -226,4 +227,33 @@ func TestRepoDownloadProgress_Start_UnexpectedDownloadCreatesNewTask(t *testing.
 	p.mu.Unlock()
 	require.NotNil(t, got)
 	require.NotSame(t, expected, got)
+}
+
+func TestRepoDownloadProgress_Finish_WhenCanceled_MarksCanceled(t *testing.T) {
+	f, err := os.CreateTemp("", "tiup-playground-download-progress-*.log")
+	require.NoError(t, err)
+	defer func() {
+		_ = f.Close()
+		_ = os.Remove(f.Name())
+	}()
+
+	ui := progressv2.New(progressv2.Options{Mode: progressv2.ModePlain, Out: f})
+	t.Cleanup(func() { _ = ui.Close() })
+
+	g := ui.Group("Downloading components")
+	ctx, cancel := context.WithCancel(context.Background())
+	progress := newRepoDownloadProgress(ctx, g)
+
+	progress.Start("https://example.com/tidb-v7.1.0-linux-amd64.tar.gz", 123)
+	cancel()
+	progress.Finish()
+
+	require.NoError(t, ui.Close())
+	require.NoError(t, f.Close())
+
+	data, err := os.ReadFile(f.Name())
+	require.NoError(t, err)
+	out := string(data)
+	require.Contains(t, out, "CANCEL - TiDB v7.1.0")
+	require.NotContains(t, out, "Downloaded  TiDB v7.1.0")
 }
