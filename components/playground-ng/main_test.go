@@ -249,7 +249,7 @@ func TestRepoDownloadProgress_Finish_WhenCanceled_MarksCanceled(t *testing.T) {
 	ui := progressv2.New(progressv2.Options{Mode: progressv2.ModePlain, Out: f})
 	t.Cleanup(func() { _ = ui.Close() })
 
-	g := ui.Group("Downloading components")
+	g := ui.Group("Download components")
 	ctx, cancel := context.WithCancel(context.Background())
 	progress := newRepoDownloadProgress(ctx, g)
 

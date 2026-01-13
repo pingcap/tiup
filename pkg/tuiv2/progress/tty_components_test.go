@@ -12,7 +12,7 @@ import (
 )
 
 func TestTTYTaskMetaAlignmentForCanceledTasks(t *testing.T) {
-	g := &Group{title: "Starting instances"}
+	g := &Group{title: "Start instances"}
 	g.tasks = []*Task{
 		{title: "TiKV Worker", status: taskStatusDone, meta: "meta-long"},
 		{title: "TiDB", status: taskStatusCanceled, meta: "meta-short"},
@@ -49,7 +49,7 @@ func TestTTYTaskHideIfFast(t *testing.T) {
 	}
 
 	t.Run("hide-success", func(t *testing.T) {
-		g := &Group{title: "Starting instances"}
+		g := &Group{title: "Start instances"}
 		g.tasks = []*Task{
 			{title: "PD", status: taskStatusDone},
 			{title: "Grafana", status: taskStatusDone, hideIfFast: true, revealAfter: 2 * time.Second, startAt: now.Add(-3 * time.Second), endAt: now},
@@ -62,7 +62,7 @@ func TestTTYTaskHideIfFast(t *testing.T) {
 	})
 
 	t.Run("show-error", func(t *testing.T) {
-		g := &Group{title: "Starting instances"}
+		g := &Group{title: "Start instances"}
 		g.tasks = []*Task{
 			{title: "PD", status: taskStatusDone},
 			{title: "Grafana", status: taskStatusError, hideIfFast: true, message: "boom"},
