@@ -58,7 +58,7 @@ type Playground struct {
 	progressMu sync.Mutex
 
 	// startingTasks holds one progress task per instance during boot, keyed by
-	// inst.Info().Name(). It lets "Starting instances" show the
+	// inst.Info().Name(). It lets "Start instances" show the
 	// full instance list from the beginning (including components that start later,
 	// like TiFlash).
 	startingTasks map[string]progressTask

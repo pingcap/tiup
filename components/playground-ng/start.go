@@ -70,7 +70,7 @@ func startProgressTask(task progressTask, meta string) <-chan struct{} {
 }
 
 // initBootStartingTasks pre-creates one pending task per planned process so the
-// "Starting instances" group can show a stable component list from the
+// "Start instances" group can show a stable component list from the
 // beginning (including components that start later, like TiFlash).
 //
 // It returns the created tasks map when the group is active in TTY mode.

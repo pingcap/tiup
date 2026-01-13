@@ -112,7 +112,7 @@ Key steps in `components/playground-ng/boot.go:bootCluster` (in order):
    - `bootExecutor.AddProcs(plan)`: create `proc.Process` instances from `plan.Services` and add them into controller state.
 8. Start instances: `bootStarter.startPlanned` (honor `Spec.StartAfter`, send `startProcRequest` via controller).
 9. Wait for critical ready: `bootStarter.waitRequiredReady()`.
-10. Close the “Starting instances” progress group and print Cluster info.
+10. Close the “Start instances” progress group and print Cluster info.
 11. Write `dsn` file: `dumpDSN(dataDir/dsn, ...)`.
 12. Generate Prometheus targets: `renderSDFile()` (write `prometheus-*/targets.json`).
 13. Write monitor topology into PD etcd: `updateMonitorTopology`.

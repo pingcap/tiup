@@ -579,7 +579,7 @@ func (p *Playground) bootCluster(ctx context.Context, options *BootOptions) (err
 		return ctx.Err()
 	}
 
-	// Conclude "Starting instances" before printing user-facing hints, so the
+	// Conclude "Start instances" before printing user-facing hints, so the
 	// final group output stays in the history area and won't be redrawn.
 	p.closeStartingGroup()
 

@@ -49,6 +49,19 @@ tiup playground-ng stop --tag my-cluster
 
 `stop` waits until the playground exits. Use `--timeout <seconds>` to change the max wait time.
 
+List running playground-ng instances:
+
+```bash
+tiup playground-ng ps
+tiup playground-ng ps --tag my-cluster
+```
+
+Stop all running playground-ng instances:
+
+```bash
+tiup playground-ng stop-all
+```
+
 ## Scale in / out
 
 Scale out instances:
