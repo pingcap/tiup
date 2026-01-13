@@ -174,7 +174,7 @@ func (inst *instance) PrepareBinary(binaryName string, componentName string, bou
 	} else {
 		colorstr.Printf("[dark_gray]Start %s instance: %s[reset]\n", componentName, instanceBinPath)
 	}
-	inst.Version = version
+	inst.Version = utils.Version(boundVersion)
 	inst.BinPath = instanceBinPath
 	return nil
 }

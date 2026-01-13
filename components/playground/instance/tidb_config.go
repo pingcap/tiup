@@ -14,9 +14,9 @@
 package instance
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -56,6 +56,15 @@ func (inst *TiDBInstance) getConfig(kvwrks []*TiKVWorkerInstance) map[string]any
 		config["tiflash-replicas.group-id"] = "enable_s3_wn_region"
 		config["tiflash-replicas.extra-s3-rule"] = false
 		config["tiflash-replicas.min-count"] = 1
+		if inst.shOpt.EnableTiKVColumnar {
+			config["cse.columnar-store-type"] = "columnar"
+		}
+		config["force-enable-fulltext-index"] = true
+		kvwrksAddr := make([]string, len(kvwrks))
+		for i, kvwrk := range kvwrks {
+			kvwrksAddr[i] = utils.JoinHostPort(kvwrk.Host, kvwrk.Port)
+		}
+		config["tiflash-server-addr"] = strings.Join(kvwrksAddr, ",")
 	case ModeDisAgg:
 		config["use-autoscaler"] = false
 		config["disaggregated-tiflash"] = true
@@ -66,7 +75,11 @@ func (inst *TiDBInstance) getConfig(kvwrks []*TiKVWorkerInstance) map[string]any
 		config["disaggregated-tiflash"] = true
 		if inst.Role() == TiDBRoleSystem {
 			config["instance.tidb_service_scope"] = "dxf_service"
-			config["tikv-worker-url"] = fmt.Sprintf("http://%s", utils.JoinHostPort(AdvertiseHost(kvwrks[0].Host), kvwrks[0].Port))
+			kvwrksAddr := make([]string, len(kvwrks))
+			for i, kvwrk := range kvwrks {
+				kvwrksAddr[i] = utils.JoinHostPort(kvwrk.Host, kvwrk.Port)
+			}
+			config["tikv-worker-url"] = strings.Join(kvwrksAddr, ",")
 			config["keyspace-name"] = "SYSTEM"
 		} else {
 			config["keyspace-name"] = "keyspace1"
