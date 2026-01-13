@@ -25,6 +25,17 @@ const (
 
 const pidFileWriteGracePeriod = 2 * time.Second
 
+func isTimeoutErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	if stdErrors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	var netErr interface{ Timeout() bool }
+	return stdErrors.As(err, &netErr) && netErr.Timeout()
+}
+
 type pidFile struct {
 	pid int
 }
@@ -149,6 +160,9 @@ func cleanupStaleRuntimeFiles(dataDir string) error {
 				if ok && probeErr == nil {
 					return fmt.Errorf("playground already running (port=%d)", port)
 				}
+				if isTimeoutErr(probeErr) {
+					return fmt.Errorf("playground command server probe timed out (port=%d)", port)
+				}
 			}
 
 			_ = os.Remove(pidPath)
@@ -175,18 +189,14 @@ func cleanupStaleRuntimeFiles(dataDir string) error {
 		return fmt.Errorf("playground already running (port=%d)", port)
 	}
 
-	// Stale port file: cleanup only when it is clearly unreachable. Avoid
-	// deleting the file on timeouts or ambiguous errors.
-	if probeErr == nil {
-		_ = os.Remove(portPath)
-		return nil
+	// A timeout means the server might still be running but is unresponsive.
+	// Prefer failing the startup over risking concurrent writes to the same dir.
+	if isTimeoutErr(probeErr) {
+		return fmt.Errorf("playground command server probe timed out (port=%d)", port)
 	}
+
 	if stdErrors.Is(probeErr, syscall.ECONNREFUSED) {
 		_ = os.Remove(portPath)
-		return nil
-	}
-	var netErr interface{ Timeout() bool }
-	if stdErrors.As(probeErr, &netErr) && netErr.Timeout() {
 		return nil
 	}
 	_ = os.Remove(portPath)
@@ -267,7 +277,7 @@ func waitPlaygroundStopped(dataDir string, timeout time.Duration) error {
 						ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 						ok, probeErr := probePlaygroundCommandServer(ctx, port)
 						cancel()
-						stillRunning = ok && probeErr == nil
+						stillRunning = (ok && probeErr == nil) || isTimeoutErr(probeErr)
 					}
 					if !stillRunning {
 						_ = os.Remove(pidPath)
