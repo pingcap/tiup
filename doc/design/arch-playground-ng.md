@@ -130,15 +130,24 @@ Dry-run entry: `components/playground-ng/main.go` uses the same planner to produ
   - Strict JSON validation: `DisallowUnknownFields`, with a body size limit.
 
 - client (subcommands): `components/playground-ng/command.go`
-  - `display/scale-in/scale-out` first locate the target via `resolvePlaygroundTarget`, then request `/command`.
+  - `display/scale-in/scale-out/stop` first locate the target via `resolvePlaygroundTarget`, then request `/command`.
 
 Target selection rules (for multiple co-existing playground-ngs): `components/playground-ng/command.go` (`resolvePlaygroundTarget`)
 
-- If `--tag` or `TIUP_INSTANCE_DATA_DIR` is explicitly specified: read only the corresponding `dataDir/port`, no guessing.
-- Otherwise scan `<tiupHome>/data/*/port`:
-  - 0 found: report “no playground running”
-  - 1 found: use it directly
-  - multiple found: prompt that `--tag` must be specified
+- If `--tag` or `TIUP_INSTANCE_DATA_DIR` is explicitly specified: read `dataDir/port` and probe the HTTP server, no guessing.
+- Otherwise scan `<tiupHome>/data/*/port` and probe each candidate:
+  - 0 reachable: report “no playground running”
+  - 1 reachable: use it directly
+  - multiple reachable: prompt that `--tag` must be specified
+
+### 4.1 Daemon Mode (background start)
+
+- CLI: root command supports `--background/-d`, which runs a short-lived starter that spawns a daemon process of the same binary (`--run-as-daemon`).
+- Data dir selection: in daemon mode, always use `<tiupHome>/data/<tag>` (never `TIUP_INSTANCE_DATA_DIR`) so the TiUP runner won't clean it up when the starter exits.
+- Runtime markers:
+  - `dataDir/pid`: exclusive claim file to prevent concurrent startups and to detect stale instances.
+  - `dataDir/port`: created after the command server successfully listens; removed on server exit.
+  - `dataDir/daemon.log`: daemon stdout/stderr; starter tails this file to mirror boot progress.
 
 ## 5. Scaling (scale-out / scale-in)
 
@@ -179,7 +188,9 @@ Target selection rules (for multiple co-existing playground-ngs): `components/pl
 
 **Root directory (`dataDir`)**
 
+- `dataDir/pid`: exclusive occupancy marker for a running playground.
 - `dataDir/port`: port of the HTTP control server (`dumpPort/loadPort`).
+- `dataDir/daemon.log`: daemon mode stdout/stderr log file.
 - `dataDir/dsn`: connection info written after boot completes (`dumpDSN`).
 
 **Instance directories (one per service instance)**
