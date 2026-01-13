@@ -106,6 +106,7 @@ The difference between a command and a component is that the command comes with 
 
 [Package management](./package-manage.md) chapter will introduce all the commands and the components will be divided into chapters according to the different components:
 - [Local Rapid Deployment TiDB Cluster](./playground.md)
+- [Playground-NG (local playground with daemon mode)](./playground-ng.md)
 - [Online cluster deployment and operation](./cluster.md)
 - [build private mirror](./mirrors.md)
 - [package command](./package.md)
