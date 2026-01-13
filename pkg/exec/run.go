@@ -36,8 +36,9 @@ import (
 
 // Skip displaying "Starting component ..." message for some commonly used components.
 var skipStartingMessages = map[string]bool{
-	"playground": true,
-	"cluster":    true,
+	"playground":    true,
+	"playground-ng": true,
+	"cluster":       true,
 }
 
 // RunComponent start a component and wait it
