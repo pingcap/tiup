@@ -252,9 +252,14 @@ Examples:
 			defer cancel(nil)
 			p.bootCancel = cancel
 
+			downloadProgress := newRepoDownloadProgress(downloadGroup)
+			if rp, ok := downloadProgress.(*repoDownloadProgress); ok {
+				p.downloadProgress = rp
+			}
+
 			env, err := environment.InitEnv(repository.Options{}, repository.MirrorOptions{
 				Context:  ctx,
-				Progress: newRepoDownloadProgress(downloadGroup),
+				Progress: downloadProgress,
 			})
 			if err != nil {
 				return err
@@ -489,10 +494,42 @@ type repoDownloadProgress struct {
 	mu   sync.Mutex
 	task *progressv2.Task
 
+	expected map[string]*progressv2.Task
+
 	now func() time.Time
 
 	lastUpdateAt time.Time
 	lastSize     int64
+}
+
+func (p *repoDownloadProgress) SetExpectedDownloads(downloads []DownloadPlan) {
+	if p == nil || p.group == nil {
+		return
+	}
+
+	expected := make(map[string]*progressv2.Task, len(downloads))
+	for _, d := range downloads {
+		componentID := strings.TrimSpace(d.ComponentID)
+		resolved := strings.TrimSpace(d.ResolvedVersion)
+		if componentID == "" || resolved == "" {
+			continue
+		}
+
+		key := componentID + "@" + resolved
+		if expected[key] != nil {
+			continue
+		}
+
+		title := proc.ComponentDisplayName(proc.RepoComponentID(componentID))
+		t := p.group.TaskPending(title)
+		t.SetMeta(resolved)
+		t.SetKindDownload()
+		expected[key] = t
+	}
+
+	p.mu.Lock()
+	p.expected = expected
+	p.mu.Unlock()
 }
 
 func (p *repoDownloadProgress) Start(rawURL string, size int64) {
@@ -500,15 +537,38 @@ func (p *repoDownloadProgress) Start(rawURL string, size int64) {
 		return
 	}
 
-	name, version := downloadDisplay(rawURL)
+	base := downloadTitle(rawURL)
+	componentID, resolved, ok := parseComponentVersionFromTarball(base)
 
-	t := p.group.Task(name)
-	if version != "" {
-		t.SetMeta(version)
+	var t *progressv2.Task
+	if ok {
+		key := componentID + "@" + resolved
+		p.mu.Lock()
+		t = p.expected[key]
+		p.mu.Unlock()
 	}
+
+	name, version := downloadDisplay(rawURL)
+	if t == nil {
+		t = p.group.Task(name)
+		if version != "" {
+			t.SetMeta(version)
+		}
+	} else {
+		if resolved != "" {
+			t.SetMeta(resolved)
+		} else if version != "" {
+			t.SetMeta(version)
+		}
+	}
+
 	if size > 0 {
 		t.SetTotal(size)
 	}
+	t.SetKindDownload()
+	t.Start()
+	// Trigger "Downloading ..." start event in plain mode even when the task was
+	// pre-created as pending.
 	t.SetKindDownload()
 
 	p.mu.Lock()

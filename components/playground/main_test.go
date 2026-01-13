@@ -178,3 +178,52 @@ func TestRepoDownloadProgress_SetCurrent_Throttles(t *testing.T) {
 	require.Equal(t, now, p.lastUpdateAt)
 	require.Equal(t, int64(1), p.lastSize)
 }
+
+func TestRepoDownloadProgress_Start_ReusesExpectedPendingTask(t *testing.T) {
+	g := &progressv2.Group{}
+	progress := newRepoDownloadProgress(g)
+
+	p, ok := progress.(*repoDownloadProgress)
+	require.True(t, ok)
+
+	p.SetExpectedDownloads([]DownloadPlan{
+		{ComponentID: "tidb", ResolvedVersion: "v7.1.0"},
+	})
+
+	p.mu.Lock()
+	expected := p.expected["tidb@v7.1.0"]
+	p.mu.Unlock()
+	require.NotNil(t, expected)
+
+	p.Start("https://example.com/tidb-v7.1.0-linux-amd64.tar.gz", 123)
+
+	p.mu.Lock()
+	got := p.task
+	p.mu.Unlock()
+	require.Same(t, expected, got)
+}
+
+func TestRepoDownloadProgress_Start_UnexpectedDownloadCreatesNewTask(t *testing.T) {
+	g := &progressv2.Group{}
+	progress := newRepoDownloadProgress(g)
+
+	p, ok := progress.(*repoDownloadProgress)
+	require.True(t, ok)
+
+	p.SetExpectedDownloads([]DownloadPlan{
+		{ComponentID: "tidb", ResolvedVersion: "v7.1.0"},
+	})
+
+	p.mu.Lock()
+	expected := p.expected["tidb@v7.1.0"]
+	p.mu.Unlock()
+	require.NotNil(t, expected)
+
+	p.Start("https://example.com/tikv-v7.1.0-linux-amd64.tar.gz", 123)
+
+	p.mu.Lock()
+	got := p.task
+	p.mu.Unlock()
+	require.NotNil(t, got)
+	require.NotSame(t, expected, got)
+}

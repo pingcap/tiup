@@ -528,6 +528,15 @@ func (p *Playground) bootCluster(ctx context.Context, options *BootOptions) (err
 	}
 	p.setControllerRequiredServices(ctx, required)
 
+	if len(plan.Downloads) > 0 {
+		p.progressMu.Lock()
+		downloadProgress := p.downloadProgress
+		p.progressMu.Unlock()
+		if downloadProgress != nil {
+			downloadProgress.SetExpectedDownloads(plan.Downloads)
+		}
+	}
+
 	executor := newBootExecutor(p, src)
 	if err := executor.Download(plan); err != nil {
 		return err

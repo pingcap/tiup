@@ -45,10 +45,11 @@ type Playground struct {
 	interruptedCh chan struct{}
 	processGroup  *ProcessGroup
 
-	ui            *progressv2.UI
-	startingGroup *progressv2.Group
-	downloadGroup *progressv2.Group
-	shutdownGroup *progressv2.Group
+	ui               *progressv2.UI
+	startingGroup    *progressv2.Group
+	downloadGroup    *progressv2.Group
+	shutdownGroup    *progressv2.Group
+	downloadProgress *repoDownloadProgress
 
 	// progressMu protects UI-related state that is accessed from multiple
 	// goroutines (boot flow, stop handling, instance waiters), including:
