@@ -30,6 +30,11 @@ If you do not specify `--tag`, a random tag will be generated and printed when t
 
 ## Display and stop
 
+Target selection:
+
+- If only one playground-ng is running, commands can omit `--tag` and it will be auto selected.
+- If multiple playground-ng instances are running, you must specify `--tag`.
+
 Display running instances:
 
 ```bash
@@ -43,6 +48,21 @@ tiup playground-ng stop --tag my-cluster
 ```
 
 `stop` waits until the playground exits. Use `--timeout <seconds>` to change the max wait time.
+
+## Scale in / out
+
+Scale out instances:
+
+```bash
+tiup playground-ng scale-out --tag my-cluster --service tidb --count 1
+```
+
+Scale in instances by name or pid:
+
+```bash
+tiup playground-ng scale-in --tag my-cluster --name tidb-0
+tiup playground-ng scale-in --tag my-cluster --pid 12345
+```
 
 ## Data directory and logs
 
