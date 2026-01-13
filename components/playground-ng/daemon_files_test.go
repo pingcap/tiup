@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -101,5 +102,50 @@ func TestCleanupStaleRuntimeFiles_RemovesStalePort(t *testing.T) {
 
 	require.NoError(t, cleanupStaleRuntimeFiles(base))
 	_, err = os.Stat(filepath.Join(base, playgroundPortFileName))
+	require.True(t, os.IsNotExist(err))
+}
+
+func TestCleanupStaleRuntimeFiles_StaleInvalidPIDIsRemoved(t *testing.T) {
+	base := t.TempDir()
+
+	pidPath := filepath.Join(base, playgroundPIDFileName)
+	require.NoError(t, os.WriteFile(pidPath, []byte(""), 0o644))
+	portPath := filepath.Join(base, playgroundPortFileName)
+	require.NoError(t, os.WriteFile(portPath, []byte("12345"), 0o644))
+
+	old := time.Now().Add(-time.Minute)
+	require.NoError(t, os.Chtimes(pidPath, old, old))
+
+	require.NoError(t, cleanupStaleRuntimeFiles(base))
+	_, err := os.Stat(pidPath)
+	require.True(t, os.IsNotExist(err))
+	_, err = os.Stat(portPath)
+	require.True(t, os.IsNotExist(err))
+}
+
+func TestCleanupStaleRuntimeFiles_RecentInvalidPIDIsTreatedAsInUse(t *testing.T) {
+	base := t.TempDir()
+
+	pidPath := filepath.Join(base, playgroundPIDFileName)
+	require.NoError(t, os.WriteFile(pidPath, []byte(""), 0o644))
+	now := time.Now()
+	require.NoError(t, os.Chtimes(pidPath, now, now))
+
+	err := cleanupStaleRuntimeFiles(base)
+	require.Error(t, err)
+	require.FileExists(t, pidPath)
+}
+
+func TestWaitPlaygroundStopped_StaleInvalidPIDIsRemoved(t *testing.T) {
+	base := t.TempDir()
+
+	pidPath := filepath.Join(base, playgroundPIDFileName)
+	require.NoError(t, os.WriteFile(pidPath, []byte(""), 0o644))
+
+	old := time.Now().Add(-time.Minute)
+	require.NoError(t, os.Chtimes(pidPath, old, old))
+
+	require.NoError(t, waitPlaygroundStopped(base, time.Second))
+	_, err := os.Stat(pidPath)
 	require.True(t, os.IsNotExist(err))
 }

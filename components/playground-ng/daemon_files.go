@@ -23,6 +23,8 @@ const (
 	playgroundDaemonLogName = "daemon.log"
 )
 
+const pidFileWriteGracePeriod = 2 * time.Second
+
 type pidFile struct {
 	pid int
 }
@@ -127,9 +129,39 @@ func cleanupStaleRuntimeFiles(dataDir string) error {
 		return nil
 	}
 	if !os.IsNotExist(err) {
-		return errors.AddStack(err)
+		info, statErr := os.Stat(pidPath)
+		if statErr != nil {
+			if os.IsNotExist(statErr) {
+				// The pid file is removed between read and stat. Continue with port
+				// check.
+				goto portCheck
+			}
+			return errors.AddStack(statErr)
+		}
+
+		age := time.Since(info.ModTime())
+		if age >= 0 && age < pidFileWriteGracePeriod {
+			return fmt.Errorf("playground is starting (pid file is being written)")
+		}
+
+		// The pid file is present but invalid (corrupted/partial). Use the port
+		// probe as a safety net before treating it as stale.
+		port, portErr := loadPort(dataDir)
+		if portErr == nil && port > 0 {
+			ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+			ok, probeErr := probePlaygroundCommandServer(ctx, port)
+			cancel()
+			if ok && probeErr == nil {
+				return fmt.Errorf("playground already running (port=%d)", port)
+			}
+		}
+
+		_ = os.Remove(pidPath)
+		_ = os.Remove(portPath)
+		return nil
 	}
 
+portCheck:
 	port, err := loadPort(dataDir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -218,12 +250,35 @@ func waitPlaygroundStopped(dataDir string, timeout time.Duration) error {
 
 	deadline := time.Now().Add(timeout)
 	pidPath := filepath.Join(dataDir, playgroundPIDFileName)
+	portPath := filepath.Join(dataDir, playgroundPortFileName)
 
 	for {
 		pid, err := readPIDFile(pidPath)
 		if err != nil {
 			if os.IsNotExist(err) {
 				return nil
+			}
+			info, statErr := os.Stat(pidPath)
+			if statErr != nil {
+				if os.IsNotExist(statErr) {
+					return nil
+				}
+			} else {
+				age := time.Since(info.ModTime())
+				if age >= pidFileWriteGracePeriod {
+					port, portErr := loadPort(dataDir)
+					if portErr == nil && port > 0 {
+						ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+						ok, probeErr := probePlaygroundCommandServer(ctx, port)
+						cancel()
+						if ok && probeErr == nil {
+							goto waitNext
+						}
+					}
+					_ = os.Remove(pidPath)
+					_ = os.Remove(portPath)
+					return nil
+				}
 			}
 		} else {
 			running, runErr := isPIDRunning(pid.pid)
@@ -233,6 +288,7 @@ func waitPlaygroundStopped(dataDir string, timeout time.Duration) error {
 			}
 		}
 
+	waitNext:
 		if time.Now().After(deadline) {
 			return fmt.Errorf("timeout waiting for playground to stop")
 		}
