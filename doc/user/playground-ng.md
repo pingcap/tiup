@@ -26,6 +26,8 @@ tiup playground-ng --background --tag my-cluster
 
 In daemon mode, TiUP starts a short-lived starter process which spawns a daemon process. After the cluster is ready, the starter exits and the playground keeps running in background.
 
+If you do not specify `--tag`, a random tag will be generated and printed when the starter reports success. Use that tag for subsequent `display/stop/scale-*` commands.
+
 ## Display and stop
 
 Display running instances:

@@ -10,6 +10,10 @@ playground's basic usage:
 tiup playground [version] [flags]
 ```
 
+> Note:
+>
+> If you need daemon mode (start in background) or want to use the next generation local playground, see [Playground-NG](./playground-ng.md) (`tiup playground-ng`).
+
 The simplest startup command `tiup playground` will start a cluster of 1 KV, 1 DB, 1 PD using locally installed TiDB/TiKV/PD or their stable version. This order actually does the following.
 - Since no version is specified, TiUP looks for the latest version of the installed playground first, assuming the latest version is v0.0.6, which is equivalent to tiup playground:v0.0.6.
 - If the playground component has never had any version installed, TiUP will install the latest stable version before starting the runtime instance.
