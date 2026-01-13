@@ -34,15 +34,18 @@ func init() {
 		},
 		NewProc: func(rt ControllerRuntime, params NewProcParams) (proc.Process, error) {
 			shOpt := rt.SharedOptions()
-			port := allocPort(params.Host, params.Config.Port, prometheusPortBase, shOpt.PortOffset)
+			shared, err := allocPortsForNewProc(proc.ServicePrometheus, params, shOpt.PortOffset)
+			if err != nil {
+				return nil, err
+			}
 			prom := &proc.PrometheusInstance{
 				ProcessInfo: proc.ProcessInfo{
 					UserBinPath:     params.Config.BinPath,
 					ID:              params.ID,
 					Dir:             params.Dir,
 					Host:            params.Host,
-					Port:            port,
-					StatusPort:      port,
+					Port:            shared.Port,
+					StatusPort:      shared.StatusPort,
 					RepoComponentID: proc.ComponentPrometheus,
 					Service:         proc.ServicePrometheus,
 				},
@@ -75,7 +78,10 @@ func init() {
 		},
 		NewProc: func(rt ControllerRuntime, params NewProcParams) (proc.Process, error) {
 			shOpt := rt.SharedOptions()
-			port := allocPort(params.Host, params.Config.Port, grafanaPortBase, shOpt.PortOffset)
+			shared, err := allocPortsForNewProc(proc.ServiceGrafana, params, shOpt.PortOffset)
+			if err != nil {
+				return nil, err
+			}
 
 			promURL := ""
 			if ps := ProcsOf[*proc.PrometheusInstance](rt, proc.ServicePrometheus); len(ps) > 0 && ps[0] != nil {
@@ -89,7 +95,8 @@ func init() {
 					ID:              params.ID,
 					Dir:             params.Dir,
 					Host:            params.Host,
-					Port:            port,
+					Port:            shared.Port,
+					StatusPort:      shared.StatusPort,
 					RepoComponentID: proc.ComponentGrafana,
 					Service:         proc.ServiceGrafana,
 				},
@@ -145,7 +152,10 @@ func init() {
 		},
 		NewProc: func(rt ControllerRuntime, params NewProcParams) (proc.Process, error) {
 			shOpt := rt.SharedOptions()
-			port := allocPort(params.Host, params.Config.Port, ngMonitoringPortBase, shOpt.PortOffset)
+			shared, err := allocPortsForNewProc(proc.ServiceNGMonitoring, params, shOpt.PortOffset)
+			if err != nil {
+				return nil, err
+			}
 
 			pds := ProcsOf[*proc.PDInstance](rt, proc.ServicePD, proc.ServicePDAPI)
 			if len(pds) == 0 {
@@ -169,8 +179,8 @@ func init() {
 					ID:              params.ID,
 					Dir:             params.Dir,
 					Host:            params.Host,
-					Port:            port,
-					StatusPort:      port,
+					Port:            shared.Port,
+					StatusPort:      shared.StatusPort,
 					RepoComponentID: proc.ComponentPrometheus,
 					Service:         proc.ServiceNGMonitoring,
 				},

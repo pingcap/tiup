@@ -198,3 +198,44 @@ func TestRegister_DefaultTimeoutRequiresAllowModifyTimeout(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "DefaultTimeout")
 }
+
+func TestFillPlannedPorts(t *testing.T) {
+	t.Run("fills standard ports and alias", func(t *testing.T) {
+		allocCalls := make([]string, 0, 2)
+		alloc := func(host string, base int) (int, error) {
+			allocCalls = append(allocCalls, host)
+			return base, nil
+		}
+
+		plan := proc.ServicePlan{
+			Shared: proc.ServiceSharedPlan{Host: "127.0.0.1"},
+		}
+		cfg := proc.Config{Port: 5000}
+		specs := []PortSpec{
+			{Name: proc.PortNamePort, Base: 4000, FromConfigPort: true},
+			{Name: proc.PortNameStatusPort, Base: 10080, Host: "0.0.0.0"},
+			{Name: "servicePort", Base: 3930},
+			{Name: "aliasPort", AliasOf: "servicePort"},
+		}
+		require.NoError(t, FillPlannedPorts(alloc, cfg, &plan, specs))
+
+		require.Equal(t, 5000, plan.Shared.Port)
+		require.Equal(t, 10080, plan.Shared.StatusPort)
+		require.Equal(t, map[string]int{
+			proc.PortNamePort:       5000,
+			proc.PortNameStatusPort: 10080,
+			"servicePort":           3930,
+			"aliasPort":             3930,
+		}, plan.Shared.Ports)
+		require.Equal(t, []string{"127.0.0.1", "0.0.0.0", "127.0.0.1"}, allocCalls)
+	})
+
+	t.Run("missing host", func(t *testing.T) {
+		plan := proc.ServicePlan{}
+		err := FillPlannedPorts(func(host string, base int) (int, error) { return base, nil }, proc.Config{}, &plan, []PortSpec{
+			{Name: proc.PortNamePort, Base: 4000},
+		})
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "planned host is empty")
+	})
+}

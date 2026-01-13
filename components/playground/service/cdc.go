@@ -84,7 +84,10 @@ func init() {
 func newTiCDCInstance(rt ControllerRuntime, params NewProcParams) (proc.Process, error) {
 	pds := ProcsOf[*proc.PDInstance](rt, proc.ServicePD, proc.ServicePDAPI)
 	shOpt := rt.SharedOptions()
-	port := allocPort(params.Host, params.Config.Port, ticdcPortBase, shOpt.PortOffset)
+	shared, err := allocPortsForNewProc(proc.ServiceTiCDC, params, shOpt.PortOffset)
+	if err != nil {
+		return nil, err
+	}
 
 	pdAddrs := make([]string, 0, len(pds))
 	for _, pd := range pds {
@@ -103,8 +106,8 @@ func newTiCDCInstance(rt ControllerRuntime, params NewProcParams) (proc.Process,
 			ID:              params.ID,
 			Dir:             params.Dir,
 			Host:            params.Host,
-			Port:            port,
-			StatusPort:      port,
+			Port:            shared.Port,
+			StatusPort:      shared.StatusPort,
 			ConfigPath:      params.Config.ConfigPath,
 			RepoComponentID: proc.ComponentCDC,
 			Service:         proc.ServiceTiCDC,
@@ -118,7 +121,10 @@ func newTiCDCInstance(rt ControllerRuntime, params NewProcParams) (proc.Process,
 func newTiKVCDCInstance(rt ControllerRuntime, params NewProcParams) (proc.Process, error) {
 	pds := ProcsOf[*proc.PDInstance](rt, proc.ServicePD, proc.ServicePDAPI)
 	shOpt := rt.SharedOptions()
-	port := allocPort(params.Host, 0, tikvcdcPortBase, shOpt.PortOffset)
+	shared, err := allocPortsForNewProc(proc.ServiceTiKVCDC, params, shOpt.PortOffset)
+	if err != nil {
+		return nil, err
+	}
 
 	pdAddrs := make([]string, 0, len(pds))
 	for _, pd := range pds {
@@ -137,8 +143,8 @@ func newTiKVCDCInstance(rt ControllerRuntime, params NewProcParams) (proc.Proces
 			ID:              params.ID,
 			Dir:             params.Dir,
 			Host:            params.Host,
-			Port:            port,
-			StatusPort:      port,
+			Port:            shared.Port,
+			StatusPort:      shared.StatusPort,
 			ConfigPath:      params.Config.ConfigPath,
 			RepoComponentID: proc.ComponentTiKVCDC,
 			Service:         proc.ServiceTiKVCDC,

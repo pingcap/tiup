@@ -129,6 +129,10 @@ func newTiKVInstance(rt ControllerRuntime, params NewProcParams) (proc.Process, 
 	pds := ProcsOf[*proc.PDInstance](rt, proc.ServicePD, proc.ServicePDAPI)
 	tsos := ProcsOf[*proc.PDInstance](rt, proc.ServicePDTSO)
 	shOpt := rt.SharedOptions()
+	shared, err := allocPortsForNewProc(proc.ServiceTiKV, params, shOpt.PortOffset)
+	if err != nil {
+		return nil, err
+	}
 
 	pdAddrs := make([]string, 0, len(pds))
 	for _, pd := range pds {
@@ -161,8 +165,8 @@ func newTiKVInstance(rt ControllerRuntime, params NewProcParams) (proc.Process, 
 			ID:              params.ID,
 			Dir:             params.Dir,
 			Host:            params.Host,
-			Port:            allocPort(params.Host, params.Config.Port, tikvPortBase, shOpt.PortOffset),
-			StatusPort:      allocPort(params.Host, 0, tikvStatusPortBase, shOpt.PortOffset),
+			Port:            shared.Port,
+			StatusPort:      shared.StatusPort,
 			ConfigPath:      params.Config.ConfigPath,
 			RepoComponentID: proc.ComponentTiKV,
 			Service:         proc.ServiceTiKV,
@@ -212,6 +216,10 @@ func newTiKVWorkerInstance(rt ControllerRuntime, params NewProcParams) (proc.Pro
 	if shOpt.Mode == proc.ModeNextGen {
 		repoComponent = proc.ComponentTiKVWorker
 	}
+	shared, err := allocPortsForNewProc(proc.ServiceTiKVWorker, params, shOpt.PortOffset)
+	if err != nil {
+		return nil, err
+	}
 
 	pdAddrs := make([]string, 0, len(pds))
 	for _, pd := range pds {
@@ -231,7 +239,7 @@ func newTiKVWorkerInstance(rt ControllerRuntime, params NewProcParams) (proc.Pro
 			ID:              params.ID,
 			Dir:             params.Dir,
 			Host:            params.Host,
-			Port:            allocPort(params.Host, params.Config.Port, tikvWorkerPortBase, shOpt.PortOffset),
+			Port:            shared.Port,
 			ConfigPath:      params.Config.ConfigPath,
 			RepoComponentID: repoComponent,
 			Service:         proc.ServiceTiKVWorker,

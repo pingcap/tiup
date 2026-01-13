@@ -131,6 +131,10 @@ func newDMMasterInstance(rt ControllerRuntime, params NewProcParams) (proc.Proce
 	}
 
 	shOpt := rt.SharedOptions()
+	shared, err := allocPortsForNewProc(proc.ServiceDMMaster, params, shOpt.PortOffset)
+	if err != nil {
+		return nil, err
+	}
 	master := &proc.DMMaster{
 		Plan: proc.DMMasterPlan{
 			RequireReady: waitReady,
@@ -140,8 +144,8 @@ func newDMMasterInstance(rt ControllerRuntime, params NewProcParams) (proc.Proce
 			ID:              params.ID,
 			Dir:             params.Dir,
 			Host:            params.Host,
-			Port:            allocPort(params.Host, 0, dmPeerPortBase, shOpt.PortOffset),
-			StatusPort:      allocPort(params.Host, params.Config.Port, dmStatusPortBase, shOpt.PortOffset),
+			Port:            shared.Port,
+			StatusPort:      shared.StatusPort,
 			ConfigPath:      params.Config.ConfigPath,
 			RepoComponentID: proc.ComponentDMMaster,
 			Service:         proc.ServiceDMMaster,
@@ -208,6 +212,10 @@ func scaleInDMMaster(rt ControllerRuntime, w io.Writer, inst proc.Process, pid i
 func newDMWorkerInstance(rt ControllerRuntime, params NewProcParams) (proc.Process, error) {
 	masters := ProcsOf[*proc.DMMaster](rt, proc.ServiceDMMaster)
 	shOpt := rt.SharedOptions()
+	shared, err := allocPortsForNewProc(proc.ServiceDMWorker, params, shOpt.PortOffset)
+	if err != nil {
+		return nil, err
+	}
 
 	masterAddrs := make([]string, 0, len(masters))
 	for _, master := range masters {
@@ -226,7 +234,7 @@ func newDMWorkerInstance(rt ControllerRuntime, params NewProcParams) (proc.Proce
 			ID:              params.ID,
 			Dir:             params.Dir,
 			Host:            params.Host,
-			Port:            allocPort(params.Host, params.Config.Port, dmWorkerPortBase, shOpt.PortOffset),
+			Port:            shared.Port,
 			ConfigPath:      params.Config.ConfigPath,
 			RepoComponentID: proc.ComponentDMWorker,
 			Service:         proc.ServiceDMWorker,

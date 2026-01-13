@@ -446,6 +446,73 @@ func validatePortSpecs(specs []PortSpec) error {
 	return nil
 }
 
+// FillPlannedPorts allocates ports for a planned service instance based on the
+// provided PortSpec list.
+//
+// It fills plan.Shared.Ports and keeps plan.Shared.Port/StatusPort in sync with
+// the standard keys (proc.PortNamePort/proc.PortNameStatusPort).
+func FillPlannedPorts(alloc PortAllocator, cfg proc.Config, plan *proc.ServicePlan, specs []PortSpec) error {
+	if plan == nil || len(specs) == 0 {
+		return nil
+	}
+	if alloc == nil {
+		return fmt.Errorf("port allocator is nil")
+	}
+
+	host := strings.TrimSpace(plan.Shared.Host)
+	if host == "" {
+		return fmt.Errorf("planned host is empty")
+	}
+
+	ports := make(map[string]int, len(specs))
+	for _, ps := range specs {
+		name := strings.TrimSpace(ps.Name)
+		if name == "" {
+			return fmt.Errorf("planned port name is empty")
+		}
+		if _, ok := ports[name]; ok {
+			return fmt.Errorf("duplicate planned port %q", name)
+		}
+
+		if alias := strings.TrimSpace(ps.AliasOf); alias != "" {
+			v, ok := ports[alias]
+			if !ok {
+				return fmt.Errorf("planned port %q aliases unknown port %q", name, alias)
+			}
+			ports[name] = v
+			continue
+		}
+
+		base := ps.Base
+		if ps.FromConfigPort && cfg.Port > 0 {
+			base = cfg.Port
+		}
+		if base <= 0 {
+			return fmt.Errorf("planned port %q base is invalid", name)
+		}
+
+		allocHost := strings.TrimSpace(ps.Host)
+		if allocHost == "" {
+			allocHost = host
+		}
+
+		port, err := alloc(allocHost, base)
+		if err != nil {
+			return err
+		}
+		ports[name] = port
+	}
+
+	plan.Shared.Ports = ports
+	if v, ok := ports[proc.PortNamePort]; ok {
+		plan.Shared.Port = v
+	}
+	if v, ok := ports[proc.PortNameStatusPort]; ok {
+		plan.Shared.StatusPort = v
+	}
+	return nil
+}
+
 // MustRegister is like Register but panics on error.
 func MustRegister(spec Spec) {
 	if err := Register(spec); err != nil {
@@ -611,12 +678,24 @@ func dmMasterClient(rt Runtime) (*api.DMMasterClient, error) {
 	return api.NewDMMasterClient(addrs, 5*time.Second, nil), nil
 }
 
-func allocPort(host string, configured, defaultBase, portOffset int) int {
-	base := configured
-	if base <= 0 {
-		base = defaultBase
+func allocPortsForNewProc(serviceID proc.ServiceID, params NewProcParams, portOffset int) (proc.ServiceSharedPlan, error) {
+	spec, ok := SpecFor(serviceID)
+	if !ok {
+		return proc.ServiceSharedPlan{}, fmt.Errorf("unknown service %s", serviceID)
 	}
-	return utils.MustGetFreePort(host, base, portOffset)
+
+	allocHost := strings.TrimSpace(params.Host)
+	if allocHost == "" {
+		allocHost = "0.0.0.0"
+	}
+
+	plan := proc.ServicePlan{Shared: proc.ServiceSharedPlan{Host: allocHost}}
+	if err := FillPlannedPorts(func(host string, base int) (int, error) {
+		return utils.MustGetFreePort(host, base, portOffset), nil
+	}, params.Config, &plan, spec.Catalog.Ports); err != nil {
+		return proc.ServiceSharedPlan{}, err
+	}
+	return plan.Shared, nil
 }
 
 func plannedStatusAddrs(byService map[proc.ServiceID][]*proc.ServicePlan, advertise func(listen string) string, serviceIDs ...proc.ServiceID) []string {

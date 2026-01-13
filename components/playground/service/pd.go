@@ -250,6 +250,10 @@ func newPDInstance(rt ControllerRuntime, serviceID proc.ServiceID, params NewPro
 	}
 
 	shOpt := rt.SharedOptions()
+	shared, err := allocPortsForNewProc(serviceID, params, shOpt.PortOffset)
+	if err != nil {
+		return nil, err
+	}
 	pd := &proc.PDInstance{
 		ShOpt: shOpt,
 		Plan: proc.PDPlan{
@@ -260,8 +264,8 @@ func newPDInstance(rt ControllerRuntime, serviceID proc.ServiceID, params NewPro
 			ID:              params.ID,
 			Dir:             params.Dir,
 			Host:            params.Host,
-			Port:            allocPort(params.Host, 0, pdPeerPortBase, shOpt.PortOffset),
-			StatusPort:      allocPort(params.Host, params.Config.Port, pdStatusPortBase, shOpt.PortOffset),
+			Port:            shared.Port,
+			StatusPort:      shared.StatusPort,
 			ConfigPath:      params.Config.ConfigPath,
 			RepoComponentID: proc.ComponentPD,
 			Service:         serviceID,

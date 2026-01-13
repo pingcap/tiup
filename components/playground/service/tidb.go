@@ -147,9 +147,9 @@ func enableBinlog(rt Runtime) bool {
 func newTiDBInstance(rt ControllerRuntime, serviceID proc.ServiceID, params NewProcParams) (proc.Process, error) {
 	pds := ProcsOf[*proc.PDInstance](rt, proc.ServicePD, proc.ServicePDAPI)
 	shOpt := rt.SharedOptions()
-	defaultPort := tidbPortBase
-	if serviceID == proc.ServiceTiDBSystem {
-		defaultPort = tidbSystemPortBase
+	shared, err := allocPortsForNewProc(serviceID, params, shOpt.PortOffset)
+	if err != nil {
+		return nil, err
 	}
 
 	pdAddrs := make([]string, 0, len(pds))
@@ -179,8 +179,8 @@ func newTiDBInstance(rt ControllerRuntime, serviceID proc.ServiceID, params NewP
 			ID:              params.ID,
 			Dir:             params.Dir,
 			Host:            params.Host,
-			Port:            allocPort(params.Host, params.Config.Port, defaultPort, shOpt.PortOffset),
-			StatusPort:      allocPort("0.0.0.0", 0, tidbStatusPortBase, shOpt.PortOffset),
+			Port:            shared.Port,
+			StatusPort:      shared.StatusPort,
 			ConfigPath:      params.Config.ConfigPath,
 			RepoComponentID: proc.ComponentTiDB,
 			Service:         serviceID,

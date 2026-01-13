@@ -55,6 +55,10 @@ func init() {
 func newTiProxyInstance(rt ControllerRuntime, params NewProcParams) (proc.Process, error) {
 	pds := ProcsOf[*proc.PDInstance](rt, proc.ServicePD, proc.ServicePDAPI)
 	shOpt := rt.SharedOptions()
+	shared, err := allocPortsForNewProc(proc.ServiceTiProxy, params, shOpt.PortOffset)
+	if err != nil {
+		return nil, err
+	}
 
 	// TiProxy session certs are used by TiDB for session token signing. During
 	// plan-based boot they are generated in Executor.PreRun; keep scale-out
@@ -82,8 +86,8 @@ func newTiProxyInstance(rt ControllerRuntime, params NewProcParams) (proc.Proces
 			ID:              params.ID,
 			Dir:             params.Dir,
 			Host:            params.Host,
-			Port:            allocPort(params.Host, params.Config.Port, 6000, shOpt.PortOffset),
-			StatusPort:      allocPort(params.Host, 0, tiproxyStatusPortBase, shOpt.PortOffset),
+			Port:            shared.Port,
+			StatusPort:      shared.StatusPort,
 			ConfigPath:      params.Config.ConfigPath,
 			RepoComponentID: proc.ComponentTiProxy,
 			Service:         proc.ServiceTiProxy,

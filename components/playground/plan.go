@@ -531,7 +531,7 @@ func buildBootPlanWithProcs(options *BootOptions, cfg bootPlannerConfig, ordered
 			if spec.PlanInstance == nil {
 				return BootPlan{}, errors.Errorf("missing planner rules for %s", serviceID)
 			}
-			if err := fillPlannedPorts(allocPort, svcCfg, &sp, spec.Catalog.Ports); err != nil {
+			if err := pgservice.FillPlannedPorts(allocPort, svcCfg, &sp, spec.Catalog.Ports); err != nil {
 				return BootPlan{}, err
 			}
 			if err := spec.PlanInstance(options, svcCfg, &sp); err != nil {
@@ -633,66 +633,4 @@ func buildBootPlanWithProcs(options *BootOptions, cfg bootPlannerConfig, ordered
 		Services:            servicePlans,
 		DebugServiceConfigs: debugConfigs,
 	}, nil
-}
-
-func fillPlannedPorts(alloc pgservice.PortAllocator, cfg proc.Config, plan *proc.ServicePlan, specs []pgservice.PortSpec) error {
-	if plan == nil || len(specs) == 0 {
-		return nil
-	}
-	if alloc == nil {
-		return errors.New("port allocator is nil")
-	}
-
-	host := strings.TrimSpace(plan.Shared.Host)
-	if host == "" {
-		return errors.New("planned host is empty")
-	}
-
-	ports := make(map[string]int, len(specs))
-	for _, ps := range specs {
-		name := strings.TrimSpace(ps.Name)
-		if name == "" {
-			return errors.New("planned port name is empty")
-		}
-		if _, ok := ports[name]; ok {
-			return errors.Errorf("duplicate planned port %q", name)
-		}
-
-		if alias := strings.TrimSpace(ps.AliasOf); alias != "" {
-			v, ok := ports[alias]
-			if !ok {
-				return errors.Errorf("planned port %q aliases unknown port %q", name, alias)
-			}
-			ports[name] = v
-			continue
-		}
-
-		base := ps.Base
-		if ps.FromConfigPort && cfg.Port > 0 {
-			base = cfg.Port
-		}
-		if base <= 0 {
-			return errors.Errorf("planned port %q base is invalid", name)
-		}
-
-		allocHost := strings.TrimSpace(ps.Host)
-		if allocHost == "" {
-			allocHost = host
-		}
-
-		port, err := alloc(allocHost, base)
-		if err != nil {
-			return err
-		}
-		ports[name] = port
-	}
-
-	plan.Shared.Ports = ports
-	if v, ok := ports[proc.PortNamePort]; ok {
-		plan.Shared.Port = v
-	}
-	if v, ok := ports[proc.PortNameStatusPort]; ok {
-		plan.Shared.StatusPort = v
-	}
-	return nil
 }

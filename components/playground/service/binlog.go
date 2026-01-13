@@ -87,7 +87,10 @@ func init() {
 func newPumpInstance(rt ControllerRuntime, params NewProcParams) (proc.Process, error) {
 	pds := ProcsOf[*proc.PDInstance](rt, proc.ServicePD, proc.ServicePDAPI)
 	shOpt := rt.SharedOptions()
-	port := allocPort(params.Host, 0, pumpPortBase, shOpt.PortOffset)
+	shared, err := allocPortsForNewProc(proc.ServicePump, params, shOpt.PortOffset)
+	if err != nil {
+		return nil, err
+	}
 
 	pdAddrs := make([]string, 0, len(pds))
 	for _, pd := range pds {
@@ -106,8 +109,8 @@ func newPumpInstance(rt ControllerRuntime, params NewProcParams) (proc.Process, 
 			ID:              params.ID,
 			Dir:             params.Dir,
 			Host:            params.Host,
-			Port:            port,
-			StatusPort:      port,
+			Port:            shared.Port,
+			StatusPort:      shared.StatusPort,
 			ConfigPath:      params.Config.ConfigPath,
 			RepoComponentID: proc.ComponentPump,
 			Service:         proc.ServicePump,
@@ -158,7 +161,10 @@ func scaleInPumpByOffline(rt ControllerRuntime, w io.Writer, inst proc.Process, 
 func newDrainerInstance(rt ControllerRuntime, params NewProcParams) (proc.Process, error) {
 	pds := ProcsOf[*proc.PDInstance](rt, proc.ServicePD, proc.ServicePDAPI)
 	shOpt := rt.SharedOptions()
-	port := allocPort(params.Host, 0, drainerPortBase, shOpt.PortOffset)
+	shared, err := allocPortsForNewProc(proc.ServiceDrainer, params, shOpt.PortOffset)
+	if err != nil {
+		return nil, err
+	}
 
 	pdAddrs := make([]string, 0, len(pds))
 	for _, pd := range pds {
@@ -177,8 +183,8 @@ func newDrainerInstance(rt ControllerRuntime, params NewProcParams) (proc.Proces
 			ID:              params.ID,
 			Dir:             params.Dir,
 			Host:            params.Host,
-			Port:            port,
-			StatusPort:      port,
+			Port:            shared.Port,
+			StatusPort:      shared.StatusPort,
 			ConfigPath:      params.Config.ConfigPath,
 			RepoComponentID: proc.ComponentDrainer,
 			Service:         proc.ServiceDrainer,
