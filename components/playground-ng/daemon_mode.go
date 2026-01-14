@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/tui/colorstr"
 	tuiterm "github.com/pingcap/tiup/pkg/tui/term"
 	tuiv2output "github.com/pingcap/tiup/pkg/tuiv2/output"
 )
@@ -119,11 +120,15 @@ func runBackgroundStarter(state *cliState) error {
 			if ok && probeErr == nil {
 				cancelTail()
 				out := tuiv2output.Stdout.Get()
-				fmt.Fprintf(out, "\nCluster running in background. To stop: tiup playground-ng stop --tag %s\n", state.tag)
+				colorstr.Fprintf(out, backgroundStarterReadyMessage(state.tag))
 				return nil
 			}
 		}
 	}
+}
+
+func backgroundStarterReadyMessage(tag string) string {
+	return fmt.Sprintf("[dim]Cluster running in background (--background).[reset]\n[dim]To stop: [reset]tiup playground-ng stop --tag %s\n", tag)
 }
 
 func daemonEnv() []string {

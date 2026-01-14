@@ -80,3 +80,7 @@ func TestBuildDaemonArgs_FiltersEqualsFormsAndKeepsPositionals(t *testing.T) {
 		"--run-as-daemon",
 	}, got)
 }
+
+func TestBackgroundStarterReadyMessage(t *testing.T) {
+	require.Equal(t, "[dim]Cluster running in background (--background).[reset]\n[dim]To stop: [reset]tiup playground-ng stop --tag foo\n", backgroundStarterReadyMessage("foo"))
+}
