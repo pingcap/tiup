@@ -160,7 +160,7 @@ func (s *engineState) applyEvent(now time.Time, e Event) {
 
 	switch e.Type {
 	case EventGroupAdd:
-		s.applyGroupAdd(e)
+		s.applyGroupAdd(now, e)
 	case EventGroupUpdate:
 		s.applyGroupUpdate(e)
 	case EventGroupClose:
@@ -180,7 +180,7 @@ func (s *engineState) applyEvent(now time.Time, e Event) {
 	}
 }
 
-func (s *engineState) applyGroupAdd(e Event) {
+func (s *engineState) applyGroupAdd(now time.Time, e Event) {
 	id := e.GroupID
 	if id == 0 {
 		return
@@ -194,9 +194,10 @@ func (s *engineState) applyGroupAdd(e Event) {
 		title = *e.Title
 	}
 	g := &groupState{
-		id:       id,
-		title:    title,
-		showMeta: true,
+		id:        id,
+		title:     title,
+		showMeta:  true,
+		startedAt: now,
 	}
 	s.groupByID[id] = g
 	s.groups = append(s.groups, g)

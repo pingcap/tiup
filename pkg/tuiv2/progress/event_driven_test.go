@@ -69,3 +69,20 @@ func TestEventLossy_TaskProgressTotalIsNotLossy(t *testing.T) {
 	require.True(t, (Event{Type: EventTaskProgress}).lossy())
 	require.False(t, (Event{Type: EventTaskProgress, Total: &total}).lossy())
 }
+
+func TestGroupStartedAt_SetOnGroupAdd(t *testing.T) {
+	start := time.Unix(1_000_000, 0)
+
+	st := newEngineState()
+	title := "Download components"
+	st.applyEvent(start, Event{Type: EventGroupAdd, GroupID: 1, Title: &title})
+
+	taskAt := start.Add(5 * time.Second)
+	taskTitle := "TiDB"
+	st.applyEvent(taskAt, Event{Type: EventTaskAdd, GroupID: 1, TaskID: 10, Title: &taskTitle})
+
+	g := st.groupByID[1]
+	require.NotNil(t, g)
+	require.Equal(t, start, g.startedAt)
+	require.Equal(t, 5*time.Second, g.elapsed(taskAt))
+}
