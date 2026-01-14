@@ -305,7 +305,7 @@ func getMonitorHosts(topo spec.Topology) (map[string]hostInfo, set.StringSet) {
 	return uniqueHosts, noAgentHosts
 }
 
-// checkTiFlashWithTLS check tiflash vserson
+// checkTiFlashWithTLS check tiflash version
 func checkTiFlashWithTLS(topo spec.Topology, version string) error {
 	if clusterSpec, ok := topo.(*spec.Specification); ok {
 		if clusterSpec.GlobalOptions.TLSEnabled {
