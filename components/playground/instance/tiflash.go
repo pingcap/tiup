@@ -110,7 +110,7 @@ func (inst *TiFlashInstance) Start(ctx context.Context) error {
 	// If inst.Version is empty, it means the tiflash is started by specific binary path.
 	// Usually this case is use for testing or development, start with new mode.
 	if !inst.Version.IsEmpty() && !tidbver.TiFlashPlaygroundNewStartMode(inst.Version.String()) {
-		colorstr.Printf("[yellow][bold]Warning[reset][bold]: TiFlash is started by a compatibility method for versions earlier than v7.0. [reset]\n")
+		colorstr.Printf("[yellow][bold]Warning[reset][bold]: TiFlash is started by a compatibility method for versions earlier than v7.1. [reset]\n")
 		return inst.startOld(ctx, inst.Version)
 	}
 
