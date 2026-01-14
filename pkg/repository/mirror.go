@@ -66,6 +66,23 @@ type (
 		Finish()
 	}
 
+	// DownloadProgressReporter is an optional extension interface for
+	// DownloadProgress implementations that want to receive retry/success/failure
+	// signals for a given download URL.
+	//
+	// When provided, the repository will prefer reporting retryable failures via
+	// these callbacks instead of emitting standalone log lines, making it
+	// possible to integrate cleanly with progress UIs.
+	DownloadProgressReporter interface {
+		// Retry is called when a retryable error occurred and the downloader will
+		// retry the same URL. attempt is 1-based (the first retry is attempt=1).
+		Retry(url string, attempt, maxAttempts int, err error)
+		// Success is called when the download succeeded (after any retries).
+		Success(url string)
+		// Error is called when the download failed and will not be retried further.
+		Error(url string, attempt, maxAttempts int, err error)
+	}
+
 	// MirrorOptions is used to customize the mirror download options
 	MirrorOptions struct {
 		// Context controls download cancelation. When canceled, ongoing network
@@ -542,32 +559,71 @@ func (l *httpMirror) Download(resource, targetDir string) error {
 	// downloaded file is stored in a temp directory and the temp directory is
 	// deleted at Close(), in this way an interrupted download won't remain
 	// any partial file on the disk
-	var err error
-	_ = utils.Retry(func() error {
-		var r io.ReadCloser
-		if err != nil && l.isRetryable(err) {
-			logprinter.Warnf("failed to download %s(%s), retrying...", resource, err.Error())
-		}
-		if r, err = l.downloadFile(l.prepareURL(resource), tmpFilePath, 0); err != nil {
-			if l.isRetryable(err) {
+	reporter, _ := l.options.Progress.(DownloadProgressReporter)
+
+	const (
+		maxAttempts = 5
+		retryDelay  = 500 * time.Millisecond
+	)
+
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		url := l.prepareURL(resource)
+
+		r, err := l.downloadFile(url, tmpFilePath, 0)
+		if err == nil {
+			if err := r.Close(); err != nil {
+				if l.isRetryable(err) && attempt < maxAttempts {
+					if reporter != nil {
+						reporter.Retry(url, attempt, maxAttempts, err)
+					} else {
+						logprinter.Warnf("failed to download %s(%s), retrying...", resource, err.Error())
+					}
+					time.Sleep(retryDelay)
+					continue
+				}
+				if reporter != nil {
+					reporter.Error(url, attempt, maxAttempts, err)
+				}
 				return err
 			}
-			// Abort retry
+
+			if err := utils.MkdirAll(targetDir, 0755); err != nil {
+				if reporter != nil {
+					reporter.Error(url, attempt, maxAttempts, err)
+				}
+				return errors.Trace(err)
+			}
+			if err := utils.Move(tmpFilePath, dstFilePath); err != nil {
+				if reporter != nil {
+					reporter.Error(url, attempt, maxAttempts, err)
+				}
+				return errors.Trace(err)
+			}
+
+			if reporter != nil {
+				reporter.Success(url)
+			}
 			return nil
 		}
-		return r.Close()
-	}, utils.RetryOption{
-		Timeout:  time.Hour,
-		Attempts: 3,
-	})
-	if err != nil {
+
+		if l.isRetryable(err) && attempt < maxAttempts {
+			if reporter != nil {
+				reporter.Retry(url, attempt, maxAttempts, err)
+			} else {
+				logprinter.Warnf("failed to download %s(%s), retrying...", resource, err.Error())
+			}
+			time.Sleep(retryDelay)
+			continue
+		}
+
+		if reporter != nil {
+			reporter.Error(url, attempt, maxAttempts, err)
+		}
 		return err
 	}
 
-	if err := utils.MkdirAll(targetDir, 0755); err != nil {
-		return errors.Trace(err)
-	}
-	return utils.Move(tmpFilePath, dstFilePath)
+	// Should never reach here.
+	return errors.Errorf("download %s failed: reached unexpected retry loop end", resource)
 }
 
 // Fetch implements the Mirror interface

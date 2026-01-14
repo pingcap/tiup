@@ -140,6 +140,9 @@ type cliState struct {
 	tiupDataDir    string
 	dataDir        string
 	deleteWhenExit bool
+	// destroyDataAfterExit controls user-facing hints. It may be true even when
+	// deleteWhenExit is false (e.g. when TiUP runner will clean the instance dir).
+	destroyDataAfterExit bool
 
 	background  bool
 	runAsDaemon bool
@@ -424,7 +427,7 @@ func newDisplay(state *cliState) *cobra.Command {
 				return err
 			}
 			if !verbose && !jsonOut {
-				colorstr.Fprintf(tuiv2output.Stderr.Get(), "\n[dark_gray]Tip: use --verbose to show more columns: COMPONENT, PID, VERSION, BINARY, LOG[reset]\n")
+				colorstr.Fprintf(tuiv2output.Stderr.Get(), "\n[dim]Tip: use --verbose to show more columns: COMPONENT, PID, VERSION, BINARY, LOG[reset]\n")
 			}
 			return nil
 		},

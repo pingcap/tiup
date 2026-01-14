@@ -22,7 +22,7 @@ func (ui *UI) maybeSealGroupLocked(g *Group) []string {
 	}
 
 	for _, t := range g.tasks {
-		if t != nil && t.status == taskStatusRunning {
+		if t != nil && (t.status == taskStatusRunning || t.status == taskStatusRetrying) {
 			return nil
 		}
 	}

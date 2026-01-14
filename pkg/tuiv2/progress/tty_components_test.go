@@ -89,3 +89,22 @@ func TestTTYTaskHideIfFast(t *testing.T) {
 		require.Contains(t, got, "Grafana")
 	})
 }
+
+func TestTTYDownloadTask_ShowsRetryingMessage(t *testing.T) {
+	g := &Group{title: "Download components"}
+	g.tasks = []*Task{
+		{title: "Grafana", kind: taskKindDownload, status: taskStatusDone, meta: "v8.5.4", total: 60 * 1024 * 1024},
+		{title: "PD", kind: taskKindDownload, status: taskStatusDone, meta: "v8.5.4", total: 51 * 1024 * 1024},
+		{title: "Prometheus", kind: taskKindDownload, status: taskStatusRetrying, meta: "v8.5.4", total: 126 * 1024 * 1024, message: "retrying 1/5..."},
+		{title: "TiKV", kind: taskKindDownload, status: taskStatusPending, meta: "v8.5.4"},
+	}
+
+	ctx := ttyRenderContext{
+		styles:  newTTYStyles(io.Discard),
+		width:   200,
+		spinner: "⠦",
+	}
+	lines := ttyGroupComponent{group: g}.Lines(ctx, 1_000_000)
+	got := ansi.Strip(strings.Join(lines, "\n"))
+	require.Contains(t, got, "! Prometheus v8.5.4 (126MiB)  retrying 1/5...")
+}

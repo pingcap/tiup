@@ -61,8 +61,8 @@ func newTTYStyles(out io.Writer) ttyStyles {
 		// both dark and light terminal themes (palette mappings vary widely).
 		progressTrack: r.NewStyle().Foreground(gray).Faint(true),
 
-		meta:    r.NewStyle().Foreground(gray),
-		message: r.NewStyle().Foreground(gray),
+		meta:    r.NewStyle().Faint(true),
+		message: r.NewStyle().Faint(true),
 
 		guideRunning: r.NewStyle().Foreground(gray),
 		guideSuccess: r.NewStyle().Foreground(green),

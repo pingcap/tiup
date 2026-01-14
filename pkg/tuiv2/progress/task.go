@@ -9,6 +9,7 @@ type taskStatus int
 const (
 	taskStatusPending taskStatus = iota
 	taskStatusRunning
+	taskStatusRetrying
 	taskStatusDone
 	taskStatusError
 	taskStatusSkipped
@@ -165,6 +166,54 @@ func (t *Task) SetMessage(msg string) {
 	ui.markDirtyLocked()
 }
 
+// Retrying marks the task as retrying with a message, while keeping it active.
+//
+// It is intended for transient, recoverable failures (e.g. network retries).
+func (t *Task) Retrying(msg string) {
+	if t == nil || t.g == nil || t.g.ui == nil {
+		return
+	}
+	ui := t.g.ui
+
+	ui.mu.Lock()
+	defer ui.mu.Unlock()
+
+	if ui.closed {
+		return
+	}
+	// Once a group is sealed into the immutable history area (TTY mode), avoid
+	// mutating tasks so previously rendered output remains stable.
+	if t.g.sealed {
+		return
+	}
+
+	switch t.status {
+	case taskStatusDone, taskStatusError, taskStatusSkipped, taskStatusCanceled:
+		return
+	}
+
+	now := time.Now()
+	t.status = taskStatusRetrying
+	t.message = msg
+	if t.startAt.IsZero() {
+		t.startAt = now
+	}
+
+	if ui.mode == ModePlain && !t.g.plainBegun {
+		t.g.plainBegun = true
+		ui.printPlainGroupHeaderLocked(t.g.title)
+	}
+	if t.g.startedAt.IsZero() {
+		t.g.startedAt = now
+	}
+
+	if ui.mode == ModePlain {
+		ui.printPlainTaskRetryLocked(t)
+	}
+
+	ui.markDirtyLocked()
+}
+
 // SetMeta sets stable, user-facing metadata for this task (e.g. component
 // version for downloads).
 //
@@ -274,7 +323,7 @@ func (t *Task) Done() {
 	ui := t.g.ui
 
 	ui.mu.Lock()
-	if ui.closed || t.status != taskStatusRunning {
+	if ui.closed || (t.status != taskStatusRunning && t.status != taskStatusRetrying) {
 		ui.mu.Unlock()
 		return
 	}
@@ -374,7 +423,7 @@ func (t *Task) Skip(reason string) {
 	ui := t.g.ui
 
 	ui.mu.Lock()
-	if ui.closed || t.status != taskStatusRunning {
+	if ui.closed || (t.status != taskStatusRunning && t.status != taskStatusRetrying) {
 		ui.mu.Unlock()
 		return
 	}
@@ -407,7 +456,7 @@ func (t *Task) Cancel(reason string) {
 	ui := t.g.ui
 
 	ui.mu.Lock()
-	if ui.closed || t.status != taskStatusRunning {
+	if ui.closed || (t.status != taskStatusRunning && t.status != taskStatusRetrying) {
 		ui.mu.Unlock()
 		return
 	}

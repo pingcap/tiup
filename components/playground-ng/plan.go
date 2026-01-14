@@ -178,26 +178,16 @@ func renderDryRunText(out io.Writer, plan BootPlan) string {
 	tokens := colorstr.DefaultTokens
 	tokens.Disable = !tuiterm.Resolve(out).Color
 
-	if len(plan.Downloads) > 0 {
-		tokens.Fprintf(&b, "[light_magenta]==> [reset][bold]Download Packages:[reset]\n")
-		for _, d := range plan.Downloads {
-			if d.ComponentID == "" || d.ResolvedVersion == "" {
-				continue
-			}
-			tokens.Fprintf(&b, "  [green]+[reset] %s[dark_gray]@%s[reset]\n", d.ComponentID, d.ResolvedVersion)
+	downloaded := make(map[string]struct{}, len(plan.Downloads))
+	for _, d := range plan.Downloads {
+		if d.ComponentID == "" || d.ResolvedVersion == "" {
+			continue
 		}
+		downloaded[d.ComponentID+"@"+d.ResolvedVersion] = struct{}{}
 	}
 
 	var reusedComponents []string
 	if len(plan.Services) > 0 {
-		downloaded := make(map[string]struct{}, len(plan.Downloads))
-		for _, d := range plan.Downloads {
-			if d.ComponentID == "" || d.ResolvedVersion == "" {
-				continue
-			}
-			downloaded[d.ComponentID+"@"+d.ResolvedVersion] = struct{}{}
-		}
-
 		seen := make(map[string]struct{})
 		for _, s := range plan.Services {
 			if s.BinPath != "" || s.ComponentID == "" || s.ResolvedVersion == "" {
@@ -217,16 +207,26 @@ func renderDryRunText(out io.Writer, plan BootPlan) string {
 	}
 
 	if len(reusedComponents) > 0 {
-		if b.Len() > 0 {
-			b.WriteString("\n")
-		}
 		tokens.Fprintf(&b, "[light_magenta]==> [reset][bold]Existing Packages:[reset]\n")
 		for _, c := range reusedComponents {
 			componentID, resolved, ok := strings.Cut(c, "@")
 			if !ok || componentID == "" || resolved == "" {
 				continue
 			}
-			tokens.Fprintf(&b, "    %s[dark_gray]@%s[reset]\n", componentID, resolved)
+			tokens.Fprintf(&b, "    %s[dim]@%s[reset]\n", componentID, resolved)
+		}
+	}
+
+	if len(plan.Downloads) > 0 {
+		if b.Len() > 0 {
+			b.WriteString("\n")
+		}
+		tokens.Fprintf(&b, "[light_magenta]==> [reset][bold]Download Packages:[reset]\n")
+		for _, d := range plan.Downloads {
+			if d.ComponentID == "" || d.ResolvedVersion == "" {
+				continue
+			}
+			tokens.Fprintf(&b, "  [green]+[reset] %s[dim]@%s[reset]\n", d.ComponentID, d.ResolvedVersion)
 		}
 	}
 
@@ -250,12 +250,12 @@ func renderDryRunText(out io.Writer, plan BootPlan) string {
 				tokens.Fprintf(&b, "%s/", componentHint)
 			}
 			if ver := s.ResolvedVersion; ver != "" {
-				tokens.Fprintf(&b, "%s[dark_gray]@%s[reset]", s.Name, ver)
+				tokens.Fprintf(&b, "%s[dim]@%s[reset]", s.Name, ver)
 			} else {
 				tokens.Fprintf(&b, "%s", s.Name)
 			}
 			if binPath := strings.TrimSpace(s.BinPath); binPath != "" {
-				tokens.Fprintf(&b, " [dark_gray](use %s)[reset]", binPath)
+				tokens.Fprintf(&b, " [dim](use %s)[reset]", binPath)
 			}
 			b.WriteString("\n")
 
@@ -265,11 +265,11 @@ func renderDryRunText(out io.Writer, plan BootPlan) string {
 				if s.Shared.StatusPort > 0 && s.Shared.StatusPort != s.Shared.Port {
 					addr = fmt.Sprintf("%s,%d", addr, s.Shared.StatusPort)
 				}
-				tokens.Fprintf(&b, "    [dark_gray]%s[reset]\n", addr)
+				tokens.Fprintf(&b, "    [dim]%s[reset]\n", addr)
 			}
 
 			if len(s.StartAfterServices) > 0 {
-				tokens.Fprintf(&b, "    [dark_gray]Start after: %s[reset]\n", strings.Join(s.StartAfterServices, ","))
+				tokens.Fprintf(&b, "    [dim]Start after: %s[reset]\n", strings.Join(s.StartAfterServices, ","))
 			}
 		}
 	}

@@ -7,11 +7,15 @@ import (
 )
 
 func (ui *UI) plainGroupHeader(title string) string {
-	return ui.plainSprintf("[bold][light_magenta]==> %s[reset]", title)
+	return ui.plainSprintf("[light_magenta]==>[reset] [bold]%s:[reset]", title)
 }
 
 func (ui *UI) plainErrorLabel() string {
 	return ui.plainSprintf("[bold][light_red]ERR[reset]")
+}
+
+func (ui *UI) plainWarnLabel() string {
+	return ui.plainSprintf("[bold][yellow]WARN[reset]")
 }
 
 func (ui *UI) plainSprintf(format string, args ...any) string {
@@ -48,14 +52,16 @@ func (ui *UI) printPlainTaskStartLocked(t *Task) {
 		return
 	}
 
-	title := t.title
-	if t.meta != "" {
-		title += " " + t.meta
+	switch {
+	case t.meta != "" && t.message != "":
+		ui.printPlainLineLocked(ui.plainSprintf("  [green]+[reset] %s [dim]%s[reset] [dim]%s[reset]", t.title, t.meta, t.message))
+	case t.meta != "":
+		ui.printPlainLineLocked(ui.plainSprintf("  [green]+[reset] %s [dim]%s[reset]", t.title, t.meta))
+	case t.message != "":
+		ui.printPlainLineLocked(ui.plainSprintf("  [green]+[reset] %s [dim]%s[reset]", t.title, t.message))
+	default:
+		ui.printPlainLineLocked(ui.plainSprintf("  [green]+[reset] %s", t.title))
 	}
-	if t.message != "" {
-		title += " " + t.message
-	}
-	ui.printPlainLineLocked(ui.plainSprintf(" [green]+[reset] %s", title))
 }
 
 func (ui *UI) printPlainTaskDoneLocked(t *Task) {
@@ -83,6 +89,24 @@ func (ui *UI) printPlainTaskErrorLocked(t *Task) {
 		return
 	}
 	ui.printPlainLineLocked("%s - %s (%s)", errLabel, title, formatDuration(elapsed))
+}
+
+func (ui *UI) printPlainTaskRetryLocked(t *Task) {
+	if ui == nil || ui.mode != ModePlain || t == nil {
+		return
+	}
+
+	label := ui.plainWarnLabel()
+
+	title := t.title
+	if t.meta != "" {
+		title += " " + t.meta
+	}
+	if t.message != "" {
+		ui.printPlainLineLocked("%s - %s: %s", label, title, t.message)
+		return
+	}
+	ui.printPlainLineLocked("%s - %s", label, title)
 }
 
 func (ui *UI) printPlainTaskSkippedLocked(t *Task) {
@@ -128,9 +152,10 @@ func (ui *UI) printPlainDownloadStartLocked(t *Task) {
 	if t.total > 0 {
 		size = formatBytes(t.total)
 	}
-	title := t.title
-	if t.meta != "" {
-		title += " " + t.meta
+	switch {
+	case t.meta != "":
+		ui.printPlainLineLocked(ui.plainSprintf("  [green]+[reset] %s [dim]%s[reset] [dim](%s)[reset]", t.title, t.meta, size))
+	default:
+		ui.printPlainLineLocked(ui.plainSprintf("  [green]+[reset] %s [dim](%s)[reset]", t.title, size))
 	}
-	ui.printPlainLineLocked(ui.plainSprintf(" [green]+[reset] %s (%s)", title, size))
 }

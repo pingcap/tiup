@@ -237,7 +237,7 @@ func (g *Group) elapsedLocked() time.Duration {
 	hasRunning := false
 	var lastEnd time.Time
 	for _, t := range g.tasks {
-		if t.status == taskStatusRunning {
+		if t.status == taskStatusRunning || t.status == taskStatusRetrying {
 			hasRunning = true
 		}
 		if !t.endAt.IsZero() && t.endAt.After(lastEnd) {

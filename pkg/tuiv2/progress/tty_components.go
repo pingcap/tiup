@@ -35,6 +35,8 @@ func ttyTaskVisible(t *Task, now time.Time) bool {
 	switch t.status {
 	case taskStatusError:
 		return true
+	case taskStatusRetrying:
+		return true
 	case taskStatusRunning:
 		if t.revealAfter <= 0 {
 			return true
@@ -84,7 +86,7 @@ func (c ttyGroupComponent) Lines(ctx ttyRenderContext, activeLimit int) []string
 		if t == nil {
 			continue
 		}
-		if t.status == taskStatusRunning {
+		if t.status == taskStatusRunning || t.status == taskStatusRetrying {
 			active++
 		}
 		if t.status == taskStatusError {
@@ -210,6 +212,8 @@ func (c ttyTaskComponent) Line(ctx ttyRenderContext) string {
 		symbol = ctx.styles.taskPendingIcon.Render("·")
 	case taskStatusRunning:
 		symbol = ctx.spinner
+	case taskStatusRetrying:
+		symbol = ctx.styles.taskCanceledIcon.Render("!")
 	case taskStatusDone:
 		symbol = ctx.styles.taskSuccessIcon.Render("✔︎")
 	case taskStatusError:
@@ -377,7 +381,15 @@ func ttyDownloadContent(t *Task, ctx ttyRenderContext, titleWidth, labelWidth in
 				parts = append(parts, ctx.styles.meta.Render(fmt.Sprintf("(%s)", formatSpeed(t.speedBps))))
 			}
 		}
+		if t.message != "" {
+			parts = append(parts, ctx.styles.message.Render(t.message))
+		}
 		return strings.Join(parts, "  ")
+	case taskStatusRetrying:
+		if t.message != "" {
+			return label + "  " + ctx.styles.message.Render(t.message)
+		}
+		return label
 	case taskStatusDone:
 		return label
 	case taskStatusError:
@@ -398,7 +410,7 @@ func ttyDownloadMeta(t *Task) string {
 	parts := make([]string, 0, 1)
 	if t.total > 0 {
 		parts = append(parts, fmt.Sprintf("(%s)", formatBytes(t.total)))
-	} else if t.status != taskStatusRunning && t.current > 0 {
+	} else if t.status != taskStatusRunning && t.status != taskStatusRetrying && t.current > 0 {
 		// Best-effort: if total is unknown but we already finished, use the final
 		// byte count as a stable size hint.
 		parts = append(parts, fmt.Sprintf("(%s)", formatBytes(t.current)))

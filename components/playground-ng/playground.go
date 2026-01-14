@@ -27,11 +27,12 @@ import (
 
 // Playground represent the playground of a cluster.
 type Playground struct {
-	dataDir         string
-	deleteWhenExit  bool
-	bootOptions     *BootOptions
-	bootBaseConfigs map[proc.ServiceID]proc.Config
-	port            int
+	dataDir              string
+	deleteWhenExit       bool
+	destroyDataAfterExit bool
+	bootOptions          *BootOptions
+	bootBaseConfigs      map[proc.ServiceID]proc.Config
+	port                 int
 
 	// shutdownProcRecords snapshots controller-owned proc records at the moment
 	// shutdown starts. It lets termination logic work after the controller loop

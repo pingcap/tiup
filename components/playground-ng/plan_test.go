@@ -761,11 +761,11 @@ func TestWriteDryRun_Text(t *testing.T) {
 
 	var buf bytes.Buffer
 	require.NoError(t, writeDryRun(&buf, plan, "text"))
-	require.Equal(t, `==> Download Packages:
-  + tidb@v1.0.0
-
-==> Existing Packages:
+	require.Equal(t, `==> Existing Packages:
     pd@v1.0.0
+
+==> Download Packages:
+  + tidb@v1.0.0
 
 ==> Start Services:
   + pd-0@v1.0.0

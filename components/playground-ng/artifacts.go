@@ -91,10 +91,10 @@ func (p *Playground) printClusterInfoCallout(tidbSucc, tiproxySucc []string) boo
 	var blocks []block
 
 	blocks = append(blocks, block{colorstr.Sprintf("[bold]TiDB Playground Cluster is started, enjoy! 🎉[reset]")})
-	if p.deleteWhenExit {
+	if p.destroyDataAfterExit {
 		blocks = append(blocks, block{
-			colorstr.Sprintf("[dark_gray]Cluster data will be destroyed after exit.[reset]"),
-			colorstr.Sprintf("[dark_gray]To persist data after exit, use [cyan]--tag <name>[reset][dark_gray].[reset]"),
+			colorstr.Sprintf("[dim]Cluster data will be destroyed after exit.[reset]"),
+			colorstr.Sprintf("[dim]Use [reset][bold]--tag <name>[reset][dim] to persist data after exit.[reset]"),
 		})
 	}
 
@@ -127,7 +127,7 @@ func (p *Playground) clusterInfoBasicRows() [][2]string {
 	}
 	if p.dataDir != "" {
 		value := prettifyUserPath(p.dataDir)
-		if p.deleteWhenExit {
+		if p.destroyDataAfterExit {
 			value += " " + colorstr.Sprintf("[yellow][bold](Destroy after exit)[reset]")
 		}
 		rows = append(rows, [2]string{"Data dir:", value})

@@ -153,6 +153,10 @@ Examples:
 			}
 
 			isRoot := cmd.Parent() == nil
+			tagExplicit := false
+			if f := cmd.Flags().Lookup("tag"); f != nil {
+				tagExplicit = f.Changed
+			}
 			if !isRoot {
 				dataParent := filepath.Join(tiupHome, localdata.DataParentDir)
 				if shouldIgnoreSubcommandInstanceDataDir(state.tiupDataDir, dataParent) {
@@ -160,6 +164,7 @@ Examples:
 				}
 			}
 			state.deleteWhenExit = false
+			state.destroyDataAfterExit = shouldDestroyDataAfterExit(isRoot, state, tagExplicit, tiupHome)
 
 			// For dry-run, prefer stable default paths so the plan output is
 			// deterministic when users don't specify a tag.
@@ -256,6 +261,7 @@ Examples:
 
 			p := NewPlayground(state.dataDir, port)
 			p.deleteWhenExit = state.deleteWhenExit
+			p.destroyDataAfterExit = state.destroyDataAfterExit
 
 			ui := progressv2.New(progressv2.Options{Mode: progressv2.ModeAuto, Out: os.Stderr})
 			defer ui.Close()
@@ -532,6 +538,23 @@ func shouldIgnoreSubcommandInstanceDataDir(instanceDir, dataParentDir string) bo
 	return true
 }
 
+func shouldDestroyDataAfterExit(isRoot bool, state *cliState, tagExplicit bool, tiupHome string) bool {
+	if state == nil || !isRoot || state.dryRun || state.background || state.runAsDaemon || tagExplicit {
+		return false
+	}
+	if state.tiupDataDir == "" {
+		return true
+	}
+
+	instanceDir := filepath.Clean(strings.TrimSpace(state.tiupDataDir))
+	dataParent := filepath.Clean(filepath.Join(tiupHome, localdata.DataParentDir))
+	sep := string(os.PathSeparator)
+	return instanceDir != "" &&
+		dataParent != "" &&
+		instanceDir != dataParent &&
+		strings.HasPrefix(instanceDir, dataParent+sep)
+}
+
 func dumpDSN(fname string, dbs []*proc.TiDBInstance, tdbs []*proc.TiProxyInstance) {
 	var dsn []string
 	for _, db := range dbs {
@@ -582,6 +605,7 @@ type repoDownloadProgress struct {
 	task *progressv2.Task
 
 	expected map[string]*progressv2.Task
+	byURL    map[string]*progressv2.Task
 
 	now func() time.Time
 
@@ -648,6 +672,7 @@ func (p *repoDownloadProgress) Start(rawURL string, size int64) {
 			t.SetMeta(version)
 		}
 	}
+	t.SetMessage("")
 
 	if size > 0 {
 		t.SetTotal(size)
@@ -659,6 +684,12 @@ func (p *repoDownloadProgress) Start(rawURL string, size int64) {
 	t.SetKindDownload()
 
 	p.mu.Lock()
+	if p.byURL == nil {
+		p.byURL = make(map[string]*progressv2.Task)
+	}
+	if rawURL != "" && t != nil {
+		p.byURL[rawURL] = t
+	}
 	p.task = t
 	p.lastUpdateAt = time.Time{}
 	p.lastSize = 0
@@ -718,7 +749,67 @@ func (p *repoDownloadProgress) Finish() {
 		t.Cancel("")
 		return
 	}
+}
+
+func (p *repoDownloadProgress) Retry(rawURL string, attempt, maxAttempts int, err error) {
+	if p == nil {
+		return
+	}
+	t := p.taskForURL(rawURL)
+	if t == nil {
+		return
+	}
+	t.Retrying(fmt.Sprintf("retrying %d/%d...", attempt, maxAttempts))
+}
+
+func (p *repoDownloadProgress) Success(rawURL string) {
+	if p == nil {
+		return
+	}
+	t := p.taskForURL(rawURL)
+	if t == nil {
+		return
+	}
+	t.SetMessage("")
 	t.Done()
+}
+
+func (p *repoDownloadProgress) Error(rawURL string, attempt, maxAttempts int, err error) {
+	if p == nil {
+		return
+	}
+	t := p.taskForURL(rawURL)
+	if t == nil {
+		return
+	}
+	if err == nil {
+		t.Error("download failed")
+		return
+	}
+	t.Error(err.Error())
+}
+
+func (p *repoDownloadProgress) taskForURL(rawURL string) *progressv2.Task {
+	if p == nil {
+		return nil
+	}
+
+	base := downloadTitle(rawURL)
+	componentID, resolved, ok := parseComponentVersionFromTarball(base)
+	if ok {
+		key := componentID + "@" + resolved
+		p.mu.Lock()
+		t := p.expected[key]
+		p.mu.Unlock()
+		if t != nil {
+			return t
+		}
+	}
+
+	p.mu.Lock()
+	t := p.byURL[rawURL]
+	p.mu.Unlock()
+	return t
 }
 
 func downloadDisplay(rawURL string) (name, version string) {
@@ -816,6 +907,7 @@ func isKnownGOARCH(goarch string) bool {
 }
 
 var _ repository.DownloadProgress = (*repoDownloadProgress)(nil)
+var _ repository.DownloadProgressReporter = (*repoDownloadProgress)(nil)
 
 func main() {
 	tui.RegisterArg0("tiup playground-ng")

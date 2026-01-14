@@ -19,10 +19,10 @@ func TestClusterInfoBasicRows(t *testing.T) {
 	require.Equal(t, [2]string{"Data dir:", "/tmp/tiup-playground-test"}, rows[1])
 }
 
-func TestClusterInfoBasicRows_DataDirHintWhenDeleteAfterExit(t *testing.T) {
+func TestClusterInfoBasicRows_DataDirHintWhenDestroyAfterExit(t *testing.T) {
 	pg := NewPlayground("/tmp/tiup-playground-test", 0)
 	pg.bootOptions = &BootOptions{Version: "v7.5.0"}
-	pg.deleteWhenExit = true
+	pg.destroyDataAfterExit = true
 
 	rows := pg.clusterInfoBasicRows()
 	require.GreaterOrEqual(t, len(rows), 2)
