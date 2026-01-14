@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pingcap/tiup/pkg/localdata"
 	progressv2 "github.com/pingcap/tiup/pkg/tuiv2/progress"
 	"github.com/stretchr/testify/require"
 )
@@ -115,6 +116,57 @@ func TestShouldIgnoreSubcommandInstanceDataDir(t *testing.T) {
 		require.NoError(t, os.MkdirAll(dir, 0o755))
 		require.NoError(t, os.WriteFile(filepath.Join(dir, ".DS_Store"), []byte(""), 0o644))
 		require.True(t, shouldIgnoreSubcommandInstanceDataDir(dir, dataParent))
+	})
+}
+
+func TestShouldDestroyDataAfterExit(t *testing.T) {
+	tiupHome := t.TempDir()
+	dataParent := filepath.Join(tiupHome, localdata.DataParentDir)
+	require.NoError(t, os.MkdirAll(dataParent, 0o755))
+
+	t.Run("RootNoTiupDataDir", func(t *testing.T) {
+		state := &cliState{}
+		require.True(t, shouldDestroyDataAfterExit(true, state, false, tiupHome))
+	})
+
+	t.Run("RootTiupDataDirUnderDataParent", func(t *testing.T) {
+		state := &cliState{tiupDataDir: filepath.Join(dataParent, "V8CMwY9")}
+		require.True(t, shouldDestroyDataAfterExit(true, state, false, tiupHome))
+	})
+
+	t.Run("RootTiupDataDirEqualsDataParent", func(t *testing.T) {
+		state := &cliState{tiupDataDir: dataParent}
+		require.False(t, shouldDestroyDataAfterExit(true, state, false, tiupHome))
+	})
+
+	t.Run("RootTiupDataDirOutsideDataParent", func(t *testing.T) {
+		state := &cliState{tiupDataDir: filepath.Join(tiupHome, "custom", "V8CMwY9")}
+		require.False(t, shouldDestroyDataAfterExit(true, state, false, tiupHome))
+	})
+
+	t.Run("NotRoot", func(t *testing.T) {
+		state := &cliState{}
+		require.False(t, shouldDestroyDataAfterExit(false, state, false, tiupHome))
+	})
+
+	t.Run("DryRun", func(t *testing.T) {
+		state := &cliState{dryRun: true}
+		require.False(t, shouldDestroyDataAfterExit(true, state, false, tiupHome))
+	})
+
+	t.Run("Background", func(t *testing.T) {
+		state := &cliState{background: true}
+		require.False(t, shouldDestroyDataAfterExit(true, state, false, tiupHome))
+	})
+
+	t.Run("RunAsDaemon", func(t *testing.T) {
+		state := &cliState{runAsDaemon: true}
+		require.False(t, shouldDestroyDataAfterExit(true, state, false, tiupHome))
+	})
+
+	t.Run("TagExplicit", func(t *testing.T) {
+		state := &cliState{}
+		require.False(t, shouldDestroyDataAfterExit(true, state, true, tiupHome))
 	})
 }
 

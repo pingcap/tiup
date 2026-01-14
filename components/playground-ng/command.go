@@ -139,10 +139,12 @@ type cliState struct {
 	tag         string
 	tiupDataDir string
 	dataDir     string
-	// destroyDataAfterExit controls user-facing hints and whether the instance
-	// data directory should be cleaned up when playground-ng exits. It may be
-	// true even when playground-ng itself should not delete the directory (e.g.
-	// when the TiUP runner will clean the instance dir).
+	// destroyDataAfterExit controls user-facing hints, and (when not managed by
+	// the TiUP runner) whether playground-ng should remove the instance data
+	// directory on exit.
+	//
+	// When running under the TiUP runner, TIUP_INSTANCE_DATA_DIR is managed by the
+	// runner; keep this flag for hints only.
 	destroyDataAfterExit bool
 
 	background  bool
