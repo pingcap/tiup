@@ -55,9 +55,9 @@ func (s *eventLogSink) write(now time.Time, e Event) {
 	if e.Type == EventTaskState && e.TaskID != 0 && e.Status != nil && taskStatusTerminal(*e.Status) {
 		if pe, ok := s.pendingCurrent[e.TaskID]; ok {
 			delete(s.pendingCurrent, e.TaskID)
-			s.lastProgressAt[e.TaskID] = now
 			_ = s.enc.Encode(pe)
 		}
+		delete(s.lastProgressAt, e.TaskID)
 	}
 
 	_ = s.enc.Encode(e)

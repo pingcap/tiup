@@ -46,4 +46,7 @@ func TestEventLogSink_FlushesThrottledProgressOnTaskDone(t *testing.T) {
 	require.Equal(t, EventTaskState, e3.Type)
 	require.NotNil(t, e3.Status)
 	require.Equal(t, TaskStatusDone, *e3.Status)
+
+	require.Empty(t, sink.pendingCurrent)
+	require.Empty(t, sink.lastProgressAt)
 }
