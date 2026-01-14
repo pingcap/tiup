@@ -265,26 +265,16 @@ func (ui *UI) startTTY() {
 				for {
 					select {
 					case e := <-ui.eventsCh:
-						func() {
-							defer func() { _ = recover() }()
-							p.Send(ttyEventMsg{Event: e})
-						}()
+						p.Send(ttyEventMsg{Event: e})
 					default:
-						func() {
-							defer func() { _ = recover() }()
-							p.Send(ttyShutdownMsg{})
-						}()
+						p.Send(ttyShutdownMsg{})
 						return
 					}
 				}
 			case <-ui.ttyDoneCh:
 				return
 			case e := <-ui.eventsCh:
-				// Best-effort: ignore sends after exit.
-				func() {
-					defer func() { _ = recover() }()
-					p.Send(ttyEventMsg{Event: e})
-				}()
+				p.Send(ttyEventMsg{Event: e})
 			}
 		}
 	}()
