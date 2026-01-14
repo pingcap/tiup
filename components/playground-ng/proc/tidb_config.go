@@ -56,7 +56,7 @@ func (inst *TiDBInstance) getConfig() (map[string]any, error) {
 		config["tiflash-replicas.extra-s3-rule"] = false
 		config["tiflash-replicas.min-count"] = 1
 		if len(inst.Plan.TiKVWorkerURLs) != 0 {
-			config["tiflash-server-addr"] = strings.Join(inst.Plan.TiKVWorkerURLs, ",")
+			config["tikv-api-service-addr"] = strings.Join(inst.Plan.TiKVWorkerURLs, ",")
 		}
 		config["force-enable-fulltext-index"] = true
 		if inst.ShOpt.EnableTiKVColumnar {

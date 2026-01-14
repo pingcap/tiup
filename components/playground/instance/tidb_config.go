@@ -64,7 +64,7 @@ func (inst *TiDBInstance) getConfig(kvwrks []*TiKVWorkerInstance) map[string]any
 		for i, kvwrk := range kvwrks {
 			kvwrksAddr[i] = utils.JoinHostPort(kvwrk.Host, kvwrk.Port)
 		}
-		config["tiflash-server-addr"] = strings.Join(kvwrksAddr, ",")
+		config["tikv-api-service-addr"] = strings.Join(kvwrksAddr, ",")
 	case ModeDisAgg:
 		config["use-autoscaler"] = false
 		config["disaggregated-tiflash"] = true
