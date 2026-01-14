@@ -233,6 +233,37 @@ func TestProbePlaygroundCommandServer_PingSucceeds(t *testing.T) {
 	require.True(t, ok)
 }
 
+func TestProbePlaygroundCommandServer_FallbackToCommandWhenPingMissing(t *testing.T) {
+	commandCalled := false
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/ping":
+			w.WriteHeader(http.StatusNotFound)
+		case "/command":
+			commandCalled = true
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			_ = json.NewEncoder(w).Encode(CommandReply{OK: false, Error: "method not allowed"})
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer s.Close()
+
+	u, err := url.Parse(s.URL)
+	require.NoError(t, err)
+	port, err := strconv.Atoi(u.Port())
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	ok, err := probePlaygroundCommandServer(ctx, port)
+	require.NoError(t, err)
+	require.True(t, ok)
+	require.True(t, commandCalled)
+}
+
 func TestWaitPlaygroundStopped_StaleInvalidPIDIsRemoved(t *testing.T) {
 	base := t.TempDir()
 
