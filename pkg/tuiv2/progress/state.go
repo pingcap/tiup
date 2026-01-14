@@ -61,9 +61,6 @@ func (g *groupState) elapsed(now time.Time) time.Duration {
 	if now.IsZero() {
 		now = time.Now()
 	}
-	if g.closed && !g.closedAt.IsZero() {
-		return g.closedAt.Sub(g.startedAt)
-	}
 
 	hasRunning := false
 	var lastEnd time.Time
@@ -81,8 +78,13 @@ func (g *groupState) elapsed(now time.Time) time.Duration {
 	if hasRunning {
 		return now.Sub(g.startedAt)
 	}
-	if !lastEnd.IsZero() {
-		return lastEnd.Sub(g.startedAt)
+
+	end := lastEnd
+	if g.closed && !g.closedAt.IsZero() && g.closedAt.After(end) {
+		end = g.closedAt
+	}
+	if !end.IsZero() {
+		return end.Sub(g.startedAt)
 	}
 	return now.Sub(g.startedAt)
 }

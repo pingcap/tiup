@@ -151,3 +151,20 @@ func TestGroupElapsed_FreezeWhenAllTasksDone(t *testing.T) {
 
 	require.Equal(t, 10*time.Second, g.elapsed(end))
 }
+
+func TestGroupElapsed_DoesNotFreezeUntilTasksDone(t *testing.T) {
+	start := time.Unix(1_000_000, 0)
+	closeAt := start.Add(2 * time.Second)
+	end := start.Add(10 * time.Second)
+
+	g := &groupState{
+		startedAt: start,
+		closed:    true,
+		closedAt:  closeAt,
+	}
+	g.tasks = []*taskState{
+		{status: taskStatusDone, startAt: start, endAt: end},
+	}
+
+	require.Equal(t, 10*time.Second, g.elapsed(end))
+}
