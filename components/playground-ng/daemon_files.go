@@ -114,12 +114,37 @@ func probePlaygroundCommandServer(ctx context.Context, port int) (bool, error) {
 		ctx = context.Background()
 	}
 
+	client := &http.Client{}
+
+	pingReq, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("http://127.0.0.1:%d/ping", port), nil)
+	if err != nil {
+		return false, errors.AddStack(err)
+	}
+	pingResp, err := client.Do(pingReq)
+	if err != nil {
+		if ctx.Err() != nil {
+			return false, err
+		}
+	} else {
+		defer pingResp.Body.Close()
+		if pingResp.StatusCode == http.StatusOK {
+			var reply CommandReply
+			if err := json.NewDecoder(pingResp.Body).Decode(&reply); err != nil {
+				return false, err
+			}
+			if reply.OK && strings.TrimSpace(reply.Message) == "pong" {
+				return true, nil
+			}
+			return false, fmt.Errorf("unexpected ping response")
+		}
+	}
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("http://127.0.0.1:%d/command", port), nil)
 	if err != nil {
 		return false, errors.AddStack(err)
 	}
 
-	resp, err := (&http.Client{}).Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return false, err
 	}

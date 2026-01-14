@@ -638,6 +638,10 @@ func sendCommandsAndPrintResult(out io.Writer, cmds []Command, addr string) erro
 
 func (p *Playground) listenAndServeHTTP() error {
 	mux := http.NewServeMux()
+	mux.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(CommandReply{OK: true, Message: "pong"})
+	})
 	mux.HandleFunc("/command", p.commandHandler)
 
 	srv := &http.Server{
