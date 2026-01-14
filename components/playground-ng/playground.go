@@ -28,7 +28,6 @@ import (
 // Playground represent the playground of a cluster.
 type Playground struct {
 	dataDir              string
-	deleteWhenExit       bool
 	destroyDataAfterExit bool
 	bootOptions          *BootOptions
 	bootBaseConfigs      map[proc.ServiceID]proc.Config

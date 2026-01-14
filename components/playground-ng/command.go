@@ -136,12 +136,13 @@ type CommandReply struct {
 type cliState struct {
 	options BootOptions
 
-	tag            string
-	tiupDataDir    string
-	dataDir        string
-	deleteWhenExit bool
-	// destroyDataAfterExit controls user-facing hints. It may be true even when
-	// deleteWhenExit is false (e.g. when TiUP runner will clean the instance dir).
+	tag         string
+	tiupDataDir string
+	dataDir     string
+	// destroyDataAfterExit controls user-facing hints and whether the instance
+	// data directory should be cleaned up when playground-ng exits. It may be
+	// true even when playground-ng itself should not delete the directory (e.g.
+	// when the TiUP runner will clean the instance dir).
 	destroyDataAfterExit bool
 
 	background  bool

@@ -163,7 +163,6 @@ Examples:
 					state.tiupDataDir = ""
 				}
 			}
-			state.deleteWhenExit = false
 			state.destroyDataAfterExit = shouldDestroyDataAfterExit(isRoot, state, tagExplicit, tiupHome)
 
 			// For dry-run, prefer stable default paths so the plan output is
@@ -171,7 +170,6 @@ Examples:
 			if isRoot && state.dryRun && state.tag == "" && state.tiupDataDir == "" {
 				state.tag = "dry-run"
 				state.dataDir = filepath.Join(tiupHome, localdata.DataParentDir, state.tag)
-				state.deleteWhenExit = false
 			} else if isRoot && (state.background || state.runAsDaemon) {
 				// In daemon mode, the data directory must not depend on
 				// TIUP_INSTANCE_DATA_DIR (it may be cleaned by the TiUP runner when the
@@ -180,7 +178,6 @@ Examples:
 					state.tag = utils.Base62Tag()
 				}
 				state.dataDir = filepath.Join(tiupHome, localdata.DataParentDir, state.tag)
-				state.deleteWhenExit = false
 			} else {
 				switch {
 				case state.tag != "":
@@ -192,7 +189,6 @@ Examples:
 					if isRoot {
 						state.tag = utils.Base62Tag()
 						state.dataDir = filepath.Join(tiupHome, localdata.DataParentDir, state.tag)
-						state.deleteWhenExit = true
 					} else {
 						state.dataDir = filepath.Join(tiupHome, localdata.DataParentDir)
 					}
@@ -260,7 +256,6 @@ Examples:
 			defer releasePID()
 
 			p := NewPlayground(state.dataDir, port)
-			p.deleteWhenExit = state.deleteWhenExit
 			p.destroyDataAfterExit = state.destroyDataAfterExit
 
 			ui := progressv2.New(progressv2.Options{Mode: progressv2.ModeAuto, Out: os.Stderr})
@@ -924,7 +919,7 @@ func main() {
 		}
 		code = 1
 	}
-	if state != nil && state.deleteWhenExit && state.dataDir != "" {
+	if state != nil && state.destroyDataAfterExit && state.tiupDataDir == "" && state.dataDir != "" {
 		_ = os.RemoveAll(state.dataDir)
 	}
 
