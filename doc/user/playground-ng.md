@@ -20,11 +20,13 @@ tiup playground-ng nightly
 Start in background (daemon mode):
 
 ```bash
-tiup playground-ng --background
-tiup playground-ng --background --tag my-cluster
+tiup playground-ng -d
+tiup playground-ng -d --tag my-cluster
 ```
 
 In daemon mode, TiUP starts a short-lived starter process which spawns a daemon process. After the cluster is ready, the starter exits and the playground keeps running in background.
+
+`-d` is shorthand for `--background`.
 
 If you do not specify `--tag`, a random tag will be generated and printed when the starter reports success. Use that tag for subsequent `display/stop/scale-*` commands.
 

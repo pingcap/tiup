@@ -133,7 +133,7 @@ Examples:
   $ tiup playground-ng --pd.config ~/config/pd.toml    # Start a local cluster with specified configuration file
   $ tiup playground-ng --db.binpath /xx/tidb-server    # Start a local cluster with component binary path
   $ tiup playground-ng --tag xx                        # Start a local cluster with data dir named 'xx' and uncleaned after exit
-  $ tiup playground-ng --background --tag xx           # Start a local cluster in background (daemon mode)
+  $ tiup playground-ng -d --tag xx                    # Start a local cluster in background (daemon mode)
   $ tiup playground-ng stop --tag xx                   # Stop the cluster started with --tag xx
   $ tiup playground-ng stop-all                        # Stop all running playground-ng instances
   $ tiup playground-ng ps                              # List all running playground-ng instances
