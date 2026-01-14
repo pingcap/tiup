@@ -97,7 +97,12 @@ type Event struct {
 }
 
 func (e Event) lossy() bool {
-	return e.Type == EventTaskProgress
+	if e.Type != EventTaskProgress {
+		return false
+	}
+	// Total updates are important structural information and should never be
+	// dropped even when the event buffer is under pressure.
+	return e.Total == nil
 }
 
 func parseEventLine(line []byte) (Event, error) {

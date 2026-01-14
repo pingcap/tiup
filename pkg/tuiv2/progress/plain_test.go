@@ -77,6 +77,38 @@ func TestDownloadTask_Plain(t *testing.T) {
 	}
 }
 
+func TestDownloadTask_Plain_PendingTaskTotalBeforeStart(t *testing.T) {
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = r.Close() })
+	t.Cleanup(func() { _ = w.Close() })
+
+	ui := New(Options{Mode: ModePlain, Out: w})
+
+	g := ui.Group("Download components")
+	t1 := g.TaskPending("TiDB")
+	t1.SetTotal(1024 * 1024)
+	t1.SetMeta("v7.5.0")
+	t1.SetKindDownload()
+	t1.Start()
+	t1.SetCurrent(1024 * 1024)
+	t1.Done()
+	g.Close()
+
+	require.NoError(t, ui.Close())
+	_ = w.Close()
+	out, err := io.ReadAll(r)
+	require.NoError(t, err)
+	got := string(out)
+
+	for _, want := range []string{
+		"==> Download components:\n",
+		"  + TiDB v7.5.0 (1.0MiB)\n",
+	} {
+		require.Contains(t, got, want)
+	}
+}
+
 func TestPlainOutput_FORCE_COLOR_EmitsANSI(t *testing.T) {
 	t.Setenv("FORCE_COLOR", "1")
 

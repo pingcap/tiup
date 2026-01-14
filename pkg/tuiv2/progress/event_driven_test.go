@@ -63,3 +63,9 @@ func TestEventLogDrivenTTYRender_AutoSealMovesGroupToHistory(t *testing.T) {
 	require.Contains(t, hist, "B")
 	require.Contains(t, hist, "task-b")
 }
+
+func TestEventLossy_TaskProgressTotalIsNotLossy(t *testing.T) {
+	total := int64(1)
+	require.True(t, (Event{Type: EventTaskProgress}).lossy())
+	require.False(t, (Event{Type: EventTaskProgress, Total: &total}).lossy())
+}

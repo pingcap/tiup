@@ -309,18 +309,23 @@ func (s *engineState) applyTaskProgress(now time.Time, e Event) {
 	if t == nil || t.g == nil || t.g.sealed {
 		return
 	}
-	if t.status != taskStatusRunning {
-		return
+	if e.Total != nil && (t.status == taskStatusPending || t.status == taskStatusRunning || t.status == taskStatusRetrying) {
+		total := *e.Total
+		if total < 0 {
+			total = 0
+		}
+		t.total = total
 	}
-	if e.Total != nil {
-		t.total = *e.Total
-	}
-	if e.Current != nil {
+	if e.Current != nil && (t.status == taskStatusPending || t.status == taskStatusRunning || t.status == taskStatusRetrying) {
 		cur := *e.Current
 		if cur < 0 {
 			cur = 0
 		}
 		t.current = cur
+	}
+
+	if t.status != taskStatusRunning {
+		return
 	}
 
 	if t.kind != taskKindDownload {
