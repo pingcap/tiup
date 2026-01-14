@@ -123,7 +123,7 @@ func (m *Manager) TLS(name string, gOpt operator.Options, enable, cleanCertifica
 	return nil
 }
 
-// checkTLSEnv check tiflash vserson and show confirm
+// checkTLSEnv check tiflash version and show confirm
 func checkTLSEnv(topo spec.Topology, clusterName, version string, skipConfirm bool) error {
 	// check tiflash version
 	if err := checkTiFlashWithTLS(topo, version); err != nil {
