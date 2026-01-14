@@ -3,7 +3,8 @@ package progress
 import (
 	"io"
 	"os"
-	"sync"
+	"sync/atomic"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -17,6 +18,18 @@ type Options struct {
 	// Out is the output file used by the UI.
 	// If nil, it defaults to os.Stderr.
 	Out *os.File
+
+	// EventLog is an optional JSON-lines sink of the event stream.
+	//
+	// It is primarily intended for daemon mode: the daemon process writes event
+	// logs to a file, and the starter process replays them in a real TTY.
+	EventLog io.Writer
+
+	// Now returns the current time.
+	// If nil, it defaults to time.Now.
+	//
+	// It exists to make tests deterministic.
+	Now func() time.Time
 }
 
 // UI is a unified progress display for both TTY users and non-TTY logs/CI.
@@ -28,23 +41,26 @@ type UI struct {
 	mode    Mode
 	outMode tuiterm.OutputMode
 
-	mu     sync.Mutex
-	closed bool
+	now func() time.Time
 
-	groups []*Group
+	closed atomic.Bool
+	nextID atomic.Uint64
 
-	// Bubble Tea TTY program state.
+	eventsCh chan Event
+	closeCh  chan struct{}
+	doneCh   chan struct{}
+
+	writer *uiWriter
+
 	ttyProgram *tea.Program
-	ttySendCh  chan tea.Msg
 	ttyDoneCh  chan struct{}
-	ttyStyles  ttyStyles
 
-	writer io.Writer
+	plainDoneCh chan struct{}
 
-	// plainPrintedGroup indicates at least one group header has been printed in
-	// ModePlain. It is used to insert a blank line between groups for readability.
-	plainPrintedGroup bool
+	eventLog *eventLogSink
 }
+
+const defaultEventBuffer = 4096
 
 // New creates a new progress UI.
 func New(opts Options) *UI {
@@ -53,24 +69,45 @@ func New(opts Options) *UI {
 		out = os.Stderr
 	}
 
+	now := opts.Now
+	if now == nil {
+		now = time.Now
+	}
+
 	requested := opts.Mode
 	termCap := tuiterm.ResolveFile(out)
 
 	actual := resolveMode(requested, termCap)
 	termCap.Control = actual == ModeTTY
+
 	ui := &UI{
 		out:     out,
 		mode:    actual,
 		outMode: termCap,
-		writer:  &uiWriter{},
-	}
-	ui.writer.(*uiWriter).ui = ui
+		now:     now,
 
-	if actual == ModeTTY {
-		ui.ttySendCh = make(chan tea.Msg, 1024)
+		eventsCh: make(chan Event, defaultEventBuffer),
+		closeCh:  make(chan struct{}),
+		doneCh:   make(chan struct{}),
+	}
+	ui.writer = &uiWriter{ui: ui}
+
+	if opts.EventLog != nil {
+		ui.eventLog = newEventLogSink(opts.EventLog)
+	}
+
+	switch actual {
+	case ModeTTY:
 		ui.ttyDoneCh = make(chan struct{})
-		ui.ttyStyles = newTTYStyles(out)
 		ui.startTTY()
+	case ModePlain:
+		ui.plainDoneCh = make(chan struct{})
+		go ui.runPlain()
+	case ModeOff:
+		close(ui.doneCh)
+	default:
+		ui.plainDoneCh = make(chan struct{})
+		go ui.runPlain()
 	}
 
 	return ui
@@ -84,8 +121,6 @@ func (ui *UI) Mode() Mode {
 	if ui == nil {
 		return ModeOff
 	}
-	ui.mu.Lock()
-	defer ui.mu.Unlock()
 	return ui.mode
 }
 
@@ -94,88 +129,65 @@ func (ui *UI) Close() error {
 	if ui == nil {
 		return nil
 	}
-
-	ui.mu.Lock()
-	if ui.closed {
-		ui.mu.Unlock()
+	if !ui.closed.CompareAndSwap(false, true) {
 		return nil
 	}
-	ui.closed = true
-	mode := ui.mode
-	ttyDoneCh := ui.ttyDoneCh
-	ttySendCh := ui.ttySendCh
-	ttyProgram := ui.ttyProgram
-	ui.mu.Unlock()
 
-	if mode == ModeTTY {
-		// Flush any pending partial line from the UI writer to avoid losing the
-		// last line when shutting down.
-		if w, ok := ui.writer.(*uiWriter); ok {
-			w.flush()
-		}
-
-		// Ask the Bubble Tea program to quit.
-		// Quit is sent via ttySendCh so it is processed after any previously
-		// enqueued history prints.
-		if ttyProgram != nil {
-			if ttySendCh != nil {
-				func() {
-					// Best-effort: channel may already be closed or blocked if the program
-					// exited unexpectedly.
-					defer func() { _ = recover() }()
-					select {
-					case ttySendCh <- tea.Quit():
-					default:
-						ttyProgram.Quit()
-					}
-				}()
-			} else {
-				ttyProgram.Quit()
-			}
-		}
-		if ttyDoneCh != nil {
-			<-ttyDoneCh
-		}
-
-		// Stop the sender loop after the Bubble Tea program has fully exited.
-		// This avoids a window where direct writes can interleave with the
-		// still-running renderer.
-		if ttySendCh != nil {
-			func() {
-				defer func() { _ = recover() }()
-				close(ttySendCh)
-			}()
+	// Flush any pending partial line before stopping the engine.
+	if ui.writer != nil {
+		if line := ui.writer.drainBufferedLine(); line != "" {
+			ui.emitForced(Event{
+				Type:   EventPrintLine,
+				At:     ui.now(),
+				Text:   line,
+				Stream: "stdout",
+			})
 		}
 	}
 
+	close(ui.closeCh)
+
+	switch ui.mode {
+	case ModeTTY:
+		if ui.ttyDoneCh != nil {
+			<-ui.ttyDoneCh
+		}
+	case ModePlain:
+		if ui.plainDoneCh != nil {
+			<-ui.plainDoneCh
+		}
+	default:
+	}
+
+	<-ui.doneCh
 	return nil
 }
 
 // Group creates a new group of tasks (usually a "stage") under this UI.
 func (ui *UI) Group(title string) *Group {
-	if ui == nil {
+	if ui == nil || ui.closed.Load() {
 		return &Group{ui: nil, title: title}
 	}
-
-	g := &Group{ui: ui, title: title, showMeta: true}
-	ui.mu.Lock()
-	if ui.closed {
-		ui.mu.Unlock()
-		return &Group{ui: nil, title: title}
-	}
-	ui.groups = append(ui.groups, g)
-	ui.markDirtyLocked()
-	ui.mu.Unlock()
+	id := ui.nextID.Add(1)
+	g := &Group{ui: ui, id: id, title: title}
+	t := title
+	ui.emit(Event{
+		Type:    EventGroupAdd,
+		At:      ui.now(),
+		GroupID: id,
+		Title:   &t,
+	})
 	return g
 }
 
 // Writer returns a writer that is safe to use together with the progress UI.
 //
-// In ModeTTY, it appends complete lines to the Bubble Tea History area (above the
-// Active area), so they remain in the terminal scrollback and don't corrupt
-// multi-line progress rendering.
+// In ModeTTY, it appends complete lines to the History area (above the Active
+// area), so they remain in the terminal scrollback and don't corrupt multi-line
+// progress rendering.
 //
-// In ModePlain and ModeOff, it writes directly to the underlying output.
+// In ModePlain and ModeOff, it still emits line-based events so daemon mode can
+// persist and replay output.
 func (ui *UI) Writer() io.Writer {
 	if ui == nil {
 		return io.Discard
@@ -185,40 +197,27 @@ func (ui *UI) Writer() io.Writer {
 
 // BlankLine prints an empty line in a UI-safe way.
 //
-// In ModeTTY, it flushes any pending partial line from UI.Writer() first, then
-// appends an empty line to the History area so subsequent callouts/hints are
-// visually separated from progress output.
+// It flushes any pending partial line from UI.Writer() first, then appends an
+// empty line.
 func (ui *UI) BlankLine() {
-	if ui == nil {
+	if ui == nil || ui.closed.Load() {
 		return
 	}
-
-	ui.mu.Lock()
-	closed := ui.closed
-	mode := ui.mode
-	writer := ui.writer
-	ui.mu.Unlock()
-
-	if closed {
-		return
-	}
-
-	if mode != ModeTTY {
-		if writer != nil {
-			_, _ = io.WriteString(writer, "\n")
-		}
-		return
-	}
-
-	// In TTY mode, UI.Writer() buffers until newline. If there is a pending
-	// partial line, writing a single '\n' would only flush it and would not
-	// create the intended blank line separator.
-	if w, ok := writer.(*uiWriter); ok && w != nil {
-		if line := w.drainBufferedLine(); line != "" {
-			ui.printLogLine(line)
+	if ui.writer != nil {
+		if line := ui.writer.drainBufferedLine(); line != "" {
+			ui.emit(Event{
+				Type:   EventPrintLine,
+				At:     ui.now(),
+				Text:   line,
+				Stream: "stdout",
+			})
 		}
 	}
-	ui.printLogLine("")
+	ui.emit(Event{
+		Type:   EventBlankLine,
+		At:     ui.now(),
+		Stream: "stdout",
+	})
 }
 
 func resolveMode(requested Mode, termCap tuiterm.OutputMode) Mode {
@@ -242,13 +241,129 @@ func resolveMode(requested Mode, termCap tuiterm.OutputMode) Mode {
 	return ModePlain
 }
 
-func (ui *UI) markDirtyLocked() {
-	if ui == nil || ui.mode != ModeTTY || ui.ttySendCh == nil || ui.closed {
+func (ui *UI) emit(e Event) {
+	if ui == nil || ui.closed.Load() {
 		return
 	}
-	defer func() { _ = recover() }()
+	if ui.mode == ModeOff {
+		return
+	}
+	if e.V == 0 {
+		e.V = EventVersion
+	}
+	if e.At.IsZero() && ui.now != nil {
+		e.At = ui.now()
+	}
+
+	// Lossy events (like frequent progress updates) should never stall the
+	// controller. Drop them if the buffer is full.
+	if e.lossy() {
+		select {
+		case <-ui.closeCh:
+			return
+		default:
+		}
+		select {
+		case ui.eventsCh <- e:
+		default:
+		}
+		return
+	}
+
 	select {
-	case ui.ttySendCh <- ttyDirtyMsg{}:
+	case <-ui.closeCh:
+		return
 	default:
 	}
+	select {
+	case ui.eventsCh <- e:
+	case <-ui.closeCh:
+	}
+}
+
+func (ui *UI) emitForced(e Event) {
+	if ui == nil {
+		return
+	}
+	if ui.mode == ModeOff {
+		return
+	}
+	if e.V == 0 {
+		e.V = EventVersion
+	}
+	if e.At.IsZero() && ui.now != nil {
+		e.At = ui.now()
+	}
+
+	select {
+	case <-ui.closeCh:
+		return
+	default:
+	}
+	select {
+	case ui.eventsCh <- e:
+	case <-ui.closeCh:
+	}
+}
+
+func (ui *UI) runPlain() {
+	defer func() {
+		if ui.plainDoneCh != nil {
+			close(ui.plainDoneCh)
+		}
+		close(ui.doneCh)
+	}()
+
+	if ui.mode == ModeOff || ui.out == nil {
+		<-ui.closeCh
+		return
+	}
+
+	st := newEngineState()
+	r := newPlainRenderer(ui.out, ui.outMode)
+
+	for {
+		select {
+		case <-ui.closeCh:
+			for {
+				select {
+				case e := <-ui.eventsCh:
+					ui.processPlainEvent(e, st, r)
+				default:
+					return
+				}
+			}
+		case e := <-ui.eventsCh:
+			ui.processPlainEvent(e, st, r)
+		}
+	}
+}
+
+func (ui *UI) processPlainEvent(e Event, st *engineState, r *plainRenderer) {
+	now := e.At
+	if now.IsZero() {
+		now = ui.now()
+	}
+
+	if ui.eventLog != nil {
+		ui.eventLog.write(now, e)
+	}
+
+	st.applyEvent(now, e)
+	r.renderEvent(now, e, st)
+}
+
+// DecodeEvent decodes a single JSON event line.
+func DecodeEvent(line []byte) (Event, error) {
+	return parseEventLine(line)
+}
+
+// ReplayEvent injects a single Event into this UI.
+//
+// It is intended for daemon mode starter processes that tail an event log file.
+func (ui *UI) ReplayEvent(e Event) {
+	if ui == nil {
+		return
+	}
+	ui.emit(e)
 }

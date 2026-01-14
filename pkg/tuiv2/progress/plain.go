@@ -2,150 +2,150 @@ package progress
 
 import (
 	"fmt"
+	"io"
+	"time"
 
 	"github.com/pingcap/tiup/pkg/tui/colorstr"
+	tuiterm "github.com/pingcap/tiup/pkg/tui/term"
 )
 
-func (ui *UI) plainGroupHeader(title string) string {
-	return ui.plainSprintf("[light_magenta]==>[reset] [bold]%s:[reset]", title)
+type plainRenderer struct {
+	out     io.Writer
+	outMode tuiterm.OutputMode
+
+	printedGroup bool
 }
 
-func (ui *UI) plainErrorLabel() string {
-	return ui.plainSprintf("[bold][light_red]ERR[reset]")
+func newPlainRenderer(out io.Writer, outMode tuiterm.OutputMode) *plainRenderer {
+	if out == nil {
+		out = io.Discard
+	}
+	return &plainRenderer{out: out, outMode: outMode}
 }
 
-func (ui *UI) plainWarnLabel() string {
-	return ui.plainSprintf("[bold][yellow]WARN[reset]")
-}
-
-func (ui *UI) plainSprintf(format string, args ...any) string {
+func (r *plainRenderer) plainSprintf(format string, args ...any) string {
 	tokens := colorstr.DefaultTokens
-	tokens.Disable = ui == nil || !ui.outMode.Color
+	tokens.Disable = !r.outMode.Color
 	return tokens.Sprintf(format, args...)
 }
 
-func (ui *UI) printPlainGroupHeaderLocked(title string) {
-	if ui == nil || ui.mode != ModePlain {
-		return
-	}
-
-	if ui.plainPrintedGroup {
-		ui.printPlainLineLocked("")
-	}
-	ui.plainPrintedGroup = true
-	ui.printPlainLineLocked(ui.plainGroupHeader(title))
+func (r *plainRenderer) groupHeader(title string) string {
+	return r.plainSprintf("[light_magenta]==>[reset] [bold]%s:[reset]", title)
 }
 
-func (ui *UI) printPlainLineLocked(format string, args ...any) {
-	if ui == nil || ui.out == nil || ui.mode != ModePlain {
-		return
-	}
-	if len(args) == 0 {
-		_, _ = fmt.Fprintln(ui.out, format)
-		return
-	}
-	_, _ = fmt.Fprintf(ui.out, format+"\n", args...)
+func (r *plainRenderer) errLabel() string {
+	return r.plainSprintf("[bold][light_red]ERR[reset]")
 }
 
-func (ui *UI) printPlainTaskStartLocked(t *Task) {
-	if ui == nil || ui.mode != ModePlain || t == nil {
+func (r *plainRenderer) warnLabel() string {
+	return r.plainSprintf("[bold][yellow]WARN[reset]")
+}
+
+func (r *plainRenderer) renderEvent(now time.Time, e Event, st *engineState) {
+	if r == nil || r.out == nil {
 		return
+	}
+
+	switch e.Type {
+	case EventPrintLine:
+		_, _ = fmt.Fprintln(r.out, e.Text)
+	case EventBlankLine:
+		_, _ = fmt.Fprintln(r.out)
+	case EventTaskAdd:
+		t := (*taskState)(nil)
+		if st != nil {
+			t = st.taskByID[e.TaskID]
+		}
+		if t == nil || t.g == nil {
+			return
+		}
+		if t.g.plainBegun {
+			return
+		}
+		if r.printedGroup {
+			_, _ = fmt.Fprintln(r.out)
+		}
+		r.printedGroup = true
+		t.g.plainBegun = true
+		_, _ = fmt.Fprintln(r.out, r.groupHeader(t.g.title))
+	case EventTaskUpdate:
+		t := (*taskState)(nil)
+		if st != nil {
+			t = st.taskByID[e.TaskID]
+		}
+		if t == nil || t.g == nil {
+			return
+		}
+		r.maybePrintDownloadStart(now, t)
+	case EventTaskState:
+		t := (*taskState)(nil)
+		if st != nil {
+			t = st.taskByID[e.TaskID]
+		}
+		if t == nil || t.g == nil {
+			return
+		}
+
+		if t.status == taskStatusRunning {
+			switch t.kind {
+			case taskKindDownload:
+				r.maybePrintDownloadStart(now, t)
+			default:
+				r.maybePrintGenericStart(now, t)
+			}
+			return
+		}
+		if t.status == taskStatusRetrying {
+			r.printRetry(now, t)
+			return
+		}
+		if t.status == taskStatusError {
+			r.printError(now, t)
+			return
+		}
+		if t.status == taskStatusSkipped {
+			r.printSkipped(now, t)
+			return
+		}
+		if t.status == taskStatusCanceled {
+			r.printCanceled(now, t)
+			return
+		}
+	default:
+	}
+}
+
+func (r *plainRenderer) maybePrintGenericStart(now time.Time, t *taskState) {
+	if r == nil || t == nil || t.plainStartPrinted {
+		return
+	}
+	t.plainStartPrinted = true
+	if t.startAt.IsZero() {
+		t.startAt = now
 	}
 
 	switch {
 	case t.meta != "" && t.message != "":
-		ui.printPlainLineLocked(ui.plainSprintf("  [green]+[reset] %s [dim]%s[reset] [dim]%s[reset]", t.title, t.meta, t.message))
+		_, _ = fmt.Fprintln(r.out, r.plainSprintf("  [green]+[reset] %s [dim]%s[reset] [dim]%s[reset]", t.title, t.meta, t.message))
 	case t.meta != "":
-		ui.printPlainLineLocked(ui.plainSprintf("  [green]+[reset] %s [dim]%s[reset]", t.title, t.meta))
+		_, _ = fmt.Fprintln(r.out, r.plainSprintf("  [green]+[reset] %s [dim]%s[reset]", t.title, t.meta))
 	case t.message != "":
-		ui.printPlainLineLocked(ui.plainSprintf("  [green]+[reset] %s [dim]%s[reset]", t.title, t.message))
+		_, _ = fmt.Fprintln(r.out, r.plainSprintf("  [green]+[reset] %s [dim]%s[reset]", t.title, t.message))
 	default:
-		ui.printPlainLineLocked(ui.plainSprintf("  [green]+[reset] %s", t.title))
+		_, _ = fmt.Fprintln(r.out, r.plainSprintf("  [green]+[reset] %s", t.title))
 	}
 }
 
-func (ui *UI) printPlainTaskDoneLocked(t *Task) {
-	if ui == nil || ui.mode != ModePlain || t == nil {
+func (r *plainRenderer) maybePrintDownloadStart(now time.Time, t *taskState) {
+	if r == nil || t == nil || t.downloadStartPrinted || t.kind != taskKindDownload {
 		return
 	}
-	// Plain mode is designed to be compact and stable (append-only logs).
-	// We only emit task start events by default.
-}
-
-func (ui *UI) printPlainTaskErrorLocked(t *Task) {
-	if ui == nil || ui.mode != ModePlain || t == nil {
+	if t.status != taskStatusRunning {
 		return
 	}
-
-	errLabel := ui.plainErrorLabel()
-
-	elapsed := t.endAt.Sub(t.startAt)
-	title := t.title
-	if t.meta != "" {
-		title += " " + t.meta
-	}
-	if t.message != "" {
-		ui.printPlainLineLocked("%s - %s: %s (%s)", errLabel, title, t.message, formatDuration(elapsed))
-		return
-	}
-	ui.printPlainLineLocked("%s - %s (%s)", errLabel, title, formatDuration(elapsed))
-}
-
-func (ui *UI) printPlainTaskRetryLocked(t *Task) {
-	if ui == nil || ui.mode != ModePlain || t == nil {
-		return
-	}
-
-	label := ui.plainWarnLabel()
-
-	title := t.title
-	if t.meta != "" {
-		title += " " + t.meta
-	}
-	if t.message != "" {
-		ui.printPlainLineLocked("%s - %s: %s", label, title, t.message)
-		return
-	}
-	ui.printPlainLineLocked("%s - %s", label, title)
-}
-
-func (ui *UI) printPlainTaskSkippedLocked(t *Task) {
-	if ui == nil || ui.mode != ModePlain || t == nil {
-		return
-	}
-
-	elapsed := t.endAt.Sub(t.startAt)
-	title := t.title
-	if t.meta != "" {
-		title += " " + t.meta
-	}
-	if t.message != "" {
-		ui.printPlainLineLocked("SKIP - %s: %s (%s)", title, t.message, formatDuration(elapsed))
-		return
-	}
-	ui.printPlainLineLocked("SKIP - %s (%s)", title, formatDuration(elapsed))
-}
-
-func (ui *UI) printPlainTaskCanceledLocked(t *Task) {
-	if ui == nil || ui.mode != ModePlain || t == nil {
-		return
-	}
-
-	elapsed := t.endAt.Sub(t.startAt)
-	title := t.title
-	if t.meta != "" {
-		title += " " + t.meta
-	}
-	if t.message != "" {
-		ui.printPlainLineLocked("CANCEL - %s: %s (%s)", title, t.message, formatDuration(elapsed))
-		return
-	}
-	ui.printPlainLineLocked("CANCEL - %s (%s)", title, formatDuration(elapsed))
-}
-
-func (ui *UI) printPlainDownloadStartLocked(t *Task) {
-	if ui == nil || ui.mode != ModePlain || t == nil {
-		return
+	t.downloadStartPrinted = true
+	if t.startAt.IsZero() {
+		t.startAt = now
 	}
 
 	size := "?"
@@ -154,8 +154,77 @@ func (ui *UI) printPlainDownloadStartLocked(t *Task) {
 	}
 	switch {
 	case t.meta != "":
-		ui.printPlainLineLocked(ui.plainSprintf("  [green]+[reset] %s [dim]%s[reset] [dim](%s)[reset]", t.title, t.meta, size))
+		_, _ = fmt.Fprintln(r.out, r.plainSprintf("  [green]+[reset] %s [dim]%s[reset] [dim](%s)[reset]", t.title, t.meta, size))
 	default:
-		ui.printPlainLineLocked(ui.plainSprintf("  [green]+[reset] %s [dim](%s)[reset]", t.title, size))
+		_, _ = fmt.Fprintln(r.out, r.plainSprintf("  [green]+[reset] %s [dim](%s)[reset]", t.title, size))
 	}
+}
+
+func (r *plainRenderer) printRetry(_ time.Time, t *taskState) {
+	if r == nil || t == nil {
+		return
+	}
+	label := r.warnLabel()
+
+	title := t.title
+	if t.meta != "" {
+		title += " " + t.meta
+	}
+	if t.message != "" {
+		_, _ = fmt.Fprintf(r.out, "%s - %s: %s\n", label, title, t.message)
+		return
+	}
+	_, _ = fmt.Fprintf(r.out, "%s - %s\n", label, title)
+}
+
+func (r *plainRenderer) printError(_ time.Time, t *taskState) {
+	if r == nil || t == nil {
+		return
+	}
+
+	errLabel := r.errLabel()
+	elapsed := t.endAt.Sub(t.startAt)
+	title := t.title
+	if t.meta != "" {
+		title += " " + t.meta
+	}
+	if t.message != "" {
+		_, _ = fmt.Fprintf(r.out, "%s - %s: %s (%s)\n", errLabel, title, t.message, formatDuration(elapsed))
+		return
+	}
+	_, _ = fmt.Fprintf(r.out, "%s - %s (%s)\n", errLabel, title, formatDuration(elapsed))
+}
+
+func (r *plainRenderer) printSkipped(_ time.Time, t *taskState) {
+	if r == nil || t == nil {
+		return
+	}
+
+	elapsed := t.endAt.Sub(t.startAt)
+	title := t.title
+	if t.meta != "" {
+		title += " " + t.meta
+	}
+	if t.message != "" {
+		_, _ = fmt.Fprintf(r.out, "SKIP - %s: %s (%s)\n", title, t.message, formatDuration(elapsed))
+		return
+	}
+	_, _ = fmt.Fprintf(r.out, "SKIP - %s (%s)\n", title, formatDuration(elapsed))
+}
+
+func (r *plainRenderer) printCanceled(_ time.Time, t *taskState) {
+	if r == nil || t == nil {
+		return
+	}
+
+	elapsed := t.endAt.Sub(t.startAt)
+	title := t.title
+	if t.meta != "" {
+		title += " " + t.meta
+	}
+	if t.message != "" {
+		_, _ = fmt.Fprintf(r.out, "CANCEL - %s: %s (%s)\n", title, t.message, formatDuration(elapsed))
+		return
+	}
+	_, _ = fmt.Fprintf(r.out, "CANCEL - %s (%s)\n", title, formatDuration(elapsed))
 }

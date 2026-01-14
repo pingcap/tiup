@@ -17,7 +17,6 @@ func TestPlainOutput_IsStableAndNoANSI(t *testing.T) {
 	t.Cleanup(func() { _ = w.Close() })
 
 	ui := New(Options{Mode: ModePlain, Out: w})
-	t.Cleanup(func() { _ = ui.Close() })
 
 	g := ui.Group("Waiting for things")
 	t1 := g.Task("task-ok")
@@ -28,6 +27,7 @@ func TestPlainOutput_IsStableAndNoANSI(t *testing.T) {
 	t2.Error("boom")
 	g.Close()
 
+	require.NoError(t, ui.Close())
 	_ = w.Close()
 	out, err := io.ReadAll(r)
 	require.NoError(t, err)
@@ -51,7 +51,6 @@ func TestDownloadTask_Plain(t *testing.T) {
 	t.Cleanup(func() { _ = w.Close() })
 
 	ui := New(Options{Mode: ModePlain, Out: w})
-	t.Cleanup(func() { _ = ui.Close() })
 
 	g := ui.Group("Download components")
 	t1 := g.Task("TiDB")
@@ -63,6 +62,7 @@ func TestDownloadTask_Plain(t *testing.T) {
 	t1.Done()
 	g.Close()
 
+	require.NoError(t, ui.Close())
 	_ = w.Close()
 	out, err := io.ReadAll(r)
 	require.NoError(t, err)
@@ -86,7 +86,6 @@ func TestPlainOutput_FORCE_COLOR_EmitsANSI(t *testing.T) {
 	t.Cleanup(func() { _ = w.Close() })
 
 	ui := New(Options{Mode: ModePlain, Out: w})
-	t.Cleanup(func() { _ = ui.Close() })
 
 	g := ui.Group("Waiting for things")
 	t1 := g.Task("task-err")
@@ -94,6 +93,7 @@ func TestPlainOutput_FORCE_COLOR_EmitsANSI(t *testing.T) {
 	t1.Error("boom")
 	g.Close()
 
+	require.NoError(t, ui.Close())
 	_ = w.Close()
 	out, err := io.ReadAll(r)
 	require.NoError(t, err)
@@ -112,10 +112,10 @@ func TestGroupElapsed_FreezeWhenAllTasksDone(t *testing.T) {
 	start := time.Unix(1_000_000, 0)
 	end := start.Add(10 * time.Second)
 
-	g := &Group{startedAt: start}
-	g.tasks = []*Task{
+	g := &groupState{startedAt: start}
+	g.tasks = []*taskState{
 		{status: taskStatusDone, startAt: start, endAt: end},
 	}
 
-	require.Equal(t, 10*time.Second, g.elapsedLocked())
+	require.Equal(t, 10*time.Second, g.elapsed(end))
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -16,6 +17,7 @@ import (
 	"github.com/pingcap/tiup/pkg/tui/colorstr"
 	tuiterm "github.com/pingcap/tiup/pkg/tui/term"
 	tuiv2output "github.com/pingcap/tiup/pkg/tuiv2/output"
+	progressv2 "github.com/pingcap/tiup/pkg/tuiv2/progress"
 )
 
 func runBackgroundStarter(state *cliState) error {
@@ -41,14 +43,18 @@ func runBackgroundStarter(state *cliState) error {
 	}
 
 	logPath := filepath.Join(state.dataDir, playgroundDaemonLogName)
-	offset := int64(0)
-	if st, err := os.Stat(logPath); err == nil {
-		offset = st.Size()
-	}
-
 	logWriter, err := os.OpenFile(logPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
 	if err != nil {
 		return errors.AddStack(err)
+	}
+
+	eventLogPath := filepath.Join(state.dataDir, playgroundTUIEventLogName)
+	eventOffset := int64(0)
+	if st, err := os.Stat(eventLogPath); err == nil {
+		eventOffset = st.Size()
+	}
+	if f, err := os.OpenFile(eventLogPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644); err == nil {
+		_ = f.Close()
 	}
 
 	args := buildDaemonArgs(state.tag)
@@ -73,9 +79,14 @@ func runBackgroundStarter(state *cliState) error {
 
 	cmd.Env = daemonEnv()
 
+	ui := progressv2.New(progressv2.Options{Mode: progressv2.ModeAuto, Out: os.Stdout})
+	defer ui.Close()
+	restore := attachUIOutput(ui)
+	defer restore()
+
 	tailCtx, cancelTail := context.WithCancel(context.Background())
 	defer cancelTail()
-	go tailFile(tailCtx, logPath, offset, tuiv2output.Stdout.Get())
+	go tailEventLog(tailCtx, eventLogPath, eventOffset, ui)
 
 	waitCh := make(chan error, 1)
 
@@ -178,10 +189,11 @@ func buildDaemonArgs(tag string) []string {
 	return out
 }
 
-func tailFile(ctx context.Context, path string, offset int64, out io.Writer) {
-	if out == nil {
-		out = io.Discard
+func tailEventLog(ctx context.Context, path string, offset int64, ui *progressv2.UI) {
+	if ui == nil {
+		return
 	}
+
 	f, err := os.Open(path)
 	if err != nil {
 		return
@@ -193,6 +205,7 @@ func tailFile(ctx context.Context, path string, offset int64, out io.Writer) {
 	}
 
 	buf := make([]byte, 32*1024)
+	var pending []byte
 	for {
 		if ctx != nil {
 			select {
@@ -204,15 +217,31 @@ func tailFile(ctx context.Context, path string, offset int64, out io.Writer) {
 
 		n, err := f.Read(buf)
 		if n > 0 {
-			_, _ = out.Write(buf[:n])
+			pending = append(pending, buf[:n]...)
+			for {
+				i := bytes.IndexByte(pending, '\n')
+				if i < 0 {
+					break
+				}
+				line := bytes.TrimSpace(pending[:i])
+				pending = pending[i+1:]
+				if len(line) == 0 {
+					continue
+				}
+				if e, decErr := progressv2.DecodeEvent(line); decErr == nil {
+					ui.ReplayEvent(e)
+				}
+			}
 		}
-		if err == nil {
+
+		switch err {
+		case nil:
 			continue
-		}
-		if err == io.EOF {
+		case io.EOF:
 			time.Sleep(50 * time.Millisecond)
 			continue
+		default:
+			return
 		}
-		return
 	}
 }

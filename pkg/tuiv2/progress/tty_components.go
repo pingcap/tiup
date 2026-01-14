@@ -19,13 +19,15 @@ type ttyRenderContext struct {
 
 	// spinner is the already-styled spinner glyph used for running tasks.
 	spinner string
+
+	now time.Time
 }
 
 type ttyGroupComponent struct {
-	group *Group
+	group *groupState
 }
 
-func ttyTaskVisible(t *Task, now time.Time) bool {
+func ttyTaskVisible(t *taskState, now time.Time) bool {
 	if t == nil {
 		return false
 	}
@@ -42,13 +44,13 @@ func ttyTaskVisible(t *Task, now time.Time) bool {
 			return true
 		}
 		if t.startAt.IsZero() {
-			// Best-effort fallback: if we don't have a start timestamp, prefer
-			// showing the task so users can see progress.
 			return true
+		}
+		if now.IsZero() {
+			now = time.Now()
 		}
 		return now.Sub(t.startAt) >= t.revealAfter
 	default:
-		// Hide pending/success/canceled/skipped tasks.
 		return false
 	}
 }
@@ -61,7 +63,7 @@ func (c ttyGroupComponent) Lines(ctx ttyRenderContext, activeLimit int) []string
 
 	tasks := g.tasks
 	if g.sortTasksByTitle && len(tasks) > 1 {
-		tasks = append([]*Task(nil), tasks...)
+		tasks = append([]*taskState(nil), tasks...)
 		sort.SliceStable(tasks, func(i, j int) bool {
 			ti := tasks[i]
 			tj := tasks[j]
@@ -72,8 +74,12 @@ func (c ttyGroupComponent) Lines(ctx ttyRenderContext, activeLimit int) []string
 		})
 	}
 
-	now := time.Now()
-	visibleTasks := make([]*Task, 0, len(tasks))
+	now := ctx.now
+	if now.IsZero() {
+		now = time.Now()
+	}
+
+	visibleTasks := make([]*taskState, 0, len(tasks))
 	for _, t := range tasks {
 		if ttyTaskVisible(t, now) {
 			visibleTasks = append(visibleTasks, t)
@@ -94,27 +100,16 @@ func (c ttyGroupComponent) Lines(ctx ttyRenderContext, activeLimit int) []string
 		}
 	}
 
-	meta := formatElapsed(g.elapsedLocked())
+	meta := formatElapsed(g.elapsed(now))
 
 	header := g.title
 	if g.showMeta {
 		header += "  " + ctx.styles.meta.Render(meta)
 	}
-	// When meta is shown, elapsed timing already indicates activity.
-	// Keep the header minimal by only appending "..." for groups that hide meta
-	// (e.g. shutdown).
 	if active > 0 && !g.showMeta {
 		header += " ..."
 	}
 
-	// Group status icon:
-	// - running: gray bullet
-	// - success: green check
-	// - error:   red cross
-	//
-	// A group is considered "finished" only when it's explicitly closed and has
-	// no running tasks. This keeps the output stable even when tasks complete
-	// early but the stage is still in progress.
 	icon := ctx.styles.groupRunningIcon.Render("•")
 	if g.closed && active == 0 {
 		if hasError {
@@ -126,15 +121,11 @@ func (c ttyGroupComponent) Lines(ctx ttyRenderContext, activeLimit int) []string
 
 	lines := []string{ctx.styles.clipLine(ctx.width, icon+" "+header)}
 
-	// When the group is successful and configured to hide details, render only
-	// the summary line.
 	if g.closed && active == 0 && !hasError && g.hideDetailsOnSuccess {
 		return lines
 	}
 
 	guide := ctx.styles.guideRunning
-	// When a successful group keeps details, use a green guide bar to show the
-	// block as a cohesive "completed section" (similar to docker build output).
 	if g.closed && active == 0 && !hasError && !g.hideDetailsOnSuccess {
 		guide = ctx.styles.guideSuccess
 	}
@@ -144,18 +135,12 @@ func (c ttyGroupComponent) Lines(ctx ttyRenderContext, activeLimit int) []string
 		shown = activeLimit
 	}
 
-	// Compute per-group column widths so task metadata/messages line up vertically.
-	//
-	// We intentionally only consider the tasks we're going to show, so hidden
-	// tasks (e.g. "... and N more") won't affect alignment.
 	maxTitleWidth := 0
 	for i := 0; i < shown; i++ {
 		t := visibleTasks[i]
 		if t == nil {
 			continue
 		}
-		// Align tasks that show a second column (meta/message), error details,
-		// or download metadata/progress.
 		if t.kind == taskKindDownload || t.meta != "" || t.message != "" || t.status == taskStatusError {
 			if w := lipgloss.Width(t.title); w > maxTitleWidth {
 				maxTitleWidth = w
@@ -193,7 +178,7 @@ func (c ttyGroupComponent) Lines(ctx ttyRenderContext, activeLimit int) []string
 }
 
 type ttyTaskComponent struct {
-	task  *Task
+	task  *taskState
 	guide lipgloss.Style
 
 	titleWidth         int
@@ -227,9 +212,6 @@ func (c ttyTaskComponent) Line(ctx ttyRenderContext) string {
 	}
 
 	guideBar := c.guide.Render("┃")
-
-	// Prefix format (stable, line-oriented):
-	//   "  ┃  ✔︎ "
 	prefix := "  " + guideBar + "  " + symbol + " "
 	prefixWidth := lipgloss.Width(prefix)
 
@@ -239,9 +221,6 @@ func (c ttyTaskComponent) Line(ctx ttyRenderContext) string {
 		content = ttyDownloadContent(t, ctx, c.titleWidth, c.downloadLabelWidth)
 	case t.status == taskStatusError:
 		if t.meta == "" && t.message != "" {
-			// When a task errors without stable metadata, align the error message to
-			// the second column for consistency and to maximize space on narrow
-			// terminals.
 			title := ttyTaskLabel(t, ctx, c.titleWidth)
 			content = title + " " + t.message
 		} else {
@@ -251,26 +230,12 @@ func (c ttyTaskComponent) Line(ctx ttyRenderContext) string {
 			}
 			title := ttyTaskLabel(t, ctx, titleWidth)
 			if t.message != "" {
-				// Keep the colon adjacent to the title for readability. Padding the
-				// title would introduce awkward spaces before ':' when other tasks have
-				// longer titles (e.g. "TiKV Worker").
 				content = fmt.Sprintf("%s: %s", title, t.message)
 			} else {
 				content = title
 			}
 		}
-	case t.status == taskStatusSkipped:
-		titleWidth := 0
-		if t.meta != "" {
-			titleWidth = c.titleWidth
-		}
-		title := ttyTaskLabel(t, ctx, titleWidth)
-		if t.message != "" {
-			content = fmt.Sprintf("%s: %s", title, ctx.styles.message.Render(t.message))
-		} else {
-			content = title
-		}
-	case t.status == taskStatusCanceled:
+	case t.status == taskStatusSkipped || t.status == taskStatusCanceled:
 		titleWidth := 0
 		if t.meta != "" {
 			titleWidth = c.titleWidth
@@ -292,17 +257,13 @@ func (c ttyTaskComponent) Line(ctx ttyRenderContext) string {
 		}
 	}
 
-	// Ensure the prefix is always visible, and clip the content into remaining
-	// width. This avoids truncating ANSI sequences.
 	if ctx.width > 0 && prefixWidth >= ctx.width {
 		return ctx.styles.clipLine(ctx.width, prefix)
 	}
-
 	if ctx.width > 0 {
 		maxContent := ctx.width - prefixWidth
 		content = ctx.styles.clipLine(maxContent, content)
 	}
-
 	return ctx.styles.clipLine(ctx.width, prefix+content)
 }
 
@@ -317,7 +278,7 @@ func padRightVisible(s string, width int) string {
 	return s + strings.Repeat(" ", width-w)
 }
 
-func ttyTaskLabel(t *Task, ctx ttyRenderContext, titleWidth int) string {
+func ttyTaskLabel(t *taskState, ctx ttyRenderContext, titleWidth int) string {
 	if t == nil {
 		return ""
 	}
@@ -332,7 +293,7 @@ func ttyTaskLabel(t *Task, ctx ttyRenderContext, titleWidth int) string {
 	return title
 }
 
-func ttyDownloadLabel(t *Task, ctx ttyRenderContext, titleWidth int) string {
+func ttyDownloadLabel(t *taskState, ctx ttyRenderContext, titleWidth int) string {
 	if t == nil {
 		return ""
 	}
@@ -343,7 +304,7 @@ func ttyDownloadLabel(t *Task, ctx ttyRenderContext, titleWidth int) string {
 	return label
 }
 
-func ttyDownloadContent(t *Task, ctx ttyRenderContext, titleWidth, labelWidth int) string {
+func ttyDownloadContent(t *taskState, ctx ttyRenderContext, titleWidth, labelWidth int) string {
 	label := ttyDownloadLabel(t, ctx, titleWidth)
 
 	switch t.status {
@@ -358,8 +319,6 @@ func ttyDownloadContent(t *Task, ctx ttyRenderContext, titleWidth, labelWidth in
 				percent = t.current * 100 / t.total
 			}
 
-			// Keep the progress bar compact: it's nice on wide terminals but should
-			// disappear first when space is limited.
 			bar := ""
 			switch {
 			case ctx.width >= 70:
@@ -402,7 +361,7 @@ func ttyDownloadContent(t *Task, ctx ttyRenderContext, titleWidth, labelWidth in
 	}
 }
 
-func ttyDownloadMeta(t *Task) string {
+func ttyDownloadMeta(t *taskState) string {
 	if t == nil {
 		return ""
 	}
@@ -411,8 +370,6 @@ func ttyDownloadMeta(t *Task) string {
 	if t.total > 0 {
 		parts = append(parts, fmt.Sprintf("(%s)", formatBytes(t.total)))
 	} else if t.status != taskStatusRunning && t.status != taskStatusRetrying && t.current > 0 {
-		// Best-effort: if total is unknown but we already finished, use the final
-		// byte count as a stable size hint.
 		parts = append(parts, fmt.Sprintf("(%s)", formatBytes(t.current)))
 	}
 	return strings.Join(parts, " ")
@@ -435,14 +392,16 @@ func renderProgressBar(styles ttyStyles, current, total int64, width int) string
 	if filled > width {
 		filled = width
 	}
-
 	bar := styles.progressFilled.Render(strings.Repeat("━", filled)) + styles.progressTrack.Render(strings.Repeat("━", width-filled))
 	return bar
 }
 
-func renderTTYBlocksLocked(groups []*Group, ctx ttyRenderContext, activeLimit int) [][]string {
+func renderTTYBlocks(st *engineState, ctx ttyRenderContext, activeLimit int) [][]string {
+	if st == nil {
+		return nil
+	}
 	var blocks [][]string
-	for _, g := range groups {
+	for _, g := range st.groups {
 		if g == nil || g.sealed {
 			continue
 		}

@@ -18,9 +18,10 @@ import (
 )
 
 const (
-	playgroundPIDFileName   = "pid"
-	playgroundPortFileName  = "port"
-	playgroundDaemonLogName = "daemon.log"
+	playgroundPIDFileName     = "pid"
+	playgroundPortFileName    = "port"
+	playgroundDaemonLogName   = "daemon.log"
+	playgroundTUIEventLogName = "tuiv2.events.jsonl"
 )
 
 const pidFileWriteGracePeriod = 2 * time.Second

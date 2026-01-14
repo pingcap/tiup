@@ -12,8 +12,8 @@ import (
 )
 
 func TestTTYTaskMetaAlignmentForCanceledTasks(t *testing.T) {
-	g := &Group{title: "Start instances"}
-	g.tasks = []*Task{
+	g := &groupState{title: "Start instances"}
+	g.tasks = []*taskState{
 		{title: "TiKV Worker", status: taskStatusDone, meta: "meta-long"},
 		{title: "TiDB", status: taskStatusCanceled, meta: "meta-short"},
 	}
@@ -22,6 +22,7 @@ func TestTTYTaskMetaAlignmentForCanceledTasks(t *testing.T) {
 		styles:  newTTYStyles(io.Discard),
 		width:   200,
 		spinner: "⠦",
+		now:     time.Now(),
 	}
 	lines := ttyGroupComponent{group: g}.Lines(ctx, 1_000_000)
 	require.GreaterOrEqual(t, len(lines), 3, "expected at least 3 lines (header + 2 tasks)")
@@ -46,11 +47,12 @@ func TestTTYTaskHideIfFast(t *testing.T) {
 		styles:  newTTYStyles(io.Discard),
 		width:   200,
 		spinner: "⠦",
+		now:     now,
 	}
 
 	t.Run("hide-success", func(t *testing.T) {
-		g := &Group{title: "Start instances"}
-		g.tasks = []*Task{
+		g := &groupState{title: "Start instances"}
+		g.tasks = []*taskState{
 			{title: "PD", status: taskStatusDone},
 			{title: "Grafana", status: taskStatusDone, hideIfFast: true, revealAfter: 2 * time.Second, startAt: now.Add(-3 * time.Second), endAt: now},
 		}
@@ -62,8 +64,8 @@ func TestTTYTaskHideIfFast(t *testing.T) {
 	})
 
 	t.Run("show-error", func(t *testing.T) {
-		g := &Group{title: "Start instances"}
-		g.tasks = []*Task{
+		g := &groupState{title: "Start instances"}
+		g.tasks = []*taskState{
 			{title: "PD", status: taskStatusDone},
 			{title: "Grafana", status: taskStatusError, hideIfFast: true, message: "boom"},
 		}
@@ -74,8 +76,8 @@ func TestTTYTaskHideIfFast(t *testing.T) {
 	})
 
 	t.Run("reveal-running-only-when-slow", func(t *testing.T) {
-		g := &Group{title: "Shutdown"}
-		g.tasks = []*Task{
+		g := &groupState{title: "Shutdown"}
+		g.tasks = []*taskState{
 			{title: "Grafana", status: taskStatusRunning, hideIfFast: true, revealAfter: 10 * time.Second, startAt: now.Add(-2 * time.Second)},
 		}
 
@@ -91,8 +93,8 @@ func TestTTYTaskHideIfFast(t *testing.T) {
 }
 
 func TestTTYDownloadTask_ShowsRetryingMessage(t *testing.T) {
-	g := &Group{title: "Download components"}
-	g.tasks = []*Task{
+	g := &groupState{title: "Download components"}
+	g.tasks = []*taskState{
 		{title: "Grafana", kind: taskKindDownload, status: taskStatusDone, meta: "v8.5.4", total: 60 * 1024 * 1024},
 		{title: "PD", kind: taskKindDownload, status: taskStatusDone, meta: "v8.5.4", total: 51 * 1024 * 1024},
 		{title: "Prometheus", kind: taskKindDownload, status: taskStatusRetrying, meta: "v8.5.4", total: 126 * 1024 * 1024, message: "retrying 1/5..."},
@@ -103,6 +105,7 @@ func TestTTYDownloadTask_ShowsRetryingMessage(t *testing.T) {
 		styles:  newTTYStyles(io.Discard),
 		width:   200,
 		spinner: "⠦",
+		now:     time.Now(),
 	}
 	lines := ttyGroupComponent{group: g}.Lines(ctx, 1_000_000)
 	got := ansi.Strip(strings.Join(lines, "\n"))

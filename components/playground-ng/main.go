@@ -258,7 +258,22 @@ Examples:
 			p := NewPlayground(state.dataDir, port)
 			p.destroyDataAfterExit = state.destroyDataAfterExit
 
-			ui := progressv2.New(progressv2.Options{Mode: progressv2.ModeAuto, Out: os.Stderr})
+			var eventLog *os.File
+			if state.runAsDaemon {
+				path := filepath.Join(state.dataDir, playgroundTUIEventLogName)
+				f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+				if err != nil {
+					return err
+				}
+				eventLog = f
+				defer func() { _ = f.Close() }()
+			}
+
+			ui := progressv2.New(progressv2.Options{
+				Mode:     progressv2.ModeAuto,
+				Out:      os.Stderr,
+				EventLog: eventLog,
+			})
 			defer ui.Close()
 			p.ui = ui
 			p.downloadGroup = ui.Group("Download components")
@@ -700,11 +715,10 @@ func (p *repoDownloadProgress) SetCurrent(size int64) {
 	}
 
 	// Repository download callbacks can be very frequent. Throttle SetCurrent
-	// updates to avoid starving other controller work (like starting TiDB) on the
-	// progress UI mutex.
+	// updates to avoid flooding the progress event channel / renderer.
 	//
-	// This keeps the TTY UI smooth (Bubble Tea already caps redraw FPS) while
-	// reducing lock contention during large downloads.
+	// This keeps the TTY UI smooth (Bubble Tea already caps redraw FPS) and keeps
+	// daemon-mode event log output at a reasonable rate during large downloads.
 	now := p.now()
 	const (
 		minInterval = 150 * time.Millisecond
