@@ -687,11 +687,10 @@ func (p *repoDownloadProgress) Start(rawURL string, size int64) {
 	if size > 0 {
 		t.SetTotal(size)
 	}
+	// Set the kind before Start so plain mode prints the download start line
+	// even when the task was pre-created as pending.
 	t.SetKindDownload()
 	t.Start()
-	// Trigger "Downloading ..." start event in plain mode even when the task was
-	// pre-created as pending.
-	t.SetKindDownload()
 
 	p.mu.Lock()
 	if p.byURL == nil {
