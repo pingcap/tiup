@@ -86,3 +86,28 @@ func TestGroupStartedAt_SetOnGroupAdd(t *testing.T) {
 	require.Equal(t, start, g.startedAt)
 	require.Equal(t, 5*time.Second, g.elapsed(taskAt))
 }
+
+func TestTaskCancelFromPending_IsTerminalAndBlocksStart(t *testing.T) {
+	now := time.Unix(1_000_000, 0)
+
+	st := newEngineState()
+	groupTitle := "Start instances"
+	taskTitle := "TiDB"
+
+	st.applyEvent(now, Event{Type: EventGroupAdd, GroupID: 1, Title: &groupTitle})
+	st.applyEvent(now, Event{Type: EventTaskAdd, GroupID: 1, TaskID: 10, Title: &taskTitle, Pending: true})
+
+	canceled := TaskStatusCanceled
+	st.applyEvent(now, Event{Type: EventTaskState, TaskID: 10, Status: &canceled})
+
+	task := st.taskByID[10]
+	require.NotNil(t, task)
+	require.Equal(t, taskStatusCanceled, task.status)
+	require.False(t, task.startAt.IsZero())
+	require.Equal(t, now, task.startAt)
+	require.Equal(t, now, task.endAt)
+
+	running := TaskStatusRunning
+	st.applyEvent(now.Add(time.Second), Event{Type: EventTaskState, TaskID: 10, Status: &running})
+	require.Equal(t, taskStatusCanceled, task.status)
+}

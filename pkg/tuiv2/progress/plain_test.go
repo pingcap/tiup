@@ -168,3 +168,31 @@ func TestGroupElapsed_DoesNotFreezeUntilTasksDone(t *testing.T) {
 
 	require.Equal(t, 10*time.Second, g.elapsed(end))
 }
+
+func TestPendingTask_Cancel_PrintsInPlain(t *testing.T) {
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = r.Close() })
+	t.Cleanup(func() { _ = w.Close() })
+
+	now := time.Unix(1_000_000, 0)
+	ui := New(Options{
+		Mode: ModePlain,
+		Out:  w,
+		Now:  func() time.Time { return now },
+	})
+
+	g := ui.Group("Start instances")
+	t1 := g.TaskPending("TiDB")
+	t1.Cancel("")
+	g.Close()
+
+	require.NoError(t, ui.Close())
+	_ = w.Close()
+	out, err := io.ReadAll(r)
+	require.NoError(t, err)
+	got := string(out)
+
+	require.Contains(t, got, "==> Start instances:\n")
+	require.Contains(t, got, "CANCEL - TiDB (0.0s)\n")
+}

@@ -420,17 +420,21 @@ func (s *engineState) applyTaskState(now time.Time, e Event) {
 		t.endAt = now
 		t.ensureStarted(now)
 	case TaskStatusSkipped:
-		if t.status != taskStatusRunning && t.status != taskStatusRetrying {
+		switch t.status {
+		case taskStatusDone, taskStatusError, taskStatusSkipped, taskStatusCanceled:
 			return
 		}
 		t.status = taskStatusSkipped
 		t.endAt = now
+		t.ensureStarted(now)
 	case TaskStatusCanceled:
-		if t.status != taskStatusRunning && t.status != taskStatusRetrying {
+		switch t.status {
+		case taskStatusDone, taskStatusError, taskStatusSkipped, taskStatusCanceled:
 			return
 		}
 		t.status = taskStatusCanceled
 		t.endAt = now
+		t.ensureStarted(now)
 	default:
 		return
 	}
