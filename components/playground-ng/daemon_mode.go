@@ -128,7 +128,7 @@ func runBackgroundStarter(state *cliState) error {
 }
 
 func backgroundStarterReadyMessage(tag string) string {
-	return fmt.Sprintf("[dim]Cluster running in background (--background).[reset]\n[dim]To stop: [reset]tiup playground-ng stop --tag %s\n", tag)
+	return fmt.Sprintf("\n[dim]Cluster running in background (-d).[reset]\n[dim]To stop: [reset]tiup playground-ng stop --tag %s\n", tag)
 }
 
 func daemonEnv() []string {
