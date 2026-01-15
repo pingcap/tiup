@@ -77,8 +77,13 @@ func (m ttyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			now = ui.now()
 		}
 
-		if ui.eventLog != nil {
+		if ui.eventLog != nil && e.Type != EventSync {
 			ui.eventLog.write(now, e)
+		}
+
+		if e.Type == EventSync {
+			ui.fulfillSync(e.SyncID)
+			return m, m.ensureSpinnerTick()
 		}
 
 		// PrintLines is a pure output event: it does not affect progress state.

@@ -346,8 +346,8 @@ func TestStopAll_NonTTY_UsesTuiv2PlainOutput(t *testing.T) {
 	require.NoError(t, err)
 	out := string(outBytes)
 
-	require.Contains(t, out, "Stop clusters | + a")
-	require.Contains(t, out, "Stop clusters | + b")
+	require.Contains(t, out, "Stop clusters | + a (v8.5.4)")
+	require.Contains(t, out, "Stop clusters | + b (v8.5.4)")
 	require.NotContains(t, out, "TAG")
 }
 

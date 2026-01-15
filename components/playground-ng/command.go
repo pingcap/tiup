@@ -643,6 +643,14 @@ func sendCommandsAndPrintResult(out io.Writer, cmds []Command, addr string) erro
 }
 
 func (p *Playground) listenAndServeHTTP() error {
+	// In daemon/starter mode, the starter uses the HTTP command server as the
+	// readiness signal. Make sure all pending progress/output events are flushed
+	// (including the final "cluster info" callout) before exposing readiness via
+	// the port file / listening socket.
+	if p != nil && p.ui != nil {
+		p.ui.Sync()
+	}
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

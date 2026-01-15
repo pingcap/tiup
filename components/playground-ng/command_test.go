@@ -13,11 +13,39 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
+	progressv2 "github.com/pingcap/tiup/pkg/tuiv2/progress"
 	"github.com/stretchr/testify/require"
 )
+
+type blockingWriter struct {
+	unblockOnce sync.Once
+	unblockCh   chan struct{}
+}
+
+func (w *blockingWriter) Unblock() {
+	if w == nil {
+		return
+	}
+	w.unblockOnce.Do(func() {
+		if w.unblockCh != nil {
+			close(w.unblockCh)
+		}
+	})
+}
+
+func (w *blockingWriter) Write(p []byte) (int, error) {
+	if w == nil {
+		return len(p), nil
+	}
+	if w.unblockCh != nil {
+		<-w.unblockCh
+	}
+	return len(p), nil
+}
 
 func TestSendCommandsAndPrintResult_FailedCommandDoesNotDuplicateErrorOutput(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -364,6 +392,63 @@ func TestListenAndServeHTTP_StopsAfterProcessGroupClose(t *testing.T) {
 
 	_, err = os.Stat(filepath.Join(dataDir, playgroundPortFileName))
 	require.True(t, os.IsNotExist(err))
+}
+
+func TestListenAndServeHTTP_FlushesProgressBeforeWritingPortFile(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	port := ln.Addr().(*net.TCPAddr).Port
+	require.NoError(t, ln.Close())
+
+	dataDir := t.TempDir()
+
+	outFile, err := os.CreateTemp(t.TempDir(), "ui-out")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = outFile.Close() })
+
+	bw := &blockingWriter{unblockCh: make(chan struct{})}
+	t.Cleanup(bw.Unblock)
+
+	ui := progressv2.New(progressv2.Options{
+		Mode:     progressv2.ModePlain,
+		Out:      outFile,
+		EventLog: bw,
+	})
+	t.Cleanup(func() { _ = ui.Close() })
+
+	_, _ = io.WriteString(ui.Writer(), "before server\n")
+
+	p := NewPlayground(dataDir, port)
+	p.ui = ui
+
+	errCh := make(chan error, 1)
+	go func() { errCh <- p.listenAndServeHTTP() }()
+
+	portPath := filepath.Join(dataDir, playgroundPortFileName)
+	deadline := time.Now().Add(200 * time.Millisecond)
+	for time.Now().Before(deadline) {
+		_, err := os.Stat(portPath)
+		if err == nil {
+			require.FailNow(t, "port file created before progress flush")
+		}
+		require.True(t, os.IsNotExist(err), "stat=%v", err)
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	bw.Unblock()
+
+	require.Eventually(t, func() bool {
+		_, err := os.Stat(portPath)
+		return err == nil
+	}, time.Second, 10*time.Millisecond)
+
+	p.processGroup.Close()
+	select {
+	case err := <-errCh:
+		require.NoError(t, err)
+	case <-time.After(time.Second):
+		require.FailNow(t, "timeout waiting for command server to stop")
+	}
 }
 
 func TestStop_WaitsForPIDFileRemoval(t *testing.T) {

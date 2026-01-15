@@ -3,6 +3,7 @@ package progress
 import (
 	"io"
 	"os"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -45,6 +46,9 @@ type UI struct {
 
 	closed atomic.Bool
 	nextID atomic.Uint64
+
+	syncMu      sync.Mutex
+	syncWaiters map[uint64]chan struct{}
 
 	eventsCh chan Event
 	closeCh  chan struct{}
@@ -194,6 +198,80 @@ func (ui *UI) Writer() io.Writer {
 	return ui.writer
 }
 
+// Sync blocks until all previously emitted events are processed by the UI engine.
+//
+// It is primarily intended for daemon mode: callers may use it to ensure output
+// is fully persisted to the event log before exposing readiness signals (e.g.
+// creating the HTTP command server port file).
+func (ui *UI) Sync() {
+	if ui == nil || ui.closed.Load() || ui.mode == ModeOff {
+		return
+	}
+
+	// Flush any pending partial line before syncing.
+	if ui.writer != nil {
+		if line := ui.writer.drainBufferedLine(); line != "" {
+			ui.emit(Event{
+				Type:  EventPrintLines,
+				At:    ui.now(),
+				Lines: []string{line},
+			})
+		}
+	}
+
+	id := ui.nextID.Add(1)
+	waitCh := make(chan struct{})
+
+	ui.syncMu.Lock()
+	if ui.syncWaiters == nil {
+		ui.syncWaiters = make(map[uint64]chan struct{})
+	}
+	ui.syncWaiters[id] = waitCh
+	ui.syncMu.Unlock()
+
+	defer ui.removeSyncWaiter(id)
+
+	e := Event{
+		Type:   EventSync,
+		At:     ui.now(),
+		SyncID: id,
+	}
+
+	select {
+	case <-ui.closeCh:
+		return
+	case ui.eventsCh <- e:
+	}
+
+	select {
+	case <-waitCh:
+	case <-ui.doneCh:
+	case <-ui.closeCh:
+	}
+}
+
+func (ui *UI) removeSyncWaiter(id uint64) {
+	if ui == nil || id == 0 {
+		return
+	}
+	ui.syncMu.Lock()
+	delete(ui.syncWaiters, id)
+	ui.syncMu.Unlock()
+}
+
+func (ui *UI) fulfillSync(id uint64) {
+	if ui == nil || id == 0 {
+		return
+	}
+	ui.syncMu.Lock()
+	waitCh := ui.syncWaiters[id]
+	delete(ui.syncWaiters, id)
+	ui.syncMu.Unlock()
+	if waitCh != nil {
+		close(waitCh)
+	}
+}
+
 // PrintLines prints one or more text lines as a single output block.
 //
 // It flushes any pending partial line from UI.Writer() first, then appends an
@@ -328,8 +406,13 @@ func (ui *UI) processPlainEvent(e Event, st *engineState, r *plainRenderer) {
 		now = ui.now()
 	}
 
-	if ui.eventLog != nil {
+	if ui.eventLog != nil && e.Type != EventSync {
 		ui.eventLog.write(now, e)
+	}
+
+	if e.Type == EventSync {
+		ui.fulfillSync(e.SyncID)
+		return
 	}
 
 	st.applyEvent(now, e)

@@ -118,7 +118,7 @@ func TestTailEventLog_ReplaysNewEventsAfterOffset(t *testing.T) {
 
 	done := make(chan struct{})
 	go func() {
-		tailEventLog(ctx, eventLogPath, offset, ui)
+		tailEventLog(ctx, eventLogPath, offset, ui, nil)
 		close(done)
 	}()
 

@@ -13,7 +13,14 @@ const (
 	// EventPrintLines prints one or more text lines as a single output block.
 	//
 	// A blank line can be represented as `EventPrintLines{Lines: []string{""}}`.
-	EventPrintLines   EventType = "print_lines"
+	EventPrintLines EventType = "print_lines"
+	// EventSync is an internal barrier event.
+	//
+	// It is emitted by UI.Sync and allows callers to wait until all previously
+	// emitted events are processed (and persisted to the event log when enabled).
+	//
+	// Renderers should ignore it.
+	EventSync         EventType = "sync"
 	EventGroupAdd     EventType = "group_add"
 	EventGroupUpdate  EventType = "group_update"
 	EventGroupClose   EventType = "group_close"
@@ -63,6 +70,9 @@ type Event struct {
 
 	// PrintLines payload.
 	Lines []string `json:"lines,omitempty"`
+
+	// Sync payload.
+	SyncID uint64 `json:"sync_id,omitempty"`
 
 	// Common "title" field (group/task add, group update).
 	Title *string `json:"title,omitempty"`

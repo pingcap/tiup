@@ -86,7 +86,12 @@ func runBackgroundStarter(state *cliState) error {
 
 	tailCtx, cancelTail := context.WithCancel(context.Background())
 	defer cancelTail()
-	go tailEventLog(tailCtx, eventLogPath, eventOffset, ui)
+	stopTailAtCh := make(chan int64, 1)
+	tailDoneCh := make(chan struct{})
+	go func() {
+		tailEventLog(tailCtx, eventLogPath, eventOffset, ui, stopTailAtCh)
+		close(tailDoneCh)
+	}()
 
 	waitCh := make(chan error, 1)
 
@@ -129,7 +134,20 @@ func runBackgroundStarter(state *cliState) error {
 			ok, probeErr := probePlaygroundCommandServer(ctx, port)
 			cancel()
 			if ok && probeErr == nil {
-				cancelTail()
+				stopAt := int64(0)
+				if st, err := os.Stat(eventLogPath); err == nil {
+					stopAt = st.Size()
+				}
+				select {
+				case stopTailAtCh <- stopAt:
+				default:
+				}
+				select {
+				case <-tailDoneCh:
+				case <-time.After(5 * time.Second):
+					cancelTail()
+				}
+
 				out := tuiv2output.Stdout.Get()
 				colorstr.Fprintf(out, backgroundStarterReadyMessage(state.tag))
 				return nil
@@ -189,7 +207,7 @@ func buildDaemonArgs(tag string) []string {
 	return out
 }
 
-func tailEventLog(ctx context.Context, path string, offset int64, ui *progressv2.UI) {
+func tailEventLog(ctx context.Context, path string, offset int64, ui *progressv2.UI, stopAtCh <-chan int64) {
 	if ui == nil {
 		return
 	}
@@ -206,6 +224,8 @@ func tailEventLog(ctx context.Context, path string, offset int64, ui *progressv2
 
 	buf := make([]byte, 32*1024)
 	var pending []byte
+	pos := offset
+	stopAt := int64(-1)
 	for {
 		if ctx != nil {
 			select {
@@ -215,9 +235,20 @@ func tailEventLog(ctx context.Context, path string, offset int64, ui *progressv2
 			}
 		}
 
+		if stopAtCh != nil && stopAt < 0 {
+			select {
+			case stopAt = <-stopAtCh:
+				if stopAt < 0 {
+					stopAt = 0
+				}
+			default:
+			}
+		}
+
 		n, err := f.Read(buf)
 		if n > 0 {
 			pending = append(pending, buf[:n]...)
+			pos += int64(n)
 			for {
 				i := bytes.IndexByte(pending, '\n')
 				if i < 0 {
@@ -238,6 +269,9 @@ func tailEventLog(ctx context.Context, path string, offset int64, ui *progressv2
 		case nil:
 			continue
 		case io.EOF:
+			if stopAt >= 0 && pos >= stopAt && len(pending) == 0 {
+				return
+			}
 			time.Sleep(50 * time.Millisecond)
 			continue
 		default:
