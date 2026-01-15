@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/pingcap/errors"
@@ -51,7 +50,7 @@ func newStopAll(state *cliState) *cobra.Command {
 			if timeoutSec <= 0 {
 				timeoutSec = 60
 			}
-			return stopAll(cmd.OutOrStdout(), time.Duration(timeoutSec)*time.Second, state)
+			return stopAll(os.Stdout, time.Duration(timeoutSec)*time.Second, state)
 		},
 	}
 	cmd.Flags().IntVar(&timeoutSec, "timeout", 60, "Max wait time in seconds for stopping each instance")
@@ -108,9 +107,9 @@ func ps(out io.Writer, state *cliState) error {
 	return nil
 }
 
-func stopAll(out io.Writer, timeout time.Duration, state *cliState) error {
+func stopAll(out *os.File, timeout time.Duration, state *cliState) error {
 	if out == nil {
-		out = io.Discard
+		out = os.Stdout
 	}
 	if state == nil {
 		return fmt.Errorf("cli state is nil")
@@ -131,14 +130,7 @@ func stopAll(out io.Writer, timeout time.Duration, state *cliState) error {
 		return nil
 	}
 
-	// Prefer tuiv2 progress output whenever we can write to a real file
-	// (os.Stdout/os.Stderr). It already falls back to plain mode in
-	// non-interactive environments.
-	if outFile, ok := out.(*os.File); ok && outFile != nil {
-		return stopAllWithProgressUI(outFile, targets, timeout)
-	}
-
-	return stopAllWithTable(out, targets, timeout)
+	return stopAllWithProgressUI(out, targets, timeout)
 }
 
 func stopAllWithProgressUI(out *os.File, targets []playgroundTarget, timeout time.Duration) error {
@@ -216,54 +208,6 @@ func stopAllWithProgressUI(out *os.File, targets []playgroundTarget, timeout tim
 	g.Close()
 
 	if len(failed) > 0 {
-		return renderedError{err: fmt.Errorf("failed to stop %d instance(s)", len(failed))}
-	}
-	return nil
-}
-
-func stopAllWithTable(out io.Writer, targets []playgroundTarget, timeout time.Duration) error {
-	summaries := make([]playgroundInstanceSummary, 0, len(targets))
-	for _, target := range targets {
-		summary, err := inspectPlaygroundInstance(target)
-		if err != nil {
-			return err
-		}
-		summaries = append(summaries, summary)
-	}
-
-	stopErrors := make([]error, len(targets))
-	var wg sync.WaitGroup
-	for i, target := range targets {
-		i, target := i, target
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			stopErrors[i] = stopSinglePlayground(target, timeout)
-		}()
-	}
-	wg.Wait()
-
-	var failed []string
-	var stopped []playgroundInstanceSummary
-	for i, err := range stopErrors {
-		if err != nil {
-			failed = append(failed, fmt.Sprintf("%s(%d): %v", targets[i].tag, targets[i].port, err))
-			continue
-		}
-		stopped = append(stopped, summaries[i])
-	}
-
-	td := utils.NewTableDisplayer(out, []string{"TAG", "VERSION", "TIDB", "TIKV", "TIFLASH"})
-	for _, s := range stopped {
-		td.AddRow(s.tag, s.version, strconv.Itoa(s.tidb), strconv.Itoa(s.tikv), strconv.Itoa(s.tiflash))
-	}
-	td.Display()
-
-	if len(failed) > 0 {
-		fmt.Fprint(out, tuiv2output.Callout{
-			Style:   tuiv2output.CalloutFailed,
-			Content: "Failed to stop: " + strings.Join(failed, "; "),
-		}.Render(out))
 		return renderedError{err: fmt.Errorf("failed to stop %d instance(s)", len(failed))}
 	}
 	return nil

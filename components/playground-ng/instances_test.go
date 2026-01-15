@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -175,19 +174,15 @@ func TestStopAll_StopsAllPlaygrounds(t *testing.T) {
 	makePlayground("b", "v8.5.4", 2, 1, 1)
 
 	state := &cliState{dataDir: base}
-	var buf bytes.Buffer
-	require.NoError(t, stopAll(&buf, time.Second, state))
+	outFile, err := os.CreateTemp(t.TempDir(), "stop-all-out")
+	require.NoError(t, err)
+	require.NoError(t, stopAll(outFile, time.Second, state))
+	require.NoError(t, outFile.Close())
 
-	_, err := os.Stat(filepath.Join(base, "a", playgroundPIDFileName))
+	_, err = os.Stat(filepath.Join(base, "a", playgroundPIDFileName))
 	require.True(t, os.IsNotExist(err))
 	_, err = os.Stat(filepath.Join(base, "b", playgroundPIDFileName))
 	require.True(t, os.IsNotExist(err))
-
-	out := buf.String()
-	require.Contains(t, out, "TAG")
-	require.Contains(t, out, "a")
-	require.Contains(t, out, "b")
-	require.Contains(t, out, "v8.5.4")
 }
 
 func TestStopAll_StopsAllPlaygroundsInParallel(t *testing.T) {
@@ -253,7 +248,10 @@ func TestStopAll_StopsAllPlaygroundsInParallel(t *testing.T) {
 	makePlayground("b")
 
 	state := &cliState{dataDir: base}
-	require.NoError(t, stopAll(io.Discard, 3*time.Second, state))
+	outFile, err := os.CreateTemp(t.TempDir(), "stop-all-out")
+	require.NoError(t, err)
+	require.NoError(t, stopAll(outFile, 3*time.Second, state))
+	require.NoError(t, outFile.Close())
 
 	times := make([]time.Time, 0, 2)
 	for len(times) < 2 {
@@ -353,7 +351,11 @@ func TestStopAll_NonTTY_UsesTuiv2PlainOutput(t *testing.T) {
 
 func TestStopAll_RejectsTag(t *testing.T) {
 	state := &cliState{dataDir: t.TempDir(), tag: "only"}
-	err := stopAll(io.Discard, time.Second, state)
+	outFile, err := os.CreateTemp(t.TempDir(), "stop-all-out")
+	require.NoError(t, err)
+	defer outFile.Close()
+
+	err = stopAll(outFile, time.Second, state)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "does not accept")
 }
@@ -361,7 +363,12 @@ func TestStopAll_RejectsTag(t *testing.T) {
 func TestStopAll_NoDataDir_PrintsWarning(t *testing.T) {
 	state := &cliState{dataDir: filepath.Join(t.TempDir(), "missing")}
 
-	var buf bytes.Buffer
-	require.NoError(t, stopAll(&buf, time.Second, state))
-	require.Contains(t, buf.String(), "No running playground-ng instances found.")
+	outFile, err := os.CreateTemp(t.TempDir(), "stop-all-out")
+	require.NoError(t, err)
+	require.NoError(t, stopAll(outFile, time.Second, state))
+	require.NoError(t, outFile.Close())
+
+	outBytes, err := os.ReadFile(outFile.Name())
+	require.NoError(t, err)
+	require.Contains(t, string(outBytes), "No running playground-ng instances found.")
 }
