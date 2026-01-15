@@ -47,10 +47,10 @@ func (r *plainRenderer) renderEvent(now time.Time, e Event, st *engineState) {
 	}
 
 	switch e.Type {
-	case EventPrintLine:
-		_, _ = fmt.Fprintln(r.out, e.Text)
-	case EventBlankLine:
-		_, _ = fmt.Fprintln(r.out)
+	case EventPrintLines:
+		for _, line := range e.Lines {
+			_, _ = fmt.Fprintln(r.out, line)
+		}
 	case EventTaskAdd:
 		t := (*taskState)(nil)
 		if st != nil {

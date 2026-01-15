@@ -32,6 +32,7 @@ func (w *uiWriter) Write(p []byte) (int, error) {
 	defer w.mu.Unlock()
 
 	n := len(p)
+	var lines []string
 	for len(p) > 0 {
 		i := bytes.IndexByte(p, '\n')
 		if i < 0 {
@@ -43,14 +44,17 @@ func (w *uiWriter) Write(p []byte) (int, error) {
 		line := w.buf.String()
 		w.buf.Reset()
 		line = strings.TrimSuffix(line, "\r")
-		ui.emit(Event{
-			Type:   EventPrintLine,
-			At:     ui.now(),
-			Text:   line,
-			Stream: "stdout",
-		})
+		lines = append(lines, line)
 
 		p = p[i+1:]
+	}
+
+	if len(lines) > 0 {
+		ui.emit(Event{
+			Type:  EventPrintLines,
+			At:    ui.now(),
+			Lines: lines,
+		})
 	}
 
 	return n, nil

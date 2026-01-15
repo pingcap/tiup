@@ -137,10 +137,9 @@ func (ui *UI) Close() error {
 	if ui.writer != nil {
 		if line := ui.writer.drainBufferedLine(); line != "" {
 			ui.emitForced(Event{
-				Type:   EventPrintLine,
-				At:     ui.now(),
-				Text:   line,
-				Stream: "stdout",
+				Type:  EventPrintLines,
+				At:    ui.now(),
+				Lines: []string{line},
 			})
 		}
 	}
@@ -195,28 +194,33 @@ func (ui *UI) Writer() io.Writer {
 	return ui.writer
 }
 
-// BlankLine prints an empty line in a UI-safe way.
+// PrintLines prints one or more text lines as a single output block.
 //
 // It flushes any pending partial line from UI.Writer() first, then appends an
-// empty line.
-func (ui *UI) BlankLine() {
+// output block.
+func (ui *UI) PrintLines(lines []string) {
 	if ui == nil || ui.closed.Load() {
 		return
 	}
+	if len(lines) == 0 && ui.writer == nil {
+		return
+	}
+
+	outLines := make([]string, 0, len(lines)+1)
 	if ui.writer != nil {
 		if line := ui.writer.drainBufferedLine(); line != "" {
-			ui.emit(Event{
-				Type:   EventPrintLine,
-				At:     ui.now(),
-				Text:   line,
-				Stream: "stdout",
-			})
+			outLines = append(outLines, line)
 		}
 	}
+	outLines = append(outLines, lines...)
+	if len(outLines) == 0 {
+		return
+	}
+
 	ui.emit(Event{
-		Type:   EventBlankLine,
-		At:     ui.now(),
-		Stream: "stdout",
+		Type:  EventPrintLines,
+		At:    ui.now(),
+		Lines: outLines,
 	})
 }
 

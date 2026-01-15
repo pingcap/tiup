@@ -70,13 +70,21 @@ func (m ttyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			ui.eventLog.write(now, e)
 		}
 
-		// PrintLine/BlankLine are pure output events: they do not affect progress state.
+		// PrintLines is a pure output event: it does not affect progress state.
 		switch e.Type {
-		case EventPrintLine:
-			line := "\r" + e.Text + ansi.EraseLineRight
-			return m, tea.Batch(m.ensureSpinnerTick(), tea.Println(line))
-		case EventBlankLine:
-			return m, tea.Batch(m.ensureSpinnerTick(), tea.Println("\r"+ansi.EraseLineRight))
+		case EventPrintLines:
+			if len(e.Lines) == 0 {
+				return m, m.ensureSpinnerTick()
+			}
+			lines := make([]string, 0, len(e.Lines))
+			for _, line := range e.Lines {
+				if line == "" {
+					lines = append(lines, "\r"+ansi.EraseLineRight)
+					continue
+				}
+				lines = append(lines, "\r"+line+ansi.EraseLineRight)
+			}
+			return m, tea.Batch(m.ensureSpinnerTick(), tea.Println(strings.Join(lines, "\n")))
 		default:
 		}
 

@@ -6,15 +6,17 @@ import (
 )
 
 // EventVersion is the current JSON schema version for Event.
-const EventVersion = 1
+const EventVersion = 2
 
 // EventType is the stable string representation of an event kind.
 type EventType string
 
 // Event types.
 const (
-	EventPrintLine    EventType = "print_line"
-	EventBlankLine    EventType = "blank_line"
+	// EventPrintLines prints one or more text lines as a single output block.
+	//
+	// A blank line can be represented as `EventPrintLines{Lines: []string{""}}`.
+	EventPrintLines   EventType = "print_lines"
 	EventGroupAdd     EventType = "group_add"
 	EventGroupUpdate  EventType = "group_update"
 	EventGroupClose   EventType = "group_close"
@@ -66,9 +68,8 @@ type Event struct {
 	GroupID uint64 `json:"gid,omitempty"`
 	TaskID  uint64 `json:"tid,omitempty"`
 
-	// PrintLine payload.
-	Stream string `json:"stream,omitempty"`
-	Text   string `json:"text,omitempty"`
+	// PrintLines payload.
+	Lines []string `json:"lines,omitempty"`
 
 	// Common "title" field (group/task add, group update).
 	Title *string `json:"title,omitempty"`

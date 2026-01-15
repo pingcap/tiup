@@ -588,7 +588,7 @@ func (p *Playground) bootCluster(ctx context.Context, options *BootOptions) (err
 	}
 
 	if p.ui != nil {
-		p.ui.BlankLine()
+		p.ui.PrintLines([]string{""})
 	} else {
 		fmt.Fprintln(p.terminalWriter())
 	}

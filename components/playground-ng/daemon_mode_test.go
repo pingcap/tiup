@@ -96,9 +96,9 @@ func TestTailEventLog_ReplaysNewEventsAfterOffset(t *testing.T) {
 	eventLogPath := filepath.Join(dir, "events.jsonl")
 
 	old, err := json.Marshal(progressv2.Event{
-		V:    progressv2.EventVersion,
-		Type: progressv2.EventPrintLine,
-		Text: "old",
+		V:     progressv2.EventVersion,
+		Type:  progressv2.EventPrintLines,
+		Lines: []string{"old"},
 	})
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(eventLogPath, append(old, '\n'), 0o644))
@@ -131,9 +131,9 @@ func TestTailEventLog_ReplaysNewEventsAfterOffset(t *testing.T) {
 	require.NoError(t, err)
 
 	newEvent, err := json.Marshal(progressv2.Event{
-		V:    progressv2.EventVersion,
-		Type: progressv2.EventPrintLine,
-		Text: "new",
+		V:     progressv2.EventVersion,
+		Type:  progressv2.EventPrintLines,
+		Lines: []string{"new"},
 	})
 	require.NoError(t, err)
 

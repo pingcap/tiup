@@ -352,7 +352,7 @@ Examples:
 					out := p.terminalWriter()
 
 					if p.ui != nil {
-						p.ui.BlankLine()
+						p.ui.PrintLines([]string{""})
 					} else {
 						fmt.Fprintln(out)
 					}
