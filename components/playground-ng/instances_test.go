@@ -276,6 +276,81 @@ func TestStopAll_StopsAllPlaygroundsInParallel(t *testing.T) {
 	require.Less(t, latest.Sub(earliest), stopDelay)
 }
 
+func TestStopAll_NonTTY_UsesTuiv2PlainOutput(t *testing.T) {
+	base := t.TempDir()
+
+	outFile, err := os.CreateTemp(t.TempDir(), "stop-all-*.log")
+	require.NoError(t, err)
+
+	makePlayground := func(tag, version string) {
+		dir := filepath.Join(base, tag)
+		require.NoError(t, os.MkdirAll(dir, 0o755))
+
+		pidPath := filepath.Join(dir, playgroundPIDFileName)
+		pidBody := fmt.Sprintf("pid=%d\nstarted_at=%s\ntag=%s\n", os.Getpid(), time.Now().UTC().Format(time.RFC3339), tag)
+		require.NoError(t, os.WriteFile(pidPath, []byte(pidBody), 0o644))
+
+		itemsJSON, err := json.Marshal([]displayItem{{Name: "pd-0", ServiceID: "pd", Status: "running", Version: version}})
+		require.NoError(t, err)
+
+		s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path != "/command" {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			if r.Method != http.MethodPost {
+				w.WriteHeader(http.StatusMethodNotAllowed)
+				_ = json.NewEncoder(w).Encode(CommandReply{OK: false, Error: "method not allowed"})
+				return
+			}
+
+			var cmd Command
+			if err := json.NewDecoder(r.Body).Decode(&cmd); err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				_ = json.NewEncoder(w).Encode(CommandReply{OK: false, Error: err.Error()})
+				return
+			}
+			switch cmd.Type {
+			case StopCommandType:
+				_ = json.NewEncoder(w).Encode(CommandReply{OK: true, Message: "Stopping playground...\n"})
+				go func() {
+					time.Sleep(50 * time.Millisecond)
+					_ = os.Remove(pidPath)
+					_ = os.Remove(filepath.Join(dir, playgroundPortFileName))
+				}()
+			case DisplayCommandType:
+				_ = json.NewEncoder(w).Encode(CommandReply{OK: true, Message: string(itemsJSON)})
+			default:
+				w.WriteHeader(http.StatusBadRequest)
+				_ = json.NewEncoder(w).Encode(CommandReply{OK: false, Error: "unexpected command"})
+			}
+		}))
+		t.Cleanup(s.Close)
+
+		u, err := url.Parse(s.URL)
+		require.NoError(t, err)
+		port, err := strconv.Atoi(u.Port())
+		require.NoError(t, err)
+		require.NoError(t, dumpPort(filepath.Join(dir, playgroundPortFileName), port))
+	}
+
+	makePlayground("a", "v8.5.4")
+	makePlayground("b", "v8.5.4")
+
+	state := &cliState{dataDir: base}
+	require.NoError(t, stopAll(outFile, time.Second, state))
+	require.NoError(t, outFile.Close())
+
+	outBytes, err := os.ReadFile(outFile.Name())
+	require.NoError(t, err)
+	out := string(outBytes)
+
+	require.Contains(t, out, "Stop clusters | + a")
+	require.Contains(t, out, "Stop clusters | + b")
+	require.NotContains(t, out, "TAG")
+}
+
 func TestStopAll_RejectsTag(t *testing.T) {
 	state := &cliState{dataDir: t.TempDir(), tag: "only"}
 	err := stopAll(io.Discard, time.Second, state)

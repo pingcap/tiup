@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/pingcap/errors"
-	tuiterm "github.com/pingcap/tiup/pkg/tui/term"
 	tuiv2output "github.com/pingcap/tiup/pkg/tuiv2/output"
 	progressv2 "github.com/pingcap/tiup/pkg/tuiv2/progress"
 	"github.com/pingcap/tiup/pkg/utils"
@@ -132,14 +131,11 @@ func stopAll(out io.Writer, timeout time.Duration, state *cliState) error {
 		return nil
 	}
 
-	// Prefer the unified tuiv2 progress output when stdout supports terminal
-	// control sequences (spinners, redrawing). Keep the table output in
-	// non-interactive mode for readability and copy/paste.
-	if tuiterm.Resolve(out).Control {
-		outFile, ok := out.(*os.File)
-		if ok && outFile != nil {
-			return stopAllWithProgressUI(outFile, targets, timeout)
-		}
+	// Prefer tuiv2 progress output whenever we can write to a real file
+	// (os.Stdout/os.Stderr). It already falls back to plain mode in
+	// non-interactive environments.
+	if outFile, ok := out.(*os.File); ok && outFile != nil {
+		return stopAllWithProgressUI(outFile, targets, timeout)
 	}
 
 	return stopAllWithTable(out, targets, timeout)
