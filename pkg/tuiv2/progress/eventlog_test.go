@@ -29,12 +29,10 @@ func TestEventLogSink_WritesAllEvents(t *testing.T) {
 	e2, err := DecodeEvent(lines[1])
 	require.NoError(t, err)
 
-	require.Equal(t, EventVersion, e1.V)
 	require.Equal(t, EventTaskProgress, e1.Type)
 	require.NotNil(t, e1.Current)
 	require.Equal(t, int64(1), *e1.Current)
 
-	require.Equal(t, EventVersion, e2.V)
 	require.Equal(t, EventTaskProgress, e2.Type)
 	require.NotNil(t, e2.Current)
 	require.Equal(t, int64(2), *e2.Current)

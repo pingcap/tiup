@@ -5,9 +5,6 @@ import (
 	"time"
 )
 
-// EventVersion is the current JSON schema version for Event.
-const EventVersion = 3
-
 // EventType is the stable string representation of an event kind.
 type EventType string
 
@@ -51,13 +48,10 @@ const (
 
 // Event is the canonical, append-only input to the tuiv2 progress engine.
 //
-// It is intentionally designed to be JSON-lines friendly so it can be persisted
-// and replayed in daemon mode.
+// It is intentionally designed to be JSON-lines friendly.
 //
 // Fields are mostly optional and interpreted based on Type.
 type Event struct {
-	// V is the schema version.
-	V int `json:"v"`
 	// Type is the event type discriminator.
 	Type EventType `json:"type"`
 	// At is the event timestamp.

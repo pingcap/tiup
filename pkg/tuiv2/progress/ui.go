@@ -252,9 +252,6 @@ func (ui *UI) emit(e Event) {
 	if ui.mode == ModeOff {
 		return
 	}
-	if e.V == 0 {
-		e.V = EventVersion
-	}
 	if e.At.IsZero() && ui.now != nil {
 		e.At = ui.now()
 	}
@@ -276,9 +273,6 @@ func (ui *UI) emitForced(e Event) {
 	}
 	if ui.mode == ModeOff {
 		return
-	}
-	if e.V == 0 {
-		e.V = EventVersion
 	}
 	if e.At.IsZero() && ui.now != nil {
 		e.At = ui.now()

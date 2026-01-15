@@ -23,9 +23,6 @@ func (s *eventLogSink) write(now time.Time, e Event) {
 	if s == nil || s.enc == nil {
 		return
 	}
-	if e.V == 0 {
-		e.V = EventVersion
-	}
 	if e.At.IsZero() {
 		e.At = now
 	}
