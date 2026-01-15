@@ -88,3 +88,9 @@ When started in daemon mode, the daemon writes its stdout/stderr to:
 ```bash
 $TIUP_HOME/data/<tag>/daemon.log
 ```
+
+The daemon also writes a TUI event log (JSON Lines) used by the starter process to render the terminal UI:
+
+```bash
+$TIUP_HOME/data/<tag>/tuiv2.events.jsonl
+```
