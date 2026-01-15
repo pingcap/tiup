@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -50,7 +49,7 @@ func newStopAll(state *cliState) *cobra.Command {
 			if timeoutSec <= 0 {
 				timeoutSec = 60
 			}
-			return stopAll(os.Stdout, time.Duration(timeoutSec)*time.Second, state)
+			return stopAll(cmd.OutOrStdout(), time.Duration(timeoutSec)*time.Second, state)
 		},
 	}
 	cmd.Flags().IntVar(&timeoutSec, "timeout", 60, "Max wait time in seconds for stopping each instance")
@@ -107,9 +106,9 @@ func ps(out io.Writer, state *cliState) error {
 	return nil
 }
 
-func stopAll(out *os.File, timeout time.Duration, state *cliState) error {
+func stopAll(out io.Writer, timeout time.Duration, state *cliState) error {
 	if out == nil {
-		out = os.Stdout
+		out = io.Discard
 	}
 	if state == nil {
 		return fmt.Errorf("cli state is nil")
@@ -133,9 +132,9 @@ func stopAll(out *os.File, timeout time.Duration, state *cliState) error {
 	return stopAllWithProgressUI(out, targets, timeout)
 }
 
-func stopAllWithProgressUI(out *os.File, targets []playgroundTarget, timeout time.Duration) error {
+func stopAllWithProgressUI(out io.Writer, targets []playgroundTarget, timeout time.Duration) error {
 	if out == nil {
-		return fmt.Errorf("output file is nil")
+		return fmt.Errorf("output writer is nil")
 	}
 
 	ui := progressv2.New(progressv2.Options{

@@ -35,8 +35,8 @@ func TestPlainOutput_IsStableAndNoANSI(t *testing.T) {
 
 	require.NotContains(t, got, "\033[", "plain output must not contain ANSI sequences")
 	for _, want := range []string{
-		"Waiting for things | + task-ok\n",
-		"Waiting for things | + task-err\n",
+		"Waiting for things | task-ok\n",
+		"Waiting for things | task-err\n",
 		"Waiting for things | ERR - task-err: boom (",
 	} {
 		require.Contains(t, got, want)
@@ -69,7 +69,7 @@ func TestDownloadTask_Plain(t *testing.T) {
 
 	require.NotContains(t, got, "\033[", "plain output must not contain ANSI sequences")
 	for _, want := range []string{
-		"Download components | + TiDB v7.5.0 (1.0MiB)\n",
+		"Download components | TiDB v7.5.0 (1.0MiB)\n",
 	} {
 		require.Contains(t, got, want)
 	}
@@ -100,7 +100,7 @@ func TestDownloadTask_Plain_PendingTaskTotalBeforeStart(t *testing.T) {
 	got := string(out)
 
 	for _, want := range []string{
-		"Download components | + TiDB v7.5.0 (1.0MiB)\n",
+		"Download components | TiDB v7.5.0 (1.0MiB)\n",
 	} {
 		require.Contains(t, got, want)
 	}

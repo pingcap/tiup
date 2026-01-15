@@ -16,9 +16,14 @@ import (
 type Options struct {
 	// Mode decides how the progress UI renders.
 	Mode Mode
-	// Out is the output file used by the UI.
+	// Out is the output writer used by the UI.
+	//
 	// If nil, it defaults to os.Stderr.
-	Out *os.File
+	//
+	// ModeAuto and ModeTTY rely on TTY detection. Only *os.File writers can be
+	// detected as TTY; other writers will be treated as non-TTY and fall back to
+	// plain output.
+	Out io.Writer
 
 	// EventLog is an optional JSON-lines sink of the event stream.
 	//
@@ -38,7 +43,8 @@ type Options struct {
 // Create a UI via New, then create Group/Task objects and update them from any goroutine.
 // Call Close when the program exits.
 type UI struct {
-	out     *os.File
+	out     io.Writer
+	outFile *os.File
 	mode    Mode
 	outMode tuiterm.OutputMode
 
@@ -72,6 +78,7 @@ func New(opts Options) *UI {
 	if out == nil {
 		out = os.Stderr
 	}
+	outFile, _ := out.(*os.File)
 
 	now := opts.Now
 	if now == nil {
@@ -79,13 +86,18 @@ func New(opts Options) *UI {
 	}
 
 	requested := opts.Mode
-	termCap := tuiterm.ResolveFile(out)
+	termCap := tuiterm.Resolve(out)
 
 	actual := resolveMode(requested, termCap)
+	if actual == ModeTTY && outFile == nil {
+		// Can't run TTY mode without a real file descriptor.
+		actual = ModePlain
+	}
 	termCap.Control = actual == ModeTTY
 
 	ui := &UI{
 		out:     out,
+		outFile: outFile,
 		mode:    actual,
 		outMode: termCap,
 		now:     now,

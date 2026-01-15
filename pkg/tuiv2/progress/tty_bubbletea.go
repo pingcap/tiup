@@ -165,8 +165,8 @@ func (m ttyModel) View() string {
 
 	width := m.width
 	height := m.height
-	if (width <= 0 || height <= 0) && ui.out != nil && term.IsTerminal(int(ui.out.Fd())) {
-		if w, h, err := term.GetSize(int(ui.out.Fd())); err == nil {
+	if (width <= 0 || height <= 0) && ui.outFile != nil && term.IsTerminal(int(ui.outFile.Fd())) {
+		if w, h, err := term.GetSize(int(ui.outFile.Fd())); err == nil {
 			if width <= 0 && w > 0 {
 				width = w
 			}
@@ -239,8 +239,8 @@ func (m ttyModel) snapshotLines(g *groupState, freezeSpinner bool) []string {
 	width := m.width
 	if width <= 0 {
 		width = 80
-		if m.ui.out != nil && term.IsTerminal(int(m.ui.out.Fd())) {
-			if w, _, err := term.GetSize(int(m.ui.out.Fd())); err == nil && w > 0 {
+		if m.ui.outFile != nil && term.IsTerminal(int(m.ui.outFile.Fd())) {
+			if w, _, err := term.GetSize(int(m.ui.outFile.Fd())); err == nil && w > 0 {
 				width = w
 			}
 		}

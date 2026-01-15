@@ -124,16 +124,17 @@ func (r *plainRenderer) maybePrintGenericStart(now time.Time, t *taskState) {
 		t.startAt = now
 	}
 
+	title := r.plainSprintf("[green]%s[reset]", t.title)
 	details := ""
 	switch {
 	case t.meta != "" && t.message != "":
-		details = r.plainSprintf("[green]+[reset] %s [dim]%s[reset] [dim]%s[reset]", t.title, t.meta, t.message)
+		details = r.plainSprintf("%s [dim]%s[reset] [dim]%s[reset]", title, t.meta, t.message)
 	case t.meta != "":
-		details = r.plainSprintf("[green]+[reset] %s [dim]%s[reset]", t.title, t.meta)
+		details = r.plainSprintf("%s [dim]%s[reset]", title, t.meta)
 	case t.message != "":
-		details = r.plainSprintf("[green]+[reset] %s [dim]%s[reset]", t.title, t.message)
+		details = r.plainSprintf("%s [dim]%s[reset]", title, t.message)
 	default:
-		details = r.plainSprintf("[green]+[reset] %s", t.title)
+		details = title
 	}
 	r.printlnWithGroup(t.g, details)
 }
@@ -150,6 +151,7 @@ func (r *plainRenderer) maybePrintDownloadStart(now time.Time, t *taskState) {
 		t.startAt = now
 	}
 
+	title := r.plainSprintf("[green]%s[reset]", t.title)
 	size := "?"
 	if t.total > 0 {
 		size = formatBytes(t.total)
@@ -157,9 +159,9 @@ func (r *plainRenderer) maybePrintDownloadStart(now time.Time, t *taskState) {
 	details := ""
 	switch {
 	case t.meta != "":
-		details = r.plainSprintf("[green]+[reset] %s [dim]%s[reset] [dim](%s)[reset]", t.title, t.meta, size)
+		details = r.plainSprintf("%s [dim]%s[reset] [dim](%s)[reset]", title, t.meta, size)
 	default:
-		details = r.plainSprintf("[green]+[reset] %s [dim](%s)[reset]", t.title, size)
+		details = r.plainSprintf("%s [dim](%s)[reset]", title, size)
 	}
 	r.printlnWithGroup(t.g, details)
 }
