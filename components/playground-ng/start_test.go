@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"os"
@@ -353,4 +354,61 @@ func TestStartProcWithControllerState_DoesNotBlockOnProgressTask(t *testing.T) {
 	case <-time.After(time.Second):
 		require.FailNow(t, "task.Done() not invoked after progress task unblocked")
 	}
+}
+
+func TestWaitBootStartingTasksSettled_EnsuresTaskDoneBeforePrintLines(t *testing.T) {
+	dir := t.TempDir()
+	out, err := os.Create(filepath.Join(dir, "out.log"))
+	require.NoError(t, err)
+
+	var eventBuf bytes.Buffer
+	ui := progressv2.New(progressv2.Options{
+		Mode:     progressv2.ModePlain,
+		Out:      out,
+		EventLog: &eventBuf,
+	})
+
+	pg := NewPlayground(dir, 0)
+	pg.ui = ui
+	pg.startingGroup = ui.Group("Start instances")
+
+	task := newTrackedProgressTask(pg.startingGroup.TaskPending("TiKV"))
+	pg.startingTasks = map[string]progressTask{"tikv": task}
+
+	task.Start()
+
+	doneCh := make(chan struct{})
+	go func() {
+		<-doneCh
+		task.Done()
+	}()
+	close(doneCh)
+
+	pg.waitBootStartingTasksSettled(time.Second)
+	pg.closeStartingGroup()
+	ui.PrintLines([]string{""})
+
+	require.NoError(t, ui.Close())
+	require.NoError(t, out.Close())
+
+	lines := bytes.Split(bytes.TrimSpace(eventBuf.Bytes()), []byte("\n"))
+	require.NotEmpty(t, lines, "expected event log to contain at least one line")
+
+	doneIdx := -1
+	blankIdx := -1
+	for i, line := range lines {
+		e, err := progressv2.DecodeEvent(line)
+		require.NoError(t, err)
+
+		if e.Type == progressv2.EventTaskState && e.Status != nil && *e.Status == progressv2.TaskStatusDone {
+			doneIdx = i
+		}
+		if e.Type == progressv2.EventPrintLines && len(e.Lines) == 1 && e.Lines[0] == "" {
+			blankIdx = i
+		}
+	}
+
+	require.NotEqual(t, -1, doneIdx, "expected to see a task done event in event log")
+	require.NotEqual(t, -1, blankIdx, "expected to see a blank PrintLines event in event log")
+	require.Less(t, doneIdx, blankIdx, "expected task done to be logged before PrintLines output")
 }

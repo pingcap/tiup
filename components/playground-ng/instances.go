@@ -5,13 +5,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/pingcap/errors"
+	tuiterm "github.com/pingcap/tiup/pkg/tui/term"
 	tuiv2output "github.com/pingcap/tiup/pkg/tuiv2/output"
+	progressv2 "github.com/pingcap/tiup/pkg/tuiv2/progress"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
@@ -128,6 +131,84 @@ func stopAll(out io.Writer, timeout time.Duration, state *cliState) error {
 		return nil
 	}
 
+	// Prefer the unified tuiv2 progress output when stdout supports terminal
+	// control sequences (spinners, redrawing). Keep the table output in
+	// non-interactive mode for readability and copy/paste.
+	if tuiterm.Resolve(out).Control {
+		outFile, ok := out.(*os.File)
+		if ok && outFile != nil {
+			return stopAllWithProgressUI(outFile, targets, timeout)
+		}
+	}
+
+	return stopAllWithTable(out, targets, timeout)
+}
+
+func stopAllWithProgressUI(out *os.File, targets []playgroundTarget, timeout time.Duration) error {
+	if out == nil {
+		return fmt.Errorf("output file is nil")
+	}
+
+	ui := progressv2.New(progressv2.Options{
+		Mode: progressv2.ModeAuto,
+		Out:  out,
+	})
+	defer ui.Close()
+
+	g := ui.Group("Stop clusters")
+
+	summaries := make([]playgroundInstanceSummary, 0, len(targets))
+	for _, target := range targets {
+		summary, err := inspectPlaygroundInstance(target)
+		if err != nil {
+			summary = playgroundInstanceSummary{tag: target.tag, port: target.port, version: "-"}
+		}
+		summaries = append(summaries, summary)
+	}
+
+	tasks := make([]*progressv2.Task, 0, len(targets))
+	for i, target := range targets {
+		t := g.TaskPending(target.tag)
+		if i < len(summaries) {
+			if v := strings.TrimSpace(summaries[i].version); v != "" && v != "-" {
+				t.SetMeta(fmt.Sprintf("(%s)", v))
+			}
+		}
+		tasks = append(tasks, t)
+	}
+
+	var failed []string
+	for i, target := range targets {
+		t := (*progressv2.Task)(nil)
+		if i < len(tasks) {
+			t = tasks[i]
+		}
+		if t != nil {
+			t.Start()
+		}
+
+		if err := stopSinglePlayground(target, timeout); err != nil {
+			failed = append(failed, fmt.Sprintf("%s(%d): %v", target.tag, target.port, err))
+			if t != nil {
+				t.Error(err.Error())
+			}
+			continue
+		}
+
+		if t != nil {
+			t.Done()
+		}
+	}
+
+	g.Close()
+
+	if len(failed) > 0 {
+		return renderedError{err: fmt.Errorf("failed to stop %d instance(s)", len(failed))}
+	}
+	return nil
+}
+
+func stopAllWithTable(out io.Writer, targets []playgroundTarget, timeout time.Duration) error {
 	summaries := make([]playgroundInstanceSummary, 0, len(targets))
 	for _, target := range targets {
 		summary, err := inspectPlaygroundInstance(target)

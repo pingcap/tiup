@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/pingcap/errors"
@@ -25,6 +26,86 @@ type progressTask interface {
 
 type hideIfFastProgressTask interface {
 	SetHideIfFast(revealAfter time.Duration)
+}
+
+type trackedProgressTask struct {
+	inner progressTask
+
+	startedOnce sync.Once
+	startedCh   chan struct{}
+
+	terminalOnce sync.Once
+	terminalCh   chan struct{}
+}
+
+func newTrackedProgressTask(inner progressTask) *trackedProgressTask {
+	return &trackedProgressTask{
+		inner:      inner,
+		startedCh:  make(chan struct{}),
+		terminalCh: make(chan struct{}),
+	}
+}
+
+func (t *trackedProgressTask) markStarted() {
+	if t == nil {
+		return
+	}
+	t.startedOnce.Do(func() { close(t.startedCh) })
+}
+
+func (t *trackedProgressTask) markTerminal() {
+	if t == nil {
+		return
+	}
+	t.terminalOnce.Do(func() { close(t.terminalCh) })
+}
+
+func (t *trackedProgressTask) SetMeta(meta string) {
+	if t == nil || t.inner == nil {
+		return
+	}
+	t.inner.SetMeta(meta)
+}
+
+func (t *trackedProgressTask) Start() {
+	if t == nil || t.inner == nil {
+		return
+	}
+	t.inner.Start()
+	t.markStarted()
+}
+
+func (t *trackedProgressTask) Done() {
+	if t == nil || t.inner == nil {
+		return
+	}
+	t.inner.Done()
+	t.markTerminal()
+}
+
+func (t *trackedProgressTask) Error(msg string) {
+	if t == nil || t.inner == nil {
+		return
+	}
+	t.inner.Error(msg)
+	t.markTerminal()
+}
+
+func (t *trackedProgressTask) Cancel(reason string) {
+	if t == nil || t.inner == nil {
+		return
+	}
+	t.inner.Cancel(reason)
+	t.markTerminal()
+}
+
+func (t *trackedProgressTask) SetHideIfFast(revealAfter time.Duration) {
+	if t == nil || t.inner == nil {
+		return
+	}
+	if inner, ok := t.inner.(hideIfFastProgressTask); ok && inner != nil {
+		inner.SetHideIfFast(revealAfter)
+	}
 }
 
 const hideInProgressRevealAfterStart = 5 * time.Second
@@ -107,7 +188,7 @@ func (p *Playground) initBootStartingTasks() map[string]progressTask {
 
 		title := procTitle(inst)
 		includeID := counts != nil && counts[title] > 1
-		t := startingGroup.TaskPending(procDisplayName(inst, includeID))
+		t := newTrackedProgressTask(startingGroup.TaskPending(procDisplayName(inst, includeID)))
 		applyHideInProgressPolicy(t, info.Service, hideInProgressRevealAfterStart)
 
 		if bin := info.UserBinPath; bin != "" {
@@ -249,10 +330,57 @@ func (p *Playground) getOrCreateStartingTask(inst proc.Process) progressTask {
 	title := procTitle(inst)
 	includeID := p.procTitleCounts != nil && p.procTitleCounts[title] > 1
 
-	t := startingGroup.TaskPending(procDisplayName(inst, includeID))
+	t := newTrackedProgressTask(startingGroup.TaskPending(procDisplayName(inst, includeID)))
 	applyHideInProgressPolicy(t, inst.Info().Service, hideInProgressRevealAfterStart)
 	p.startingTasks[name] = t
 	return t
+}
+
+func (p *Playground) waitBootStartingTasksSettled(timeout time.Duration) {
+	if p == nil || timeout <= 0 {
+		return
+	}
+
+	p.progressMu.Lock()
+	var tasks []*trackedProgressTask
+	for _, task := range p.startingTasks {
+		t, ok := task.(*trackedProgressTask)
+		if !ok || t == nil {
+			continue
+		}
+		select {
+		case <-t.startedCh:
+		default:
+			continue
+		}
+		select {
+		case <-t.terminalCh:
+			continue
+		default:
+		}
+		tasks = append(tasks, t)
+	}
+	p.progressMu.Unlock()
+
+	if len(tasks) == 0 {
+		return
+	}
+
+	deadline := time.Now().Add(timeout)
+	for _, t := range tasks {
+		remain := time.Until(deadline)
+		if remain <= 0 {
+			return
+		}
+		if t == nil {
+			continue
+		}
+		select {
+		case <-t.terminalCh:
+		case <-time.After(remain):
+			return
+		}
+	}
 }
 
 func (p *Playground) markStartingTaskError(inst proc.Process, meta string, err error) {
