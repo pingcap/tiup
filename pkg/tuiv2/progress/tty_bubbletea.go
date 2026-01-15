@@ -12,9 +12,14 @@ import (
 
 type ttyEventMsg struct {
 	Event Event
+	Ack   chan ttyEventAck
 }
 
 type ttyShutdownMsg struct{}
+
+type ttyEventAck struct {
+	Prints []string
+}
 
 type ttyModel struct {
 	ui     *UI
@@ -57,6 +62,12 @@ func (m ttyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	case ttyEventMsg:
 		ui := m.ui
+		prints := []string(nil)
+		if msg.Ack != nil {
+			defer func() {
+				msg.Ack <- ttyEventAck{Prints: prints}
+			}()
+		}
 		if ui == nil {
 			return m, nil
 		}
@@ -84,19 +95,18 @@ func (m ttyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				lines = append(lines, "\r"+line+ansi.EraseLineRight)
 			}
-			return m, tea.Batch(m.ensureSpinnerTick(), tea.Println(strings.Join(lines, "\n")))
+			prints = append(prints, strings.Join(lines, "\n"))
+			return m, m.ensureSpinnerTick()
 		default:
 		}
 
 		m.state.applyEvent(now, e)
 
-		var cmds []tea.Cmd
-
 		// Seal snapshots (explicit).
 		if e.Type == EventGroupClose && e.Finished != nil && !*e.Finished {
 			if g := m.state.groupByID[e.GroupID]; g != nil && g.sealed {
 				if lines := m.snapshotLines(g, true); len(lines) > 0 {
-					cmds = append(cmds, tea.Println("\r"+strings.Join(lines, "\n")))
+					prints = append(prints, "\r"+strings.Join(lines, "\n"))
 				}
 			}
 		}
@@ -108,12 +118,11 @@ func (m ttyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			g.sealed = true
 			if lines := m.snapshotLines(g, false); len(lines) > 0 {
-				cmds = append(cmds, tea.Println("\r"+strings.Join(lines, "\n")))
+				prints = append(prints, "\r"+strings.Join(lines, "\n"))
 			}
 		}
 
-		cmds = append(cmds, m.ensureSpinnerTick())
-		return m, tea.Batch(cmds...)
+		return m, m.ensureSpinnerTick()
 	case spinner.TickMsg:
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
@@ -265,6 +274,28 @@ func (ui *UI) startTTY() {
 		_, _ = p.Run()
 	}()
 
+	sendEvent := func(e Event) bool {
+		ackCh := make(chan ttyEventAck)
+		p.Send(ttyEventMsg{Event: e, Ack: ackCh})
+
+		var ack ttyEventAck
+		select {
+		case ack = <-ackCh:
+		case <-ui.ttyDoneCh:
+			return false
+		}
+
+		for _, block := range ack.Prints {
+			select {
+			case <-ui.ttyDoneCh:
+				return false
+			default:
+			}
+			p.Println(block)
+		}
+		return true
+	}
+
 	go func() {
 		defer close(ui.doneCh)
 		for {
@@ -273,7 +304,9 @@ func (ui *UI) startTTY() {
 				for {
 					select {
 					case e := <-ui.eventsCh:
-						p.Send(ttyEventMsg{Event: e})
+						if !sendEvent(e) {
+							return
+						}
 					default:
 						p.Send(ttyShutdownMsg{})
 						return
@@ -282,7 +315,9 @@ func (ui *UI) startTTY() {
 			case <-ui.ttyDoneCh:
 				return
 			case e := <-ui.eventsCh:
-				p.Send(ttyEventMsg{Event: e})
+				if !sendEvent(e) {
+					return
+				}
 			}
 		}
 	}()
