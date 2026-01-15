@@ -6,7 +6,7 @@ import (
 )
 
 // EventVersion is the current JSON schema version for Event.
-const EventVersion = 2
+const EventVersion = 3
 
 // EventType is the stable string representation of an event kind.
 type EventType string
