@@ -369,7 +369,9 @@ func (l *httpMirror) downloadFile(url string, to string, maxSize int64) (io.Read
 	resp := client.Do(req)
 
 	// start progress output loop
-	t := time.NewTicker(time.Millisecond)
+	// 10 FPS is enough for progress reporting and avoids excessive CPU usage
+	// under fast networks (grab download callbacks can be very frequent).
+	t := time.NewTicker(100 * time.Millisecond)
 	defer t.Stop()
 
 	var progress DownloadProgress

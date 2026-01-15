@@ -35,10 +35,9 @@ func TestPlainOutput_IsStableAndNoANSI(t *testing.T) {
 
 	require.NotContains(t, got, "\033[", "plain output must not contain ANSI sequences")
 	for _, want := range []string{
-		"==> Waiting for things:\n",
-		"  + task-ok\n",
-		"  + task-err\n",
-		"ERR - task-err: boom (",
+		"Waiting for things | + task-ok\n",
+		"Waiting for things | + task-err\n",
+		"Waiting for things | ERR - task-err: boom (",
 	} {
 		require.Contains(t, got, want)
 	}
@@ -70,8 +69,7 @@ func TestDownloadTask_Plain(t *testing.T) {
 
 	require.NotContains(t, got, "\033[", "plain output must not contain ANSI sequences")
 	for _, want := range []string{
-		"==> Download components:\n",
-		"  + TiDB v7.5.0 (1.0MiB)\n",
+		"Download components | + TiDB v7.5.0 (1.0MiB)\n",
 	} {
 		require.Contains(t, got, want)
 	}
@@ -102,8 +100,7 @@ func TestDownloadTask_Plain_PendingTaskTotalBeforeStart(t *testing.T) {
 	got := string(out)
 
 	for _, want := range []string{
-		"==> Download components:\n",
-		"  + TiDB v7.5.0 (1.0MiB)\n",
+		"Download components | + TiDB v7.5.0 (1.0MiB)\n",
 	} {
 		require.Contains(t, got, want)
 	}
@@ -136,7 +133,7 @@ func TestPlainOutput_FORCE_COLOR_EmitsANSI(t *testing.T) {
 	tokens := colorstr.DefaultTokens
 	tokens.Disable = false
 
-	require.Contains(t, got, tokens.Sprintf("[light_magenta]==>[reset] [bold]Waiting for things:[reset]"), "expected colored group header")
+	require.Contains(t, got, tokens.Sprintf("[light_magenta][bold]Waiting for things[reset]"), "expected colored group prefix")
 	require.Contains(t, got, tokens.Sprintf("[bold][light_red]ERR[reset]"), "expected colored ERR label")
 }
 
@@ -193,6 +190,5 @@ func TestPendingTask_Cancel_PrintsInPlain(t *testing.T) {
 	require.NoError(t, err)
 	got := string(out)
 
-	require.Contains(t, got, "==> Start instances:\n")
-	require.Contains(t, got, "CANCEL - TiDB (0.0s)\n")
+	require.Contains(t, got, "Start instances | CANCEL - TiDB (0.0s)\n")
 }

@@ -259,21 +259,6 @@ func (ui *UI) emit(e Event) {
 		e.At = ui.now()
 	}
 
-	// Lossy events (like frequent progress updates) should never stall the
-	// controller. Drop them if the buffer is full.
-	if e.lossy() {
-		select {
-		case <-ui.closeCh:
-			return
-		default:
-		}
-		select {
-		case ui.eventsCh <- e:
-		default:
-		}
-		return
-	}
-
 	select {
 	case <-ui.closeCh:
 		return

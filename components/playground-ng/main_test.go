@@ -247,32 +247,59 @@ func TestRepoDownloadProgress_SetCurrent_Throttles(t *testing.T) {
 	p.SetCurrent(0)
 	require.Equal(t, base, p.lastUpdateAt)
 	require.Equal(t, int64(0), p.lastSize)
+	require.Equal(t, int64(0), p.latestSize)
 
 	now = base.Add(10 * time.Millisecond)
 	p.SetCurrent(1)
 	require.Equal(t, base, p.lastUpdateAt)
 	require.Equal(t, int64(0), p.lastSize)
+	require.Equal(t, int64(1), p.latestSize)
 
-	now = base.Add(20 * time.Millisecond)
-	p.SetCurrent(256 * 1024)
+	now = base.Add(100 * time.Millisecond)
+	p.SetCurrent(2)
 	require.Equal(t, now, p.lastUpdateAt)
-	require.Equal(t, int64(256*1024), p.lastSize)
+	require.Equal(t, int64(2), p.lastSize)
+	require.Equal(t, int64(2), p.latestSize)
 
 	lastUpdateAt := p.lastUpdateAt
 	now = lastUpdateAt.Add(10 * time.Millisecond)
-	p.SetCurrent(256*1024 + 1)
+	p.SetCurrent(3)
 	require.Equal(t, lastUpdateAt, p.lastUpdateAt)
-	require.Equal(t, int64(256*1024), p.lastSize)
+	require.Equal(t, int64(2), p.lastSize)
+	require.Equal(t, int64(3), p.latestSize)
 
-	lastUpdateAt = p.lastUpdateAt
-	now = lastUpdateAt.Add(150 * time.Millisecond)
-	p.SetCurrent(256*1024 + 2)
-	require.Equal(t, now, p.lastUpdateAt)
-	require.Equal(t, int64(256*1024+2), p.lastSize)
-
-	lastUpdateAt = p.lastUpdateAt
-	now = lastUpdateAt.Add(10 * time.Millisecond)
+	// Size decreases should always be emitted immediately (e.g. restarted download).
+	now = lastUpdateAt.Add(20 * time.Millisecond)
 	p.SetCurrent(1)
+	require.Equal(t, now, p.lastUpdateAt)
+	require.Equal(t, int64(1), p.lastSize)
+	require.Equal(t, int64(1), p.latestSize)
+}
+
+func TestRepoDownloadProgress_Finish_FlushesSuppressedCurrent(t *testing.T) {
+	g := &progressv2.Group{}
+	progress := newRepoDownloadProgress(context.Background(), g)
+
+	p, ok := progress.(*repoDownloadProgress)
+	require.True(t, ok)
+
+	p.Start("https://example.com/tidb-v7.1.0-linux-amd64.tar.gz", 0)
+
+	base := time.Date(2024, 1, 2, 3, 4, 5, 0, time.UTC)
+	now := base
+	p.now = func() time.Time { return now }
+
+	p.SetCurrent(0)
+	require.Equal(t, int64(0), p.lastSize)
+	require.Equal(t, int64(0), p.latestSize)
+
+	now = base.Add(10 * time.Millisecond)
+	p.SetCurrent(1)
+	require.Equal(t, int64(0), p.lastSize)
+	require.Equal(t, int64(1), p.latestSize)
+
+	now = base.Add(20 * time.Millisecond)
+	p.Finish()
 	require.Equal(t, now, p.lastUpdateAt)
 	require.Equal(t, int64(1), p.lastSize)
 }

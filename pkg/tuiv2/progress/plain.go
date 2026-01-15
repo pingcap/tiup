@@ -12,8 +12,6 @@ import (
 type plainRenderer struct {
 	out     io.Writer
 	outMode tuiterm.OutputMode
-
-	printedGroup bool
 }
 
 func newPlainRenderer(out io.Writer, outMode tuiterm.OutputMode) *plainRenderer {
@@ -29,8 +27,27 @@ func (r *plainRenderer) plainSprintf(format string, args ...any) string {
 	return tokens.Sprintf(format, args...)
 }
 
-func (r *plainRenderer) groupHeader(title string) string {
-	return r.plainSprintf("[light_magenta]==>[reset] [bold]%s:[reset]", title)
+func (r *plainRenderer) groupPrefix(title string) string {
+	if title == "" {
+		return ""
+	}
+	return r.plainSprintf("[light_magenta][bold]%s[reset]", title)
+}
+
+func (r *plainRenderer) printlnWithGroup(g *groupState, details string) {
+	if r == nil || r.out == nil {
+		return
+	}
+	title := ""
+	if g != nil {
+		title = g.title
+	}
+	prefix := r.groupPrefix(title)
+	if prefix == "" {
+		_, _ = fmt.Fprintln(r.out, details)
+		return
+	}
+	_, _ = fmt.Fprintf(r.out, "%s | %s\n", prefix, details)
 }
 
 func (r *plainRenderer) errLabel() string {
@@ -51,23 +68,6 @@ func (r *plainRenderer) renderEvent(now time.Time, e Event, st *engineState) {
 		for _, line := range e.Lines {
 			_, _ = fmt.Fprintln(r.out, line)
 		}
-	case EventTaskAdd:
-		t := (*taskState)(nil)
-		if st != nil {
-			t = st.taskByID[e.TaskID]
-		}
-		if t == nil || t.g == nil {
-			return
-		}
-		if t.g.plainBegun {
-			return
-		}
-		if r.printedGroup {
-			_, _ = fmt.Fprintln(r.out)
-		}
-		r.printedGroup = true
-		t.g.plainBegun = true
-		_, _ = fmt.Fprintln(r.out, r.groupHeader(t.g.title))
 	case EventTaskUpdate:
 		t := (*taskState)(nil)
 		if st != nil {
@@ -124,16 +124,18 @@ func (r *plainRenderer) maybePrintGenericStart(now time.Time, t *taskState) {
 		t.startAt = now
 	}
 
+	details := ""
 	switch {
 	case t.meta != "" && t.message != "":
-		_, _ = fmt.Fprintln(r.out, r.plainSprintf("  [green]+[reset] %s [dim]%s[reset] [dim]%s[reset]", t.title, t.meta, t.message))
+		details = r.plainSprintf("[green]+[reset] %s [dim]%s[reset] [dim]%s[reset]", t.title, t.meta, t.message)
 	case t.meta != "":
-		_, _ = fmt.Fprintln(r.out, r.plainSprintf("  [green]+[reset] %s [dim]%s[reset]", t.title, t.meta))
+		details = r.plainSprintf("[green]+[reset] %s [dim]%s[reset]", t.title, t.meta)
 	case t.message != "":
-		_, _ = fmt.Fprintln(r.out, r.plainSprintf("  [green]+[reset] %s [dim]%s[reset]", t.title, t.message))
+		details = r.plainSprintf("[green]+[reset] %s [dim]%s[reset]", t.title, t.message)
 	default:
-		_, _ = fmt.Fprintln(r.out, r.plainSprintf("  [green]+[reset] %s", t.title))
+		details = r.plainSprintf("[green]+[reset] %s", t.title)
 	}
+	r.printlnWithGroup(t.g, details)
 }
 
 func (r *plainRenderer) maybePrintDownloadStart(now time.Time, t *taskState) {
@@ -152,12 +154,14 @@ func (r *plainRenderer) maybePrintDownloadStart(now time.Time, t *taskState) {
 	if t.total > 0 {
 		size = formatBytes(t.total)
 	}
+	details := ""
 	switch {
 	case t.meta != "":
-		_, _ = fmt.Fprintln(r.out, r.plainSprintf("  [green]+[reset] %s [dim]%s[reset] [dim](%s)[reset]", t.title, t.meta, size))
+		details = r.plainSprintf("[green]+[reset] %s [dim]%s[reset] [dim](%s)[reset]", t.title, t.meta, size)
 	default:
-		_, _ = fmt.Fprintln(r.out, r.plainSprintf("  [green]+[reset] %s [dim](%s)[reset]", t.title, size))
+		details = r.plainSprintf("[green]+[reset] %s [dim](%s)[reset]", t.title, size)
 	}
+	r.printlnWithGroup(t.g, details)
 }
 
 func (r *plainRenderer) printRetry(_ time.Time, t *taskState) {
@@ -171,10 +175,10 @@ func (r *plainRenderer) printRetry(_ time.Time, t *taskState) {
 		title += " " + t.meta
 	}
 	if t.message != "" {
-		_, _ = fmt.Fprintf(r.out, "%s - %s: %s\n", label, title, t.message)
+		r.printlnWithGroup(t.g, fmt.Sprintf("%s - %s: %s", label, title, t.message))
 		return
 	}
-	_, _ = fmt.Fprintf(r.out, "%s - %s\n", label, title)
+	r.printlnWithGroup(t.g, fmt.Sprintf("%s - %s", label, title))
 }
 
 func (r *plainRenderer) printError(_ time.Time, t *taskState) {
@@ -189,10 +193,10 @@ func (r *plainRenderer) printError(_ time.Time, t *taskState) {
 		title += " " + t.meta
 	}
 	if t.message != "" {
-		_, _ = fmt.Fprintf(r.out, "%s - %s: %s (%s)\n", errLabel, title, t.message, formatDuration(elapsed))
+		r.printlnWithGroup(t.g, fmt.Sprintf("%s - %s: %s (%s)", errLabel, title, t.message, formatDuration(elapsed)))
 		return
 	}
-	_, _ = fmt.Fprintf(r.out, "%s - %s (%s)\n", errLabel, title, formatDuration(elapsed))
+	r.printlnWithGroup(t.g, fmt.Sprintf("%s - %s (%s)", errLabel, title, formatDuration(elapsed)))
 }
 
 func (r *plainRenderer) printSkipped(_ time.Time, t *taskState) {
@@ -206,10 +210,10 @@ func (r *plainRenderer) printSkipped(_ time.Time, t *taskState) {
 		title += " " + t.meta
 	}
 	if t.message != "" {
-		_, _ = fmt.Fprintf(r.out, "SKIP - %s: %s (%s)\n", title, t.message, formatDuration(elapsed))
+		r.printlnWithGroup(t.g, fmt.Sprintf("SKIP - %s: %s (%s)", title, t.message, formatDuration(elapsed)))
 		return
 	}
-	_, _ = fmt.Fprintf(r.out, "SKIP - %s (%s)\n", title, formatDuration(elapsed))
+	r.printlnWithGroup(t.g, fmt.Sprintf("SKIP - %s (%s)", title, formatDuration(elapsed)))
 }
 
 func (r *plainRenderer) printCanceled(_ time.Time, t *taskState) {
@@ -223,8 +227,8 @@ func (r *plainRenderer) printCanceled(_ time.Time, t *taskState) {
 		title += " " + t.meta
 	}
 	if t.message != "" {
-		_, _ = fmt.Fprintf(r.out, "CANCEL - %s: %s (%s)\n", title, t.message, formatDuration(elapsed))
+		r.printlnWithGroup(t.g, fmt.Sprintf("CANCEL - %s: %s (%s)", title, t.message, formatDuration(elapsed)))
 		return
 	}
-	_, _ = fmt.Fprintf(r.out, "CANCEL - %s (%s)\n", title, formatDuration(elapsed))
+	r.printlnWithGroup(t.g, fmt.Sprintf("CANCEL - %s (%s)", title, formatDuration(elapsed)))
 }

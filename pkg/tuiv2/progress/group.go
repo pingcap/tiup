@@ -124,9 +124,11 @@ func (g *Group) Seal() {
 	if g == nil || g.ui == nil || g.ui.closed.Load() {
 		return
 	}
+	finished := false
 	g.ui.emit(Event{
-		Type:    EventGroupSeal,
-		At:      g.ui.now(),
-		GroupID: g.id,
+		Type:     EventGroupClose,
+		At:       g.ui.now(),
+		GroupID:  g.id,
+		Finished: &finished,
 	})
 }

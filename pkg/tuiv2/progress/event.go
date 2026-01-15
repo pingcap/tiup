@@ -20,7 +20,6 @@ const (
 	EventGroupAdd     EventType = "group_add"
 	EventGroupUpdate  EventType = "group_update"
 	EventGroupClose   EventType = "group_close"
-	EventGroupSeal    EventType = "group_seal"
 	EventTaskAdd      EventType = "task_add"
 	EventTaskUpdate   EventType = "task_update"
 	EventTaskProgress EventType = "task_progress"
@@ -78,6 +77,12 @@ type Event struct {
 	ShowMeta             *bool `json:"show_meta,omitempty"`
 	HideDetailsOnSuccess *bool `json:"hide_details_on_success,omitempty"`
 	SortTasksByTitle     *bool `json:"sort_tasks_by_title,omitempty"`
+	// Group close.
+	//
+	// Finished=false means "seal snapshot": the group is moved from Active to
+	// History immediately (used for interrupts). When omitted, it defaults to
+	// true ("normal close").
+	Finished *bool `json:"finished,omitempty"`
 
 	// Task add.
 	Pending bool `json:"pending,omitempty"`
@@ -95,15 +100,6 @@ type Event struct {
 
 	// Task state transition.
 	Status *TaskStatus `json:"status,omitempty"`
-}
-
-func (e Event) lossy() bool {
-	if e.Type != EventTaskProgress {
-		return false
-	}
-	// Total updates are important structural information and should never be
-	// dropped even when the event buffer is under pressure.
-	return e.Total == nil
 }
 
 func parseEventLine(line []byte) (Event, error) {

@@ -93,7 +93,7 @@ func (m ttyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var cmds []tea.Cmd
 
 		// Seal snapshots (explicit).
-		if e.Type == EventGroupSeal {
+		if e.Type == EventGroupClose && e.Finished != nil && !*e.Finished {
 			if g := m.state.groupByID[e.GroupID]; g != nil && g.sealed {
 				if lines := m.snapshotLines(g, true); len(lines) > 0 {
 					cmds = append(cmds, tea.Println("\r"+strings.Join(lines, "\n")))

@@ -621,6 +621,7 @@ type repoDownloadProgress struct {
 
 	lastUpdateAt time.Time
 	lastSize     int64
+	latestSize   int64
 }
 
 func (p *repoDownloadProgress) SetExpectedDownloads(downloads []DownloadPlan) {
@@ -702,6 +703,7 @@ func (p *repoDownloadProgress) Start(rawURL string, size int64) {
 	p.task = t
 	p.lastUpdateAt = time.Time{}
 	p.lastSize = 0
+	p.latestSize = 0
 	p.mu.Unlock()
 }
 
@@ -716,17 +718,14 @@ func (p *repoDownloadProgress) SetCurrent(size int64) {
 	// Repository download callbacks can be very frequent. Throttle SetCurrent
 	// updates to avoid flooding the progress event channel / renderer.
 	//
-	// This keeps the TTY UI smooth (Bubble Tea already caps redraw FPS) and keeps
-	// daemon-mode event log output at a reasonable rate during large downloads.
+	// 10 FPS is enough for a smooth progress UI (TTY redraw is capped anyway) and
+	// also keeps daemon-mode event logs at a reasonable size.
 	now := p.now()
-	const (
-		minInterval = 150 * time.Millisecond
-		minDelta    = 256 * 1024
-	)
+	const minInterval = 100 * time.Millisecond
+
+	p.latestSize = size
 	shouldUpdate := false
 	if size < p.lastSize {
-		shouldUpdate = true
-	} else if size-p.lastSize >= minDelta {
 		shouldUpdate = true
 	} else if p.lastUpdateAt.IsZero() || now.Sub(p.lastUpdateAt) >= minInterval {
 		shouldUpdate = true
@@ -746,6 +745,12 @@ func (p *repoDownloadProgress) SetCurrent(size int64) {
 func (p *repoDownloadProgress) Finish() {
 	p.mu.Lock()
 	t := p.task
+	latestSize := p.latestSize
+	flush := t != nil && latestSize != p.lastSize
+	if flush {
+		p.lastUpdateAt = p.now()
+		p.lastSize = latestSize
+	}
 	p.task = nil
 	ctx := p.ctx
 	p.mu.Unlock()
@@ -753,6 +758,13 @@ func (p *repoDownloadProgress) Finish() {
 	if t == nil {
 		return
 	}
+
+	// Ensure the final progress current is emitted even when the last callback
+	// falls into the throttle window.
+	if flush {
+		t.SetCurrent(latestSize)
+	}
+
 	if ctx != nil && ctx.Err() != nil {
 		t.Cancel("")
 		return

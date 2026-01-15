@@ -35,8 +35,6 @@ type groupState struct {
 	showMeta             bool
 	hideDetailsOnSuccess bool
 	sortTasksByTitle     bool
-
-	plainBegun bool
 }
 
 func (g *groupState) canAutoSeal() bool {
@@ -167,8 +165,6 @@ func (s *engineState) applyEvent(now time.Time, e Event) {
 		s.applyGroupUpdate(e)
 	case EventGroupClose:
 		s.applyGroupClose(now, e)
-	case EventGroupSeal:
-		s.applyGroupSeal(e)
 	case EventTaskAdd:
 		s.applyTaskAdd(now, e)
 	case EventTaskUpdate:
@@ -226,19 +222,24 @@ func (s *engineState) applyGroupUpdate(e Event) {
 
 func (s *engineState) applyGroupClose(now time.Time, e Event) {
 	g := s.groupByID[e.GroupID]
-	if g == nil || g.sealed || g.closed {
+	if g == nil || g.sealed {
+		return
+	}
+
+	finished := true
+	if e.Finished != nil {
+		finished = *e.Finished
+	}
+	if !finished {
+		g.sealed = true
+		return
+	}
+
+	if g.closed {
 		return
 	}
 	g.closed = true
 	g.closedAt = now
-}
-
-func (s *engineState) applyGroupSeal(e Event) {
-	g := s.groupByID[e.GroupID]
-	if g == nil || g.sealed {
-		return
-	}
-	g.sealed = true
 }
 
 func (s *engineState) applyTaskAdd(now time.Time, e Event) {
