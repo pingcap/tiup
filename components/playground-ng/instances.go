@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/pingcap/errors"
@@ -177,8 +178,14 @@ func stopAllWithProgressUI(out *os.File, targets []playgroundTarget, timeout tim
 		tasks = append(tasks, t)
 	}
 
-	var failed []string
+	type stopResult struct {
+		index int
+		err   error
+	}
+
+	results := make(chan stopResult, len(targets))
 	for i, target := range targets {
+		target := target
 		t := (*progressv2.Task)(nil)
 		if i < len(tasks) {
 			t = tasks[i]
@@ -186,15 +193,25 @@ func stopAllWithProgressUI(out *os.File, targets []playgroundTarget, timeout tim
 		if t != nil {
 			t.Start()
 		}
+		go func(index int) {
+			results <- stopResult{index: index, err: stopSinglePlayground(target, timeout)}
+		}(i)
+	}
 
-		if err := stopSinglePlayground(target, timeout); err != nil {
-			failed = append(failed, fmt.Sprintf("%s(%d): %v", target.tag, target.port, err))
+	var failed []string
+	for range targets {
+		r := <-results
+		t := (*progressv2.Task)(nil)
+		if r.index >= 0 && r.index < len(tasks) {
+			t = tasks[r.index]
+		}
+		if r.err != nil {
+			failed = append(failed, fmt.Sprintf("%s(%d): %v", targets[r.index].tag, targets[r.index].port, r.err))
 			if t != nil {
-				t.Error(err.Error())
+				t.Error(r.err.Error())
 			}
 			continue
 		}
-
 		if t != nil {
 			t.Done()
 		}
@@ -218,13 +235,23 @@ func stopAllWithTable(out io.Writer, targets []playgroundTarget, timeout time.Du
 		summaries = append(summaries, summary)
 	}
 
+	stopErrors := make([]error, len(targets))
+	var wg sync.WaitGroup
+	for i, target := range targets {
+		i, target := i, target
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			stopErrors[i] = stopSinglePlayground(target, timeout)
+		}()
+	}
+	wg.Wait()
+
 	var failed []string
 	var stopped []playgroundInstanceSummary
-	for i, target := range targets {
-		target := target
-
-		if err := stopSinglePlayground(target, timeout); err != nil {
-			failed = append(failed, fmt.Sprintf("%s(%d): %v", target.tag, target.port, err))
+	for i, err := range stopErrors {
+		if err != nil {
+			failed = append(failed, fmt.Sprintf("%s(%d): %v", targets[i].tag, targets[i].port, err))
 			continue
 		}
 		stopped = append(stopped, summaries[i])

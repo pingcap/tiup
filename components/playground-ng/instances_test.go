@@ -190,6 +190,92 @@ func TestStopAll_StopsAllPlaygrounds(t *testing.T) {
 	require.Contains(t, out, "v8.5.4")
 }
 
+func TestStopAll_StopsAllPlaygroundsInParallel(t *testing.T) {
+	base := t.TempDir()
+	stopDelay := 500 * time.Millisecond
+	stopCalls := make(chan time.Time, 2)
+
+	makePlayground := func(tag string) {
+		dir := filepath.Join(base, tag)
+		require.NoError(t, os.MkdirAll(dir, 0o755))
+
+		pidPath := filepath.Join(dir, playgroundPIDFileName)
+		pidBody := fmt.Sprintf("pid=%d\nstarted_at=%s\ntag=%s\n", os.Getpid(), time.Now().UTC().Format(time.RFC3339), tag)
+		require.NoError(t, os.WriteFile(pidPath, []byte(pidBody), 0o644))
+
+		itemsJSON, err := json.Marshal([]displayItem{{Name: "pd-0", ServiceID: "pd", Status: "running", Version: "v8.5.4"}})
+		require.NoError(t, err)
+
+		s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path != "/command" {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			if r.Method != http.MethodPost {
+				w.WriteHeader(http.StatusMethodNotAllowed)
+				_ = json.NewEncoder(w).Encode(CommandReply{OK: false, Error: "method not allowed"})
+				return
+			}
+
+			var cmd Command
+			if err := json.NewDecoder(r.Body).Decode(&cmd); err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				_ = json.NewEncoder(w).Encode(CommandReply{OK: false, Error: err.Error()})
+				return
+			}
+			switch cmd.Type {
+			case StopCommandType:
+				stopCalls <- time.Now()
+				_ = json.NewEncoder(w).Encode(CommandReply{OK: true, Message: "Stopping playground...\n"})
+				go func() {
+					time.Sleep(stopDelay)
+					_ = os.Remove(pidPath)
+					_ = os.Remove(filepath.Join(dir, playgroundPortFileName))
+				}()
+			case DisplayCommandType:
+				_ = json.NewEncoder(w).Encode(CommandReply{OK: true, Message: string(itemsJSON)})
+			default:
+				w.WriteHeader(http.StatusBadRequest)
+				_ = json.NewEncoder(w).Encode(CommandReply{OK: false, Error: "unexpected command"})
+			}
+		}))
+		t.Cleanup(s.Close)
+
+		u, err := url.Parse(s.URL)
+		require.NoError(t, err)
+		port, err := strconv.Atoi(u.Port())
+		require.NoError(t, err)
+		require.NoError(t, dumpPort(filepath.Join(dir, playgroundPortFileName), port))
+	}
+
+	makePlayground("a")
+	makePlayground("b")
+
+	state := &cliState{dataDir: base}
+	require.NoError(t, stopAll(io.Discard, 3*time.Second, state))
+
+	times := make([]time.Time, 0, 2)
+	for len(times) < 2 {
+		select {
+		case at := <-stopCalls:
+			times = append(times, at)
+		case <-time.After(3 * time.Second):
+			t.Fatalf("timed out waiting for stop calls, got %d", len(times))
+		}
+	}
+
+	earliest := times[0]
+	latest := times[0]
+	if times[1].Before(earliest) {
+		earliest = times[1]
+	}
+	if times[1].After(latest) {
+		latest = times[1]
+	}
+	require.Less(t, latest.Sub(earliest), stopDelay)
+}
+
 func TestStopAll_RejectsTag(t *testing.T) {
 	state := &cliState{dataDir: t.TempDir(), tag: "only"}
 	err := stopAll(io.Discard, time.Second, state)
