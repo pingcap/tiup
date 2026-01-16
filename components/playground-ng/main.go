@@ -121,24 +121,26 @@ func execute(state *cliState) error {
 		state = newCLIState()
 	}
 
+	arg0 := playgroundCLIArg0()
+
 	rootCmd := &cobra.Command{
 		Use: fmt.Sprintf("%s [version]", filepath.Base(os.Args[0])),
-		Long: `Bootstrap a TiDB cluster in your local host, the latest release version will be chosen
+		Long: fmt.Sprintf(`Bootstrap a TiDB cluster in your local host, the latest release version will be chosen
 if you don't specified a version.
 
 Examples:
-  $ tiup playground-ng nightly                         # Start a TiDB nightly version local cluster
-  $ tiup playground-ng v5.0.1 --db 3 --pd 3 --kv 3     # Start a local cluster with 10 nodes
-  $ tiup playground-ng nightly --without-monitor       # Start a local cluster and disable monitor system
-  $ tiup playground-ng --pd.config ~/config/pd.toml    # Start a local cluster with specified configuration file
-  $ tiup playground-ng --db.binpath /xx/tidb-server    # Start a local cluster with component binary path
-  $ tiup playground-ng --tag xx                        # Start a local cluster with data dir named 'xx' and uncleaned after exit
-  $ tiup playground-ng -d --tag xx                    # Start a local cluster in background (daemon mode)
-  $ tiup playground-ng stop --tag xx                   # Stop the cluster started with --tag xx
-  $ tiup playground-ng stop-all                        # Stop all running playground-ng instances
-  $ tiup playground-ng ps                              # List all running playground-ng instances
-  $ tiup playground-ng --mode tikv-slim                # Start a local tikv only cluster (No TiDB or TiFlash Available)
-  $ tiup playground-ng --mode tikv-slim --kv 3 --pd 3  # Start a local tikv only cluster with 6 nodes`,
+  $ %[1]s nightly                         # Start a TiDB nightly version local cluster
+  $ %[1]s v5.0.1 --db 3 --pd 3 --kv 3     # Start a local cluster with 10 nodes
+  $ %[1]s nightly --without-monitor       # Start a local cluster and disable monitor system
+  $ %[1]s --pd.config ~/config/pd.toml    # Start a local cluster with specified configuration file
+  $ %[1]s --db.binpath /xx/tidb-server    # Start a local cluster with component binary path
+  $ %[1]s --tag xx                        # Start a local cluster with data dir named 'xx' and uncleaned after exit
+  $ %[1]s -d --tag xx                     # Start a local cluster in background (daemon mode)
+  $ %[1]s stop --tag xx                   # Stop the cluster started with --tag xx
+  $ %[1]s stop-all                        # Stop all running playground-ng instances
+  $ %[1]s ps                              # List all running playground-ng instances
+  $ %[1]s --mode tikv-slim                # Start a local tikv only cluster (No TiDB or TiFlash Available)
+  $ %[1]s --mode tikv-slim --kv 3 --pd 3  # Start a local tikv only cluster with 6 nodes`, arg0),
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Version:       version.NewTiUPVersion().String(),
@@ -398,7 +400,7 @@ Examples:
 	tui.AddColorFunctionsForCobra()
 	tui.BeautifyCobraUsageAndHelp(rootCmd)
 
-	rootCmd.Flags().StringVar(&state.options.ShOpt.Mode, "mode", "tidb", fmt.Sprintf("tiup playground-ng mode: '%s', '%s', '%s', '%s', '%s'", proc.ModeNormal, proc.ModeCSE, proc.ModeNextGen, proc.ModeDisAgg, proc.ModeTiKVSlim))
+	rootCmd.Flags().StringVar(&state.options.ShOpt.Mode, "mode", "tidb", fmt.Sprintf("%s mode: '%s', '%s', '%s', '%s', '%s'", arg0, proc.ModeNormal, proc.ModeCSE, proc.ModeNextGen, proc.ModeDisAgg, proc.ModeTiKVSlim))
 	rootCmd.Flags().StringVar(&state.options.ShOpt.PDMode, "pd.mode", "pd", "PD mode: 'pd', 'ms'")
 	rootCmd.Flags().StringVar(&state.options.ShOpt.CSE.S3Endpoint, "cse.s3_endpoint", "http://127.0.0.1:9000",
 		fmt.Sprintf("Object store URL for --mode=%s, --mode=%s, --mode=%s", proc.ModeCSE, proc.ModeDisAgg, proc.ModeNextGen))
@@ -930,7 +932,7 @@ var _ repository.DownloadProgress = (*repoDownloadProgress)(nil)
 var _ repository.DownloadProgressReporter = (*repoDownloadProgress)(nil)
 
 func main() {
-	tui.RegisterArg0("tiup playground-ng")
+	tui.RegisterArg0(playgroundCLIArg0())
 
 	state := newCLIState()
 

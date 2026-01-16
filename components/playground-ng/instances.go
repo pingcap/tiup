@@ -114,7 +114,7 @@ func stopAll(out io.Writer, timeout time.Duration, state *cliState) error {
 		return fmt.Errorf("cli state is nil")
 	}
 	if strings.TrimSpace(state.tag) != "" || strings.TrimSpace(state.tiupDataDir) != "" {
-		return fmt.Errorf("stop-all does not accept --tag or TIUP_INSTANCE_DATA_DIR; use 'tiup playground-ng stop' instead")
+		return fmt.Errorf("stop-all does not accept --tag or TIUP_INSTANCE_DATA_DIR; use '%s' instead", playgroundCLICommand("stop"))
 	}
 
 	targets, err := listPlaygroundTargets(state.dataDir)

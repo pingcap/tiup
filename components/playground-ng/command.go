@@ -276,6 +276,8 @@ func scaleOutServiceIDs() []proc.ServiceID {
 }
 
 func newScaleOut(state *cliState) *cobra.Command {
+	arg0 := playgroundCLIArg0()
+
 	var services []string
 	var counts []int
 	var cfg proc.Config
@@ -294,7 +296,7 @@ func newScaleOut(state *cliState) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "scale-out",
 		Short:   "Scale out instances in a running playground",
-		Example: "tiup playground-ng scale-out --service tidb --count 1",
+		Example: fmt.Sprintf("%s scale-out --service tidb --count 1", arg0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var reqs []ScaleOutRequest
 			switch {
@@ -367,13 +369,15 @@ func newScaleOut(state *cliState) *cobra.Command {
 }
 
 func newScaleIn(state *cliState) *cobra.Command {
+	arg0 := playgroundCLIArg0()
+
 	var names []string
 	var pids []int
 
 	cmd := &cobra.Command{
 		Use:     "scale-in",
 		Short:   "Scale in one or more instances by name or pid",
-		Example: "  tiup playground-ng scale-in --name tidb-0\n  tiup playground-ng scale-in --pid 12345",
+		Example: fmt.Sprintf("  %s scale-in --name tidb-0\n  %s scale-in --pid 12345", arg0, arg0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(names) == 0 && len(pids) == 0 {
 				return cmd.Help()
@@ -412,8 +416,8 @@ func newScaleIn(state *cliState) *cobra.Command {
 		Hidden: false,
 	}
 
-	cmd.Flags().StringSliceVar(&names, "name", nil, "Instance name(s) to scale in (get from tiup playground-ng display)")
-	cmd.Flags().IntSliceVar(&pids, "pid", nil, "Instance PID(s) to scale in (get from tiup playground-ng display --verbose)")
+	cmd.Flags().StringSliceVar(&names, "name", nil, fmt.Sprintf("Instance name(s) to scale in (get from %s display)", arg0))
+	cmd.Flags().IntSliceVar(&pids, "pid", nil, fmt.Sprintf("Instance PID(s) to scale in (get from %s display --verbose)", arg0))
 
 	return cmd
 }
@@ -441,11 +445,13 @@ func newDisplay(state *cliState) *cobra.Command {
 }
 
 func newStop(state *cliState) *cobra.Command {
+	arg0 := playgroundCLIArg0()
+
 	var timeoutSec int
 	cmd := &cobra.Command{
 		Use:     "stop",
 		Short:   "Stop a running playground",
-		Example: "tiup playground-ng stop --tag my-cluster",
+		Example: fmt.Sprintf("%s stop --tag my-cluster", arg0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if timeoutSec <= 0 {
 				timeoutSec = 60
@@ -567,7 +573,7 @@ func printDisplayFailureWarning(out io.Writer, err error) {
 
 	var lines []string
 	if shouldSuggestPlaygroundNotRunning(err) {
-		lines = append(lines, colorstr.Sprintf("[bold]Looks like no tiup playground-ng is running?[reset]"))
+		lines = append(lines, colorstr.Sprintf("[bold]Looks like no %s is running?[reset]", playgroundCLIArg0()))
 	}
 	lines = append(lines, fmt.Sprintf("Error: %v", err))
 
