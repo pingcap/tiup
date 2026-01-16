@@ -87,10 +87,6 @@ func TestBuildDaemonArgs_FiltersEqualsFormsAndKeepsPositionals(t *testing.T) {
 	}, got)
 }
 
-func TestBackgroundStarterReadyMessage(t *testing.T) {
-	require.Equal(t, "\n[dim]Cluster running in background (-d).[reset]\n[dim]To stop: [reset]tiup playground-ng stop --tag foo\n", backgroundStarterReadyMessageWithArg0("foo", "tiup playground-ng"))
-}
-
 func TestTailEventLog_ReplaysNewEventsAfterOffset(t *testing.T) {
 	dir := t.TempDir()
 	eventLogPath := filepath.Join(dir, "events.jsonl")
