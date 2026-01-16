@@ -61,10 +61,22 @@ func OsArgs() string {
 
 // OsArgs0 return the command name that user inputs, e.g. tiup, or tiup cluster.
 func OsArgs0() string {
-	if strings.Contains(args()[0], " ") {
-		return args()[0]
+	a0 := args()[0]
+	if strings.Contains(a0, " ") {
+		return a0
 	}
-	return filepath.Base(args()[0])
+	// If users invoke the binary via a path (relative or absolute), keep it so
+	// the rendered usage/help is copy-pasteable (e.g. `bin/tiup-playground-ng`).
+	//
+	// filepath.Base would drop the path prefix and make the hint inaccurate.
+	if strings.Contains(a0, string(os.PathSeparator)) {
+		return a0
+	}
+	// Accept Unix-style separators on Windows too (users may run `foo/bar.exe`).
+	if os.PathSeparator != '/' && strings.Contains(a0, "/") {
+		return a0
+	}
+	return filepath.Base(a0)
 }
 
 func init() {

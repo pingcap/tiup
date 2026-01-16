@@ -400,6 +400,15 @@ Examples:
 	tui.AddColorFunctionsForCobra()
 	tui.BeautifyCobraUsageAndHelp(rootCmd)
 
+	// Cobra's default version flag uses the command name derived from `Use`,
+	// which is the binary name (e.g. tiup-playground-ng). For standalone runs we
+	// want argv0 (e.g. bin/tiup-playground-ng); for TiUP component mode we want
+	// `tiup playground-ng[:<ver>]`.
+	rootCmd.InitDefaultVersionFlag()
+	if f := rootCmd.Flags().Lookup("version"); f != nil {
+		f.Usage = fmt.Sprintf("version for %s", arg0)
+	}
+
 	rootCmd.Flags().StringVar(&state.options.ShOpt.Mode, "mode", "tidb", fmt.Sprintf("%s mode: '%s', '%s', '%s', '%s', '%s'", arg0, proc.ModeNormal, proc.ModeCSE, proc.ModeNextGen, proc.ModeDisAgg, proc.ModeTiKVSlim))
 	rootCmd.Flags().StringVar(&state.options.ShOpt.PDMode, "pd.mode", "pd", "PD mode: 'pd', 'ms'")
 	rootCmd.Flags().StringVar(&state.options.ShOpt.CSE.S3Endpoint, "cse.s3_endpoint", "http://127.0.0.1:9000",
