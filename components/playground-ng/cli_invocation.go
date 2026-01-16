@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/pingcap/tiup/pkg/localdata"
 )
@@ -50,4 +51,26 @@ func playgroundCLICommand(subcommand string) string {
 		return arg0
 	}
 	return arg0 + " " + subcommand
+}
+
+func rewriteCobraUseLine(arg0, useLine string) string {
+	if arg0 == "" {
+		return useLine
+	}
+	i := strings.Index(useLine, " ")
+	if i <= 0 {
+		return arg0
+	}
+	return arg0 + useLine[i:]
+}
+
+func rewriteCobraCommandPath(arg0, commandPath string) string {
+	if arg0 == "" {
+		return commandPath
+	}
+	i := strings.Index(commandPath, " ")
+	if i <= 0 {
+		return arg0
+	}
+	return arg0 + commandPath[i:]
 }

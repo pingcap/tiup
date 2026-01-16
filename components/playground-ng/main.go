@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/fatih/color"
+	cc "github.com/ivanpirog/coloredcobra"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/playground-ng/proc"
 	"github.com/pingcap/tiup/pkg/environment"
@@ -397,13 +398,40 @@ Examples:
 		color.NoColor = true
 	}
 
-	tui.AddColorFunctionsForCobra()
-	tui.BeautifyCobraUsageAndHelp(rootCmd)
+	cobra.AddTemplateFunc("pgCmdLine", func(useLine string) string {
+		return rewriteCobraUseLine(arg0, useLine)
+	})
+	cobra.AddTemplateFunc("pgCmdPath", func(commandPath string) string {
+		return rewriteCobraCommandPath(arg0, commandPath)
+	})
+
+	usageTpl := rootCmd.UsageTemplate()
+	usageTpl = strings.ReplaceAll(usageTpl, "{{.UseLine}}", "{{pgCmdLine .UseLine}}")
+	usageTpl = strings.ReplaceAll(usageTpl, "{{.CommandPath}}", "{{pgCmdPath .CommandPath}}")
+	rootCmd.SetUsageTemplate(usageTpl)
+
+	cc.Init(&cc.Config{
+		RootCmd:  rootCmd,
+		Headings: cc.HiCyan + cc.Bold + cc.Underline,
+		Commands: cc.HiYellow + cc.Bold,
+		Example:  cc.Italic,
+		ExecName: cc.Bold,
+		Flags:    cc.Bold,
+	})
+
+	usageTpl = rootCmd.UsageTemplate()
+	usageTpl = strings.ReplaceAll(usageTpl, "(CommandStyle .CommandPath)", "(CommandStyle (pgCmdPath .CommandPath))")
+	rootCmd.SetUsageTemplate(usageTpl)
 
 	// Cobra's default version flag uses the command name derived from `Use`,
 	// which is the binary name (e.g. tiup-playground-ng). For standalone runs we
 	// want argv0 (e.g. bin/tiup-playground-ng); for TiUP component mode we want
 	// `tiup playground-ng[:<ver>]`.
+	rootCmd.InitDefaultHelpFlag()
+	if f := rootCmd.Flags().Lookup("help"); f != nil {
+		f.Usage = fmt.Sprintf("help for %s", arg0)
+	}
+
 	rootCmd.InitDefaultVersionFlag()
 	if f := rootCmd.Flags().Lookup("version"); f != nil {
 		f.Usage = fmt.Sprintf("version for %s", arg0)
