@@ -126,22 +126,29 @@ func execute(state *cliState) error {
 
 	rootCmd := &cobra.Command{
 		Use: fmt.Sprintf("%s [version]", filepath.Base(os.Args[0])),
-		Long: fmt.Sprintf(`Bootstrap a TiDB cluster in your local host, the latest release version will be chosen
-if you don't specified a version.
+		Long: colorstr.Sprintf(`>_ [bold]TiUP Playground[reset] [dim](ng)[reset]
 
-Examples:
-  $ %[1]s nightly                         # Start a TiDB nightly version local cluster
-  $ %[1]s v5.0.1 --db 3 --pd 3 --kv 3     # Start a local cluster with 10 nodes
-  $ %[1]s nightly --without-monitor       # Start a local cluster and disable monitor system
-  $ %[1]s --pd.config ~/config/pd.toml    # Start a local cluster with specified configuration file
-  $ %[1]s --db.binpath /xx/tidb-server    # Start a local cluster with component binary path
-  $ %[1]s --tag xx                        # Start a local cluster with data dir named 'xx' and uncleaned after exit
-  $ %[1]s -d --tag xx                     # Start a local cluster in background (daemon mode)
-  $ %[1]s stop --tag xx                   # Stop the cluster started with --tag xx
-  $ %[1]s stop-all                        # Stop all running playground-ng instances
-  $ %[1]s ps                              # List all running playground-ng instances
-  $ %[1]s --mode tikv-slim                # Start a local tikv only cluster (No TiDB or TiFlash Available)
-  $ %[1]s --mode tikv-slim --kv 3 --pd 3  # Start a local tikv only cluster with 6 nodes`, arg0),
+Start and manage a TiDB cluster locally for development.
+
+[bold]Examples:[reset]
+
+  [dim]Start a cluster using latest release version:[reset]
+  [cyan]%[1]s[reset]
+
+  [dim]Start a nightly cluster:[reset]
+  [cyan]%[1]s nightly[reset]
+
+  [dim]Start a TiKV-only cluster:[reset]
+  [cyan]%[1]s --mode tikv-slim[reset]
+
+  [dim]Start a cluster and run in background:[reset]
+  [cyan]%[1]s -d[reset]
+
+  [dim]Start a tagged cluster (data will not be cleaned after exit):[reset]
+  [cyan]%[1]s --tag foo[reset]
+
+  [dim]Stop the specified cluster:[reset]
+  [cyan]%[1]s stop --tag foo[reset]`, arg0),
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Version:       version.NewTiUPVersion().String(),
@@ -412,11 +419,8 @@ Examples:
 
 	cc.Init(&cc.Config{
 		RootCmd:  rootCmd,
-		Headings: cc.HiCyan + cc.Bold + cc.Underline,
-		Commands: cc.HiYellow + cc.Bold,
-		Example:  cc.Italic,
-		ExecName: cc.Bold,
-		Flags:    cc.Bold,
+		Headings: cc.Bold,
+		Commands: cc.Cyan + cc.Bold,
 	})
 
 	usageTpl = rootCmd.UsageTemplate()

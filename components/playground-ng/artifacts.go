@@ -94,7 +94,7 @@ func (p *Playground) printClusterInfoCallout(tidbSucc, tiproxySucc []string) boo
 	if p.destroyDataAfterExit {
 		blocks = append(blocks, block{
 			colorstr.Sprintf("[dim]Cluster data will be destroyed after exit.[reset]"),
-			colorstr.Sprintf("[dim]Use [reset][bold]--tag <name>[reset][dim] to persist data after exit.[reset]"),
+			colorstr.Sprintf("[dim]Use [bold]--tag <name>[reset][dim] to persist data after exit.[reset]"),
 		})
 	}
 

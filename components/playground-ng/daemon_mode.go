@@ -149,7 +149,7 @@ func runBackgroundStarter(state *cliState) error {
 				}
 
 				out := tuiv2output.Stdout.Get()
-				colorstr.Fprintf(out, fmt.Sprintf("\n[dim]Cluster running in background (-d).[reset]\n[dim]To stop: [reset]%s stop --tag %s\n", state.tag, playgroundCLIArg0()))
+				colorstr.Fprintf(out, fmt.Sprintf("\n[dim]Cluster running in background ([bold]-d[reset][dim]).[reset]\n[dim]To stop: [bold]%s stop --tag %s[reset]\n", playgroundCLIArg0(), state.tag))
 				return nil
 			}
 		}
