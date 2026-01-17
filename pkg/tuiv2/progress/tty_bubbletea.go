@@ -236,6 +236,12 @@ func (m ttyModel) snapshotLines(g *groupState, freezeSpinner bool) []string {
 	if g == nil || m.ui == nil {
 		return nil
 	}
+	// Keep snapshot behavior consistent with the Active area render: groups with
+	// no tasks are not meaningful to users, and sealing them would otherwise
+	// produce "ghost" stages on interrupts (e.g. Ctrl+C in playground).
+	if len(g.tasks) == 0 {
+		return nil
+	}
 	width := m.width
 	if width <= 0 {
 		width = 80

@@ -1,6 +1,7 @@
 package progress
 
 import (
+	"io"
 	"os"
 	"testing"
 	"time"
@@ -53,4 +54,30 @@ func TestTTYModel_PrintOrder_GroupSnapshotAndPrintLines(t *testing.T) {
 	require.Contains(t, ansi.Strip(printed[1]), startTitle)
 	require.Equal(t, "\r"+ansi.EraseLineRight, printed[2])
 	require.Equal(t, "\r"+clusterInfoLine+ansi.EraseLineRight, printed[3])
+}
+
+func TestTTYModel_SealEmptyGroup_DoesNotPrintSnapshot(t *testing.T) {
+	now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	ui := &UI{
+		out: io.Discard,
+		now: func() time.Time { return now },
+	}
+
+	m := newTTYModel(ui)
+
+	apply := func(e Event) []string {
+		ackCh := make(chan ttyEventAck, 1)
+		next, _ := m.Update(ttyEventMsg{Event: e, Ack: ackCh})
+		m = next.(ttyModel)
+		ack := <-ackCh
+		return ack.Prints
+	}
+
+	title := "Download components"
+	printed := apply(Event{Type: EventGroupAdd, At: now, GroupID: 1, Title: &title})
+	require.Empty(t, printed)
+
+	finished := false
+	printed = apply(Event{Type: EventGroupClose, At: now.Add(time.Second), GroupID: 1, Finished: &finished})
+	require.Empty(t, printed, "sealed group without tasks should not produce a snapshot")
 }
