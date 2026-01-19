@@ -158,6 +158,20 @@ func (p *Playground) controllerLoop(ctx context.Context) {
 		}
 	}()
 	for {
+		// Controller cancel is used to initiate shutdown. Drain any already
+		// queued events (e.g. a force-kill request sent right after Ctrl+C)
+		// before exiting, otherwise they may be lost due to select randomness.
+		if ctx.Err() != nil {
+			for {
+				select {
+				case evt := <-p.evtCh:
+					p.handleEvent(&state, evt)
+				default:
+					return
+				}
+			}
+		}
+
 		select {
 		case req := <-p.cmdReqCh:
 			var buf bytes.Buffer
@@ -166,7 +180,7 @@ func (p *Playground) controllerLoop(ctx context.Context) {
 		case evt := <-p.evtCh:
 			p.handleEvent(&state, evt)
 		case <-ctx.Done():
-			return
+			// See the ctx.Err() drain at the beginning of the next loop.
 		}
 	}
 }
@@ -539,6 +553,13 @@ func (p *Playground) requestStopInternal() {
 
 func (p *Playground) requestForceKill() {
 	if p == nil {
+		return
+	}
+	// When shutdown is already in progress (e.g. second Ctrl+C), do not depend on
+	// the controller loop to process forceKillEvent. The controller may have been
+	// canceled already, and it can exit before draining queued events.
+	if p.Stopping() {
+		p.forceKillShutdown()
 		return
 	}
 	if !p.emitEvent(forceKillEvent{}) {

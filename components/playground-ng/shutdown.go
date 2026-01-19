@@ -105,7 +105,10 @@ func (p *Playground) forceKillShutdownWithControllerState(state *controllerState
 		shutdownGroup.SetTitle("Shutdown (force killed)")
 	}
 
-	go p.terminateForceKill(p.shutdownProcRecords)
+	// Force kill is expected to take effect immediately (e.g. double Ctrl+C).
+	// Do it synchronously so we don't accidentally wait for graceful SIGTERM
+	// completion just because the scheduler hasn't run the kill goroutine yet.
+	p.terminateForceKill(p.shutdownProcRecords)
 }
 
 func (p *Playground) addWaitProc(inst proc.Process) chan error {
