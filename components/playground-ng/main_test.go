@@ -117,6 +117,13 @@ func TestShouldIgnoreSubcommandInstanceDataDir(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(dir, ".DS_Store"), []byte(""), 0o644))
 		require.True(t, shouldIgnoreSubcommandInstanceDataDir(dir, dataParent))
 	})
+
+	t.Run("OnlyTiupProcessMeta", func(t *testing.T) {
+		dir := filepath.Join(dataParent, "V8CMwY9")
+		require.NoError(t, os.MkdirAll(dir, 0o755))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, localdata.MetaFilename), []byte("{}"), 0o644))
+		require.True(t, shouldIgnoreSubcommandInstanceDataDir(dir, dataParent))
+	})
 }
 
 func TestShouldDestroyDataAfterExit(t *testing.T) {

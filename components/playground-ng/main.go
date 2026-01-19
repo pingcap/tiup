@@ -117,6 +117,48 @@ func printInterrupt(ui *progressv2.UI, sig syscall.Signal) {
 	colorstr.Fprintf(ui.Writer(), "[red][bold]%s[reset]\n", msg)
 }
 
+func startPlaygroundSignalHandler(p *Playground, cancelBoot context.CancelCauseFunc, booted, sigReceived *uint32) {
+	if p == nil {
+		return
+	}
+
+	sc := make(chan os.Signal, 2)
+	signal.Notify(sc,
+		syscall.SIGHUP,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+		syscall.SIGQUIT,
+	)
+
+	go func() {
+		defer signal.Stop(sc)
+
+		stopRequested := false
+		for {
+			sig := (<-sc).(syscall.Signal)
+			if sigReceived != nil {
+				atomic.StoreUint32(sigReceived, 1)
+			}
+
+			// If bootCluster is not done we just cancel context to make it
+			// clean up and return ASAP (including interrupting downloads).
+			if booted != nil && cancelBoot != nil && atomic.LoadUint32(booted) == 0 {
+				cancelBoot(nil)
+			}
+
+			// If we're already stopping (either due to a previous signal or a
+			// non-signal stop request), treat subsequent signals as a force kill
+			// request.
+			if stopRequested || p.Stopping() {
+				p.requestForceKill()
+				continue
+			}
+			stopRequested = true
+			p.requestStopSignal(sig)
+		}
+	}()
+}
+
 func execute(state *cliState) error {
 	if state == nil {
 		state = newCLIState()
@@ -317,30 +359,7 @@ Start and manage a TiDB cluster locally for development.
 			}
 			environment.SetGlobalEnv(env)
 
-			go func() {
-				sc := make(chan os.Signal, 1)
-				signal.Notify(sc,
-					syscall.SIGHUP,
-					syscall.SIGINT,
-					syscall.SIGTERM,
-					syscall.SIGQUIT,
-				)
-
-				sig := (<-sc).(syscall.Signal)
-				atomic.StoreUint32(&sigReceived, 1)
-
-				// If bootCluster is not done we just cancel context to make it
-				// clean up and return ASAP (including interrupting downloads).
-				if atomic.LoadUint32(&booted) == 0 {
-					cancel(nil)
-				}
-				p.requestStopSignal(sig)
-				// If user try double ctrl+c, force quit
-				sig2 := (<-sc).(syscall.Signal)
-				if sig2 == syscall.SIGINT {
-					p.requestForceKill()
-				}
-			}()
+			startPlaygroundSignalHandler(p, cancel, &booted, &sigReceived)
 
 			bootErr := p.bootCluster(ctx, &state.options)
 			if bootErr != nil {
@@ -582,7 +601,10 @@ func shouldIgnoreSubcommandInstanceDataDir(instanceDir, dataParentDir string) bo
 	}
 	for _, ent := range entries {
 		name := ent.Name()
-		if name == "" || name == ".DS_Store" {
+		// TiUP runner may write the process meta file into TIUP_INSTANCE_DATA_DIR
+		// before the component inspects the directory. Ignore it so subcommands
+		// without an explicit --tag can still auto-discover running instances.
+		if name == "" || name == ".DS_Store" || name == localdata.MetaFilename {
 			continue
 		}
 		return false
