@@ -42,10 +42,7 @@ var servicePreRunHandlers = map[proc.ServiceID]preRunHandler{
 
 // maxParallelComponentDownloads caps the number of concurrent component
 // downloads during boot.
-//
-// This is intentionally a constant because the product requirement is "max 8"
-// (and the UI is expected to show up to 8 in-flight downloads at a time).
-const maxParallelComponentDownloads = 8
+const maxParallelComponentDownloads = 4
 
 // Download installs components required by the boot plan.
 //
