@@ -689,6 +689,18 @@ type repoDownloadProgress struct {
 	latestSize   int64
 }
 
+// Clone returns an independent progress adapter instance.
+//
+// repository.DownloadProgress only supports one active download, and
+// repoDownloadProgress has mutable per-download state (`task`, `byURL`,
+// throttling fields). When boot downloads are parallelized, sharing a single
+// instance would cause different downloads to race on that state and corrupt
+// the UI (mixed progress, flicker, wrong task attribution).
+//
+// The clone shares the `expected` task map with the original intentionally:
+// it is populated once via SetExpectedDownloads before downloads start and is
+// read-only afterwards. Reusing the same *progressv2.Task pointers is safe
+// because Task is an emit-only handle and the UI loop owns the render state.
 func (p *repoDownloadProgress) Clone() *repoDownloadProgress {
 	if p == nil {
 		return nil

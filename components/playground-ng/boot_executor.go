@@ -40,8 +40,40 @@ var servicePreRunHandlers = map[proc.ServiceID]preRunHandler{
 	},
 }
 
+// maxParallelComponentDownloads caps the number of concurrent component
+// downloads during boot.
+//
+// This is intentionally a constant because the product requirement is "max 8"
+// (and the UI is expected to show up to 8 in-flight downloads at a time).
 const maxParallelComponentDownloads = 8
 
+// Download installs components required by the boot plan.
+//
+// This implementation is intentionally more complex than a simple loop calling
+// src.EnsureInstalled().
+//
+// Background / constraints:
+//   - The repository layer reports progress via repository.DownloadProgress which
+//     only models a *single* active download (Start/SetCurrent/Finish). Our UI
+//     adapter (repoDownloadProgress) also keeps mutable "current download" state
+//     (e.g. `task`, throttling fields).
+//   - To show multiple downloads concurrently in the TUI we need *one progress
+//     instance per download*, otherwise different downloads would race on the
+//     shared state and the UI would mix/flicker.
+//   - envComponentSource.EnsureInstalled delegates to env.V1Repository().UpdateComponents,
+//     which is primarily designed for sequential installation and shares a single
+//     mirror/progress instance internally. Simply calling it concurrently would
+//     not yield the desired UI and would also introduce unnecessary contention
+//     around manifest updates.
+//
+// Approach:
+//   - Prefetch version items (URL + SHA256) serially, so manifest fetch/update
+//     happens deterministically and without concurrent writes to local manifests.
+//   - Download + verify + untar in parallel with an errgroup limit, using a fresh
+//     mirror/progress instance per goroutine.
+//
+// Note: this logic intentionally lives in playground-ng to avoid invasive
+// changes to shared pkg/repository APIs.
 func (e *bootExecutor) Download(ctx context.Context, plan BootPlan) error {
 	if e == nil || e.src == nil {
 		return errors.New("component source not initialized")
@@ -300,6 +332,17 @@ type downloadInstallOptions struct {
 	progress          repository.DownloadProgress
 }
 
+// downloadAndInstallComponent is a minimal, playground-ng-local
+// reimplementation of the "download + verify + (optional) untar" part of
+// repository.UpdateComponents.
+//
+// It exists because parallel boot downloads need:
+// - per-download progress reporters (DownloadProgress is single-task), and
+// - per-download mirror instances (each mirror has its own tempdir/progress),
+// without expanding shared pkg/repository APIs just for playground-ng.
+//
+// It relies on ComponentVersion() having been called earlier so the local
+// component manifest exists (for later BinaryPath resolution via Entry).
 func downloadAndInstallComponent(ctx context.Context, mirrorSource string, profile *localdata.Profile, d preparedDownload, opt downloadInstallOptions) error {
 	if ctx == nil {
 		ctx = context.Background()
@@ -385,6 +428,11 @@ func verifySHA256(path string, expected string) error {
 	return nil
 }
 
+// normalizeDownloadPlans trims/filters and de-duplicates download plans.
+//
+// Boot planning can produce multiple service instances that depend on the same
+// component@version. Downloading the same tarball more than once would waste
+// bandwidth and also makes the progress UI misleading.
 func normalizeDownloadPlans(plans []DownloadPlan) []DownloadPlan {
 	if len(plans) == 0 {
 		return nil

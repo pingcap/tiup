@@ -37,6 +37,10 @@ After making changes, ensure build and lint pass before committing.
 - **Avoid over-abstraction for tests**: Prefer simple policy knobs/configuration to stabilize tests over introducing heavy test-only injection layers. Unit-test OS-dependent helpers separately.
 - **Use `testify/require` for assertions**: Prefer `require.Equal`/`require.NoError`/`require.Contains` etc over hand-written assertion blocks.
 
+### Documentation and Rationale
+
+- **Explain non-obvious complexity**: If a change introduces logic that looks “overly complex”, add a short but explicit comment near the code describing the constraint that forced it, why a simpler approach does not work (or what would break), and what would need to change to make simplification safe later.
+
 ### DRY and Structural Organization
 
 - **DRY**: Don’t copy and paste large blocks of identical logic; wherever `for` loops/table-driven approaches/unified helpers can be used, duplication must be eliminated.

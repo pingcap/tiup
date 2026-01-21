@@ -99,6 +99,12 @@ func (p *Playground) terminalWriter() io.Writer {
 	return tuiv2output.Stdout.Get()
 }
 
+// downloadProgressFactory returns a factory that creates a fresh progress
+// reporter for each concurrent download.
+//
+// We intentionally return a factory instead of exposing `p.downloadProgress`
+// directly because repoDownloadProgress keeps mutable "current download" state.
+// Parallel downloads must use independent instances (see repoDownloadProgress.Clone).
 func (p *Playground) downloadProgressFactory() func() repository.DownloadProgress {
 	if p == nil {
 		return nil

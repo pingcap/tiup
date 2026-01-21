@@ -33,6 +33,14 @@ Fight entropy. Leave the codebase better than you found it.
 - **Keep component code cohesive**: Try to keep `tiflash.go`/`tidb.go`/`tikv.go` to one file each (extra `*_config.go` files are allowed). Avoid a scattered structure like “5 files each mixing tiflash/tidb/tikv”.
 - **Prefer a coarse-grained file layout**: In `components/playground-ng` (top-level), `components/playground-ng/proc` and `components/playground-ng/service`, prefer a few semantically cohesive files over many tiny ones. Avoid < 100 LOC files unless they are required (e.g. OS/build-tag specific files); aim for ~200-700 LOC per file when it keeps readability. However, don't merge multiple unrelated components/services into one file.
 
+### Documentation (Rationale)
+
+- **Explain non-obvious complexity**: If a change introduces complexity due to constraints (shared pkg API limitations, progress UI behavior, concurrency model, etc.), add an explicit comment near the code describing:
+  - what constraint forced the shape,
+  - why a simpler approach does not work (or what would break),
+  - what invariants/assumptions the code relies on, and
+  - what would need to change to make simplification safe later.
+
 ### Concurrency Model (Actor)
 
 - **Single owner**: Playground’s runtime state (e.g., `procs`/`expectedExit`/service count statistics, etc.) is exclusively owned by the controller goroutine. Other goroutines may only interact with it through the event channel (`EmitEvent`/`doCommand`).
