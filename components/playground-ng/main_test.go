@@ -360,6 +360,38 @@ func TestRepoDownloadProgress_Start_UnexpectedDownloadCreatesNewTask(t *testing.
 	require.NotSame(t, expected, got)
 }
 
+func TestRepoDownloadProgress_Clone_HasIndependentState(t *testing.T) {
+	g := &progressv2.Group{}
+	progress := newRepoDownloadProgress(context.Background(), g)
+
+	p, ok := progress.(*repoDownloadProgress)
+	require.True(t, ok)
+
+	p.SetExpectedDownloads([]DownloadPlan{
+		{ComponentID: "tidb", ResolvedVersion: "v7.1.0"},
+	})
+
+	clone := p.Clone()
+	require.NotNil(t, clone)
+
+	p.mu.Lock()
+	require.Nil(t, p.task)
+	expected := p.expected["tidb@v7.1.0"]
+	p.mu.Unlock()
+	require.NotNil(t, expected)
+
+	clone.Start("https://example.com/tidb-v7.1.0-linux-amd64.tar.gz", 123)
+
+	clone.mu.Lock()
+	got := clone.task
+	clone.mu.Unlock()
+	require.Same(t, expected, got)
+
+	p.mu.Lock()
+	require.Nil(t, p.task)
+	p.mu.Unlock()
+}
+
 func TestRepoDownloadProgress_Finish_WhenCanceled_MarksCanceled(t *testing.T) {
 	f, err := os.CreateTemp("", "tiup-playground-download-progress-*.log")
 	require.NoError(t, err)

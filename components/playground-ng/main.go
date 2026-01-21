@@ -689,6 +689,28 @@ type repoDownloadProgress struct {
 	latestSize   int64
 }
 
+func (p *repoDownloadProgress) Clone() *repoDownloadProgress {
+	if p == nil {
+		return nil
+	}
+
+	p.mu.Lock()
+	expected := p.expected
+	p.mu.Unlock()
+
+	now := p.now
+	if now == nil {
+		now = time.Now
+	}
+
+	return &repoDownloadProgress{
+		ctx:      p.ctx,
+		group:    p.group,
+		expected: expected,
+		now:      now,
+	}
+}
+
 func (p *repoDownloadProgress) SetExpectedDownloads(downloads []DownloadPlan) {
 	if p == nil || p.group == nil {
 		return

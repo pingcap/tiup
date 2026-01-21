@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -15,6 +16,8 @@ import (
 )
 
 type recordingExecutorSource struct {
+	mu sync.Mutex
+
 	ensureInstalledCalls []string
 	binaryPathCalls      []string
 
@@ -30,18 +33,69 @@ func (s *recordingExecutorSource) PlanInstall(proc.ServiceID, string, string, bo
 }
 
 func (s *recordingExecutorSource) EnsureInstalled(component, resolved string) error {
+	s.mu.Lock()
 	s.ensureInstalledCalls = append(s.ensureInstalledCalls, component+"@"+resolved)
+	s.mu.Unlock()
 	return nil
 }
 
 func (s *recordingExecutorSource) BinaryPath(component, resolved string) (string, error) {
 	_ = resolved
+	s.mu.Lock()
 	s.binaryPathCalls = append(s.binaryPathCalls, component)
+	s.mu.Unlock()
 	if s.binaryPathByComponent != nil {
 		if path := s.binaryPathByComponent[component]; path != "" {
 			return path, nil
 		}
 	}
+	return filepath.Join("/bin", component), nil
+}
+
+type blockingDownloadSource struct {
+	ctx context.Context
+
+	entered chan struct{}
+	release chan struct{}
+
+	mu      sync.Mutex
+	current int
+	max     int
+}
+
+func (s *blockingDownloadSource) ResolveVersion(_ string, constraint string) (string, error) {
+	return constraint, nil
+}
+
+func (s *blockingDownloadSource) PlanInstall(proc.ServiceID, string, string, bool) (*DownloadPlan, error) {
+	return nil, nil
+}
+
+func (s *blockingDownloadSource) EnsureInstalled(string, string) error {
+	s.mu.Lock()
+	s.current++
+	if s.current > s.max {
+		s.max = s.current
+	}
+	s.mu.Unlock()
+
+	s.entered <- struct{}{}
+
+	defer func() {
+		s.mu.Lock()
+		s.current--
+		s.mu.Unlock()
+	}()
+
+	select {
+	case <-s.release:
+		return nil
+	case <-s.ctx.Done():
+		return s.ctx.Err()
+	}
+}
+
+func (s *blockingDownloadSource) BinaryPath(component, _ string) (string, error) {
 	return filepath.Join("/bin", component), nil
 }
 
@@ -96,8 +150,8 @@ func TestBootExecutor_Download_EnsuresInstalled(t *testing.T) {
 		},
 	}
 
-	require.NoError(t, executor.Download(plan))
-	require.Equal(t, []string{"tidb@v1.0.0", "tikv@v1.0.0"}, src.ensureInstalledCalls)
+	require.NoError(t, executor.Download(context.Background(), plan))
+	require.ElementsMatch(t, []string{"tidb@v1.0.0", "tikv@v1.0.0"}, src.ensureInstalledCalls)
 }
 
 func TestBootExecutor_AddProcs_CachesBinaryPathByComponentVersion(t *testing.T) {
@@ -238,6 +292,54 @@ func TestBootExecutor_AddProcs_ResolvesRequiredBinaryPath(t *testing.T) {
 	require.Equal(t, tikvWorker, workerProcs[0].Info().BinPath)
 }
 
+func TestBootExecutor_Download_RespectsConcurrencyLimit(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	t.Cleanup(cancel)
+
+	total := maxParallelComponentDownloads * 3
+	entered := make(chan struct{}, total)
+	release := make(chan struct{})
+
+	src := &blockingDownloadSource{
+		ctx:     ctx,
+		entered: entered,
+		release: release,
+	}
+	executor := newBootExecutor(nil, src)
+
+	plan := BootPlan{Downloads: make([]DownloadPlan, 0, total)}
+	for i := 0; i < total; i++ {
+		plan.Downloads = append(plan.Downloads, DownloadPlan{
+			ComponentID:     "comp-" + strconv.Itoa(i),
+			ResolvedVersion: "v1.0.0",
+		})
+	}
+
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- executor.Download(ctx, plan)
+	}()
+
+	for i := 0; i < maxParallelComponentDownloads; i++ {
+		select {
+		case <-entered:
+		case <-ctx.Done():
+			require.FailNow(t, "downloads did not reach concurrency limit")
+		}
+	}
+
+	src.mu.Lock()
+	maxSeen := src.max
+	current := src.current
+	src.mu.Unlock()
+
+	require.Equal(t, maxParallelComponentDownloads, current)
+	require.LessOrEqual(t, maxSeen, maxParallelComponentDownloads)
+
+	close(release)
+	require.NoError(t, <-errCh)
+}
+
 func TestBootExecutor_ExecuteBootPlan_DownloadPreRunAddProcsStart(t *testing.T) {
 	oldStdout := tuiv2output.Stdout.Get()
 	tuiv2output.Stdout.Set(io.Discard)
@@ -309,8 +411,8 @@ func TestBootExecutor_ExecuteBootPlan_DownloadPreRunAddProcsStart(t *testing.T) 
 		},
 	}
 
-	require.NoError(t, executor.Download(plan))
-	require.Equal(t, []string{"prometheus@v1.0.0", "tiproxy@v1.0.0"}, src.ensureInstalledCalls)
+	require.NoError(t, executor.Download(context.Background(), plan))
+	require.ElementsMatch(t, []string{"prometheus@v1.0.0", "tiproxy@v1.0.0"}, src.ensureInstalledCalls)
 
 	require.NoError(t, executor.PreRun(context.Background(), plan))
 	_, err := os.Stat(filepath.Join(dir, "tiproxy.crt"))

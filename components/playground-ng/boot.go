@@ -539,7 +539,7 @@ func (p *Playground) bootCluster(ctx context.Context, options *BootOptions) (err
 	}
 
 	executor := newBootExecutor(p, src)
-	if err := executor.Download(plan); err != nil {
+	if err := executor.Download(ctx, plan); err != nil {
 		return err
 	}
 	if len(plan.Downloads) > 0 {
