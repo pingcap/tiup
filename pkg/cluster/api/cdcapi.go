@@ -366,6 +366,7 @@ func (c *CDCOpenAPIClient) CreateChangefeed(bucket, prefix, endpoint, accessKey,
 	}
 
 	sinkConfig := map[string]any{
+         // Avoid encountering the issue of date in the CDC output path. https://github.com/pingcap/ticdc/issues/4073
 		"date-separator": "none",
 	}
 
