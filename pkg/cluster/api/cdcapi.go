@@ -365,9 +365,15 @@ func (c *CDCOpenAPIClient) CreateChangefeed(bucket, prefix, endpoint, accessKey,
 		return err != nil && !strings.Contains(err.Error(), "bad request when creating changefeed")
 	}
 
+	sinkConfig := map[string]any{
+         // Avoid encountering the issue of date in the CDC output path. https://github.com/pingcap/ticdc/issues/4073
+		"date-separator": "none",
+	}
+
 	err := utils.RetryUntil(func() error {
 		cfg := map[string]any{
-			"sink_uri": sinkURI,
+			"sink_uri":    sinkURI,
+			"sink_config": sinkConfig,
 		}
 		body, err := json.Marshal(cfg)
 		if err != nil {
