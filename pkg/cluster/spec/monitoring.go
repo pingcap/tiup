@@ -63,7 +63,8 @@ type PrometheusSpec struct {
 	ScrapeInterval        string                 `yaml:"scrape_interval,omitempty" validate:"scrape_interval:editable"`
 	ScrapeTimeout         string                 `yaml:"scrape_timeout,omitempty" validate:"scrape_timeout:editable"`
 
-	AdditionalArgs []string `yaml:"additional_args,omitempty" validate:"additional_args:ignore"`
+	AdditionalArgs     []string       `yaml:"additional_args,omitempty" validate:"additional_args:ignore"`
+	NgMonitoringConfig map[string]any `yaml:"ng_monitoring_config,omitempty" validate:"ng_monitoring_config:ignore"`
 }
 
 // Remote prometheus remote config
@@ -486,24 +487,37 @@ func (i *MonitorInstance) InitConfig(
 	}
 
 	if spec.NgPort > 0 {
-		pds := []string{}
+		pdAddrs := []string{}
 		if servers, found := topoHasField("PDServers"); found {
 			for i := 0; i < servers.Len(); i++ {
 				pd := servers.Index(i).Interface().(*PDSpec)
-				pds = append(pds, fmt.Sprintf("\"%s\"", utils.JoinHostPort(pd.Host, pd.ClientPort)))
+				pdAddrs = append(pdAddrs, utils.JoinHostPort(pd.Host, pd.ClientPort))
 			}
 		}
-		ngcfg := &config.NgMonitoringConfig{
-			ClusterName:      clusterName,
-			Address:          utils.JoinHostPort(i.GetListenHost(), spec.NgPort),
-			AdvertiseAddress: utils.JoinHostPort(i.GetHost(), spec.NgPort),
-			PDAddrs:          strings.Join(pds, ","),
-			TLSEnabled:       enableTLS,
 
-			DeployDir: paths.Deploy,
-			DataDir:   paths.Data[0],
-			LogDir:    paths.Log,
+		// Build base ng-monitoring config as a map so user overrides via
+		// server_configs.ng_monitoring and per-instance ng_monitoring_config
+		// are merged on top (same pattern as PD/TiKV/TiDB).
+		baseConfig := map[string]any{
+			"address":           utils.JoinHostPort(i.GetListenHost(), spec.NgPort),
+			"advertise-address": utils.JoinHostPort(i.GetHost(), spec.NgPort),
+			"log.path":          paths.Log,
+			"log.level":         "INFO",
+			"pd.endpoints":      pdAddrs,
+			"storage.path":      paths.Data[0],
 		}
+		if enableTLS {
+			baseConfig["security.ca-path"] = fmt.Sprintf("%s/tls/ca.crt", paths.Deploy)
+			baseConfig["security.cert-path"] = fmt.Sprintf("%s/tls/prometheus.crt", paths.Deploy)
+			baseConfig["security.key-path"] = fmt.Sprintf("%s/tls/prometheus.pem", paths.Deploy)
+		}
+
+		// Gather global and per-instance ng-monitoring user config.
+		var globalNgConfig map[string]any
+		if s, ok := i.topo.(*Specification); ok {
+			globalNgConfig = s.ServerConfigs.NGMonitoring
+		}
+		userConfig := MergeConfig(globalNgConfig, spec.NgMonitoringConfig)
 
 		if servers, found := topoHasField("Monitors"); found {
 			for idx := 0; idx < servers.Len(); idx++ {
@@ -514,7 +528,11 @@ func (i *MonitorInstance) InitConfig(
 		}
 
 		fp = filepath.Join(paths.Cache, fmt.Sprintf("ngmonitoring_%s_%d.toml", i.GetHost(), i.GetPort()))
-		if err := ngcfg.ConfigToFile(fp); err != nil {
+		ngConf, err := Merge2Toml("ng_monitoring", baseConfig, userConfig)
+		if err != nil {
+			return err
+		}
+		if err := utils.WriteFile(fp, ngConf, 0755); err != nil {
 			return err
 		}
 		dst = filepath.Join(paths.Deploy, "conf", "ngmonitoring.toml")
