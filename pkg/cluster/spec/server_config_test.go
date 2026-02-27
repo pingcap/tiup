@@ -69,7 +69,7 @@ monitoring_servers:
 		"advertise-address": "10.0.1.21:12020",
 		"log.path":          "/tidb-deploy/prometheus-9090/log",
 		"log.level":         "INFO",
-		"pd.endpoints":      []string{"10.0.1.10:2379"},
+		"pd.endpoints":      []string{"10.0.1.10:2379", "10.0.1.11:2379"},
 		"storage.path":      "/tidb-data/prometheus-9090",
 	}
 
@@ -87,6 +87,9 @@ monitoring_servers:
 	require.Contains(t, tomlStr, `enable = true`)                   // from global
 	require.Contains(t, tomlStr, `data_retention_seconds = 259200`) // from per-instance
 	require.Contains(t, tomlStr, `address = "0.0.0.0:12020"`)       // from base
+
+	// pd.endpoints must be a TOML array of quoted strings (matches old template behavior)
+	require.Contains(t, tomlStr, `endpoints = ["10.0.1.10:2379", "10.0.1.11:2379"]`)
 }
 
 func TestGetValueFromPath(t *testing.T) {
