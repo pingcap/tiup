@@ -1,6 +1,5 @@
 Source: tiup
 Section: golang
-Priority: optional
 Maintainer: Debian Go Packaging Team <team+pkg-go@tracker.debian.org>
 Uploaders:
  Otto Kekäläinen <otto@debian.org>,
@@ -10,14 +9,12 @@ Build-Depends:
  dh-sequence-golang,
  golang-any,
  golang-etcd-server-dev,
- golang-github-alecthomas-chroma-dev,
  golang-github-appleboy-easyssh-proxy-dev,
  golang-github-asaskevich-eventbus-dev,
  golang-github-astroprofundis-sysinfo-dev,
  golang-github-cavaliergopher-grab-dev,
  golang-github-cheggaaa-pb.v3-dev,
  golang-github-creasty-defaults-dev,
- golang-github-dchest-bcrypt-pbkdf-dev,
  golang-github-docker-go-units-dev,
  golang-github-fatih-color-dev,
  golang-github-gibson042-canonicaljson-go-dev,
@@ -25,8 +22,6 @@ Build-Depends:
  golang-github-go-git-go-billy-dev,
  golang-github-go-sql-driver-mysql-dev,
  golang-github-gofrs-flock-dev,
- golang-github-golang-protobuf-1-5-dev,
- golang-github-google-shlex-dev,
  golang-github-google-uuid-dev,
  golang-github-gorilla-mux-dev,
  golang-github-jedib0t-go-pretty-dev,
@@ -41,7 +36,6 @@ Build-Depends:
  golang-github-pingcap-failpoint-dev,
  golang-github-pingcap-fn-dev,
  golang-github-pingcap-kvproto-dev,
- golang-github-pkg-errors-dev,
  golang-github-prometheus-client-model-dev,
  golang-github-prometheus-common-dev,
  golang-github-prometheus-prom2json-dev,
@@ -57,23 +51,16 @@ Build-Depends:
  golang-github-vishvananda-netlink-dev,
  golang-github-xo-dburl-dev,
  golang-github-xo-tblfmt-dev,
- golang-github-xo-terminfo-dev,
  golang-github-xo-usql-dev,
  golang-go.uber-atomic-dev,
  golang-go.uber-zap-dev,
- golang-golang-x-crypto-dev,
- golang-golang-x-mod-dev,
- golang-golang-x-sync-dev,
- golang-golang-x-sys-dev,
- golang-golang-x-term-dev,
- golang-google-grpc-dev,
+ golang-gogoprotobuf-dev,
  golang-gopkg-ini.v1-dev,
- golang-gopkg-vmihailenco-msgpack.v2-dev,
  golang-gopkg-yaml.v3-dev,
  golang-sslmate-src-go-pkcs12-dev,
  golang-toml-dev,
 Testsuite: autopkgtest-pkg-go
-Standards-Version: 4.7.2
+Standards-Version: 4.7.3
 Vcs-Browser: https://salsa.debian.org/go-team/packages/tiup
 Vcs-Git: https://salsa.debian.org/go-team/packages/tiup.git
 Homepage: https://github.com/pingcap/tiup
@@ -87,6 +74,8 @@ Depends:
  ${shlibs:Depends},
 Static-Built-Using:
  ${misc:Static-Built-Using},
+Built-Using:
+ ${misc:Built-Using},
 Description: Component manager for TiDB
  TiUP is a tool designed to manage TiDB components, providing an easy way to
  install, update, and maintain various components of the TiDB ecosystem. It

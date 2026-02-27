@@ -28,4 +28,4 @@ override_dh_auto_install:
 	(cd debian/tiup/usr/bin/ && for x in *; do mv $$x tiup-$$x; done; mv tiup-tiup tiup)
 
 %:
-	dh $@ --builddirectory=debian/.build/upstream --buildsystem=golang
+	dh $@ --builddirectory=debian/_build/upstream --buildsystem=golang

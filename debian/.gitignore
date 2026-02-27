@@ -2,7 +2,7 @@
 *.log
 *.substvars
 /.debhelper/
-/.build/
+/_build/
 /debhelper-build-stamp
 /files
 /tiup/
