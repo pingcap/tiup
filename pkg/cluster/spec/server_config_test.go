@@ -1,7 +1,6 @@
 package spec
 
 import (
-	"bytes"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -13,6 +12,8 @@ func TestMerge(t *testing.T) {
 server_configs:
   tidb:
     performance.feedback-probability: 12.0
+    log.level: 0.0
+    token-limit: 1000.1
 `)
 
 	topo := new(Specification)
@@ -20,16 +21,22 @@ server_configs:
 	err := yaml.Unmarshal(yamlData, topo)
 	require.NoError(t, err)
 
-	yamlData, err = yaml.Marshal(topo)
+	// Verify values are parsed as float64
+	require.Equal(t, float64(12.0), topo.ServerConfigs.TiDB["performance.feedback-probability"])
+	require.Equal(t, float64(0.0), topo.ServerConfigs.TiDB["log.level"])
+	require.Equal(t, float64(1000.1), topo.ServerConfigs.TiDB["token-limit"])
+
+	// Verify Marshal/Unmarshal round-trip works without error
+	_, err = yaml.Marshal(topo)
 	require.NoError(t, err)
-	decimal := bytes.Contains(yamlData, []byte("12"))
-	require.True(t, decimal)
 
 	get, err := Merge2Toml("tidb", topo.ServerConfigs.TiDB, nil)
 	require.NoError(t, err)
 
-	decimal = bytes.Contains(get, []byte("12.0"))
-	require.True(t, decimal)
+	// Verify all float values retain decimal point in TOML output
+	require.Contains(t, string(get), "12.0")
+	require.Contains(t, string(get), "0.0")
+	require.Contains(t, string(get), "1000.1")
 }
 
 func TestGetValueFromPath(t *testing.T) {
@@ -125,6 +132,48 @@ func TestFoldMap(t *testing.T) {
 			"l": 6,
 		},
 	}, r)
+}
+
+func TestYAMLFloatSerialization(t *testing.T) {
+	// Test that float values are serialized with decimal point preserved.
+	// This ensures the forked yaml.v3 correctly handles float serialization.
+	// See: https://github.com/go-yaml/yaml/issues/1038
+	yamlData := []byte(`
+server_configs:
+  tidb:
+    float_one: 1.0
+    float_zero: 0.0
+    float_value: 3.14
+`)
+
+	topo := new(Specification)
+	err := yaml.Unmarshal(yamlData, topo)
+	require.NoError(t, err)
+
+	// Verify the values are correctly parsed as float64
+	require.Equal(t, float64(1.0), topo.ServerConfigs.TiDB["float_one"])
+	require.Equal(t, float64(0.0), topo.ServerConfigs.TiDB["float_zero"])
+	require.Equal(t, float64(3.14), topo.ServerConfigs.TiDB["float_value"])
+
+	// Marshal back to YAML
+	marshaled, err := yaml.Marshal(topo)
+	require.NoError(t, err)
+
+	// The forked yaml.v3 should serialize float 1.0 as "1.0" (not "1")
+	// This preserves the float type during round-trip serialization
+	require.Contains(t, string(marshaled), "1.0")
+	require.Contains(t, string(marshaled), "0.0")
+	require.Contains(t, string(marshaled), "3.14")
+
+	// Unmarshal again to verify type is preserved
+	topo2 := new(Specification)
+	err = yaml.Unmarshal(marshaled, topo2)
+	require.NoError(t, err)
+
+	// After round-trip, the values should still be float64
+	require.IsType(t, float64(0), topo2.ServerConfigs.TiDB["float_one"])
+	require.IsType(t, float64(0), topo2.ServerConfigs.TiDB["float_zero"])
+	require.IsType(t, float64(0), topo2.ServerConfigs.TiDB["float_value"])
 }
 
 func TestEncodeRemoteCfg(t *testing.T) {

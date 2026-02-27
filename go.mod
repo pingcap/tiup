@@ -4,6 +4,8 @@ go 1.24.0
 
 toolchain go1.24.1
 
+replace gopkg.in/yaml.v3 => github.com/WizardWuuu/yaml v0.0.0-20260224063639-09a585130e86
+
 require (
 	github.com/AstroProfundis/sysinfo v0.0.0-20240112160158-ed54df16e9ce
 	github.com/BurntSushi/toml v1.5.0
