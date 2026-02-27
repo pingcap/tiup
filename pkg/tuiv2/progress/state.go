@@ -300,10 +300,7 @@ func (s *engineState) applyTaskUpdate(e Event) {
 		t.hideIfFast = *e.HideIfFast
 	}
 	if e.RevealAfterMs != nil {
-		d := time.Duration(*e.RevealAfterMs) * time.Millisecond
-		if d < 0 {
-			d = 0
-		}
+		d := max(time.Duration(*e.RevealAfterMs)*time.Millisecond, 0)
 		t.revealAfter = d
 	}
 }
@@ -314,17 +311,11 @@ func (s *engineState) applyTaskProgress(now time.Time, e Event) {
 		return
 	}
 	if e.Total != nil && (t.status == taskStatusPending || t.status == taskStatusRunning || t.status == taskStatusRetrying) {
-		total := *e.Total
-		if total < 0 {
-			total = 0
-		}
+		total := max(*e.Total, 0)
 		t.total = total
 	}
 	if e.Current != nil && (t.status == taskStatusPending || t.status == taskStatusRunning || t.status == taskStatusRetrying) {
-		cur := *e.Current
-		if cur < 0 {
-			cur = 0
-		}
+		cur := max(*e.Current, 0)
 		t.current = cur
 	}
 

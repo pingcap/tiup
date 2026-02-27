@@ -18,6 +18,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"maps"
 	"os"
 	"path"
 	"path/filepath"
@@ -228,9 +229,7 @@ func (i *GrafanaInstance) InitConfig(
 	if userConfig == nil {
 		userConfig = make(map[string]string)
 	}
-	for k, v := range spec.Config {
-		userConfig[k] = v
-	}
+	maps.Copy(userConfig, spec.Config)
 	err := mergeAdditionalGrafanaConf(fp, userConfig)
 	if err != nil {
 		return err
@@ -264,7 +263,7 @@ func (i *GrafanaInstance) InitConfig(
 
 	// Get monitors
 	topo := reflect.ValueOf(i.topo)
-	if topo.Kind() == reflect.Ptr {
+	if topo.Kind() == reflect.Pointer {
 		topo = topo.Elem()
 	}
 	val := topo.FieldByName("Monitors")
@@ -359,7 +358,7 @@ func (i *GrafanaInstance) initDashboards(ctx context.Context, e ctxt.Executor, s
 
 	// Get the monitor component to check if VM is the default datasource
 	topo := reflect.ValueOf(i.topo)
-	if topo.Kind() == reflect.Ptr {
+	if topo.Kind() == reflect.Pointer {
 		topo = topo.Elem()
 	}
 	val := topo.FieldByName("Monitors")

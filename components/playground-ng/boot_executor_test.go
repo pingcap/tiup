@@ -308,7 +308,7 @@ func TestBootExecutor_Download_RespectsConcurrencyLimit(t *testing.T) {
 	executor := newBootExecutor(nil, src)
 
 	plan := BootPlan{Downloads: make([]DownloadPlan, 0, total)}
-	for i := 0; i < total; i++ {
+	for i := range total {
 		plan.Downloads = append(plan.Downloads, DownloadPlan{
 			ComponentID:     "comp-" + strconv.Itoa(i),
 			ResolvedVersion: "v1.0.0",
@@ -320,7 +320,7 @@ func TestBootExecutor_Download_RespectsConcurrencyLimit(t *testing.T) {
 		errCh <- executor.Download(ctx, plan)
 	}()
 
-	for i := 0; i < maxParallelComponentDownloads; i++ {
+	for range maxParallelComponentDownloads {
 		select {
 		case <-entered:
 		case <-ctx.Done():

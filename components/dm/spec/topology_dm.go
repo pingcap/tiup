@@ -36,10 +36,10 @@ const (
 )
 
 var (
-	globalOptionTypeName     = reflect.TypeOf(GlobalOptions{}).Name()
-	monitorOptionTypeName    = reflect.TypeOf(MonitoredOptions{}).Name()
-	serverConfigsTypeName    = reflect.TypeOf(DMServerConfigs{}).Name()
-	componentSourcesTypeName = reflect.TypeOf(ComponentSources{}).Name()
+	globalOptionTypeName     = reflect.TypeFor[GlobalOptions]().Name()
+	monitorOptionTypeName    = reflect.TypeFor[MonitoredOptions]().Name()
+	serverConfigsTypeName    = reflect.TypeFor[DMServerConfigs]().Name()
+	componentSourcesTypeName = reflect.TypeFor[ComponentSources]().Name()
 )
 
 func setDefaultDir(parent, role, port string, field reflect.Value) {
@@ -63,7 +63,7 @@ func findField(v reflect.Value, fieldName string) (int, bool) {
 
 // Skip global/monitored/job options
 func isSkipField(field reflect.Value) bool {
-	if field.Kind() == reflect.Ptr {
+	if field.Kind() == reflect.Pointer {
 		if field.IsZero() {
 			return true
 		}
@@ -321,7 +321,7 @@ func (s *Specification) platformConflictsDetect() error {
 
 	platformStats := map[string]conflict{}
 	topoSpec := reflect.ValueOf(s).Elem()
-	topoType := reflect.TypeOf(s).Elem()
+	topoType := reflect.TypeFor[Specification]()
 
 	for i := 0; i < topoSpec.NumField(); i++ {
 		if isSkipField(topoSpec.Field(i)) {
@@ -393,7 +393,7 @@ func (s *Specification) portConflictsDetect() error {
 	portStats := map[usedPort]conflict{}
 	uniqueHosts := set.NewStringSet()
 	topoSpec := reflect.ValueOf(s).Elem()
-	topoType := reflect.TypeOf(s).Elem()
+	topoType := reflect.TypeFor[Specification]()
 
 	for i := 0; i < topoSpec.NumField(); i++ {
 		if isSkipField(topoSpec.Field(i)) {
@@ -506,7 +506,7 @@ func (s *Specification) dirConflictsDetect() error {
 	)
 
 	topoSpec := reflect.ValueOf(s).Elem()
-	topoType := reflect.TypeOf(s).Elem()
+	topoType := reflect.TypeFor[Specification]()
 
 	for i := 0; i < topoSpec.NumField(); i++ {
 		if isSkipField(topoSpec.Field(i)) {
@@ -757,7 +757,7 @@ func setDMCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) erro
 			return err
 		}
 		field.Set(ref.Elem())
-	case reflect.Ptr:
+	case reflect.Pointer:
 		if err := setDMCustomDefaults(globalOptions, field.Elem()); err != nil {
 			return err
 		}

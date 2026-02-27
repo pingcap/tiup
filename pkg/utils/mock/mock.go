@@ -87,5 +87,5 @@ func Reset(fpname string) error {
 
 func failpath(fpname string) string {
 	type em struct{}
-	return path.Join(reflect.TypeOf(em{}).PkgPath(), fpname)
+	return path.Join(reflect.TypeFor[em]().PkgPath(), fpname)
 }

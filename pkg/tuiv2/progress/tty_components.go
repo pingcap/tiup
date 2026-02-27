@@ -385,10 +385,7 @@ func renderProgressBar(styles ttyStyles, current, total int64, width int) string
 	if current > total {
 		current = total
 	}
-	filled := int(float64(current) / float64(total) * float64(width))
-	if filled < 0 {
-		filled = 0
-	}
+	filled := max(int(float64(current)/float64(total)*float64(width)), 0)
 	if filled > width {
 		filled = width
 	}

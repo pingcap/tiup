@@ -172,7 +172,6 @@ func stopAllWithProgressUI(out io.Writer, targets []playgroundTarget, timeout ti
 
 	results := make(chan stopResult, len(targets))
 	for i, target := range targets {
-		target := target
 		t := (*progressv2.Task)(nil)
 		if i < len(tasks) {
 			t = tasks[i]

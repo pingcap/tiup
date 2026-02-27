@@ -411,7 +411,7 @@ func (e *TiKVLabelError) Error() string {
 	}
 	sort.Strings(ids)
 
-	str := ""
+	var str strings.Builder
 	for _, id := range ids {
 		if len(e.TiKVInstances[id]) == 0 {
 			continue
@@ -422,12 +422,12 @@ func (e *TiKVLabelError) Error() string {
 		}
 		sort.Strings(errs)
 
-		str += fmt.Sprintf("%s:\n", id)
+		str.WriteString(fmt.Sprintf("%s:\n", id))
 		for _, e := range errs {
-			str += fmt.Sprintf("\t%s\n", e)
+			str.WriteString(fmt.Sprintf("\t%s\n", e))
 		}
 	}
-	return str
+	return str.String()
 }
 
 // TiKVLabelProvider provides the store labels information
@@ -495,7 +495,7 @@ func (s *Specification) platformConflictsDetect() error {
 
 	platformStats := map[string]conflict{}
 	topoSpec := reflect.ValueOf(s).Elem()
-	topoType := reflect.TypeOf(s).Elem()
+	topoType := reflect.TypeFor[Specification]()
 
 	for i := 0; i < topoSpec.NumField(); i++ {
 		if isSkipField(topoSpec.Field(i)) {
@@ -543,7 +543,7 @@ func (s *Specification) platformConflictsDetect() error {
 
 func (s *Specification) portInvalidDetect() error {
 	topoSpec := reflect.ValueOf(s).Elem()
-	topoType := reflect.TypeOf(s).Elem()
+	topoType := reflect.TypeFor[Specification]()
 
 	checkPort := func(idx int, compSpec reflect.Value) error {
 		compSpec = reflect.Indirect(compSpec)
@@ -618,7 +618,7 @@ func (s *Specification) portConflictsDetect() error {
 	portStats := map[usedPort]conflict{}
 	uniqueHosts := set.NewStringSet()
 	topoSpec := reflect.ValueOf(s).Elem()
-	topoType := reflect.TypeOf(s).Elem()
+	topoType := reflect.TypeFor[Specification]()
 
 	for i := 0; i < topoSpec.NumField(); i++ {
 		if isSkipField(topoSpec.Field(i)) {
@@ -725,7 +725,7 @@ func (s *Specification) dirConflictsDetect() error {
 	var dirStats = map[usedDir]conflict{}
 
 	topoSpec := reflect.ValueOf(s).Elem()
-	topoType := reflect.TypeOf(s).Elem()
+	topoType := reflect.TypeFor[Specification]()
 
 	for i := 0; i < topoSpec.NumField(); i++ {
 		if isSkipField(topoSpec.Field(i)) {
@@ -1047,7 +1047,7 @@ func (s *Specification) validateMonitorAgent() error {
 	)
 	agentStats := map[string]conflict{}
 	topoSpec := reflect.ValueOf(s).Elem()
-	topoType := reflect.TypeOf(s).Elem()
+	topoType := reflect.TypeFor[Specification]()
 
 	for i := 0; i < topoSpec.NumField(); i++ {
 		if isSkipField(topoSpec.Field(i)) {

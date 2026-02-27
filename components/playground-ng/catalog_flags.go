@@ -117,7 +117,7 @@ func applyServiceDefaults(flagSet *pflag.FlagSet, opts *BootOptions) error {
 	// Apply default counts first (some later defaults depend on these).
 	{
 		specs := pgservice.AllSpecs()
-		for i := 0; i < 8; i++ {
+		for range 8 {
 			changed := false
 			for _, spec := range specs {
 				def := spec.Catalog
@@ -228,7 +228,6 @@ func registerLegacyScaleOutFlags(cmd *cobra.Command) *legacyScaleOutFlags {
 
 	flags := cmd.Flags()
 	for _, spec := range specs {
-		spec := spec
 		if spec.serviceID == "" || spec.flagPrefix == "" {
 			continue
 		}

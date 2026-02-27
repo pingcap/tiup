@@ -25,12 +25,12 @@ import (
 
 // JoinInt joins a slice of int to string
 func JoinInt(nums []int, delim string) string {
-	result := ""
+	var result strings.Builder
 	for _, i := range nums {
-		result += strconv.Itoa(i)
-		result += delim
+		result.WriteString(strconv.Itoa(i))
+		result.WriteString(delim)
 	}
-	return strings.TrimSuffix(result, delim)
+	return strings.TrimSuffix(result.String(), delim)
 }
 
 // IsFlagSetByUser check if the a flag is set by user explicitly

@@ -458,7 +458,7 @@ func findField(v reflect.Value, fieldName string) (int, bool) {
 
 func findSliceField(v Topology, fieldName string) (reflect.Value, bool) {
 	topo := reflect.ValueOf(v)
-	if topo.Kind() == reflect.Ptr {
+	if topo.Kind() == reflect.Pointer {
 		topo = topo.Elem()
 	}
 
@@ -629,11 +629,11 @@ func fillCustomDefaults(globalOptions *GlobalOptions, data any) error {
 }
 
 var (
-	globalOptionTypeName      = reflect.TypeOf(GlobalOptions{}).Name()
-	monitorOptionTypeName     = reflect.TypeOf(MonitoredOptions{}).Name()
-	serverConfigsTypeName     = reflect.TypeOf(ServerConfigs{}).Name()
-	componentVersionsTypeName = reflect.TypeOf(ComponentVersions{}).Name()
-	componentSourcesTypeName  = reflect.TypeOf(ComponentSources{}).Name()
+	globalOptionTypeName      = reflect.TypeFor[GlobalOptions]().Name()
+	monitorOptionTypeName     = reflect.TypeFor[MonitoredOptions]().Name()
+	serverConfigsTypeName     = reflect.TypeFor[ServerConfigs]().Name()
+	componentVersionsTypeName = reflect.TypeFor[ComponentVersions]().Name()
+	componentSourcesTypeName  = reflect.TypeFor[ComponentSources]().Name()
 )
 
 // Skip global/monitored options
@@ -671,7 +671,7 @@ func setCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) error 
 			return err
 		}
 		field.Set(ref.Elem())
-	case reflect.Ptr:
+	case reflect.Pointer:
 		if err := setCustomDefaults(globalOptions, field.Elem()); err != nil {
 			return err
 		}
@@ -968,7 +968,7 @@ func setHostArchOrOS(field reflect.Value, hostArchOrOS map[string]string, fullTy
 		return nil
 	}
 
-	if field.Kind() == reflect.Ptr {
+	if field.Kind() == reflect.Pointer {
 		return setHostArchOrOS(field.Elem(), hostArchOrOS, fullType)
 	}
 

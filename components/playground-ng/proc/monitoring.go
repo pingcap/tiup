@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -115,9 +116,7 @@ func (inst *PrometheusInstance) RenderSDFile(sid2targets map[ServiceID]MetricAdd
 			Targets: targets,
 			Labels:  map[string]string{"job": id.String()},
 		}
-		for k, v := range t.Labels {
-			it.Labels[k] = v
-		}
+		maps.Copy(it.Labels, t.Labels)
 		items = append(items, it)
 	}
 
@@ -311,7 +310,7 @@ func resolveGrafanaHome(binPath string) string {
 		dir = filepath.Dir(binPath)
 	}
 
-	for i := 0; i < 8; i++ {
+	for range 8 {
 		defaults := filepath.Join(dir, "conf", "defaults.ini")
 		if st, err := os.Stat(defaults); err == nil && !st.IsDir() {
 			return dir

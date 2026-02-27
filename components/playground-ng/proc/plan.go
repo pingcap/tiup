@@ -123,7 +123,7 @@ func NewProcessFromPlan(plan ServicePlan, info ProcessInfo, shOpt SharedOptions,
 // The returned bool reports whether the binary exists.
 func ResolveSiblingBinary(baseBinPath, want string) (string, bool) {
 	dir := filepath.Dir(baseBinPath)
-	for i := 0; i < 4; i++ {
+	for range 4 {
 		path := filepath.Join(dir, want)
 		if _, err := os.Stat(path); err == nil {
 			return path, true

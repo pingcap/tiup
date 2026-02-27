@@ -52,8 +52,8 @@ func readPIDFile(path string) (pidFile, error) {
 	var out pidFile
 	seenPID := false
 
-	lines := strings.Split(string(data), "\n")
-	for _, line := range lines {
+	lines := strings.SplitSeq(string(data), "\n")
+	for line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue

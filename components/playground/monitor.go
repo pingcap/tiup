@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -40,9 +41,7 @@ func (m *monitor) renderSDFile(cid2targets map[string]instance.MetricAddr) error
 			Targets: t.Targets,
 			Labels:  map[string]string{"job": id},
 		}
-		for k, v := range t.Labels {
-			it.Labels[k] = v
-		}
+		maps.Copy(it.Labels, t.Labels)
 		items = append(items, it)
 	}
 

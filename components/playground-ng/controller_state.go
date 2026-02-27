@@ -44,7 +44,7 @@ func (s *controllerState) removeProcByPID(serviceID proc.ServiceID, pid int) (pr
 	}
 
 	list := s.procs[serviceID]
-	for i := 0; i < len(list); i++ {
+	for i := range list {
 		inst := list[i]
 		if inst == nil {
 			continue
@@ -66,7 +66,7 @@ func (s *controllerState) removeProc(serviceID proc.ServiceID, inst proc.Process
 	}
 
 	list := s.procs[serviceID]
-	for i := 0; i < len(list); i++ {
+	for i := range list {
 		if list[i] != inst {
 			continue
 		}

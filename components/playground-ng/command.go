@@ -473,7 +473,6 @@ func scaleIn(out io.Writer, reqs []ScaleInRequest, state *cliState) error {
 
 	var cmds []Command
 	for _, req := range reqs {
-		req := req
 		if req.Name == "" && req.PID <= 0 {
 			continue
 		}
@@ -505,7 +504,6 @@ func scaleOut(out io.Writer, reqs []ScaleOutRequest, state *cliState) (num int, 
 
 	cmds := make([]Command, 0, len(reqs))
 	for _, req := range reqs {
-		req := req
 		cmds = append(cmds, Command{
 			Type:     ScaleOutCommandType,
 			ScaleOut: &req,

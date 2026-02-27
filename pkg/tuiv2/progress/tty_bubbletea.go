@@ -182,10 +182,7 @@ func (m ttyModel) View() string {
 		height = 24
 	}
 
-	maxLines := height - 1
-	if maxLines < 3 {
-		maxLines = 3
-	}
+	maxLines := max(height-1, 3)
 
 	ctx := ttyRenderContext{
 		styles:  m.styles,

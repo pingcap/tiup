@@ -190,20 +190,20 @@ func printErrorMessageForNormalError(err error) {
 }
 
 func printErrorMessageForErrorX(err *errorx.Error) {
-	msg := ""
+	var msg strings.Builder
 	ident := 0
 	causeErrX := err
 	for causeErrX != nil {
 		if ident > 0 {
-			msg += strings.Repeat("  ", ident) + "caused by: "
+			msg.WriteString(strings.Repeat("  ", ident) + "caused by: ")
 		}
 		currentErrMsg := causeErrX.Message()
 		if len(currentErrMsg) > 0 {
 			if ident == 0 {
 				// Print error code only for top level error
-				msg += fmt.Sprintf("%s (%s)\n", currentErrMsg, causeErrX.Type().FullName())
+				msg.WriteString(fmt.Sprintf("%s (%s)\n", currentErrMsg, causeErrX.Type().FullName()))
 			} else {
-				msg += fmt.Sprintf("%s\n", currentErrMsg)
+				msg.WriteString(fmt.Sprintf("%s\n", currentErrMsg))
 			}
 			ident++
 		}
@@ -215,14 +215,14 @@ func printErrorMessageForErrorX(err *errorx.Error) {
 				if ident > 0 {
 					// The error may have empty message. In this case we treat it as a transparent error.
 					// Thus `ident == 0` can be possible.
-					msg += strings.Repeat("  ", ident) + "caused by: "
+					msg.WriteString(strings.Repeat("  ", ident) + "caused by: ")
 				}
-				msg += fmt.Sprintf("%s\n", cause.Error())
+				msg.WriteString(fmt.Sprintf("%s\n", cause.Error()))
 			}
 			break
 		}
 	}
-	_, _ = tui.ColorErrorMsg.Fprintf(os.Stderr, "\nError: %s", msg)
+	_, _ = tui.ColorErrorMsg.Fprintf(os.Stderr, "\nError: %s", msg.String())
 }
 
 func extractSuggestionFromErrorX(err *errorx.Error) string {

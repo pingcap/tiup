@@ -219,8 +219,8 @@ func prettifyUserPath(p string) string {
 		return "~"
 	}
 	sep := string(os.PathSeparator)
-	if strings.HasPrefix(p, home+sep) {
-		return "~" + sep + strings.TrimPrefix(p, home+sep)
+	if after, ok := strings.CutPrefix(p, home+sep); ok {
+		return "~" + sep + after
 	}
 	return p
 }

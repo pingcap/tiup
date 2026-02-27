@@ -62,7 +62,7 @@ type Event struct {
 	// Type is the event type discriminator.
 	Type EventType `json:"type"`
 	// At is the event timestamp.
-	At time.Time `json:"at,omitempty"`
+	At time.Time `json:"at"`
 
 	// IDs (stable).
 	GroupID uint64 `json:"gid,omitempty"`

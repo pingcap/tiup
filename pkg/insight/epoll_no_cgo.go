@@ -2,7 +2,6 @@
 // Ported from https://github.com/pingcap/tidb-ansible/blob/v3.1.0/scripts/check/epoll_chk.cc
 
 //go:build !cgo || !linux
-// +build !cgo !linux
 
 package insight
 

@@ -26,6 +26,7 @@ package colorstr
 import (
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"sync/atomic"
 
@@ -61,9 +62,7 @@ func (c colorTokens) Sprintf(format string, a ...any) string {
 // DefaultTokens uses default color tokens.
 var DefaultTokens = (func() colorTokens {
 	colors := make(map[string]string)
-	for k, v := range colorstring.DefaultColors {
-		colors[k] = v
-	}
+	maps.Copy(colors, colorstring.DefaultColors)
 	return colorTokens{
 		Colorize: colorstring.Colorize{
 			Colors:  colors,

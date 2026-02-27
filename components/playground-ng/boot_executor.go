@@ -140,7 +140,6 @@ func (e *bootExecutor) Download(ctx context.Context, plan BootPlan) error {
 		g, gctx := errgroup.WithContext(ctx)
 		g.SetLimit(maxParallelComponentDownloads)
 		for _, d := range prepared {
-			d := d
 			g.Go(func() error {
 				return downloadAndInstallComponent(gctx, mirror.Source(), profile, d, downloadInstallOptions{
 					disableDecompress: disableDecompress,
@@ -155,7 +154,6 @@ func (e *bootExecutor) Download(ctx context.Context, plan BootPlan) error {
 	g, _ := errgroup.WithContext(ctx)
 	g.SetLimit(maxParallelComponentDownloads)
 	for _, d := range downloads {
-		d := d
 		g.Go(func() error {
 			return e.src.EnsureInstalled(d.ComponentID, d.ResolvedVersion)
 		})

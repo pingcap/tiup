@@ -93,7 +93,7 @@ func (m *Manager) Upgrade(name string, clusterVersion string, componentVersions 
 		m.logger.Warnf("%s", color.RedString("There is no guarantee that the cluster can be downgraded. Be careful before you continue."))
 	}
 
-	compVersionMsg := ""
+	var compVersionMsg strings.Builder
 	restartComponents := []string{}
 	components := topo.ComponentsByUpdateOrder(base.Version)
 	for _, comp := range components {
@@ -107,7 +107,7 @@ func (m *Manager) Upgrade(name string, clusterVersion string, componentVersions 
 		if comp.Name() != spec.ComponentTiProxy || calver != oldver {
 			restartComponents = append(restartComponents, comp.Name(), comp.Role())
 			if len(comp.Instances()) > 0 {
-				compVersionMsg += fmt.Sprintf("\nwill upgrade and restart component \"%19s\" to \"%s\",", comp.Name(), calver)
+				compVersionMsg.WriteString(fmt.Sprintf("\nwill upgrade and restart component \"%19s\" to \"%s\",", comp.Name(), calver))
 			}
 		}
 	}
@@ -121,8 +121,8 @@ func (m *Manager) Upgrade(name string, clusterVersion string, componentVersions 
 		if componentVersions[spec.ComponentNodeExporter] != "" {
 			monitoredOptions.NodeExporterVersion = componentVersions[spec.ComponentNodeExporter]
 		}
-		compVersionMsg += fmt.Sprintf("\nwill upgrade component %19s to \"%s\",", "\"node-exporter\"", monitoredOptions.NodeExporterVersion)
-		compVersionMsg += fmt.Sprintf("\nwill upgrade component %19s to \"%s\".", "\"blackbox-exporter\"", monitoredOptions.BlackboxExporterVersion)
+		compVersionMsg.WriteString(fmt.Sprintf("\nwill upgrade component %19s to \"%s\",", "\"node-exporter\"", monitoredOptions.NodeExporterVersion))
+		compVersionMsg.WriteString(fmt.Sprintf("\nwill upgrade component %19s to \"%s\".", "\"blackbox-exporter\"", monitoredOptions.BlackboxExporterVersion))
 	}
 
 	m.logger.Warnf(`%s
@@ -133,7 +133,7 @@ This operation will upgrade %s %s cluster %s (with a concurrency of %d) to %s:%s
 		color.HiYellowString(name),
 		opt.Concurrency,
 		color.HiYellowString(clusterVersion),
-		compVersionMsg)
+		compVersionMsg.String())
 	if !skipConfirm {
 		if err := tui.PromptForConfirmOrAbortError(`Do you want to continue? [y/N]:`); err != nil {
 			return err
