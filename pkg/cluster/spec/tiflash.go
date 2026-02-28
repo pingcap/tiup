@@ -556,8 +556,6 @@ server_configs:
     status.metrics_port: %[8]d
     logger.errorlog: "%[2]s/tiflash_error.log"
     logger.log: "%[2]s/tiflash.log"
-    logger.count: 20
-    logger.size: "1000M"
     %[13]s
     raft.pd_addr: "%[9]s"
     %[12]s
