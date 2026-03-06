@@ -348,6 +348,7 @@ func (c *CDCOpenAPIClient) CreateChangefeed(bucket, prefix, endpoint, accessKey,
 	options = append(options, "protocol=canal-json")
 	options = append(options, "enable-tidb-extension=true")
 	options = append(options, "output-row-key=true")
+	options = append(options, "use-table-id-as-path=true")
 	if accessKey != "" && secretKey != "" {
 		options = append(options, fmt.Sprintf("access-key=%s", accessKey))
 		options = append(options, fmt.Sprintf("secret-access-key=%s", secretKey))
@@ -366,7 +367,7 @@ func (c *CDCOpenAPIClient) CreateChangefeed(bucket, prefix, endpoint, accessKey,
 	}
 
 	sinkConfig := map[string]any{
-         // Avoid encountering the issue of date in the CDC output path. https://github.com/pingcap/ticdc/issues/4073
+		// Avoid encountering the issue of date in the CDC output path. https://github.com/pingcap/ticdc/issues/4073
 		"date-separator": "none",
 	}
 
