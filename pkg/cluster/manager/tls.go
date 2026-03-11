@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
@@ -160,15 +161,16 @@ func getTLSFileMap(m *Manager, clusterName string, topo spec.Topology,
 		// get:  host: set(tlsdir)
 		delFileMap = getCleanupFiles(topo, false, false, cleanCertificate, false, []string{}, []string{})
 		// build file list string
-		delFileList := fmt.Sprintf("\n%s:\n %s", color.CyanString("localhost"), m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+		var delFileList strings.Builder
+		delFileList.WriteString(fmt.Sprintf("\n%s:\n %s", color.CyanString("localhost"), m.specManager.Path(clusterName, spec.TLSCertKeyDir)))
 		for host, fileList := range delFileMap {
-			delFileList += fmt.Sprintf("\n%s:", color.CyanString(host))
+			delFileList.WriteString(fmt.Sprintf("\n%s:", color.CyanString(host)))
 			for _, dfp := range fileList.Slice() {
-				delFileList += fmt.Sprintf("\n %s", dfp)
+				delFileList.WriteString(fmt.Sprintf("\n %s", dfp))
 			}
 		}
 
-		m.logger.Warnf("The parameter `%s` will delete the following files: %s", color.YellowString("--clean-certificate"), delFileList)
+		m.logger.Warnf("The parameter `%s` will delete the following files: %s", color.YellowString("--clean-certificate"), delFileList.String())
 
 		if !skipConfirm {
 			if err := tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]:"); err != nil {

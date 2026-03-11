@@ -44,10 +44,7 @@ func (l Labels) Lines(out io.Writer) []string {
 	}
 	sep := strings.Repeat(" ", gap)
 
-	width := l.LabelWidth
-	if width < 0 {
-		width = 0
-	}
+	width := max(l.LabelWidth, 0)
 	if width == 0 {
 		for _, row := range l.Rows {
 			if w := ansi.StringWidth(row[0]); w > width {

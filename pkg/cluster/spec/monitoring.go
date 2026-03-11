@@ -17,6 +17,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"maps"
 	"os"
 	"path"
 	"path/filepath"
@@ -678,9 +679,7 @@ func mergeAdditionalScrapeConf(source string, addition map[string]any) error {
 	}
 
 	for _, job := range result["scrape_configs"].([]any) {
-		for k, v := range addition {
-			job.(map[string]any)[k] = v
-		}
+		maps.Copy(job.(map[string]any), addition)
 	}
 	bytes, err = yaml.Marshal(result)
 	if err != nil {

@@ -157,7 +157,7 @@ func renderInstanceSpec(t string, inst spec.Instance) ([]string, error) {
 
 func renderSpec(t string, s any, id string) (string, error) {
 	// Only apply on *spec.TiDBInstance and *spec.PDInstance etc.
-	if v := reflect.ValueOf(s); v.Kind() == reflect.Ptr {
+	if v := reflect.ValueOf(s); v.Kind() == reflect.Pointer {
 		if v = v.Elem(); !v.IsValid() {
 			return "", perrs.Errorf("invalid spec")
 		}

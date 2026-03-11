@@ -1,5 +1,4 @@
 //go:build windows
-// +build windows
 
 package main
 
@@ -12,4 +11,3 @@ func killProcessOrGroup(pid int, sig syscall.Signal) error {
 	_ = sig
 	return nil
 }
-

@@ -22,7 +22,7 @@ func TestReadPIDFile_ParsesStartedAtAndTag(t *testing.T) {
 	pidPath := filepath.Join(base, playgroundPIDFileName)
 
 	startedAt := "2026-01-13T20:00:00Z"
-	require.NoError(t, os.WriteFile(pidPath, []byte(fmt.Sprintf("pid=123\nstarted_at=%s\ntag=my-cluster\n", startedAt)), 0o644))
+	require.NoError(t, os.WriteFile(pidPath, fmt.Appendf(nil, "pid=123\nstarted_at=%s\ntag=my-cluster\n", startedAt), 0o644))
 
 	got, err := readPIDFile(pidPath)
 	require.NoError(t, err)
@@ -85,7 +85,7 @@ func TestCleanupStaleRuntimeFiles_RemovesStalePIDAndPort(t *testing.T) {
 
 	stalePID := 999999
 	found := false
-	for i := 0; i < 1000; i++ {
+	for i := range 1000 {
 		pid := stalePID + i
 		running, err := isPIDRunning(pid)
 		if err == nil && !running {

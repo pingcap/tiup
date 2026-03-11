@@ -29,13 +29,13 @@ func TestPS_ListsRunningPlaygrounds(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(dir, playgroundPIDFileName), []byte(pidBody), 0o644))
 
 		var items []displayItem
-		for i := 0; i < tidb; i++ {
+		for i := range tidb {
 			items = append(items, displayItem{Name: fmt.Sprintf("tidb-%d", i), ServiceID: "tidb", Status: "running", Version: version})
 		}
-		for i := 0; i < tikv; i++ {
+		for i := range tikv {
 			items = append(items, displayItem{Name: fmt.Sprintf("tikv-%d", i), ServiceID: "tikv", Status: "running", Version: version})
 		}
-		for i := 0; i < tiflash; i++ {
+		for i := range tiflash {
 			items = append(items, displayItem{Name: fmt.Sprintf("tiflash-%d", i), ServiceID: "tiflash", Status: "running", Version: version})
 		}
 		items = append(items, displayItem{Name: "pd-0", ServiceID: "pd", Status: "running", Version: version})
@@ -112,13 +112,13 @@ func TestStopAll_StopsAllPlaygrounds(t *testing.T) {
 		require.NoError(t, os.WriteFile(pidPath, []byte(pidBody), 0o644))
 
 		var items []displayItem
-		for i := 0; i < tidb; i++ {
+		for i := range tidb {
 			items = append(items, displayItem{Name: fmt.Sprintf("tidb-%d", i), ServiceID: "tidb", Status: "running", Version: version})
 		}
-		for i := 0; i < tikv; i++ {
+		for i := range tikv {
 			items = append(items, displayItem{Name: fmt.Sprintf("tikv-%d", i), ServiceID: "tikv", Status: "running", Version: version})
 		}
-		for i := 0; i < tiflash; i++ {
+		for i := range tiflash {
 			items = append(items, displayItem{Name: fmt.Sprintf("tiflash-%d", i), ServiceID: "tiflash", Status: "running", Version: version})
 		}
 		items = append(items, displayItem{Name: "pd-0", ServiceID: "pd", Status: "running", Version: version})

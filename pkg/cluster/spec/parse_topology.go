@@ -158,7 +158,7 @@ func expandRelativePath(user string, topo any) {
 			expandRelativePath(user, ref.Interface())
 			v.Field(i).Set(ref.Elem())
 		}
-	case reflect.Ptr:
+	case reflect.Pointer:
 		expandRelativePath(user, v.Interface())
 	}
 }

@@ -113,23 +113,23 @@ func cleanupConfirm(logger *logprinter.Logger, clusterName, sysName, version str
 	}
 
 	// build file list string
-	delFileList := ""
+	var delFileList strings.Builder
 	for host, fileList := range delFileMap {
 		// target host has no files to delete
 		if len(fileList) == 0 {
 			continue
 		}
 
-		delFileList += fmt.Sprintf("\n%s:", color.CyanString(host))
+		delFileList.WriteString(fmt.Sprintf("\n%s:", color.CyanString(host)))
 		for _, dfp := range fileList.Slice() {
-			delFileList += fmt.Sprintf("\n %s", dfp)
+			delFileList.WriteString(fmt.Sprintf("\n %s", dfp))
 		}
 	}
 
 	logger.Warnf("Clean the clutser %s's%s.\nNodes will be ignored: %s\nRoles will be ignored: %s\nFiles to be deleted are: %s",
 		color.HiYellowString(clusterName), cleanTarget(cleanOpt), cleanOpt.RetainDataNodes,
 		cleanOpt.RetainDataRoles,
-		delFileList)
+		delFileList.String())
 	return tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]:")
 }
 
