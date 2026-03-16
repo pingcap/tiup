@@ -348,6 +348,7 @@ func (c *CDCOpenAPIClient) CreateChangefeed(bucket, prefix, endpoint, accessKey,
 	options = append(options, "protocol=canal-json")
 	options = append(options, "enable-tidb-extension=true")
 	options = append(options, "output-row-key=true")
+	// Use table id as path instead of table name in the cdc output file path. https://github.com/pingcap/ticdc/issues/4357
 	options = append(options, "use-table-id-as-path=true")
 	if accessKey != "" && secretKey != "" {
 		options = append(options, fmt.Sprintf("access-key=%s", accessKey))
