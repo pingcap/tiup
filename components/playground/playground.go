@@ -1085,7 +1085,7 @@ func (p *Playground) waitAllDMMasterUp() {
 func (p *Playground) bindVersion(comp string, version string) (bindVersion string) {
 	if p.bootOptions.ShOpt.Mode == instance.ModeFTS {
 		switch comp {
-		case spec.ComponentTiDB, spec.ComponentTiFlash:
+		case spec.ComponentTiDB, spec.ComponentTiKV, spec.ComponentTiFlash:
 			bindVersion = utils.FTSVersionAlias
 		default:
 			bindVersion = utils.NightlyVersionAlias
