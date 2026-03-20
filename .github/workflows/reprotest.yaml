@@ -33,19 +33,14 @@ jobs:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
 
-    strategy:
-      matrix:
-        go:
-          - 1.21.x
-
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
 
-      - name: Set up Go ${{ matrix.go }}
-        uses: actions/setup-go@v4
+      - name: Set up Go
+        uses: actions/setup-go@v6
         with:
-          go-version: ${{ matrix.go }}
+          go-version-file: 'go.mod'
 
       - name: Install reprotest and prepare
         id: prepare_env
