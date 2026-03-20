@@ -189,6 +189,7 @@ func (i *PumpInstance) ScaleConfig(
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
+	opt InstanceOpt,
 ) error {
 	s := i.topo
 	defer func() {
@@ -196,7 +197,7 @@ func (i *PumpInstance) ScaleConfig(
 	}()
 	i.topo = mustBeClusterTopo(topo)
 
-	return i.InitConfig(ctx, e, clusterName, clusterVersion, deployUser, paths)
+	return i.InitConfig(ctx, e, clusterName, clusterVersion, deployUser, paths, opt)
 }
 
 // InitConfig implements Instance interface.
@@ -207,6 +208,7 @@ func (i *PumpInstance) InitConfig(
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
+	opt InstanceOpt,
 ) error {
 	topo := i.topo.(*Specification)
 	if err := i.BaseInstance.InitConfig(ctx, e, topo.GlobalOptions, deployUser, paths); err != nil {
