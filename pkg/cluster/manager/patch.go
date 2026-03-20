@@ -147,13 +147,18 @@ func checkPackage(specManager *spec.SpecManager, name string, inst spec.Instance
 	}
 
 	ver := inst.CalculateVersion(metadata.GetBaseMeta().Version)
-	repo, err := clusterutil.NewRepository(nodeOS, arch)
-	if err != nil {
-		return err
-	}
-	entry, err := repo.ComponentBinEntry(inst.ComponentSource(), ver)
-	if err != nil {
-		return err
+	var entry string
+	if inst.ComponentName() == spec.ComponentTiKVWorker {
+		entry = spec.ComponentTiKVWorker
+	} else {
+		repo, err := clusterutil.NewRepository(nodeOS, arch)
+		if err != nil {
+			return err
+		}
+		entry, err = repo.ComponentBinEntry(inst.ComponentSource(), ver)
+		if err != nil {
+			return err
+		}
 	}
 
 	checksum, err := utils.Checksum(packagePath)

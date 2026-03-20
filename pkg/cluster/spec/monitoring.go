@@ -361,6 +361,13 @@ func (i *MonitorInstance) InitConfig(
 			cfig.AddTiKV(kv.Host, uint64(kv.StatusPort))
 		}
 	}
+	if servers, found := topoHasField("TiKVWorkerServers"); found {
+		for i := 0; i < servers.Len(); i++ {
+			worker := servers.Index(i).Interface().(*TiKVWorkerSpec)
+			uniqueHosts.Insert(worker.Host)
+			cfig.AddTiKVWorker(worker.Host, uint64(worker.Port))
+		}
+	}
 	if servers, found := topoHasField("TiDBServers"); found {
 		for i := 0; i < servers.Len(); i++ {
 			db := servers.Index(i).Interface().(*TiDBSpec)
