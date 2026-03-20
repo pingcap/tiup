@@ -134,6 +134,7 @@ type (
 		CDC             map[string]any    `yaml:"cdc"`
 		TiKVCDC         map[string]any    `yaml:"kvcdc"`
 		Grafana         map[string]string `yaml:"grafana"`
+		NGMonitoring    map[string]any    `yaml:"ng_monitoring"`
 	}
 
 	// ComponentVersions represents the versions of components
