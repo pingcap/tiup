@@ -59,7 +59,8 @@ var (
 	CheckNameNet           = "network"
 	CheckNameLimits        = "limits"
 	CheckNameSysService    = "service"
-	CheckNameSELinux       = "selinux"
+	CheckNameSELinuxConf   = "selinux_conf"
+	CheckNameSELinuxStatus = "selinux_status"
 	CheckNameCommand       = "command"
 	CheckNameFio           = "fio"
 	CheckNameTHP           = "thp"
@@ -567,10 +568,10 @@ func CheckServices(ctx context.Context, e ctxt.Executor, host, service string, d
 	return result
 }
 
-// CheckSELinux checks if SELinux is enabled on the host
-func CheckSELinux(ctx context.Context, e ctxt.Executor, sudo bool) *CheckResult {
+// CheckSELinuxConf checks if SELinux is enabled on the host
+func CheckSELinuxConf(ctx context.Context, e ctxt.Executor, sudo bool) *CheckResult {
 	result := &CheckResult{
-		Name: CheckNameSELinux,
+		Name: CheckNameSELinuxConf,
 	}
 	m := module.NewShellModule(module.ShellModuleConfig{
 		// ignore grep errors, the file may not exist for some systems
@@ -591,9 +592,33 @@ func CheckSELinux(ctx context.Context, e ctxt.Executor, sudo bool) *CheckResult 
 	}
 
 	if lines > 0 {
-		result.Err = fmt.Errorf("SELinux is not disabled")
-	} else {
-		result.Msg = "SELinux is disabled"
+		result.Err = fmt.Errorf("SELinux is not configured to be disabled")
+		return result
+	}
+	result.Msg = "SELinux is disabled in configuration"
+	return result
+}
+
+// CheckSELinuxStatus checks if SELinux is enabled on the host
+func CheckSELinuxStatus(ctx context.Context, e ctxt.Executor, sudo bool) *CheckResult {
+	result := &CheckResult{
+		Name: CheckNameSELinuxStatus,
+	}
+	m := module.NewShellModule(module.ShellModuleConfig{
+		Command: "getenforce",
+		Sudo:    sudo,
+	})
+	stdout, stderr, err := m.Execute(ctx, e)
+	if err != nil {
+		result.Err = fmt.Errorf("%w %s", err, stderr)
+		return result
+	}
+	out := strings.Trim(string(stdout), "\n")
+	if out == "Enforcing" {
+		result.Err = fmt.Errorf("SELinux is in Enforcing mode, Update the configuration and reboot")
+	} else if out == "Permissive" {
+		result.Err = fmt.Errorf("SELinux is in Permissive mode, disabling is recommended")
+		result.Warn = true
 	}
 	return result
 }
