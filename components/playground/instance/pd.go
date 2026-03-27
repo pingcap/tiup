@@ -15,9 +15,12 @@ package instance
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/tidbver"
@@ -235,4 +238,41 @@ func (inst *PDInstance) LogFile() string {
 // Addr return the listen address of PD
 func (inst *PDInstance) Addr() string {
 	return utils.JoinHostPort(AdvertiseHost(inst.Host), inst.StatusPort)
+}
+
+// Ready returns nil when PD is ready to serve.
+func (inst *PDInstance) Ready(ctx context.Context) error {
+	url := fmt.Sprintf("http://%s/pd/api/v1/members", inst.Addr())
+
+	var r struct {
+		Header struct {
+			ClusterID uint64 `json:"cluster_id"`
+		} `json:"header"`
+	}
+
+	ready := func() bool {
+		resp, err := http.Get(url)
+		if err != nil {
+			return false
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode == 200 {
+			err = json.NewDecoder(resp.Body).Decode(&r)
+			return err == nil && r.Header.ClusterID != 0
+		}
+		return false
+	}
+
+	for {
+		if ready() {
+			return nil
+		}
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(time.Second):
+			// retry
+		}
+	}
 }

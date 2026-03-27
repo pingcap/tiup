@@ -1285,6 +1285,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 	anyPumpReady := false
 	allDMMasterReady := false
+	allPDReady := false
 	// Start all instance except tiflash.
 	err := p.WalkInstances(func(cid string, ins instance.Instance) error {
 		if cid == spec.ComponentTiFlash {
@@ -1294,6 +1295,19 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		if cid == spec.ComponentDMWorker && !allDMMasterReady {
 			p.waitAllDMMasterUp()
 			allDMMasterReady = true
+		}
+
+		// wait all PD ready before starting TiDB to avoid cluster ID mismatch
+		if cid == spec.ComponentTiDB && !allPDReady {
+			for _, pd := range p.pds {
+				pdCtx, cancel := context.WithTimeout(ctx, time.Second*120)
+				err := pd.Ready(pdCtx)
+				cancel()
+				if err != nil {
+					return errors.Annotatef(err, "failed to wait PD %s to be ready", pd.Addr())
+				}
+			}
+			allPDReady = true
 		}
 
 		err := p.startInstance(ctx, ins)
