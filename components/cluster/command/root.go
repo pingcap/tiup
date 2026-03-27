@@ -306,8 +306,8 @@ func extractSuggestionFromErrorX(err *errorx.Error) string {
 	return ""
 }
 
-// (e.g. profiling) before exiting.
 // Execute executes the root command.
+// (e.g. profiling) before exiting.
 func Execute() {
 	zap.L().Info("Execute command", zap.String("command", tui.OsArgs()))
 	if tiupmeta.DebugMode {

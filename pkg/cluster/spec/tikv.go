@@ -220,7 +220,7 @@ func (c *TiKVComponent) Instances() []Instance {
 			},
 			StatusFn: s.Status,
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
-				return UptimeByHost(s.GetManageHost(), s.StatusPort, timeout, tlsCfg)
+				return UptimeByHost(s.GetManageHost(), s.StatusPort, timeout, tlsCfg, "")
 			},
 			Component: c,
 		}, c.Topology, 0})

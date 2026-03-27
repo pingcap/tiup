@@ -14,7 +14,13 @@
 package spec
 
 import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"strconv"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -58,4 +64,26 @@ func TestMultiDirAbs(t *testing.T) {
 	require.Equal(t, 2, len(paths))
 	require.Equal(t, "/home/tidb/a", paths[0])
 	require.Equal(t, "/tmp/b", paths[1])
+}
+
+func TestUptimeByHost(t *testing.T) {
+	now := float64(time.Now().Add(-5 * time.Minute).Unix())
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "/metrics", r.URL.Path)
+		fmt.Fprintf(w, "# HELP process_start_time_seconds mock data\n")
+		fmt.Fprintf(w, "# TYPE process_start_time_seconds gauge\n")
+		fmt.Fprintf(w, "process_start_time_seconds %.9e\n", now)
+	}))
+	t.Cleanup(func() {
+		server.Close()
+	})
+
+	u, err := url.Parse(server.URL)
+	require.NoError(t, err)
+
+	port, err := strconv.Atoi(u.Port())
+	require.NoError(t, err)
+
+	got := UptimeByHost(u.Hostname(), port, 5*time.Second, nil, "")
+	require.GreaterOrEqual(t, got, 5*time.Minute)
 }

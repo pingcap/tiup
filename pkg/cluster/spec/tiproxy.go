@@ -14,7 +14,6 @@
 package spec
 
 import (
-	"bytes"
 	"context"
 	"crypto/tls"
 	"fmt"
@@ -26,48 +25,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/utils"
-	"github.com/prometheus/common/expfmt"
 )
-
-func proxyUptimeByHost(host string, port int, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
-	if timeout < time.Second {
-		timeout = statusQueryTimeout
-	}
-
-	scheme := "http"
-	if tlsCfg != nil {
-		scheme = "https"
-	}
-	url := fmt.Sprintf("%s://%s/api/metrics", scheme, utils.JoinHostPort(host, port))
-
-	client := utils.NewHTTPClient(timeout, tlsCfg)
-
-	body, err := client.Get(context.TODO(), url)
-	if err != nil || body == nil {
-		return 0
-	}
-
-	var parser expfmt.TextParser
-	reader := bytes.NewReader(body)
-	mf, err := parser.TextToMetricFamilies(reader)
-	if err != nil {
-		return 0
-	}
-
-	now := time.Now()
-	for k, v := range mf {
-		if k == promMetricStartTimeSeconds {
-			ms := v.GetMetric()
-			if len(ms) >= 1 {
-				startTime := ms[0].Gauge.GetValue()
-				return now.Sub(time.Unix(int64(startTime), 0))
-			}
-			return 0
-		}
-	}
-
-	return 0
-}
 
 // TiProxySpec represents the TiProxy topology specification in topology.yaml
 type TiProxySpec struct {
@@ -173,7 +131,7 @@ func (c *TiProxyComponent) Instances() []Instance {
 				return statusByHost(s.Host, s.StatusPort, "/api/debug/health", timeout, tlsCfg)
 			},
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
-				return proxyUptimeByHost(s.Host, s.StatusPort, timeout, tlsCfg)
+				return UptimeByHost(s.Host, s.StatusPort, timeout, tlsCfg, "/api/metrics")
 			},
 			Component: c,
 		}, c.Topology}

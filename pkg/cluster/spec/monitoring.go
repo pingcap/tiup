@@ -176,7 +176,7 @@ func (c *MonitorComponent) Instances() []Instance {
 				return statusByHost(s.GetManageHost(), s.Port, "/-/ready", timeout, nil)
 			},
 			UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
-				return UptimeByHost(s.GetManageHost(), s.Port, timeout, tlsCfg)
+				return UptimeByHost(s.GetManageHost(), s.Port, timeout, tlsCfg, "")
 			},
 			Component: c,
 		}, c.Topology}
