@@ -39,6 +39,66 @@ server_configs:
 	require.Contains(t, string(get), "1000.1")
 }
 
+func TestNGMonitoringServerConfig(t *testing.T) {
+	yamlData := []byte(`
+server_configs:
+  ng_monitoring:
+    storage.type: "sqlite"
+    log.level: "WARN"
+    continuous_profiling.enable: true
+    continuous_profiling.profile_seconds: 5
+    continuous_profiling.interval_seconds: 15
+
+monitoring_servers:
+  - host: 10.0.1.21
+    ng_port: 12020
+    ng_monitoring_config:
+      storage.path: "/custom/data/path"
+      continuous_profiling.data_retention_seconds: 259200
+`)
+
+	topo := new(Specification)
+	err := yaml.Unmarshal(yamlData, topo)
+	require.NoError(t, err)
+
+	// Verify global config parsed
+	require.Equal(t, "sqlite", topo.ServerConfigs.NGMonitoring["storage.type"])
+	require.Equal(t, "WARN", topo.ServerConfigs.NGMonitoring["log.level"])
+	require.Equal(t, true, topo.ServerConfigs.NGMonitoring["continuous_profiling.enable"])
+
+	// Verify per-instance config parsed
+	require.Len(t, topo.Monitors, 1)
+	require.Equal(t, "/custom/data/path", topo.Monitors[0].NgMonitoringConfig["storage.path"])
+
+	// Build base config (simulating what InitConfig does)
+	baseConfig := map[string]any{
+		"address":           "0.0.0.0:12020",
+		"advertise-address": "10.0.1.21:12020",
+		"log.path":          "/tidb-deploy/prometheus-9090/log",
+		"log.level":         "INFO",
+		"pd.endpoints":      []string{"10.0.1.10:2379", "10.0.1.11:2379"},
+		"storage.path":      "/tidb-data/prometheus-9090",
+	}
+
+	// Merge: base + global + per-instance (same as InitConfig logic)
+	userConfig := MergeConfig(topo.ServerConfigs.NGMonitoring, topo.Monitors[0].NgMonitoringConfig)
+	got, err := Merge2Toml("ng_monitoring", baseConfig, userConfig)
+	require.NoError(t, err)
+
+	tomlStr := string(got)
+
+	// User overrides should take precedence
+	require.Contains(t, tomlStr, `type = "sqlite"`)                 // from global server_configs
+	require.Contains(t, tomlStr, `path = "/custom/data/path"`)      // per-instance overrides base
+	require.Contains(t, tomlStr, `level = "WARN"`)                  // global overrides default
+	require.Contains(t, tomlStr, `enable = true`)                   // from global
+	require.Contains(t, tomlStr, `data_retention_seconds = 259200`) // from per-instance
+	require.Contains(t, tomlStr, `address = "0.0.0.0:12020"`)       // from base
+
+	// pd.endpoints must be a TOML array of quoted strings (matches old template behavior)
+	require.Contains(t, tomlStr, `endpoints = ["10.0.1.10:2379", "10.0.1.11:2379"]`)
+}
+
 func TestGetValueFromPath(t *testing.T) {
 	yamlData := []byte(`
 server_configs:

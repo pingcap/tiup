@@ -63,6 +63,11 @@ monitored:
   # tiflash:
   # tiflash-learner:
   # kvcdc:
+  # ng_monitoring:
+  #   storage.type: "sqlite"
+  #   continuous_profiling.enable: true
+  #   continuous_profiling.profile_seconds: 5
+  #   continuous_profiling.interval_seconds: 15
 
 # # Server configs are used to specify the configuration of PD Servers.
 pd_servers:
@@ -363,6 +368,10 @@ monitoring_servers:
     # rule_dir: /home/tidb/prometheus_rule
     # scrape_interval: 15s
     # scrape_timeout: 10s
+    # # The following configs are used to overwrite the `server_configs.ng_monitoring` values.
+    # ng_monitoring_config:
+    #   storage.path: "/tidb-data/prometheus-8249/docdb"
+    #   continuous_profiling.data_retention_seconds: 259200
 # # Server configs are used to specify the configuration of Grafana Servers.  
 grafana_servers:
   # # The ip address of the Grafana Server.
