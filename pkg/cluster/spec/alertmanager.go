@@ -145,7 +145,7 @@ func (c *AlertManagerComponent) Instances() []Instance {
 					return statusByHost(s.GetManageHost(), s.WebPort, "/-/ready", timeout, nil)
 				},
 				UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
-					return UptimeByHost(s.GetManageHost(), s.WebPort, timeout, tlsCfg)
+					return UptimeByHost(s.GetManageHost(), s.WebPort, timeout, tlsCfg, "")
 				},
 				Component: c,
 			},

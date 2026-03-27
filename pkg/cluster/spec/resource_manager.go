@@ -184,7 +184,7 @@ func (c *ResourceManagerComponent) Instances() []Instance {
 				},
 				StatusFn: s.Status,
 				UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
-					return UptimeByHost(s.GetManageHost(), s.Port, timeout, tlsCfg)
+					return UptimeByHost(s.GetManageHost(), s.Port, timeout, tlsCfg, "")
 				},
 				Component: c,
 			},

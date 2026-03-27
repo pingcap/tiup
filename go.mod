@@ -42,7 +42,6 @@ require (
 	github.com/pingcap/fn v1.0.0
 	github.com/pingcap/kvproto v0.0.0-20230331024443-349815129e6d
 	github.com/prometheus/client_model v0.3.0
-	github.com/prometheus/common v0.42.0
 	github.com/prometheus/prom2json v1.3.2
 	github.com/r3labs/diff/v3 v3.0.1
 	github.com/sergi/go-diff v1.3.1
@@ -122,6 +121,7 @@ require (
 	github.com/nsf/termbox-go v0.0.0-20190121233118-02980233997d // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/prometheus/common v0.42.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/rs/xid v1.4.0 // indirect

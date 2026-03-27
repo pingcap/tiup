@@ -14,22 +14,24 @@
 package spec
 
 import (
-	"bytes"
 	"context"
 	"crypto/tls"
 	"fmt"
 	"path/filepath"
 	"reflect"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/version"
-	"github.com/prometheus/common/expfmt"
 	"go.etcd.io/etcd/client/pkg/v3/transport"
 )
 
 var tidbSpec *SpecManager
+
+var promRegexp = regexp.MustCompile(`process_start_time_seconds\s+([\d.e+-]+)`)
 
 // GetSpecManager return the spec manager of tidb cluster.
 func GetSpecManager() *SpecManager {
@@ -149,7 +151,7 @@ func statusByHost(host string, port int, path string, timeout time.Duration, tls
 }
 
 // UptimeByHost queries current uptime of the instance by http Prometheus metric api.
-func UptimeByHost(host string, port int, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
+func UptimeByHost(host string, port int, timeout time.Duration, tlsCfg *tls.Config, path string) time.Duration {
 	if timeout < time.Second {
 		timeout = statusQueryTimeout
 	}
@@ -158,7 +160,13 @@ func UptimeByHost(host string, port int, timeout time.Duration, tlsCfg *tls.Conf
 	if tlsCfg != nil {
 		scheme = "https"
 	}
-	url := fmt.Sprintf("%s://%s/metrics", scheme, utils.JoinHostPort(host, port))
+	if path == "" {
+		path = "/metrics"
+	}
+	if path[0] != '/' {
+		path = "/" + path
+	}
+	url := fmt.Sprintf("%s://%s%s", scheme, utils.JoinHostPort(host, port), path)
 
 	client := utils.NewHTTPClient(timeout, tlsCfg)
 
@@ -167,26 +175,17 @@ func UptimeByHost(host string, port int, timeout time.Duration, tlsCfg *tls.Conf
 		return 0
 	}
 
-	var parser expfmt.TextParser
-	reader := bytes.NewReader(body)
-	mf, err := parser.TextToMetricFamilies(reader)
+	matches := promRegexp.FindSubmatch(body)
+	if len(matches) != 2 {
+		return 0
+	}
+
+	f, err := strconv.ParseFloat(string(matches[1]), 64)
 	if err != nil {
 		return 0
 	}
 
-	now := time.Now()
-	for k, v := range mf {
-		if k == promMetricStartTimeSeconds {
-			ms := v.GetMetric()
-			if len(ms) >= 1 {
-				startTime := ms[0].Gauge.GetValue()
-				return now.Sub(time.Unix(int64(startTime), 0))
-			}
-			return 0
-		}
-	}
-
-	return 0
+	return time.Since(time.Unix(int64(f), 0))
 }
 
 // Abs returns the absolute path

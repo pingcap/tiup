@@ -40,9 +40,6 @@ import (
 const (
 	// Timeout in second when querying node status
 	statusQueryTimeout = 10 * time.Second
-
-	// the prometheus metric name of start time of the process since unix epoch in seconds.
-	promMetricStartTimeSeconds = "process_start_time_seconds"
 )
 
 // FullHostType is the type of fullhost operations

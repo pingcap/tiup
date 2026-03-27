@@ -18,7 +18,10 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
+	"runtime/pprof"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
@@ -46,6 +49,9 @@ var (
 	gOpt        operator.Options
 	skipConfirm bool
 	log         = logprinter.NewLogger("") // init default logger
+	profileDir  string
+	profileFile *os.File
+	profileTS   string
 )
 
 var (
@@ -72,6 +78,8 @@ func init() {
 		SilenceErrors: true,
 		Version:       version.NewTiUPVersion().String(),
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			startProfiler(profileDir)
+
 			// populate logger
 			log.SetDisplayModeFromString(gOpt.DisplayMode)
 
@@ -121,6 +129,7 @@ func init() {
 			return nil
 		},
 		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
+			stopProfiler(profileDir)
 			proxy.MaybeStopProxy()
 			return tiupmeta.GlobalEnv().Close()
 		},
@@ -143,6 +152,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&gOpt.SSHProxyIdentity, "ssh-proxy-identity-file", path.Join(utils.UserHome(), ".ssh", "id_rsa"), "The identity file used to login the proxy host.")
 	rootCmd.PersistentFlags().BoolVar(&gOpt.SSHProxyUsePassword, "ssh-proxy-use-password", false, "Use password to login the proxy host.")
 	rootCmd.PersistentFlags().Uint64Var(&gOpt.SSHProxyTimeout, "ssh-proxy-timeout", 5, "Timeout in seconds to connect the proxy host via SSH, ignored for operations that don't need an SSH connection.")
+	rootCmd.PersistentFlags().StringVar(&profileDir, "profile-dir", "", "Write cpu/heap pprof profiles into this directory")
 	_ = rootCmd.PersistentFlags().MarkHidden("native-ssh")
 	_ = rootCmd.PersistentFlags().MarkHidden("ssh-proxy-host")
 	_ = rootCmd.PersistentFlags().MarkHidden("ssh-proxy-user")
@@ -183,6 +193,62 @@ func init() {
 		newMetaCmd(),
 		newRotateSSHCmd(),
 	)
+}
+
+func startProfiler(dir string) {
+	if dir == "" {
+		return
+	}
+
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		fmt.Fprintf(os.Stderr, "failed to create profile dir %q: %v\n", dir, err)
+		return
+	}
+
+	timestamp := time.Now().Format("20060102-150405")
+	pid := os.Getpid()
+	cpuPath := filepath.Join(dir, fmt.Sprintf("cpu-%d-%s.pprof", pid, timestamp))
+	f, err := os.Create(cpuPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to create cpu profile %q: %v\n", cpuPath, err)
+		return
+	}
+
+	if err := pprof.StartCPUProfile(f); err != nil {
+		_ = f.Close()
+		fmt.Fprintf(os.Stderr, "failed to start cpu profile: %v\n", err)
+		return
+	}
+
+	profileTS = timestamp
+	profileFile = f
+}
+
+func stopProfiler(dir string) {
+	if dir == "" {
+		return
+	}
+
+	pprof.StopCPUProfile()
+	if profileFile != nil {
+		defer profileFile.Close()
+		profileFile = nil
+	}
+
+	pid := os.Getpid()
+
+	if prof := pprof.Lookup("heap"); prof != nil {
+		outPath := filepath.Join(dir, fmt.Sprintf("heap-%d-%s.pprof", pid, profileTS))
+		f, err := os.Create(outPath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to create heap profile %q: %v\n", outPath, err)
+			return
+		}
+		defer f.Close()
+		if err := prof.WriteTo(f, 0); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to write heap profile %q: %v\n", outPath, err)
+		}
+	}
 }
 
 func printErrorMessageForNormalError(err error) {
@@ -240,7 +306,8 @@ func extractSuggestionFromErrorX(err *errorx.Error) string {
 	return ""
 }
 
-// Execute executes the root command
+// Execute executes the root command.
+// (e.g. profiling) before exiting.
 func Execute() {
 	zap.L().Info("Execute command", zap.String("command", tui.OsArgs()))
 	if tiupmeta.DebugMode {

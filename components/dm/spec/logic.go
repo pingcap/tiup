@@ -112,7 +112,7 @@ func (c *DMMasterComponent) Instances() []Instance {
 				},
 				StatusFn: s.Status,
 				UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
-					return spec.UptimeByHost(s.Host, s.Port, timeout, tlsCfg)
+					return spec.UptimeByHost(s.Host, s.Port, timeout, tlsCfg, "")
 				},
 				Component: c,
 			},
@@ -334,7 +334,7 @@ func (c *DMWorkerComponent) Instances() []Instance {
 				},
 				StatusFn: s.Status,
 				UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
-					return spec.UptimeByHost(s.Host, s.Port, timeout, tlsCfg)
+					return spec.UptimeByHost(s.Host, s.Port, timeout, tlsCfg, "")
 				},
 				Component: c,
 			},
