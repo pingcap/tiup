@@ -117,6 +117,7 @@ type (
 	ServerConfigs struct {
 		TiDB            map[string]any    `yaml:"tidb"`
 		TiKV            map[string]any    `yaml:"tikv"`
+		TiKVWorker      map[string]any    `yaml:"tikv_worker"`
 		PD              map[string]any    `yaml:"pd"`
 		TSO             map[string]any    `yaml:"tso"`
 		Scheduling      map[string]any    `yaml:"scheduling"`
@@ -137,6 +138,7 @@ type (
 	ComponentVersions struct {
 		TiDB            string `yaml:"tidb,omitempty"`
 		TiKV            string `yaml:"tikv,omitempty"`
+		TiKVWorker      string `yaml:"tikv_worker,omitempty"`
 		TiFlash         string `yaml:"tiflash,omitempty"`
 		PD              string `yaml:"pd,omitempty"`
 		TSO             string `yaml:"tso,omitempty"`
@@ -159,15 +161,16 @@ type (
 
 	// ComponentSources represents the source of components
 	ComponentSources struct {
-		TiDB      string `yaml:"tidb,omitempty" validate:"tidb:editable"`
-		TiKV      string `yaml:"tikv,omitempty" validate:"tikv:editable"`
-		TiFlash   string `yaml:"tiflash,omitempty" validate:"tiflash:editable"`
-		PD        string `yaml:"pd,omitempty" validate:"pd:editable"`
-		Dashboard string `yaml:"tidb_dashboard,omitempty" validate:"tidb_dashboard:editable"`
-		Pump      string `yaml:"pump,omitempty" validate:"pump:editable"`
-		Drainer   string `yaml:"drainer,omitempty" validate:"drainer:editable"`
-		CDC       string `yaml:"cdc,omitempty" validate:"cdc:editable"`
-		TiKVCDC   string `yaml:"kvcdc,omitempty" validate:"kvcdc:editable"`
+		TiDB       string `yaml:"tidb,omitempty" validate:"tidb:editable"`
+		TiKV       string `yaml:"tikv,omitempty" validate:"tikv:editable"`
+		TiKVWorker string `yaml:"tikv_worker,omitempty" validate:"tikv_worker:editable"`
+		TiFlash    string `yaml:"tiflash,omitempty" validate:"tiflash:editable"`
+		PD         string `yaml:"pd,omitempty" validate:"pd:editable"`
+		Dashboard  string `yaml:"tidb_dashboard,omitempty" validate:"tidb_dashboard:editable"`
+		Pump       string `yaml:"pump,omitempty" validate:"pump:editable"`
+		Drainer    string `yaml:"drainer,omitempty" validate:"drainer:editable"`
+		CDC        string `yaml:"cdc,omitempty" validate:"cdc:editable"`
+		TiKVCDC    string `yaml:"kvcdc,omitempty" validate:"kvcdc:editable"`
 	}
 
 	// Specification represents the specification of topology.yaml
@@ -179,6 +182,7 @@ type (
 		ServerConfigs          ServerConfigs          `yaml:"server_configs,omitempty" validate:"server_configs:ignore"`
 		TiDBServers            []*TiDBSpec            `yaml:"tidb_servers"`
 		TiKVServers            []*TiKVSpec            `yaml:"tikv_servers"`
+		TiKVWorkerServers      []*TiKVWorkerSpec      `yaml:"tikv_worker_servers,omitempty"`
 		TiFlashServers         []*TiFlashSpec         `yaml:"tiflash_servers"`
 		TiProxyServers         []*TiProxySpec         `yaml:"tiproxy_servers"`
 		PDServers              []*PDSpec              `yaml:"pd_servers"`
@@ -567,6 +571,7 @@ func (s *Specification) Merge(that Topology) Topology {
 		ComponentVersions:      s.ComponentVersions.Merge(spec.ComponentVersions),
 		TiDBServers:            append(s.TiDBServers, spec.TiDBServers...),
 		TiKVServers:            append(s.TiKVServers, spec.TiKVServers...),
+		TiKVWorkerServers:      append(s.TiKVWorkerServers, spec.TiKVWorkerServers...),
 		PDServers:              append(s.PDServers, spec.PDServers...),
 		DashboardServers:       append(s.DashboardServers, spec.DashboardServers...),
 		TiFlashServers:         append(s.TiFlashServers, spec.TiFlashServers...),
@@ -592,6 +597,7 @@ func (v *ComponentVersions) Merge(that ComponentVersions) ComponentVersions {
 	return ComponentVersions{
 		TiDB:            utils.Ternary(that.TiDB != "", that.TiDB, v.TiDB).(string),
 		TiKV:            utils.Ternary(that.TiKV != "", that.TiKV, v.TiKV).(string),
+		TiKVWorker:      utils.Ternary(that.TiKVWorker != "", that.TiKVWorker, v.TiKVWorker).(string),
 		PD:              utils.Ternary(that.PD != "", that.PD, v.PD).(string),
 		TSO:             utils.Ternary(that.TSO != "", that.TSO, v.TSO).(string),
 		Scheduling:      utils.Ternary(that.Scheduling != "", that.Scheduling, v.Scheduling).(string),
@@ -809,7 +815,7 @@ func (s *Specification) ComponentsByStopOrder() (comps []Component) {
 
 // ComponentsByStartOrder return component in the order need to start.
 func (s *Specification) ComponentsByStartOrder() (comps []Component) {
-	// "pd", "tso", "scheduling", "resource-manager", "dashboard", "tiproxy", "tikv", "pump", "tidb", "tiflash", "drainer", "cdc", "tikv-cdc", "prometheus", "grafana", "alertmanager"
+	// "pd", "tso", "scheduling", "resource-manager", "dashboard", "tiproxy", "tikv", "tikv-worker", "pump", "tidb", "tiflash", "drainer", "cdc", "tikv-cdc", "prometheus", "grafana", "alertmanager"
 	comps = append(comps, &PDComponent{s})
 	comps = append(comps, &TSOComponent{s})
 	comps = append(comps, &SchedulingComponent{s})
@@ -818,6 +824,7 @@ func (s *Specification) ComponentsByStartOrder() (comps []Component) {
 	comps = append(comps, &DashboardComponent{s})
 	comps = append(comps, &TiProxyComponent{s})
 	comps = append(comps, &TiKVComponent{s})
+	comps = append(comps, &TiKVWorkerComponent{s})
 	comps = append(comps, &PumpComponent{s})
 	comps = append(comps, &TiDBComponent{s})
 	comps = append(comps, &TiFlashComponent{s})
@@ -837,7 +844,7 @@ func (s *Specification) ComponentsByUpdateOrder(curVer string) (comps []Componen
 	// Ref: https://github.com/pingcap/tiup/issues/2166
 	cdcUpgradeBeforePDTiKVTiDB := tidbver.TiCDCUpgradeBeforePDTiKVTiDB(curVer)
 
-	// "tiflash", <"cdc">, "pd", "tso", "scheduling", "resource-manager","router", "dashboard", "tiproxy", "tikv", "pump", "tidb", "drainer", <"cdc>", "prometheus", "grafana", "alertmanager"
+	// "tiflash", <"cdc">, "pd", "tso", "scheduling", "resource-manager","router", "dashboard", "tiproxy", "tikv", "tikv-worker", "pump", "tidb", "drainer", <"cdc>", "prometheus", "grafana", "alertmanager"
 	comps = append(comps, &TiFlashComponent{s})
 	if cdcUpgradeBeforePDTiKVTiDB {
 		comps = append(comps, &CDCComponent{s})
@@ -850,6 +857,7 @@ func (s *Specification) ComponentsByUpdateOrder(curVer string) (comps []Componen
 	comps = append(comps, &DashboardComponent{s})
 	comps = append(comps, &TiProxyComponent{s})
 	comps = append(comps, &TiKVComponent{s})
+	comps = append(comps, &TiKVWorkerComponent{s})
 	comps = append(comps, &PumpComponent{s})
 	comps = append(comps, &TiDBComponent{s})
 	comps = append(comps, &DrainerComponent{s})

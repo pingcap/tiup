@@ -65,6 +65,15 @@ func (u *UpdateMeta) Execute(ctx context.Context) error {
 	}
 	newMeta.Topology.TiKVServers = tikvServers
 
+	tikvWorkerServers := make([]*spec.TiKVWorkerSpec, 0)
+	for i, instance := range (&spec.TiKVWorkerComponent{Topology: topo}).Instances() {
+		if deleted.Exist(instance.ID()) {
+			continue
+		}
+		tikvWorkerServers = append(tikvWorkerServers, topo.TiKVWorkerServers[i])
+	}
+	newMeta.Topology.TiKVWorkerServers = tikvWorkerServers
+
 	pdServers := make([]*spec.PDSpec, 0)
 	for i, instance := range (&spec.PDComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {

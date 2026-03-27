@@ -43,6 +43,12 @@ tikv_servers:
   - host: {{ . }}
 {{- end }}
 {{ end }}
+{{ if .TiKVWorkerServers -}}
+tikv_worker_servers:
+{{- range .TiKVWorkerServers }}
+  - host: {{ . }}
+{{- end }}
+{{ end }}
 {{- if .TiFlashServers }}
 tiflash_servers:
  {{- range .TiFlashServers }}

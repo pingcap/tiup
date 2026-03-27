@@ -32,6 +32,7 @@ func TestDefaultDataDir(t *testing.T) {
 	// Test with without global DataDir.
 	topo := new(Specification)
 	topo.TiKVServers = append(topo.TiKVServers, &TiKVSpec{Host: "1.1.1.1", Port: 22})
+	topo.TiKVWorkerServers = append(topo.TiKVWorkerServers, &TiKVWorkerSpec{Host: "1.1.1.2", Port: 22})
 	topo.CDCServers = append(topo.CDCServers, &CDCSpec{Host: "2.3.3.3", Port: 22})
 	topo.TiKVCDCServers = append(topo.TiKVCDCServers, &TiKVCDCSpec{Host: "3.3.3.3", Port: 22})
 	data, err := yaml.Marshal(topo)
@@ -43,6 +44,7 @@ func TestDefaultDataDir(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "data", topo.GlobalOptions.DataDir)
 	require.Equal(t, "data", topo.TiKVServers[0].DataDir)
+	require.Equal(t, "data", topo.TiKVWorkerServers[0].DataDir)
 	require.Equal(t, "data", topo.CDCServers[0].DataDir)
 	require.Equal(t, "data", topo.TiKVCDCServers[0].DataDir)
 
@@ -54,6 +56,7 @@ func TestDefaultDataDir(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "data", topo.GlobalOptions.DataDir)
 	require.Equal(t, "data", topo.TiKVServers[0].DataDir)
+	require.Equal(t, "data", topo.TiKVWorkerServers[0].DataDir)
 	require.Equal(t, "data", topo.CDCServers[0].DataDir)
 	require.Equal(t, "data", topo.TiKVCDCServers[0].DataDir)
 
@@ -62,6 +65,8 @@ func TestDefaultDataDir(t *testing.T) {
 	topo.GlobalOptions.DataDir = "/global_data"
 	topo.TiKVServers = append(topo.TiKVServers, &TiKVSpec{Host: "1.1.1.1", Port: 22})
 	topo.TiKVServers = append(topo.TiKVServers, &TiKVSpec{Host: "1.1.1.2", Port: 33, DataDir: "/my_data"})
+	topo.TiKVWorkerServers = append(topo.TiKVWorkerServers, &TiKVWorkerSpec{Host: "1.1.1.3", Port: 22})
+	topo.TiKVWorkerServers = append(topo.TiKVWorkerServers, &TiKVWorkerSpec{Host: "1.1.1.4", Port: 33, DataDir: "/my_worker_data"})
 	topo.CDCServers = append(topo.CDCServers, &CDCSpec{Host: "2.3.3.3", Port: 22})
 	topo.CDCServers = append(topo.CDCServers, &CDCSpec{Host: "2.3.3.4", Port: 22, DataDir: "/cdc_data"})
 	topo.TiKVCDCServers = append(topo.TiKVCDCServers, &TiKVCDCSpec{Host: "3.3.3.3", Port: 22})
@@ -75,6 +80,9 @@ func TestDefaultDataDir(t *testing.T) {
 	require.Equal(t, "/global_data", topo.GlobalOptions.DataDir)
 	require.Equal(t, "/global_data/tikv-22", topo.TiKVServers[0].DataDir)
 	require.Equal(t, "/my_data", topo.TiKVServers[1].DataDir)
+
+	require.Equal(t, "/global_data/tikv-worker-22", topo.TiKVWorkerServers[0].DataDir)
+	require.Equal(t, "/my_worker_data", topo.TiKVWorkerServers[1].DataDir)
 
 	require.Equal(t, "/global_data/cdc-22", topo.CDCServers[0].DataDir)
 	require.Equal(t, "/cdc_data", topo.CDCServers[1].DataDir)
