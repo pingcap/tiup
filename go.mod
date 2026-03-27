@@ -51,7 +51,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.10.0
 	github.com/vishvananda/netlink v0.0.0-20210530105856-14e832ae1e8f
-	github.com/xo/usql v0.14.0
+	github.com/xo/usql v0.19.19
 	go.etcd.io/etcd/client/pkg/v3 v3.5.7
 	go.etcd.io/etcd/client/v3 v3.5.7
 	go.uber.org/atomic v1.11.0
