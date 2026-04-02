@@ -463,7 +463,7 @@ func (i *PDInstance) PostRestart(ctx context.Context, topo Topology, tlsCfg *tls
 		return errors.Annotatef(err, "failed to start PD peer %s", i.GetHost())
 	}
 
-	if updcfg.TargetVersion != "" && tidbver.PDSupportReadyAPI(updcfg.TargetVersion) {
+	if updcfg != nil && updcfg.TargetVersion != "" && tidbver.PDSupportReadyAPI(updcfg.TargetVersion) {
 		if err := utils.Retry(pdClient.CheckReady, timeoutOpt); err != nil {
 			return errors.Annotatef(err, "failed to wait PD load all regions %s", i.GetHost())
 		}
