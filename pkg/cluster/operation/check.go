@@ -203,7 +203,7 @@ func checkOSInfo(opt *CheckOptions, osInfo *sysinfo.OS) *CheckResult {
 		}
 	case "redhat", "rhel", "ol":
 		// RHEL 8.4 or newer 8.x versions are supported
-		if compareVersion(osInfo.Version, "8.4") < 0 || compareVersion(osInfo.Version, "9") >= 0 {
+		if compareVersion(osInfo.Version, "8.4") < 0 || compareVersion(osInfo.Version, "10") >= 0 {
 			result.Err = fmt.Errorf("%s %s not supported, use version 8.4 or a later 8.x version please",
 				osInfo.Name, osInfo.Release)
 			return result
