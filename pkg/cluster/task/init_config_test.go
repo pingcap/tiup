@@ -50,6 +50,7 @@ func (i *fakeInstance) InitConfig(
 	clusterVersion string,
 	deployUser string,
 	paths meta.DirPaths,
+	opt spec.InstanceOpt,
 ) error {
 	if i.hasConfigError {
 		return errors.Annotate(spec.ErrorCheckConfig, "test error")

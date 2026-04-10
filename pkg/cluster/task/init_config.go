@@ -33,6 +33,7 @@ type InitConfig struct {
 	deployUser     string
 	ignoreCheck    bool
 	paths          meta.DirPaths
+	opt            spec.InstanceOpt
 }
 
 // Execute implements the Task interface
@@ -47,7 +48,7 @@ func (c *InitConfig) Execute(ctx context.Context) error {
 		return errors.Annotatef(err, "create cache directory failed: %s", c.paths.Cache)
 	}
 
-	err := c.instance.InitConfig(ctx, exec, c.clusterName, c.clusterVersion, c.deployUser, c.paths)
+	err := c.instance.InitConfig(ctx, exec, c.clusterName, c.clusterVersion, c.deployUser, c.paths, c.opt)
 	if err != nil {
 		if c.ignoreCheck && errors.Cause(err) == spec.ErrorCheckConfig {
 			return nil
