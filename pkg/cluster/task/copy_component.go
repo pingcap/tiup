@@ -19,7 +19,9 @@ import (
 
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/environment"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/repository"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // CopyComponent is used to copy all files related the specific version a component
@@ -51,8 +53,15 @@ func (c *CopyComponent) Execute(ctx context.Context) error {
 
 	// Copy to remote server
 	srcPath := c.srcPath
+	useDefaultSrcPath := srcPath == ""
 	if srcPath == "" {
 		srcPath = spec.PackagePath(c.component, c.version, c.os, c.arch)
+	}
+	if useDefaultSrcPath && c.component == spec.ComponentTiKVWorker && utils.IsNotExist(srcPath) {
+		if logger, ok := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger); ok {
+			logger.Warnf("Skip copying %s:%s because package was not found at %s", c.component, c.version, srcPath)
+		}
+		return nil
 	}
 
 	install := &InstallPackage{

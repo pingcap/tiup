@@ -17,8 +17,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pingcap/errors"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/environment"
+	"github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/repository"
 )
 
@@ -42,7 +45,7 @@ func NewDownloader(component string, os string, arch string, version string) *Do
 }
 
 // Execute implements the Task interface
-func (d *Downloader) Execute(_ context.Context) error {
+func (d *Downloader) Execute(ctx context.Context) error {
 	// If the version is not specified, the last stable one will be used
 	if d.version == "" {
 		env := environment.GlobalEnv()
@@ -55,7 +58,17 @@ func (d *Downloader) Execute(_ context.Context) error {
 		}
 		d.version = string(ver)
 	}
-	return operator.Download(d.component, d.os, d.arch, d.version)
+	err := operator.Download(d.component, d.os, d.arch, d.version)
+	if err == nil {
+		return nil
+	}
+	if d.component == spec.ComponentTiKVWorker && (errors.Cause(err) == repository.ErrUnknownComponent || errors.Cause(err) == repository.ErrUnknownVersion) {
+		if logger, ok := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger); ok {
+			logger.Warnf("Skip downloading %s:%s (%s/%s): %s", d.component, d.version, d.os, d.arch, err.Error())
+		}
+		return nil
+	}
+	return err
 }
 
 // Rollback implements the Task interface

@@ -43,6 +43,7 @@ type LocalTemplate struct {
 	PDServers           []string // pd_servers in yaml template
 	TiDBServers         []string // tidb_servers in yaml template
 	TiKVServers         []string // tikv_servers in yaml template
+	TiKVWorkerServers   []string // tikv_worker_servers in yaml template
 	TiFlashServers      []string // tiflash_servers in yaml template
 	MonitoringServers   []string // monitoring_servers in yaml template
 	GrafanaServers      []string // grafana_servers in yaml template
@@ -131,6 +132,7 @@ func newTemplateCmd() *cobra.Command {
 	cmd.Flags().StringSliceVar(&localOpt.PDServers, "pd-servers", []string{"127.0.0.1"}, "List of PD servers")
 	cmd.Flags().StringSliceVar(&localOpt.TiDBServers, "tidb-servers", []string{"127.0.0.1"}, "List of TiDB servers")
 	cmd.Flags().StringSliceVar(&localOpt.TiKVServers, "tikv-servers", []string{"127.0.0.1"}, "List of TiKV servers")
+	cmd.Flags().StringSliceVar(&localOpt.TiKVWorkerServers, "tikv-worker-servers", nil, "List of TiKV worker servers")
 	cmd.Flags().StringSliceVar(&localOpt.TiFlashServers, "tiflash-servers", nil, "List of TiFlash servers")
 	cmd.Flags().StringSliceVar(&localOpt.MonitoringServers, "monitoring-servers", []string{"127.0.0.1"}, "List of monitor servers")
 	cmd.Flags().StringSliceVar(&localOpt.GrafanaServers, "grafana-servers", []string{"127.0.0.1"}, "List of grafana servers")
