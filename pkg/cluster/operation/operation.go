@@ -59,6 +59,8 @@ type Options struct {
 
 	DisplayMode string // the output format
 	Operation   Operation
+
+	IngoreInitConfigRoles []string // ignore config generate in the specific roles
 }
 
 // SSHCustomScripts represents the custom ssh script set to be executed during cluster operations
