@@ -62,6 +62,17 @@ const (
 	UserMode SystemdMode = "user"
 )
 
+// TLSMode represents the certificate management strategy for a TLS-enabled cluster.
+// Empty string is treated as "managed" for backward compatibility with existing clusters.
+type TLSMode string
+
+const (
+	// TLSModeManaged means TiUP generates and manages self-signed certificates.
+	TLSModeManaged TLSMode = "managed"
+	// TLSModeCustom means the user provides their own CA-signed certificates.
+	TLSModeCustom TLSMode = "custom"
+)
+
 // general role names
 var (
 	RoleMonitor       = "monitor"
@@ -88,6 +99,7 @@ type (
 		SSHPort         int                  `yaml:"ssh_port,omitempty" default:"22" validate:"ssh_port:editable"`
 		SSHType         executor.SSHType     `yaml:"ssh_type,omitempty" default:"builtin"`
 		TLSEnabled      bool                 `yaml:"enable_tls,omitempty"`
+		TLSMode         TLSMode              `yaml:"tls_mode,omitempty"`
 		ListenHost      string               `yaml:"listen_host,omitempty" validate:"listen_host:editable"`
 		DeployDir       string               `yaml:"deploy_dir,omitempty" default:"deploy"`
 		DataDir         string               `yaml:"data_dir,omitempty" default:"data"`
@@ -199,6 +211,11 @@ type (
 		Alertmanagers          []*AlertmanagerSpec    `yaml:"alertmanager_servers,omitempty"`
 	}
 )
+
+// IsCustomTLS returns true if the cluster uses user-provided certificates.
+func (g *GlobalOptions) IsCustomTLS() bool {
+	return g.TLSEnabled && g.TLSMode == TLSModeCustom
+}
 
 // BaseTopo is the base info to topology.
 type BaseTopo struct {

@@ -305,22 +305,34 @@ func (i *TiKVInstance) InitConfig(
 // setTLSConfig set TLS Config to support enable/disable TLS
 func (i *TiKVInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error) {
 	if enableTLS {
-		if configs == nil {
-			configs = make(map[string]any)
+		if i.topo.(*Specification).GlobalOptions.IsCustomTLS() {
+			// Custom: validate user has set the required keys, don't overwrite.
+			for _, key := range []string{"security.ca-path", "security.cert-path", "security.key-path"} {
+				if _, ok := configs[key]; !ok {
+					return nil, fmt.Errorf(
+						"custom TLS mode requires %q in config for %s (%s:%d)\n"+
+							"Use 'tiup cluster edit-config' to set certificate paths",
+						key, i.ComponentName(), i.GetHost(), i.GetMainPort())
+				}
+			}
+		} else {
+			if configs == nil {
+				configs = make(map[string]any)
+			}
+			configs["security.ca-path"] = fmt.Sprintf(
+				"%s/tls/%s",
+				paths.Deploy,
+				TLSCACert,
+			)
+			configs["security.cert-path"] = fmt.Sprintf(
+				"%s/tls/%s.crt",
+				paths.Deploy,
+				i.Role())
+			configs["security.key-path"] = fmt.Sprintf(
+				"%s/tls/%s.pem",
+				paths.Deploy,
+				i.Role())
 		}
-		configs["security.ca-path"] = fmt.Sprintf(
-			"%s/tls/%s",
-			paths.Deploy,
-			TLSCACert,
-		)
-		configs["security.cert-path"] = fmt.Sprintf(
-			"%s/tls/%s.crt",
-			paths.Deploy,
-			i.Role())
-		configs["security.key-path"] = fmt.Sprintf(
-			"%s/tls/%s.pem",
-			paths.Deploy,
-			i.Role())
 	} else {
 		// drainer tls config list
 		tlsConfigs := []string{
