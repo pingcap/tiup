@@ -523,6 +523,11 @@ func buildMonitoredCertificateTasks(
 					Mkdir(globalOptions.User, host, globalOptions.SystemdMode != spec.UserMode, tlsDir)
 
 				if comp == spec.ComponentBlackboxExporter {
+					// In custom mode the user provides blackbox certs via
+					// monitored.blackbox_ca/cert/key — no generation needed.
+					if globalOptions.IsCustomTLS() {
+						continue
+					}
 					ca, innerr := crypto.ReadCA(
 						name,
 						m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSCACert),

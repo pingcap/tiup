@@ -123,6 +123,11 @@ type (
 		LogDir                  string               `yaml:"log_dir,omitempty"`
 		NumaNode                string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
 		ResourceControl         meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
+		// Paths on the target node for blackbox_exporter TLS in custom mode.
+		// In managed mode these are ignored; TiUP generates and deploys certs automatically.
+		BlackboxCA   string `yaml:"blackbox_ca,omitempty" validate:"blackbox_ca:editable"`
+		BlackboxCert string `yaml:"blackbox_cert,omitempty" validate:"blackbox_cert:editable"`
+		BlackboxKey  string `yaml:"blackbox_key,omitempty" validate:"blackbox_key:editable"`
 	}
 
 	// ServerConfigs represents the server runtime configuration
