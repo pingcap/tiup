@@ -218,7 +218,7 @@ func (i *TiDBInstance) InitConfig(
 	}
 
 	// set TLS configs
-	spec.Config, err = i.setTLSConfig(ctx, enableTLS, spec.Config, paths)
+	spec.Config, err = i.setTLSConfig(ctx, enableTLS, spec.Config, globalConfig, paths)
 	if err != nil {
 		return err
 	}
@@ -249,13 +249,13 @@ func (i *TiDBInstance) setTiProxyConfig(ctx context.Context, topo *Specification
 }
 
 // setTLSConfig set TLS Config to support enable/disable TLS
-func (i *TiDBInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error) {
+func (i *TiDBInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, globalConfig map[string]any, paths meta.DirPaths) (map[string]any, error) {
 	// set TLS configs
 	if enableTLS {
 		if i.topo.(*Specification).GlobalOptions.IsCustomTLS() {
 			// Custom: validate user has set the required keys, don't overwrite.
 			for _, key := range []string{"security.cluster-ssl-ca", "security.cluster-ssl-cert", "security.cluster-ssl-key"} {
-				if _, ok := configs[key]; !ok {
+				if !hasKey(key, configs, globalConfig) {
 					return nil, fmt.Errorf(
 						"custom TLS mode requires %q in config for %s (%s:%d)\n"+
 							"Use 'tiup cluster edit-config' to set certificate paths",

@@ -227,7 +227,7 @@ func (i *TiProxyInstance) InitConfig(
 	}
 
 	var err error
-	instanceConfig, err = i.setTLSConfig(ctx, topo.GlobalOptions.TLSEnabled, instanceConfig, paths)
+	instanceConfig, err = i.setTLSConfig(ctx, topo.GlobalOptions.TLSEnabled, instanceConfig, globalConfig, paths)
 	if err != nil {
 		return err
 	}
@@ -236,7 +236,7 @@ func (i *TiProxyInstance) InitConfig(
 }
 
 // setTLSConfig set TLS Config to support enable/disable TLS
-func (i *TiProxyInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error) {
+func (i *TiProxyInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, globalConfig map[string]any, paths meta.DirPaths) (map[string]any, error) {
 	if configs == nil {
 		configs = make(map[string]any)
 	}
@@ -254,7 +254,7 @@ func (i *TiProxyInstance) setTLSConfig(ctx context.Context, enableTLS bool, conf
 				"security.sql-tls.cert",
 				"security.sql-tls.key",
 			} {
-				if _, ok := configs[key]; !ok {
+				if !hasKey(key, configs, globalConfig) {
 					return nil, fmt.Errorf(
 						"custom TLS mode requires %q in config for %s (%s:%d)\n"+
 							"Use 'tiup cluster edit-config' to set certificate paths",
