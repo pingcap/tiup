@@ -71,6 +71,10 @@ func newTLSCmd() *cobra.Command {
 				return perrs.New("custom mode only applies to enable")
 			}
 
+			if customMode && (clientCA == "" || clientCert == "" || clientKey == "") {
+				return perrs.New("--custom requires --client-ca, --client-cert, and --client-key")
+			}
+
 			customOpts := manager.CustomTLSOptions{
 				Enabled:    customMode,
 				ClientCA:   clientCA,
