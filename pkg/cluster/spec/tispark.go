@@ -460,7 +460,7 @@ func (i *TiSparkWorkerInstance) InitConfig(
 		WithCustomFields(topo.TiSparkMasters[0].SparkConfigs)
 
 	// doesn't work
-	if _, err := i.setTLSConfig(ctx, false, nil, paths); err != nil {
+	if _, err := i.setTLSConfig(ctx, false, nil, nil, paths); err != nil {
 		return err
 	}
 
@@ -520,7 +520,7 @@ func (i *TiSparkWorkerInstance) InitConfig(
 
 // setTLSConfig set TLS Config to support enable/disable TLS
 // TiSparkWorkerInstance no need to configure TLS
-func (i *TiSparkWorkerInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error) {
+func (i *TiSparkWorkerInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, globalConfig map[string]any, paths meta.DirPaths) (map[string]any, error) {
 	return nil, nil
 }
 
