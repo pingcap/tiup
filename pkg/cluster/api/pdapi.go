@@ -800,16 +800,16 @@ func (pc *PDClient) IsUp(host string) (bool, error) {
 // DelStore deletes stores from a (TiKV) host
 // The host parameter should be in format of IP:Port, that matches store's address
 func (pc *PDClient) DelStore(host string, retryOpt *utils.RetryOption) error {
-	return pc.delStore(host, retryOpt, false)
+	return pc.deleteStore(host, retryOpt, false)
 }
 
 // DelStorePhysicallyDestroyed deletes a store and tells PD that the store has
 // been physically destroyed, so PD can bypass replica-count checks.
 func (pc *PDClient) DelStorePhysicallyDestroyed(host string, retryOpt *utils.RetryOption) error {
-	return pc.delStore(host, retryOpt, true)
+	return pc.deleteStore(host, retryOpt, true)
 }
 
-func (pc *PDClient) delStore(host string, retryOpt *utils.RetryOption, physicallyDestroyed bool) error {
+func (pc *PDClient) deleteStore(host string, retryOpt *utils.RetryOption, physicallyDestroyed bool) error {
 	// get info of current stores
 	storeInfo, err := pc.GetCurrentStore(host)
 	if err != nil {
