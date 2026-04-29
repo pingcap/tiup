@@ -192,7 +192,7 @@ func ScaleInCluster(
 				compName := component.Name()
 
 				if compName != spec.ComponentPump && compName != spec.ComponentDrainer {
-					if err := deleteMember(ctx, component, instance, pdClient, binlogClient, options.APITimeout); err != nil {
+					if err := deletePhysicallyDestroyedMember(ctx, component, instance, pdClient, binlogClient, options.APITimeout); err != nil {
 						logger.Warnf("failed to delete %s: %v", compName, err)
 					}
 				}
@@ -388,6 +388,29 @@ func deleteMember(
 	binlogClient *api.BinlogClient,
 	timeoutSecond uint64,
 ) error {
+	return deleteMemberWithStoreDelete(ctx, component, instance, pdClient, pdClient.DelStore, binlogClient, timeoutSecond)
+}
+
+func deletePhysicallyDestroyedMember(
+	ctx context.Context,
+	component spec.Component,
+	instance spec.Instance,
+	pdClient *api.PDClient,
+	binlogClient *api.BinlogClient,
+	timeoutSecond uint64,
+) error {
+	return deleteMemberWithStoreDelete(ctx, component, instance, pdClient, pdClient.DelStorePhysicallyDestroyed, binlogClient, timeoutSecond)
+}
+
+func deleteMemberWithStoreDelete(
+	ctx context.Context,
+	component spec.Component,
+	instance spec.Instance,
+	pdClient *api.PDClient,
+	delStore func(string, *utils.RetryOption) error,
+	binlogClient *api.BinlogClient,
+	timeoutSecond uint64,
+) error {
 	timeoutOpt := &utils.RetryOption{
 		Timeout: time.Second * time.Duration(timeoutSecond),
 		Delay:   time.Second * 5,
@@ -395,12 +418,12 @@ func deleteMember(
 
 	switch component.Name() {
 	case spec.ComponentTiKV:
-		if err := pdClient.DelStore(instance.ID(), timeoutOpt); err != nil {
+		if err := delStore(instance.ID(), timeoutOpt); err != nil {
 			return err
 		}
 	case spec.ComponentTiFlash:
 		addr := utils.JoinHostPort(instance.GetHost(), instance.(*spec.TiFlashInstance).GetServicePort())
-		if err := pdClient.DelStore(addr, timeoutOpt); err != nil {
+		if err := delStore(addr, timeoutOpt); err != nil {
 			return err
 		}
 	case spec.ComponentPD:
