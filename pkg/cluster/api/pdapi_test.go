@@ -30,60 +30,39 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestDelStorePhysicallyDestroyedQuery(t *testing.T) {
-	tests := []struct {
-		name                   string
-		delStore               func(*PDClient, string, *utils.RetryOption) error
-		expectedDeleteRawQuery string
-	}{
-		{
-			name:                   "regular delete",
-			delStore:               (*PDClient).DelStore,
-			expectedDeleteRawQuery: "",
-		},
-		{
-			name:                   "physically destroyed delete",
-			delStore:               (*PDClient).DelStorePhysicallyDestroyed,
-			expectedDeleteRawQuery: "force=true",
-		},
-	}
+func TestDelStoreDoesNotUseForceQuery(t *testing.T) {
+	var deleted atomic.Bool
+	var deleteRawQuery string
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var deleted atomic.Bool
-			var deleteRawQuery string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/pd/api/v1/stores":
+			state := metapb.StoreState_Up
+			if deleted.Load() {
+				state = metapb.StoreState_Offline
+			}
+			fmt.Fprintf(w, `{"count":1,"stores":[{"store":{"id":42,"address":"store-1:20160","state":%d}}]}`, state)
+		case r.Method == http.MethodDelete && r.URL.Path == "/pd/api/v1/store/42":
+			deleteRawQuery = r.URL.RawQuery
+			deleted.Store(true)
+			fmt.Fprint(w, `"The store is set as Offline."`)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
 
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				switch {
-				case r.Method == http.MethodGet && r.URL.Path == "/pd/api/v1/stores":
-					state := metapb.StoreState_Up
-					if deleted.Load() {
-						state = metapb.StoreState_Offline
-					}
-					fmt.Fprintf(w, `{"count":1,"stores":[{"store":{"id":42,"address":"store-1:20160","state":%d}}]}`, state)
-				case r.Method == http.MethodDelete && r.URL.Path == "/pd/api/v1/store/42":
-					deleteRawQuery = r.URL.RawQuery
-					deleted.Store(true)
-					fmt.Fprint(w, `"The store is set as Offline."`)
-				default:
-					http.NotFound(w, r)
-				}
-			}))
-			defer server.Close()
+	logger := logprinter.NewLogger("")
+	logger.SetStdout(io.Discard)
+	logger.SetStderr(io.Discard)
+	ctx := context.WithValue(context.Background(), logprinter.ContextKeyLogger, logger)
+	client := NewPDClient(ctx, []string{strings.TrimPrefix(server.URL, "http://")}, time.Second, nil)
 
-			logger := logprinter.NewLogger("")
-			logger.SetStdout(io.Discard)
-			logger.SetStderr(io.Discard)
-			ctx := context.WithValue(context.Background(), logprinter.ContextKeyLogger, logger)
-			client := NewPDClient(ctx, []string{strings.TrimPrefix(server.URL, "http://")}, time.Second, nil)
+	err := client.DelStore("store-1:20160", &utils.RetryOption{
+		Delay:   time.Millisecond,
+		Timeout: time.Second,
+	})
 
-			err := tt.delStore(client, "store-1:20160", &utils.RetryOption{
-				Delay:   time.Millisecond,
-				Timeout: time.Second,
-			})
-
-			require.NoError(t, err)
-			require.Equal(t, tt.expectedDeleteRawQuery, deleteRawQuery)
-		})
-	}
+	require.NoError(t, err)
+	require.Empty(t, deleteRawQuery)
 }
