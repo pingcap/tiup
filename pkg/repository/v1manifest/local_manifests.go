@@ -198,9 +198,9 @@ func (ms *FsManifests) load(filename string) (string, error) {
 	file, err := os.Open(fullPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			// Use the hardcode root.json if there is no root.json currently
+			// Use system root.json if none was found in the local profile directory
 			if filename == ManifestFilenameRoot {
-				initRoot, err := filepath.Abs(filepath.Join(ms.profile.Root(), "bin/root.json"))
+				initRoot, err := filepath.Abs(filepath.Join("/usr/share/tiup/root.json"))
 				if err != nil {
 					return "", errors.Trace(err)
 				}
