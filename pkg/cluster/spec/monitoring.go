@@ -401,14 +401,14 @@ func (i *MonitorInstance) InitConfig(
 		for i := 0; i < servers.Len(); i++ {
 			ticiMeta := servers.Index(i).Interface().(*TiCIMetaSpec)
 			uniqueHosts.Insert(ticiMeta.Host)
-			cfig.AddTiCIMeta(ticiMeta.Host, uint64(ticiMeta.Port))
+			cfig.AddTiCIMeta(ticiMeta.Host, uint64(ticiMeta.StatusPort))
 		}
 	}
 	if servers, found := topoHasField("TiCIWorkerServers"); found {
 		for i := 0; i < servers.Len(); i++ {
 			ticiWorker := servers.Index(i).Interface().(*TiCIWorkerSpec)
 			uniqueHosts.Insert(ticiWorker.Host)
-			cfig.AddTiCIWorker(ticiWorker.Host, uint64(ticiWorker.Port))
+			cfig.AddTiCIWorker(ticiWorker.Host, uint64(ticiWorker.StatusPort))
 		}
 	}
 	if servers, found := topoHasField("Monitors"); found {
