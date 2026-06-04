@@ -33,7 +33,7 @@ import (
 
 var (
 	// ErrInstallFirst indicates that a component/version is not installed
-	ErrInstallFirst = errors.New("component not installed")
+	ErrInstallFirst = perrs.New("component not installed")
 )
 
 // EnvList is the canonical allowlist of environment variables TiUP will print or expose.
@@ -146,8 +146,9 @@ func InitEnv(options repository.Options, mOpt repository.MirrorOptions) (*Enviro
 	local, err = v1manifest.NewManifests(profile)
 	if err != nil {
 		if errors.Is(err, v1manifest.ErrLoadManifest) {
-			// Only bootstrap root.json if the file is actually missing.
-			// If the file exists but is corrupted, preserve the original error.
+			// Only bootstrap root.json when the file is actually missing.
+			// If it exists but can't be read (e.g. permissions), preserve the
+			// original error rather than overwriting it.
 			rootPath := profile.Path("bin", "root.json")
 			if _, statErr := os.Stat(rootPath); os.IsNotExist(statErr) {
 				// Use the configured mirrorAddr so that custom/test mirrors are respected.
