@@ -14,6 +14,7 @@
 package environment
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -21,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pingcap/errors"
+	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
@@ -144,7 +145,21 @@ func InitEnv(options repository.Options, mOpt repository.MirrorOptions) (*Enviro
 	var local v1manifest.LocalManifests
 	local, err = v1manifest.NewManifests(profile)
 	if err != nil {
-		return nil, errors.Annotatef(err, "initial repository from mirror(%s) failed", mirrorAddr)
+		if errors.Is(err, v1manifest.ErrLoadManifest) {
+			// Only bootstrap root.json if the file is actually missing.
+			// If the file exists but is corrupted, preserve the original error.
+			rootPath := profile.Path("bin", "root.json")
+			if _, statErr := os.Stat(rootPath); os.IsNotExist(statErr) {
+				// Use the configured mirrorAddr so that custom/test mirrors are respected.
+				if err := profile.ResetMirror(mirrorAddr, ""); err != nil {
+					return nil, perrs.Annotatef(err, "initial repository from mirror(%s) failed", mirrorAddr)
+				}
+				local, err = v1manifest.NewManifests(profile)
+			}
+		}
+		if err != nil {
+			return nil, perrs.Annotatef(err, "initial repository from mirror(%s) failed", mirrorAddr)
+		}
 	}
 	v1repo = repository.NewV1Repo(mirror, options, local)
 
@@ -222,7 +237,7 @@ func (env *Environment) SelectInstalledVersion(component string, ver utils.Versi
 	versions := []string{}
 	for _, v := range installed {
 		vi, err := env.v1Repo.LocalComponentVersion(component, v, true)
-		if errors.Cause(err) == repository.ErrUnknownVersion {
+		if perrs.Cause(err) == repository.ErrUnknownVersion {
 			continue
 		}
 		if err != nil {
@@ -238,9 +253,9 @@ func (env *Environment) SelectInstalledVersion(component string, ver utils.Versi
 		return semver.Compare(versions[i], versions[j]) > 0
 	})
 
-	errInstallFirst := errors.Annotatef(ErrInstallFirst, "use `tiup install %s` to install component `%s` first", component, component)
+	errInstallFirst := perrs.Annotatef(ErrInstallFirst, "use `tiup install %s` to install component `%s` first", component, component)
 	if !ver.IsEmpty() {
-		errInstallFirst = errors.Annotatef(ErrInstallFirst, "use `tiup install %s:%s` to install specified version", component, ver.String())
+		errInstallFirst = perrs.Annotatef(ErrInstallFirst, "use `tiup install %s:%s` to install specified version", component, ver.String())
 	}
 
 	if ver.IsEmpty() || string(ver) == utils.NightlyVersionAlias {
