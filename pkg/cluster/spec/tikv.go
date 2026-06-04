@@ -37,6 +37,7 @@ import (
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/prom2json"
 	"go.uber.org/zap"
+	"golang.org/x/net/http/httpproxy"
 )
 
 const (
@@ -514,15 +515,18 @@ func makeTransport(tlsCfg *tls.Config) *http.Transport {
 		transport.TLSClientConfig = tlsCfg.Clone()
 	}
 
-	// prefer to use the inner http proxy
-	httpProxy := os.Getenv("TIUP_INNER_HTTP_PROXY")
-	if len(httpProxy) == 0 {
-		httpProxy = os.Getenv("HTTP_PROXY")
+	// Resolve the proxy from the environment so that both HTTP(S)_PROXY and
+	// NO_PROXY are honored. TIUP_INNER_HTTP_PROXY, if set, overrides the proxy
+	// URL but NO_PROXY is still respected, so internal endpoints (e.g. the TiKV
+	// status port) are scraped directly instead of through the proxy.
+	proxyCfg := httpproxy.FromEnvironment()
+	if inner := os.Getenv("TIUP_INNER_HTTP_PROXY"); len(inner) > 0 {
+		proxyCfg.HTTPProxy = inner
+		proxyCfg.HTTPSProxy = inner
 	}
-	if len(httpProxy) > 0 {
-		if proxyURL, err := url.Parse(httpProxy); err == nil {
-			transport.Proxy = http.ProxyURL(proxyURL)
-		}
+	proxyFunc := proxyCfg.ProxyFunc()
+	transport.Proxy = func(req *http.Request) (*url.URL, error) {
+		return proxyFunc(req.URL)
 	}
 	return transport
 }
