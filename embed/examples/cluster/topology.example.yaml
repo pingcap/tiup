@@ -226,6 +226,19 @@ tikv_servers:
     # config:
     #   log.level: warn
 
+tikv_worker_servers:
+  - host: 10.0.1.22
+    # ssh_port: 22
+    port: 19000
+    deploy_dir: "/data1/tidb-deploy/tikv-worker-19000"
+    data_dir: "/data1/tidb-data/tikv-worker-19000"
+    log_dir: "/data1/tidb-deploy/tikv-worker-19000/log"
+    # numa_node: "0"
+    # config:
+    #   schema-manager.enabled: true
+    #   schema-manager.dir: /data1/tidb-data/tikv-worker-19000/data/schemas
+    #   schema-manager.keyspace-refresh-interval: "500ms"
+
 # # Server configs are used to specify the configuration of TiFlash Servers.
 tiflash_servers:
   # # The ip address of the TiFlash Server.
