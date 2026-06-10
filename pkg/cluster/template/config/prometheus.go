@@ -34,6 +34,7 @@ type PrometheusConfig struct {
 	TiDBStatusAddrs           []string
 	TiProxyStatusAddrs        []string
 	TiKVStatusAddrs           []string
+	TiKVWorkerAddrs           []string
 	PDAddrs                   []string
 	TSOAddrs                  []string
 	SchedulingAddrs           []string
@@ -94,6 +95,12 @@ func (c *PrometheusConfig) AddTiProxy(ip string, port uint64) *PrometheusConfig 
 // AddTiKV add a TiKV address
 func (c *PrometheusConfig) AddTiKV(ip string, port uint64) *PrometheusConfig {
 	c.TiKVStatusAddrs = append(c.TiKVStatusAddrs, utils.JoinHostPort(ip, int(port)))
+	return c
+}
+
+// AddTiKVWorker add a tikv-worker address.
+func (c *PrometheusConfig) AddTiKVWorker(ip string, port uint64) *PrometheusConfig {
+	c.TiKVWorkerAddrs = append(c.TiKVWorkerAddrs, utils.JoinHostPort(ip, int(port)))
 	return c
 }
 
