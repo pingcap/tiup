@@ -45,9 +45,9 @@ function scale_tools() {
         total=20
         total_add_one=21
     else
-        total_sub_one=21
-        total=22
-        total_add_one=23
+        total_sub_one=19
+        total=20
+        total_add_one=21
     fi
 
     echo "start scale in pump"
@@ -63,15 +63,6 @@ function scale_tools() {
     echo "start scale out cdc"
     topo=./topo/full_scale_in_cdc.yaml
     yes | tiup-cluster $client scale-out $name $topo
-
-    if [ $test_tls = false ]; then
-        echo "start scale in tispark"
-        yes | tiup-cluster $client --yes scale-in $name -N n4:7078
-        wait_instance_num_reach $name $total_sub_one $native_ssh
-        echo "start scale out tispark"
-        topo=./topo/full_scale_in_tispark.yaml
-        yes | tiup-cluster $client --yes scale-out $name $topo
-    fi
 
     echo "start scale in grafana"
     tiup-cluster $client --yes scale-in $name -N n1:3000

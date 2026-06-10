@@ -49,12 +49,6 @@ cdc_servers:
   - host: n4
   - host: n5
 
-tispark_masters:
-  - host: n3
-
-tispark_workers:
-  - host: n4
-
 monitoring_servers:
   - host: n1
     rule_dir: /tmp/local/prometheus

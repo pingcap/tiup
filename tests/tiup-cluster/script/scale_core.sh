@@ -44,9 +44,9 @@ function scale_core() {
         total=20
         total_add_one=21
     else
-        total_sub_one=24
-        total=25
-        total_add_one=26
+        total_sub_one=22
+        total=23
+        total_add_one=24
     fi
 
     echo "start scale in tidb"
