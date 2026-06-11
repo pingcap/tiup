@@ -240,6 +240,6 @@ func (i *DashboardInstance) InitConfig(
 }
 
 // setTLSConfig set TLS Config to support enable/disable TLS
-func (i *DashboardInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error) {
+func (i *DashboardInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, globalConfig map[string]any, paths meta.DirPaths) (map[string]any, error) {
 	return nil, nil
 }

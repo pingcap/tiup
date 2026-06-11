@@ -68,7 +68,7 @@ func (m *MonitoredConfig) Execute(ctx context.Context) error {
 	var cfg template.ConfigGenerator
 	switch m.component {
 	case spec.ComponentNodeExporter:
-		if err := m.syncBlackboxConfig(ctx, exec, config.NewBlackboxConfig(m.paths.Deploy, m.tlsEnabled)); err != nil {
+		if err := m.syncBlackboxConfig(ctx, exec, config.NewBlackboxConfig(m.paths.Deploy, m.tlsEnabled, m.options.BlackboxCA, m.options.BlackboxCert, m.options.BlackboxKey)); err != nil {
 			return err
 		}
 		cfg = scripts.

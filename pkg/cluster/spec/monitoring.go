@@ -469,7 +469,7 @@ func (i *MonitorInstance) InitConfig(
 	}
 
 	// doesn't work
-	if _, err := i.setTLSConfig(ctx, false, nil, paths); err != nil {
+	if _, err := i.setTLSConfig(ctx, false, nil, nil, paths); err != nil {
 		return err
 	}
 
@@ -592,7 +592,7 @@ func (i *MonitorInstance) InitConfig(
 }
 
 // setTLSConfig set TLS Config to support enable/disable TLS
-func (i *MonitorInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error) {
+func (i *MonitorInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, globalConfig map[string]any, paths meta.DirPaths) (map[string]any, error) {
 	return nil, nil
 }
 

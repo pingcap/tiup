@@ -199,7 +199,7 @@ func (i *AlertManagerInstance) InitConfig(
 	}
 
 	// doesn't work
-	if _, err := i.setTLSConfig(ctx, false, nil, paths); err != nil {
+	if _, err := i.setTLSConfig(ctx, false, nil, nil, paths); err != nil {
 		return err
 	}
 
@@ -249,6 +249,6 @@ func (i *AlertManagerInstance) ScaleConfig(
 }
 
 // setTLSConfig set TLS Config to support enable/disable TLS
-func (i *AlertManagerInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error) {
+func (i *AlertManagerInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, globalConfig map[string]any, paths meta.DirPaths) (map[string]any, error) {
 	return nil, nil
 }
