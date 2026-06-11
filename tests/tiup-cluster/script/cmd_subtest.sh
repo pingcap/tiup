@@ -164,6 +164,12 @@ function cmd_subtest() {
     # Test rename
     tiup-cluster $client --yes rename $name "tmp-cluster-name"
     tiup-cluster $client display "tmp-cluster-name"
+    if [ $test_tls = true ]; then
+        local_ca="$HOME/.tiup/storage/cluster/clusters/tmp-cluster-name/tls/ca.crt"
+        local_ca_sum=`sha256sum "$local_ca" | awk '{print $1}'`
+        remote_ca_sum=`ssh -o "StrictHostKeyChecking=no" -o "PasswordAuthentication=no" n1 "sha256sum /home/tidb/deploy/tidb-4000/tls/ca.crt" | awk '{print $1}'`
+        test "$local_ca_sum" = "$remote_ca_sum"
+    fi
     tiup-cluster $client --yes rename "tmp-cluster-name" $name
 
     # Test enable & disable
