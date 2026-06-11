@@ -90,7 +90,8 @@ func (lr *listResult) print() {
 }
 
 func showComponentList(env *environment.Environment, opt listOptions) (*listResult, error) {
-	if !opt.installedOnly {
+	// Skip online update in packaged builds
+	if !opt.installedOnly && !environment.IsPackagedBuild {
 		err := env.V1Repository().UpdateComponentManifests()
 		if err != nil {
 			tui.ColorWarningMsg.Fprint(os.Stderr, "Warn: Update component manifest failed, err_msg=[", err.Error(), "]\n")
@@ -182,17 +183,6 @@ func showComponentList(env *environment.Environment, opt listOptions) (*listResu
 }
 
 func showComponentVersions(env *environment.Environment, component string, opt listOptions) (*listResult, error) {
-	var comp *v1manifest.Component
-	var err error
-	if opt.installedOnly {
-		comp, err = env.V1Repository().LocalComponentManifest(component, false)
-	} else {
-		comp, err = env.V1Repository().GetComponentManifest(component, false)
-	}
-	if err != nil {
-		return nil, errors.Annotate(err, "failed to fetch component")
-	}
-
 	versions, err := env.Profile().InstalledVersions(component)
 	if err != nil {
 		return nil, err
@@ -201,6 +191,16 @@ func showComponentVersions(env *environment.Environment, component string, opt l
 
 	var cmpTable [][]string
 	cmpTable = append(cmpTable, []string{"Version", "Installed", "Release", "Platforms"})
+
+	var comp *v1manifest.Component
+	if opt.installedOnly {
+		comp, err = env.V1Repository().LocalComponentManifest(component, false)
+	} else {
+		comp, err = env.V1Repository().GetComponentManifest(component, false)
+	}
+	if err != nil {
+		return nil, errors.Annotate(err, "failed to fetch component")
+	}
 
 	platforms := make(map[string][]string)
 	released := make(map[string]string)
