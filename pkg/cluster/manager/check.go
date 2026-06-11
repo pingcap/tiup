@@ -686,7 +686,10 @@ func fixFailedChecks(host string, res *operator.CheckResult, t *task.Builder, sy
 	case operator.CheckNameTHP:
 		t.Shell(host,
 			fmt.Sprintf(
-				`if [ -d %[1]s ]; then echo never > %[1]s/enabled; fi && %s`,
+				// grubby only exists on RHEL-family distros; skip the persistent
+				// kernel argument when it's not available (e.g. Debian/Ubuntu)
+				// instead of failing the whole apply.
+				`if [ -d %[1]s ]; then echo never > %[1]s/enabled; fi && if command -v grubby >/dev/null 2>&1; then %s; fi`,
 				"/sys/kernel/mm/transparent_hugepage",
 				`grubby --update-kernel=ALL --args="transparent_hugepage=never"`,
 			),
