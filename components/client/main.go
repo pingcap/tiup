@@ -23,6 +23,7 @@ import (
 	"os/user"
 	"path"
 
+	"github.com/go-git/go-billy/v5/osfs"
 	ui "github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
 	"github.com/pingcap/tiup/pkg/environment"
@@ -98,11 +99,12 @@ func connect(target string) error {
 	if err != nil {
 		return fmt.Errorf("can't get current user: %s", err.Error())
 	}
-	l, err := rline.New(false, "", env.HistoryFile(u))
+	l, err := rline.New(false, false, false, "", env.HistoryFile(u))
 	if err != nil {
 		return fmt.Errorf("can't open history file: %s", err.Error())
 	}
-	h := handler.New(l, u, os.Getenv(localdata.EnvNameInstanceDataDir), true)
+	dataDir := os.Getenv(localdata.EnvNameInstanceDataDir)
+	h := handler.New(l, u, dataDir, osfs.New(dataDir), true)
 	if err = h.Open(context.TODO(), ep.dsn); err != nil {
 		return fmt.Errorf("can't open connection to %s: %s", ep.dsn, err.Error())
 	}
