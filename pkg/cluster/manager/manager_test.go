@@ -14,9 +14,12 @@
 package manager
 
 import (
+	"strings"
 	"testing"
 
+	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -115,4 +118,17 @@ func TestDeduplicateCheckResult(t *testing.T) {
 	if len(checkResults) != 1 {
 		t.Errorf("Deduplicate Check Result Failed")
 	}
+}
+
+func TestFixFailedChecksSELinuxCommandToleratesMissingSELinuxFiles(t *testing.T) {
+	b := task.NewBuilder(nil)
+	msg, err := fixFailedChecks("n1", &operator.CheckResult{Name: operator.CheckNameSELinuxStatus}, b, string(spec.SystemMode))
+	require.NoError(t, err)
+	require.NotEmpty(t, msg)
+
+	cmd := b.Build().String()
+	require.Contains(t, cmd, "[ -f /etc/selinux/config ]")
+	require.Contains(t, cmd, "command -v setenforce")
+	require.Contains(t, cmd, "setenforce 0 || true")
+	require.False(t, strings.Contains(cmd, "/etc/selinux/config && setenforce 0"))
 }

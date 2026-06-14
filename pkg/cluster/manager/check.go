@@ -644,6 +644,12 @@ func formatHostCheckResults(results []HostCheckResult) [][]string {
 	return lines
 }
 
+const disableSELinuxCommand = "if [ -f /etc/selinux/config ]; then " +
+	"sed -i 's/^[[:blank:]]*SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config; " +
+	"fi && if command -v setenforce >/dev/null 2>&1; then " +
+	"setenforce 0 || true; " +
+	"fi"
+
 // fixFailedChecks tries to automatically apply changes to fix failed checks
 func fixFailedChecks(host string, res *operator.CheckResult, t *task.Builder, systemdMode string) (string, error) {
 	msg := ""
@@ -675,11 +681,7 @@ func fixFailedChecks(host string, res *operator.CheckResult, t *task.Builder, sy
 		msg = fmt.Sprintf("will try to set '%s'", color.HiBlueString(res.Msg))
 	case operator.CheckNameSELinuxConf, operator.CheckNameSELinuxStatus:
 		t.Shell(host,
-			fmt.Sprintf(
-				"sed -i 's/^[[:blank:]]*SELINUX=enforcing/SELINUX=disabled/g' %s && %s",
-				"/etc/selinux/config",
-				"setenforce 0",
-			),
+			disableSELinuxCommand,
 			"",
 			sudo)
 		msg = fmt.Sprintf("will try to %s, reboot might be needed", color.HiBlueString("disable SELinux"))
