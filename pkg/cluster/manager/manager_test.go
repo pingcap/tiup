@@ -132,3 +132,16 @@ func TestFixFailedChecksSELinuxCommandToleratesMissingSELinuxFiles(t *testing.T)
 	require.Contains(t, cmd, "setenforce 0 || true")
 	require.False(t, strings.Contains(cmd, "/etc/selinux/config && setenforce 0"))
 }
+
+func TestFixFailedChecksTHPCommandToleratesMissingGrubby(t *testing.T) {
+	b := task.NewBuilder(nil)
+	msg, err := fixFailedChecks("n1", &operator.CheckResult{Name: operator.CheckNameTHP}, b, string(spec.SystemMode))
+	require.NoError(t, err)
+	require.NotEmpty(t, msg)
+
+	cmd := b.Build().String()
+	require.Contains(t, cmd, "[ -d /sys/kernel/mm/transparent_hugepage ]")
+	require.Contains(t, cmd, "command -v grubby")
+	require.Contains(t, cmd, "grubby --update-kernel=ALL")
+	require.False(t, strings.Contains(cmd, "fi && grubby"))
+}
