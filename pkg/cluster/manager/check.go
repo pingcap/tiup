@@ -644,6 +644,14 @@ func formatHostCheckResults(results []HostCheckResult) [][]string {
 	return lines
 }
 
+const disableSELinuxCommand = "if [ -f /etc/selinux/config ]; then " +
+	"sed -i 's/^[[:blank:]]*SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config; " +
+	"fi && if command -v setenforce >/dev/null 2>&1; then " +
+	"setenforce 0 || true; " +
+	"fi"
+
+const disableTHPCommand = `if [ -d /sys/kernel/mm/transparent_hugepage ]; then echo never > /sys/kernel/mm/transparent_hugepage/enabled; fi && if command -v grubby >/dev/null 2>&1; then grubby --update-kernel=ALL --args="transparent_hugepage=never"; fi`
+
 // fixFailedChecks tries to automatically apply changes to fix failed checks
 func fixFailedChecks(host string, res *operator.CheckResult, t *task.Builder, systemdMode string) (string, error) {
 	msg := ""
@@ -675,21 +683,13 @@ func fixFailedChecks(host string, res *operator.CheckResult, t *task.Builder, sy
 		msg = fmt.Sprintf("will try to set '%s'", color.HiBlueString(res.Msg))
 	case operator.CheckNameSELinuxConf, operator.CheckNameSELinuxStatus:
 		t.Shell(host,
-			fmt.Sprintf(
-				"sed -i 's/^[[:blank:]]*SELINUX=enforcing/SELINUX=disabled/g' %s && %s",
-				"/etc/selinux/config",
-				"setenforce 0",
-			),
+			disableSELinuxCommand,
 			"",
 			sudo)
 		msg = fmt.Sprintf("will try to %s, reboot might be needed", color.HiBlueString("disable SELinux"))
 	case operator.CheckNameTHP:
 		t.Shell(host,
-			fmt.Sprintf(
-				`if [ -d %[1]s ]; then echo never > %[1]s/enabled; fi && %s`,
-				"/sys/kernel/mm/transparent_hugepage",
-				`grubby --update-kernel=ALL --args="transparent_hugepage=never"`,
-			),
+			disableTHPCommand,
 			"",
 			sudo)
 		msg = fmt.Sprintf("will try to %s, please check again after reboot", color.HiBlueString("disable THP"))
