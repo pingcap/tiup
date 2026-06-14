@@ -674,7 +674,7 @@ func fixFailedChecks(host string, res *operator.CheckResult, t *task.Builder, sy
 		t.Limit(host, fields[0], fields[1], fields[2], fields[3], sudo)
 		msg = fmt.Sprintf("will try to set '%s'", color.HiBlueString(res.Msg))
 	case operator.CheckNameSELinuxConf, operator.CheckNameSELinuxStatus:
-		t.Shell(host,
+		t.ShellIgnoreNonZero(host,
 			fmt.Sprintf(
 				"sed -i 's/^[[:blank:]]*SELINUX=enforcing/SELINUX=disabled/g' %s && %s",
 				"/etc/selinux/config",
@@ -684,7 +684,7 @@ func fixFailedChecks(host string, res *operator.CheckResult, t *task.Builder, sy
 			sudo)
 		msg = fmt.Sprintf("will try to %s, reboot might be needed", color.HiBlueString("disable SELinux"))
 	case operator.CheckNameTHP:
-		t.Shell(host,
+		t.ShellIgnoreNonZero(host,
 			fmt.Sprintf(
 				`if [ -d %[1]s ]; then echo never > %[1]s/enabled; fi && %s`,
 				"/sys/kernel/mm/transparent_hugepage",
@@ -697,7 +697,7 @@ func fixFailedChecks(host string, res *operator.CheckResult, t *task.Builder, sy
 		// not applying swappiness setting here, it should be fixed
 		// in the sysctl check
 		// t.Sysctl(host, "vm.swappiness", "0")
-		t.Shell(host,
+		t.ShellIgnoreNonZero(host,
 			"swapoff -a || exit 0", // ignore failure
 			"", sudo,
 		)

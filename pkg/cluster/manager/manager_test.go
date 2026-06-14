@@ -16,7 +16,9 @@ package manager
 import (
 	"testing"
 
+	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -115,4 +117,39 @@ func TestDeduplicateCheckResult(t *testing.T) {
 	if len(checkResults) != 1 {
 		t.Errorf("Deduplicate Check Result Failed")
 	}
+}
+
+func TestFixFailedChecksSELinuxCommandIsBestEffort(t *testing.T) {
+	b := task.NewBuilder(nil)
+	msg, err := fixFailedChecks("n1", &operator.CheckResult{Name: operator.CheckNameSELinuxStatus}, b, string(spec.SystemMode))
+	require.NoError(t, err)
+	require.NotEmpty(t, msg)
+
+	cmd := b.Build().String()
+	require.Contains(t, cmd, "sed -i")
+	require.Contains(t, cmd, "setenforce 0")
+	require.Contains(t, cmd, ") || true")
+}
+
+func TestFixFailedChecksTHPCommandIsBestEffort(t *testing.T) {
+	b := task.NewBuilder(nil)
+	msg, err := fixFailedChecks("n1", &operator.CheckResult{Name: operator.CheckNameTHP}, b, string(spec.SystemMode))
+	require.NoError(t, err)
+	require.NotEmpty(t, msg)
+
+	cmd := b.Build().String()
+	require.Contains(t, cmd, "transparent_hugepage")
+	require.Contains(t, cmd, "grubby --update-kernel=ALL")
+	require.Contains(t, cmd, ") || true")
+}
+
+func TestFixFailedChecksSwapCommandIsBestEffort(t *testing.T) {
+	b := task.NewBuilder(nil)
+	msg, err := fixFailedChecks("n1", &operator.CheckResult{Name: operator.CheckNameSwap}, b, string(spec.SystemMode))
+	require.NoError(t, err)
+	require.NotEmpty(t, msg)
+
+	cmd := b.Build().String()
+	require.Contains(t, cmd, "swapoff -a")
+	require.Contains(t, cmd, ") || true")
 }

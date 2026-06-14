@@ -396,6 +396,18 @@ func (b *Builder) Shell(host, command, cmdID string, sudo bool) *Builder {
 	return b
 }
 
+// ShellIgnoreNonZero runs a shell command on cluster host and ignores the command exit status.
+func (b *Builder) ShellIgnoreNonZero(host, command, cmdID string, sudo bool) *Builder {
+	b.tasks = append(b.tasks, &Shell{
+		host:          host,
+		command:       command,
+		sudo:          sudo,
+		cmdID:         cmdID,
+		ignoreNonZero: true,
+	})
+	return b
+}
+
 // SystemCtl run systemctl on host
 func (b *Builder) SystemCtl(host, unit, action string, daemonReload, checkActive bool, scope string) *Builder {
 	b.tasks = append(b.tasks, &SystemCtl{

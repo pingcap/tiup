@@ -22,12 +22,20 @@ import (
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 )
 
-// Shell is used to create directory on the target host
+// Shell is used to run a shell command on the target host.
 type Shell struct {
-	host    string
-	command string
-	sudo    bool
-	cmdID   string
+	host          string
+	command       string
+	sudo          bool
+	cmdID         string
+	ignoreNonZero bool
+}
+
+func (m *Shell) commandToRun() string {
+	if m.ignoreNonZero {
+		return fmt.Sprintf("(%s) || true", m.command)
+	}
+	return m.command
 }
 
 // Execute implements the Task interface
@@ -37,10 +45,11 @@ func (m *Shell) Execute(ctx context.Context) error {
 		return ErrNoExecutor
 	}
 
+	command := m.commandToRun()
 	ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger).
-		Infof("Run command on %s(sudo:%v): %s", m.host, m.sudo, m.command)
+		Infof("Run command on %s(sudo:%v): %s", m.host, m.sudo, command)
 
-	stdout, stderr, err := exec.Execute(ctx, m.command, m.sudo)
+	stdout, stderr, err := exec.Execute(ctx, command, m.sudo)
 	outputID := m.host
 	if m.cmdID != "" {
 		outputID = m.cmdID
@@ -60,5 +69,5 @@ func (m *Shell) Rollback(ctx context.Context) error {
 
 // String implements the fmt.Stringer interface
 func (m *Shell) String() string {
-	return fmt.Sprintf("Shell: host=%s, sudo=%v, command=`%s`", m.host, m.sudo, m.command)
+	return fmt.Sprintf("Shell: host=%s, sudo=%v, command=`%s`", m.host, m.sudo, m.commandToRun())
 }
