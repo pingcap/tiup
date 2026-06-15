@@ -922,7 +922,6 @@ func newMirrorCloneCmd() *cobra.Command {
 	)
 
 	initMirrorCloneExtraArgs := func(cmd *cobra.Command) error {
-		initialized = true
 		env := environment.GlobalEnv()
 		repo = env.V1Repository()
 		index, err := repo.FetchIndexManifest()
@@ -943,6 +942,7 @@ func newMirrorCloneCmd() *cobra.Command {
 			options.Components[name] = new([]string)
 			cmd.Flags().StringSliceVar(options.Components[name], name, nil, "Specify the versions for component "+name)
 		}
+		initialized = true
 		return nil
 	}
 	cmd := &cobra.Command{

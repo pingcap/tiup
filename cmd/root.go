@@ -75,11 +75,8 @@ the latest stable version will be downloaded from the repository.`,
 			return nil
 		},
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 0 {
-				switch args[0] {
-				case "--help", "-h", "--version", "-v":
-					return nil
-				}
+			if shouldSkipEnvInit(cmd, args) {
+				return nil
 			}
 			switch cmd.Name() {
 			case "init", "rotate", "set":
@@ -206,6 +203,25 @@ the latest stable version will be downloaded from the repository.`,
 		newLinkCmd(),
 		newUnlinkCmd(),
 	)
+}
+
+func shouldSkipEnvInit(cmd *cobra.Command, args []string) bool {
+	if len(args) == 0 {
+		return false
+	}
+
+	switch args[0] {
+	case "--help", "-h":
+		return !isMirrorCloneCommand(cmd)
+	case "--version", "-v":
+		return true
+	default:
+		return false
+	}
+}
+
+func isMirrorCloneCommand(cmd *cobra.Command) bool {
+	return cmd != nil && cmd.Name() == "clone" && cmd.HasParent() && cmd.Parent().Name() == "mirror"
 }
 
 type rootComponentArgs struct {

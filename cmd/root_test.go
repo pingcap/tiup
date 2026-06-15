@@ -16,6 +16,7 @@ package cmd
 import (
 	"testing"
 
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
 )
 
@@ -43,4 +44,17 @@ func TestParseRootComponentArgs_StripsExplicitSeparator(t *testing.T) {
 		componentSpec: "playground",
 		componentArgs: []string{"-T", "demo"},
 	}, got)
+}
+
+func TestShouldSkipEnvInit(t *testing.T) {
+	mirrorCmd := &cobra.Command{Use: "mirror"}
+	cloneCmd := &cobra.Command{Use: "clone"}
+	mirrorCmd.AddCommand(cloneCmd)
+
+	require.True(t, shouldSkipEnvInit(rootCmd, []string{"-h"}))
+	require.True(t, shouldSkipEnvInit(rootCmd, []string{"--help"}))
+	require.True(t, shouldSkipEnvInit(rootCmd, []string{"-v"}))
+	require.False(t, shouldSkipEnvInit(rootCmd, []string{"playground"}))
+	require.False(t, shouldSkipEnvInit(cloneCmd, []string{"-h"}))
+	require.False(t, shouldSkipEnvInit(cloneCmd, []string{"--help"}))
 }

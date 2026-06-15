@@ -296,11 +296,7 @@ func (i *MonitorInstance) InitConfig(
 	cfg.RetentionSize = getRetentionSize(logPtr, spec.RetentionSize)
 
 	// Check if agent mode is enabled in additional arguments
-	if !cfg.EnablePromAgentMode {
-		if slices.Contains(spec.AdditionalArgs, "--enable-feature=agent") {
-			cfg.EnablePromAgentMode = true
-		}
-	}
+	cfg.EnablePromAgentMode = cfg.EnablePromAgentMode || slices.Contains(spec.AdditionalArgs, "--enable-feature=agent")
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_prometheus_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
