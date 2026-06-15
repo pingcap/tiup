@@ -43,10 +43,7 @@ var (
 )
 
 // arguments
-var (
-	binPath string
-	tag     string
-)
+var binPath string
 
 func init() {
 	cobra.EnableCommandSorting = false
@@ -113,11 +110,8 @@ the latest stable version will be downloaded from the repository.`,
 			// TBD: change this flag to subcommand
 
 			// We assume the first unknown parameter is the component name and following
-			// parameters will be transparent passed because registered flags and subcommands
-			// will be parsed correctly.
-			// e.g: tiup --tag mytag --rm playground --db 3 --pd 3 --kv 4
-			//   => run "playground" with parameters "--db 3 --pd 3 --kv 4"
-			// tiup --tag mytag --binpath /xxx/tikv-server tikv
+			// parameters will be transparently passed because registered flags and
+			// subcommands will be parsed correctly.
 			switch args[0] {
 			case "--help", "-h":
 				return cmd.Help()
@@ -147,32 +141,15 @@ the latest stable version will be downloaded from the repository.`,
 				args = args[2:]
 			case "--force-pull":
 				forcePull = true
-			case "--tag", "-T":
-				if len(args) < 2 {
-					return fmt.Errorf("flag %s needs an argument", args[0])
-				}
-				tag = args[1]
-				args = args[2:]
-			}
-
-			// component may use tag from environment variable. as workaround, make tiup set the same tag
-			for i := 0; i < len(args)-1; i++ {
-				if args[i] == "--tag" || args[i] == "-T" {
-					tag = args[i+1]
-				}
 			}
 
 			if len(args) < 1 {
 				return cmd.Help()
 			}
 
-			componentSpec := args[0]
-			args = args[1:]
-			if len(args) > 0 && args[0] == "--" {
-				args = args[1:]
-			}
+			runArgs := parseRootComponentArgs(args, binPath, forcePull)
 
-			return tiupexec.RunComponent(env, tag, componentSpec, binPath, forcePull, args)
+			return tiupexec.RunComponent(env, "", runArgs.componentSpec, runArgs.binPath, runArgs.forcePull, runArgs.componentArgs)
 		},
 		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
 			return environment.GlobalEnv().Close()
@@ -213,7 +190,6 @@ the latest stable version will be downloaded from the repository.`,
 	// useless, exist to generate help information
 	rootCmd.Flags().String("binary", "", "Print binary path of a specific version of a component `<component>[:version]`\n"+
 		"and the latest version installed will be selected if no version specified")
-	rootCmd.Flags().StringP("tag", "T", "", "[Deprecated] Specify a tag for component instance")
 	rootCmd.Flags().String("binpath", "", "Specify the binary path of component instance")
 	rootCmd.Flags().BoolP("version", "v", false, "Print the version of tiup")
 
@@ -230,6 +206,32 @@ the latest stable version will be downloaded from the repository.`,
 		newLinkCmd(),
 		newUnlinkCmd(),
 	)
+}
+
+type rootComponentArgs struct {
+	binPath       string
+	forcePull     bool
+	componentSpec string
+	componentArgs []string
+}
+
+func parseRootComponentArgs(args []string, binPath string, forcePull bool) rootComponentArgs {
+	if len(args) < 1 {
+		return rootComponentArgs{}
+	}
+
+	componentSpec := args[0]
+	componentArgs := args[1:]
+	if len(componentArgs) > 0 && componentArgs[0] == "--" {
+		componentArgs = componentArgs[1:]
+	}
+
+	return rootComponentArgs{
+		binPath:       binPath,
+		forcePull:     forcePull,
+		componentSpec: componentSpec,
+		componentArgs: componentArgs,
+	}
 }
 
 // Execute parses the command line arguments and calls proper functions
