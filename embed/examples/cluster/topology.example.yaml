@@ -59,6 +59,7 @@ monitored:
 # server_configs:
   # tidb:
   # tikv:
+  # tikv-worker:
   # pd:
   # tiflash:
   # tiflash-learner:
@@ -367,7 +368,7 @@ monitoring_servers:
     # ssh_port: 22
     # # Prometheus Service communication port.
     # port: 9090
-    # # ng-monitoring servive communication port
+    # # ng-monitoring service communication port
     # ng_port: 12020
     # # Prometheus deployment file, startup script, configuration file storage directory.
     # deploy_dir: "/tidb-deploy/prometheus-8249"
