@@ -52,8 +52,9 @@ var (
 // ref https://man7.org/linux/man-pages/man8/useradd.8.html
 // ref https://man7.org/linux/man-pages/man8/groupadd.8.html
 var (
-	reUser                = regexp.MustCompile(`^[a-z_]([a-z0-9_-]{0,31}|[a-z0-9_-]{0,30}\$)$`)
-	reGroup               = regexp.MustCompile(`^[a-z_]([a-z0-9_-]{0,15})$`)
+	reUser  = regexp.MustCompile(`^[a-z_]([a-z0-9_-]{0,31}|[a-z0-9_-]{0,30}\$)$`)
+	reGroup = regexp.MustCompile(`^[a-z_]([a-z0-9_-]{0,15})$`)
+	// Prometheus label name 必须以字母或下划线开头，后面只能跟字母、数字或下划线。
 	rePrometheusLabelName = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
 )
 
@@ -1039,6 +1040,7 @@ func (s *Specification) validateTiFlashConfigs() error {
 }
 
 func (s *Specification) validatePrometheusExternalLabels() error {
+	// cluster 和 monitor 是 TiUP 已经内置写入的 external_labels，用户不能覆盖它们。
 	reservedLabels := set.NewStringSet("cluster", "monitor")
 	for _, monitor := range s.Monitors {
 		for label := range monitor.ExternalLabels {
@@ -1049,6 +1051,7 @@ func (s *Specification) validatePrometheusExternalLabels() error {
 					label,
 				)
 			}
+			// 以 __ 开头的标签名通常保留给 Prometheus 内部语义，这里直接拒绝，避免把内部保留风格暴露给用户配置。
 			if strings.HasPrefix(label, "__") {
 				return errors.Errorf(
 					"monitoring_servers:%s.external_labels contains invalid label name '%s': labels starting with '__' are reserved",
@@ -1056,6 +1059,7 @@ func (s *Specification) validatePrometheusExternalLabels() error {
 					label,
 				)
 			}
+			// 除了显式保留名之外，这里再按 Prometheus label name 规则校验，避免把非法键名写进最终配置。
 			if !rePrometheusLabelName.MatchString(label) {
 				return errors.Errorf(
 					"monitoring_servers:%s.external_labels contains invalid label name '%s'",

@@ -16,6 +16,7 @@ package config
 import (
 	"bytes"
 	"path"
+	// 这里复用标准库的字符串转义逻辑，避免手写 YAML 引号时漏掉单引号、双引号等特殊字符。
 	"strconv"
 	"strings"
 	"text/template"
@@ -27,10 +28,11 @@ import (
 
 // PrometheusConfig represent the data to generate Prometheus config
 type PrometheusConfig struct {
-	ClusterName               string
-	ScrapeInterval            string
-	ScrapeTimeout             string
-	TLSEnabled                bool
+	ClusterName    string
+	ScrapeInterval string
+	ScrapeTimeout  string
+	TLSEnabled     bool
+	// ExternalLabels 表示用户希望额外注入到 Prometheus global.external_labels 的自定义标签集合。
 	ExternalLabels            map[string]string
 	NodeExporterAddrs         []string
 	TiDBStatusAddrs           []string
@@ -250,8 +252,10 @@ func (c *PrometheusConfig) SetExternalLabels(labels map[string]string) *Promethe
 		return c
 	}
 
+	// 这里复制一份 map，而不是直接持有外部引用，避免调用方后续修改原 map 影响配置对象内部状态。
 	c.ExternalLabels = make(map[string]string, len(labels))
 	for key, value := range labels {
+		// 这里逐项复制用户配置的 label，后续模板渲染会原样输出这些 key/value。
 		c.ExternalLabels[key] = value
 	}
 	return c
@@ -303,6 +307,7 @@ func (c *PrometheusConfig) ConfigWithAgentMode(enableAgent bool) ([]byte, error)
 
 // ConfigWithTemplate generate the Prometheus config content by tpl
 func (c *PrometheusConfig) ConfigWithTemplate(tpl string) ([]byte, error) {
+	// 这里向模板注册 yamlQuote，专门负责把 external_labels 的 value 安全地转成带转义的 YAML 字符串。
 	tmpl, err := template.New("Prometheus").Funcs(template.FuncMap{
 		"yamlQuote": strconv.Quote,
 	}).Parse(tpl)

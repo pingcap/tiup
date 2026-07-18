@@ -320,6 +320,7 @@ func (i *MonitorInstance) InitConfig(
 
 	// transfer config
 	cfig := config.NewPrometheusConfig(clusterName, clusterVersion, enableTLS)
+	// 这里把 topology 中解析出的 external_labels 交给 Prometheus 配置对象，后面模板渲染时会落到 global.external_labels。
 	cfig.SetExternalLabels(spec.ExternalLabels)
 	if monitoredOptions != nil {
 		cfig.AddBlackbox(i.GetHost(), uint64(monitoredOptions.BlackboxExporterPort))

@@ -239,7 +239,9 @@ monitoring_servers:
     # data_dir: "/tidb-data/prometheus-8249"
     # # Prometheus log file storage directory.
     # log_dir: "/tidb-deploy/prometheus-8249/log"
+    # 这里展示最小化 topology 里 external_labels 的写法，表示把静态集群元数据直接写进 Prometheus 全局标签。
     # external_labels:
+    #   这里的 key/value 都是用户自己声明的静态字符串，不是 TiUP 自动推导出来的。
     #   environment: production
     #   region: us-east-1
 

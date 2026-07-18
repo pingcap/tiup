@@ -658,7 +658,9 @@ monitoring_servers:
       region: us-east-1
 `), &topo)
 	require.NoError(t, err)
+	// 这里确认 environment 这个用户自定义标签会完整保存在 PrometheusSpec 里。
 	require.Equal(t, "production", topo.Monitors[0].ExternalLabels["environment"])
+	// 这里确认 region 这个用户自定义标签也会完整保存在 PrometheusSpec 里。
 	require.Equal(t, "us-east-1", topo.Monitors[0].ExternalLabels["region"])
 
 	topo = Specification{}
