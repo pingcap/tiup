@@ -54,6 +54,7 @@ type PrometheusSpec struct {
 	PromRemoteWriteToVM   bool                   `yaml:"prom_remote_write_to_vm,omitempty" validate:"prom_remote_write_to_vm:editable"` // Enable remote write to ng-monitoring
 	EnablePromAgentMode   bool                   `yaml:"enable_prom_agent_mode,omitempty" validate:"enable_prom_agent_mode:editable"`   // Enable Prometheus agent mode
 	RemoteConfig          Remote                 `yaml:"remote_config,omitempty" validate:"remote_config:ignore"`
+	ExternalLabels        map[string]string      `yaml:"external_labels,omitempty" validate:"external_labels:ignore"`
 	ExternalAlertmanagers []ExternalAlertmanager `yaml:"external_alertmanagers" validate:"external_alertmanagers:ignore"`
 	PushgatewayAddrs      []string               `yaml:"pushgateway_addrs,omitempty" validate:"pushgateway_addrs:ignore"`
 	Retention             string                 `yaml:"storage_retention,omitempty" validate:"storage_retention:editable"` // deprecated
@@ -319,6 +320,7 @@ func (i *MonitorInstance) InitConfig(
 
 	// transfer config
 	cfig := config.NewPrometheusConfig(clusterName, clusterVersion, enableTLS)
+	cfig.SetExternalLabels(spec.ExternalLabels)
 	if monitoredOptions != nil {
 		cfig.AddBlackbox(i.GetHost(), uint64(monitoredOptions.BlackboxExporterPort))
 	}

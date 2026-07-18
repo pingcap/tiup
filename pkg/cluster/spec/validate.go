@@ -1037,6 +1037,22 @@ func (s *Specification) validateTiFlashConfigs() error {
 	return nil
 }
 
+func (s *Specification) validatePrometheusExternalLabels() error {
+	reservedLabels := set.NewStringSet("cluster", "monitor")
+	for _, monitor := range s.Monitors {
+		for label := range monitor.ExternalLabels {
+			if reservedLabels.Exist(label) {
+				return errors.Errorf(
+					"monitoring_servers:%s.external_labels contains reserved label '%s'",
+					monitor.Host,
+					label,
+				)
+			}
+		}
+	}
+	return nil
+}
+
 // validateMonitorAgent checks for conflicts in topology for different ignore_exporter
 // settings for multiple instances on the same host / IP
 func (s *Specification) validateMonitorAgent() error {
@@ -1108,6 +1124,7 @@ func (s *Specification) Validate() error {
 		s.validateResourceManagerNames,
 		s.validateTiSparkSpec,
 		s.validateTiFlashConfigs,
+		s.validatePrometheusExternalLabels,
 		s.validateMonitorAgent,
 	}
 

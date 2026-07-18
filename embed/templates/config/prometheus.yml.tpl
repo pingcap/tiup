@@ -12,6 +12,9 @@ global:
   external_labels:
     cluster: '{{.ClusterName}}'
     monitor: "prometheus"
+{{- range $key, $value := .ExternalLabels}}
+    {{$key}}: '{{$value}}'
+{{- end}}
 
 # Load and evaluate rules in this file every 'evaluation_interval' seconds.
 rule_files:

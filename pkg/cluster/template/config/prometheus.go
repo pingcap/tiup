@@ -30,6 +30,7 @@ type PrometheusConfig struct {
 	ScrapeInterval            string
 	ScrapeTimeout             string
 	TLSEnabled                bool
+	ExternalLabels            map[string]string
 	NodeExporterAddrs         []string
 	TiDBStatusAddrs           []string
 	TiProxyStatusAddrs        []string
@@ -239,6 +240,19 @@ func (c *PrometheusConfig) AddLocalRule(rule string) *PrometheusConfig {
 // SetRemoteConfig set remote read/write config
 func (c *PrometheusConfig) SetRemoteConfig(cfg string) *PrometheusConfig {
 	c.RemoteConfig = cfg
+	return c
+}
+
+// SetExternalLabels sets custom Prometheus external labels.
+func (c *PrometheusConfig) SetExternalLabels(labels map[string]string) *PrometheusConfig {
+	if len(labels) == 0 {
+		return c
+	}
+
+	c.ExternalLabels = make(map[string]string, len(labels))
+	for key, value := range labels {
+		c.ExternalLabels[key] = value
+	}
 	return c
 }
 

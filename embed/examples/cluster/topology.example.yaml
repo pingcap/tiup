@@ -368,6 +368,11 @@ monitoring_servers:
     # rule_dir: /home/tidb/prometheus_rule
     # scrape_interval: 15s
     # scrape_timeout: 10s
+    # 这里可以给当前 Prometheus 补充集群自定义的 external_labels，后续 remote_write/federation/alerts 都会带上这些标签。
+    # external_labels:
+    #   这里的 key 由用户自己定义，常见会写环境、地域、机房等稳定元数据。
+    #   environment: production
+    #   region: us-east-1
     # # The following configs are used to overwrite the `server_configs.ng_monitoring` values.
     # ng_monitoring_config:
     #   storage.path: "/tidb-data/prometheus-8249/docdb"

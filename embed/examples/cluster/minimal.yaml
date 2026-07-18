@@ -239,6 +239,9 @@ monitoring_servers:
     # data_dir: "/tidb-data/prometheus-8249"
     # # Prometheus log file storage directory.
     # log_dir: "/tidb-deploy/prometheus-8249/log"
+    # external_labels:
+    #   environment: production
+    #   region: us-east-1
 
 # # Server configs are used to specify the configuration of Grafana Servers.  
 grafana_servers:
