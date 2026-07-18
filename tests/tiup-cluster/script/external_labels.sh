@@ -1,0 +1,51 @@
+#!/bin/bash
+
+set -eu
+
+function external_labels() {
+    mkdir -p ~/.tiup/bin/
+
+    version=$1
+    name="test_external_labels_$RANDOM"
+    topo=./topo/external_labels.yaml
+    invalid_topo=./topo/external_labels_invalid.yaml
+    prometheus_config=/home/tidb/deploy/prometheus-9090/conf/prometheus.yml
+
+    set +e
+    invalid_output=$(tiup-cluster check $invalid_topo -i ~/.ssh/id_rsa 2>&1)
+    invalid_status=$?
+    set -e
+    if [ $invalid_status -eq 0 ]; then
+        echo "expected invalid external_labels topology check to fail"
+        exit 1
+    fi
+    echo "$invalid_output" | grep "contains reserved label 'cluster'"
+
+    tiup-cluster --yes deploy $name $version $topo -i ~/.ssh/id_rsa
+    tiup-cluster --yes start $name
+
+    tiup-cluster _test $name writable
+
+    tiup-cluster exec $name -N n1 --command "grep -q \"cluster: '$name'\" $prometheus_config"
+    tiup-cluster exec $name -N n1 --command "grep -q 'monitor: \"prometheus\"' $prometheus_config"
+    tiup-cluster exec $name -N n1 --command "grep -q 'environment: \"production\"' $prometheus_config"
+    tiup-cluster exec $name -N n1 --command "grep -q 'region: \"us-east-1\"' $prometheus_config"
+
+    EDITOR=ex tiup-cluster edit-config -y $name <<EOEX
+:%s/production/staging/g
+:%s/us-east-1/eu-central-1/g
+:x
+EOEX
+    yes | tiup-cluster reload $name --transfer-timeout 60
+
+    tiup-cluster _test $name writable
+
+    tiup-cluster exec $name -N n1 --command "grep -q \"cluster: '$name'\" $prometheus_config"
+    tiup-cluster exec $name -N n1 --command "grep -q 'monitor: \"prometheus\"' $prometheus_config"
+    ! tiup-cluster exec $name -N n1 --command "grep -q 'environment: \"production\"' $prometheus_config"
+    tiup-cluster exec $name -N n1 --command "grep -q 'environment: \"staging\"' $prometheus_config"
+    ! tiup-cluster exec $name -N n1 --command "grep -q 'region: \"us-east-1\"' $prometheus_config"
+    tiup-cluster exec $name -N n1 --command "grep -q 'region: \"eu-central-1\"' $prometheus_config"
+
+    tiup-cluster --yes destroy $name
+}
