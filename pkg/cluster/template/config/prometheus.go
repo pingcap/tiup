@@ -16,6 +16,7 @@ package config
 import (
 	"bytes"
 	"path"
+	"strconv"
 	"strings"
 	"text/template"
 
@@ -302,7 +303,9 @@ func (c *PrometheusConfig) ConfigWithAgentMode(enableAgent bool) ([]byte, error)
 
 // ConfigWithTemplate generate the Prometheus config content by tpl
 func (c *PrometheusConfig) ConfigWithTemplate(tpl string) ([]byte, error) {
-	tmpl, err := template.New("Prometheus").Parse(tpl)
+	tmpl, err := template.New("Prometheus").Funcs(template.FuncMap{
+		"yamlQuote": strconv.Quote,
+	}).Parse(tpl)
 	if err != nil {
 		return nil, err
 	}

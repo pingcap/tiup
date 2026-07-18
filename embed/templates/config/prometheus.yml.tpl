@@ -13,7 +13,7 @@ global:
     cluster: '{{.ClusterName}}'
     monitor: "prometheus"
 {{- range $key, $value := .ExternalLabels}}
-    {{$key}}: '{{$value}}'
+    {{$key}}: {{yamlQuote $value}}
 {{- end}}
 
 # Load and evaluate rules in this file every 'evaluation_interval' seconds.

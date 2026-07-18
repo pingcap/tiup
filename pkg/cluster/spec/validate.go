@@ -52,8 +52,9 @@ var (
 // ref https://man7.org/linux/man-pages/man8/useradd.8.html
 // ref https://man7.org/linux/man-pages/man8/groupadd.8.html
 var (
-	reUser  = regexp.MustCompile(`^[a-z_]([a-z0-9_-]{0,31}|[a-z0-9_-]{0,30}\$)$`)
-	reGroup = regexp.MustCompile(`^[a-z_]([a-z0-9_-]{0,15})$`)
+	reUser                = regexp.MustCompile(`^[a-z_]([a-z0-9_-]{0,31}|[a-z0-9_-]{0,30}\$)$`)
+	reGroup               = regexp.MustCompile(`^[a-z_]([a-z0-9_-]{0,15})$`)
+	rePrometheusLabelName = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
 )
 
 func fixDir(topo Topology) func(string) string {
@@ -1044,6 +1045,20 @@ func (s *Specification) validatePrometheusExternalLabels() error {
 			if reservedLabels.Exist(label) {
 				return errors.Errorf(
 					"monitoring_servers:%s.external_labels contains reserved label '%s'",
+					monitor.Host,
+					label,
+				)
+			}
+			if strings.HasPrefix(label, "__") {
+				return errors.Errorf(
+					"monitoring_servers:%s.external_labels contains invalid label name '%s': labels starting with '__' are reserved",
+					monitor.Host,
+					label,
+				)
+			}
+			if !rePrometheusLabelName.MatchString(label) {
+				return errors.Errorf(
+					"monitoring_servers:%s.external_labels contains invalid label name '%s'",
 					monitor.Host,
 					label,
 				)
