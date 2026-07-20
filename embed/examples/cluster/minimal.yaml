@@ -239,7 +239,9 @@ monitoring_servers:
     # data_dir: "/tidb-data/prometheus-8249"
     # # Prometheus log file storage directory.
     # log_dir: "/tidb-deploy/prometheus-8249/log"
+    # Show how to attach static cluster metadata through Prometheus global external_labels.
     # external_labels:
+    #   User-defined keys and values are rendered as-is instead of being derived by TiUP.
     #   environment: production
     #   region: us-east-1
 

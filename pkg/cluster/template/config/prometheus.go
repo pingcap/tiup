@@ -31,6 +31,7 @@ type PrometheusConfig struct {
 	ScrapeInterval string
 	ScrapeTimeout  string
 	TLSEnabled     bool
+	// ExternalLabels holds user-defined entries merged into global.external_labels.
 	ExternalLabels            map[string]string
 	NodeExporterAddrs         []string
 	TiDBStatusAddrs           []string
@@ -250,6 +251,7 @@ func (c *PrometheusConfig) SetExternalLabels(labels map[string]string) *Promethe
 		return c
 	}
 
+	// Copy the input map so later caller mutations do not change the config object.
 	c.ExternalLabels = make(map[string]string, len(labels))
 	for key, value := range labels {
 		c.ExternalLabels[key] = value
@@ -303,6 +305,7 @@ func (c *PrometheusConfig) ConfigWithAgentMode(enableAgent bool) ([]byte, error)
 
 // ConfigWithTemplate generate the Prometheus config content by tpl
 func (c *PrometheusConfig) ConfigWithTemplate(tpl string) ([]byte, error) {
+	// yamlQuote keeps label values valid even when they contain quotes or other special characters.
 	tmpl, err := template.New("Prometheus").Funcs(template.FuncMap{
 		"yamlQuote": strconv.Quote,
 	}).Parse(tpl)

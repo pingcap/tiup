@@ -22,6 +22,7 @@ import (
 
 type renderedPrometheusConfig struct {
 	Global struct {
+		// Only decode global.external_labels because that is the output surface under test.
 		ExternalLabels map[string]string `yaml:"external_labels"`
 	} `yaml:"global"`
 }
@@ -30,6 +31,7 @@ func decodeExternalLabels(t *testing.T, content []byte) map[string]string {
 	t.Helper()
 
 	var cfg renderedPrometheusConfig
+	// Decode the rendered YAML instead of string matching so the test validates a real config.
 	if err := yaml.Unmarshal(content, &cfg); err != nil {
 		t.Fatalf("failed to decode rendered prometheus config: %v\n%s", err, string(content))
 	}
@@ -37,6 +39,7 @@ func decodeExternalLabels(t *testing.T, content []byte) map[string]string {
 }
 
 func TestPrometheusConfigExternalLabelsDefaults(t *testing.T) {
+	// Keep backward compatibility when no custom external_labels are provided.
 	cfg := NewPrometheusConfig("test-cluster", "v6.1.0", false)
 
 	content, err := cfg.Config()
@@ -60,6 +63,7 @@ func TestPrometheusConfigExternalLabelsDefaults(t *testing.T) {
 }
 
 func TestPrometheusConfigExternalLabels(t *testing.T) {
+	// Include both quote styles to cover YAML escaping in custom label values.
 	cfg := NewPrometheusConfig("test-cluster", "v6.1.0", false)
 	cfg.SetExternalLabels(map[string]string{
 		"environment": "prod'uction",

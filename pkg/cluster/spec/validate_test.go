@@ -649,6 +649,7 @@ func TestRelativePathDetect(t *testing.T) {
 
 func TestPrometheusExternalLabels(t *testing.T) {
 	topo := Specification{}
+	// Allow user-defined external labels to round-trip into the monitor spec.
 	err := yaml.Unmarshal([]byte(`
 monitoring_servers:
   - host: 172.16.5.138
@@ -661,6 +662,7 @@ monitoring_servers:
 	require.Equal(t, "us-east-1", topo.Monitors[0].ExternalLabels["region"])
 
 	topo = Specification{}
+	// Reject labels reserved for the built-in TiUP metadata.
 	err = yaml.Unmarshal([]byte(`
 monitoring_servers:
   - host: 172.16.5.138
@@ -681,6 +683,7 @@ monitoring_servers:
 	require.Equal(t, "monitoring_servers:172.16.5.138.external_labels contains reserved label 'monitor'", err.Error())
 
 	topo = Specification{}
+	// Reject names that violate the Prometheus label naming rules.
 	err = yaml.Unmarshal([]byte(`
 monitoring_servers:
   - host: 172.16.5.138
@@ -691,6 +694,7 @@ monitoring_servers:
 	require.Equal(t, "monitoring_servers:172.16.5.138.external_labels contains invalid label name '1region'", err.Error())
 
 	topo = Specification{}
+	// Reject the Prometheus-reserved __* label namespace.
 	err = yaml.Unmarshal([]byte(`
 monitoring_servers:
   - host: 172.16.5.138

@@ -368,7 +368,9 @@ monitoring_servers:
     # rule_dir: /home/tidb/prometheus_rule
     # scrape_interval: 15s
     # scrape_timeout: 10s
+    # Use external_labels to attach stable metadata that is propagated to remote_write, federation, and alerts.
     # external_labels:
+    #   Typical keys describe user-defined dimensions such as environment or region.
     #   environment: production
     #   region: us-east-1
     # # The following configs are used to overwrite the `server_configs.ng_monitoring` values.
