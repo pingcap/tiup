@@ -12,7 +12,7 @@ global:
   external_labels:
     cluster: '{{.ClusterName}}'
     monitor: "prometheus"
-{{- /* 这里继续把用户在 topology 里声明的自定义 external_labels 渲染到 Prometheus 全局标签中。 */}}
+{{- /* Render user-defined external_labels from the topology into Prometheus global labels. */}}
 {{- range $key, $value := .ExternalLabels}}
     {{$key}}: {{yamlQuote $value}}
 {{- end}}
