@@ -649,7 +649,6 @@ func TestRelativePathDetect(t *testing.T) {
 
 func TestPrometheusExternalLabels(t *testing.T) {
 	topo := Specification{}
-	// 先验证正常场景：合法 external_labels 可以被 topology 正常解析进监控节点配置。
 	err := yaml.Unmarshal([]byte(`
 monitoring_servers:
   - host: 172.16.5.138
@@ -658,13 +657,10 @@ monitoring_servers:
       region: us-east-1
 `), &topo)
 	require.NoError(t, err)
-	// 这里确认 environment 这个用户自定义标签会完整保存在 PrometheusSpec 里。
 	require.Equal(t, "production", topo.Monitors[0].ExternalLabels["environment"])
-	// 这里确认 region 这个用户自定义标签也会完整保存在 PrometheusSpec 里。
 	require.Equal(t, "us-east-1", topo.Monitors[0].ExternalLabels["region"])
 
 	topo = Specification{}
-	// 这里验证保留标签 cluster：它是 TiUP 固定写入的，不应该允许用户重定义。
 	err = yaml.Unmarshal([]byte(`
 monitoring_servers:
   - host: 172.16.5.138
@@ -672,11 +668,9 @@ monitoring_servers:
       cluster: production
 `), &topo)
 	require.Error(t, err)
-	// 这里把报错内容精确锁住，确保后续不会悄悄变成“允许覆盖”或者“报一个模糊错误”。
 	require.Equal(t, "monitoring_servers:172.16.5.138.external_labels contains reserved label 'cluster'", err.Error())
 
 	topo = Specification{}
-	// 再验证保留标签 monitor：它和 cluster 一样是 TiUP 固定写入的，不应该允许用户重定义。
 	err = yaml.Unmarshal([]byte(`
 monitoring_servers:
   - host: 172.16.5.138
@@ -684,11 +678,9 @@ monitoring_servers:
       monitor: production
 `), &topo)
 	require.Error(t, err)
-	// 这里同样把 monitor 的报错信息锁住，避免未来回归。
 	require.Equal(t, "monitoring_servers:172.16.5.138.external_labels contains reserved label 'monitor'", err.Error())
 
 	topo = Specification{}
-	// 这里验证不合法的标签名：以数字开头不符合 Prometheus label name 规则，应该在校验阶段失败。
 	err = yaml.Unmarshal([]byte(`
 monitoring_servers:
   - host: 172.16.5.138
@@ -696,11 +688,9 @@ monitoring_servers:
       1region: us-east-1
 `), &topo)
 	require.Error(t, err)
-	// 这里把非法标签名的错误内容锁住，确保是“标签名非法”而不是其他副作用报错。
 	require.Equal(t, "monitoring_servers:172.16.5.138.external_labels contains invalid label name '1region'", err.Error())
 
 	topo = Specification{}
-	// 这里验证 __ 前缀：这种前缀通常保留给 Prometheus 内部标签语义，不应该暴露给用户 external_labels。
 	err = yaml.Unmarshal([]byte(`
 monitoring_servers:
   - host: 172.16.5.138
@@ -708,7 +698,6 @@ monitoring_servers:
       __replica__: tiflash
 `), &topo)
 	require.Error(t, err)
-	// 这里精确锁住 __ 前缀的报错文案，确保后续实现继续明确拒绝这类保留风格标签。
 	require.Equal(t, "monitoring_servers:172.16.5.138.external_labels contains invalid label name '__replica__': labels starting with '__' are reserved", err.Error())
 }
 
