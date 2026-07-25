@@ -53,6 +53,9 @@ cdc_servers:
 monitoring_servers:
   - host: n1
     rule_dir: /tmp/local/prometheus
+    external_labels:
+      environment: production
+      region: us-east-1
 grafana_servers:
   - host: n1
     dashboard_dir: /tmp/local/grafana

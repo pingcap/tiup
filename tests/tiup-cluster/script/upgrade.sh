@@ -29,10 +29,12 @@ function upgrade() {
     fi
 
     tiup-cluster _test $name writable
+    assert_prometheus_external_labels $name n1 production us-east-1
 
     yes | tiup-cluster upgrade $name $version --transfer-timeout 60
 
     tiup-cluster _test $name writable
+    assert_prometheus_external_labels $name n1 production us-east-1
 
     # test edit-config & reload
     # change the config of pump and check it after reload
@@ -47,6 +49,7 @@ EOEX
     tiup-cluster exec $name -R pump --command "grep '2 mib' /home/tidb/deploy/pump-8250/conf/pump.toml"
 
     tiup-cluster _test $name writable
+    assert_prometheus_external_labels $name n1 production us-east-1
 
     tiup-cluster --yes destroy $name
 }

@@ -525,6 +525,47 @@ tiflash_servers:
 	})
 }
 
+func TestTopologyMergePreservesPrometheusExternalLabels(t *testing.T) {
+	with2TempFile(t, `
+server_configs:
+  tikv:
+    storage.reserve-space: 1K
+
+tidb_servers:
+  - host: 172.16.5.140
+
+pd_servers:
+  - host: 172.16.5.140
+
+tikv_servers:
+  - host: 172.16.5.140
+
+monitoring_servers:
+  - host: 172.16.5.140
+    rule_dir: /tmp/local/prometheus
+    external_labels:
+      environment: production
+      region: us-east-1
+grafana_servers:
+  - host: 172.16.5.140
+    dashboard_dir: /tmp/local/grafana
+alertmanager_servers:
+  - host: 172.16.5.140
+    config_file: /tmp/local/alertmanager/alertmanager.yml
+`, `
+tidb_servers:
+  - host: 172.16.5.141
+`, func(base, scale string) {
+		topo, err := merge4test(base, scale)
+		require.NoError(t, err)
+		require.Len(t, topo.Monitors, 1)
+		require.Equal(t, map[string]string{
+			"environment": "production",
+			"region":      "us-east-1",
+		}, topo.Monitors[0].ExternalLabels)
+	})
+}
+
 func TestMergeComponentVersions(t *testing.T) {
 	// test component version overwrite
 	with2TempFile(t, `

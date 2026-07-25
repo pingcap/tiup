@@ -41,6 +41,9 @@ drainer_servers:
 
 monitoring_servers:
   - host: n1
+    external_labels:
+      environment: production
+      region: us-east-1
 grafana_servers:
   - host: n1
 alertmanager_servers:

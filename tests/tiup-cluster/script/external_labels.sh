@@ -9,7 +9,6 @@ function external_labels() {
     name="test_external_labels_$RANDOM"
     topo=./topo/external_labels.yaml
     invalid_topo=./topo/external_labels_invalid.yaml
-    prometheus_config=/home/tidb/deploy/prometheus-9090/conf/prometheus.yml
 
     echo "check invalid external_labels topology"
     set +e
@@ -33,10 +32,7 @@ function external_labels() {
     tiup-cluster display $name
 
     # check the generated Prometheus config after the initial deploy
-    tiup-cluster exec $name -N n1 --command "grep -q \"cluster: '$name'\" $prometheus_config"
-    tiup-cluster exec $name -N n1 --command "grep -q 'monitor: \"prometheus\"' $prometheus_config"
-    tiup-cluster exec $name -N n1 --command "grep -q 'environment: \"production\"' $prometheus_config"
-    tiup-cluster exec $name -N n1 --command "grep -q 'region: \"us-east-1\"' $prometheus_config"
+    assert_prometheus_external_labels $name n1 production us-east-1
 
     echo "edit config and reload cluster"
     EDITOR=ex tiup-cluster edit-config -y $name <<EOEX
@@ -49,12 +45,22 @@ EOEX
     tiup-cluster _test $name writable
 
     # verify reload updates the rendered external_labels instead of keeping the old values
-    tiup-cluster exec $name -N n1 --command "grep -q \"cluster: '$name'\" $prometheus_config"
-    tiup-cluster exec $name -N n1 --command "grep -q 'monitor: \"prometheus\"' $prometheus_config"
-    ! tiup-cluster exec $name -N n1 --command "grep -q 'environment: \"production\"' $prometheus_config"
-    tiup-cluster exec $name -N n1 --command "grep -q 'environment: \"staging\"' $prometheus_config"
-    ! tiup-cluster exec $name -N n1 --command "grep -q 'region: \"us-east-1\"' $prometheus_config"
-    tiup-cluster exec $name -N n1 --command "grep -q 'region: \"eu-central-1\"' $prometheus_config"
+    assert_prometheus_external_labels $name n1 staging eu-central-1
+    assert_prometheus_external_label_absent $name n1 environment production
+    assert_prometheus_external_label_absent $name n1 region us-east-1
+
+    echo "remove external_labels and reload cluster"
+    EDITOR=ex tiup-cluster edit-config -y $name <<EOEX
+:g/    external_labels:/.,+2d
+:x
+EOEX
+    yes | tiup-cluster reload $name --transfer-timeout 60
+
+    tiup-cluster _test $name writable
+
+    assert_default_prometheus_external_labels $name n1
+    assert_prometheus_external_label_absent $name n1 environment staging
+    assert_prometheus_external_label_absent $name n1 region eu-central-1
 
     echo "destroy cluster"
     tiup-cluster --yes destroy $name

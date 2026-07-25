@@ -66,3 +66,34 @@ function wait_instance_num_reach() {
     tiup-cluster $client display $name
     exit -1
 }
+
+function assert_default_prometheus_external_labels() {
+    name=$1
+    node=$2
+    prometheus_config=/home/tidb/deploy/prometheus-9090/conf/prometheus.yml
+
+    tiup-cluster exec $name -N $node --command "grep -q \"cluster: '$name'\" $prometheus_config"
+    tiup-cluster exec $name -N $node --command "grep -q 'monitor: \"prometheus\"' $prometheus_config"
+}
+
+function assert_prometheus_external_labels() {
+    name=$1
+    node=$2
+    environment=$3
+    region=$4
+    prometheus_config=/home/tidb/deploy/prometheus-9090/conf/prometheus.yml
+
+    assert_default_prometheus_external_labels $name $node
+    tiup-cluster exec $name -N $node --command "grep -q 'environment: \"$environment\"' $prometheus_config"
+    tiup-cluster exec $name -N $node --command "grep -q 'region: \"$region\"' $prometheus_config"
+}
+
+function assert_prometheus_external_label_absent() {
+    name=$1
+    node=$2
+    label=$3
+    value=$4
+    prometheus_config=/home/tidb/deploy/prometheus-9090/conf/prometheus.yml
+
+    ! tiup-cluster exec $name -N $node --command "grep -q '$label: \"$value\"' $prometheus_config"
+}
