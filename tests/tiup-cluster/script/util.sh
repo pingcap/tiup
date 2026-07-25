@@ -94,6 +94,41 @@ function assert_prometheus_external_label_absent() {
     label=$3
     value=$4
     prometheus_config=/home/tidb/deploy/prometheus-9090/conf/prometheus.yml
+    pattern="$label: \"$value\""
+    pattern_b64=$(printf '%s' "$pattern" | base64 | tr -d '\n')
+    config_b64=$(printf '%s' "$prometheus_config" | base64 | tr -d '\n')
+    remote_command="bash -lc 'pattern=\$(printf %s \"$pattern_b64\" | base64 -d); config=\$(printf %s \"$config_b64\" | base64 -d); grep -F -q -- \"\$pattern\" \"\$config\"; rc=\$?; echo __GREP_RC__:\$rc; exit 0'"
 
-    ! tiup-cluster exec $name -N $node --command "grep -q '$label: \"$value\"' $prometheus_config"
+    set +e
+    output=$(tiup-cluster exec $name -N $node --command "$remote_command" 2>&1)
+    status=$?
+    set -e
+
+    if [ $status -ne 0 ]; then
+        echo "$output"
+        return $status
+    fi
+
+    grep_rc=$(echo "$output" | sed -n 's/.*__GREP_RC__:\([0-9][0-9]*\).*/\1/p' | tail -n 1)
+    if [ -z "$grep_rc" ]; then
+        echo "$output"
+        echo "failed to parse grep exit code while checking Prometheus external_labels"
+        return 1
+    fi
+
+    case "$grep_rc" in
+        0)
+            echo "$output"
+            echo "expected Prometheus external label '$pattern' to be absent in $prometheus_config on $node"
+            return 1
+            ;;
+        1)
+            return 0
+            ;;
+        *)
+            echo "$output"
+            echo "grep failed with exit code $grep_rc while checking Prometheus external_labels in $prometheus_config on $node"
+            return 1
+            ;;
+    esac
 }
