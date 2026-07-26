@@ -19,56 +19,32 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	cjson "github.com/gibson042/canonicaljson-go"
-	"github.com/google/uuid"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/crypto"
 	"github.com/pingcap/tiup/pkg/localdata"
+	"github.com/pingcap/tiup/pkg/repository/testutil"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
-	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/stretchr/testify/assert"
 )
 
-// Create a profile directory
-// Contained stuff:
-//   - index.json: with wrong signature
-//   - snapshot.json: correct
-//   - tidb.json: correct
-//   - timestamp: with expired timestamp
-func genPollutedProfileDir() (string, error) {
-	uid := uuid.New().String()
-	dir := path.Join("/tmp", uid)
-
-	wd, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-
-	if err := utils.Copy(path.Join(wd, "testdata", "polluted"), dir); err != nil {
-		return "", err
-	}
-
-	return dir, nil
-}
-
 func TestPollutedManifest(t *testing.T) {
-	profileDir, err := genPollutedProfileDir()
+	fixture, err := testutil.NewPollutedProfileFixture()
 	assert.Nil(t, err)
-	defer os.RemoveAll(profileDir)
+	defer os.RemoveAll(fixture.Dir)
 
-	profile := localdata.NewProfile(profileDir, &localdata.TiUPConfig{})
+	profile := localdata.NewProfile(fixture.Dir, &localdata.TiUPConfig{})
 	local, err := v1manifest.NewManifests(profile)
 	assert.Nil(t, err)
 
 	// Mock remote expired
 	mirror := MockMirror{
 		Resources: map[string]string{
-			"/timestamp.json": `{"signatures":[{"keyid":"66d4ea1da00076c822a6e1b4df5eb1e529eb38f6edcedff323e62f2bfe3eaddd","sig":"V8MgDDCmfVb8N0O3unbAno8q6i2Ag1Sbr/3n12Odk8McKzZaif7OcDm1IZB5J3o7ajsBF1tduTrcO7OijJQvx8l9i6aZi9J1lb/eJpYsyvQWdzd/T7osdRkEIhtM4/sGFjGslOolTFmpA/U5IkJ+FWAi38YaFPRn8bfIPLGniRAYs4/qjLBB3RgBUlDIIVvTiJIHEHtf3Bqb5LjpEjW4XhmDK94LJbKUqfO/6oDnQzI6Rot7zBWwDQVrIHakvQxoqA5c2jtMHCXSdX9cN7aRrNO4csggMzvQot7K0JYYszlroXnsL2ioNMgcPhtoEaMLW9mFjmdgR0j1//n1mxtdWA=="}],"signed":{"_type":"timestamp","expires":"2000-08-01T14:47:48+08:00","meta":{"/snapshot.json":{"hashes":{"sha256":"24c9fa83f15eda0683999b98ac0ff87fb95aed91c10410891fb38313f38e35c1"},"length":1760}},"spec_version":"0.1.0","version":639}}`,
+			"/timestamp.json": fixture.RemoteExpiredTimestamp,
 		},
 	}
 	repo := NewV1Repo(&mirror, Options{}, local)
@@ -79,9 +55,8 @@ func TestPollutedManifest(t *testing.T) {
 	// Mock remote correct but local throw sign error
 	mirror = MockMirror{
 		Resources: map[string]string{
-			// these files will expire after 2120
-			"/timestamp.json": `{"signatures":[{"keyid":"66d4ea1da00076c822a6e1b4df5eb1e529eb38f6edcedff323e62f2bfe3eaddd","sig":"Mo/o68zmRCpu5gHB9uEyVVtf5Cz432F6dd/jkKVDQXw3vG4ftnOiIRF590OfE79VFQ3BXDgMUmfD7sdkcU5Gc4HBUqKWt3vI1tFsEFfxZDQSA/upONirknxtKKZtrjDkk/rjD7cLE3S/Stul+ho0LwwlFncUZmdYaaXBeP9YileekUR15S+XvIInNO5YK+vy2EqTjMQdYTMabhZHxvP35MUMnphXuBV0aLjuvkaksF2V0mXFGcB9GUHzmgGuW32VoF2G6UBiRYaSu0r1LjTqS2auL/TciLZmi95KAAlCz3f8SOpkQ0z5bZiSk8SFCbPN1tb97RSaFJQ1jnEmxZULZA=="}],"signed":{"_type":"timestamp","expires":"2120-08-01T14:47:48+08:00","meta":{"/snapshot.json":{"hashes":{"sha256":"acb8b69c0335c6b4f3b0315dc58bdf774fca558c050dd16ae4459e3a82d39261"},"length":1760}},"spec_version":"0.1.0","version":99999}}`,
-			"/420.index.json": `{"signatures":[{"keyid":"7fce7ec4f9c36d51dec7ec96065bb64958b743e46ea8141da668cd2ce58a9e61","sig":"MFVJxmU1ErcobtRcssvQiHQLTAVyCVieVpSNlgIAv6FSGN8utFpKuV3RKgelgJskt2j/gJ6k+ITpUqd1Y9iiff44N9u9oov0CBR7gYoSfSum8yEqI0AeJKePUu40959xe/1WU881npF50+LE8ovk0MC8mXzNDoe4kHWFZBve9s+VbPS1KwD2jdnf9sR95rJLF8vxMwnDwsXmdf5Y4TV9nUvQ996BRmr0YFQKBVl9DqxQ+Y2KyXjrNaZwJhKdF7I3W6fCOF4Cf5QMbZ6SG4TrPsscjscZQKJHox3iMuL6NGEem2B2lEJovrlBh0U9/cN4y6CZvEnL3uGYp7gxVvTe7A=="}],"signed":{"_type":"index","components":{"tidb":{"hidden":false,"owner":"pingcap","standalone":false,"url":"/tidb.json","yanked":false}},"default_components":[],"expires":"2121-06-23T12:05:15+08:00","owners":{"pingcap":{"keys":{"a61b695e2b86097d993e94e99fd15ec6d8fc8e9522948c9ff21c2f2c881093ae":{"keytype":"rsa","keyval":{"public":"-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnayxhw6KeoKK+Ax9RW6v\n66YjrpRpGLewLmSSAzJGX8nL5/a2nEbXbeF9po265KcBSFWol8jLBsmG56ruwwxp\noWWhJPncqGqy8wMeRMmTf7ATGa+tk+To7UAQD0MYzt7rRlIdpqi9Us3J6076Z83k\n2sxFnX9sVflhOsotGWL7hmrn/CJWxKsO6OVCoqbIlnJV8xFazE2eCfaDTIEEEgnh\nLIGDsmv1AN8ImUIn/hyKcm1PfhDZrF5qhEVhfz5D8aX3cUcEJw8BvCaNloXyHf+y\nDKjqO/dJ7YFWVt7nPqOvaEkBQGMd54ETJ/BbO9r3WTsjXKleoPovBSQ/oOxApypb\nNQIDAQAB\n-----END PUBLIC KEY-----\n"},"scheme":"rsassa-pss-sha256"}},"name":"PingCAP","threshold":1}},"spec_version":"0.1.0","version":420}}`,
+			"/timestamp.json": fixture.RemoteTimestamp,
+			"/420.index.json": fixture.RemoteIndex,
 		},
 	}
 	repo = NewV1Repo(&mirror, Options{}, local)
