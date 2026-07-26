@@ -11,44 +11,67 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v1manifest_test
+package v1manifest
 
 import (
 	"os"
+	"path"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/pingcap/tiup/pkg/localdata"
-	"github.com/pingcap/tiup/pkg/repository/testutil"
-	"github.com/pingcap/tiup/pkg/repository/v1manifest"
+	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/stretchr/testify/assert"
 )
 
+// Create a profile directory
+// Contained stuff:
+//   - index.json: with wrong signature
+//   - snapshot.json: correct
+//   - tidb.json: correct
+//   - timestamp: with expired timestamp
+func genPollutedProfileDir() (string, error) {
+	uid := uuid.New().String()
+	dir := path.Join("/tmp", uid)
+
+	wd, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+
+	if err := utils.Copy(path.Join(wd, "testdata", "polluted"), dir); err != nil {
+		return "", err
+	}
+
+	return dir, nil
+}
+
 func TestPollutedManifest(t *testing.T) {
-	fixture, err := testutil.NewPollutedProfileFixture()
+	profileDir, err := genPollutedProfileDir()
 	assert.Nil(t, err)
-	defer os.RemoveAll(fixture.Dir)
+	defer os.RemoveAll(profileDir)
 
-	profile := localdata.NewProfile(fixture.Dir, &localdata.TiUPConfig{})
-	manifest, err := v1manifest.NewManifests(profile)
+	profile := localdata.NewProfile(profileDir, &localdata.TiUPConfig{})
+	manifest, err := NewManifests(profile)
 	assert.Nil(t, err)
 
-	index := v1manifest.Index{}
+	index := Index{}
 	_, exist, err := manifest.LoadManifest(&index)
 	assert.Nil(t, err)
 	assert.False(t, exist)
 
-	snap := v1manifest.Snapshot{}
+	snap := Snapshot{}
 	_, exist, err = manifest.LoadManifest(&snap)
 	assert.Nil(t, err)
 	assert.True(t, exist)
 
-	timestamp := v1manifest.Timestamp{}
+	timestamp := Timestamp{}
 	_, exist, err = manifest.LoadManifest(&timestamp)
 	assert.Nil(t, err)
 	assert.False(t, exist)
 
-	filename := v1manifest.ComponentManifestFilename("tidb")
-	tidb, err := manifest.LoadComponentManifest(&v1manifest.ComponentItem{
+	filename := ComponentManifestFilename("tidb")
+	tidb, err := manifest.LoadComponentManifest(&ComponentItem{
 		Owner: "pingcap",
 		URL:   "/tidb.json",
 	}, filename)
