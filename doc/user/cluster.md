@@ -75,6 +75,25 @@ monitoring_servers:
   - host: 172.16.5.134
 ```
 
+Starting in TiUP 1.17.0, you can also set Prometheus global
+`external_labels` under `monitoring_servers`:
+
+```yaml
+monitoring_servers:
+  - host: 172.16.5.134
+    external_labels:
+      environment: production
+      region: us-east-1
+```
+
+Use this field to attach stable metadata that should be propagated through
+Prometheus `remote_write`, federation, and alerts. TiUP renders the configured
+key/value pairs as-is.
+
+Note: older TiUP versions do not ignore unknown topology fields here. If a
+topology file containing `monitoring_servers[].external_labels` is opened by an
+older TiUP that does not support this field, topology parsing fails.
+
 Save the file as `/tmp/topology.yaml`. If we want to use TiDB's v4.0.0-rc version with the cluster name prod-cluster, run:
 
 ```shell
