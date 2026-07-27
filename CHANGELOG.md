@@ -16,12 +16,6 @@ TiUP Changelog
 
 - Fix the issue that `tiup mirror clone -h` and `tiup mirror clone --help` may panic (#2717, @xhebox)
 
-### Miscellaneous
-
-- Add lifecycle test and documentation coverage for Prometheus `external_labels` support (#2721, @zanmato1984)
-- Update test `root.json` fixtures to v7 (#2724, @bb7133)
-- Fix cluster scale CI by removing stale TiSpark from non-TLS test topologies (#2713, @app/copilot-swe-agent)
-
 ## [1.16.5] 2026-04-10
 
 ### New Features
