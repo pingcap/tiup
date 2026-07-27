@@ -1,5 +1,27 @@
 TiUP Changelog
 
+## [1.17.0] 2026-07-27
+
+### New Features
+
+- `tiup-cluster` support `monitoring_servers[].external_labels` to configure Prometheus external labels (#2719, @zanmato1984)
+- `tiup-cluster` support TiKV worker deployment and management (#2677, @Lloyd-Pottiger)
+
+### Improvements
+
+- `tiup-cluster` refresh TLS certificates after renaming a TLS-enabled cluster to avoid certificate mismatch (#2715, @xhebox)
+- Remove the deprecated TiUP root `--tag/-T` flag. Use component-level tag flags instead, such as `tiup playground --tag <name>` (#2716, @xhebox)
+
+### Fixes
+
+- Fix the issue that `tiup mirror clone -h` and `tiup mirror clone --help` may panic (#2717, @xhebox)
+
+### Miscellaneous
+
+- Add lifecycle test and documentation coverage for Prometheus `external_labels` support (#2721, @zanmato1984)
+- Update test `root.json` fixtures to v7 (#2724, @bb7133)
+- Fix cluster scale CI by removing stale TiSpark from non-TLS test topologies (#2713, @app/copilot-swe-agent)
+
 ## [1.16.5] 2026-04-10
 
 ### New Features
