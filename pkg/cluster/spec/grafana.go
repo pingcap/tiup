@@ -374,13 +374,16 @@ func (i *GrafanaInstance) initDashboards(ctx context.Context, e ctxt.Executor, s
 	}
 
 	// Deal with the cluster name and datasource
+	// Replace literal dashboard placeholders first. The datasource name can contain
+	// "test-cluster" (for example, "test-cluster-vm"), so replacing these literals
+	// after datasource placeholders would rewrite the generated name a second time.
 	for _, cmd := range []string{
+		`find %s -type f -exec sed -i 's/test-cluster/%s/g' {} \;`,
+		`find %s -type f -exec sed -i 's/Test-Cluster/%s/g' {} \;`,
 		`find %s -type f -exec sed -i 's/\${DS_.*-CLUSTER}/%s/g' {} \;`,
 		`find %s -type f -exec sed -i 's/DS_.*-CLUSTER/%s/g' {} \;`,
 		`find %s -type f -exec sed -i 's/\${DS_LIGHTNING}/%s/g' {} \;`,
 		`find %s -type f -exec sed -i 's/DS_LIGHTNING/%s/g' {} \;`,
-		`find %s -type f -exec sed -i 's/test-cluster/%s/g' {} \;`,
-		`find %s -type f -exec sed -i 's/Test-Cluster/%s/g' {} \;`,
 	} {
 		cmd := fmt.Sprintf(cmd, dashboardsDir, datasourceName)
 		_, stderr, err := e.Execute(ctx, cmd, false)
