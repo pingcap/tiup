@@ -23,10 +23,13 @@ import (
 	"testing"
 
 	"github.com/pingcap/tiup/pkg/checkpoint"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
 
@@ -441,17 +444,77 @@ func TestHandleRemoteWriteDisabled(t *testing.T) {
 	assert.Equal(t, vmURL, spec.RemoteConfig.RemoteWrite[0]["url"])
 }
 
-func TestDashboardServersDiscoveredForNodeExporter(t *testing.T) {
+func TestStandaloneDashboardHostInNodeExporterTargets(t *testing.T) {
 	topo := &Specification{
+		GlobalOptions: GlobalOptions{
+			User:        "tidb",
+			SystemdMode: UserMode,
+		},
+		MonitoredOptions: MonitoredOptions{
+			NodeExporterPort:     9100,
+			BlackboxExporterPort: 9115,
+		},
+		PDServers: []*PDSpec{
+			{Host: "10.0.1.11", ClientPort: 2379},
+		},
+		Monitors: []*PrometheusSpec{
+			{Host: "10.0.1.21", Port: 9090},
+		},
 		DashboardServers: []*DashboardSpec{
 			{Host: "10.0.1.50", Port: 12333},
 		},
 	}
 
-	servers, found := findSliceField(topo, "DashboardServers")
-	assert.True(t, found)
-	assert.Equal(t, 1, servers.Len())
+	deployDir := t.TempDir()
+	cacheDir := t.TempDir()
+	paths := meta.DirPaths{
+		Deploy: deployDir,
+		Cache:  cacheDir,
+		Data:   []string{filepath.Join(deployDir, "data")},
+		Log:    filepath.Join(deployDir, "log"),
+	}
+	require.NoError(t, os.MkdirAll(filepath.Join(deployDir, "bin", "prometheus"), 0755))
 
-	dashboard := servers.Index(0).Interface().(*DashboardSpec)
-	assert.Equal(t, "10.0.1.50", dashboard.Host)
+	comp := MonitorComponent{Topology: topo}
+	prom := comp.Instances()[0].(*MonitorInstance)
+	err := prom.InitConfig(
+		ctxt.New(context.Background(), 0, logprinter.NewLogger("")),
+		&mockExecutor{},
+		"verify-dashboard",
+		"v8.5.0",
+		"tidb",
+		paths,
+	)
+	require.NoError(t, err)
+
+	body, err := os.ReadFile(filepath.Join(deployDir, "conf", "prometheus.yml"))
+	require.NoError(t, err)
+
+	var parsed struct {
+		ScrapeConfigs []struct {
+			JobName       string `yaml:"job_name"`
+			StaticConfigs []struct {
+				Targets []string `yaml:"targets"`
+			} `yaml:"static_configs"`
+		} `yaml:"scrape_configs"`
+	}
+	require.NoError(t, yaml.Unmarshal(body, &parsed))
+
+	targetsOf := func(job string) []string {
+		var out []string
+		for _, sc := range parsed.ScrapeConfigs {
+			if sc.JobName != job {
+				continue
+			}
+			for _, cfg := range sc.StaticConfigs {
+				out = append(out, cfg.Targets...)
+			}
+		}
+		return out
+	}
+
+	assert.Contains(t, targetsOf("overwritten-nodes"), "10.0.1.50:9100")
+	assert.Contains(t, targetsOf("overwritten-nodes"), "10.0.1.11:9100")
+	assert.Contains(t, targetsOf("overwritten-nodes"), "10.0.1.21:9100")
+	assert.Contains(t, targetsOf("monitor_port_probe"), "10.0.1.50:9115")
 }
