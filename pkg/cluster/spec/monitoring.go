@@ -255,6 +255,17 @@ func (i *MonitorInstance) handleRemoteWrite(spec *PrometheusSpec, monitoring *Pr
 	}
 }
 
+func addDashboardScrapeHosts(uniqueHosts set.StringSet, topoHasField func(string) (reflect.Value, bool)) {
+	servers, found := topoHasField("DashboardServers")
+	if !found {
+		return
+	}
+	for idx := 0; idx < servers.Len(); idx++ {
+		dashboard := servers.Index(idx).Interface().(*DashboardSpec)
+		uniqueHosts.Insert(dashboard.Host)
+	}
+}
+
 // InitConfig implement Instance interface
 func (i *MonitorInstance) InitConfig(
 	ctx context.Context,
@@ -428,12 +439,7 @@ func (i *MonitorInstance) InitConfig(
 			cfig.AddTiKVCDC(tikvCdc.Host, uint64(tikvCdc.Port))
 		}
 	}
-	if servers, found := topoHasField("DashboardServers"); found {
-		for idx := 0; idx < servers.Len(); idx++ {
-			dashboard := servers.Index(idx).Interface().(*DashboardSpec)
-			uniqueHosts.Insert(dashboard.Host)
-		}
-	}
+	addDashboardScrapeHosts(uniqueHosts, topoHasField)
 	if servers, found := topoHasField("Monitors"); found {
 		for idx := 0; idx < servers.Len(); idx++ {
 			monitoring := servers.Index(idx).Interface().(*PrometheusSpec)
