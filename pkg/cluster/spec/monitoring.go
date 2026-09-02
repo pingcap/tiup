@@ -255,45 +255,6 @@ func (i *MonitorInstance) handleRemoteWrite(spec *PrometheusSpec, monitoring *Pr
 	}
 }
 
-// uniqueHostsFromTopo returns hosts scraped by node_exporter and blackbox_exporter.
-func uniqueHostsFromTopo(topo Topology) set.StringSet {
-	uniqueHosts := set.NewStringSet()
-	for _, field := range []string{
-		"PDServers",
-		"TSOServers",
-		"SchedulingServers",
-		"RouterServers",
-		"ResourceManagerServers",
-		"DashboardServers",
-		"TiKVServers",
-		"TiKVWorkerServers",
-		"TiDBServers",
-		"TiProxyServers",
-		"TiFlashServers",
-		"PumpServers",
-		"Drainers",
-		"CDCServers",
-		"TiKVCDCServers",
-		"Monitors",
-		"Grafanas",
-		"Alertmanagers",
-		"Masters",
-		"Workers",
-	} {
-		servers, found := findSliceField(topo, field)
-		if !found {
-			continue
-		}
-		for i := 0; i < servers.Len(); i++ {
-			hostField := reflect.Indirect(servers.Index(i)).FieldByName("Host")
-			if hostField.IsValid() && hostField.Kind() == reflect.String && hostField.String() != "" {
-				uniqueHosts.Insert(hostField.String())
-			}
-		}
-	}
-	return uniqueHosts
-}
-
 // InitConfig implement Instance interface
 func (i *MonitorInstance) InitConfig(
 	ctx context.Context,
@@ -366,65 +327,75 @@ func (i *MonitorInstance) InitConfig(
 	}
 	cfig.ScrapeInterval = spec.ScrapeInterval
 	cfig.ScrapeTimeout = spec.ScrapeTimeout
-	uniqueHosts := uniqueHostsFromTopo(i.topo)
+	uniqueHosts := set.NewStringSet()
 
 	if servers, found := topoHasField("PDServers"); found {
 		for i := 0; i < servers.Len(); i++ {
 			pd := servers.Index(i).Interface().(*PDSpec)
+			uniqueHosts.Insert(pd.Host)
 			cfig.AddPD(pd.Host, uint64(pd.ClientPort))
 		}
 	}
 	if servers, found := topoHasField("TSOServers"); found {
 		for i := 0; i < servers.Len(); i++ {
 			tso := servers.Index(i).Interface().(*TSOSpec)
+			uniqueHosts.Insert(tso.Host)
 			cfig.AddTSO(tso.Host, uint64(tso.Port))
 		}
 	}
 	if servers, found := topoHasField("SchedulingServers"); found {
 		for i := 0; i < servers.Len(); i++ {
 			scheduling := servers.Index(i).Interface().(*SchedulingSpec)
+			uniqueHosts.Insert(scheduling.Host)
 			cfig.AddScheduling(scheduling.Host, uint64(scheduling.Port))
 		}
 	}
 	if servers, found := topoHasField("RouterServers"); found {
 		for i := 0; i < servers.Len(); i++ {
 			router := servers.Index(i).Interface().(*RouterSpec)
+			uniqueHosts.Insert(router.Host)
 			cfig.AddRouter(router.Host, uint64(router.Port))
 		}
 	}
 	if servers, found := topoHasField("ResourceManagerServers"); found {
 		for i := 0; i < servers.Len(); i++ {
 			rm := servers.Index(i).Interface().(*ResourceManagerSpec)
+			uniqueHosts.Insert(rm.Host)
 			cfig.AddResourceManager(rm.Host, uint64(rm.Port))
 		}
 	}
 	if servers, found := topoHasField("TiKVServers"); found {
 		for i := 0; i < servers.Len(); i++ {
 			kv := servers.Index(i).Interface().(*TiKVSpec)
+			uniqueHosts.Insert(kv.Host)
 			cfig.AddTiKV(kv.Host, uint64(kv.StatusPort))
 		}
 	}
 	if servers, found := topoHasField("TiKVWorkerServers"); found {
 		for i := 0; i < servers.Len(); i++ {
 			worker := servers.Index(i).Interface().(*TiKVWorkerSpec)
+			uniqueHosts.Insert(worker.Host)
 			cfig.AddTiKVWorker(worker.Host, uint64(worker.Port))
 		}
 	}
 	if servers, found := topoHasField("TiDBServers"); found {
 		for i := 0; i < servers.Len(); i++ {
 			db := servers.Index(i).Interface().(*TiDBSpec)
+			uniqueHosts.Insert(db.Host)
 			cfig.AddTiDB(db.Host, uint64(db.StatusPort))
 		}
 	}
 	if servers, found := topoHasField("TiProxyServers"); found {
 		for i := 0; i < servers.Len(); i++ {
 			db := servers.Index(i).Interface().(*TiProxySpec)
+			uniqueHosts.Insert(db.Host)
 			cfig.AddTiProxy(db.Host, uint64(db.StatusPort))
 		}
 	}
 	if servers, found := topoHasField("TiFlashServers"); found {
 		for i := 0; i < servers.Len(); i++ {
 			flash := servers.Index(i).Interface().(*TiFlashSpec)
+			uniqueHosts.Insert(flash.Host)
 			cfig.AddTiFlashLearner(flash.Host, uint64(flash.FlashProxyStatusPort))
 			cfig.AddTiFlash(flash.Host, uint64(flash.StatusPort))
 		}
@@ -432,36 +403,54 @@ func (i *MonitorInstance) InitConfig(
 	if servers, found := topoHasField("PumpServers"); found {
 		for i := 0; i < servers.Len(); i++ {
 			pump := servers.Index(i).Interface().(*PumpSpec)
+			uniqueHosts.Insert(pump.Host)
 			cfig.AddPump(pump.Host, uint64(pump.Port))
 		}
 	}
 	if servers, found := topoHasField("Drainers"); found {
 		for i := 0; i < servers.Len(); i++ {
 			drainer := servers.Index(i).Interface().(*DrainerSpec)
+			uniqueHosts.Insert(drainer.Host)
 			cfig.AddDrainer(drainer.Host, uint64(drainer.Port))
 		}
 	}
 	if servers, found := topoHasField("CDCServers"); found {
 		for i := 0; i < servers.Len(); i++ {
 			cdc := servers.Index(i).Interface().(*CDCSpec)
+			uniqueHosts.Insert(cdc.Host)
 			cfig.AddCDC(cdc.Host, uint64(cdc.Port))
 		}
 	}
 	if servers, found := topoHasField("TiKVCDCServers"); found {
 		for i := 0; i < servers.Len(); i++ {
 			tikvCdc := servers.Index(i).Interface().(*TiKVCDCSpec)
+			uniqueHosts.Insert(tikvCdc.Host)
 			cfig.AddTiKVCDC(tikvCdc.Host, uint64(tikvCdc.Port))
+		}
+	}
+	if servers, found := topoHasField("DashboardServers"); found {
+		for idx := 0; idx < servers.Len(); idx++ {
+			dashboard := servers.Index(idx).Interface().(*DashboardSpec)
+			uniqueHosts.Insert(dashboard.Host)
+		}
+	}
+	if servers, found := topoHasField("Monitors"); found {
+		for idx := 0; idx < servers.Len(); idx++ {
+			monitoring := servers.Index(idx).Interface().(*PrometheusSpec)
+			uniqueHosts.Insert(monitoring.Host)
 		}
 	}
 	if servers, found := topoHasField("Grafanas"); found {
 		for i := 0; i < servers.Len(); i++ {
 			grafana := servers.Index(i).Interface().(*GrafanaSpec)
+			uniqueHosts.Insert(grafana.Host)
 			cfig.AddGrafana(grafana.Host, uint64(grafana.Port))
 		}
 	}
 	if servers, found := topoHasField("Alertmanagers"); found {
 		for i := 0; i < servers.Len(); i++ {
 			alertmanager := servers.Index(i).Interface().(*AlertmanagerSpec)
+			uniqueHosts.Insert(alertmanager.Host)
 			cfig.AddAlertmanager(alertmanager.Host, uint64(alertmanager.WebPort))
 		}
 	}
@@ -469,6 +458,7 @@ func (i *MonitorInstance) InitConfig(
 		for i := 0; i < servers.Len(); i++ {
 			master := reflect.Indirect(servers.Index(i))
 			host, port := master.FieldByName("Host").String(), master.FieldByName("Port").Int()
+			uniqueHosts.Insert(host)
 			cfig.AddDMMaster(host, uint64(port))
 		}
 	}
@@ -477,6 +467,7 @@ func (i *MonitorInstance) InitConfig(
 		for i := 0; i < servers.Len(); i++ {
 			worker := reflect.Indirect(servers.Index(i))
 			host, port := worker.FieldByName("Host").String(), worker.FieldByName("Port").Int()
+			uniqueHosts.Insert(host)
 			cfig.AddDMWorker(host, uint64(port))
 		}
 	}

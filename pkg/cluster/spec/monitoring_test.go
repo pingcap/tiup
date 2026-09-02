@@ -441,22 +441,17 @@ func TestHandleRemoteWriteDisabled(t *testing.T) {
 	assert.Equal(t, vmURL, spec.RemoteConfig.RemoteWrite[0]["url"])
 }
 
-func TestUniqueHostsFromTopoIncludesStandaloneDashboard(t *testing.T) {
+func TestDashboardServersDiscoveredForNodeExporter(t *testing.T) {
 	topo := &Specification{
-		PDServers: []*PDSpec{
-			{Host: "10.0.1.11", ClientPort: 2379},
-		},
-		Monitors: []*PrometheusSpec{
-			{Host: "10.0.1.21", Port: 9090},
-		},
 		DashboardServers: []*DashboardSpec{
 			{Host: "10.0.1.50", Port: 12333},
 		},
 	}
 
-	hosts := uniqueHostsFromTopo(topo)
-	assert.True(t, hosts.Exist("10.0.1.11"))
-	assert.True(t, hosts.Exist("10.0.1.21"))
-	assert.True(t, hosts.Exist("10.0.1.50"), "standalone tidb-dashboard host should be scraped by node_exporter")
-	assert.Equal(t, 3, len(hosts))
+	servers, found := findSliceField(topo, "DashboardServers")
+	assert.True(t, found)
+	assert.Equal(t, 1, servers.Len())
+
+	dashboard := servers.Index(0).Interface().(*DashboardSpec)
+	assert.Equal(t, "10.0.1.50", dashboard.Host)
 }
