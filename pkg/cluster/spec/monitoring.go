@@ -439,7 +439,6 @@ func (i *MonitorInstance) InitConfig(
 			cfig.AddTiKVCDC(tikvCdc.Host, uint64(tikvCdc.Port))
 		}
 	}
-	addDashboardScrapeHosts(uniqueHosts, topoHasField)
 	if servers, found := topoHasField("Monitors"); found {
 		for idx := 0; idx < servers.Len(); idx++ {
 			monitoring := servers.Index(idx).Interface().(*PrometheusSpec)
@@ -477,6 +476,9 @@ func (i *MonitorInstance) InitConfig(
 			cfig.AddDMWorker(host, uint64(port))
 		}
 	}
+	// Keep this out of the uniqueHosts loops above: another if+for would
+	// push InitConfig over revive's cognitive-complexity limit of 110.
+	addDashboardScrapeHosts(uniqueHosts, topoHasField)
 
 	if monitoredOptions != nil {
 		for host := range uniqueHosts {
