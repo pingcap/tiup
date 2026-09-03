@@ -255,6 +255,17 @@ func (i *MonitorInstance) handleRemoteWrite(spec *PrometheusSpec, monitoring *Pr
 	}
 }
 
+func addDashboardScrapeHosts(uniqueHosts set.StringSet, topoHasField func(string) (reflect.Value, bool)) {
+	servers, found := topoHasField("DashboardServers")
+	if !found {
+		return
+	}
+	for idx := 0; idx < servers.Len(); idx++ {
+		dashboard := servers.Index(idx).Interface().(*DashboardSpec)
+		uniqueHosts.Insert(dashboard.Host)
+	}
+}
+
 // InitConfig implement Instance interface
 func (i *MonitorInstance) InitConfig(
 	ctx context.Context,
@@ -465,6 +476,9 @@ func (i *MonitorInstance) InitConfig(
 			cfig.AddDMWorker(host, uint64(port))
 		}
 	}
+	// Keep this out of the uniqueHosts loops above: another if+for would
+	// push InitConfig over revive's cognitive-complexity limit of 110.
+	addDashboardScrapeHosts(uniqueHosts, topoHasField)
 
 	if monitoredOptions != nil {
 		for host := range uniqueHosts {
