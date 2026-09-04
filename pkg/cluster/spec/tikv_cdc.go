@@ -173,6 +173,7 @@ func (i *TiKVCDCInstance) ScaleConfig(
 	clusterVersion,
 	user string,
 	paths meta.DirPaths,
+	opt InstanceOpt,
 ) error {
 	s := i.topo
 	defer func() {
@@ -180,7 +181,7 @@ func (i *TiKVCDCInstance) ScaleConfig(
 	}()
 	i.topo = mustBeClusterTopo(topo)
 
-	return i.InitConfig(ctx, e, clusterName, clusterVersion, user, paths)
+	return i.InitConfig(ctx, e, clusterName, clusterVersion, user, paths, opt)
 }
 
 // InitConfig implements Instance interface.
@@ -191,6 +192,7 @@ func (i *TiKVCDCInstance) InitConfig(
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
+	opt InstanceOpt,
 ) error {
 	if !tidbver.TiKVCDCSupportDeploy(clusterVersion) {
 		return errors.New("tikv-cdc only supports cluster version v6.2.0 or later")

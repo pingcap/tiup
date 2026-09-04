@@ -137,6 +137,7 @@ func (i *MasterInstance) InitConfig(
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
+	opt spec.InstanceOpt,
 ) error {
 	if err := i.BaseInstance.InitConfig(ctx, e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
@@ -233,8 +234,9 @@ func (i *MasterInstance) ScaleConfig(
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
+	opt spec.InstanceOpt,
 ) error {
-	if err := i.InitConfig(ctx, e, clusterName, clusterVersion, deployUser, paths); err != nil {
+	if err := i.InitConfig(ctx, e, clusterName, clusterVersion, deployUser, paths, opt); err != nil {
 		return err
 	}
 
@@ -360,6 +362,7 @@ func (i *WorkerInstance) InitConfig(
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
+	opt spec.InstanceOpt,
 ) error {
 	if err := i.BaseInstance.InitConfig(ctx, e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
@@ -454,13 +457,14 @@ func (i *WorkerInstance) ScaleConfig(
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
+	opt spec.InstanceOpt,
 ) error {
 	s := i.topo
 	defer func() {
 		i.topo = s
 	}()
 	i.topo = topo.(*Specification)
-	return i.InitConfig(ctx, e, clusterName, clusterVersion, deployUser, paths)
+	return i.InitConfig(ctx, e, clusterName, clusterVersion, deployUser, paths, opt)
 }
 
 // GetGlobalOptions returns cluster topology
