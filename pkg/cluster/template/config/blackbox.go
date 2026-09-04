@@ -22,17 +22,25 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
-// BlackboxConfig represent the data to generate AlertManager config
+// BlackboxConfig represent the data to generate blackbox_exporter config
 type BlackboxConfig struct {
 	DeployDir  string
 	TLSEnabled bool
+	// Custom cert paths (on the target node). When non-empty, the template
+	// uses these instead of the default {DeployDir}/tls/ paths.
+	CustomCA   string
+	CustomCert string
+	CustomKey  string
 }
 
 // NewBlackboxConfig returns a BlackboxConfig
-func NewBlackboxConfig(deployDir string, tlsEnabled bool) *BlackboxConfig {
+func NewBlackboxConfig(deployDir string, tlsEnabled bool, customCA, customCert, customKey string) *BlackboxConfig {
 	return &BlackboxConfig{
 		DeployDir:  deployDir,
 		TLSEnabled: tlsEnabled,
+		CustomCA:   customCA,
+		CustomCert: customCert,
+		CustomKey:  customKey,
 	}
 }
 

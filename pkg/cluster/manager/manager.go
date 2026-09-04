@@ -89,6 +89,11 @@ func (m *Manager) confirmTopology(name, version string, topo spec.Topology, patc
 	fmt.Printf("Cluster version: %s\n", cyan.Sprint(version))
 	if topo.BaseTopo().GlobalOptions.TLSEnabled {
 		fmt.Printf("TLS encryption:  %s\n", cyan.Sprint("enabled"))
+		if topo.BaseTopo().GlobalOptions.IsCustomTLS() {
+			fmt.Printf("TLS mode:        %s\n", cyan.Sprint("custom"))
+		} else {
+			fmt.Printf("TLS mode:        %s\n", cyan.Sprint("managed"))
+		}
 	}
 
 	// check if managehost is set

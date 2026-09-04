@@ -16,9 +16,15 @@ modules:
       tls: true
       tls_config:
         insecure_skip_verify: false
+{{- if .CustomCA}}
+        ca_file: {{.CustomCA}}
+        cert_file: {{.CustomCert}}
+        key_file: {{.CustomKey}}
+{{- else}}
         ca_file: {{.DeployDir}}/tls/ca.crt
         cert_file: {{.DeployDir}}/tls/blackbox_exporter.crt
         key_file: {{.DeployDir}}/tls/blackbox_exporter.pem
+{{- end}}
 {{- end}}
   pop3s_banner:
     prober: tcp
