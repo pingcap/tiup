@@ -95,7 +95,7 @@ func newTemplateCmd() *cobra.Command {
 				return nil
 			}
 
-			// redner template
+			// render template
 
 			// validate arch
 			if localOpt.GlobalArch != "amd64" && localOpt.GlobalArch != "arm64" {
