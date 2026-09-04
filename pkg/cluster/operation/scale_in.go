@@ -193,7 +193,7 @@ func ScaleInCluster(
 
 				if compName != spec.ComponentPump && compName != spec.ComponentDrainer {
 					if err := deleteMember(ctx, component, instance, pdClient, binlogClient, options.APITimeout); err != nil {
-						logger.Warnf("failed to delete %s: %v", compName, err)
+						return errors.Trace(err)
 					}
 				}
 
