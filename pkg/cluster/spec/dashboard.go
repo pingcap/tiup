@@ -18,7 +18,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
@@ -198,10 +197,6 @@ func (i *DashboardInstance) InitConfig(
 	enableTLS := topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(*DashboardSpec)
 
-	pds := []string{}
-	for _, pdspec := range topo.PDServers {
-		pds = append(pds, pdspec.GetAdvertiseClientURL(enableTLS))
-	}
 	cfg := &scripts.DashboardScript{
 		// -h, --host string              listen host of the Dashboard Server
 		Host:        i.GetListenHost(),
@@ -211,7 +206,7 @@ func (i *DashboardInstance) InitConfig(
 		LogDir:      paths.Log,
 		Port:        spec.Port,
 		NumaNode:    spec.NumaNode,
-		PD:          strings.Join(pds, ","),
+		PD:          dashboardPDEndpoint(topo.PDServers, enableTLS),
 		TLSEnabled:  enableTLS,
 	}
 
@@ -242,4 +237,18 @@ func (i *DashboardInstance) InitConfig(
 // setTLSConfig set TLS Config to support enable/disable TLS
 func (i *DashboardInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error) {
 	return nil, nil
+}
+
+// dashboardPDEndpoint returns the PD URL for standalone tidb-dashboard.
+//
+// Dashboard treats --pd as a single endpoint and does not split a
+// comma-separated list, so passing all PD endpoints breaks its PD
+// connection. See https://github.com/pingcap/tidb-dashboard/issues/1920.
+// Pass only the first PD until Dashboard supports multiple PD HTTP API
+// endpoints, then restore joining all PD URLs.
+func dashboardPDEndpoint(pdServers []*PDSpec, enableTLS bool) string {
+	if len(pdServers) == 0 {
+		return ""
+	}
+	return pdServers[0].GetAdvertiseClientURL(enableTLS)
 }
