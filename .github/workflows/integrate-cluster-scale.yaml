@@ -91,6 +91,8 @@ jobs:
         # if: always()
         run: |
           docker exec tiup-cluster-control bash /tiup-cluster/tests/tiup-cluster/script/pull_log.sh /tiup-cluster/logs
+          mkdir -p ./logs
+          docker cp tiup-cluster-control:/tiup-cluster/logs/. ./logs/
 
       - name: Detect error log
         if: ${{ failure() }}
@@ -103,7 +105,7 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           overwrite: true
-          name: cluster_logs
+          name: cluster_logs-${{ matrix.cases }}
           path: ./logs
 
       - name: Output cluster debug log
