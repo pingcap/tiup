@@ -61,7 +61,7 @@ function scale_core() {
     topo=./topo/full_scale_in_tidb.yaml
     tiup-cluster $client --yes scale-out $name $topo
     # after scale-out, ensure the service is enabled
-    tiup-cluster $client exec $name -N n1 --command "systemctl status tidb-4000 | grep Loaded |grep 'enabled; vendor'"
+    tiup-cluster $client exec $name -N n1 --command "systemctl is-enabled --quiet tidb-4000"
     tiup-cluster $client exec $name -N n1 --command "grep -q n1:10080 /home/tidb/deploy/prometheus-9090/conf/prometheus.yml"
     assert_prometheus_external_labels $name n1 production us-east-1
 
