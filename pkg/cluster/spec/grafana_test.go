@@ -282,6 +282,18 @@ func TestVictoriaMetricsDefaultDatasource(t *testing.T) {
 	err = os.MkdirAll(binDir, 0755)
 	require.NoError(t, err)
 
+	datasourceName := "test-cluster-vm"
+	dashboardReplacements := []struct {
+		commandPattern string
+		placeholder    string
+	}{
+		{`s/test-cluster/`, "test-cluster"},
+		{`s/Test-Cluster/`, "Test-Cluster"},
+		{`s/\${DS_.*-CLUSTER}/`, "${DS_TEST-CLUSTER}"},
+		{`s/DS_.*-CLUSTER/`, "DS_TEST-CLUSTER"},
+		{`s/\${DS_LIGHTNING}/`, "${DS_LIGHTNING}"},
+		{`s/DS_LIGHTNING/`, "DS_LIGHTNING"},
+	}
 	// Create a mock for the execute function to handle the dashboard copy command
 	origExecutor := &mockExecutor{
 		executeFunc: func(ctx context.Context, cmd string, sudo bool, timeouts ...time.Duration) ([]byte, []byte, error) {
@@ -297,7 +309,7 @@ func TestVictoriaMetricsDefaultDatasource(t *testing.T) {
 					return nil, nil, err
 				}
 			} else if strings.Contains(cmd, "sed") {
-				// Handle the sed command to replace datasource references
+				// Handle each sed command using the same replacement order as initDashboards.
 				files, err := os.ReadDir(dashboardsDir)
 				if err != nil {
 					return nil, nil, err
@@ -305,23 +317,21 @@ func TestVictoriaMetricsDefaultDatasource(t *testing.T) {
 
 				for _, file := range files {
 					if strings.HasSuffix(file.Name(), ".json") {
-						content, err := os.ReadFile(filepath.Join(dashboardsDir, file.Name()))
+						filePath := filepath.Join(dashboardsDir, file.Name())
+						content, err := os.ReadFile(filePath)
 						if err != nil {
 							return nil, nil, err
 						}
 
-						// Replace datasource references - simulating what sed would do
-						modifiedContent := strings.ReplaceAll(string(content),
-							`"DS_TEST-CLUSTER"`,
-							fmt.Sprintf(`"DS_%s-VM"`, strings.ToUpper("test-cluster")))
-						modifiedContent = strings.ReplaceAll(modifiedContent,
-							`"text": "test-cluster"`,
-							fmt.Sprintf(`"text": "%s-vm"`, "test-cluster"))
-						modifiedContent = strings.ReplaceAll(modifiedContent,
-							`"value": "test-cluster"`,
-							fmt.Sprintf(`"value": "%s-vm"`, "test-cluster"))
+						modifiedContent := string(content)
+						for _, replacement := range dashboardReplacements {
+							if strings.Contains(cmd, replacement.commandPattern) {
+								modifiedContent = strings.ReplaceAll(modifiedContent, replacement.placeholder, datasourceName)
+								break
+							}
+						}
 
-						err = os.WriteFile(filepath.Join(dashboardsDir, file.Name()), []byte(modifiedContent), 0644)
+						err = os.WriteFile(filePath, []byte(modifiedContent), 0644)
 						if err != nil {
 							return nil, nil, err
 						}
@@ -335,7 +345,11 @@ func TestVictoriaMetricsDefaultDatasource(t *testing.T) {
 	// Create a sample dashboard file with datasource references
 	dashboardContent := `{
 		"annotations": {
-			"list": []
+			"list": [
+				{
+					"datasource": "${DS_TEST-CLUSTER}"
+				}
+			]
 		},
 		"editable": true,
 		"fiscalYearStartMonth": 0,
@@ -408,8 +422,15 @@ func TestVictoriaMetricsDefaultDatasource(t *testing.T) {
 	content, err := os.ReadFile(dashboardFile)
 	require.NoError(t, err)
 
-	// Verify VM datasource was used
-	assert.Contains(t, string(content), `"DS_TEST-CLUSTER-VM"`)
+	// Verify every dashboard reference uses the provisioned VM datasource name
+	// without rewriting it to test-cluster-vm-vm.
+	assert.Contains(t, string(content), `"datasource": "test-cluster-vm"`)
+	assert.Contains(t, string(content), `"name": "test-cluster-vm"`)
 	assert.Contains(t, string(content), `"text": "test-cluster-vm"`)
 	assert.Contains(t, string(content), `"value": "test-cluster-vm"`)
+	assert.NotContains(t, string(content), "test-cluster-vm-vm")
+
+	dsContent, err := os.ReadFile(filepath.Join(deployDir, "provisioning", "datasources", "datasource.yml"))
+	require.NoError(t, err)
+	assert.Contains(t, string(dsContent), "name: test-cluster-vm")
 }

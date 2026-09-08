@@ -71,6 +71,9 @@ func (c *TLSCert) Execute(ctx context.Context) error {
 	// save cert to cache dir
 	keyFileName := fmt.Sprintf("%s-%s-%d.pem", c.role, c.host, c.port)
 	certFileName := fmt.Sprintf("%s-%s-%d.crt", c.role, c.host, c.port)
+	// Per-instance CA cache path. Parallel TLSCert tasks used to share
+	// cache/ca.crt and SCP a truncated file (#2727).
+	caFileName := fmt.Sprintf("%s-%s-%d-ca.crt", c.role, c.host, c.port)
 	keyFile := filepath.Join(
 		c.paths.Cache,
 		keyFileName,
@@ -79,7 +82,7 @@ func (c *TLSCert) Execute(ctx context.Context) error {
 		c.paths.Cache,
 		certFileName,
 	)
-	caFile := filepath.Join(c.paths.Cache, spec.TLSCACert)
+	caFile := filepath.Join(c.paths.Cache, caFileName)
 	if err := utils.SaveFileWithBackup(keyFile, privKey.Pem(), ""); err != nil {
 		return err
 	}

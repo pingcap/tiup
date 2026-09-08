@@ -1,5 +1,14 @@
 TiUP Changelog
 
+## [1.17.1] 2026-09-08
+
+### Fixes
+
+- `tiup-cluster` fix Grafana dashboard datasource replacement when using VictoriaMetrics (#2732, @Defined2014)
+- `tiup-cluster` collect node_exporter metrics on dedicated TiDB Dashboard hosts (#2734, @mayjiang0203)
+- `tiup-cluster` preserve shared exporter directories and systemd units when destroying a cluster with `ignore_exporter: true` (#2737, @Smityz, @ekexium)
+- `tiup-cluster` prevent concurrent TLS certificate distribution from copying an empty CA certificate and blocking component startup (#2738, @ekexium)
+
 ## [1.17.0] 2026-07-27
 
 ### New Features
