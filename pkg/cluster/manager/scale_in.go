@@ -106,6 +106,14 @@ func (m *Manager) ScaleIn(
 		return err
 	}
 
+	deletedNodes := set.NewStringSet(nodes...)
+	scaledInPD := false
+	topo.IterInstance(func(inst spec.Instance) {
+		if deletedNodes.Exist(inst.ID()) && inst.ComponentName() == spec.ComponentPD {
+			scaledInPD = true
+		}
+	})
+
 	b, err := m.sshTaskBuilder(name, topo, base.User, gOpt)
 	if err != nil {
 		return err
@@ -161,6 +169,15 @@ func (m *Manager) ScaleIn(
 	}
 
 	m.logger.Infof("Scaled cluster `%s` in successfully", name)
+	if scaledInPD {
+		if dash := spec.FindComponent(topo, spec.ComponentDashboard); dash != nil && len(dash.Instances()) > 0 {
+			m.logger.Warnf("%s", color.YellowString(
+				"\nSince PD node(s) were scaled in, the standalone tidb-dashboard connects to a single PD endpoint "+
+					"that may have been removed. If it can no longer reach PD, restart it to pick up a new endpoint:\n\t%s",
+				color.GreenString("%s restart %s -R %s", tui.OsArgs0(), name, spec.ComponentDashboard),
+			))
+		}
+	}
 
 	return nil
 }
