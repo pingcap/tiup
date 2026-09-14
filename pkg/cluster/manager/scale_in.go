@@ -106,13 +106,7 @@ func (m *Manager) ScaleIn(
 		return err
 	}
 
-	deletedNodes := set.NewStringSet(nodes...)
-	scaledInPD := false
-	topo.IterInstance(func(inst spec.Instance) {
-		if deletedNodes.Exist(inst.ID()) && inst.ComponentName() == spec.ComponentPD {
-			scaledInPD = true
-		}
-	})
+	scaledInPD := isScaledInPD(topo, nodes)
 
 	b, err := m.sshTaskBuilder(name, topo, base.User, gOpt)
 	if err != nil {
@@ -169,14 +163,12 @@ func (m *Manager) ScaleIn(
 	}
 
 	m.logger.Infof("Scaled cluster `%s` in successfully", name)
-	if scaledInPD {
-		if dash := spec.FindComponent(topo, spec.ComponentDashboard); dash != nil && len(dash.Instances()) > 0 {
-			m.logger.Warnf("%s", color.YellowString(
-				"\nSince PD node(s) were scaled in, the standalone tidb-dashboard connects to a single PD endpoint "+
-					"that may have been removed. If it can no longer reach PD, restart it to pick up a new endpoint:\n\t%s",
-				color.GreenString("%s restart %s -R %s", tui.OsArgs0(), name, spec.ComponentDashboard),
-			))
-		}
+	if scaledInPD && hasStandaloneDashboard(topo) {
+		m.logger.Warnf("%s", color.YellowString(
+			"\nSince PD node(s) were scaled in, the standalone tidb-dashboard connects to a single PD endpoint "+
+				"that may have been removed. If it can no longer reach PD, restart it to pick up a new endpoint:\n\t%s",
+			color.GreenString("%s restart %s -R %s", tui.OsArgs0(), name, spec.ComponentDashboard),
+		))
 	}
 
 	return nil
@@ -202,4 +194,22 @@ func checkAsyncComps(topo spec.Topology, nodes []string) error {
 				delAsyncOfflineComps.Slice())))
 	}
 	return nil
+}
+
+// isScaledInPD reports whether any of the given node IDs belongs to a PD instance.
+func isScaledInPD(topo spec.Topology, nodes []string) bool {
+	deletedNodes := set.NewStringSet(nodes...)
+	scaledInPD := false
+	topo.IterInstance(func(inst spec.Instance) {
+		if deletedNodes.Exist(inst.ID()) && inst.ComponentName() == spec.ComponentPD {
+			scaledInPD = true
+		}
+	})
+	return scaledInPD
+}
+
+// hasStandaloneDashboard reports whether the topology contains a standalone tidb-dashboard.
+func hasStandaloneDashboard(topo spec.Topology) bool {
+	dash := spec.FindComponent(topo, spec.ComponentDashboard)
+	return dash != nil && len(dash.Instances()) > 0
 }
