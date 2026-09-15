@@ -14,11 +14,18 @@
 package spec
 
 import (
+	"context"
+	"errors"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"testing"
+	"time"
 
-	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
+	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/stretchr/testify/require"
 )
 
@@ -46,13 +53,11 @@ func TestDashboardScriptSinglePD(t *testing.T) {
 		pds       []*PDSpec
 		enableTLS bool
 		wantPD    string
-		wantNot   string
 	}{
 		{
-			name:    "uses only the first PD",
-			pds:     []*PDSpec{{Host: "10.0.0.1", ClientPort: 2379}, {Host: "10.0.0.2", ClientPort: 2379}},
-			wantPD:  "http://10.0.0.1:2379",
-			wantNot: "10.0.0.2",
+			name:   "uses only the first PD",
+			pds:    []*PDSpec{{Host: "10.0.0.1", ClientPort: 2379}, {Host: "10.0.0.2", ClientPort: 2379}},
+			wantPD: "http://10.0.0.1:2379",
 		},
 		{
 			name:      "uses https when TLS is enabled",
@@ -61,34 +66,62 @@ func TestDashboardScriptSinglePD(t *testing.T) {
 			wantPD:    "https://10.0.0.1:2379",
 		},
 		{
-			name:    "preserves an explicit advertised client address",
-			pds:     []*PDSpec{{Host: "10.0.0.1", ClientPort: 2379, AdvertiseClientAddr: "https://pd.example.com:443"}, {Host: "10.0.0.2", ClientPort: 2379}},
-			wantPD:  "https://pd.example.com:443",
-			wantNot: "10.0.0.2",
+			name:   "preserves an explicit advertised client address",
+			pds:    []*PDSpec{{Host: "10.0.0.1", ClientPort: 2379, AdvertiseClientAddr: "https://pd.example.com:443"}, {Host: "10.0.0.2", ClientPort: 2379}},
+			wantPD: "https://pd.example.com:443",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			script := &scripts.DashboardScript{
-				Host:        "0.0.0.0",
-				Port:        12333,
-				DeployDir:   "/tidb-deploy",
-				DataDir:     "/tidb-data",
-				LogDir:      "/tidb-log",
-				TidbVersion: "v8.5.0",
-				PD:          dashboardPDEndpoint(tt.pds, tt.enableTLS),
+			topo := &Specification{
+				GlobalOptions:    GlobalOptions{User: "tidb", SystemdMode: UserMode, TLSEnabled: tt.enableTLS},
+				PDServers:        tt.pds,
+				DashboardServers: []*DashboardSpec{{Host: "10.0.0.50", Port: 12333}},
 			}
+			deployDir := t.TempDir()
+			paths := meta.DirPaths{
+				Deploy: deployDir,
+				Cache:  t.TempDir(),
+				Data:   []string{filepath.Join(deployDir, "data")},
+				Log:    filepath.Join(deployDir, "log"),
+			}
+			comp := DashboardComponent{Topology: topo}
+			instance := comp.Instances()[0].(*DashboardInstance)
+			ctx := ctxt.New(context.Background(), 0, logprinter.NewLogger(""))
+			// Stop after the script transfer, before config validation looks up
+			// binaries in the global TiUP repository. No mirror or installation
+			// is needed to verify the production script-generation path.
+			scriptTransferred := errors.New("stop after startup script transfer")
+			executor := &mockExecutor{executeFunc: func(_ context.Context, cmd string, _ bool, _ ...time.Duration) ([]byte, []byte, error) {
+				if cmd == "chmod +x "+filepath.Join(deployDir, "scripts", "run_tidb-dashboard.sh") {
+					return nil, nil, scriptTransferred
+				}
+				// The mock copies the unit file but does not execute mv.
+				// Remove that temporary source instead of leaking it in /tmp.
+				if strings.HasPrefix(cmd, "mv /tmp/tidb-dashboard_") {
+					require.NoError(t, os.Remove(strings.Fields(cmd)[1]))
+				}
+				return nil, nil, nil
+			}}
+			require.ErrorIs(t, instance.InitConfig(ctx, executor, "test-cluster", "v8.5.0", "tidb", paths), scriptTransferred)
 
-			file := filepath.Join(t.TempDir(), "run_tidb-dashboard.sh")
-			require.NoError(t, script.ConfigToFile(file))
-
-			body, err := os.ReadFile(file)
+			// Inspect the transferred script, so regressions in InitConfig wiring fail.
+			body, err := os.ReadFile(filepath.Join(deployDir, "scripts", "run_tidb-dashboard.sh"))
 			require.NoError(t, err)
-
-			require.Contains(t, string(body), `--pd="`+tt.wantPD+`"`)
-			if tt.wantNot != "" {
-				require.NotContains(t, string(body), tt.wantNot)
+			endpoints := regexp.MustCompile(`--pd="([^"\n]*)"`).FindAllStringSubmatch(string(body), -1)
+			require.Len(t, endpoints, 1)
+			require.Equal(t, tt.wantPD, endpoints[0][1])
+			for _, flag := range []struct{ name, path string }{
+				{"--tidb-ca", "tls/ca.crt"},
+				{"--tidb-cert", "tls/tidb-dashboard.crt"},
+				{"--tidb-key", "tls/tidb-dashboard.pem"},
+			} {
+				if tt.enableTLS {
+					require.Contains(t, string(body), flag.name+" "+flag.path)
+				} else {
+					require.NotContains(t, string(body), flag.name)
+				}
 			}
 		})
 	}

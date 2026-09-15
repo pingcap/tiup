@@ -163,12 +163,8 @@ func (m *Manager) ScaleIn(
 	}
 
 	m.logger.Infof("Scaled cluster `%s` in successfully", name)
-	if scaledInPD && hasStandaloneDashboard(topo) {
-		m.logger.Warnf("%s", color.YellowString(
-			"\nSince PD node(s) were scaled in, the standalone tidb-dashboard connects to a single PD endpoint "+
-				"that may have been removed. If it can no longer reach PD, restart it to pick up a new endpoint:\n\t%s",
-			color.GreenString("%s restart %s -R %s", tui.OsArgs0(), name, spec.ComponentDashboard),
-		))
+	if warning := dashboardScaleInWarning(name, scaledInPD, topo); warning != "" {
+		m.logger.Warnf("%s", warning)
 	}
 
 	return nil
@@ -208,8 +204,16 @@ func isScaledInPD(topo spec.Topology, nodes []string) bool {
 	return scaledInPD
 }
 
-// hasStandaloneDashboard reports whether the topology contains a standalone tidb-dashboard.
-func hasStandaloneDashboard(topo spec.Topology) bool {
+// dashboardScaleInWarning returns restart guidance when PD was scaled in and a
+// standalone Dashboard remains in the updated topology.
+func dashboardScaleInWarning(name string, scaledInPD bool, topo spec.Topology) string {
 	dash := spec.FindComponent(topo, spec.ComponentDashboard)
-	return dash != nil && len(dash.Instances()) > 0
+	if !scaledInPD || dash == nil || len(dash.Instances()) == 0 {
+		return ""
+	}
+	return color.YellowString(
+		"\nSince PD node(s) were scaled in, the standalone tidb-dashboard connects to a single PD endpoint "+
+			"that may have been removed. If it can no longer reach PD, restart it to pick up a new endpoint:\n\t%s",
+		color.GreenString("%s restart %s -R %s", tui.OsArgs0(), name, spec.ComponentDashboard),
+	)
 }
