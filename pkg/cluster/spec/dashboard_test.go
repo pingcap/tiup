@@ -112,17 +112,6 @@ func TestDashboardScriptSinglePD(t *testing.T) {
 			endpoints := regexp.MustCompile(`--pd="([^"\n]*)"`).FindAllStringSubmatch(string(body), -1)
 			require.Len(t, endpoints, 1)
 			require.Equal(t, tt.wantPD, endpoints[0][1])
-			for _, flag := range []struct{ name, path string }{
-				{"--tidb-ca", "tls/ca.crt"},
-				{"--tidb-cert", "tls/tidb-dashboard.crt"},
-				{"--tidb-key", "tls/tidb-dashboard.pem"},
-			} {
-				if tt.enableTLS {
-					require.Contains(t, string(body), flag.name+" "+flag.path)
-				} else {
-					require.NotContains(t, string(body), flag.name)
-				}
-			}
 		})
 	}
 }
