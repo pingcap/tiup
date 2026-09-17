@@ -177,6 +177,11 @@ func (m *Manager) Display(dopt DisplayOption, opt operator.Options) error {
 		// display TLS info
 		if topo.BaseTopo().GlobalOptions.TLSEnabled {
 			fmt.Printf("TLS encryption:     %s\n", cyan.Sprint("enabled"))
+			if topo.BaseTopo().GlobalOptions.IsCustomTLS() {
+				fmt.Printf("TLS mode:           %s\n", cyan.Sprint("custom"))
+			} else {
+				fmt.Printf("TLS mode:           %s\n", cyan.Sprint("managed"))
+			}
 			fmt.Printf("CA certificate:     %s\n", cyan.Sprint(
 				m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSCACert),
 			))
@@ -393,6 +398,11 @@ func (m *Manager) DisplayTiKVLabels(dopt DisplayOption, opt operator.Options) er
 		// display TLS info
 		if topo.BaseTopo().GlobalOptions.TLSEnabled {
 			fmt.Printf("TLS encryption:  	%s\n", cyan.Sprint("enabled"))
+			if topo.BaseTopo().GlobalOptions.IsCustomTLS() {
+				fmt.Printf("TLS mode:        	%s\n", cyan.Sprint("custom"))
+			} else {
+				fmt.Printf("TLS mode:        	%s\n", cyan.Sprint("managed"))
+			}
 			fmt.Printf("CA certificate:     %s\n", cyan.Sprint(
 				m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSCACert),
 			))

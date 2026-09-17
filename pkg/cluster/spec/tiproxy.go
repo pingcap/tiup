@@ -227,7 +227,7 @@ func (i *TiProxyInstance) InitConfig(
 	}
 
 	var err error
-	instanceConfig, err = i.setTLSConfig(ctx, topo.GlobalOptions.TLSEnabled, instanceConfig, paths)
+	instanceConfig, err = i.setTLSConfig(ctx, topo.GlobalOptions.TLSEnabled, instanceConfig, globalConfig, paths)
 	if err != nil {
 		return err
 	}
@@ -236,23 +236,45 @@ func (i *TiProxyInstance) InitConfig(
 }
 
 // setTLSConfig set TLS Config to support enable/disable TLS
-func (i *TiProxyInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error) {
+func (i *TiProxyInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, globalConfig map[string]any, paths meta.DirPaths) (map[string]any, error) {
 	if configs == nil {
 		configs = make(map[string]any)
 	}
 	if enableTLS {
-		configs["security.cluster-tls.ca"] = fmt.Sprintf("%s/tls/%s", paths.Deploy, TLSCACert)
-		configs["security.cluster-tls.cert"] = fmt.Sprintf("%s/tls/%s.crt", paths.Deploy, i.Role())
-		configs["security.cluster-tls.key"] = fmt.Sprintf("%s/tls/%s.pem", paths.Deploy, i.Role())
+		if i.topo.(*Specification).GlobalOptions.IsCustomTLS() {
+			// Custom: validate user has set the required keys, don't overwrite.
+			for _, key := range []string{
+				"security.cluster-tls.ca",
+				"security.cluster-tls.cert",
+				"security.cluster-tls.key",
+				"security.server-http-tls.ca",
+				"security.server-http-tls.cert",
+				"security.server-http-tls.key",
+				"security.sql-tls.ca",
+				"security.sql-tls.cert",
+				"security.sql-tls.key",
+			} {
+				if !hasKey(key, configs, globalConfig) {
+					return nil, fmt.Errorf(
+						"custom TLS mode requires %q in config for %s (%s:%d)\n"+
+							"Use 'tiup cluster edit-config' to set certificate paths",
+						key, i.ComponentName(), i.GetHost(), i.GetMainPort())
+				}
+			}
+		} else {
+			configs["security.cluster-tls.ca"] = fmt.Sprintf("%s/tls/%s", paths.Deploy, TLSCACert)
+			configs["security.cluster-tls.cert"] = fmt.Sprintf("%s/tls/%s.crt", paths.Deploy, i.Role())
+			configs["security.cluster-tls.key"] = fmt.Sprintf("%s/tls/%s.pem", paths.Deploy, i.Role())
 
-		configs["security.server-http-tls.ca"] = fmt.Sprintf("%s/tls/%s", paths.Deploy, TLSCACert)
-		configs["security.server-http-tls.cert"] = fmt.Sprintf("%s/tls/%s.crt", paths.Deploy, i.Role())
-		configs["security.server-http-tls.key"] = fmt.Sprintf("%s/tls/%s.pem", paths.Deploy, i.Role())
-		configs["security.server-http-tls.skip-ca"] = true
+			configs["security.server-http-tls.ca"] = fmt.Sprintf("%s/tls/%s", paths.Deploy, TLSCACert)
+			configs["security.server-http-tls.cert"] = fmt.Sprintf("%s/tls/%s.crt", paths.Deploy, i.Role())
+			configs["security.server-http-tls.key"] = fmt.Sprintf("%s/tls/%s.pem", paths.Deploy, i.Role())
+			configs["security.server-http-tls.skip-ca"] = true
 
-		configs["security.sql-tls.ca"] = fmt.Sprintf("%s/tls/%s", paths.Deploy, TLSCACert)
-		configs["security.sql-tls.cert"] = fmt.Sprintf("%s/tls/%s.crt", paths.Deploy, i.Role())
-		configs["security.sql-tls.key"] = fmt.Sprintf("%s/tls/%s.pem", paths.Deploy, i.Role())
+			configs["security.sql-tls.ca"] = fmt.Sprintf("%s/tls/%s", paths.Deploy, TLSCACert)
+			configs["security.sql-tls.cert"] = fmt.Sprintf("%s/tls/%s.crt", paths.Deploy, i.Role())
+			configs["security.sql-tls.key"] = fmt.Sprintf("%s/tls/%s.pem", paths.Deploy, i.Role())
+		}
 	} else {
 		// drainer tls config list
 		tlsConfigs := []string{
