@@ -111,6 +111,9 @@ cdc_servers:
 kvcdc_servers:
   - host: 172.16.5.244
     data_dir: "tikv-cdc-data"
+tikv_worker_servers:
+  - host: 172.16.5.250
+    data_dir: "tikv-worker-data"
 `), &topo)
 	require.NoError(t, err)
 	require.Equal(t, "test1", topo.GlobalOptions.User)
@@ -129,6 +132,10 @@ kvcdc_servers:
 	require.Equal(t, 220, topo.TiKVCDCServers[0].SSHPort)
 	require.Equal(t, "test-deploy/tikv-cdc-8600", topo.TiKVCDCServers[0].DeployDir)
 	require.Equal(t, "tikv-cdc-data", topo.TiKVCDCServers[0].DataDir)
+
+	require.Equal(t, 220, topo.TiKVWorkerServers[0].SSHPort)
+	require.Equal(t, "test-deploy/tikv-worker-19000", topo.TiKVWorkerServers[0].DeployDir)
+	require.Equal(t, "tikv-worker-data", topo.TiKVWorkerServers[0].DataDir)
 }
 
 func TestDataDirAbsolute(t *testing.T) {
@@ -152,6 +159,11 @@ kvcdc_servers:
     data_dir: "tikv-cdc-data"
   - host: 172.16.5.245
     port: 33333
+tikv_worker_servers:
+  - host: 172.16.5.251
+    data_dir: "worker-data"
+  - host: 172.16.5.252
+    port: 29000
 `), &topo)
 	require.NoError(t, err)
 
@@ -163,6 +175,9 @@ kvcdc_servers:
 
 	require.Equal(t, "tikv-cdc-data", topo.TiKVCDCServers[0].DataDir)
 	require.Equal(t, "/test-data/tikv-cdc-33333", topo.TiKVCDCServers[1].DataDir)
+
+	require.Equal(t, "worker-data", topo.TiKVWorkerServers[0].DataDir)
+	require.Equal(t, "/test-data/tikv-worker-29000", topo.TiKVWorkerServers[1].DataDir)
 }
 
 func TestGlobalConfig(t *testing.T) {
@@ -190,6 +205,9 @@ server_configs:
     scheduler.max_limit: 20480
   kvcdc:
     gc-ttl: 43200
+  tikv_worker:
+    schema-manager.enabled: false
+    log.level: info
 
 tidb_servers:
   - host: 172.16.5.138
@@ -209,6 +227,13 @@ kvcdc_servers:
     port: 8601
     config:
       log-level: "debug"
+
+tikv_worker_servers:
+  - host: 172.16.5.253
+  - host: 172.16.5.254
+    port: 19001
+    config:
+      log.level: debug
 `), &topo)
 	require.NoError(t, err)
 	require.Equal(t, map[string]any{
@@ -220,6 +245,10 @@ kvcdc_servers:
 	require.Equal(t, map[string]any{
 		"gc-ttl": 43200,
 	}, topo.ServerConfigs.TiKVCDC)
+	require.Equal(t, map[string]any{
+		"schema-manager.enabled": false,
+		"log.level":              "info",
+	}, topo.ServerConfigs.TiKVWorker)
 
 	expected := map[string]any{
 		"status": map[string]any{
@@ -292,6 +321,18 @@ kvcdc_servers:
 	}
 	got = FoldMap(topo.TiKVCDCServers[1].Config)
 	require.Equal(t, expected, got)
+
+	expected = map[string]any{}
+	got = FoldMap(topo.TiKVWorkerServers[0].Config)
+	require.Equal(t, expected, got)
+
+	expected = map[string]any{
+		"log": map[string]any{
+			"level": "debug",
+		},
+	}
+	got = FoldMap(topo.TiKVWorkerServers[1].Config)
+	require.Equal(t, expected, got)
 }
 
 func TestGlobalConfigPatch(t *testing.T) {
@@ -363,6 +404,9 @@ server_configs:
     config.item3.item6: 600
   kvcdc:
     gc-ttl: 43200
+  tikv_worker:
+    schema-manager.enabled: false
+    log.level: info
 
 tikv_servers:
   - host: 172.16.5.138
@@ -374,6 +418,11 @@ kvcdc_servers:
   - host: 172.16.5.238
     config:
       log-level: "debug"
+
+tikv_worker_servers:
+  - host: 172.16.5.255
+    config:
+      log.level: debug
 
 `), &topo)
 	require.NoError(t, err)
@@ -406,6 +455,23 @@ gc-ttl = 43200
 log-level = "debug"
 `
 	got, err = Merge2Toml("kvcdc", topo.ServerConfigs.TiKVCDC, topo.TiKVCDCServers[0].Config)
+	require.NoError(t, err)
+	require.Equal(t, expected, string(got))
+
+	expected = `# WARNING: This file is auto-generated. Do not edit! All your modification will be overwritten!
+# You can use 'tiup cluster edit-config' and 'tiup cluster reload' to update the configuration
+# All configuration items you want to change can be added to:
+# server_configs:
+#   tikv-worker:
+#     aa.b1.c3: value
+#     aa.b2.c4: value
+[log]
+level = "debug"
+
+[schema-manager]
+enabled = false
+`
+	got, err = Merge2Toml("tikv-worker", topo.ServerConfigs.TiKVWorker, topo.TiKVWorkerServers[0].Config)
 	require.NoError(t, err)
 	require.Equal(t, expected, string(got))
 }
