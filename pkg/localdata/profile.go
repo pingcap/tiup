@@ -224,6 +224,11 @@ func (p *Profile) VersionIsInstalled(component, version string) (bool, error) {
 
 // ResetMirror reset root.json and cleanup manifests directory
 func (p *Profile) ResetMirror(addr, root string) error {
+	// Ensure bin directory exists
+	if err := os.MkdirAll(p.Path("bin"), 0755); err != nil {
+		return err
+	}
+
 	// Calculating root.json path
 	shaWriter := sha256.New()
 	if _, err := io.Copy(shaWriter, strings.NewReader(addr)); err != nil {
