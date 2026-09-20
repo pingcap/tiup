@@ -24,6 +24,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"golang.org/x/net/http/httpproxy"
 )
 
 // HTTPClient is a wrap of http.Client
@@ -37,19 +39,22 @@ func NewHTTPClient(timeout time.Duration, tlsConfig *tls.Config) *HTTPClient {
 	if timeout < time.Second {
 		timeout = 10 * time.Second // default timeout is 10s
 	}
+	// Resolve the proxy from the environment so that both HTTP(S)_PROXY and
+	// NO_PROXY are honored. TIUP_INNER_HTTP_PROXY, if set, overrides the proxy
+	// URL but NO_PROXY is still respected, so internal endpoints (e.g. PD)
+	// listed in NO_PROXY are reached directly instead of through the proxy.
+	proxyCfg := httpproxy.FromEnvironment()
+	if inner := os.Getenv("TIUP_INNER_HTTP_PROXY"); len(inner) > 0 {
+		proxyCfg.HTTPProxy = inner
+		proxyCfg.HTTPSProxy = inner
+	}
+	proxyFunc := proxyCfg.ProxyFunc()
 	tr := &http.Transport{
 		TLSClientConfig: tlsConfig,
 		Dial:            (&net.Dialer{Timeout: 3 * time.Second}).Dial,
-	}
-	// prefer to use the inner http proxy
-	httpProxy := os.Getenv("TIUP_INNER_HTTP_PROXY")
-	if len(httpProxy) == 0 {
-		httpProxy = os.Getenv("HTTP_PROXY")
-	}
-	if len(httpProxy) > 0 {
-		if proxyURL, err := url.Parse(httpProxy); err == nil {
-			tr.Proxy = http.ProxyURL(proxyURL)
-		}
+		Proxy: func(req *http.Request) (*url.URL, error) {
+			return proxyFunc(req.URL)
+		},
 	}
 	return &HTTPClient{
 		client: &http.Client{
