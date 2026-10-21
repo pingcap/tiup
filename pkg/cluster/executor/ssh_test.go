@@ -14,11 +14,16 @@
 package executor
 
 import (
+	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNativeSSHConfigArgs(t *testing.T) {
@@ -131,5 +136,37 @@ func TestNativeSSHConfigArgs(t *testing.T) {
 	for _, tc := range testcases {
 		e.Config = tc.c
 		assert.Equal(t, tc.e, strings.Join(e.configArgs([]string{}, tc.s), " "))
+	}
+}
+
+func TestNativeSSHTransferRemoteAddress(t *testing.T) {
+	dir := t.TempDir()
+	argsFile := filepath.Join(dir, "args")
+	// fake scp that records its arguments
+	scp := filepath.Join(dir, "scp")
+	require.NoError(t, os.WriteFile(scp, []byte("#!/bin/sh\necho \"$@\" > "+argsFile+"\n"), 0o755))
+	t.Setenv(localdata.EnvNameSCPPath, scp)
+
+	testcases := []struct {
+		host     string
+		download bool
+		e        string
+	}{
+		{"192.168.1.1", false, "/src tidb@192.168.1.1:/dst"},
+		{"192.168.1.1", true, "tidb@192.168.1.1:/src " + filepath.Join(dir, "dst")},
+		{"fdbd:dc0c:1:121a::51", false, "/src tidb@[fdbd:dc0c:1:121a::51]:/dst"},
+		{"fdbd:dc0c:1:121a::51", true, "tidb@[fdbd:dc0c:1:121a::51]:/src " + filepath.Join(dir, "dst")},
+	}
+
+	for _, tc := range testcases {
+		e := &NativeSSHExecutor{Config: &SSHConfig{User: "tidb", Host: tc.host}}
+		dst := "/dst"
+		if tc.download {
+			dst = filepath.Join(dir, "dst")
+		}
+		require.NoError(t, e.Transfer(context.Background(), "/src", dst, tc.download, 0, false))
+		args, err := os.ReadFile(argsFile)
+		require.NoError(t, err)
+		require.True(t, strings.HasSuffix(strings.TrimSpace(string(args)), tc.e), string(args))
 	}
 }

@@ -382,14 +382,19 @@ func (e *NativeSSHExecutor) Transfer(ctx context.Context, src, dst string, downl
 	}
 	args = e.configArgs(args, true) // prefix and postfix args
 
+	// scp splits host and path at the first colon, so an IPv6 address must be bracketed
+	host := e.Config.Host
+	if strings.Contains(host, ":") {
+		host = "[" + host + "]"
+	}
 	if download {
 		targetPath := filepath.Dir(dst)
 		if err := utils.MkdirAll(targetPath, 0755); err != nil {
 			return err
 		}
-		args = append(args, fmt.Sprintf("%s@%s:%s", e.Config.User, e.Config.Host, src), dst)
+		args = append(args, fmt.Sprintf("%s@%s:%s", e.Config.User, host, src), dst)
 	} else {
-		args = append(args, src, fmt.Sprintf("%s@%s:%s", e.Config.User, e.Config.Host, dst))
+		args = append(args, src, fmt.Sprintf("%s@%s:%s", e.Config.User, host, dst))
 	}
 
 	command := exec.Command(args[0], args[1:]...)
