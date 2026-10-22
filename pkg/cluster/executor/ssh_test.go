@@ -141,10 +141,10 @@ func TestNativeSSHConfigArgs(t *testing.T) {
 
 func TestNativeSSHTransferRemoteAddress(t *testing.T) {
 	dir := t.TempDir()
-	argsFile := filepath.Join(dir, "args")
-	// fake scp that records its arguments
+	// fake scp that records its arguments next to itself
 	scp := filepath.Join(dir, "scp")
-	require.NoError(t, os.WriteFile(scp, []byte("#!/bin/sh\necho \"$@\" > "+argsFile+"\n"), 0o755))
+	argsFile := scp + ".args"
+	require.NoError(t, os.WriteFile(scp, []byte("#!/bin/sh\necho \"$@\" > \"$0.args\"\n"), 0o755))
 	t.Setenv(localdata.EnvNameSCPPath, scp)
 
 	testcases := []struct {
