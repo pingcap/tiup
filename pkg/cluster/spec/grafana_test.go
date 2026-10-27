@@ -15,11 +15,17 @@ package spec
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"os"
 	"os/user"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -31,6 +37,7 @@ import (
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/ini.v1"
 )
 
 func TestLocalDashboards(t *testing.T) {
@@ -433,4 +440,111 @@ func TestVictoriaMetricsDefaultDatasource(t *testing.T) {
 	dsContent, err := os.ReadFile(filepath.Join(deployDir, "provisioning", "datasources", "datasource.yml"))
 	require.NoError(t, err)
 	assert.Contains(t, string(dsContent), "name: test-cluster-vm")
+}
+
+// TestGrafanaProbeProtocol checks that the status and uptime probes follow
+// server.protocol and do not use the cluster TLS config.
+func TestGrafanaProbeProtocol(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/metrics" {
+			fmt.Fprintf(w, "process_start_time_seconds %d\n", time.Now().Add(-time.Hour).Unix())
+		}
+	})
+	httpServer := httptest.NewServer(handler)
+	t.Cleanup(httpServer.Close)
+	httpsServer := httptest.NewTLSServer(handler)
+	t.Cleanup(httpsServer.Close)
+
+	// the cluster TLS config of a cluster with enable_tls, Grafana does not use it
+	clusterTLS := &tls.Config{RootCAs: x509.NewCertPool()}
+
+	tests := []struct {
+		name           string
+		serverConfig   map[string]string
+		instanceConfig map[string]string
+		tlsServer      bool
+		clusterTLS     *tls.Config
+		status         string
+	}{
+		{name: "http by default", status: "Up"},
+		{name: "http with cluster tls", clusterTLS: clusterTLS, status: "Up"},
+		{name: "https in instance config", instanceConfig: map[string]string{"server.protocol": "https"}, tlsServer: true, status: "Up"},
+		{name: "h2 in instance config", instanceConfig: map[string]string{"server.protocol": "h2"}, tlsServer: true, status: "Up"},
+		{name: "https in server_configs", serverConfig: map[string]string{"server.protocol": "https"}, tlsServer: true, clusterTLS: clusterTLS, status: "Up"},
+		{name: "instance config overrides server_configs", serverConfig: map[string]string{"server.protocol": "https"}, instanceConfig: map[string]string{"server.protocol": "http"}, tlsServer: true, status: "Down"},
+		{name: "http probe of https grafana", tlsServer: true, status: "Down"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httpServer
+			if tt.tlsServer {
+				server = httpsServer
+			}
+			u, err := url.Parse(server.URL)
+			require.NoError(t, err)
+			port, err := strconv.Atoi(u.Port())
+			require.NoError(t, err)
+
+			topo := new(Specification)
+			topo.ServerConfigs.Grafana = tt.serverConfig
+			topo.Grafanas = append(topo.Grafanas, &GrafanaSpec{
+				Host:   u.Hostname(),
+				Port:   port,
+				Config: tt.instanceConfig,
+			})
+			ins := (&GrafanaComponent{topo}).Instances()
+			require.Len(t, ins, 1)
+
+			ctx := context.Background()
+			require.Equal(t, tt.status, ins[0].Status(ctx, 5*time.Second, tt.clusterTLS))
+			uptime := ins[0].Uptime(ctx, 5*time.Second, tt.clusterTLS)
+			if tt.status == "Up" {
+				require.GreaterOrEqual(t, uptime, time.Hour)
+			} else {
+				require.Zero(t, uptime)
+			}
+		})
+	}
+}
+
+// TestGrafanaMergedConfig checks that the instance config overrides
+// server_configs.grafana and the shared map is not modified.
+func TestGrafanaMergedConfig(t *testing.T) {
+	global := map[string]string{"log.level": "info", "server.protocol": "http"}
+	a := &GrafanaSpec{Config: map[string]string{"server.protocol": "https"}}
+	b := &GrafanaSpec{}
+
+	require.Equal(t, map[string]string{"log.level": "info", "server.protocol": "https"}, a.mergedConfig(global))
+	require.Equal(t, map[string]string{"log.level": "info", "server.protocol": "http"}, b.mergedConfig(global))
+	require.Equal(t, map[string]string{"log.level": "info", "server.protocol": "http"}, global)
+	require.Empty(t, b.mergedConfig(nil))
+}
+
+// TestGrafanaInitConfigInstanceOverride checks that the instance config of one
+// Grafana does not leak into the grafana.ini of another one.
+func TestGrafanaInitConfigInstanceOverride(t *testing.T) {
+	ctx := ctxt.New(context.Background(), 0, logprinter.NewLogger(""))
+
+	topo := new(Specification)
+	topo.ServerConfigs.Grafana = map[string]string{"server.enable_gzip": "true"}
+	topo.Monitors = []*PrometheusSpec{{Host: "127.0.0.1", Port: 9090}}
+	topo.Grafanas = []*GrafanaSpec{
+		{Host: "127.0.0.1", Port: 3000, Config: map[string]string{"server.protocol": "https"}},
+		{Host: "127.0.0.1", Port: 3001},
+	}
+
+	var servers []*ini.Section
+	for _, ins := range (&GrafanaComponent{topo}).Instances() {
+		paths := meta.DirPaths{Deploy: t.TempDir(), Cache: t.TempDir()}
+		require.NoError(t, ins.InitConfig(ctx, &mockExecutor{}, "test-cluster", "v8.5.0", "tidb", paths))
+		cfg, err := ini.Load(filepath.Join(paths.Deploy, "conf", "grafana.ini"))
+		require.NoError(t, err)
+		servers = append(servers, cfg.Section("server"))
+	}
+
+	require.Equal(t, "https", servers[0].Key("protocol").String())
+	require.Equal(t, "true", servers[0].Key("enable_gzip").String())
+	require.False(t, servers[1].HasKey("protocol"))
+	require.Equal(t, "true", servers[1].Key("enable_gzip").String())
+	require.Equal(t, map[string]string{"server.enable_gzip": "true"}, topo.ServerConfigs.Grafana)
 }
