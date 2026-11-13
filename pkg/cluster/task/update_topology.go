@@ -103,7 +103,16 @@ type componentTopology struct {
 // updateInstancesAndOps receives alertmanager, prometheus and grafana instance list, if the list has
 //
 //	no member or all deleted, it will add a `OpDelete` in ops, otherwise it will push all current not deleted instances into instance list.
+//
+// An initially empty Grafana list preserves existing discovery information for detached instances.
 func updateInstancesAndOps(ops []clientv3.Op, ins []spec.Instance, deleted set.StringSet, instances []spec.Instance, componentName string) ([]clientv3.Op, []spec.Instance) {
+	// An absent Grafana is no longer managed, but its discovery key may still
+	// serve an externally maintained instance. Explicit scale-in of the last
+	// managed Grafana must continue to delete the key below.
+	if componentName == spec.ComponentGrafana && len(instances) == 0 {
+		return ops, ins
+	}
+
 	var currentInstances []spec.Instance
 	for _, instance := range instances {
 		if deleted.Exist(instance.ID()) {
