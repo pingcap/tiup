@@ -19,7 +19,12 @@ function detach_grafana() (
     function detach_remote() {
         local host=$1
         shift
-        ssh -o BatchMode=yes -o ConnectTimeout=10 -i "$HOME/.ssh/id_rsa" "root@$host" "$@"
+        # The control container's startup keyscan can run before the nodes are
+        # ready. Track this fixture's keys separately, accepting first contact
+        # but still rejecting a key that changes during the test.
+        ssh -o BatchMode=yes -o ConnectTimeout=10 \
+            -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile="$state/known_hosts" \
+            -i "$HOME/.ssh/id_rsa" "root@$host" "$@"
     }
 
     function detach_save_failure() {
