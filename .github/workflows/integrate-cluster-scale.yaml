@@ -40,6 +40,7 @@ jobs:
           - 'test_scale_core_tls'
           - 'test_scale_tools_tls'
           - 'test_scale_tiproxy'
+          - 'test_detach_grafana'
     steps:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v6

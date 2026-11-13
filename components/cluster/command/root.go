@@ -114,6 +114,12 @@ func init() {
 				log.Infof("The --native-ssh flag has been deprecated, please use --ssh=system")
 			}
 
+			// Detach only updates local metadata, so unrelated SSH proxy credentials
+			// must not be read or requested for this command.
+			if cmd.Name() == "detach-grafana" {
+				return nil
+			}
+
 			err = proxy.MaybeStartProxy(
 				gOpt.SSHProxyHost,
 				gOpt.SSHProxyPort,
@@ -169,6 +175,7 @@ func init() {
 		newRestartCmd(),
 		newScaleInCmd(),
 		newScaleOutCmd(),
+		newDetachGrafanaCmd(),
 		newDestroyCmd(),
 		newCleanCmd(),
 		newUpgradeCmd(),
