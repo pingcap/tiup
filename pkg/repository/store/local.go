@@ -20,7 +20,6 @@ import (
 
 	"github.com/gofrs/flock"
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/utils"
 )
 
 type localStore struct {
@@ -44,20 +43,15 @@ func (s *localStore) Begin() (FsTxn, error) {
 
 // Returns the last modify time
 func (s *localStore) last(filename string) (*time.Time, error) {
-	fp := path.Join(s.root, filename)
-	if utils.IsNotExist(fp) {
+	fi, err := statLocalFile(s.root, filename)
+	if os.IsNotExist(err) {
 		return nil, nil
 	}
-	fi, err := os.Stat(fp)
 	if err != nil {
 		return nil, errors.Annotate(err, "Stat file")
 	}
 	mt := fi.ModTime()
 	return &mt, nil
-}
-
-func (s *localStore) path(filename string) string {
-	return path.Join(s.root, filename)
 }
 
 func (s *localStore) lock() error {

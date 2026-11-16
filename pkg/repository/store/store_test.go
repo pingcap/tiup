@@ -14,6 +14,8 @@
 package store
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 
@@ -106,7 +108,9 @@ func TestUpstream(t *testing.T) {
 	_, err = txn.ReadManifest("timestamp.json", &v1manifest.Timestamp{})
 	assert.NotNil(t, err)
 
-	txn, err = New(root, "https://tiup-mirrors.pingcap.com").Begin()
+	upstream := httptest.NewServer(http.FileServer(http.Dir("../testdata/manifests")))
+	defer upstream.Close()
+	txn, err = New(root, upstream.URL).Begin()
 	assert.Nil(t, err)
 	m, err := txn.ReadManifest("timestamp.json", &v1manifest.Timestamp{})
 	assert.Nil(t, err)

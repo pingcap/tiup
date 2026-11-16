@@ -17,8 +17,6 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"slices"
-
 	"github.com/gorilla/mux"
 	"github.com/pingcap/fn"
 	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
@@ -69,9 +67,15 @@ func (h *componentSigner) sign(r *http.Request, m *v1manifest.RawManifest) (sr *
 	name := mux.Vars(r)["name"]
 	info := buildInfo(r, sid)
 
-	blackList := []string{"root", "index", "snapshot", "timestamp"}
-	if slices.Contains(blackList, name) {
+	if !v1manifest.ValidComponentID(name) {
 		return nil, ErrorForbiden
+	}
+	comp := v1manifest.Component{}
+	if err := json.Unmarshal(m.Signed, &comp); err != nil {
+		return nil, ErrorInvalidManifest
+	}
+	if comp.ID != name || !v1manifest.ValidComponentID(comp.ID) {
+		return nil, ErrorInvalidManifest
 	}
 
 	logprinter.Infof("Sign component manifest for %s, sid: %s", name, sid)
@@ -84,11 +88,8 @@ func (h *componentSigner) sign(r *http.Request, m *v1manifest.RawManifest) (sr *
 		Reader: readCloser,
 		Name:   fileName,
 	}
-
-	comp := v1manifest.Component{}
-	if err := json.Unmarshal(m.Signed, &comp); err != nil {
-		logprinter.Errorf("Unmarshal manifest %s", err.Error())
-		return nil, ErrorInvalidManifest
+	if readCloser != nil {
+		defer readCloser.Close()
 	}
 
 	manifest := &v1manifest.Manifest{
@@ -99,8 +100,10 @@ func (h *componentSigner) sign(r *http.Request, m *v1manifest.RawManifest) (sr *
 	switch err := h.mirror.Publish(manifest, info); err {
 	case model.ErrorConflict:
 		return nil, ErrorManifestConflict
-	case model.ErrorWrongSignature:
+	case model.ErrorWrongSignature, model.ErrorMissingOwner:
 		return nil, ErrorForbiden
+	case model.ErrorInvalidComponentID, model.ErrorWrongManifestType:
+		return nil, ErrorInvalidManifest
 	case model.ErrorWrongChecksum, model.ErrorWrongFileName:
 		logprinter.Errorf("Publish component: %s", err.Error())
 		return nil, ErrorInvalidTarball

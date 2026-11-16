@@ -180,22 +180,19 @@ func (m *model) Rotate(manifest *v1manifest.Manifest) error {
 
 // Publish implements Backend
 func (m *model) Publish(manifest *v1manifest.Manifest, info ComponentInfo) error {
-	signed := manifest.Signed.(*v1manifest.Component)
+	if manifest == nil {
+		return ErrorWrongManifestType
+	}
+	signed, ok := manifest.Signed.(*v1manifest.Component)
+	if !ok || signed == nil {
+		return ErrorWrongManifestType
+	}
+	if !v1manifest.ValidComponentID(signed.ID) {
+		return ErrorInvalidComponentID
+	}
 	initTime := time.Now()
 	pf := func() error {
-		// Write the component manifest (component.json)
-		if err := m.updateComponentManifest(manifest); err != nil {
-			return err
-		}
-
-		// Update snapshot.json and signature
-		fi, err := m.txn.Stat(fmt.Sprintf("%d.%s.json", signed.Version, signed.ID))
-		if err != nil {
-			return err
-		}
-
 		var indexFileVersion *v1manifest.FileVersion
-		var owner *v1manifest.Owner
 		if err := m.updateIndexManifest(initTime, func(im *v1manifest.Manifest) (*v1manifest.Manifest, error) {
 			// We only update index.json when it's a new component
 			// or the yanked, standalone, hidden fields changed,
@@ -203,26 +200,16 @@ func (m *model) Publish(manifest *v1manifest.Manifest, info ComponentInfo) error
 			var (
 				compItem  v1manifest.ComponentItem
 				compExist bool
+				owner     *v1manifest.Owner
 			)
 
 			componentName := signed.ID
 			signed := im.Signed.(*v1manifest.Index)
 			if compItem, compExist = signed.Components[componentName]; compExist {
 				// Find the owner of target component
-				var o v1manifest.Owner
-				if info.OwnerID() != "" {
-					o = signed.Owners[info.OwnerID()]
-				} else {
-					o = signed.Owners[compItem.Owner]
-				}
+				// A transfer must be authorized by the current owner, not its recipient.
+				o := signed.Owners[compItem.Owner]
 				owner = &o
-				if info.Yanked() == nil &&
-					info.Hidden() == nil &&
-					info.Standalone() == nil &&
-					info.OwnerID() == "" {
-					// No changes on index.json
-					return nil, nil
-				}
 			} else {
 				var ownerID string
 				// The component is a new component, so the owner is whoever first create it.
@@ -236,6 +223,13 @@ func (m *model) Publish(manifest *v1manifest.Manifest, info ComponentInfo) error
 					URL:   fmt.Sprintf("/%s.json", componentName),
 				}
 			}
+			if err := verifyComponentManifest(owner, manifest); err != nil {
+				return nil, err
+			}
+			if compExist && info.Yanked() == nil && info.Hidden() == nil &&
+				info.Standalone() == nil && info.OwnerID() == "" {
+				return nil, nil
+			}
 			if info.Yanked() != nil {
 				compItem.Yanked = *info.Yanked()
 			}
@@ -246,6 +240,9 @@ func (m *model) Publish(manifest *v1manifest.Manifest, info ComponentInfo) error
 				compItem.Standalone = *info.Standalone()
 			}
 			if info.OwnerID() != "" {
+				if _, ok := signed.Owners[info.OwnerID()]; !ok {
+					return nil, ErrorMissingOwner
+				}
 				compItem.Owner = info.OwnerID()
 			}
 
@@ -256,7 +253,13 @@ func (m *model) Publish(manifest *v1manifest.Manifest, info ComponentInfo) error
 			return err
 		}
 
-		if err := verifyComponentManifest(owner, manifest); err != nil {
+		// The index callback authenticates the publisher before it can write.
+		// Only then may component metadata leave memory, even in a transaction.
+		if err := m.updateComponentManifest(manifest); err != nil {
+			return err
+		}
+		fi, err := m.txn.Stat(fmt.Sprintf("%d.%s.json", signed.Version, signed.ID))
+		if err != nil {
 			return err
 		}
 
