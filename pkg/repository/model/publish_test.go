@@ -16,6 +16,7 @@ package model
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -136,7 +137,7 @@ func TestPublishValidationBeforeWrites(t *testing.T) {
 		require.Equal(t, "updated", manifest.Signed.(*v1manifest.Component).Description)
 	})
 
-	t.Run("only current owner can authorize a transfer", func(t *testing.T) {
+	t.Run("local transfer uses recipient signatures", func(t *testing.T) {
 		recipient, err := v1manifest.GenKeyInfo()
 		require.NoError(t, err)
 		public, err := recipient.Public()
@@ -146,15 +147,57 @@ func TestPublishValidationBeforeWrites(t *testing.T) {
 		require.NoError(t, New(txn, keys).Grant("recipient", "test recipient", public))
 		comp := v1manifest.NewComponent("existing", "transfer", time.Now())
 		comp.Version = 3
+		for _, tc := range []struct {
+			name, owner string
+			key         *v1manifest.KeyInfo
+			wantErr     error
+		}{
+			{name: "previous owner cannot sign for recipient", owner: "recipient", key: publisher, wantErr: ErrorWrongSignature},
+			{name: "unknown recipient", owner: "unknown", key: recipient, wantErr: ErrorMissingOwner},
+			{name: "recipient cannot publish before transfer", key: recipient, wantErr: ErrorWrongSignature},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				manifest, err := v1manifest.SignManifest(comp, tc.key)
+				require.NoError(t, err)
+				txn, err := st.Begin()
+				require.NoError(t, err)
+				defer func() { require.NoError(t, txn.Rollback()) }()
+				recorded := &recordingTxn{FsTxn: txn}
+				require.ErrorIs(t, New(recorded, keys).Publish(manifest, &PublishInfo{Owner: tc.owner}), tc.wantErr)
+				require.Empty(t, recorded.writes)
+			})
+		}
 		manifest, err := v1manifest.SignManifest(comp, recipient)
 		require.NoError(t, err)
 		txn, err = st.Begin()
 		require.NoError(t, err)
-		recorded := &recordingTxn{FsTxn: txn}
-		require.Error(t, New(recorded, keys).Publish(manifest, &PublishInfo{Owner: "recipient"}))
-		require.Empty(t, recorded.writes)
-		require.NoError(t, txn.Rollback())
-		publish(comp, &PublishInfo{Owner: "recipient"})
+		require.NoError(t, New(txn, keys).Publish(manifest, &PublishInfo{Owner: "recipient"}))
+
+		// Check the transferred manifest immediately, before a later recipient
+		// publication could hide a transfer that committed an unreadable manifest.
+		readTxn, err := st.Begin()
+		require.NoError(t, err)
+		defer func() { require.NoError(t, readTxn.Rollback()) }()
+		var snapshot v1manifest.Snapshot
+		_, err = readTxn.ReadManifest(v1manifest.ManifestFilenameSnapshot, &snapshot)
+		require.NoError(t, err)
+		var index v1manifest.Index
+		_, err = readTxn.ReadManifest(fmt.Sprintf("%d.index.json", snapshot.Meta[v1manifest.ManifestURLIndex].Version), &index)
+		require.NoError(t, err)
+		item := index.Components[comp.ID]
+		require.Equal(t, "recipient", item.Owner)
+		owner := index.Owners[item.Owner]
+		keyStore := v1manifest.NewKeyStore()
+		require.NoError(t, keyStore.AddKeys(item.Owner, uint(owner.Threshold), index.Expires, owner.Keys))
+		reader, err := readTxn.Read(fmt.Sprintf("%d.%s.json", comp.Version, comp.ID))
+		require.NoError(t, err)
+		defer reader.Close()
+		var verified v1manifest.Component
+		_, err = v1manifest.ReadComponentManifest(reader, &verified, &item, keyStore)
+		require.NoError(t, err)
+		require.Equal(t, comp.Version, verified.Version)
+		require.Equal(t, "transfer", verified.Description)
+
 		comp.Version++
 		manifest, err = v1manifest.SignManifest(comp, recipient)
 		require.NoError(t, err)

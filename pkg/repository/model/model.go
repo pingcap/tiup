@@ -206,9 +206,17 @@ func (m *model) Publish(manifest *v1manifest.Manifest, info ComponentInfo) error
 			componentName := signed.ID
 			signed := im.Signed.(*v1manifest.Index)
 			if compItem, compExist = signed.Components[componentName]; compExist {
-				// Find the owner of target component
-				// A transfer must be authorized by the current owner, not its recipient.
-				o := signed.Owners[compItem.Owner]
+				ownerID := compItem.Owner
+				if info.OwnerID() != "" {
+					// Transfers are local administrative operations: the CLI collects
+					// recipient signatures so clients can verify the new owner's manifest.
+					// The HTTP publish API cannot supply OwnerID.
+					ownerID = info.OwnerID()
+				}
+				o, ok := signed.Owners[ownerID]
+				if !ok {
+					return nil, ErrorMissingOwner
+				}
 				owner = &o
 			} else {
 				var ownerID string
@@ -224,6 +232,9 @@ func (m *model) Publish(manifest *v1manifest.Manifest, info ComponentInfo) error
 				}
 			}
 			if err := verifyComponentManifest(owner, manifest); err != nil {
+				return nil, err
+			}
+			if err := m.validateArchiveClaims(signed, manifest.Signed.(*v1manifest.Component), info.Filename()); err != nil {
 				return nil, err
 			}
 			if compExist && info.Yanked() == nil && info.Hidden() == nil &&
@@ -330,9 +341,9 @@ func (m *model) copyTiUP(origin string) error {
 
 func (m *model) checkAndWrite(manifest *v1manifest.Component, info ComponentData) error {
 	fname := info.Filename()
-	for _, plat := range manifest.Platforms {
-		for _, vi := range plat {
-			if vi.URL[1:] == fname {
+	for platform, plat := range manifest.Platforms {
+		for ver, vi := range plat {
+			if vi.URL == "/"+fname && fname == archiveFilename(manifest.ID, platform, ver) {
 				if err := m.txn.Write(fname, info); err != nil {
 					return err
 				}

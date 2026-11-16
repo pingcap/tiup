@@ -141,4 +141,23 @@ func TestPublishHTTPBindingAndCompatibility(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, payload, string(contents))
 	})
+	t.Run("HTTP query cannot request an administrative ownership transfer", func(t *testing.T) {
+		recipient, err := v1manifest.GenKeyInfo()
+		require.NoError(t, err)
+		public, err := recipient.Public()
+		require.NoError(t, err)
+		require.NoError(t, s.mirror.Grant("recipient", "test recipient", public))
+		comp := v1manifest.NewComponent("metadata", "not authorized", time.Now())
+		comp.Version = 3
+		manifest, err := v1manifest.SignManifest(comp, recipient)
+		require.NoError(t, err)
+		body, err := json.Marshal(manifest)
+		require.NoError(t, err)
+		r := httptest.NewRequest(http.MethodPost, "/api/v1/component/no-upload/metadata?owner=recipient", bytes.NewReader(body))
+		r.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		s.router().ServeHTTP(w, r)
+		require.Equal(t, http.StatusForbidden, w.Code)
+		require.NoFileExists(t, filepath.Join(root, "3.metadata.json"))
+	})
 }
