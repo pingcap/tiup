@@ -26,6 +26,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/fatih/color"
@@ -48,9 +49,10 @@ var ErrUnknownVersion = errors.New("unknown version")
 // V1Repository represents a remote repository viewed with the v1 manifest design.
 type V1Repository struct {
 	Options
-	mirror    Mirror
-	local     v1manifest.LocalManifests
-	timestamp *v1manifest.Manifest
+	mirror     Mirror
+	local      v1manifest.LocalManifests
+	timestamp  *v1manifest.Manifest
+	manifestMu *sync.Mutex
 }
 
 // ComponentSpec describes a component a user would like to have or use.
@@ -77,9 +79,10 @@ func NewV1Repo(mirror Mirror, opts Options, local v1manifest.LocalManifests) *V1
 	}
 
 	repo := &V1Repository{
-		Options: opts,
-		mirror:  mirror,
-		local:   local,
+		Options:    opts,
+		mirror:     mirror,
+		local:      local,
+		manifestMu: &sync.Mutex{},
 	}
 
 	return repo
@@ -90,7 +93,9 @@ const maxRootSize uint = 1024 * 1024
 
 // WithOptions clone a new V1Repository with given options
 func (r *V1Repository) WithOptions(opts Options) Repository {
-	return NewV1Repo(r.Mirror(), opts, r.local)
+	repo := NewV1Repo(r.Mirror(), opts, r.local)
+	repo.manifestMu = r.manifestMu
+	return repo
 }
 
 // Mirror returns Mirror
@@ -212,6 +217,11 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 
 // ensureManifests ensures that the snapshot, root, and index manifests are up to date and saved in r.local.
 func (r *V1Repository) ensureManifests() error {
+	// A timed-out component update check can still be refreshing the shared root
+	// keys when foreground installation starts reading the manifests.
+	r.manifestMu.Lock()
+	defer r.manifestMu.Unlock()
+
 	defer func(start time.Time) {
 		logprinter.Verbose("Ensure manifests finished in %s", time.Since(start))
 	}(time.Now())
