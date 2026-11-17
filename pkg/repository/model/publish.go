@@ -92,21 +92,34 @@ func (m *model) validateArchiveClaims(index *v1manifest.Index, component *v1mani
 			return err
 		}
 		committed := manifest.Signed.(*v1manifest.Component)
-		claims := reserved
 		if id == component.ID {
 			previous = committed
-			claims = owned
 		}
 		// Include legacy custom filenames: canonical names are ambiguous when IDs
 		// and prerelease versions contain hyphens, and older mirrors used custom URLs.
 		for _, versions := range committed.Platforms {
 			for _, item := range versions {
-				if claim := localArchiveClaim(item.URL); claim != "" {
-					claims[claim] = true
+				if id != component.ID {
+					if claim := localArchiveClaim(item.URL); claim != "" {
+						reserved[claim] = true
+					}
 				}
-				if filename, local := strings.CutPrefix(item.URL, "/"); id == version.TiUPVerName && local {
+				filename, local := strings.CutPrefix(item.URL, "/")
+				if !local {
+					continue
+				}
+				// Only exact raw filenames prove ownership. Case folding or URL
+				// normalization can otherwise authorize replacing a different file.
+				if id == component.ID {
+					owned[filename] = true
+				}
+				if id == version.TiUPVerName {
 					if alias := tiupArchiveAlias(filename); alias != "" {
-						claims[strings.ToLower(alias)] = true
+						if id == component.ID {
+							owned[alias] = true
+						} else {
+							reserved[strings.ToLower(alias)] = true
+						}
 					}
 				}
 			}
@@ -117,7 +130,7 @@ func (m *model) validateArchiveClaims(index *v1manifest.Index, component *v1mani
 		if reserved[claim] {
 			return ErrorWrongFileName
 		}
-		if !owned[claim] {
+		if !owned[name] {
 			// A retired URL does not make its file available to another publisher.
 			// Check metadata-only claims too, before they can establish ownership.
 			if _, err := m.txn.Stat(name); err == nil {
