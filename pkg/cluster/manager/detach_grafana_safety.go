@@ -22,6 +22,9 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 )
 
+// grafanaDetachDir records one directory either occupied by a detached Grafana
+// instance or still managed by a lifecycle operation. kind only labels the
+// path in error messages ("deploy", "paths.data", "monitored data", ...).
 type grafanaDetachDir struct {
 	cluster string
 	node    string
@@ -29,31 +32,54 @@ type grafanaDetachDir struct {
 	path    string
 }
 
-func (m *Manager) validateGrafanaDetachDirs(name string, remaining *spec.ClusterMeta, targets []spec.Instance) error {
+// validateGrafanaDetachDirs rejects a detach whose Grafana directories overlap
+// any directory TiUP still manages.
+//
+// Detach promises that remote files are left untouched, but later lifecycle
+// operations keep cleaning up recorded directories through a shell: destroy
+// and scale-in remove deploy/data/log directories, reload and upgrade rewrite
+// deploy directories, and a monitored host is cleaned up once its last managed
+// component is gone. A directory shared between a detached Grafana and any
+// managed instance would eventually be deleted or overwritten, breaking that
+// promise. The check therefore covers every cluster in this profile, not just
+// the one being detached: the same host can be managed by several clusters,
+// and destroying any of them runs the cleanup. Only locally recorded paths
+// are compared; remote symlinks and mounts are invisible here, which is why
+// detach still asks the operator to verify the actual layout.
+func validateGrafanaDetachDirs(specManager *spec.SpecManager, name string, postDetach *spec.ClusterMeta, targets []spec.Instance) error {
+	// Collect the directories the detached instances occupy, grouped by
+	// manage host. These are the paths TiUP must never touch again.
 	protected := make(map[string][]grafanaDetachDir)
 	for _, instance := range targets {
-		dirs, err := grafanaDetachInstanceDirs(name, remaining, instance)
+		dirs, err := grafanaDetachInstanceDirs(name, postDetach, instance)
 		if err != nil {
 			return err
 		}
 		host := instance.GetManageHost()
 		protected[host] = append(protected[host], dirs...)
 	}
-	names, err := m.specManager.List()
+	// Collect the directories TiUP may still clean up or rewrite on those
+	// hosts, from every cluster in the profile. The detached cluster
+	// contributes the post-detach topology passed in; the others are loaded
+	// from disk.
+	names, err := specManager.List()
 	if err != nil {
 		return err
 	}
 	for _, cluster := range names {
-		metadata := remaining
+		metadata := postDetach
 		if cluster != name {
 			metadata = &spec.ClusterMeta{}
-			if err := m.specManager.Metadata(cluster, metadata); err != nil {
+			if err := specManager.Metadata(cluster, metadata); err != nil {
 				return errors.Annotatef(err, "cannot check directories recorded for cluster %q in this profile", cluster)
 			}
 		}
 		if metadata.Topology == nil {
 			return errors.Errorf("cannot check directories: cluster %q has no topology in its metadata", cluster)
 		}
+		// Instance directories of every component deployed on the affected
+		// hosts (including Grafana path overrides and TiFlash remote caches
+		// via grafanaDetachInstanceDirs).
 		managed := make(map[string][]grafanaDetachDir)
 		for _, component := range metadata.Topology.ComponentsByStartOrder() {
 			for _, instance := range component.Instances() {
@@ -68,40 +94,23 @@ func (m *Manager) validateGrafanaDetachDirs(name string, remaining *spec.Cluster
 				managed[host] = append(managed[host], dirs...)
 			}
 		}
+		// Monitored (node_exporter / blackbox_exporter) directories on the
+		// affected hosts; they belong to no instance.
 		hosts, noAgentHosts := getMonitorHosts(metadata.Topology)
-		options := metadata.Topology.MonitoredOptions
 		for host := range hosts {
 			if len(protected[host]) == 0 || noAgentHosts.Exist(host) {
 				continue
 			}
-			deploy := spec.Abs(metadata.Topology.GlobalOptions.User, options.DeployDir)
-			data := options.DataDir
-			if data != "" && !filepath.IsAbs(data) {
-				data = filepath.Join(deploy, data)
+			dirs, err := grafanaDetachMonitoredDirs(cluster, metadata)
+			if err != nil {
+				return err
 			}
-			for _, dir := range []grafanaDetachDir{
-				{cluster, "monitor", "monitored deploy", deploy},
-				{cluster, "monitor", "monitored data", data},
-				{cluster, "monitor", "monitored log", spec.Abs(metadata.Topology.GlobalOptions.User, options.LogDir)},
-			} {
-				if dir.path != "" {
-					managed[host] = append(managed[host], dir)
-				}
-			}
-			// Deployment resolves relative monitored data below its deploy dir,
-			// but DestroyMonitored passes it directly to a shell in the SSH home.
-			// Cover both recorded interpretations without changing that cleanup.
-			if options.DataDir != "" && !filepath.IsAbs(options.DataDir) {
-				managed[host] = append(managed[host], grafanaDetachDir{
-					cluster, "monitor", "monitored data cleanup", spec.Abs(metadata.User, options.DataDir),
-				})
-			}
+			managed[host] = append(managed[host], dirs...)
 		}
+		// Reject if any protected directory equals, contains, or is contained
+		// in a managed directory on the same host.
 		for host, dirs := range managed {
 			for _, dir := range dirs {
-				if err := dir.validate(); err != nil {
-					return err
-				}
 				for _, target := range protected[host] {
 					if grafanaDetachPathsOverlap(target.path, dir.path) {
 						return errors.Errorf("cannot detach Grafana %s: %s %q overlaps cluster %q node %s %s %q on host %s", target.node, target.kind, target.path, dir.cluster, dir.node, dir.kind, dir.path, host)
@@ -113,6 +122,10 @@ func (m *Manager) validateGrafanaDetachDirs(name string, remaining *spec.Cluster
 	return nil
 }
 
+// grafanaDetachInstanceDirs returns the directories occupied by one instance:
+// deploy, log and (possibly multiple) data directories, plus the
+// component-specific overrides that live outside them, such as Grafana's
+// paths.* settings or the TiFlash remote cache dir.
 func grafanaDetachInstanceDirs(cluster string, metadata *spec.ClusterMeta, instance spec.Instance) ([]grafanaDetachDir, error) {
 	dirs := []grafanaDetachDir{
 		{cluster, instance.ID(), "deploy", spec.Abs(metadata.User, instance.DeployDir())},
@@ -152,6 +165,43 @@ func grafanaDetachInstanceDirs(cluster string, metadata *spec.ClusterMeta, insta
 	return dirs, nil
 }
 
+// grafanaDetachMonitoredDirs returns the deploy/data/log directories of the
+// monitored components on one host; DestroyMonitored removes them once the
+// host's last managed component is gone. A relative data dir is listed twice
+// on purpose: deployment resolves it below the monitored deploy dir, but
+// DestroyMonitored passes it to a shell directly, i.e. relative to the SSH
+// home. Cover both recorded interpretations without changing that cleanup.
+func grafanaDetachMonitoredDirs(cluster string, metadata *spec.ClusterMeta) ([]grafanaDetachDir, error) {
+	options := metadata.Topology.MonitoredOptions
+	deploy := spec.Abs(metadata.Topology.GlobalOptions.User, options.DeployDir)
+	data := options.DataDir
+	if data != "" && !filepath.IsAbs(data) {
+		data = filepath.Join(deploy, data)
+	}
+	dirs := []grafanaDetachDir{
+		{cluster, "monitor", "monitored deploy", deploy},
+		{cluster, "monitor", "monitored data", data},
+		{cluster, "monitor", "monitored log", spec.Abs(metadata.Topology.GlobalOptions.User, options.LogDir)},
+	}
+	if options.DataDir != "" && !filepath.IsAbs(options.DataDir) {
+		dirs = append(dirs, grafanaDetachDir{
+			cluster, "monitor", "monitored data cleanup", spec.Abs(metadata.User, options.DataDir),
+		})
+	}
+	var kept []grafanaDetachDir
+	for _, dir := range dirs {
+		if dir.path == "" {
+			continue
+		}
+		if err := dir.validate(); err != nil {
+			return nil, err
+		}
+		dir.path = filepath.Clean(dir.path)
+		kept = append(kept, dir)
+	}
+	return kept, nil
+}
+
 func (d grafanaDetachDir) validate() error {
 	// Grafana expands providers and relative paths on the remote host. Resolving
 	// them (or symlinks) on the control machine would give a false safety check.
@@ -163,6 +213,11 @@ func (d grafanaDetachDir) validate() error {
 	return nil
 }
 
+// grafanaDetachPathsOverlap reports whether first and second denote the same
+// directory or one of them contains the other. Both directions matter: a
+// managed directory inside the detached one will be removed by a future
+// scale-in, and a detached directory inside a managed one is removed with it
+// by a future destroy or scale-in of that instance.
 func grafanaDetachPathsOverlap(first, second string) bool {
 	first, second = filepath.Clean(first), filepath.Clean(second)
 	return first == second ||
