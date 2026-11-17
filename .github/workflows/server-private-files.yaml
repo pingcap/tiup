@@ -1,0 +1,57 @@
+name: server-private-files
+
+on:
+  pull_request:
+    paths:
+      - 'server/**'
+      - 'pkg/repository/**'
+      - 'tests/tiup-server/**'
+      - 'tests/Makefile'
+      - 'Makefile'
+      - '.github/workflows/server-private-files.yaml'
+      - 'go.mod'
+      - 'go.sum'
+
+permissions:
+  contents: read
+
+jobs:
+  server-private-files:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: Server boundary and repository regressions
+        run: go test -race ./server/... ./pkg/repository/...
+      - name: Existing layouts, signing and private HTTP denial
+        run: make test_server_private_files
+
+  unicode-alias:
+    # macos-latest arm64 exhausted hosted capacity before this job could start.
+    runs-on: macos-26-intel
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: Require non-skipped filesystem alias regressions
+        shell: bash
+        run: |
+          go test -json -count=1 ./server | tee unicode-alias.json
+          jq -e -s '
+            ["TestStaticServerUnicodeKeyDirectoryAlias",
+             "TestStaticServerSymlinkRootCaseAlias",
+             "TestStaticServerUnicodePrivateRoot/root",
+             "TestStaticServerUnicodePrivateRoot/ancestor",
+             "TestStaticServerUnicodePrivateRoot/combining-mark-order"] as $required |
+            [.[] | select(.Action == "pass") | .Test] as $passed |
+            ($required - $passed | length) == 0
+          ' unicode-alias.json
