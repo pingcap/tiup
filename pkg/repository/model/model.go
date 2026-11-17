@@ -15,7 +15,6 @@ package model
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	cjson "github.com/gibson042/canonicaljson-go"
@@ -322,15 +321,10 @@ func (m *model) Publish(manifest *v1manifest.Manifest, info ComponentInfo) error
 }
 
 func (m *model) copyTiUP(origin string) error {
-	xs := strings.Split(origin, "-")
-	if len(xs) < 4 {
+	tiupTar := tiupArchiveAlias(origin)
+	if tiupTar == "" {
 		return ErrorWrongFileName
 	}
-	// convert
-	//	`tiup-${version}-linux-arm64.tar.gz`  -> `tiup-linux-arm64.tar.gz`
-	//  `tiup-v1.4.0-darwin-amd64.tar.gz` -> `tiup-darwin-amd64.tar.gz`
-	//  `tiup-v1.4.0-r13-gcd19b75+staging-darwin-amd64.tar.gz` -> `tiup-darwin-amd64.tar.gz`
-	tiupTar := strings.Join(append(xs[:1], xs[len(xs)-2:]...), "-")
 	reader, err := m.txn.Read(origin)
 	if err != nil {
 		return err

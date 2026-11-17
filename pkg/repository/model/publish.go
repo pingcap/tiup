@@ -42,6 +42,20 @@ func archiveFilename(id, platform, ver string) string {
 	return name
 }
 
+// tiupArchiveAlias preserves copyTiUP's historical filename rule, including
+// custom version tokens. Derive it from the raw, flat filename, not a manifest
+// platform or a normalized URL: those can name a different existing alias.
+func tiupArchiveAlias(filename string) string {
+	if strings.ContainsAny(filename, "/\\\x00") {
+		return ""
+	}
+	parts := strings.Split(filename, "-")
+	if len(parts) < 4 {
+		return ""
+	}
+	return strings.Join([]string{parts[0], parts[len(parts)-2], parts[len(parts)-1]}, "-")
+}
+
 // localArchiveClaim reserves legacy relative URLs and aliases normalized by HTTP
 // servers too. Normalization only reserves names; it never authorizes a write.
 func localArchiveClaim(resource string) string {
@@ -85,13 +99,15 @@ func (m *model) validateArchiveClaims(index *v1manifest.Index, component *v1mani
 		}
 		// Include legacy custom filenames: canonical names are ambiguous when IDs
 		// and prerelease versions contain hyphens, and older mirrors used custom URLs.
-		for platform, versions := range committed.Platforms {
-			for ver, item := range versions {
+		for _, versions := range committed.Platforms {
+			for _, item := range versions {
 				if claim := localArchiveClaim(item.URL); claim != "" {
 					claims[claim] = true
 				}
-				if name := archiveFilename(id, platform, ver); id == version.TiUPVerName && name != "" && item.URL == "/"+name {
-					claims[strings.ToLower("tiup-"+strings.ReplaceAll(platform, "/", "-")+".tar.gz")] = true
+				if filename, local := strings.CutPrefix(item.URL, "/"); id == version.TiUPVerName && local {
+					if alias := tiupArchiveAlias(filename); alias != "" {
+						claims[strings.ToLower(alias)] = true
+					}
 				}
 			}
 		}
@@ -140,8 +156,7 @@ func (m *model) validateArchiveClaims(index *v1manifest.Index, component *v1mani
 				}
 			}
 			if component.ID == version.TiUPVerName && canonical {
-				alias := "tiup-" + strings.ReplaceAll(platform, "/", "-") + ".tar.gz"
-				if err := checkClaim(alias); err != nil {
+				if err := checkClaim(tiupArchiveAlias(name)); err != nil {
 					return err
 				}
 			}
