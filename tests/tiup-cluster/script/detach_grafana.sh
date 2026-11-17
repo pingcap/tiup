@@ -163,7 +163,11 @@ function detach_grafana() (
         detach-grafana "$name" -N n2:3000
     detach_assert_key "$key_a"
     tiup-cluster display "$name" > "$state/display"
-    ! grep -F 'n2:3000' "$state/display"
+    # `! grep` would not fail the script under set -e, so assert explicitly.
+    if grep -Fq 'n2:3000' "$state/display"; then
+        echo "display still lists detached instance n2:3000"
+        return 1
+    fi
     grep -F 'n1:3001' "$state/display"
     detach_assert_preserved n2 3000
 
@@ -173,7 +177,10 @@ function detach_grafana() (
     tiup-cluster --yes detach-grafana "$name" -N n1:3001
     detach_assert_key "$key_b"
     tiup-cluster display "$name" > "$state/display"
-    ! grep -F 'n1:3001' "$state/display"
+    if grep -Fq 'n1:3001' "$state/display"; then
+        echo "display still lists detached instance n1:3001"
+        return 1
+    fi
 
     tiup-cluster --yes start "$name"
     detach_assert_key "$key_b"

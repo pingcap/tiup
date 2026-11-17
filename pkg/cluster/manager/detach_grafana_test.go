@@ -188,11 +188,24 @@ func TestDetachGrafanaDirectorySafety(t *testing.T) {
 		{name: "managed shell glob", modify: func(m *spec.ClusterMeta) {
 			m.Topology.PDServers[0].DeployDir = "/srv/pd*"
 			m.Topology.Grafanas[0].DeployDir = "/srv/pd-grafana"
-		}, want: "absolute literal path"},
+		}, want: "whitespace or shell metacharacters"},
 		{name: "managed shell whitespace", modify: func(m *spec.ClusterMeta) {
 			m.Topology.PDServers[0].DeployDir = "/srv/pd /srv/grafana"
 			m.Topology.Grafanas[0].DeployDir = "/srv/grafana"
-		}, want: "absolute literal path"},
+		}, want: "whitespace or shell metacharacters"},
+		{name: "shell syntax hidden by path cleaning", modify: func(m *spec.ClusterMeta) {
+			m.Topology.TiDBServers[0].LogDir = "/home/tidb/deploy/grafana-3000 /../tidb-4000-log"
+		}, want: "whitespace or shell metacharacters"},
+		{name: "mixed ignore_exporter keeps monitored check", modify: func(m *spec.ClusterMeta) {
+			// A host sharing only its manage_host with non-ignoring
+			// instances can ignore exporters without failing topology
+			// validation, but DestroyMonitored still cleans the shared
+			// manage host when the last non-ignoring instance goes away.
+			m.Topology.MonitoredOptions.DeployDir = "/home/tidb/deploy/grafana-3000/monitor"
+			m.Topology.TiKVServers[0].Host = "n5"
+			m.Topology.TiKVServers[0].ManageHost = "n1"
+			m.Topology.TiKVServers[0].IgnoreExporter = true
+		}, want: "monitored deploy"},
 		{name: "empty override", modify: func(m *spec.ClusterMeta) {
 			m.Topology.Grafanas[0].Config["paths.logs"] = ""
 		}, want: "absolute literal path"},

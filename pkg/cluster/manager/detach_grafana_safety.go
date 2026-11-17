@@ -20,6 +20,7 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/set"
 )
 
 // grafanaDetachDir records one directory either occupied by a detached Grafana
@@ -95,10 +96,19 @@ func validateGrafanaDetachDirs(specManager *spec.SpecManager, name string, postD
 			}
 		}
 		// Monitored (node_exporter / blackbox_exporter) directories on the
-		// affected hosts; they belong to no instance.
-		hosts, noAgentHosts := getMonitorHosts(metadata.Topology)
-		for host := range hosts {
-			if len(protected[host]) == 0 || noAgentHosts.Exist(host) {
+		// affected hosts; they belong to no instance. DestroyMonitored runs
+		// whenever the last instance destroyed on a manage host does not
+		// ignore exporters, so one non-ignoring instance keeps the host's
+		// monitored directories in play; do not skip the host just because
+		// some other instance on it ignores them.
+		agentHosts := set.NewStringSet()
+		metadata.Topology.IterInstance(func(inst spec.Instance) {
+			if !inst.IgnoreMonitorAgent() {
+				agentHosts.Insert(inst.GetManageHost())
+			}
+		})
+		for host := range agentHosts {
+			if len(protected[host]) == 0 {
 				continue
 			}
 			dirs, err := grafanaDetachMonitoredDirs(cluster, metadata)
@@ -127,6 +137,22 @@ func validateGrafanaDetachDirs(specManager *spec.SpecManager, name string, postD
 // component-specific overrides that live outside them, such as Grafana's
 // paths.* settings or the TiFlash remote cache dir.
 func grafanaDetachInstanceDirs(cluster string, metadata *spec.ClusterMeta, instance spec.Instance) ([]grafanaDetachDir, error) {
+	// Lifecycle cleanup passes the raw recorded values to an unquoted shell;
+	// check them before spec.Abs()/filepath.Clean() normalizes away the
+	// whitespace and dot segments the remote shell would still act on.
+	for _, dir := range []struct{ kind, raw string }{
+		{"deploy", instance.DeployDir()},
+		{"log", instance.LogDir()},
+	} {
+		if err := grafanaDetachValidateRecordedPath(cluster, instance.ID(), dir.kind, dir.raw); err != nil {
+			return nil, err
+		}
+	}
+	for _, raw := range strings.Split(instance.DataDir(), ",") {
+		if err := grafanaDetachValidateRecordedPath(cluster, instance.ID(), "data", raw); err != nil {
+			return nil, err
+		}
+	}
 	dirs := []grafanaDetachDir{
 		{cluster, instance.ID(), "deploy", spec.Abs(metadata.User, instance.DeployDir())},
 		{cluster, instance.ID(), "log", spec.Abs(metadata.User, instance.LogDir())},
@@ -173,6 +199,17 @@ func grafanaDetachInstanceDirs(cluster string, metadata *spec.ClusterMeta, insta
 // home. Cover both recorded interpretations without changing that cleanup.
 func grafanaDetachMonitoredDirs(cluster string, metadata *spec.ClusterMeta) ([]grafanaDetachDir, error) {
 	options := metadata.Topology.MonitoredOptions
+	// Same raw-value check as for instances: DestroyMonitored passes these
+	// options to an unquoted shell, too.
+	for _, dir := range []struct{ kind, raw string }{
+		{"monitored deploy", options.DeployDir},
+		{"monitored data", options.DataDir},
+		{"monitored log", options.LogDir},
+	} {
+		if err := grafanaDetachValidateRecordedPath(cluster, "monitor", dir.kind, dir.raw); err != nil {
+			return nil, err
+		}
+	}
 	deploy := spec.Abs(metadata.Topology.GlobalOptions.User, options.DeployDir)
 	data := options.DataDir
 	if data != "" && !filepath.IsAbs(data) {
@@ -200,6 +237,20 @@ func grafanaDetachMonitoredDirs(cluster string, metadata *spec.ClusterMeta) ([]g
 		kept = append(kept, dir)
 	}
 	return kept, nil
+}
+
+// grafanaDetachValidateRecordedPath rejects raw recorded path values that the
+// remote shell would interpret differently than this local check does.
+// spec.Abs trims surrounding whitespace and filepath.Clean drops segments
+// such as "grafana /../", but lifecycle cleanup passes the raw value to an
+// unquoted `rm -rf`, where the same string word-splits into several paths or
+// expands globs. Raw values may remain relative: the remote shell resolves
+// them against the SSH home, matching spec.Abs.
+func grafanaDetachValidateRecordedPath(cluster, node, kind, raw string) error {
+	if strings.ContainsAny(raw, "~$\x00\r\n\t *?[]`;&|<>\\\"'(){}!") {
+		return errors.Errorf("cannot check cluster %q node %s %s path %q locally: whitespace or shell metacharacters in it would reach lifecycle cleanup's shell unquoted; record plain literal paths before detaching", cluster, node, kind, raw)
+	}
+	return nil
 }
 
 func (d grafanaDetachDir) validate() error {
