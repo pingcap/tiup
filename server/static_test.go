@@ -28,6 +28,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func newCountingUpstream(t *testing.T, body string) (*httptest.Server, *atomic.Int32) {
+	t.Helper()
+	requests := &atomic.Int32{}
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests.Add(1)
+		_, _ = w.Write([]byte(body))
+	}))
+	t.Cleanup(upstream.Close)
+	return upstream, requests
+}
+
 func TestStaticServerPrivateFiles(t *testing.T) {
 	for _, keyLocation := range []string{"default", "custom", "external", "symlink-root"} {
 		t.Run(keyLocation, func(t *testing.T) {
@@ -45,12 +56,7 @@ func TestStaticServerPrivateFiles(t *testing.T) {
 				keyDir = t.TempDir()
 			}
 			require.NoError(t, os.MkdirAll(keyDir, 0700))
-			var upstreamRequests atomic.Int32
-			upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				upstreamRequests.Add(1)
-				_, _ = w.Write([]byte("upstream public file"))
-			}))
-			defer upstream.Close()
+			upstream, upstreamRequests := newCountingUpstream(t, "upstream public file")
 			configuredKeyDir := keyDir
 			if keyLocation == "default" || keyLocation == "symlink-root" {
 				configuredKeyDir = ""
@@ -180,12 +186,7 @@ func TestStaticServerUnicodeKeyDirectoryAlias(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, os.SameFile(privateInfo, aliasInfo))
 
-	var upstreamRequests atomic.Int32
-	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		upstreamRequests.Add(1)
-		_, _ = w.Write([]byte("upstream public file"))
-	}))
-	defer upstream.Close()
+	upstream, upstreamRequests := newCountingUpstream(t, "upstream public file")
 	s, err := newServer(root, keyDir, upstream.URL)
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(filepath.Join(keyDir, "private.json"), []byte("PRIVATE TEST MARKER"), 0600))
@@ -206,12 +207,7 @@ func TestStaticServerPrivatePathNormalization(t *testing.T) {
 			keyDir := filepath.Join(root, keyName)
 			require.NoError(t, os.Mkdir(keyDir, 0700))
 			require.NoError(t, os.Mkdir(filepath.Join(root, "public"), 0700))
-			var upstreamRequests atomic.Int32
-			upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				upstreamRequests.Add(1)
-				_, _ = w.Write([]byte("upstream public file"))
-			}))
-			defer upstream.Close()
+			upstream, upstreamRequests := newCountingUpstream(t, "upstream public file")
 			configuredKeyDir := keyDir
 			if keyName == "keys" {
 				configuredKeyDir = ""
@@ -261,12 +257,7 @@ func TestStaticServerUnavailableRoot(t *testing.T) {
 				root = filepath.Join(t.TempDir(), "alias")
 				require.NoError(t, os.Symlink(realRoot, root))
 			}
-			var upstreamRequests atomic.Int32
-			upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				upstreamRequests.Add(1)
-				_, _ = w.Write([]byte("UPSTREAM MARKER"))
-			}))
-			t.Cleanup(upstream.Close)
+			upstream, upstreamRequests := newCountingUpstream(t, "UPSTREAM MARKER")
 			s, err := newServer(root, filepath.Join(root, keyName), upstream.URL)
 			require.NoError(t, err)
 			h := s.router()
@@ -291,7 +282,6 @@ func TestStaticServerUnavailableRoot(t *testing.T) {
 			require.Equal(t, http.StatusOK, w.Code)
 			require.Equal(t, "UPSTREAM MARKER", w.Body.String())
 			require.Equal(t, int32(1), upstreamRequests.Load())
-			upstream.Close()
 		}
 	}
 }
@@ -319,12 +309,7 @@ func TestStaticServerMissingPrivateAliases(t *testing.T) {
 				keyDir = filepath.Join(parent, "nested", "private-signing")
 				aliases = []string{"nested/private-signing"}
 			}
-			var upstreamRequests atomic.Int32
-			upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				upstreamRequests.Add(1)
-				_, _ = w.Write([]byte("UPSTREAM MARKER"))
-			}))
-			defer upstream.Close()
+			upstream, upstreamRequests := newCountingUpstream(t, "UPSTREAM MARKER")
 			s, err := newServer(root, keyDir, upstream.URL)
 			require.NoError(t, err)
 			for _, method := range []string{http.MethodGet, http.MethodHead} {

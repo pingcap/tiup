@@ -164,6 +164,8 @@ func staticServer(local string, upstream string, privateDirs ...string) http.Han
 			}
 			logprinter.Errorf("Handle file: %s", err.Error())
 			return
+		} else if !os.IsNotExist(err) && !os.IsPermission(err) {
+			logprinter.Errorf("Open static file: %s", err.Error())
 		}
 		fsh.ServeHTTP(w, r)
 	})

@@ -36,12 +36,7 @@ func TestStaticServerPrivateRequestHeaders(t *testing.T) {
 			keyDir := filepath.Join(root, keyName)
 			require.NoError(t, os.Mkdir(keyDir, 0700))
 			privateFile := filepath.Join(keyDir, "private.json")
-			var upstreamRequests atomic.Int32
-			upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				upstreamRequests.Add(1)
-				_, _ = w.Write([]byte("UPSTREAM MARKER"))
-			}))
-			defer upstream.Close()
+			upstream, upstreamRequests := newCountingUpstream(t, "UPSTREAM MARKER")
 			s, err := newServer(root, keyDir, upstream.URL)
 			require.NoError(t, err)
 			// Install inert key markers only after signing-key initialization.
@@ -107,12 +102,7 @@ func TestStaticServerRejectedEntries(t *testing.T) {
 		_, err = os.Stat(filepath.Join(root, name))
 		require.True(t, os.IsNotExist(err), "fixture must be a dangling symlink")
 	}
-	var upstreamRequests atomic.Int32
-	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		upstreamRequests.Add(1)
-		_, _ = w.Write([]byte("UPSTREAM MARKER"))
-	}))
-	defer upstream.Close()
+	upstream, upstreamRequests := newCountingUpstream(t, "UPSTREAM MARKER")
 	s, err := newServer(root, "", upstream.URL)
 	require.NoError(t, err)
 	server := httptest.NewServer(s.router())
