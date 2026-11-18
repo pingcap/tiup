@@ -65,6 +65,9 @@ grafana_servers:
     port: 3001
     patched: true
 `), metadata.Topology))
+	// Deploy and scale-out expand relative directories to absolute paths
+	// before saving; only edit-config can leave relative values behind.
+	spec.ExpandRelativeDir(metadata.Topology)
 	return metadata
 }
 
@@ -168,9 +171,16 @@ func TestDetachGrafanaDirectorySafety(t *testing.T) {
 		{name: "monitored directory", modify: func(m *spec.ClusterMeta) {
 			m.Topology.MonitoredOptions.DeployDir = "/home/tidb/deploy/grafana-3000/monitor"
 		}, want: "monitored deploy"},
-		{name: "relative monitored data cleanup", modify: func(m *spec.ClusterMeta) {
+		{name: "relative monitored data after edit-config", modify: func(m *spec.ClusterMeta) {
 			m.Topology.Grafanas[0].DeployDir = "/home/tidb/data/monitor-9100/grafana-3000"
-		}, want: "monitored data cleanup"},
+			m.Topology.MonitoredOptions.DataDir = "data/monitor-9100"
+		}, want: "absolute literal path"},
+		{name: "relative instance deploy dir after edit-config", modify: func(m *spec.ClusterMeta) {
+			// A relative recorded path resolves against the remote login
+			// home, which the metadata does not record: it can be /root for
+			// root or any custom home for a pre-existing account.
+			m.Topology.TiDBServers[0].DeployDir = "tidb-deploy-4000"
+		}, want: "absolute literal path"},
 		{name: "TiFlash external cache", modify: func(m *spec.ClusterMeta) {
 			m.Topology.TiFlashServers[0].ManageHost = "n1"
 			m.Topology.TiFlashServers[0].Config = map[string]any{spec.TiFlashRemoteCacheDir: "/home/tidb/deploy/grafana-3000/cache"}
@@ -214,23 +224,20 @@ func TestDetachGrafanaDirectorySafety(t *testing.T) {
 			m.User = "root"
 			m.Topology.GlobalOptions.User = "root"
 			m.Topology.Grafanas[0].DeployDir = "/root/data/monitor-9100/grafana-3000"
-		}, want: "monitored data cleanup"},
+			m.Topology.MonitoredOptions.DataDir = "data/monitor-9100"
+		}, want: "absolute literal path"},
 		{name: "root SSH home instance dir divergence", modify: func(m *spec.ClusterMeta) {
-			// spec.Abs maps relative paths under /home/<user>, but a root
-			// SSH session starts in /root: cleanup removes the instance
-			// below /root/tidb-deploy-4000 while the /home/root entry alone
-			// would not cover it.
 			m.User = "root"
 			m.Topology.GlobalOptions.User = "root"
 			m.Topology.TiDBServers[0].DeployDir = "tidb-deploy-4000"
 			m.Topology.Grafanas[0].DeployDir = "/root/tidb-deploy-4000/grafana-3000"
-		}, want: "deploy cleanup"},
+		}, want: "absolute literal path"},
 		{name: "empty override", modify: func(m *spec.ClusterMeta) {
 			m.Topology.Grafanas[0].Config["paths.logs"] = ""
 		}, want: "absolute literal path"},
 		{name: "environment provider", modify: func(m *spec.ClusterMeta) {
 			m.Topology.Grafanas[0].Config["paths.plugins"] = "/srv/$__env{PLUGIN_DIR}"
-		}, want: "absolute literal path"},
+		}, want: "whitespace or shell metacharacters"},
 		{name: "different host does not block", modify: func(m *spec.ClusterMeta) {
 			m.Topology.Grafanas[1].Config = map[string]string{"paths.data": "$__env{DATA_DIR}"}
 		}},

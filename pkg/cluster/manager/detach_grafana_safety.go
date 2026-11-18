@@ -45,8 +45,10 @@ type grafanaDetachDir struct {
 // promise. The check therefore covers every cluster in this profile, not just
 // the one being detached: the same host can be managed by several clusters,
 // and destroying any of them runs the cleanup. Only locally recorded paths
-// are compared; remote symlinks and mounts are invisible here, which is why
-// detach still asks the operator to verify the actual layout.
+// are compared — they must be absolute literals, since a relative path
+// resolves against the remote login home, which the metadata does not record
+// — and remote symlinks and mounts are invisible here, which is why detach
+// still asks the operator to verify the actual layout.
 func validateGrafanaDetachDirs(specManager *spec.SpecManager, name string, postDetach *spec.ClusterMeta, targets []spec.Instance) error {
 	// Collect the directories the detached instances occupy, grouped by
 	// manage host. These are the paths TiUP must never touch again.
@@ -138,33 +140,36 @@ func validateGrafanaDetachDirs(specManager *spec.SpecManager, name string, postD
 // paths.* settings or the TiFlash remote cache dir.
 func grafanaDetachInstanceDirs(cluster string, metadata *spec.ClusterMeta, instance spec.Instance) ([]grafanaDetachDir, error) {
 	id := instance.ID()
-	dirs := []grafanaDetachDir{
-		{cluster, id, "deploy", spec.Abs(metadata.User, instance.DeployDir())},
-		{cluster, id, "log", spec.Abs(metadata.User, instance.LogDir())},
-	}
-	// Lifecycle cleanup passes the raw recorded values to an unquoted shell:
-	// check them before spec.Abs()/filepath.Clean() normalizes away the
-	// whitespace and dot segments the remote shell would still act on, and
-	// record where a relative value resolves in the SSH login home when that
-	// differs from the /home/<user> prefix spec.Abs applies (root: /root).
+	// Every recorded path must be an absolute literal before anything else:
+	// lifecycle cleanup passes the recorded values to an unquoted shell, a
+	// relative value would resolve against the remote login home, which the
+	// metadata does not record, and spec.Abs()/filepath.Clean() would
+	// normalize away the whitespace and dot segments the shell still acts
+	// on. Metadata saved by deploy and scale-out always satisfies this
+	// (spec.ExpandRelativeDir runs before saving); in practice this only
+	// rejects values introduced later through edit-config.
 	for _, dir := range []struct{ kind, raw string }{
 		{"deploy", instance.DeployDir()},
 		{"log", instance.LogDir()},
 	} {
+		if dir.raw == "" { // nothing recorded, nothing for cleanup to delete
+			continue
+		}
 		if err := grafanaDetachValidateRecordedPath(cluster, id, dir.kind, dir.raw); err != nil {
 			return nil, err
 		}
-		if cleanup := grafanaDetachCleanupDir(metadata.User, dir.raw); cleanup != "" {
-			dirs = append(dirs, grafanaDetachDir{cluster, id, dir.kind + " cleanup", cleanup})
-		}
 	}
 	for _, raw := range strings.Split(instance.DataDir(), ",") {
+		if raw == "" {
+			continue
+		}
 		if err := grafanaDetachValidateRecordedPath(cluster, id, "data", raw); err != nil {
 			return nil, err
 		}
-		if cleanup := grafanaDetachCleanupDir(metadata.User, raw); cleanup != "" {
-			dirs = append(dirs, grafanaDetachDir{cluster, id, "data cleanup", cleanup})
-		}
+	}
+	dirs := []grafanaDetachDir{
+		{cluster, id, "deploy", spec.Abs(metadata.User, instance.DeployDir())},
+		{cluster, id, "log", spec.Abs(metadata.User, instance.LogDir())},
 	}
 	for _, dir := range spec.MultiDirAbs(metadata.User, instance.DataDir()) {
 		dirs = append(dirs, grafanaDetachDir{cluster, id, "data", dir})
@@ -178,7 +183,10 @@ func grafanaDetachInstanceDirs(cluster string, metadata *spec.ClusterMeta, insta
 				value, found = metadata.Topology.ServerConfigs.Grafana[key]
 			}
 			if found {
-				dirs = append(dirs, grafanaDetachDir{cluster, instance.ID(), key, value})
+				if err := grafanaDetachValidateRecordedPath(cluster, id, key, value); err != nil {
+					return nil, err
+				}
+				dirs = append(dirs, grafanaDetachDir{cluster, id, key, value})
 			}
 		}
 	case spec.ComponentTiFlash:
@@ -186,15 +194,15 @@ func grafanaDetachInstanceDirs(cluster string, metadata *spec.ClusterMeta, insta
 		if value, found := config[spec.TiFlashRemoteCacheDir]; found {
 			dir, ok := value.(string)
 			if !ok {
-				return nil, errors.Errorf("cannot determine cluster %q node %s %s directory", cluster, instance.ID(), spec.TiFlashRemoteCacheDir)
+				return nil, errors.Errorf("cannot determine cluster %q node %s %s directory", cluster, id, spec.TiFlashRemoteCacheDir)
 			}
-			dirs = append(dirs, grafanaDetachDir{cluster, instance.ID(), spec.TiFlashRemoteCacheDir, dir})
+			if err := grafanaDetachValidateRecordedPath(cluster, id, spec.TiFlashRemoteCacheDir, dir); err != nil {
+				return nil, err
+			}
+			dirs = append(dirs, grafanaDetachDir{cluster, id, spec.TiFlashRemoteCacheDir, dir})
 		}
 	}
 	for i := range dirs {
-		if err := dirs[i].validate(); err != nil {
-			return nil, err
-		}
 		dirs[i].path = filepath.Clean(dirs[i].path)
 	}
 	return dirs, nil
@@ -202,54 +210,32 @@ func grafanaDetachInstanceDirs(cluster string, metadata *spec.ClusterMeta, insta
 
 // grafanaDetachMonitoredDirs returns the deploy/data/log directories of the
 // monitored components on one host; DestroyMonitored removes them once the
-// host's last managed component is gone. A relative data dir is listed twice
-// on purpose: deployment resolves it below the monitored deploy dir, but
-// DestroyMonitored passes it to a shell directly, i.e. relative to the SSH
-// home. Cover both recorded interpretations without changing that cleanup.
+// host's last managed component is gone.
 func grafanaDetachMonitoredDirs(cluster string, metadata *spec.ClusterMeta) ([]grafanaDetachDir, error) {
 	options := metadata.Topology.MonitoredOptions
-	// Same raw-value check as for instances: DestroyMonitored passes these
+	// Same recorded-path rule as for instances: DestroyMonitored passes these
 	// options to an unquoted shell, too.
 	for _, dir := range []struct{ kind, raw string }{
 		{"monitored deploy", options.DeployDir},
 		{"monitored data", options.DataDir},
 		{"monitored log", options.LogDir},
 	} {
+		if dir.raw == "" { // nothing recorded, nothing for cleanup to delete
+			continue
+		}
 		if err := grafanaDetachValidateRecordedPath(cluster, "monitor", dir.kind, dir.raw); err != nil {
 			return nil, err
 		}
 	}
-	deploy := spec.Abs(metadata.Topology.GlobalOptions.User, options.DeployDir)
-	data := options.DataDir
-	if data != "" && !filepath.IsAbs(data) {
-		data = filepath.Join(deploy, data)
-	}
 	dirs := []grafanaDetachDir{
-		{cluster, "monitor", "monitored deploy", deploy},
-		{cluster, "monitor", "monitored data", data},
-		{cluster, "monitor", "monitored log", spec.Abs(metadata.Topology.GlobalOptions.User, options.LogDir)},
+		{cluster, "monitor", "monitored deploy", options.DeployDir},
+		{cluster, "monitor", "monitored data", options.DataDir},
+		{cluster, "monitor", "monitored log", options.LogDir},
 	}
-	if options.DataDir != "" && !filepath.IsAbs(options.DataDir) {
-		dirs = append(dirs, grafanaDetachDir{
-			cluster, "monitor", "monitored data cleanup", filepath.Join(grafanaDetachSSHHome(metadata.User), options.DataDir),
-		})
-	}
-	// The same SSH-home divergence applies to the other relative options.
-	for _, dir := range []struct{ kind, raw string }{
-		{"monitored deploy", options.DeployDir},
-		{"monitored log", options.LogDir},
-	} {
-		if cleanup := grafanaDetachCleanupDir(metadata.User, dir.raw); cleanup != "" {
-			dirs = append(dirs, grafanaDetachDir{cluster, "monitor", dir.kind + " cleanup", cleanup})
-		}
-	}
-	var kept []grafanaDetachDir
+	kept := make([]grafanaDetachDir, 0, len(dirs))
 	for _, dir := range dirs {
 		if dir.path == "" {
 			continue
-		}
-		if err := dir.validate(); err != nil {
-			return nil, err
 		}
 		dir.path = filepath.Clean(dir.path)
 		kept = append(kept, dir)
@@ -257,54 +243,20 @@ func grafanaDetachMonitoredDirs(cluster string, metadata *spec.ClusterMeta) ([]g
 	return kept, nil
 }
 
-// grafanaDetachValidateRecordedPath rejects raw recorded path values that the
-// remote shell would interpret differently than this local check does.
-// spec.Abs trims surrounding whitespace and filepath.Clean drops segments
-// such as "grafana /../", but lifecycle cleanup passes the raw value to an
-// unquoted `rm -rf`, where the same string word-splits into several paths or
-// expands globs. Raw values may remain relative; callers then record every
-// location such a value can resolve to, including the SSH login home for
-// accounts like root where it differs from spec.Abs's /home/<user> prefix.
+// grafanaDetachValidateRecordedPath rejects recorded path values that this
+// local check cannot map to one definite location: a relative value resolves
+// against the remote login home, which the metadata does not record (an
+// account provisioned outside TiUP can have any home, root's is /root), and
+// whitespace or shell metacharacters reach lifecycle cleanup's unquoted
+// shell. Metadata saved by deploy and scale-out is always absolute
+// (spec.ExpandRelativeDir runs before saving), so in practice this only
+// rejects values introduced later through edit-config.
 func grafanaDetachValidateRecordedPath(cluster, node, kind, raw string) error {
+	if !filepath.IsAbs(raw) {
+		return errors.Errorf("cannot determine cluster %q node %s %s path %q locally: a relative path resolves against the remote login home, which this check cannot know; record an absolute literal path matching the actual configuration before detaching", cluster, node, kind, raw)
+	}
 	if strings.ContainsAny(raw, "~$\x00\r\n\t *?[]`;&|<>\\\"'(){}!") {
 		return errors.Errorf("cannot check cluster %q node %s %s path %q locally: whitespace or shell metacharacters in it would reach lifecycle cleanup's shell unquoted; record plain literal paths before detaching", cluster, node, kind, raw)
-	}
-	return nil
-}
-
-// grafanaDetachSSHHome returns the home directory the deploy user's SSH
-// session starts in, which is where an unquoted `rm -rf <relative path>`
-// resolves. spec.Abs prefixes relative paths with /home/<user>, which does
-// not hold for root, whose home is /root.
-func grafanaDetachSSHHome(user string) string {
-	if user == "root" {
-		return "/root"
-	}
-	return filepath.Join("/home", user)
-}
-
-// grafanaDetachCleanupDir returns the extra location lifecycle cleanup
-// removes a relative recorded path from when that differs from the location
-// spec.Abs computes: the SSH login home and /home/<user> disagree only for
-// accounts like root. Unset paths are never removed and yield no location.
-func grafanaDetachCleanupDir(user, raw string) string {
-	if raw == "" || filepath.IsAbs(raw) {
-		return ""
-	}
-	cleanup := filepath.Join(grafanaDetachSSHHome(user), raw)
-	if cleanup == spec.Abs(user, raw) {
-		return ""
-	}
-	return cleanup
-}
-
-func (d grafanaDetachDir) validate() error {
-	// Grafana expands providers and relative paths on the remote host. Resolving
-	// them (or symlinks) on the control machine would give a false safety check.
-	// Existing lifecycle cleanup passes paths to a shell without quoting. A glob
-	// or shell expression cannot be checked by literal directory comparison.
-	if !filepath.IsAbs(d.path) || strings.ContainsAny(d.path, "$\x00\r\n\t *?[]`;&|<>\\\"'(){}!") {
-		return errors.Errorf("cannot determine cluster %q node %s %s directory %q locally; record an absolute literal path matching the actual configuration before detaching", d.cluster, d.node, d.kind, d.path)
 	}
 	return nil
 }
