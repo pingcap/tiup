@@ -21,8 +21,11 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/google/uuid"
@@ -32,6 +35,7 @@ import (
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // Create a profile directory
@@ -433,6 +437,115 @@ func TestEnsureManifests(t *testing.T) {
 	repo.PurgeTimestamp()
 	err = repo.ensureManifests()
 	assert.NotNil(t, err)
+}
+
+type gatedManifestMirror struct {
+	Mirror
+	resource string
+	entered  chan struct{}
+	release  chan struct{}
+	blocked  atomic.Bool
+	err      error
+}
+
+func (m *gatedManifestMirror) Fetch(resource string, maxSize int64) (io.ReadCloser, error) {
+	if resource == m.resource && m.blocked.CompareAndSwap(false, true) {
+		close(m.entered)
+		<-m.release
+		if m.err != nil {
+			return nil, m.err
+		}
+	}
+	return m.Mirror.Fetch(resource, maxSize)
+}
+
+func TestEnsureManifestsConcurrent(t *testing.T) {
+	for _, derived := range []bool{false, true} {
+		for _, failFirst := range []bool{false, true} {
+			t.Run(fmt.Sprintf("WithOptions=%t/firstError=%t", derived, failFirst), func(t *testing.T) {
+				oldRoot, oldKey := rootManifest(t)
+				newRoot, newKey := rootManifest(t)
+				newRoot.Version = oldRoot.Version + 1
+				oldRootJSON := serialize(t, oldRoot, oldKey)
+				newRootJSON := serialize(t, newRoot, oldKey, newKey)
+				profileDir := t.TempDir()
+				require.NoError(t, os.MkdirAll(filepath.Join(profileDir, "bin"), 0755))
+				require.NoError(t, os.WriteFile(filepath.Join(profileDir, "bin/root.json"), []byte(oldRootJSON), 0644))
+				local, err := v1manifest.NewManifests(localdata.NewProfile(profileDir, &localdata.TiUPConfig{}))
+				require.NoError(t, err)
+
+				index, _ := indexManifest(t)
+				indexJSON := serialize(t, index, newKey)
+				snapshot := snapshotManifest()
+				snapshot.Meta[v1manifest.ManifestURLRoot] = v1manifest.FileVersion{Version: newRoot.Version}
+				snapshot.Meta[v1manifest.ManifestURLIndex] = v1manifest.FileVersion{Version: index.Version, Length: uint(len(indexJSON))}
+				snapshotJSON := serialize(t, snapshot, newKey)
+				timestamp := timestampManifest()
+				timestamp.Meta[v1manifest.ManifestURLSnapshot] = v1manifest.FileHash{
+					Hashes: map[string]string{v1manifest.SHA256: hash(snapshotJSON)},
+					Length: uint(len(snapshotJSON)),
+				}
+				rootURL := FnameWithVersion(v1manifest.ManifestURLRoot, newRoot.Version)
+				indexURL := FnameWithVersion(v1manifest.ManifestURLIndex, index.Version)
+				mirror := &gatedManifestMirror{
+					Mirror: &MockMirror{Resources: map[string]string{
+						rootURL:                         newRootJSON,
+						indexURL:                        indexJSON,
+						v1manifest.ManifestURLSnapshot:  snapshotJSON,
+						v1manifest.ManifestURLTimestamp: serialize(t, timestamp, newKey),
+					}},
+					// The next root probe runs after the keys advance and before root.json is published.
+					resource: FnameWithVersion(v1manifest.ManifestURLRoot, newRoot.Version+1),
+					entered:  make(chan struct{}),
+					release:  make(chan struct{}),
+				}
+				if failFirst {
+					// Fail after root rotation completes so the next caller can retry the index.
+					mirror.resource = indexURL
+					mirror.err = errors.New("injected index fetch failure")
+				}
+				repo := NewV1Repo(mirror, Options{}, local)
+				foreground := repo
+				if derived {
+					foreground = repo.WithOptions(Options{GOOS: "linux", GOARCH: "amd64"}).(*V1Repository)
+				}
+				backgroundDone := make(chan error, 1)
+				foregroundDone := make(chan error, 1)
+				defer func() {
+					close(mirror.release)
+					require.ErrorIs(t, <-backgroundDone, mirror.err)
+					require.NoError(t, <-foregroundDone)
+					root, err := repo.loadRoot()
+					require.NoError(t, err)
+					require.Equal(t, newRoot.Version, root.Version)
+				}()
+				go func() { backgroundDone <- repo.ensureManifests() }()
+				<-mirror.entered
+				go func() { foregroundDone <- foreground.ensureManifests() }()
+
+				// Wait for the foreground caller to actually contend for the mutex, rather
+				// than assuming it has been scheduled after an arbitrary sleep.
+				require.Eventually(t, func() bool {
+					select {
+					case err := <-foregroundDone:
+						foregroundDone <- err
+						t.Errorf("foreground refresh returned before the background refresh was released: %v", err)
+						return true
+					default:
+					}
+					stacks := make([]byte, 64<<10)
+					n := runtime.Stack(stacks, true)
+					for _, stack := range strings.Split(string(stacks[:n]), "\n\n") {
+						if strings.Contains(stack, "[sync.Mutex.Lock]") &&
+							strings.Contains(stack, "(*V1Repository).ensureManifests") {
+							return true
+						}
+					}
+					return false
+				}, 5*time.Second, time.Millisecond)
+			})
+		}
+	}
 }
 
 func TestLatestStableVersion(t *testing.T) {
