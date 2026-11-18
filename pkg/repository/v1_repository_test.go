@@ -485,21 +485,23 @@ func TestEnsureManifestsConcurrent(t *testing.T) {
 					Hashes: map[string]string{v1manifest.SHA256: hash(snapshotJSON)},
 					Length: uint(len(snapshotJSON)),
 				}
+				rootURL := FnameWithVersion(v1manifest.ManifestURLRoot, newRoot.Version)
+				indexURL := FnameWithVersion(v1manifest.ManifestURLIndex, index.Version)
 				mirror := &gatedManifestMirror{
 					Mirror: &MockMirror{Resources: map[string]string{
-						"/43.root.json":                 newRootJSON,
-						"/5.index.json":                 indexJSON,
+						rootURL:                         newRootJSON,
+						indexURL:                        indexJSON,
 						v1manifest.ManifestURLSnapshot:  snapshotJSON,
 						v1manifest.ManifestURLTimestamp: serialize(t, timestamp, newKey),
 					}},
-					// Root 43 has advanced the shared keys, but root.json is still root 42.
-					resource: "/44.root.json",
+					// The next root probe runs after the keys advance and before root.json is published.
+					resource: FnameWithVersion(v1manifest.ManifestURLRoot, newRoot.Version+1),
 					entered:  make(chan struct{}),
 					release:  make(chan struct{}),
 				}
 				if failFirst {
 					// Fail after root rotation completes so the next caller can retry the index.
-					mirror.resource = "/5.index.json"
+					mirror.resource = indexURL
 					mirror.err = errors.New("injected index fetch failure")
 				}
 				repo := NewV1Repo(mirror, Options{}, local)
