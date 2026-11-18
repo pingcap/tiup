@@ -1,0 +1,26 @@
+global:
+  user: tidb
+  group: pingcap
+  deploy_dir: /home/tidb/detach-deploy
+  data_dir: /home/tidb/detach-data
+
+server_configs:
+  pd:
+    replication.max-replicas: 1
+  tikv:
+    storage.reserve-space: 5M
+
+tidb_servers:
+  - host: n1
+pd_servers:
+  - host: n3
+tikv_servers:
+  - host: n4
+monitoring_servers:
+  - host: n1
+grafana_servers:
+  # n2 becomes invisible to this cluster after detaching its only instance.
+  - host: n2
+    port: 3000
+  - host: n1
+    port: 3001
