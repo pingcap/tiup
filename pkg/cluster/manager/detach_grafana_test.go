@@ -206,6 +206,25 @@ func TestDetachGrafanaDirectorySafety(t *testing.T) {
 			m.Topology.TiKVServers[0].ManageHost = "n1"
 			m.Topology.TiKVServers[0].IgnoreExporter = true
 		}, want: "monitored deploy"},
+		{name: "root SSH home monitored data divergence", modify: func(m *spec.ClusterMeta) {
+			// spec.Abs maps relative paths under /home/<user>, but a root
+			// SSH session starts in /root, so cleanup removes /root/data/...
+			// while the check without the SSH-home entry would only cover
+			// /home/root/data/...
+			m.User = "root"
+			m.Topology.GlobalOptions.User = "root"
+			m.Topology.Grafanas[0].DeployDir = "/root/data/monitor-9100/grafana-3000"
+		}, want: "monitored data cleanup"},
+		{name: "root SSH home instance dir divergence", modify: func(m *spec.ClusterMeta) {
+			// spec.Abs maps relative paths under /home/<user>, but a root
+			// SSH session starts in /root: cleanup removes the instance
+			// below /root/tidb-deploy-4000 while the /home/root entry alone
+			// would not cover it.
+			m.User = "root"
+			m.Topology.GlobalOptions.User = "root"
+			m.Topology.TiDBServers[0].DeployDir = "tidb-deploy-4000"
+			m.Topology.Grafanas[0].DeployDir = "/root/tidb-deploy-4000/grafana-3000"
+		}, want: "deploy cleanup"},
 		{name: "empty override", modify: func(m *spec.ClusterMeta) {
 			m.Topology.Grafanas[0].Config["paths.logs"] = ""
 		}, want: "absolute literal path"},
