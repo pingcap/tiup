@@ -41,3 +41,8 @@ build_tiup_test: failpoint-enable
 		-o tests/tiup/bin/tiup.test \
 		github.com/pingcap/tiup;
 	@$(FAILPOINT_DISABLE)
+
+.PHONY: test_server_private_files
+test_server_private_files: tiup server
+	@# Target: verify existing server signing layouts and private HTTP denial.
+	bash tests/tiup-server/test_private_files.sh bin/tiup bin/tiup-server
