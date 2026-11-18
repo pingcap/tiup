@@ -30,6 +30,8 @@ var (
 	ErrorWrongChecksum = errors.New("checksum mismatch")
 	// ErrorWrongFileName indicates that the name of tar file is not correct
 	ErrorWrongFileName = errors.New("incorrect file name")
+	// ErrorInvalidComponentID indicates an unsafe or reserved component identifier.
+	ErrorInvalidComponentID = errors.New("invalid component identifier")
 	// ErrorWrongManifestType indicates that the manifest type is not expected
 	ErrorWrongManifestType = errors.New("the manifest type is not expected")
 	// ErrorWrongManifestVersion indicates that the manifest version is not expected

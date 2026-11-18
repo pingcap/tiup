@@ -146,6 +146,23 @@ func ComponentManifestFilename(id string) string {
 	return fmt.Sprintf("%s.json", id)
 }
 
+// ValidComponentID reports whether id is a non-reserved, portable component name.
+func ValidComponentID(id string) bool {
+	switch strings.ToLower(id) {
+	case "", ManifestTypeRoot, ManifestTypeIndex, ManifestTypeSnapshot, ManifestTypeTimestamp:
+		return false
+	}
+	for i, c := range id {
+		if c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' {
+			continue
+		}
+		if i == 0 || c != '-' && c != '_' && c != '.' {
+			return false
+		}
+	}
+	return true
+}
+
 // RootManifestFilename returns the expected filename for the root manifest with the given version.
 func RootManifestFilename(version uint) string {
 	return fmt.Sprintf("%v.root.json", version)

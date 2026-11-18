@@ -15,7 +15,6 @@ package model
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	cjson "github.com/gibson042/canonicaljson-go"
@@ -180,22 +179,19 @@ func (m *model) Rotate(manifest *v1manifest.Manifest) error {
 
 // Publish implements Backend
 func (m *model) Publish(manifest *v1manifest.Manifest, info ComponentInfo) error {
-	signed := manifest.Signed.(*v1manifest.Component)
+	if manifest == nil {
+		return ErrorWrongManifestType
+	}
+	signed, ok := manifest.Signed.(*v1manifest.Component)
+	if !ok || signed == nil {
+		return ErrorWrongManifestType
+	}
+	if !v1manifest.ValidComponentID(signed.ID) {
+		return ErrorInvalidComponentID
+	}
 	initTime := time.Now()
 	pf := func() error {
-		// Write the component manifest (component.json)
-		if err := m.updateComponentManifest(manifest); err != nil {
-			return err
-		}
-
-		// Update snapshot.json and signature
-		fi, err := m.txn.Stat(fmt.Sprintf("%d.%s.json", signed.Version, signed.ID))
-		if err != nil {
-			return err
-		}
-
 		var indexFileVersion *v1manifest.FileVersion
-		var owner *v1manifest.Owner
 		if err := m.updateIndexManifest(initTime, func(im *v1manifest.Manifest) (*v1manifest.Manifest, error) {
 			// We only update index.json when it's a new component
 			// or the yanked, standalone, hidden fields changed,
@@ -203,26 +199,24 @@ func (m *model) Publish(manifest *v1manifest.Manifest, info ComponentInfo) error
 			var (
 				compItem  v1manifest.ComponentItem
 				compExist bool
+				owner     *v1manifest.Owner
 			)
 
 			componentName := signed.ID
 			signed := im.Signed.(*v1manifest.Index)
 			if compItem, compExist = signed.Components[componentName]; compExist {
-				// Find the owner of target component
-				var o v1manifest.Owner
+				ownerID := compItem.Owner
 				if info.OwnerID() != "" {
-					o = signed.Owners[info.OwnerID()]
-				} else {
-					o = signed.Owners[compItem.Owner]
+					// Transfers are local administrative operations: the CLI collects
+					// recipient signatures so clients can verify the new owner's manifest.
+					// The HTTP publish API cannot supply OwnerID.
+					ownerID = info.OwnerID()
+				}
+				o, ok := signed.Owners[ownerID]
+				if !ok {
+					return nil, ErrorMissingOwner
 				}
 				owner = &o
-				if info.Yanked() == nil &&
-					info.Hidden() == nil &&
-					info.Standalone() == nil &&
-					info.OwnerID() == "" {
-					// No changes on index.json
-					return nil, nil
-				}
 			} else {
 				var ownerID string
 				// The component is a new component, so the owner is whoever first create it.
@@ -236,6 +230,16 @@ func (m *model) Publish(manifest *v1manifest.Manifest, info ComponentInfo) error
 					URL:   fmt.Sprintf("/%s.json", componentName),
 				}
 			}
+			if err := verifyComponentManifest(owner, manifest); err != nil {
+				return nil, err
+			}
+			if err := m.validateArchiveClaims(signed, manifest.Signed.(*v1manifest.Component), info.Filename()); err != nil {
+				return nil, err
+			}
+			if compExist && info.Yanked() == nil && info.Hidden() == nil &&
+				info.Standalone() == nil && info.OwnerID() == "" {
+				return nil, nil
+			}
 			if info.Yanked() != nil {
 				compItem.Yanked = *info.Yanked()
 			}
@@ -246,6 +250,9 @@ func (m *model) Publish(manifest *v1manifest.Manifest, info ComponentInfo) error
 				compItem.Standalone = *info.Standalone()
 			}
 			if info.OwnerID() != "" {
+				if _, ok := signed.Owners[info.OwnerID()]; !ok {
+					return nil, ErrorMissingOwner
+				}
 				compItem.Owner = info.OwnerID()
 			}
 
@@ -256,7 +263,13 @@ func (m *model) Publish(manifest *v1manifest.Manifest, info ComponentInfo) error
 			return err
 		}
 
-		if err := verifyComponentManifest(owner, manifest); err != nil {
+		// The index callback authenticates the publisher before it can write.
+		// Only then may component metadata leave memory, even in a transaction.
+		if err := m.updateComponentManifest(manifest); err != nil {
+			return err
+		}
+		fi, err := m.txn.Stat(fmt.Sprintf("%d.%s.json", signed.Version, signed.ID))
+		if err != nil {
 			return err
 		}
 
@@ -308,15 +321,10 @@ func (m *model) Publish(manifest *v1manifest.Manifest, info ComponentInfo) error
 }
 
 func (m *model) copyTiUP(origin string) error {
-	xs := strings.Split(origin, "-")
-	if len(xs) < 4 {
+	tiupTar := tiupArchiveAlias(origin)
+	if tiupTar == "" {
 		return ErrorWrongFileName
 	}
-	// convert
-	//	`tiup-${version}-linux-arm64.tar.gz`  -> `tiup-linux-arm64.tar.gz`
-	//  `tiup-v1.4.0-darwin-amd64.tar.gz` -> `tiup-darwin-amd64.tar.gz`
-	//  `tiup-v1.4.0-r13-gcd19b75+staging-darwin-amd64.tar.gz` -> `tiup-darwin-amd64.tar.gz`
-	tiupTar := strings.Join(append(xs[:1], xs[len(xs)-2:]...), "-")
 	reader, err := m.txn.Read(origin)
 	if err != nil {
 		return err
@@ -327,9 +335,9 @@ func (m *model) copyTiUP(origin string) error {
 
 func (m *model) checkAndWrite(manifest *v1manifest.Component, info ComponentData) error {
 	fname := info.Filename()
-	for _, plat := range manifest.Platforms {
-		for _, vi := range plat {
-			if vi.URL[1:] == fname {
+	for platform, plat := range manifest.Platforms {
+		for ver, vi := range plat {
+			if vi.URL == "/"+fname && fname == archiveFilename(manifest.ID, platform, ver) {
 				if err := m.txn.Write(fname, info); err != nil {
 					return err
 				}

@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"path"
 	"time"
@@ -87,8 +88,7 @@ func newLocalTxn(store *localStore) (*localTxn, error) {
 
 // Write implements FsTxn
 func (t *localTxn) Write(filename string, reader io.Reader) error {
-	filepath := path.Join(t.root, filename)
-	file, err := os.Create(filepath)
+	file, err := openLocalFile(t.root, filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
 	if err != nil {
 		return errors.Annotate(err, "create file")
 	}
@@ -100,67 +100,62 @@ func (t *localTxn) Write(filename string, reader io.Reader) error {
 
 // Read implements FsTxn
 func (t *localTxn) Read(filename string) (io.ReadCloser, error) {
-	filepath := t.store.path(filename)
-	if utils.IsExist(path.Join(t.root, filename)) {
-		filepath = path.Join(t.root, filename)
+	file, err := openLocalFile(t.root, filename, os.O_RDONLY)
+	if os.IsNotExist(err) {
+		return openLocalFile(t.store.root, filename, os.O_RDONLY)
 	}
-
-	return os.Open(filepath)
+	return file, err
 }
 
 func (t *localTxn) WriteManifest(filename string, manifest *v1manifest.Manifest) error {
 	if err := t.access(filename); err != nil {
 		return err
 	}
-	filepath := path.Join(t.root, filename)
-	file, err := os.Create(filepath)
+	bytes, err := cjson.Marshal(manifest)
+	if err != nil {
+		return errors.Annotate(err, "marshal manifest")
+	}
+	file, err := openLocalFile(t.root, filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
 	if err != nil {
 		return errors.Annotate(err, "create file")
 	}
 	defer file.Close()
 
-	bytes, err := cjson.Marshal(manifest)
-	if err != nil {
-		return errors.Annotate(err, "marshal manifest")
-	}
-
 	if _, err = file.Write(bytes); err != nil {
 		return errors.Annotate(err, "write file")
 	}
 
-	if err = file.Close(); err != nil {
-		return errors.Annotate(err, "flush file content")
-	}
-
-	fi, err := os.Stat(filepath)
+	fi, err := file.Stat()
 	if err != nil {
 		return errors.Annotate(err, "stat file")
 	}
 	// The modify time must increase
 	if !t.first(filename).Before(fi.ModTime()) {
 		mt := time.Unix(0, t.first(filename).UnixNano()+1)
-		return os.Chtimes(filepath, mt, mt)
+		dir, err := os.OpenRoot(t.root)
+		if err != nil {
+			return err
+		}
+		defer dir.Close()
+		if err := dir.Chtimes(filename, mt, mt); err != nil {
+			return err
+		}
 	}
-
-	return nil
+	return file.Close()
 }
 
 func (t *localTxn) ReadManifest(filename string, role v1manifest.ValidManifest) (*v1manifest.Manifest, error) {
 	if err := t.access(filename); err != nil {
 		return nil, err
 	}
-	filepath := t.store.path(filename)
-	if utils.IsExist(path.Join(t.root, filename)) {
-		filepath = path.Join(t.root, filename)
-	}
 	var wc io.Reader
-	file, err := os.Open(filepath)
+	file, err := t.Read(filename)
 	switch {
 	case err == nil:
 		wc = file
 		defer file.Close()
 	case os.IsNotExist(err) && t.store.upstream != "":
-		url := fmt.Sprintf("%s/%s", t.store.upstream, filename)
+		url := fmt.Sprintf("%s/%s", t.store.upstream, url.PathEscape(filename))
 		client := utils.NewHTTPClient(time.Minute, nil)
 		body, err := client.Get(context.TODO(), url)
 		if err != nil {
@@ -175,12 +170,17 @@ func (t *localTxn) ReadManifest(filename string, role v1manifest.ValidManifest) 
 }
 
 func (t *localTxn) ResetManifest() error {
+	dir, err := os.OpenRoot(t.root)
+	if err != nil {
+		return err
+	}
+	defer dir.Close()
 	for file := range t.accessed {
-		fp := path.Join(t.root, file)
-		if utils.IsExist(fp) {
-			if err := os.Remove(fp); err != nil {
-				return err
-			}
+		if err := validateFilename(file); err != nil {
+			return err
+		}
+		if err := dir.Remove(file); err != nil && !os.IsNotExist(err) {
+			return err
 		}
 	}
 	t.accessed = make(map[string]*time.Time)
@@ -191,11 +191,11 @@ func (t *localTxn) Stat(filename string) (os.FileInfo, error) {
 	if err := t.access(filename); err != nil {
 		return nil, err
 	}
-	filepath := t.store.path(filename)
-	if utils.IsExist(path.Join(t.root, filename)) {
-		filepath = path.Join(t.root, filename)
+	fi, err := statLocalFile(t.root, filename)
+	if os.IsNotExist(err) {
+		return statLocalFile(t.store.root, filename)
 	}
-	return os.Stat(filepath)
+	return fi, err
 }
 
 func (t *localTxn) Commit() error {
@@ -212,6 +212,15 @@ func (t *localTxn) Commit() error {
 	if err != nil {
 		return err
 	}
+	// Reject non-files at either end before copying any staged data.
+	for _, f := range files {
+		if _, err := statLocalFile(t.root, f.Name()); err != nil {
+			return err
+		}
+		if _, err := statLocalFile(t.store.root, f.Name()); err != nil && !os.IsNotExist(err) {
+			return err
+		}
+	}
 
 	hasTimestamp := false
 	for _, f := range files {
@@ -220,12 +229,12 @@ func (t *localTxn) Commit() error {
 			hasTimestamp = true
 			continue
 		}
-		if err := utils.Copy(path.Join(t.root, f.Name()), t.store.path(f.Name())); err != nil {
+		if err := copyLocalFile(t.root, t.store.root, f.Name()); err != nil {
 			return err
 		}
 	}
 	if hasTimestamp {
-		if err := utils.Copy(path.Join(t.root, v1manifest.ManifestFilenameTimestamp), t.store.path(v1manifest.ManifestFilenameTimestamp)); err != nil {
+		if err := copyLocalFile(t.root, t.store.root, v1manifest.ManifestFilenameTimestamp); err != nil {
 			return err
 		}
 	}
@@ -255,14 +264,17 @@ func (t *localTxn) checkConflict() error {
 }
 
 func (t *localTxn) access(filename string) error {
+	if err := validateFilename(filename); err != nil {
+		return err
+	}
 	// Use the earliest time
 	if t.accessed[filename] != nil {
 		return nil
 	}
 
 	// Use the modify time of timestamp.json
-	timestamp := t.store.path(v1manifest.ManifestFilenameTimestamp)
-	fi, err := os.Stat(timestamp)
+	timestamp := path.Join(t.store.root, v1manifest.ManifestFilenameTimestamp)
+	fi, err := statLocalFile(t.store.root, v1manifest.ManifestFilenameTimestamp)
 	if err == nil {
 		mt := fi.ModTime()
 		t.accessed[filename] = &mt
