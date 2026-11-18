@@ -159,7 +159,7 @@ func grafanaDetachInstanceDirs(cluster string, metadata *spec.ClusterMeta, insta
 			return nil, err
 		}
 	}
-	for _, raw := range strings.Split(instance.DataDir(), ",") {
+	for raw := range strings.SplitSeq(instance.DataDir(), ",") {
 		if raw == "" {
 			continue
 		}
@@ -194,7 +194,7 @@ func grafanaDetachInstanceDirs(cluster string, metadata *spec.ClusterMeta, insta
 		if value, found := config[spec.TiFlashRemoteCacheDir]; found {
 			dir, ok := value.(string)
 			if !ok {
-				return nil, errors.Errorf("cannot determine cluster %q node %s %s directory", cluster, id, spec.TiFlashRemoteCacheDir)
+				return nil, errors.Errorf("cannot determine cluster %q node %s %s directory: the recorded value is not a plain string, which lifecycle cleanup would fail on; fix it with `tiup cluster edit-config %s` before detaching", cluster, id, spec.TiFlashRemoteCacheDir, cluster)
 			}
 			if err := grafanaDetachValidateRecordedPath(cluster, id, spec.TiFlashRemoteCacheDir, dir); err != nil {
 				return nil, err
@@ -253,10 +253,10 @@ func grafanaDetachMonitoredDirs(cluster string, metadata *spec.ClusterMeta) ([]g
 // rejects values introduced later through edit-config.
 func grafanaDetachValidateRecordedPath(cluster, node, kind, raw string) error {
 	if !filepath.IsAbs(raw) {
-		return errors.Errorf("cannot determine cluster %q node %s %s path %q locally: a relative path resolves against the remote login home, which this check cannot know; record an absolute literal path matching the actual configuration before detaching", cluster, node, kind, raw)
+		return errors.Errorf("cannot determine cluster %q node %s %s path %q locally: a relative path resolves against the remote login home, which this check cannot know; record an absolute literal path with `tiup cluster edit-config %s` before detaching", cluster, node, kind, raw, cluster)
 	}
 	if strings.ContainsAny(raw, "~$\x00\r\n\t *?[]`;&|<>\\\"'(){}!") {
-		return errors.Errorf("cannot check cluster %q node %s %s path %q locally: whitespace or shell metacharacters in it would reach lifecycle cleanup's shell unquoted; record plain literal paths before detaching", cluster, node, kind, raw)
+		return errors.Errorf("cannot check cluster %q node %s %s path %q locally: whitespace or shell metacharacters in it would reach lifecycle cleanup's shell unquoted; record a plain literal path with `tiup cluster edit-config %s` before detaching", cluster, node, kind, raw, cluster)
 	}
 	return nil
 }
