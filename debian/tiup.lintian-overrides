@@ -1,0 +1,4 @@
+# All of these spelling errors are inherited from dependencies and not issues in
+# this TiUP package itself
+tiup: spelling-error-in-binary ment meant [usr/bin/*]
+tiup: spelling-error-in-binary preceed precede [usr/bin/*]

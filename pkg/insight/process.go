@@ -162,7 +162,10 @@ func (proc_stat *ProcessStat) getProcessStat(proc *process.Process) {
 	proc_stat.Name, _ = proc.Name()
 	proc_stat.Exec, _ = proc.Exe()
 	proc_stat.Cmdline, _ = proc.Cmdline()
-	proc_stat.Status, _ = proc.Status()
+	statuses, _ := proc.Status()
+	if len(statuses) > 0 {
+		proc_stat.Status = statuses[0]
+	}
 	proc_stat.StartTime, _ = getProcStartTime(proc)
 	proc_stat.CPUTimes, _ = proc.Times()
 	proc_stat.Memory, _ = proc.MemoryInfo()
