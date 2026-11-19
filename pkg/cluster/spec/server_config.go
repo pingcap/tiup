@@ -109,7 +109,7 @@ func FoldMap(ms map[string]any) map[string]any {
 	return result
 }
 
-// FlattenMap convert mutil-layer map to single layer
+// FlattenMap convert multi-layer map to single layer
 func FlattenMap(ms map[string]any) map[string]any {
 	result := map[string]any{}
 	for k, v := range ms {
