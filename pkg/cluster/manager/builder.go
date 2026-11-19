@@ -523,6 +523,11 @@ func buildMonitoredCertificateTasks(
 					Mkdir(globalOptions.User, host, globalOptions.SystemdMode != spec.UserMode, tlsDir)
 
 				if comp == spec.ComponentBlackboxExporter {
+					// In custom mode the user provides blackbox certs via
+					// monitored.blackbox_ca/cert/key — no generation needed.
+					if globalOptions.IsCustomTLS() {
+						continue
+					}
 					ca, innerr := crypto.ReadCA(
 						name,
 						m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSCACert),
@@ -711,8 +716,9 @@ func buildTLSTask(
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
 
-	//  load certificate file
-	if topo.BaseTopo().GlobalOptions.TLSEnabled {
+	// In custom mode: skip cert generation entirely — user provides their own certs.
+	// In managed mode: load/generate certificates as before.
+	if topo.BaseTopo().GlobalOptions.TLSEnabled && !topo.BaseTopo().GlobalOptions.IsCustomTLS() {
 		tlsDir := m.specManager.Path(name, spec.TLSCertKeyDir)
 		m.logger.Infof("Generate certificate: %s", color.YellowString(tlsDir))
 		if err := m.loadCertificate(name, topo.BaseTopo().GlobalOptions, reloadCertificate); err != nil {
@@ -893,43 +899,51 @@ func buildCertificateTasks(
 	base *spec.BaseMeta,
 	gOpt operator.Options,
 	p *tui.SSHConnectionProps) ([]*task.StepDisplay, error) {
+	if !topo.BaseTopo().GlobalOptions.TLSEnabled {
+		return nil, nil
+	}
+
+	// Custom mode: no cert generation or transfer needed.
+	// User's security.*-path config values point directly to their cert files.
+	if topo.BaseTopo().GlobalOptions.IsCustomTLS() {
+		return nil, nil
+	}
+
 	var (
 		iterErr          error
 		certificateTasks []*task.StepDisplay // tasks which are used to copy certificate to remote host
 	)
 
-	// copy TLS certificate to remote host
-	if topo.BaseTopo().GlobalOptions.TLSEnabled {
-		topo.IterInstance(func(inst spec.Instance) {
-			deployDir := spec.Abs(base.User, inst.DeployDir())
-			tlsDir := filepath.Join(deployDir, spec.TLSCertKeyDir)
+	// Managed mode: generate and transfer TLS certificates to remote host
+	topo.IterInstance(func(inst spec.Instance) {
+		deployDir := spec.Abs(base.User, inst.DeployDir())
+		tlsDir := filepath.Join(deployDir, spec.TLSCertKeyDir)
 
-			tb := task.NewSimpleUerSSH(m.logger, inst.GetManageHost(), inst.GetSSHPort(), base.User, gOpt, p, topo.BaseTopo().GlobalOptions.SSHType).
-				Mkdir(base.User, inst.GetManageHost(), topo.BaseTopo().GlobalOptions.SystemdMode != spec.UserMode, deployDir, tlsDir)
-			ca, err := crypto.ReadCA(
-				name,
-				m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSCACert),
-				m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSCAKey),
-			)
-			if err != nil {
-				iterErr = err
-				return
-			}
-			tb = tb.TLSCert(
-				inst.GetHost(),
-				inst.ComponentName(),
-				inst.Role(),
-				inst.GetMainPort(),
-				ca,
-				meta.DirPaths{
-					Deploy: deployDir,
-					Cache:  m.specManager.Path(name, spec.TempConfigPath),
-				})
+		tb := task.NewSimpleUerSSH(m.logger, inst.GetManageHost(), inst.GetSSHPort(), base.User, gOpt, p, topo.BaseTopo().GlobalOptions.SSHType).
+			Mkdir(base.User, inst.GetManageHost(), topo.BaseTopo().GlobalOptions.SystemdMode != spec.UserMode, deployDir, tlsDir)
+		ca, err := crypto.ReadCA(
+			name,
+			m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSCACert),
+			m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSCAKey),
+		)
+		if err != nil {
+			iterErr = err
+			return
+		}
+		tb = tb.TLSCert(
+			inst.GetHost(),
+			inst.ComponentName(),
+			inst.Role(),
+			inst.GetMainPort(),
+			ca,
+			meta.DirPaths{
+				Deploy: deployDir,
+				Cache:  m.specManager.Path(name, spec.TempConfigPath),
+			})
 
-			t := tb.BuildAsStep(fmt.Sprintf("  - Generate certificate %s -> %s", inst.ComponentName(), inst.ID()))
-			certificateTasks = append(certificateTasks, t)
-		})
-	}
+		t := tb.BuildAsStep(fmt.Sprintf("  - Generate certificate %s -> %s", inst.ComponentName(), inst.ID()))
+		certificateTasks = append(certificateTasks, t)
+	})
 
 	return certificateTasks, iterErr
 }

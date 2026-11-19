@@ -225,7 +225,7 @@ func (i *TiKVCDCInstance) InitConfig(
 	}
 
 	// doesn't work.
-	if _, err := i.setTLSConfig(ctx, false, nil, paths); err != nil {
+	if _, err := i.setTLSConfig(ctx, false, nil, nil, paths); err != nil {
 		return err
 	}
 
@@ -247,7 +247,7 @@ func (i *TiKVCDCInstance) InitConfig(
 }
 
 // setTLSConfig set TLS Config to support enable/disable TLS
-func (i *TiKVCDCInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error) {
+func (i *TiKVCDCInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, globalConfig map[string]any, paths meta.DirPaths) (map[string]any, error) {
 	return nil, nil
 }
 

@@ -253,7 +253,7 @@ func (i *SchedulingInstance) InitConfig(
 
 	globalConfig := topo.ServerConfigs.Scheduling
 	// set TLS configs
-	spec.Config, err = i.setTLSConfig(ctx, enableTLS, spec.Config, paths)
+	spec.Config, err = i.setTLSConfig(ctx, enableTLS, spec.Config, globalConfig, paths)
 	if err != nil {
 		return err
 	}
@@ -266,25 +266,37 @@ func (i *SchedulingInstance) InitConfig(
 }
 
 // setTLSConfig set TLS Config to support enable/disable TLS
-func (i *SchedulingInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error) {
+func (i *SchedulingInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, globalConfig map[string]any, paths meta.DirPaths) (map[string]any, error) {
 	// set TLS configs
 	if enableTLS {
-		if configs == nil {
-			configs = make(map[string]any)
+		if i.topo.(*Specification).GlobalOptions.IsCustomTLS() {
+			// Custom: validate user has set the required keys, don't overwrite.
+			for _, key := range []string{"security.cacert-path", "security.cert-path", "security.key-path"} {
+				if !hasKey(key, configs, globalConfig) {
+					return nil, fmt.Errorf(
+						"custom TLS mode requires %q in config for %s (%s:%d)\n"+
+							"Use 'tiup cluster edit-config' to set certificate paths",
+						key, i.ComponentName(), i.GetHost(), i.GetMainPort())
+				}
+			}
+		} else {
+			if configs == nil {
+				configs = make(map[string]any)
+			}
+			configs["security.cacert-path"] = fmt.Sprintf(
+				"%s/tls/%s",
+				paths.Deploy,
+				TLSCACert,
+			)
+			configs["security.cert-path"] = fmt.Sprintf(
+				"%s/tls/%s.crt",
+				paths.Deploy,
+				i.Role())
+			configs["security.key-path"] = fmt.Sprintf(
+				"%s/tls/%s.pem",
+				paths.Deploy,
+				i.Role())
 		}
-		configs["security.cacert-path"] = fmt.Sprintf(
-			"%s/tls/%s",
-			paths.Deploy,
-			TLSCACert,
-		)
-		configs["security.cert-path"] = fmt.Sprintf(
-			"%s/tls/%s.crt",
-			paths.Deploy,
-			i.Role())
-		configs["security.key-path"] = fmt.Sprintf(
-			"%s/tls/%s.pem",
-			paths.Deploy,
-			i.Role())
 	} else {
 		// drainer tls config list
 		tlsConfigs := []string{

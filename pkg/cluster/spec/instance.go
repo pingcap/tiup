@@ -126,7 +126,7 @@ type Instance interface {
 	SetPatched(bool)
 	CalculateVersion(string) string
 	// SetVersion(string)
-	setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error)
+	setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, globalConfig map[string]any, paths meta.DirPaths) (map[string]any, error)
 }
 
 // PortStarted wait until a port is being listened
@@ -245,7 +245,7 @@ func (i *BaseInstance) InitConfig(ctx context.Context, e ctxt.Executor, opt Glob
 	e.Execute(ctx, cmd, sudo) //nolint
 
 	// doesn't work
-	if _, err := i.setTLSConfig(ctx, false, nil, paths); err != nil {
+	if _, err := i.setTLSConfig(ctx, false, nil, nil, paths); err != nil {
 		return err
 	}
 
@@ -254,8 +254,18 @@ func (i *BaseInstance) InitConfig(ctx context.Context, e ctxt.Executor, opt Glob
 
 // setTLSConfig set TLS Config to support enable/disable TLS
 // baseInstance no need to configure TLS
-func (i *BaseInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error) {
+func (i *BaseInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, globalConfig map[string]any, paths meta.DirPaths) (map[string]any, error) {
 	return nil, nil
+}
+
+// hasKey reports whether key exists in any of the provided maps.
+func hasKey(key string, maps ...map[string]any) bool {
+	for _, m := range maps {
+		if _, ok := m[key]; ok {
+			return true
+		}
+	}
+	return false
 }
 
 // TransferLocalConfigFile scp local config file to remote
