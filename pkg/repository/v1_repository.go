@@ -519,7 +519,9 @@ func (r *V1Repository) DownloadComponent(item *v1manifest.VersionItem, target st
 		return err
 	}
 
-	_, err = checkHash(reader, item.Hashes[v1manifest.SHA256])
+	// Stream the file through the hasher instead of buffering it in memory:
+	// component tarballs can be several hundred MiB.
+	err = utils.CheckSHA256(reader, item.Hashes[v1manifest.SHA256])
 	reader.Close()
 	if err != nil {
 		// remove the target compoonent to avoid attacking
