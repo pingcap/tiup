@@ -1,0 +1,48 @@
+name: Local Diag Redact
+
+on:
+  push:
+    branches: [codex/local-diag-redact-20261030]
+  pull_request:
+    paths: ['cmd/diag_redact*', 'cmd/root.go', '.github/workflows/local-diag-redact.yaml']
+
+permissions:
+  contents: read
+
+jobs:
+  local-entry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.25.5'
+      - name: Check and build local entry
+        run: |
+          test -z "$(gofmt -l cmd/diag_redact*.go cmd/root.go)"
+          go vet ./cmd
+          go test ./cmd
+          CGO_ENABLED=0 go build -trimpath -o bin/tiup .
+      - name: Verify forwarding and exit code without a TiUP mirror
+        run: |
+          cat > bin/diag-redact <<'SH'
+          #!/bin/sh
+          printf '%s\n' "$@" > "$CAPTURE_FILE"
+          exit "${TEST_EXIT_CODE:-0}"
+          SH
+          chmod 700 bin/diag-redact
+          export CAPTURE_FILE="$RUNNER_TEMP/component-args"
+          export TIUP_HOME="$RUNNER_TEMP/empty-tiup-home"
+          bin/tiup diag-redact collect 'cluster with spaces' --from '2026-10-30T11:00:00+08:00'
+          test "$(sed -n '1p' "$CAPTURE_FILE")" = collect
+          test "$(sed -n '2p' "$CAPTURE_FILE")" = 'cluster with spaces'
+          test "$(sed -n '3p' "$CAPTURE_FILE")" = --from
+          set +e
+          TEST_EXIT_CODE=27 bin/tiup diag-redact --version
+          status=$?
+          set -e
+          test "$status" = 27
+          test ! -e "$TIUP_HOME/bin/root.json"
+          rm bin/diag-redact
+          if bin/tiup diag-redact --version > "$RUNNER_TEMP/missing.log" 2>&1; then exit 1; fi
+          grep -q 'local diag-redact not found' "$RUNNER_TEMP/missing.log"

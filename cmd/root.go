@@ -191,6 +191,7 @@ the latest stable version will be downloaded from the repository.`,
 	rootCmd.Flags().BoolP("version", "v", false, "Print the version of tiup")
 
 	rootCmd.AddCommand(
+		newDiagRedactCmd(),
 		newInstallCmd(),
 		newListCmd(),
 		newUninstallCmd(),
@@ -206,6 +207,9 @@ the latest stable version will be downloaded from the repository.`,
 }
 
 func shouldSkipEnvInit(cmd *cobra.Command, args []string) bool {
+	if cmd != nil && cmd.Name() == "diag-redact" {
+		return true
+	}
 	if len(args) == 0 {
 		return false
 	}
