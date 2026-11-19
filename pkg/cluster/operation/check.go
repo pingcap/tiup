@@ -608,9 +608,15 @@ func CheckSELinuxStatus(ctx context.Context, e ctxt.Executor, sudo bool) *CheckR
 		Command: "getenforce",
 		Sudo:    sudo,
 	})
-	stdout, stderr, err := m.Execute(ctx, e)
+	stdout, _, err := m.Execute(ctx, e)
 	if err != nil {
-		result.Err = fmt.Errorf("%w %s", err, stderr)
+		// getenforce is unavailable (e.g. SELinux userspace tools are not
+		// installed, as on most Debian/Ubuntu hosts), which means SELinux is
+		// not enforcing on this host. Treat it as disabled rather than a
+		// failure, so we don't trigger a fix that edits a non-existent
+		// /etc/selinux/config. The configuration is still checked separately
+		// by CheckSELinuxConf.
+		result.Msg = "getenforce not available, assuming SELinux is disabled"
 		return result
 	}
 	out := strings.Trim(string(stdout), "\n")
