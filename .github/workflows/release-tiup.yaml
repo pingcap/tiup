@@ -28,7 +28,10 @@ on:
 
 jobs:
   release:
-    runs-on: ubuntu-22.04
+    # Builds on the self-hosted runner set deployed for this repository; the
+    # image has no wget, so downloads below use curl. Rollback: set this back to
+    # `ubuntu-22.04`.
+    runs-on: arc-runner-set-tiup-release
     timeout-minutes: 30
     outputs:
       REL_VER: ${{ steps.build_tiup.outputs.REL_VER }}
@@ -124,7 +127,7 @@ jobs:
           echo ::set-output name=TIUP_BIN::$TIUP_HOME/bin/tiup
 
           rm -rf $TIUP_HOME && mkdir -p $TIUP_HOME/{bin,keys}
-          wget -O $TMP_DIR/tiup-linux-amd64.tar.gz -q https://tiup-mirrors.pingcap.com/tiup-linux-amd64.tar.gz
+          curl -fsSL -o $TMP_DIR/tiup-linux-amd64.tar.gz https://tiup-mirrors.pingcap.com/tiup-linux-amd64.tar.gz
           tar -zxf $TMP_DIR/tiup-linux-amd64.tar.gz -C $TIUP_HOME/bin && chmod 755 $TIUP_HOME/bin/tiup
           curl -s https://tiup-mirrors.pingcap.com/root.json -o $TIUP_HOME/bin/root.json
 
