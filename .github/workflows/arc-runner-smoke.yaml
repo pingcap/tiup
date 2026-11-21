@@ -1,0 +1,50 @@
+name: arc-runner-smoke
+
+# On-demand check that the self-hosted runner set behind release-tiup has the
+# GitHub, Go and packaging toolchain the release job relies on. It never writes
+# a mirror and uses no secrets. Pull-request runs are restricted to the fork that
+# introduced this file so ordinary PRs never occupy the self-hosted runner.
+on:
+  workflow_dispatch:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Smoke
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == 'wuhuizuo/tiup'
+    runs-on: arc-runner-set-tiup-release
+    timeout-minutes: 10
+    steps:
+      - name: Show runner identity
+        run: |
+          uname -a
+          uname -m
+          echo "runner=${RUNNER_NAME}"
+          echo "labels=${RUNNER_LABELS}"
+
+      - name: Check out code
+        uses: actions/checkout@v6
+
+      - name: Verify github.com reachability
+        run: git ls-remote https://github.com/pingcap/tiup refs/heads/master
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: 'go.mod'
+          cache: false
+
+      - name: Check Go and mirror access
+        run: |
+          go version
+          curl -fsSI https://tiup-mirrors.pingcap.com/root.json | head -5
+
+      - name: Check packaging toolchain
+        run: |
+          tar --version
+          sha256sum --version | head -1
+          b2sum --version | head -1
+          df -h /
