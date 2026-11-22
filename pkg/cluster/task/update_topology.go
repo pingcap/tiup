@@ -62,9 +62,9 @@ func (u *UpdateTopology) Execute(ctx context.Context) error {
 	var ops []clientv3.Op
 	var instances []spec.Instance
 
-	ops, instances = updateInstancesAndOps(ops, instances, deleted, (&spec.MonitorComponent{Topology: topo}).Instances(), "prometheus")
-	ops, instances = updateInstancesAndOps(ops, instances, deleted, (&spec.GrafanaComponent{Topology: topo}).Instances(), "grafana")
-	ops, instances = updateInstancesAndOps(ops, instances, deleted, (&spec.AlertManagerComponent{Topology: topo}).Instances(), "alertmanager")
+	ops, instances = updateInstancesAndOps(ops, instances, deleted, (&spec.MonitorComponent{Topology: topo}).Instances(), "prometheus", nil)
+	ops, instances = updateInstancesAndOps(ops, instances, deleted, (&spec.GrafanaComponent{Topology: topo}).Instances(), "grafana", topo.DetachedGrafanas)
+	ops, instances = updateInstancesAndOps(ops, instances, deleted, (&spec.AlertManagerComponent{Topology: topo}).Instances(), "alertmanager", nil)
 
 	for _, instance := range (&spec.TiDBComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
@@ -104,21 +104,25 @@ type componentTopology struct {
 //
 //	no member or all deleted, it will add a `OpDelete` in ops, otherwise it will push all current not deleted instances into instance list.
 //
-// An initially empty Grafana list preserves existing discovery information for detached instances.
-func updateInstancesAndOps(ops []clientv3.Op, ins []spec.Instance, deleted set.StringSet, instances []spec.Instance, componentName string) ([]clientv3.Op, []spec.Instance) {
-	// An absent Grafana is no longer managed, but its discovery key may still
-	// serve an externally maintained instance. Explicit scale-in of the last
-	// managed Grafana must continue to delete the key below.
-	if componentName == spec.ComponentGrafana && len(instances) == 0 {
-		return ops, ins
-	}
-
+// A Grafana list with no surviving instance deletes the discovery entry — the
+// behavior before detach-grafana existed, which lets every later refresh
+// retry a cleanup that failed midway — unless the metadata still records a
+// detached Grafana: then the empty list means the entry belongs to an
+// instance TiUP handed over, and it must be preserved. The check runs on the
+// survivors (after the deleted filter), so it also covers the update that
+// runs inside a scale-in of the last managed Grafana, which must not delete
+// an entry preserved for a detached one.
+func updateInstancesAndOps(ops []clientv3.Op, ins []spec.Instance, deleted set.StringSet, instances []spec.Instance, componentName string, detachedGrafanas []*spec.DetachedGrafana) ([]clientv3.Op, []spec.Instance) {
 	var currentInstances []spec.Instance
 	for _, instance := range instances {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
 		currentInstances = append(currentInstances, instance)
+	}
+
+	if componentName == spec.ComponentGrafana && len(currentInstances) == 0 && len(detachedGrafanas) > 0 {
+		return ops, ins
 	}
 
 	if len(currentInstances) == 0 {

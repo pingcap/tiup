@@ -45,6 +45,11 @@ func (u *UpdateMeta) Execute(ctx context.Context) error {
 		ServerConfigs:     u.metadata.Topology.ServerConfigs,
 		ComponentVersions: u.metadata.Topology.ComponentVersions,
 		ComponentSources:  u.metadata.Topology.ComponentSources,
+		// A scale-in of unrelated components must not look like the end of a
+		// detach: keep the records so a later refresh still preserves the
+		// Grafana discovery entry. They are never pruned here — removing
+		// instances cannot end the preservation duty.
+		DetachedGrafanas: u.metadata.Topology.DetachedGrafanas,
 	}
 
 	tidbServers := make([]*spec.TiDBSpec, 0)

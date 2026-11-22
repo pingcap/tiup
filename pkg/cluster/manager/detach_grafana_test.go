@@ -94,6 +94,15 @@ func TestDetachGrafanaPreservesMetadata(t *testing.T) {
 			if tc.keep == 0 {
 				want.Topology.Grafanas = nil
 			}
+			// The detached instances leave their addresses behind: without
+			// the record an empty Grafana list would be indistinguishable
+			// from a completed scale-in, and the next refresh would delete
+			// the discovery entry detach promised to keep.
+			var wantDetached []*spec.DetachedGrafana
+			for _, grafana := range before.Topology.Grafanas[:len(before.Topology.Grafanas)-tc.keep] {
+				wantDetached = append(wantDetached, &spec.DetachedGrafana{Host: grafana.Host, Port: grafana.Port})
+			}
+			want.Topology.DetachedGrafanas = wantDetached
 
 			require.NoError(t, m.DetachGrafana("test", tc.nodes, true))
 			after, err := spec.ClusterMetadata("test")
@@ -107,6 +116,27 @@ func TestDetachGrafanaPreservesMetadata(t *testing.T) {
 			require.Equal(t, original, backup)
 		})
 	}
+}
+
+func TestDetachGrafanaAccumulatesDetachedRecords(t *testing.T) {
+	// Detaching in several steps must accumulate: the second run starts from
+	// metadata that already carries the first run's record, and losing it
+	// would let the next refresh delete the entry the first detach promised
+	// to keep.
+	m := newGrafanaDetachTestManager(t)
+	metadata := grafanaDetachTestMetadata(t)
+	metadata.Topology.DetachedGrafanas = []*spec.DetachedGrafana{{Host: "old", Port: 3000}}
+	require.NoError(t, spec.SaveClusterMeta("test", metadata))
+
+	require.NoError(t, m.DetachGrafana("test", []string{"n1:3000"}, true))
+
+	after, err := spec.ClusterMetadata("test")
+	require.NoError(t, err)
+	require.Equal(t, []*spec.DetachedGrafana{
+		{Host: "old", Port: 3000},
+		{Host: "n1", Port: 3000},
+	}, after.Topology.DetachedGrafanas)
+	require.Len(t, after.Topology.Grafanas, 1)
 }
 
 func TestDetachGrafanaRejectsWithoutSaving(t *testing.T) {

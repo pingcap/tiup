@@ -162,6 +162,10 @@ function detach_grafana() (
         --ssh-proxy-identity-file "$state/missing-proxy-key" \
         detach-grafana "$name" -N n2:3000
     detach_assert_key "$key_a"
+    # The detach must leave its mark: without a detached_grafanas record the
+    # saved metadata looks like a completed scale-in, and the next refresh
+    # would delete the discovery entry detach promised to keep.
+    grep -q 'detached_grafanas' "$TIUP_COMPONENT_DATA_DIR/clusters/$name/meta.yaml"
     tiup-cluster display "$name" > "$state/display"
     # `! grep` would not fail the script under set -e, so assert explicitly.
     if grep -Fq 'n2:3000' "$state/display"; then

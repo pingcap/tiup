@@ -201,6 +201,11 @@ type (
 		Monitors               []*PrometheusSpec      `yaml:"monitoring_servers"`
 		Grafanas               []*GrafanaSpec         `yaml:"grafana_servers,omitempty"`
 		Alertmanagers          []*AlertmanagerSpec    `yaml:"alertmanager_servers,omitempty"`
+		// DetachedGrafanas records addresses of Grafana instances removed
+		// from management by detach-grafana; it is maintained by that command
+		// and pruned by PruneDetachedGrafanas, never by instance-level
+		// lifecycle code. See the DetachedGrafana type for its purpose.
+		DetachedGrafanas []*DetachedGrafana `yaml:"detached_grafanas,omitempty"`
 	}
 )
 
@@ -590,6 +595,10 @@ func (s *Specification) Merge(that Topology) Topology {
 		Monitors:               append(s.Monitors, spec.Monitors...),
 		Grafanas:               append(s.Grafanas, spec.Grafanas...),
 		Alertmanagers:          append(s.Alertmanagers, spec.Alertmanagers...),
+		// Detached records describe handed-over instances, never something
+		// the new part could add; drop them only through the prune that runs
+		// when the merged topology manages a Grafana again.
+		DetachedGrafanas: s.DetachedGrafanas,
 	}
 }
 

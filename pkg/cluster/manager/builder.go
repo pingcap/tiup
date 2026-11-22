@@ -329,6 +329,12 @@ func buildScaleOutTask(
 	}
 
 	builder.Func("Save meta", func(_ context.Context) error {
+		// Scaling out a managed Grafana takes over the discovery entry and
+		// ends the preservation duty recorded for detached ones; without the
+		// prune a later scale-in of that Grafana would preserve a stale entry.
+		if specTopo, ok := mergedTopo.(*spec.Specification); ok {
+			specTopo.PruneDetachedGrafanas()
+		}
 		metadata.SetTopology(mergedTopo)
 		return m.specManager.SaveMeta(name, metadata)
 	})

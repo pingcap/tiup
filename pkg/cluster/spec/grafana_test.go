@@ -434,3 +434,24 @@ func TestVictoriaMetricsDefaultDatasource(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, string(dsContent), "name: test-cluster-vm")
 }
+
+func TestPruneDetachedGrafanas(t *testing.T) {
+	// The detached records are the only thing telling a topology refresh to
+	// preserve the Grafana discovery entry, and they are only trustworthy
+	// while no managed Grafana exists: once one is added it takes over the
+	// entry, and a leftover record would make a later refresh preserve a
+	// stale entry after that Grafana is scaled in. Hence prune exactly when a
+	// managed Grafana is present and keep the records otherwise.
+	detached := []*DetachedGrafana{{Host: "gone", Port: 3000}}
+
+	noManaged := &Specification{DetachedGrafanas: detached}
+	noManaged.PruneDetachedGrafanas()
+	require.Equal(t, detached, noManaged.DetachedGrafanas, "records must survive while no managed Grafana exists")
+
+	withManaged := &Specification{
+		Grafanas:         []*GrafanaSpec{{Host: "kept", Port: 3000}},
+		DetachedGrafanas: detached,
+	}
+	withManaged.PruneDetachedGrafanas()
+	require.Empty(t, withManaged.DetachedGrafanas, "a managed Grafana ends the preservation duty")
+}

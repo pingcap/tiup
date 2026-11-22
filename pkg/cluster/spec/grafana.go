@@ -63,6 +63,31 @@ type GrafanaSpec struct {
 	UseVMAsDatasource bool                 `yaml:"use_vm_as_datasource,omitempty" validate:"use_vm_as_datasource:editable"`
 }
 
+// DetachedGrafana records the address of one Grafana instance that
+// detach-grafana transferred out of TiUP management. It exists only to keep
+// topology refreshes from deleting the Grafana discovery entry: an empty
+// managed list on its own cannot tell a detached instance (whose entry must
+// stay) from a scale-in whose PD cleanup failed midway (whose stale entry the
+// next refresh must delete). No lifecycle operation consumes the record —
+// the instance's whole specification now belongs to its new maintainer — so
+// it carries the address and nothing else.
+type DetachedGrafana struct {
+	Host string `yaml:"host,omitempty"`
+	Port int    `yaml:"port,omitempty"`
+}
+
+// PruneDetachedGrafanas drops the detached-Grafana records once the topology
+// manages a Grafana instance again: a managed instance takes over the
+// discovery entry, the preservation duty recorded for the detached ones ends,
+// and a leftover record would make a later refresh preserve a stale entry
+// after that managed instance is scaled in. The records are meaningful only
+// while the topology has no managed Grafana.
+func (s *Specification) PruneDetachedGrafanas() {
+	if len(s.Grafanas) > 0 {
+		s.DetachedGrafanas = nil
+	}
+}
+
 // Role returns the component role of the instance
 func (s *GrafanaSpec) Role() string {
 	return ComponentGrafana

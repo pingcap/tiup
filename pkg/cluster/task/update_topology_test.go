@@ -27,13 +27,31 @@ import (
 func TestUpdateInstancesAndOps(t *testing.T) {
 	for _, component := range []string{spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertmanager} {
 		for _, test := range []struct {
-			name    string
-			empty   bool
-			deleted []string
-			wantIDs []string
+			name     string
+			empty    bool
+			deleted  []string
+			detached int // detached-grafana records kept in the metadata
+			wantIDs  []string
 		}{
+			// An empty surviving list without detached records deletes the
+			// entry: after a scale-in whose PD cleanup failed midway, the
+			// saved metadata no longer lists the Grafana, and only this
+			// delete — retried by every later refresh — converges the stale
+			// entry away. This is the behavior from before detach-grafana
+			// existed and must survive it.
 			{name: "empty", empty: true},
 			{name: "empty with unrelated deletion", empty: true, deleted: []string{"other:1234"}},
+			// The same empty list with a detached record instead means the
+			// entry belongs to an instance TiUP handed over: preserve it.
+			{name: "empty with detached records preserves the entry", empty: true, detached: 1},
+			// Scaling in the last managed Grafana runs this update with the
+			// removed instance still in the in-memory list; a detached record
+			// in the metadata must suppress that in-chain deletion too, or
+			// the entry preserved for the handed-over instance is lost to
+			// the unrelated scale-in.
+			{name: "all deleted with detached records preserves the entry", deleted: []string{"first:3000", "second:3000"}, detached: 1},
+			// Without a detached record that same in-chain deletion is the
+			// ordinary scale-in of the last managed Grafana: delete.
 			{name: "all retained", wantIDs: []string{"first:3000", "second:3000"}},
 			{name: "first deleted", deleted: []string{"first:3000"}, wantIDs: []string{"second:3000"}},
 			{name: "all deleted", deleted: []string{"first:3000", "second:3000"}},
@@ -51,6 +69,9 @@ func TestUpdateInstancesAndOps(t *testing.T) {
 						{Host: "first", WebPort: 3000}, {Host: "second", WebPort: 3000},
 					},
 				}
+				for range test.detached {
+					topo.DetachedGrafanas = append(topo.DetachedGrafanas, &spec.DetachedGrafana{Host: "gone", Port: 3000})
+				}
 				instances := spec.FindComponent(topo, component).Instances()
 				if test.empty {
 					instances = nil
@@ -61,6 +82,7 @@ func TestUpdateInstancesAndOps(t *testing.T) {
 				ops, retained := updateInstancesAndOps(
 					[]clientv3.Op{clientv3.OpPut("/previous", "untouched")}, previous,
 					set.NewStringSet(test.deleted...), instances, component,
+					topo.DetachedGrafanas,
 				)
 
 				require.True(t, ops[0].IsPut())
@@ -72,7 +94,10 @@ func TestUpdateInstancesAndOps(t *testing.T) {
 					ids = append(ids, instance.ID())
 				}
 				require.Equal(t, test.wantIDs, ids)
-				wantDelete := len(test.wantIDs) == 0 && (component != spec.ComponentGrafana || !test.empty)
+				// The discovery entry survives an empty surviving list only
+				// for Grafana and only while a detached record vouches for
+				// it; every other empty list deletes the entry.
+				wantDelete := len(test.wantIDs) == 0 && !(component == spec.ComponentGrafana && test.detached > 0)
 				if wantDelete {
 					require.Len(t, ops, 2)
 					require.True(t, ops[1].IsDelete())
