@@ -151,6 +151,7 @@ func TestDetachGrafanaRejectsWithoutSaving(t *testing.T) {
 func TestDetachGrafanaDirectorySafety(t *testing.T) {
 	for _, tc := range []struct {
 		name   string
+		nodes  []string // detach targets, defaults to n1:3000
 		modify func(*spec.ClusterMeta)
 		other  bool
 		want   string
@@ -251,6 +252,45 @@ func TestDetachGrafanaDirectorySafety(t *testing.T) {
 		{name: "cross cluster parent", other: true, modify: func(m *spec.ClusterMeta) {
 			m.Topology.PDServers[0].DeployDir = "/home/tidb/deploy"
 		}, want: "cluster \"other\""},
+		{name: "IPv6 compressed and expanded spellings", nodes: []string{"[2001:db8::1]:3000"}, modify: func(m *spec.ClusterMeta) {
+			// One machine recorded as a compressed literal on Grafana and as
+			// an expanded literal on PD: comparing recorded strings would
+			// put the two in different host groups and miss the overlap.
+			m.Topology.Grafanas[0].Host = "2001:db8::1"
+			m.Topology.Grafanas[0].DeployDir = "/home/tidb/deploy/pd-2379/grafana-3000"
+			m.Topology.PDServers[0].Host = "2001:0db8:0000:0000:0000:0000:0000:0001"
+		}, want: "overlaps"},
+		{name: "IPv4-mapped spelling matches IPv4", nodes: []string{"[::ffff:192.168.1.1]:3000"}, modify: func(m *spec.ClusterMeta) {
+			m.Topology.Grafanas[0].Host = "::ffff:192.168.1.1"
+			m.Topology.Grafanas[0].DeployDir = "/home/tidb/deploy/pd-2379/grafana-3000"
+			m.Topology.PDServers[0].Host = "192.168.1.1"
+		}, want: "overlaps"},
+		{name: "Grafana database file inside PD data", modify: func(m *spec.ClusterMeta) {
+			m.Topology.PDServers[0].DataDir = "/home/tidb/data/pd-2379"
+			m.Topology.Grafanas[0].Config["database.url"] = "/home/tidb/data/pd-2379/grafana.db"
+		}, want: "database.url"},
+		{name: "sqlite-prefixed database url", modify: func(m *spec.ClusterMeta) {
+			m.Topology.PDServers[0].DataDir = "/home/tidb/data/pd-2379"
+			m.Topology.Grafanas[0].Config["database.url"] = "sqlite:///home/tidb/data/pd-2379/grafana.db"
+		}, want: "database.url"},
+		{name: "database path in managed directory", modify: func(m *spec.ClusterMeta) {
+			m.Topology.Grafanas[0].Config["database.path"] = "/home/tidb/deploy/pd-2379/grafana.db"
+		}, want: "database.path"},
+		{name: "global database url", modify: func(m *spec.ClusterMeta) {
+			m.Topology.PDServers[0].DataDir = "/home/tidb/data/pd-2379"
+			m.Topology.ServerConfigs.Grafana = map[string]string{"database.url": "/home/tidb/data/pd-2379/grafana.db"}
+		}, want: "database.url"},
+		{name: "external database url does not block", modify: func(m *spec.ClusterMeta) {
+			m.Topology.Grafanas[0].Config["database.url"] = "mysql://user:secret@db.example.com:3306/grafana"
+		}},
+		{name: "relative database path stays covered", modify: func(m *spec.ClusterMeta) {
+			// Resolves inside paths.data (or the working directory), both of
+			// which the deploy or paths.data entries already cover.
+			m.Topology.Grafanas[0].Config["database.path"] = "grafana.db"
+		}},
+		{name: "dot-dot database path rejected", modify: func(m *spec.ClusterMeta) {
+			m.Topology.Grafanas[0].Config["database.path"] = "../../etc/grafana/grafana.db"
+		}, want: "dot-dot"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			m := newGrafanaDetachTestManager(t)
@@ -265,7 +305,11 @@ func TestDetachGrafanaDirectorySafety(t *testing.T) {
 			require.NoError(t, spec.SaveClusterMeta("test", metadata))
 			before, err := os.ReadFile(m.specManager.Path("test", "meta.yaml"))
 			require.NoError(t, err)
-			err = m.DetachGrafana("test", []string{"n1:3000"}, true)
+			nodes := tc.nodes
+			if len(nodes) == 0 {
+				nodes = []string{"n1:3000"}
+			}
+			err = m.DetachGrafana("test", nodes, true)
 			if tc.want == "" {
 				require.NoError(t, err)
 				return

@@ -15,6 +15,7 @@
 package manager
 
 import (
+	"net"
 	"path/filepath"
 	"strings"
 
@@ -23,14 +24,30 @@ import (
 	"github.com/pingcap/tiup/pkg/set"
 )
 
-// grafanaDetachDir records one directory either occupied by a detached Grafana
-// instance or still managed by a lifecycle operation. kind only labels the
-// path in error messages ("deploy", "paths.data", "monitored data", ...).
+// grafanaDetachDir records one location — a directory occupied by a detached
+// Grafana instance or still managed by a lifecycle operation, or a file the
+// instance keeps there (Grafana's SQLite database). kind only labels the
+// path in error messages ("deploy", "paths.data", "database.url", ...).
 type grafanaDetachDir struct {
 	cluster string
 	node    string
 	kind    string
 	path    string
+}
+
+// grafanaDetachHostKey returns the key under which the same-host directory
+// check groups paths. A host recorded as an IP literal is compared by
+// address: the same IPv6 machine can be spelled compressed or expanded (and
+// an IPv4-mapped literal duplicates its IPv4 form), and different spellings
+// must not split one machine into two comparison groups, or the overlap
+// check would silently skip it. A value that is not an IP literal keeps the
+// recorded string: hostname aliases of one machine stay outside what a local
+// check can resolve.
+func grafanaDetachHostKey(host string) string {
+	if ip := net.ParseIP(host); ip != nil {
+		return ip.String()
+	}
+	return host
 }
 
 // validateGrafanaDetachDirs rejects a detach whose Grafana directories overlap
@@ -44,11 +61,12 @@ type grafanaDetachDir struct {
 // managed instance would eventually be deleted or overwritten, breaking that
 // promise. The check therefore covers every cluster in this profile, not just
 // the one being detached: the same host can be managed by several clusters,
-// and destroying any of them runs the cleanup. Only locally recorded paths
-// are compared — they must be absolute literals, since a relative path
-// resolves against the remote login home, which the metadata does not record
-// — and remote symlinks and mounts are invisible here, which is why detach
-// still asks the operator to verify the actual layout.
+// and destroying any of them runs the cleanup. Hosts are compared through
+// grafanaDetachHostKey. Only locally recorded paths are compared — they must
+// be absolute literals, since a relative path resolves against the remote
+// login home, which the metadata does not record — and remote symlinks and
+// mounts are invisible here, which is why detach still asks the operator to
+// verify the actual layout.
 func validateGrafanaDetachDirs(specManager *spec.SpecManager, name string, postDetach *spec.ClusterMeta, targets []spec.Instance) error {
 	// Collect the directories the detached instances occupy, grouped by
 	// manage host. These are the paths TiUP must never touch again.
@@ -58,7 +76,7 @@ func validateGrafanaDetachDirs(specManager *spec.SpecManager, name string, postD
 		if err != nil {
 			return err
 		}
-		host := instance.GetManageHost()
+		host := grafanaDetachHostKey(instance.GetManageHost())
 		protected[host] = append(protected[host], dirs...)
 	}
 	// Collect the directories TiUP may still clean up or rewrite on those
@@ -86,7 +104,7 @@ func validateGrafanaDetachDirs(specManager *spec.SpecManager, name string, postD
 		managed := make(map[string][]grafanaDetachDir)
 		for _, component := range metadata.Topology.ComponentsByStartOrder() {
 			for _, instance := range component.Instances() {
-				host := instance.GetManageHost()
+				host := grafanaDetachHostKey(instance.GetManageHost())
 				if len(protected[host]) == 0 {
 					continue
 				}
@@ -106,7 +124,7 @@ func validateGrafanaDetachDirs(specManager *spec.SpecManager, name string, postD
 		agentHosts := set.NewStringSet()
 		metadata.Topology.IterInstance(func(inst spec.Instance) {
 			if !inst.IgnoreMonitorAgent() {
-				agentHosts.Insert(inst.GetManageHost())
+				agentHosts.Insert(grafanaDetachHostKey(inst.GetManageHost()))
 			}
 		})
 		for host := range agentHosts {
@@ -134,10 +152,11 @@ func validateGrafanaDetachDirs(specManager *spec.SpecManager, name string, postD
 	return nil
 }
 
-// grafanaDetachInstanceDirs returns the directories occupied by one instance:
+// grafanaDetachInstanceDirs returns the locations occupied by one instance:
 // deploy, log and (possibly multiple) data directories, plus the
 // component-specific overrides that live outside them, such as Grafana's
-// paths.* settings or the TiFlash remote cache dir.
+// paths.* settings and SQLite database location, or the TiFlash remote
+// cache dir.
 func grafanaDetachInstanceDirs(cluster string, metadata *spec.ClusterMeta, instance spec.Instance) ([]grafanaDetachDir, error) {
 	id := instance.ID()
 	// Every recorded path must be an absolute literal before anything else:
@@ -188,6 +207,47 @@ func grafanaDetachInstanceDirs(cluster string, metadata *spec.ClusterMeta, insta
 				}
 				dirs = append(dirs, grafanaDetachDir{cluster, id, key, value})
 			}
+		}
+		// The saved dashboards live in Grafana's SQLite database, whose file
+		// the [database] settings can move out of paths.data (covered above):
+		// url accepts a bare or sqlite://-prefixed file location, path names
+		// the sqlite file directly. Protect every local location that can be
+		// determined from the metadata, so an overlap with a managed
+		// directory is rejected instead of silently deleting the database
+		// with that directory later.
+		for _, key := range []string{"database.url", "database.path"} {
+			value, found := grafana.Config[key]
+			if !found {
+				value, found = metadata.Topology.ServerConfigs.Grafana[key]
+			}
+			if !found || value == "" {
+				// Unset or empty keeps Grafana's default location inside
+				// paths.data, which the entry above (or the deploy directory
+				// behind the template default) already covers.
+				continue
+			}
+			location := value
+			for _, prefix := range []string{"sqlite3://", "sqlite://"} {
+				location = strings.TrimPrefix(location, prefix)
+			}
+			if strings.Contains(location, "://") {
+				// mysql://, postgres:// and friends address an external
+				// database server: there is no local file to protect.
+				continue
+			}
+			if !filepath.IsAbs(location) {
+				// A relative location resolves inside Grafana's data path or
+				// working directory — both recorded above — unless it climbs
+				// out with dot-dot segments, which can land anywhere.
+				if grafanaDetachClimbsOut(location) {
+					return nil, errors.Errorf("cannot determine cluster %q node %s %s path %q locally: a relative path with dot-dot segments can resolve outside Grafana's own directories; record an absolute literal path with `tiup cluster edit-config %s` before detaching", cluster, id, key, value, cluster)
+				}
+				continue
+			}
+			if err := grafanaDetachValidateRecordedPath(cluster, id, key, location); err != nil {
+				return nil, err
+			}
+			dirs = append(dirs, grafanaDetachDir{cluster, id, key, location})
 		}
 	case spec.ComponentTiFlash:
 		config := instance.(*spec.TiFlashInstance).InstanceSpec.(*spec.TiFlashSpec).Config
@@ -259,6 +319,17 @@ func grafanaDetachValidateRecordedPath(cluster, node, kind, raw string) error {
 		return errors.Errorf("cannot check cluster %q node %s %s path %q locally: whitespace or shell metacharacters in it would reach lifecycle cleanup's shell unquoted; record a plain literal path with `tiup cluster edit-config %s` before detaching", cluster, node, kind, raw, cluster)
 	}
 	return nil
+}
+
+// grafanaDetachClimbsOut reports whether a relative path contains a dot-dot
+// segment and can therefore resolve above the directory it is relative to.
+func grafanaDetachClimbsOut(path string) bool {
+	for _, segment := range strings.Split(path, "/") {
+		if segment == ".." {
+			return true
+		}
+	}
+	return false
 }
 
 // grafanaDetachPathsOverlap reports whether first and second denote the same
