@@ -320,7 +320,17 @@ func TestDetachGrafanaDirectorySafety(t *testing.T) {
 		}},
 		{name: "dot-dot database path rejected", modify: func(m *spec.ClusterMeta) {
 			m.Topology.Grafanas[0].Config["database.path"] = "../../etc/grafana/grafana.db"
-		}, want: "dot-dot"},
+		}, want: "can resolve outside"},
+		{name: "net-climbing database path rejected", modify: func(m *spec.ClusterMeta) {
+			// The first dot-dot cancels against "data"; the second one
+			// still climbs above the base, so the location is unknown.
+			m.Topology.Grafanas[0].Config["database.path"] = "data/../../pd-data/grafana.db"
+		}, want: "can resolve outside"},
+		{name: "cancelling dot-dot database path stays covered", modify: func(m *spec.ClusterMeta) {
+			// "data/.." resolves back to the base itself, so the file stays
+			// inside the protected data directory.
+			m.Topology.Grafanas[0].Config["database.path"] = "data/../grafana.db"
+		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			m := newGrafanaDetachTestManager(t)
