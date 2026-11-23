@@ -239,7 +239,7 @@ func grafanaDetachInstanceDirs(cluster string, metadata *spec.ClusterMeta, insta
 				// A relative location resolves inside Grafana's data path or
 				// working directory — both recorded above — unless it climbs
 				// out with dot-dot segments, which can land anywhere.
-				if grafanaDetachClimbsOut(location) {
+				if grafanaDetachPathEscapes(location) {
 					return nil, errors.Errorf("cannot determine cluster %q node %s %s path %q locally: a relative path with dot-dot segments can resolve outside Grafana's own directories; record an absolute literal path with `tiup cluster edit-config %s` before detaching", cluster, id, key, value, cluster)
 				}
 				continue
@@ -321,9 +321,12 @@ func grafanaDetachValidateRecordedPath(cluster, node, kind, raw string) error {
 	return nil
 }
 
-// grafanaDetachClimbsOut reports whether a relative path contains a dot-dot
-// segment and can therefore resolve above the directory it is relative to.
-func grafanaDetachClimbsOut(path string) bool {
+// grafanaDetachPathEscapes reports whether a relative path might resolve
+// above the directory it is relative to. It treats any dot-dot segment as an
+// escape, which is deliberately conservative: a segment like "a/../b" ends
+// up back inside, but where a dot-dot path really lands depends on Grafana's
+// own resolution, and the check refuses to guess.
+func grafanaDetachPathEscapes(path string) bool {
 	for _, segment := range strings.Split(path, "/") {
 		if segment == ".." {
 			return true

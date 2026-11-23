@@ -647,12 +647,26 @@ var (
 	serverConfigsTypeName     = reflect.TypeFor[ServerConfigs]().Name()
 	componentVersionsTypeName = reflect.TypeFor[ComponentVersions]().Name()
 	componentSourcesTypeName  = reflect.TypeFor[ComponentSources]().Name()
+	detachedGrafanaTypeName   = reflect.TypeFor[DetachedGrafana]().Name()
 )
 
-// Skip global/monitored options
+// Skip global/monitored options and non-component records.
+//
+// The component detectors pass whole slice fields here, whose types are
+// unnamed ([]*TiDBSpec, ...), so a slice matches by its element type name;
+// DetachedGrafana is a record kept for discovery, not an instance, and must
+// stay out of platform, port and arch detection.
 func isSkipField(field reflect.Value) bool {
 	tp := field.Type().Name()
-	return tp == globalOptionTypeName || tp == monitorOptionTypeName || tp == serverConfigsTypeName || tp == componentVersionsTypeName || tp == componentSourcesTypeName
+	if tp == "" && field.Kind() == reflect.Slice {
+		tp = field.Type().Elem().Name()
+		if tp == "" && field.Type().Elem().Kind() == reflect.Pointer {
+			// component slices hold pointers ([]*TiDBSpec, ...)
+			tp = field.Type().Elem().Elem().Name()
+		}
+	}
+	return tp == globalOptionTypeName || tp == monitorOptionTypeName || tp == serverConfigsTypeName ||
+		tp == componentVersionsTypeName || tp == componentSourcesTypeName || tp == detachedGrafanaTypeName
 }
 
 func setDefaultDir(parent, role, port string, field reflect.Value) {

@@ -104,14 +104,15 @@ type componentTopology struct {
 //
 //	no member or all deleted, it will add a `OpDelete` in ops, otherwise it will push all current not deleted instances into instance list.
 //
-// A Grafana list with no surviving instance deletes the discovery entry — the
-// behavior before detach-grafana existed, which lets every later refresh
-// retry a cleanup that failed midway — unless the metadata still records a
-// detached Grafana: then the empty list means the entry belongs to an
-// instance TiUP handed over, and it must be preserved. The check runs on the
-// survivors (after the deleted filter), so it also covers the update that
-// runs inside a scale-in of the last managed Grafana, which must not delete
-// an entry preserved for a detached one.
+// For Grafana, an empty surviving list keeps the discovery entry only while
+// the metadata records a detached Grafana. Such a record means the entry
+// belongs to an instance TiUP handed over, so it must be preserved. Without
+// one, the empty list means the last managed Grafana is gone. That includes
+// a scale-in whose PD cleanup failed midway; deleting the entry there lets
+// every later refresh retry the cleanup, as before detach-grafana existed.
+// The check runs on the survivors, after the deleted filter, so a scale-in
+// of the last managed Grafana also reaches it and cannot delete an entry
+// preserved for a detached one.
 func updateInstancesAndOps(ops []clientv3.Op, ins []spec.Instance, deleted set.StringSet, instances []spec.Instance, componentName string, detachedGrafanas []*spec.DetachedGrafana) ([]clientv3.Op, []spec.Instance) {
 	var currentInstances []spec.Instance
 	for _, instance := range instances {
