@@ -177,7 +177,7 @@ func (i *MasterInstance) InitConfig(
 		return err
 	}
 
-	if spec.Config, err = i.setTLSConfig(ctx, enableTLS, spec.Config, paths); err != nil {
+	if spec.Config, err = i.setTLSConfig(ctx, enableTLS, spec.Config, nil, paths); err != nil {
 		return err
 	}
 
@@ -187,7 +187,7 @@ func (i *MasterInstance) InitConfig(
 
 // setTLSConfig set TLS Config to support enable/disable TLS
 // MasterInstance no need to configure TLS
-func (i *MasterInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error) {
+func (i *MasterInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, globalConfig map[string]any, paths meta.DirPaths) (map[string]any, error) {
 	// set TLS configs
 	if enableTLS {
 		if configs == nil {
@@ -398,7 +398,7 @@ func (i *WorkerInstance) InitConfig(
 		return err
 	}
 
-	if spec.Config, err = i.setTLSConfig(ctx, enableTLS, spec.Config, paths); err != nil {
+	if spec.Config, err = i.setTLSConfig(ctx, enableTLS, spec.Config, nil, paths); err != nil {
 		return err
 	}
 
@@ -408,7 +408,7 @@ func (i *WorkerInstance) InitConfig(
 
 // setTLSConfig set TLS Config to support enable/disable TLS
 // workrsInstance no need to configure TLS
-func (i *WorkerInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, paths meta.DirPaths) (map[string]any, error) {
+func (i *WorkerInstance) setTLSConfig(ctx context.Context, enableTLS bool, configs map[string]any, globalConfig map[string]any, paths meta.DirPaths) (map[string]any, error) {
 	// set TLS configs
 	if enableTLS {
 		if configs == nil {
