@@ -33,6 +33,10 @@ import (
 var (
 	// ErrInstallFirst indicates that a component/version is not installed
 	ErrInstallFirst = errors.New("component not installed")
+
+	// IsPackagedBuild is hard-coded to 'true' in binaries produced by packaged builds
+    // (e.g., Debian, RPM, Homebrew) to change their behavior to be more like real system programs.
+	IsPackagedBuild = true
 )
 
 // EnvList is the canonical allowlist of environment variables TiUP will print or expose.
@@ -127,6 +131,13 @@ func InitEnv(options repository.Options, mOpt repository.MirrorOptions) (*Enviro
 		return env, nil
 	}
 
+	// Always initialize the repository. In packaged builds,
+	// specific functions (like automatic updates) will check IsPackagedBuild
+	// and adapt their behavior. Explicit install/list should work.
+	if IsPackagedBuild {
+		fmt.Fprintln(os.Stderr, "Online version check and repository interaction skipped in packaged build.")
+	}
+
 	initRepo := time.Now()
 	profile := localdata.InitProfile()
 
@@ -203,6 +214,9 @@ func (env *Environment) UpdateComponents(specs []string, nightly, force bool) er
 
 // SelfUpdate updates TiUP.
 func (env *Environment) SelfUpdate() error {
+	if IsPackagedBuild {
+		return errors.New("tiup self-update is disabled in this packaged build")
+	}
 	if err := env.v1Repo.DownloadTiUP(env.LocalPath("bin")); err != nil {
 		return err
 	}
