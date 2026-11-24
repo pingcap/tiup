@@ -244,7 +244,7 @@ func (b *Builder) BackupComponent(component, fromVer string, host, deployDir str
 }
 
 // InitConfig appends a CopyComponent task to the current task collection
-func (b *Builder) InitConfig(clusterName, version string, specManager *spec.SpecManager, inst spec.Instance, deployUser string, ignoreCheck bool, paths meta.DirPaths) *Builder {
+func (b *Builder) InitConfig(clusterName, version string, specManager *spec.SpecManager, inst spec.Instance, deployUser string, ignoreCheck bool, paths meta.DirPaths, opt spec.InstanceOpt) *Builder {
 	// get nightly version
 	var componentVersion utils.Version
 	meta := specManager.NewMetadata()
@@ -274,6 +274,7 @@ func (b *Builder) InitConfig(clusterName, version string, specManager *spec.Spec
 		deployUser:     deployUser,
 		ignoreCheck:    ignoreCheck,
 		paths:          paths,
+		opt:            opt,
 	})
 	return b
 }
