@@ -15,7 +15,6 @@
 package manager
 
 import (
-	"net"
 	"path/filepath"
 	"strings"
 
@@ -36,18 +35,13 @@ type grafanaDetachDir struct {
 }
 
 // grafanaDetachHostKey returns the key under which the same-host directory
-// check groups paths. A host recorded as an IP literal is compared by
-// address: the same IPv6 machine can be spelled compressed or expanded (and
-// an IPv4-mapped literal duplicates its IPv4 form), and different spellings
-// must not split one machine into two comparison groups, or the overlap
-// check would silently skip it. A value that is not an IP literal keeps the
-// recorded string: hostname aliases of one machine stay outside what a local
-// check can resolve.
+// check groups paths: the same IPv6 machine can be spelled compressed or
+// expanded (and an IPv4-mapped literal duplicates its IPv4 form), and
+// different spellings must not split one machine into two comparison
+// groups, or the overlap check would silently skip it. Hostname aliases of
+// one machine stay outside what a local check can resolve.
 func grafanaDetachHostKey(host string) string {
-	if ip := net.ParseIP(host); ip != nil {
-		return ip.String()
-	}
-	return host
+	return spec.HostKey(host)
 }
 
 // validateGrafanaDetachDirs rejects a detach whose Grafana directories overlap

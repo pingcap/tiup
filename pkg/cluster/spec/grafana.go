@@ -19,6 +19,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"maps"
+	"net"
 	"os"
 	"path"
 	"path/filepath"
@@ -65,15 +66,37 @@ type GrafanaSpec struct {
 
 // DetachedGrafana records the address of one Grafana instance that
 // detach-grafana transferred out of TiUP management. It exists only to keep
-// topology refreshes from deleting the Grafana discovery entry: an empty
-// managed list on its own cannot tell a detached instance (whose entry must
-// stay) from a scale-in whose PD cleanup failed midway (whose stale entry the
-// next refresh must delete). No lifecycle operation consumes the record —
+// topology refreshes from deleting the Grafana discovery entry while that
+// entry still points at the recorded address: an empty managed list on its
+// own cannot tell a detached instance (whose entry must stay) from a
+// scale-in whose PD cleanup failed midway (whose stale entry the next
+// refresh must delete), and refreshes rewrite the entry to the surviving
+// managed instance, so the record vouches for an address, not for whatever
+// the entry happens to hold. No lifecycle operation consumes the record —
 // the instance's whole specification now belongs to its new maintainer — so
 // it carries the address and nothing else.
 type DetachedGrafana struct {
 	Host string `yaml:"host,omitempty"`
 	Port int    `yaml:"port,omitempty"`
+}
+
+// HostKey returns the canonical form under which recorded hosts are
+// compared: a host written as an IP literal is compared by address — the
+// same IPv6 machine can be spelled compressed or expanded, and an
+// IPv4-mapped literal duplicates its IPv4 form — while any other value
+// keeps the recorded string, since hostname aliases of one machine stay
+// outside what TiUP can resolve locally.
+func HostKey(host string) string {
+	if ip := net.ParseIP(host); ip != nil {
+		return ip.String()
+	}
+	return host
+}
+
+// Matches reports whether a discovery entry described by ip and port points
+// at this detached instance.
+func (d *DetachedGrafana) Matches(ip string, port int) bool {
+	return HostKey(d.Host) == HostKey(ip) && d.Port == port
 }
 
 // PruneDetachedGrafanas drops the detached-Grafana records once the topology

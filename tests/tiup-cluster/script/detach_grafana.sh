@@ -131,6 +131,17 @@ function detach_grafana() (
         diff -u "$state/$port.before" "$state/$port.current"
     }
 
+    # Capture what detach promises to preserve for one instance: the service
+    # is up under a known PID, the API answers, and the files TiUP owns match
+    # checksums recorded now.
+    function detach_record_baseline() {
+        local host=$1 port=$2
+        curl --fail --silent --show-error --retry 10 --retry-connrefused --retry-delay 1 --max-time 15 "http://$host:$port/api/health"
+        detach_snapshot "$host" "$port" > "$state/$port.before"
+        detach_remote "$host" "systemctl show --property=MainPID --value grafana-$port.service" > "$state/$port.pid"
+        test "$(cat "$state/$port.pid")" -gt 0
+    }
+
     local key_a='{"ip":"n2","port":3000,"deploy_path":"/home/tidb/detach-deploy/grafana-3000"}'
     local key_b='{"ip":"n1","port":3001,"deploy_path":"/home/tidb/detach-deploy/grafana-3001"}'
     local key_c='{"ip":"n5","port":3002,"deploy_path":"/home/tidb/detach-deploy/grafana-3002"}'
@@ -141,12 +152,7 @@ function detach_grafana() (
     tiup-cluster _test "$name" writable
     detach_assert_key "$key_a"
     for entry in n2:3000 n1:3001; do
-        host=${entry%:*}
-        port=${entry#*:}
-        curl --fail --silent --show-error --retry 10 --retry-connrefused --retry-delay 1 --max-time 15 "http://$host:$port/api/health"
-        detach_snapshot "$host" "$port" > "$state/$port.before"
-        detach_remote "$host" "systemctl show --property=MainPID --value grafana-$port.service" > "$state/$port.pid"
-        test "$(cat "$state/$port.pid")" -gt 0
+        detach_record_baseline "${entry%:*}" "${entry#*:}"
     done
 
     # Validate all requested nodes before committing any removal.
@@ -178,6 +184,25 @@ function detach_grafana() (
     # A remaining managed Grafana takes precedence on the next refresh.
     tiup-cluster --yes start "$name"
     detach_assert_key "$key_b"
+
+    # Scaling in that last managed Grafana must delete the entry: the
+    # detached record vouches for A's address, but the entry holds B's.
+    # Preserving it would leave PD publishing B's dead address forever.
+    # Deleting converges like a scale-in with no detached Grafana at all,
+    # and later refreshes find no entry and must not write one back.
+    tiup-cluster --yes scale-in "$name" -N n1:3001
+    detach_assert_key ''
+    tiup-cluster --yes start "$name"
+    detach_assert_key ''
+    detach_assert_preserved n2 3000
+
+    # Bring the managed Grafana back to hand it over for real: the entry
+    # points at a managed instance again, and the upcoming detach must
+    # preserve exactly that address.
+    tiup-cluster --yes scale-out "$name" ./topo/detach_grafana_scale_back.yaml -i "$HOME/.ssh/id_rsa"
+    detach_assert_key "$key_b"
+    detach_record_baseline n1 3001
+
     tiup-cluster --yes detach-grafana "$name" -N n1:3001
     detach_assert_key "$key_b"
     tiup-cluster display "$name" > "$state/display"

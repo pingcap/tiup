@@ -30,7 +30,9 @@ func TestUpdateInstancesAndOps(t *testing.T) {
 			name     string
 			empty    bool
 			deleted  []string
-			detached int // detached-grafana records kept in the metadata
+			detached []spec.DetachedGrafana // detached-grafana records kept in the metadata
+			entry    *componentTopology     // current value of the grafana discovery entry
+			preserve bool                   // a grafana entry it vouches for must survive
 			wantIDs  []string
 		}{
 			// An empty surviving list without detached records deletes the
@@ -41,17 +43,42 @@ func TestUpdateInstancesAndOps(t *testing.T) {
 			// existed and must survive it.
 			{name: "empty", empty: true},
 			{name: "empty with unrelated deletion", empty: true, deleted: []string{"other:1234"}},
-			// The same empty list with a detached record instead means the
-			// entry belongs to an instance TiUP handed over: preserve it.
-			{name: "empty with detached records preserves the entry", empty: true, detached: 1},
+			// A detached record preserves the entry only while the entry
+			// points at the address the record vouches for: the entry
+			// belongs to an instance TiUP handed over.
+			{name: "entry at a detached address is preserved", empty: true,
+				detached: []spec.DetachedGrafana{{Host: "gone", Port: 3000}},
+				entry:    &componentTopology{IP: "gone", Port: 3000}, preserve: true},
+			// The record vouches for its address, not for whatever the
+			// entry happens to hold: a refresh rewrote the entry to the
+			// surviving managed instance, and scaling that one in leaves a
+			// dead address no record covers — delete it, converging as
+			// before detach-grafana existed.
+			{name: "entry at the removed managed address is deleted", empty: true,
+				detached: []spec.DetachedGrafana{{Host: "gone", Port: 3000}},
+				entry:    &componentTopology{IP: "second", Port: 3000}},
+			// A missing entry stays missing: nothing writes one back on
+			// behalf of an instance TiUP no longer manages.
+			{name: "absent entry stays absent", empty: true,
+				detached: []spec.DetachedGrafana{{Host: "gone", Port: 3000}}, preserve: true},
+			// Hosts compare by address, so compressed and expanded
+			// spellings of one IPv6 address are the same machine.
+			{name: "IPv6 spelling differences preserve the entry", empty: true,
+				detached: []spec.DetachedGrafana{{Host: "2001:db8::1", Port: 3000}},
+				entry:    &componentTopology{IP: "2001:db8:0:0:0:0:0:1", Port: 3000}, preserve: true},
 			// Scaling in the last managed Grafana runs this update with the
-			// removed instance still in the in-memory list; a detached record
-			// in the metadata must suppress that in-chain deletion too, or
-			// the entry preserved for the handed-over instance is lost to
-			// the unrelated scale-in.
-			{name: "all deleted with detached records preserves the entry", deleted: []string{"first:3000", "second:3000"}, detached: 1},
-			// Without a detached record that same in-chain deletion is the
-			// ordinary scale-in of the last managed Grafana: delete.
+			// removed instance still in the in-memory list; a detached
+			// record must suppress that in-chain deletion too when the entry
+			// is the one it vouches for, or the entry preserved for the
+			// handed-over instance is lost to the unrelated scale-in.
+			{name: "in-chain deletion of an entry at a detached address is suppressed", deleted: []string{"first:3000", "second:3000"},
+				detached: []spec.DetachedGrafana{{Host: "gone", Port: 3000}},
+				entry:    &componentTopology{IP: "gone", Port: 3000}, preserve: true},
+			// The same in-chain deletion with the entry pointing at the
+			// removed managed instance is the ordinary scale-in: delete.
+			{name: "in-chain deletion of the removed managed address proceeds", deleted: []string{"first:3000", "second:3000"},
+				detached: []spec.DetachedGrafana{{Host: "gone", Port: 3000}},
+				entry:    &componentTopology{IP: "second", Port: 3000}},
 			{name: "all retained", wantIDs: []string{"first:3000", "second:3000"}},
 			{name: "first deleted", deleted: []string{"first:3000"}, wantIDs: []string{"second:3000"}},
 			{name: "all deleted", deleted: []string{"first:3000", "second:3000"}},
@@ -69,8 +96,8 @@ func TestUpdateInstancesAndOps(t *testing.T) {
 						{Host: "first", WebPort: 3000}, {Host: "second", WebPort: 3000},
 					},
 				}
-				for range test.detached {
-					topo.DetachedGrafanas = append(topo.DetachedGrafanas, &spec.DetachedGrafana{Host: "gone", Port: 3000})
+				for _, detached := range test.detached {
+					topo.DetachedGrafanas = append(topo.DetachedGrafanas, &detached)
 				}
 				instances := spec.FindComponent(topo, component).Instances()
 				if test.empty {
@@ -79,10 +106,14 @@ func TestUpdateInstancesAndOps(t *testing.T) {
 				previous := (&spec.TiDBComponent{Topology: &spec.Specification{
 					TiDBServers: []*spec.TiDBSpec{{Host: "tidb", Port: 4000}},
 				}}).Instances()
+				var grafanaEntry *componentTopology
+				if component == spec.ComponentGrafana {
+					grafanaEntry = test.entry
+				}
 				ops, retained := updateInstancesAndOps(
 					[]clientv3.Op{clientv3.OpPut("/previous", "untouched")}, previous,
 					set.NewStringSet(test.deleted...), instances, component,
-					topo.DetachedGrafanas,
+					topo.DetachedGrafanas, grafanaEntry,
 				)
 
 				require.True(t, ops[0].IsPut())
@@ -96,8 +127,9 @@ func TestUpdateInstancesAndOps(t *testing.T) {
 				require.Equal(t, test.wantIDs, ids)
 				// The discovery entry survives an empty surviving list only
 				// for Grafana and only while a detached record vouches for
-				// it; every other empty list deletes the entry.
-				wantDelete := len(test.wantIDs) == 0 && !(component == spec.ComponentGrafana && test.detached > 0)
+				// the address it holds; every other empty list deletes the
+				// entry.
+				wantDelete := len(test.wantIDs) == 0 && !(component == spec.ComponentGrafana && test.preserve)
 				if wantDelete {
 					require.Len(t, ops, 2)
 					require.True(t, ops[1].IsDelete())
