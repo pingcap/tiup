@@ -114,6 +114,35 @@ function detach_grafana() (
         fi
     }
 
+    function detach_write_key() {
+        # Same gateway, standing in for an operator who maintains the
+        # discovery record by hand.
+        local encoded
+        encoded=$(printf '%s' "$1" | base64 | tr -d '\n') || return $?
+        curl --fail --silent --show-error --connect-timeout 5 --max-time 15 \
+            -H 'Content-Type: application/json' \
+            --data "{\"key\":\"L3RvcG9sb2d5L2dyYWZhbmE=\",\"value\":\"$encoded\"}" \
+            http://n3:2379/v3/kv/put
+    }
+
+    function detach_owe_entry_cleanup() {
+        # Rebuild what a scale-in leaves behind when its PD update fails: the
+        # entry is still in etcd and the metadata still owes its cleanup.
+        # UpdateMeta writes exactly this record. It is the last key under
+        # `topology:`, which yaml.v3 writes with 4-space indentation.
+        printf '    pending_grafana_entry_cleanups:\n        - host: %s\n          port: %s\n' "$1" "$2" \
+            >> "$TIUP_COMPONENT_DATA_DIR/clusters/$name/meta.yaml"
+    }
+
+    function detach_assert_no_pending_cleanup() {
+        # A refresh that succeeded has settled the cleanup. `! grep` would not
+        # fail the script under set -e, so assert explicitly.
+        if grep -q 'pending_grafana_entry_cleanups' "$TIUP_COMPONENT_DATA_DIR/clusters/$name/meta.yaml"; then
+            echo "metadata still records a pending Grafana entry cleanup"
+            return 1
+        fi
+    }
+
     function detach_snapshot() {
         local host=$1 port=$2
         local deploy="/home/tidb/detach-deploy/grafana-$port"
@@ -168,10 +197,10 @@ function detach_grafana() (
         --ssh-proxy-identity-file "$state/missing-proxy-key" \
         detach-grafana "$name" -N n2:3000
     detach_assert_key "$key_a"
-    # The detach must leave its mark: without a detached_grafanas record the
-    # saved metadata looks like a completed scale-in, and the next refresh
-    # would delete the discovery entry detach promised to keep.
-    grep -q 'detached_grafanas' "$TIUP_COMPONENT_DATA_DIR/clusters/$name/meta.yaml"
+    # detach must not record a pending entry cleanup the way a scale-in does:
+    # with that record the next refresh would delete the discovery entry of
+    # the handed-over instance.
+    detach_assert_no_pending_cleanup
     tiup-cluster display "$name" > "$state/display"
     # `! grep` would not fail the script under set -e, so assert explicitly.
     if grep -Fq 'n2:3000' "$state/display"; then
@@ -185,13 +214,13 @@ function detach_grafana() (
     tiup-cluster --yes start "$name"
     detach_assert_key "$key_b"
 
-    # Scaling in that last managed Grafana must delete the entry: the
-    # detached record vouches for A's address, but the entry holds B's.
-    # Preserving it would leave PD publishing B's dead address forever.
-    # Deleting converges like a scale-in with no detached Grafana at all,
+    # Scaling in that last managed Grafana must delete the entry: TiUP removed
+    # the instance it points at, and keeping it would have PD publish B's dead
+    # address. The cleanup recorded for a retry is settled by the same command,
     # and later refreshes find no entry and must not write one back.
     tiup-cluster --yes scale-in "$name" -N n1:3001
     detach_assert_key ''
+    detach_assert_no_pending_cleanup
     tiup-cluster --yes start "$name"
     detach_assert_key ''
     detach_assert_preserved n2 3000
@@ -226,14 +255,42 @@ function detach_grafana() (
     detach_assert_preserved n2 3000
     detach_assert_preserved n1 3001
 
+    # While this cluster manages no Grafana the discovery record is the
+    # operator's to keep: the handed-over Grafana may be moved to another
+    # address and the record updated by hand, and a routine refresh must
+    # leave it as it is.
+    local key_moved='{"ip":"192.0.2.10","port":3000,"deploy_path":"/srv/grafana"}'
+    detach_write_key "$key_moved"
+    tiup-cluster --yes start "$name"
+    detach_assert_key "$key_moved"
+
     # Starting to manage another Grafana overwrites discovery; removing that
     # last managed instance deletes the key instead of restoring an old one.
     tiup-cluster --yes scale-out "$name" ./topo/detach_grafana_scale_out.yaml -i "$HOME/.ssh/id_rsa"
     detach_assert_key "$key_c"
     tiup-cluster --yes scale-in "$name" -N n5:3002
     detach_assert_key ''
+    detach_assert_no_pending_cleanup
     detach_assert_preserved n2 3000
     detach_assert_preserved n1 3001
+
+    # Rebuild what that scale-in leaves behind when its PD update fails: the
+    # entry is still in etcd and the metadata still owes its cleanup. The next
+    # refresh must retry the deletion and drop the record.
+    detach_write_key "$key_c"
+    detach_owe_entry_cleanup n5 3002
+    tiup-cluster --yes start "$name"
+    detach_assert_key ''
+    detach_assert_no_pending_cleanup
+
+    # The retry deletes only an entry that still points at the removed
+    # instance. One rewritten meanwhile belongs to whoever rewrote it, and
+    # settling the cleanup must not cost it.
+    detach_write_key "$key_moved"
+    detach_owe_entry_cleanup n5 3002
+    tiup-cluster --yes start "$name"
+    detach_assert_key "$key_moved"
+    detach_assert_no_pending_cleanup
 
     tiup-cluster --yes destroy "$name"
     destroyed=true

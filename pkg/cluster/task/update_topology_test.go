@@ -16,6 +16,7 @@ package task
 
 import (
 	"encoding/json"
+	"errors"
 	"testing"
 
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -24,61 +25,47 @@ import (
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
+// previousTiDBInstance returns the instance list an earlier call leaves in
+// the output, which the function under test must pass through untouched.
+func previousTiDBInstance() []spec.Instance {
+	return (&spec.TiDBComponent{Topology: &spec.Specification{
+		TiDBServers: []*spec.TiDBSpec{{Host: "tidb", Port: 4000}},
+	}}).Instances()
+}
+
+func requireOps(t *testing.T, ops []clientv3.Op, previous []spec.Instance, retained []spec.Instance, key string, wantIDs []string, deleted bool) {
+	t.Helper()
+	require.True(t, ops[0].IsPut())
+	require.Equal(t, "/previous", string(ops[0].KeyBytes()))
+	require.Equal(t, "untouched", string(ops[0].ValueBytes()))
+	require.Same(t, previous[0], retained[0])
+	var ids []string
+	for _, instance := range retained[1:] {
+		ids = append(ids, instance.ID())
+	}
+	require.Equal(t, wantIDs, ids)
+	if deleted {
+		require.Len(t, ops, 2)
+		require.True(t, ops[1].IsDelete())
+		require.Equal(t, key, string(ops[1].KeyBytes()))
+	} else {
+		require.Len(t, ops, 1)
+	}
+}
+
 func TestUpdateInstancesAndOps(t *testing.T) {
-	for _, component := range []string{spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertmanager} {
+	// Prometheus and Alertmanager keep the rule they always had: with no
+	// surviving instance their discovery entry is deleted, so that a removal
+	// whose PD update failed is converged by every later refresh.
+	for _, component := range []string{spec.ComponentPrometheus, spec.ComponentAlertmanager} {
 		for _, test := range []struct {
-			name     string
-			empty    bool
-			deleted  []string
-			detached []spec.DetachedGrafana // detached-grafana records kept in the metadata
-			entry    *componentTopology     // current value of the grafana discovery entry
-			preserve bool                   // a grafana entry it vouches for must survive
-			wantIDs  []string
+			name    string
+			empty   bool
+			deleted []string
+			wantIDs []string
 		}{
-			// An empty surviving list without detached records deletes the
-			// entry: after a scale-in whose PD cleanup failed midway, the
-			// saved metadata no longer lists the Grafana, and only this
-			// delete — retried by every later refresh — converges the stale
-			// entry away. This is the behavior from before detach-grafana
-			// existed and must survive it.
 			{name: "empty", empty: true},
 			{name: "empty with unrelated deletion", empty: true, deleted: []string{"other:1234"}},
-			// A detached record preserves the entry only while the entry
-			// points at the address the record vouches for: the entry
-			// belongs to an instance TiUP handed over.
-			{name: "entry at a detached address is preserved", empty: true,
-				detached: []spec.DetachedGrafana{{Host: "gone", Port: 3000}},
-				entry:    &componentTopology{IP: "gone", Port: 3000}, preserve: true},
-			// The record vouches for its address, not for whatever the
-			// entry happens to hold: a refresh rewrote the entry to the
-			// surviving managed instance, and scaling that one in leaves a
-			// dead address no record covers — delete it, converging as
-			// before detach-grafana existed.
-			{name: "entry at the removed managed address is deleted", empty: true,
-				detached: []spec.DetachedGrafana{{Host: "gone", Port: 3000}},
-				entry:    &componentTopology{IP: "second", Port: 3000}},
-			// A missing entry stays missing: nothing writes one back on
-			// behalf of an instance TiUP no longer manages.
-			{name: "absent entry stays absent", empty: true,
-				detached: []spec.DetachedGrafana{{Host: "gone", Port: 3000}}, preserve: true},
-			// Hosts compare by address, so compressed and expanded
-			// spellings of one IPv6 address are the same machine.
-			{name: "IPv6 spelling differences preserve the entry", empty: true,
-				detached: []spec.DetachedGrafana{{Host: "2001:db8::1", Port: 3000}},
-				entry:    &componentTopology{IP: "2001:db8:0:0:0:0:0:1", Port: 3000}, preserve: true},
-			// Scaling in the last managed Grafana runs this update with the
-			// removed instance still in the in-memory list; a detached
-			// record must suppress that in-chain deletion too when the entry
-			// is the one it vouches for, or the entry preserved for the
-			// handed-over instance is lost to the unrelated scale-in.
-			{name: "in-chain deletion of an entry at a detached address is suppressed", deleted: []string{"first:3000", "second:3000"},
-				detached: []spec.DetachedGrafana{{Host: "gone", Port: 3000}},
-				entry:    &componentTopology{IP: "gone", Port: 3000}, preserve: true},
-			// The same in-chain deletion with the entry pointing at the
-			// removed managed instance is the ordinary scale-in: delete.
-			{name: "in-chain deletion of the removed managed address proceeds", deleted: []string{"first:3000", "second:3000"},
-				detached: []spec.DetachedGrafana{{Host: "gone", Port: 3000}},
-				entry:    &componentTopology{IP: "second", Port: 3000}},
 			{name: "all retained", wantIDs: []string{"first:3000", "second:3000"}},
 			{name: "first deleted", deleted: []string{"first:3000"}, wantIDs: []string{"second:3000"}},
 			{name: "all deleted", deleted: []string{"first:3000", "second:3000"}},
@@ -86,9 +73,6 @@ func TestUpdateInstancesAndOps(t *testing.T) {
 		} {
 			t.Run(component+"/"+test.name, func(t *testing.T) {
 				topo := &spec.Specification{
-					Grafanas: []*spec.GrafanaSpec{
-						{Host: "first", Port: 3000}, {Host: "second", Port: 3000},
-					},
 					Monitors: []*spec.PrometheusSpec{
 						{Host: "first", Port: 3000}, {Host: "second", Port: 3000},
 					},
@@ -96,49 +80,130 @@ func TestUpdateInstancesAndOps(t *testing.T) {
 						{Host: "first", WebPort: 3000}, {Host: "second", WebPort: 3000},
 					},
 				}
-				for _, detached := range test.detached {
-					topo.DetachedGrafanas = append(topo.DetachedGrafanas, &detached)
-				}
 				instances := spec.FindComponent(topo, component).Instances()
 				if test.empty {
 					instances = nil
 				}
-				previous := (&spec.TiDBComponent{Topology: &spec.Specification{
-					TiDBServers: []*spec.TiDBSpec{{Host: "tidb", Port: 4000}},
-				}}).Instances()
-				var grafanaEntry *componentTopology
-				if component == spec.ComponentGrafana {
-					grafanaEntry = test.entry
-				}
+				previous := previousTiDBInstance()
 				ops, retained := updateInstancesAndOps(
 					[]clientv3.Op{clientv3.OpPut("/previous", "untouched")}, previous,
 					set.NewStringSet(test.deleted...), instances, component,
-					topo.DetachedGrafanas, grafanaEntry,
 				)
-
-				require.True(t, ops[0].IsPut())
-				require.Equal(t, "/previous", string(ops[0].KeyBytes()))
-				require.Equal(t, "untouched", string(ops[0].ValueBytes()))
-				require.Same(t, previous[0], retained[0])
-				var ids []string
-				for _, instance := range retained[1:] {
-					ids = append(ids, instance.ID())
-				}
-				require.Equal(t, test.wantIDs, ids)
-				// The discovery entry survives an empty surviving list only
-				// for Grafana and only while a detached record vouches for
-				// the address it holds; every other empty list deletes the
-				// entry.
-				wantDelete := len(test.wantIDs) == 0 && !(component == spec.ComponentGrafana && test.preserve)
-				if wantDelete {
-					require.Len(t, ops, 2)
-					require.True(t, ops[1].IsDelete())
-					require.Equal(t, "/topology/"+component, string(ops[1].KeyBytes()))
-				} else {
-					require.Len(t, ops, 1)
-				}
+				requireOps(t, ops, previous, retained, "/topology/"+component, test.wantIDs, len(test.wantIDs) == 0)
 			})
 		}
+	}
+}
+
+func TestUpdateGrafanaAndOps(t *testing.T) {
+	// The cases walk through the rule documented on updateGrafanaAndOps.
+	// TiUP writes a Grafana discovery entry as the address and deploy path
+	// of a managed instance; only the address matters here.
+	entry := func(ip string, port int) string {
+		data, err := json.Marshal(componentTopology{IP: ip, Port: port, DeployPath: "/deploy/grafana"})
+		require.NoError(t, err)
+		return string(data)
+	}
+	owed := []*spec.GrafanaEntryCleanup{{Host: "removed", Port: 3000}}
+	for _, test := range []struct {
+		name     string
+		managed  []string                    // hosts of the Grafana instances in the topology
+		deleted  []string                    // node IDs removed by this run
+		recorded []*spec.GrafanaEntryCleanup // cleanups owed before this run
+		entry    string                      // current value of the discovery entry, empty when absent
+		read     bool                        // whether deciding needs the entry
+		delete   bool
+		wantIDs  []string
+	}{
+		// While a managed Grafana survives it takes over the entry, as before.
+		{name: "surviving Grafana takes over the entry",
+			managed: []string{"first", "second"}, wantIDs: []string{"first:3000", "second:3000"}},
+		{name: "surviving Grafana after a removal",
+			managed: []string{"first", "second"}, deleted: []string{"first:3000"}, wantIDs: []string{"second:3000"}},
+		// With no managed Grafana and nothing owed, the entry is not TiUP's:
+		// it may belong to a Grafana handed over with detach-grafana, or to one
+		// an operator runs outside TiUP. It is left alone, and not even read.
+		{name: "entry of a detached Grafana is left alone", entry: entry("gone", 3000)},
+		{name: "entry of a Grafana outside TiUP is left alone", entry: entry("192.0.2.1", 3000)},
+		{name: "missing entry stays missing"},
+		// A scale-in of the last Grafana removes the instance the entry points
+		// at, so the entry is deleted in the same run ...
+		{name: "entry at the instance removed in this run is deleted",
+			managed: []string{"gone"}, deleted: []string{"gone:3000"},
+			entry: entry("gone", 3000), read: true, delete: true},
+		// ... and only that entry: one pointing elsewhere, say at a Grafana
+		// detached earlier, is not TiUP's to delete.
+		{name: "entry elsewhere during a removal is left alone",
+			managed: []string{"gone"}, deleted: []string{"gone:3000"},
+			entry: entry("elsewhere", 3000), read: true},
+		{name: "missing entry during a removal stays missing",
+			managed: []string{"gone"}, deleted: []string{"gone:3000"}, read: true},
+		// When the PD update of that scale-in fails, the saved metadata no
+		// longer lists the instance. The recorded cleanup is what lets every
+		// later refresh retry the deletion.
+		{name: "recorded cleanup is retried by a later refresh",
+			recorded: owed, entry: entry("removed", 3000), read: true, delete: true},
+		{name: "recorded cleanup does not reach an entry at another address",
+			recorded: owed, entry: entry("moved", 3000), read: true},
+		{name: "recorded cleanup with the entry already gone", recorded: owed, read: true},
+		{name: "recorded and removed instances both count",
+			managed: []string{"gone"}, deleted: []string{"gone:3000"},
+			recorded: owed, entry: entry("removed", 3000), read: true, delete: true},
+		// Hosts are compared by address, so IPv6 spellings name one instance.
+		{name: "IPv6 spelling differences name the same instance",
+			recorded: []*spec.GrafanaEntryCleanup{{Host: "2001:db8::1", Port: 3000}},
+			entry:    entry("2001:db8:0:0:0:0:0:1", 3000), read: true, delete: true},
+		// A value TiUP did not write is not the leftover of an instance it
+		// removed; decoding it must not fail the refresh either.
+		{name: "undecodable entry is left alone", recorded: owed, entry: "not json", read: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			topo := &spec.Specification{}
+			for _, host := range test.managed {
+				topo.Grafanas = append(topo.Grafanas, &spec.GrafanaSpec{Host: host, Port: 3000})
+			}
+			previous := previousTiDBInstance()
+			read := false
+			ops, retained, err := updateGrafanaAndOps(
+				[]clientv3.Op{clientv3.OpPut("/previous", "untouched")}, previous,
+				set.NewStringSet(test.deleted...), (&spec.GrafanaComponent{Topology: topo}).Instances(), test.recorded,
+				func() ([]byte, error) {
+					read = true
+					return []byte(test.entry), nil
+				},
+			)
+			require.NoError(t, err)
+			require.Equal(t, test.read, read, "the entry is read exactly when a cleanup is owed")
+			requireOps(t, ops, previous, retained, "/topology/grafana", test.wantIDs, test.delete)
+		})
+	}
+}
+
+func TestUpdateGrafanaAndOpsPropagatesReadError(t *testing.T) {
+	// The entry is read only when a cleanup is owed, and a failed read must
+	// then not pass for a missing entry: the refresh fails and the next one
+	// retries, with the cleanup still recorded.
+	readFailed := errors.New("read failed")
+	for _, test := range []struct {
+		name     string
+		managed  []string
+		deleted  []string
+		recorded []*spec.GrafanaEntryCleanup
+	}{
+		{name: "removed in this run", managed: []string{"gone"}, deleted: []string{"gone:3000"}},
+		{name: "recorded earlier", recorded: []*spec.GrafanaEntryCleanup{{Host: "removed", Port: 3000}}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			topo := &spec.Specification{}
+			for _, host := range test.managed {
+				topo.Grafanas = append(topo.Grafanas, &spec.GrafanaSpec{Host: host, Port: 3000})
+			}
+			_, _, err := updateGrafanaAndOps(
+				nil, nil, set.NewStringSet(test.deleted...), (&spec.GrafanaComponent{Topology: topo}).Instances(), test.recorded,
+				func() ([]byte, error) { return nil, readFailed },
+			)
+			require.ErrorIs(t, err, readFailed)
+		})
 	}
 }
 

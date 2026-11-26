@@ -63,12 +63,6 @@ func (m *Manager) EditConfig(name string, opt EditConfigOptions, skipConfirm boo
 	}
 
 	m.logger.Infof("Applying changes...")
-	// A managed Grafana added here takes over the discovery entry, ending the
-	// preservation duty recorded for detached ones; drop the records so a
-	// later empty Grafana list means "delete the entry" again.
-	if specTopo, ok := newTopo.(*spec.Specification); ok {
-		specTopo.PruneDetachedGrafanas()
-	}
 	metadata.SetTopology(newTopo)
 	err = m.specManager.SaveMeta(name, metadata)
 	if err != nil {

@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -201,11 +202,9 @@ type (
 		Monitors               []*PrometheusSpec      `yaml:"monitoring_servers"`
 		Grafanas               []*GrafanaSpec         `yaml:"grafana_servers,omitempty"`
 		Alertmanagers          []*AlertmanagerSpec    `yaml:"alertmanager_servers,omitempty"`
-		// DetachedGrafanas records addresses of Grafana instances removed
-		// from management by detach-grafana; it is maintained by that command
-		// and pruned by PruneDetachedGrafanas, never by instance-level
-		// lifecycle code. See the DetachedGrafana type for its purpose.
-		DetachedGrafanas []*DetachedGrafana `yaml:"detached_grafanas,omitempty"`
+		// Cleanups of the Grafana discovery entry that TiUP still owes; see
+		// GrafanaEntryCleanup for what a record means and who maintains it.
+		PendingGrafanaEntryCleanups []*GrafanaEntryCleanup `yaml:"pending_grafana_entry_cleanups,omitempty"`
 	}
 )
 
@@ -570,6 +569,7 @@ func (s *Specification) GetEtcdProxyClient(tlsCfg *tls.Config, tcpProxy *proxy.T
 // Merge returns a new Specification which sum old ones
 func (s *Specification) Merge(that Topology) Topology {
 	spec := that.(*Specification)
+	grafanas := slices.Concat(s.Grafanas, spec.Grafanas)
 	return &Specification{
 		GlobalOptions:          s.GlobalOptions,
 		MonitoredOptions:       s.MonitoredOptions,
@@ -593,12 +593,11 @@ func (s *Specification) Merge(that Topology) Topology {
 		TiSparkMasters:         append(s.TiSparkMasters, spec.TiSparkMasters...),
 		TiSparkWorkers:         append(s.TiSparkWorkers, spec.TiSparkWorkers...),
 		Monitors:               append(s.Monitors, spec.Monitors...),
-		Grafanas:               append(s.Grafanas, spec.Grafanas...),
+		Grafanas:               grafanas,
 		Alertmanagers:          append(s.Alertmanagers, spec.Alertmanagers...),
-		// Detached records describe handed-over instances, never something
-		// the new part could add; drop them only through the prune that runs
-		// when the merged topology manages a Grafana again.
-		DetachedGrafanas: s.DetachedGrafanas,
+		// An owed cleanup must survive the merge that replaces the saved
+		// topology, unless a Grafana is added and takes over the entry.
+		PendingGrafanaEntryCleanups: PendingGrafanaEntryCleanups(grafanas, s.PendingGrafanaEntryCleanups, nil),
 	}
 }
 
@@ -642,19 +641,19 @@ func fillCustomDefaults(globalOptions *GlobalOptions, data any) error {
 }
 
 var (
-	globalOptionTypeName      = reflect.TypeFor[GlobalOptions]().Name()
-	monitorOptionTypeName     = reflect.TypeFor[MonitoredOptions]().Name()
-	serverConfigsTypeName     = reflect.TypeFor[ServerConfigs]().Name()
-	componentVersionsTypeName = reflect.TypeFor[ComponentVersions]().Name()
-	componentSourcesTypeName  = reflect.TypeFor[ComponentSources]().Name()
-	detachedGrafanaTypeName   = reflect.TypeFor[DetachedGrafana]().Name()
+	globalOptionTypeName        = reflect.TypeFor[GlobalOptions]().Name()
+	monitorOptionTypeName       = reflect.TypeFor[MonitoredOptions]().Name()
+	serverConfigsTypeName       = reflect.TypeFor[ServerConfigs]().Name()
+	componentVersionsTypeName   = reflect.TypeFor[ComponentVersions]().Name()
+	componentSourcesTypeName    = reflect.TypeFor[ComponentSources]().Name()
+	grafanaEntryCleanupTypeName = reflect.TypeFor[GrafanaEntryCleanup]().Name()
 )
 
 // Skip global/monitored options and non-component records.
 //
 // The component detectors pass whole slice fields here, whose types are
 // unnamed ([]*TiDBSpec, ...), so a slice matches by its element type name;
-// DetachedGrafana is a record kept for discovery, not an instance, and must
+// GrafanaEntryCleanup is a bookkeeping record, not an instance, and must
 // stay out of platform, port and arch detection.
 func isSkipField(field reflect.Value) bool {
 	tp := field.Type().Name()
@@ -666,7 +665,7 @@ func isSkipField(field reflect.Value) bool {
 		}
 	}
 	return tp == globalOptionTypeName || tp == monitorOptionTypeName || tp == serverConfigsTypeName ||
-		tp == componentVersionsTypeName || tp == componentSourcesTypeName || tp == detachedGrafanaTypeName
+		tp == componentVersionsTypeName || tp == componentSourcesTypeName || tp == grafanaEntryCleanupTypeName
 }
 
 func setDefaultDir(parent, role, port string, field reflect.Value) {

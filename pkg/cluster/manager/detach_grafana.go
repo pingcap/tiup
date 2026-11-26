@@ -95,7 +95,7 @@ func (m *Manager) DetachGrafana(name string, nodes []string, skipConfirm bool) e
 	// overlap with a remaining (e.g. parent) directory would never be
 	// reported again. postDetach is a throwaway view built for this check
 	// (and the warnings below); clusterMeta itself is never modified here —
-	// only the UpdateMeta task at the end persists a change.
+	// only SaveClusterMeta at the end persists a change.
 	postDetach := postDetachMeta(clusterMeta, targetIDs)
 	if err := validateGrafanaDetachDirs(m.specManager, name, postDetach, targets); err != nil {
 		return err
@@ -135,13 +135,11 @@ Finish all other TiUP changes before proceeding: detach does not lock out concur
 		}
 	}
 
-	// Persist the change. Unlike scale-in, which records the removal through
-	// task.UpdateMeta, detach must also leave a DetachedGrafanas record:
-	// without it an empty Grafana list in the saved metadata is
-	// indistinguishable from a completed scale-in, and the next topology
-	// refresh would delete the discovery entry detach promised to keep.
-	// SaveClusterMeta backs up the previous file the same way UpdateMeta
-	// does; the in-memory clusterMeta is not modified.
+	// Persist the change without task.UpdateMeta, which records an entry
+	// cleanup for every Grafana it removes (see spec.GrafanaEntryCleanup): the
+	// next refresh would then delete the discovery entry of the handed-over
+	// instance. SaveClusterMeta backs up the previous file the same way
+	// UpdateMeta does; the in-memory clusterMeta is not modified.
 	if err := spec.SaveClusterMeta(name, postDetachMeta(clusterMeta, targetIDs)); err != nil {
 		return errors.Annotate(err, "failed to save detach metadata; inspect meta.yaml and backup/ before retrying")
 	}
@@ -150,29 +148,22 @@ Finish all other TiUP changes before proceeding: detach does not lock out concur
 	return nil
 }
 
-// postDetachMeta returns metadata with the given Grafana instances moved from
-// the managed list to the detached record: Grafanas drops them, so no
-// lifecycle operation ever sees them again, while DetachedGrafanas keeps
-// their addresses for the topology refreshes that must preserve the discovery
-// entry. Existing records are kept, so detaching in several steps
-// accumulates. Both struct copies are shallow — apart from Topology (and
-// Topology.Grafanas / DetachedGrafanas) every field still aliases the loaded
-// metadata, which is fine for the validation view and for saving alike.
+// postDetachMeta returns metadata with the given Grafana instances removed
+// from the managed list, so that no lifecycle operation ever sees them again.
+// Both struct copies are shallow — apart from Topology (and
+// Topology.Grafanas) every field still aliases the loaded metadata, which is
+// fine for the validation view and for saving alike.
 func postDetachMeta(metadata *spec.ClusterMeta, detachIDs []string) *spec.ClusterMeta {
 	detaching := set.NewStringSet(detachIDs...)
 	topology := *metadata.Topology
 	topology.Grafanas = nil
-	detached := append([]*spec.DetachedGrafana{}, metadata.Topology.DetachedGrafanas...)
 	// GrafanaComponent.Instances() yields instances in Grafanas order, so the
 	// i-th instance corresponds to Grafanas[i] in the original topology.
 	for i, instance := range (&spec.GrafanaComponent{Topology: metadata.Topology}).Instances() {
 		if !detaching.Exist(instance.ID()) {
 			topology.Grafanas = append(topology.Grafanas, metadata.Topology.Grafanas[i])
-			continue
 		}
-		detached = append(detached, &spec.DetachedGrafana{Host: instance.GetHost(), Port: instance.GetPort()})
 	}
-	topology.DetachedGrafanas = detached
 	view := *metadata
 	view.Topology = &topology
 	return &view
@@ -187,7 +178,7 @@ func grafanaDetachFollowUpWarning(topology *spec.Specification) string {
 	if len(topology.Grafanas) > 0 {
 		fmt.Fprintf(&msg, "%d managed Grafana instance(s) remain; future topology refreshes will use their monitoring entry.\n", len(topology.Grafanas))
 	} else {
-		msg.WriteString("Existing Grafana discovery information is kept (recorded as detached_grafanas in the metadata) but is not checked or recreated. Adding managed Grafana later, or removing that record with `tiup cluster edit-config`, replaces or deletes it.\n")
+		msg.WriteString("Existing Grafana discovery information is kept as it is: later topology refreshes do not check, rewrite or recreate it while this cluster manages no Grafana. Adding a managed Grafana later replaces it.\n")
 	}
 	msg.WriteString("Future Prometheus configuration refreshes will remove health probes for the detached Grafana instances.")
 	return color.YellowString("\n%s", msg.String())

@@ -24,6 +24,7 @@ import (
 	"path"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"time"
 
@@ -64,18 +65,29 @@ type GrafanaSpec struct {
 	UseVMAsDatasource bool                 `yaml:"use_vm_as_datasource,omitempty" validate:"use_vm_as_datasource:editable"`
 }
 
-// DetachedGrafana records the address of one Grafana instance that
-// detach-grafana transferred out of TiUP management. It exists only to keep
-// topology refreshes from deleting the Grafana discovery entry while that
-// entry still points at the recorded address: an empty managed list on its
-// own cannot tell a detached instance (whose entry must stay) from a
-// scale-in whose PD cleanup failed midway (whose stale entry the next
-// refresh must delete), and refreshes rewrite the entry to the surviving
-// managed instance, so the record vouches for an address, not for whatever
-// the entry happens to hold. No lifecycle operation consumes the record —
-// the instance's whole specification now belongs to its new maintainer — so
-// it carries the address and nothing else.
-type DetachedGrafana struct {
+// GrafanaEntryCleanup records that TiUP removed the managed Grafana at this
+// address as the last one it managed, and has not yet dealt with the
+// discovery entry it wrote for that instance. The rule it serves is documented
+// in task.updateGrafanaAndOps.
+//
+// The rule needs the record because, once no Grafana is managed, a refresh
+// must leave the entry alone unless it is the leftover of an instance TiUP
+// removed, and with the instance gone from the metadata nothing else can tell
+// one from the other. The record is therefore kept for exactly as long as the
+// cleanup is owed:
+//
+//   - task.UpdateMeta adds it when it saves a topology whose last managed
+//     Grafana was removed, before the refresh that clears the entry runs. A
+//     refresh that fails or is interrupted is thereby retried by every later one.
+//   - A refresh drops it once it has committed
+//     (task.UpdateTopology.settleGrafanaEntryCleanups), and so does any change
+//     that leaves a managed Grafana, since that instance takes over the entry
+//     (see PendingGrafanaEntryCleanups).
+//
+// Between commands, the metadata carries a record only while a cleanup is
+// still owed. It is a note for TiUP alone, not a managed instance, and carries
+// the address and nothing else.
+type GrafanaEntryCleanup struct {
 	Host string `yaml:"host,omitempty"`
 	Port int    `yaml:"port,omitempty"`
 }
@@ -93,22 +105,22 @@ func HostKey(host string) string {
 	return host
 }
 
-// Matches reports whether a discovery entry described by ip and port points
-// at this detached instance.
-func (d *DetachedGrafana) Matches(ip string, port int) bool {
-	return HostKey(d.Host) == HostKey(ip) && d.Port == port
+// Matches reports whether a discovery entry described by ip and port was
+// written for the instance this cleanup belongs to.
+func (c *GrafanaEntryCleanup) Matches(ip string, port int) bool {
+	return HostKey(c.Host) == HostKey(ip) && c.Port == port
 }
 
-// PruneDetachedGrafanas drops the detached-Grafana records once the topology
-// manages a Grafana instance again: a managed instance takes over the
-// discovery entry, the preservation duty recorded for the detached ones ends,
-// and a leftover record would make a later refresh preserve a stale entry
-// after that managed instance is scaled in. The records are meaningful only
-// while the topology has no managed Grafana.
-func (s *Specification) PruneDetachedGrafanas() {
-	if len(s.Grafanas) > 0 {
-		s.DetachedGrafanas = nil
+// PendingGrafanaEntryCleanups returns the entry cleanups a topology owes after
+// a change, given what it owed before (recorded) and the Grafana instances the
+// change removes and keeps. A surviving managed instance takes over the
+// discovery entry and settles them all; without one, the removed instances
+// join the recorded cleanups.
+func PendingGrafanaEntryCleanups(remaining []*GrafanaSpec, recorded, removed []*GrafanaEntryCleanup) []*GrafanaEntryCleanup {
+	if len(remaining) > 0 {
+		return nil
 	}
+	return slices.Concat(recorded, removed)
 }
 
 // Role returns the component role of the instance

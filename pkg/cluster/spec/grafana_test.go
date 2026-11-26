@@ -435,23 +435,28 @@ func TestVictoriaMetricsDefaultDatasource(t *testing.T) {
 	assert.Contains(t, string(dsContent), "name: test-cluster-vm")
 }
 
-func TestPruneDetachedGrafanas(t *testing.T) {
-	// The detached records are the only thing telling a topology refresh to
-	// preserve the Grafana discovery entry, and they are only trustworthy
-	// while no managed Grafana exists: once one is added it takes over the
-	// entry, and a leftover record would make a later refresh preserve a
-	// stale entry after that Grafana is scaled in. Hence prune exactly when a
-	// managed Grafana is present and keep the records otherwise.
-	detached := []*DetachedGrafana{{Host: "gone", Port: 3000}}
+func TestGrafanaEntryCleanupMatches(t *testing.T) {
+	cleanup := &GrafanaEntryCleanup{Host: "2001:db8::1", Port: 3000}
+	// Hosts are compared by address: an entry spelled differently from the
+	// metadata still names the same instance.
+	require.True(t, cleanup.Matches("2001:db8:0:0:0:0:0:1", 3000))
+	require.False(t, cleanup.Matches("2001:db8::1", 3001))
+	require.False(t, cleanup.Matches("2001:db8::2", 3000))
+}
 
-	noManaged := &Specification{DetachedGrafanas: detached}
-	noManaged.PruneDetachedGrafanas()
-	require.Equal(t, detached, noManaged.DetachedGrafanas, "records must survive while no managed Grafana exists")
+func TestPendingGrafanaEntryCleanups(t *testing.T) {
+	removed := []*GrafanaEntryCleanup{{Host: "first", Port: 3000}, {Host: "second", Port: 3000}}
+	recorded := []*GrafanaEntryCleanup{{Host: "owed", Port: 3000}}
+	managed := []*GrafanaSpec{{Host: "kept", Port: 3000}}
 
-	withManaged := &Specification{
-		Grafanas:         []*GrafanaSpec{{Host: "kept", Port: 3000}},
-		DetachedGrafanas: detached,
-	}
-	withManaged.PruneDetachedGrafanas()
-	require.Empty(t, withManaged.DetachedGrafanas, "a managed Grafana ends the preservation duty")
+	// A surviving managed Grafana takes over the discovery entry, which
+	// settles every cleanup, recorded or new.
+	require.Nil(t, PendingGrafanaEntryCleanups(managed, recorded, removed))
+	// Without one, the newly removed instances join the cleanups recorded
+	// earlier, which a change that removes nothing keeps as they are.
+	require.Equal(t, []*GrafanaEntryCleanup{{Host: "owed", Port: 3000}, {Host: "first", Port: 3000}, {Host: "second", Port: 3000}},
+		PendingGrafanaEntryCleanups(nil, recorded, removed))
+	require.Equal(t, recorded, PendingGrafanaEntryCleanups(nil, recorded, nil))
+	require.Equal(t, removed, PendingGrafanaEntryCleanups(nil, nil, removed))
+	require.Nil(t, PendingGrafanaEntryCleanups(nil, nil, nil))
 }

@@ -59,23 +59,20 @@ func (u *UpdateTopology) Execute(ctx context.Context) error {
 
 	deleted := set.NewStringSet(u.deletedNodeIDs...)
 
-	// Whether an empty surviving Grafana list may keep the discovery entry
-	// depends on what the entry currently holds, which only the cluster
-	// itself knows: the metadata's detached records vouch for an address,
-	// not for whatever the entry happens to contain. The read sits outside
-	// the transaction below; the entry is written only by TiUP, and
-	// refreshes of one cluster are not expected to interleave.
-	grafanaEntry, err := readTopologyEntry(ctx, client, spec.ComponentGrafana)
-	if err != nil {
-		return err
-	}
-
 	var ops []clientv3.Op
 	var instances []spec.Instance
 
-	ops, instances = updateInstancesAndOps(ops, instances, deleted, (&spec.MonitorComponent{Topology: topo}).Instances(), "prometheus", nil, nil)
-	ops, instances = updateInstancesAndOps(ops, instances, deleted, (&spec.GrafanaComponent{Topology: topo}).Instances(), "grafana", topo.DetachedGrafanas, grafanaEntry)
-	ops, instances = updateInstancesAndOps(ops, instances, deleted, (&spec.AlertManagerComponent{Topology: topo}).Instances(), "alertmanager", nil, nil)
+	ops, instances = updateInstancesAndOps(ops, instances, deleted, (&spec.MonitorComponent{Topology: topo}).Instances(), "prometheus")
+	// The entry is read from etcd only when a cleanup is owed; the closure
+	// keeps that decision inside updateGrafanaAndOps.
+	ops, instances, err = updateGrafanaAndOps(ops, instances, deleted, (&spec.GrafanaComponent{Topology: topo}).Instances(),
+		topo.PendingGrafanaEntryCleanups, func() ([]byte, error) {
+			return readTopologyEntry(ctx, client, spec.ComponentGrafana)
+		})
+	if err != nil {
+		return err
+	}
+	ops, instances = updateInstancesAndOps(ops, instances, deleted, (&spec.AlertManagerComponent{Topology: topo}).Instances(), "alertmanager")
 
 	for _, instance := range (&spec.TiDBComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
@@ -100,8 +97,10 @@ func (u *UpdateTopology) Execute(ctx context.Context) error {
 		ops = append(ops, *op)
 	}
 
-	_, err = txn.Then(ops...).Commit()
-	return err
+	if _, err := txn.Then(ops...).Commit(); err != nil {
+		return err
+	}
+	return u.settleGrafanaEntryCleanups()
 }
 
 // componentTopology represent the topology info for alertmanager, prometheus and grafana.
@@ -111,39 +110,16 @@ type componentTopology struct {
 	DeployPath string `json:"deploy_path"`
 }
 
-// updateInstancesAndOps receives alertmanager, prometheus and grafana instance list, if the list has
+// updateInstancesAndOps receives alertmanager or prometheus instance list, if the list has
 //
 //	no member or all deleted, it will add a `OpDelete` in ops, otherwise it will push all current not deleted instances into instance list.
-//
-// For Grafana, an empty surviving list keeps the discovery entry only while
-// the entry's current address, grafanaEntry, belongs to an instance TiUP
-// handed over (a detached record). The records vouch for their addresses
-// alone: refreshes rewrite the entry to the surviving managed instance, and
-// once that one is scaled in too, the entry holds a dead address no record
-// vouches for — deleting it lets every later refresh converge the stale
-// entry away, as before detach-grafana existed. Without any record the same
-// holds for a scale-in whose PD cleanup failed midway. A missing entry
-// stays missing; nothing writes one back. The check runs on the survivors,
-// after the deleted filter, so a scale-in of the last managed Grafana also
-// reaches it and cannot delete an entry preserved for a detached one.
-func updateInstancesAndOps(ops []clientv3.Op, ins []spec.Instance, deleted set.StringSet, instances []spec.Instance, componentName string, detachedGrafanas []*spec.DetachedGrafana, grafanaEntry *componentTopology) ([]clientv3.Op, []spec.Instance) {
+func updateInstancesAndOps(ops []clientv3.Op, ins []spec.Instance, deleted set.StringSet, instances []spec.Instance, componentName string) ([]clientv3.Op, []spec.Instance) {
 	var currentInstances []spec.Instance
 	for _, instance := range instances {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
 		currentInstances = append(currentInstances, instance)
-	}
-
-	if componentName == spec.ComponentGrafana && len(currentInstances) == 0 && len(detachedGrafanas) > 0 {
-		if grafanaEntry == nil {
-			return ops, ins
-		}
-		for _, detached := range detachedGrafanas {
-			if detached.Matches(grafanaEntry.IP, grafanaEntry.Port) {
-				return ops, ins
-			}
-		}
 	}
 
 	if len(currentInstances) == 0 {
@@ -154,9 +130,83 @@ func updateInstancesAndOps(ops []clientv3.Op, ins []spec.Instance, deleted set.S
 	return ops, ins
 }
 
+// updateGrafanaAndOps maintains the Grafana discovery entry (/topology/grafana
+// in PD, where TiDB Dashboard reads the Grafana address) by one rule:
+//
+//	While TiUP manages a Grafana, the entry follows the managed instances.
+//	Once it manages none, the entry is left alone, unread, unless it still
+//	points at an instance TiUP removed and has not yet cleared the entry of:
+//	that entry is deleted, and the deletion is retried until it succeeds.
+//
+// The second half comes down to ownership. Once TiUP manages no Grafana, the
+// entry belongs to whoever runs Grafana: the last instance may have been
+// handed over with detach-grafana and moved since, and its operator may have
+// updated the entry. What TiUP wrote for an instance it removed is the one
+// exception, as nothing listens at that address any more.
+//
+// TiUP can tell that exception only by remembering the removal, since the
+// metadata no longer lists the instance afterwards. The removal is therefore
+// recorded as a pending cleanup (spec.GrafanaEntryCleanup) until a refresh
+// has dealt with the entry. An instance counts as removed if this run removes
+// it (still in instances, listed in deleted) or a record says so, and
+// settleGrafanaEntryCleanups drops the records once the refresh has committed.
+// A missing entry stays missing.
+func updateGrafanaAndOps(ops []clientv3.Op, ins []spec.Instance, deleted set.StringSet, instances []spec.Instance, recorded []*spec.GrafanaEntryCleanup, readEntry func() ([]byte, error)) ([]clientv3.Op, []spec.Instance, error) {
+	var currentInstances []spec.Instance
+	cleanups := append([]*spec.GrafanaEntryCleanup{}, recorded...)
+	for _, instance := range instances {
+		if !deleted.Exist(instance.ID()) {
+			currentInstances = append(currentInstances, instance)
+			continue
+		}
+		cleanups = append(cleanups, grafanaEntryCleanupFor(instance))
+	}
+
+	if len(currentInstances) > 0 {
+		return ops, append(ins, currentInstances...), nil
+	}
+	if len(cleanups) == 0 {
+		return ops, ins, nil
+	}
+
+	value, err := readEntry()
+	if err != nil {
+		return ops, ins, err
+	}
+	if grafanaEntryPointsAt(value, cleanups) {
+		ops = append(ops, clientv3.OpDelete("/topology/"+spec.ComponentGrafana))
+	}
+	return ops, ins, nil
+}
+
+// grafanaEntryCleanupFor returns the cleanup owed for a Grafana instance TiUP
+// is removing.
+func grafanaEntryCleanupFor(instance spec.Instance) *spec.GrafanaEntryCleanup {
+	return &spec.GrafanaEntryCleanup{Host: instance.GetHost(), Port: instance.GetPort()}
+}
+
+// grafanaEntryPointsAt reports whether the discovery entry held in value was
+// written for the Grafana instance at one of the addresses in cleanups. A
+// missing value, or one not in the form TiUP writes, is not such a leftover.
+func grafanaEntryPointsAt(value []byte, cleanups []*spec.GrafanaEntryCleanup) bool {
+	if len(value) == 0 {
+		return false
+	}
+	var entry componentTopology
+	if err := json.Unmarshal(value, &entry); err != nil {
+		return false
+	}
+	for _, cleanup := range cleanups {
+		if cleanup.Matches(entry.IP, entry.Port) {
+			return true
+		}
+	}
+	return false
+}
+
 // readTopologyEntry returns the current value of a monitoring component's
 // discovery entry, or nil when the entry does not exist.
-func readTopologyEntry(ctx context.Context, client *clientv3.Client, component string) (*componentTopology, error) {
+func readTopologyEntry(ctx context.Context, client *clientv3.Client, component string) ([]byte, error) {
 	resp, err := client.Get(ctx, "/topology/"+component)
 	if err != nil {
 		return nil, err
@@ -164,11 +214,25 @@ func readTopologyEntry(ctx context.Context, client *clientv3.Client, component s
 	if len(resp.Kvs) == 0 {
 		return nil, nil
 	}
-	var entry componentTopology
-	if err := json.Unmarshal(resp.Kvs[0].Value, &entry); err != nil {
-		return nil, errors.Annotatef(err, "unmarshal discovery entry /topology/%s", component)
+	return resp.Kvs[0].Value, nil
+}
+
+// settleGrafanaEntryCleanups drops the pending entry cleanups once this
+// refresh has committed, as spec.GrafanaEntryCleanup describes. From then on a
+// record would only let a later refresh delete an entry someone wrote at the
+// removed instance's former address.
+//
+// The record is read back from disk, not from the in-memory topology: during a
+// scale-in that one still lists the removed instance and predates the record
+// UpdateMeta has just saved.
+func (u *UpdateTopology) settleGrafanaEntryCleanups() error {
+	u.metadata.Topology.PendingGrafanaEntryCleanups = nil
+	metadata, err := spec.ClusterMetadata(u.cluster)
+	if err != nil || metadata.Topology == nil || len(metadata.Topology.PendingGrafanaEntryCleanups) == 0 {
+		return err
 	}
-	return &entry, nil
+	metadata.Topology.PendingGrafanaEntryCleanups = nil
+	return spec.SaveClusterMeta(u.cluster, metadata)
 }
 
 // updateTopologyOp receive an alertmanager, prometheus or grafana instance, and return an operation
