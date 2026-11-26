@@ -63,6 +63,16 @@ type GrafanaSpec struct {
 	UseVMAsDatasource bool                 `yaml:"use_vm_as_datasource,omitempty" validate:"use_vm_as_datasource:editable"`
 }
 
+// mergedConfig returns the settings written to grafana.ini: global
+// (server_configs.grafana) overridden by the instance config. global is not
+// modified, it is shared by all Grafana instances.
+func (s *GrafanaSpec) mergedConfig(global map[string]string) map[string]string {
+	config := make(map[string]string, len(global)+len(s.Config))
+	maps.Copy(config, global)
+	maps.Copy(config, s.Config)
+	return config
+}
+
 // Role returns the component role of the instance
 func (s *GrafanaSpec) Role() string {
 	return ComponentGrafana
@@ -153,10 +163,10 @@ func (c *GrafanaComponent) Instances() []Instance {
 					s.DeployDir,
 				},
 				StatusFn: func(_ context.Context, timeout time.Duration, _ *tls.Config, _ ...string) string {
-					return statusByHost(s.GetManageHost(), s.Port, "/login", timeout, nil)
+					return statusByHost(s.GetManageHost(), s.Port, "/login", timeout, c.probeTLSConfig(s))
 				},
-				UptimeFn: func(_ context.Context, timeout time.Duration, tlsCfg *tls.Config) time.Duration {
-					return UptimeByHost(s.GetManageHost(), s.Port, timeout, tlsCfg, "")
+				UptimeFn: func(_ context.Context, timeout time.Duration, _ *tls.Config) time.Duration {
+					return UptimeByHost(s.GetManageHost(), s.Port, timeout, c.probeTLSConfig(s), "")
 				},
 				Component: c,
 			},
@@ -164,6 +174,21 @@ func (c *GrafanaComponent) Instances() []Instance {
 		})
 	}
 	return ins
+}
+
+// probeTLSConfig returns the TLS config for the status and uptime probes of s,
+// or nil if s serves plain HTTP.
+//
+// TiUP does not set up TLS for Grafana (see setTLSConfig), so its certificate
+// is not issued by the cluster CA, and the probe connects by manage host, which
+// the certificate may not name. The probes send no credentials, so the
+// certificate is not verified, as with the plain HTTP probe.
+func (c *GrafanaComponent) probeTLSConfig(s *GrafanaSpec) *tls.Config {
+	protocol := s.mergedConfig(c.GetGrafanaConfig())["server.protocol"]
+	if protocol != "https" && protocol != "h2" {
+		return nil
+	}
+	return &tls.Config{InsecureSkipVerify: true}
 }
 
 // GrafanaInstance represent the grafana instance
@@ -225,12 +250,7 @@ func (i *GrafanaInstance) InitConfig(
 		return err
 	}
 
-	userConfig := i.topo.GetGrafanaConfig()
-	if userConfig == nil {
-		userConfig = make(map[string]string)
-	}
-	maps.Copy(userConfig, spec.Config)
-	err := mergeAdditionalGrafanaConf(fp, userConfig)
+	err := mergeAdditionalGrafanaConf(fp, spec.mergedConfig(i.topo.GetGrafanaConfig()))
 	if err != nil {
 		return err
 	}
