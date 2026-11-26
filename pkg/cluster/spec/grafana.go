@@ -19,10 +19,12 @@ import (
 	"crypto/tls"
 	"fmt"
 	"maps"
+	"net"
 	"os"
 	"path"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"time"
 
@@ -61,6 +63,64 @@ type GrafanaSpec struct {
 	OrgName           string               `yaml:"org_name,omitempty" validate:"org_name:editable"`
 	OrgRole           string               `yaml:"org_role,omitempty" validate:"org_role:editable"`
 	UseVMAsDatasource bool                 `yaml:"use_vm_as_datasource,omitempty" validate:"use_vm_as_datasource:editable"`
+}
+
+// GrafanaEntryCleanup records that TiUP removed the managed Grafana at this
+// address as the last one it managed, and has not yet dealt with the
+// discovery entry it wrote for that instance. The rule it serves is documented
+// in task.updateGrafanaAndOps.
+//
+// The rule needs the record because, once no Grafana is managed, a refresh
+// must leave the entry alone unless it is the leftover of an instance TiUP
+// removed, and with the instance gone from the metadata nothing else can tell
+// one from the other. The record is therefore kept for exactly as long as the
+// cleanup is owed:
+//
+//   - task.UpdateMeta adds it when it saves a topology whose last managed
+//     Grafana was removed, before the refresh that clears the entry runs. A
+//     refresh that fails or is interrupted is thereby retried by every later one.
+//   - A refresh drops it once it has committed
+//     (task.UpdateTopology.settleGrafanaEntryCleanups), and so does any change
+//     that leaves a managed Grafana, since that instance takes over the entry
+//     (see PendingGrafanaEntryCleanups).
+//
+// Between commands, the metadata carries a record only while a cleanup is
+// still owed. It is a note for TiUP alone, not a managed instance, and carries
+// the address and nothing else.
+type GrafanaEntryCleanup struct {
+	Host string `yaml:"host,omitempty"`
+	Port int    `yaml:"port,omitempty"`
+}
+
+// HostKey returns the canonical form under which recorded hosts are
+// compared: a host written as an IP literal is compared by address — the
+// same IPv6 machine can be spelled compressed or expanded, and an
+// IPv4-mapped literal duplicates its IPv4 form — while any other value
+// keeps the recorded string, since hostname aliases of one machine stay
+// outside what TiUP can resolve locally.
+func HostKey(host string) string {
+	if ip := net.ParseIP(host); ip != nil {
+		return ip.String()
+	}
+	return host
+}
+
+// Matches reports whether a discovery entry described by ip and port was
+// written for the instance this cleanup belongs to.
+func (c *GrafanaEntryCleanup) Matches(ip string, port int) bool {
+	return HostKey(c.Host) == HostKey(ip) && c.Port == port
+}
+
+// PendingGrafanaEntryCleanups returns the entry cleanups a topology owes after
+// a change, given what it owed before (recorded) and the Grafana instances the
+// change removes and keeps. A surviving managed instance takes over the
+// discovery entry and settles them all; without one, the removed instances
+// join the recorded cleanups.
+func PendingGrafanaEntryCleanups(remaining []*GrafanaSpec, recorded, removed []*GrafanaEntryCleanup) []*GrafanaEntryCleanup {
+	if len(remaining) > 0 {
+		return nil
+	}
+	return slices.Concat(recorded, removed)
 }
 
 // Role returns the component role of the instance

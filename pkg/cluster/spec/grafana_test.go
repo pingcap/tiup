@@ -434,3 +434,29 @@ func TestVictoriaMetricsDefaultDatasource(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, string(dsContent), "name: test-cluster-vm")
 }
+
+func TestGrafanaEntryCleanupMatches(t *testing.T) {
+	cleanup := &GrafanaEntryCleanup{Host: "2001:db8::1", Port: 3000}
+	// Hosts are compared by address: an entry spelled differently from the
+	// metadata still names the same instance.
+	require.True(t, cleanup.Matches("2001:db8:0:0:0:0:0:1", 3000))
+	require.False(t, cleanup.Matches("2001:db8::1", 3001))
+	require.False(t, cleanup.Matches("2001:db8::2", 3000))
+}
+
+func TestPendingGrafanaEntryCleanups(t *testing.T) {
+	removed := []*GrafanaEntryCleanup{{Host: "first", Port: 3000}, {Host: "second", Port: 3000}}
+	recorded := []*GrafanaEntryCleanup{{Host: "owed", Port: 3000}}
+	managed := []*GrafanaSpec{{Host: "kept", Port: 3000}}
+
+	// A surviving managed Grafana takes over the discovery entry, which
+	// settles every cleanup, recorded or new.
+	require.Nil(t, PendingGrafanaEntryCleanups(managed, recorded, removed))
+	// Without one, the newly removed instances join the cleanups recorded
+	// earlier, which a change that removes nothing keeps as they are.
+	require.Equal(t, []*GrafanaEntryCleanup{{Host: "owed", Port: 3000}, {Host: "first", Port: 3000}, {Host: "second", Port: 3000}},
+		PendingGrafanaEntryCleanups(nil, recorded, removed))
+	require.Equal(t, recorded, PendingGrafanaEntryCleanups(nil, recorded, nil))
+	require.Equal(t, removed, PendingGrafanaEntryCleanups(nil, nil, removed))
+	require.Nil(t, PendingGrafanaEntryCleanups(nil, nil, nil))
+}

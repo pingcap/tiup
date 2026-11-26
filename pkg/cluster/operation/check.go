@@ -614,9 +614,10 @@ func CheckSELinuxStatus(ctx context.Context, e ctxt.Executor, sudo bool) *CheckR
 		return result
 	}
 	out := strings.Trim(string(stdout), "\n")
-	if out == "Enforcing" {
+	switch out {
+	case "Enforcing":
 		result.Err = fmt.Errorf("SELinux is in Enforcing mode, Update the configuration and reboot")
-	} else if out == "Permissive" {
+	case "Permissive":
 		result.Err = fmt.Errorf("SELinux is in Permissive mode, disabling is recommended")
 		result.Warn = true
 	}
