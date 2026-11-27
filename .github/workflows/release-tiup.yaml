@@ -48,10 +48,10 @@ jobs:
 
   prepare:
     name: Prepare the release
-    # Everything here is network-independent: resolve the exact commit, derive
-    # the version, and build the linux/amd64 tiup driver used for publishing.
+    # Resolve the exact commit, version and refs. All compilations happen in the
+    # build job; the linux/amd64 build also uploads the publishing driver.
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
     outputs:
       commit: ${{ steps.commit.outputs.commit }}
       REL_VER: ${{ steps.version.outputs.REL_VER }}
@@ -68,11 +68,6 @@ jobs:
       - name: Record the checked-out commit
         id: commit
         run: echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: 'go.mod'
 
       - name: Check if this is a staging build
         id: check_staging
@@ -109,24 +104,6 @@ jobs:
             REL_VER=$(git describe --tags --always)
           fi
           echo "REL_VER=$REL_VER" >> "$GITHUB_OUTPUT"
-
-      - name: Build the tiup driver for publishing
-        env:
-          GOOS: linux
-          GOARCH: amd64
-        run: |
-          export GOPATH=${GITHUB_WORKSPACE}/go
-          export PATH=$PATH:$GOPATH/bin
-          BUILD_FLAGS='-trimpath -mod=readonly -modcacherw -buildvcs=false' make tiup
-          ./bin/tiup --version
-
-      - name: Upload the tiup driver
-        uses: actions/upload-artifact@v7
-        with:
-          name: tiup-linux-amd64
-          path: bin/tiup
-          retention-days: 1
-          if-no-files-found: error
 
   build:
     name: Build ${{ matrix.os }}-${{ matrix.arch }}
@@ -186,6 +163,15 @@ jobs:
           echo "b2sum:" >> ${checksum_file}
           b2sum bin/* >> ${checksum_file}
           cat ${checksum_file}
+
+      - name: Upload the tiup driver for publishing
+        if: matrix.os == 'linux' && matrix.arch == 'amd64'
+        uses: actions/upload-artifact@v7
+        with:
+          name: tiup-linux-amd64
+          path: bin/tiup
+          retention-days: 1
+          if-no-files-found: error
 
       - name: Upload the build output
         uses: actions/upload-artifact@v7

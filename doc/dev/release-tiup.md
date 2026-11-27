@@ -52,12 +52,12 @@ different owner key, update `TIUP_SERVER` and `TIUP_COMP_KEY` together.
 
 1. `resolve` selects `staging` only for a `workflow_dispatch` with
    `staging-mirror: true`; every other trigger selects `production`.
-2. `prepare` checks out the release ref on a GitHub-hosted runner, records the
-   exact commit, derives the version from the ref, and builds the linux/amd64
-   `tiup` driver used for publishing.
+2. `prepare` resolves the exact commit, version and refs from the release ref;
+   it does not compile.
 3. `build` (GitHub-hosted, 4-way matrix) checks out the commit recorded by
    `prepare`, builds the components for each OS/arch, writes the checksums, and
-   uploads `bin/` plus the checksum file as an artifact.
+   uploads `bin/` plus the checksum file as an artifact. The linux/amd64 leg also
+   uploads `bin/tiup` as the driver used for publishing.
 4. `release` (self-hosted, 4-way matrix) runs only the mirror interaction:
    downloads the build output and the driver, fetches `root.json` from the
    selected mirror, packages the components, publishes them, and uploads the
@@ -71,10 +71,10 @@ publish; there is no fallback to another mirror or another key.
 
 1. Run the workflow with `git-ref: master` and `staging-mirror: true`.
 2. Check that the run page shows the `staging` deployment environment.
-3. Check the logs: `prepare` contains `make tiup`; `build` contains the component
-   builds and checksums; `release` contains `tiup --version` and does **not**
-   request `tiup-linux-amd64.tar.gz`; the `root.json` request goes to the staging
-   mirror.
+3. Check the logs: `build` contains the component builds and checksums (the
+   linux/amd64 leg also uploads the driver); `release` contains `tiup --version`
+   and does **not** request `tiup-linux-amd64.tar.gz`; the `root.json` request
+   goes to the staging mirror.
 4. Check the published component manifest: `signatures[].keyid` must equal the
    staging `index.json` owner key id.
 
