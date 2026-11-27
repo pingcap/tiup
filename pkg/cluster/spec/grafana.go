@@ -19,6 +19,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"maps"
+	"net"
 	"os"
 	"path"
 	"path/filepath"
@@ -61,6 +62,54 @@ type GrafanaSpec struct {
 	OrgName           string               `yaml:"org_name,omitempty" validate:"org_name:editable"`
 	OrgRole           string               `yaml:"org_role,omitempty" validate:"org_role:editable"`
 	UseVMAsDatasource bool                 `yaml:"use_vm_as_datasource,omitempty" validate:"use_vm_as_datasource:editable"`
+}
+
+// GrafanaEntryCleanup records that TiUP removed the managed Grafana at this
+// address, and that no topology refresh has committed since. The rule it
+// serves is documented in task.updateGrafanaAndOps.
+//
+// The rule needs the record because, once no Grafana is managed, a refresh
+// must leave the entry alone unless it is the leftover of an instance TiUP
+// removed, and with the instance gone from the metadata nothing else can tell
+// one from the other. The record is therefore kept for exactly as long as the
+// cleanup is owed:
+//
+//   - task.UpdateMeta adds one for every Grafana it removes, before the
+//     refresh that follows runs. That refresh moves the entry to a Grafana
+//     still managed or deletes it. Should it fail or be interrupted, the
+//     entry may stay at the removed instance, and the record is what lets
+//     every later refresh tell that leftover from an entry an operator
+//     maintains. This holds for a removal that leaves a Grafana managed no
+//     less than for the last one.
+//   - A refresh drops the records once it has committed
+//     (task.UpdateTopology.settleGrafanaEntryCleanups), whether it wrote the
+//     entry of a Grafana still managed or deleted the leftover.
+//
+// Between commands, the metadata carries a record only while a cleanup is
+// still owed. It is a note for TiUP alone, not a managed instance, and carries
+// the address and nothing else.
+type GrafanaEntryCleanup struct {
+	Host string `yaml:"host,omitempty"`
+	Port int    `yaml:"port,omitempty"`
+}
+
+// HostKey returns the canonical form under which recorded hosts are
+// compared: a host written as an IP literal is compared by address — the
+// same IPv6 machine can be spelled compressed or expanded, and an
+// IPv4-mapped literal duplicates its IPv4 form — while any other value
+// keeps the recorded string, since hostname aliases of one machine stay
+// outside what TiUP can resolve locally.
+func HostKey(host string) string {
+	if ip := net.ParseIP(host); ip != nil {
+		return ip.String()
+	}
+	return host
+}
+
+// Matches reports whether a discovery entry described by ip and port was
+// written for the instance this cleanup belongs to.
+func (c *GrafanaEntryCleanup) Matches(ip string, port int) bool {
+	return HostKey(c.Host) == HostKey(ip) && c.Port == port
 }
 
 // Role returns the component role of the instance

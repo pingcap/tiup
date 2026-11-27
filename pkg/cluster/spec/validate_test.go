@@ -1226,3 +1226,29 @@ tikv_servers:
 		require.Equal(t, "spec.deploy.dir_overlap: Deploy directory overlaps to another instance", err.Error())
 	}
 }
+
+// Pending Grafana entry cleanups must stay outside the component detectors:
+// the record carries no platform of its own, and its address belongs to an
+// instance TiUP already removed, so a record on a host with managed components
+// must neither trigger a platform mismatch nor reserve the removed port.
+func TestValidateIgnoresPendingGrafanaEntryCleanups(t *testing.T) {
+	topo := Specification{}
+	// The record reuses the TiDB port on purpose: if it were treated as a
+	// component, portConflictsDetect would reject the topology.
+	err := yaml.Unmarshal([]byte(`
+global:
+  os: "linux"
+  arch: "amd64"
+tidb_servers:
+  - host: 172.16.5.100
+monitoring_servers:
+  - host: 172.16.5.100
+grafana_servers:
+  - host: 172.16.5.100
+pending_grafana_entry_cleanups:
+  - host: 172.16.5.100
+    port: 4000
+`), &topo)
+	require.NoError(t, err)
+	require.Equal(t, []*GrafanaEntryCleanup{{Host: "172.16.5.100", Port: 4000}}, topo.PendingGrafanaEntryCleanups)
+}

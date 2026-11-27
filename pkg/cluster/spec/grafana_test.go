@@ -434,3 +434,33 @@ func TestVictoriaMetricsDefaultDatasource(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, string(dsContent), "name: test-cluster-vm")
 }
+
+func TestGrafanaEntryCleanupMatches(t *testing.T) {
+	cleanup := &GrafanaEntryCleanup{Host: "2001:db8::1", Port: 3000}
+	// Hosts are compared by address: an entry spelled differently from the
+	// metadata still names the same instance.
+	require.True(t, cleanup.Matches("2001:db8:0:0:0:0:0:1", 3000))
+	require.False(t, cleanup.Matches("2001:db8::1", 3001))
+	require.False(t, cleanup.Matches("2001:db8::2", 3000))
+}
+
+func TestTopologyMergeKeepsGrafanaEntryCleanups(t *testing.T) {
+	// An owed cleanup survives a scale-out, which replaces the saved topology
+	// with the merged one, whether or not a Grafana is added: the refresh that
+	// follows settles it (see GrafanaEntryCleanup).
+	recorded := []*GrafanaEntryCleanup{{Host: "removed", Port: 3000}}
+	for _, test := range []struct {
+		name  string
+		added []*GrafanaSpec
+	}{
+		{name: "without a Grafana"},
+		{name: "with a Grafana", added: []*GrafanaSpec{{Host: "added", Port: 3000}}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			base := &Specification{PendingGrafanaEntryCleanups: recorded}
+			merged := base.Merge(&Specification{Grafanas: test.added}).(*Specification)
+			require.Equal(t, recorded, merged.PendingGrafanaEntryCleanups)
+			require.Equal(t, test.added, merged.Grafanas)
+		})
+	}
+}

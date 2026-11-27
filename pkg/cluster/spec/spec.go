@@ -201,6 +201,9 @@ type (
 		Monitors               []*PrometheusSpec      `yaml:"monitoring_servers"`
 		Grafanas               []*GrafanaSpec         `yaml:"grafana_servers,omitempty"`
 		Alertmanagers          []*AlertmanagerSpec    `yaml:"alertmanager_servers,omitempty"`
+		// Cleanups of the Grafana discovery entry that TiUP still owes; see
+		// GrafanaEntryCleanup for what a record means and who maintains it.
+		PendingGrafanaEntryCleanups []*GrafanaEntryCleanup `yaml:"pending_grafana_entry_cleanups,omitempty"`
 	}
 )
 
@@ -590,6 +593,9 @@ func (s *Specification) Merge(that Topology) Topology {
 		Monitors:               append(s.Monitors, spec.Monitors...),
 		Grafanas:               append(s.Grafanas, spec.Grafanas...),
 		Alertmanagers:          append(s.Alertmanagers, spec.Alertmanagers...),
+		// An owed cleanup survives the merge. The refresh that follows a
+		// scale-out settles it, whether or not a Grafana was added.
+		PendingGrafanaEntryCleanups: s.PendingGrafanaEntryCleanups,
 	}
 }
 
@@ -633,17 +639,31 @@ func fillCustomDefaults(globalOptions *GlobalOptions, data any) error {
 }
 
 var (
-	globalOptionTypeName      = reflect.TypeFor[GlobalOptions]().Name()
-	monitorOptionTypeName     = reflect.TypeFor[MonitoredOptions]().Name()
-	serverConfigsTypeName     = reflect.TypeFor[ServerConfigs]().Name()
-	componentVersionsTypeName = reflect.TypeFor[ComponentVersions]().Name()
-	componentSourcesTypeName  = reflect.TypeFor[ComponentSources]().Name()
+	globalOptionTypeName        = reflect.TypeFor[GlobalOptions]().Name()
+	monitorOptionTypeName       = reflect.TypeFor[MonitoredOptions]().Name()
+	serverConfigsTypeName       = reflect.TypeFor[ServerConfigs]().Name()
+	componentVersionsTypeName   = reflect.TypeFor[ComponentVersions]().Name()
+	componentSourcesTypeName    = reflect.TypeFor[ComponentSources]().Name()
+	grafanaEntryCleanupTypeName = reflect.TypeFor[GrafanaEntryCleanup]().Name()
 )
 
-// Skip global/monitored options
+// Skip global/monitored options and non-component records.
+//
+// The component detectors pass whole slice fields here, whose types are
+// unnamed ([]*TiDBSpec, ...), so a slice matches by its element type name;
+// GrafanaEntryCleanup is a bookkeeping record, not an instance, and must
+// stay out of platform, port and arch detection.
 func isSkipField(field reflect.Value) bool {
 	tp := field.Type().Name()
-	return tp == globalOptionTypeName || tp == monitorOptionTypeName || tp == serverConfigsTypeName || tp == componentVersionsTypeName || tp == componentSourcesTypeName
+	if tp == "" && field.Kind() == reflect.Slice {
+		tp = field.Type().Elem().Name()
+		if tp == "" && field.Type().Elem().Kind() == reflect.Pointer {
+			// component slices hold pointers ([]*TiDBSpec, ...)
+			tp = field.Type().Elem().Elem().Name()
+		}
+	}
+	return tp == globalOptionTypeName || tp == monitorOptionTypeName || tp == serverConfigsTypeName ||
+		tp == componentVersionsTypeName || tp == componentSourcesTypeName || tp == grafanaEntryCleanupTypeName
 }
 
 func setDefaultDir(parent, role, port string, field reflect.Value) {
