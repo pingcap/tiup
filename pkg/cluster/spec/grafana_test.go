@@ -444,19 +444,23 @@ func TestGrafanaEntryCleanupMatches(t *testing.T) {
 	require.False(t, cleanup.Matches("2001:db8::2", 3000))
 }
 
-func TestPendingGrafanaEntryCleanups(t *testing.T) {
-	removed := []*GrafanaEntryCleanup{{Host: "first", Port: 3000}, {Host: "second", Port: 3000}}
-	recorded := []*GrafanaEntryCleanup{{Host: "owed", Port: 3000}}
-	managed := []*GrafanaSpec{{Host: "kept", Port: 3000}}
-
-	// A surviving managed Grafana takes over the discovery entry, which
-	// settles every cleanup, recorded or new.
-	require.Nil(t, PendingGrafanaEntryCleanups(managed, recorded, removed))
-	// Without one, the newly removed instances join the cleanups recorded
-	// earlier, which a change that removes nothing keeps as they are.
-	require.Equal(t, []*GrafanaEntryCleanup{{Host: "owed", Port: 3000}, {Host: "first", Port: 3000}, {Host: "second", Port: 3000}},
-		PendingGrafanaEntryCleanups(nil, recorded, removed))
-	require.Equal(t, recorded, PendingGrafanaEntryCleanups(nil, recorded, nil))
-	require.Equal(t, removed, PendingGrafanaEntryCleanups(nil, nil, removed))
-	require.Nil(t, PendingGrafanaEntryCleanups(nil, nil, nil))
+func TestTopologyMergeKeepsGrafanaEntryCleanups(t *testing.T) {
+	// An owed cleanup survives a scale-out, which replaces the saved topology
+	// with the merged one, whether or not a Grafana is added: the refresh that
+	// follows settles it (see GrafanaEntryCleanup).
+	recorded := []*GrafanaEntryCleanup{{Host: "removed", Port: 3000}}
+	for _, test := range []struct {
+		name  string
+		added []*GrafanaSpec
+	}{
+		{name: "without a Grafana"},
+		{name: "with a Grafana", added: []*GrafanaSpec{{Host: "added", Port: 3000}}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			base := &Specification{PendingGrafanaEntryCleanups: recorded}
+			merged := base.Merge(&Specification{Grafanas: test.added}).(*Specification)
+			require.Equal(t, recorded, merged.PendingGrafanaEntryCleanups)
+			require.Equal(t, test.added, merged.Grafanas)
+		})
+	}
 }

@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"reflect"
-	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -569,7 +568,6 @@ func (s *Specification) GetEtcdProxyClient(tlsCfg *tls.Config, tcpProxy *proxy.T
 // Merge returns a new Specification which sum old ones
 func (s *Specification) Merge(that Topology) Topology {
 	spec := that.(*Specification)
-	grafanas := slices.Concat(s.Grafanas, spec.Grafanas)
 	return &Specification{
 		GlobalOptions:          s.GlobalOptions,
 		MonitoredOptions:       s.MonitoredOptions,
@@ -593,11 +591,11 @@ func (s *Specification) Merge(that Topology) Topology {
 		TiSparkMasters:         append(s.TiSparkMasters, spec.TiSparkMasters...),
 		TiSparkWorkers:         append(s.TiSparkWorkers, spec.TiSparkWorkers...),
 		Monitors:               append(s.Monitors, spec.Monitors...),
-		Grafanas:               grafanas,
+		Grafanas:               append(s.Grafanas, spec.Grafanas...),
 		Alertmanagers:          append(s.Alertmanagers, spec.Alertmanagers...),
-		// An owed cleanup must survive the merge that replaces the saved
-		// topology, unless a Grafana is added and takes over the entry.
-		PendingGrafanaEntryCleanups: PendingGrafanaEntryCleanups(grafanas, s.PendingGrafanaEntryCleanups, nil),
+		// An owed cleanup survives the merge. The refresh that follows a
+		// scale-out settles it, whether or not a Grafana was added.
+		PendingGrafanaEntryCleanups: s.PendingGrafanaEntryCleanups,
 	}
 }
 

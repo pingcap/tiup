@@ -16,6 +16,7 @@ package task
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -219,10 +220,9 @@ func (u *UpdateMeta) Execute(ctx context.Context) error {
 		grafanas = append(grafanas, topo.Grafanas[i])
 	}
 	newMeta.Topology.Grafanas = grafanas
-	// Record the removal before the refresh that clears the entry runs, as
+	// Record every removal before the refresh that settles it runs, as
 	// spec.GrafanaEntryCleanup describes.
-	newMeta.Topology.PendingGrafanaEntryCleanups = spec.PendingGrafanaEntryCleanups(
-		grafanas, topo.PendingGrafanaEntryCleanups, removedGrafanas)
+	newMeta.Topology.PendingGrafanaEntryCleanups = slices.Concat(topo.PendingGrafanaEntryCleanups, removedGrafanas)
 
 	alertmanagers := make([]*spec.AlertmanagerSpec, 0)
 	for i, instance := range (&spec.AlertManagerComponent{Topology: topo}).Instances() {

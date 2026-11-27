@@ -24,8 +24,9 @@ import (
 )
 
 func TestUpdateMetaRecordsGrafanaEntryCleanup(t *testing.T) {
-	// UpdateMeta records a cleanup when it saves a topology whose last managed
-	// Grafana was removed, and not otherwise (see spec.GrafanaEntryCleanup).
+	// UpdateMeta records a cleanup for every Grafana it removes, next to the
+	// ones recorded before. Settling them is left to the refresh that follows
+	// (see spec.GrafanaEntryCleanup).
 	recorded := []*spec.GrafanaEntryCleanup{{Host: "owed", Port: 3000}}
 	for _, test := range []struct {
 		name     string
@@ -38,8 +39,9 @@ func TestUpdateMetaRecordsGrafanaEntryCleanup(t *testing.T) {
 		{name: "removing the last Grafana is recorded",
 			managed: []string{"gone"}, deleted: []string{"gone:3000"},
 			want: []*spec.GrafanaEntryCleanup{{Host: "gone", Port: 3000}}},
-		{name: "a surviving Grafana settles the recorded cleanups",
-			managed: []string{"gone", "kept"}, recorded: recorded, deleted: []string{"gone:3000"}, kept: 1},
+		{name: "a removal that leaves a Grafana managed is recorded as well",
+			managed: []string{"gone", "kept"}, recorded: recorded, deleted: []string{"gone:3000"}, kept: 1,
+			want: []*spec.GrafanaEntryCleanup{{Host: "owed", Port: 3000}, {Host: "gone", Port: 3000}}},
 		{name: "unrelated removals keep the recorded cleanups",
 			recorded: recorded, deleted: []string{"n2:4000"}, want: recorded},
 		{name: "removals join the recorded cleanups",

@@ -24,7 +24,6 @@ import (
 	"path"
 	"path/filepath"
 	"reflect"
-	"slices"
 	"strings"
 	"time"
 
@@ -66,9 +65,8 @@ type GrafanaSpec struct {
 }
 
 // GrafanaEntryCleanup records that TiUP removed the managed Grafana at this
-// address as the last one it managed, and has not yet dealt with the
-// discovery entry it wrote for that instance. The rule it serves is documented
-// in task.updateGrafanaAndOps.
+// address, and that no topology refresh has committed since. The rule it
+// serves is documented in task.updateGrafanaAndOps.
 //
 // The rule needs the record because, once no Grafana is managed, a refresh
 // must leave the entry alone unless it is the leftover of an instance TiUP
@@ -76,13 +74,16 @@ type GrafanaSpec struct {
 // one from the other. The record is therefore kept for exactly as long as the
 // cleanup is owed:
 //
-//   - task.UpdateMeta adds it when it saves a topology whose last managed
-//     Grafana was removed, before the refresh that clears the entry runs. A
-//     refresh that fails or is interrupted is thereby retried by every later one.
-//   - A refresh drops it once it has committed
-//     (task.UpdateTopology.settleGrafanaEntryCleanups), and so does any change
-//     that leaves a managed Grafana, since that instance takes over the entry
-//     (see PendingGrafanaEntryCleanups).
+//   - task.UpdateMeta adds one for every Grafana it removes, before the
+//     refresh that follows runs. That refresh moves the entry to a Grafana
+//     still managed or deletes it. Should it fail or be interrupted, the
+//     entry may stay at the removed instance, and the record is what lets
+//     every later refresh tell that leftover from an entry an operator
+//     maintains. This holds for a removal that leaves a Grafana managed no
+//     less than for the last one.
+//   - A refresh drops the records once it has committed
+//     (task.UpdateTopology.settleGrafanaEntryCleanups), whether it wrote the
+//     entry of a Grafana still managed or deleted the leftover.
 //
 // Between commands, the metadata carries a record only while a cleanup is
 // still owed. It is a note for TiUP alone, not a managed instance, and carries
@@ -109,18 +110,6 @@ func HostKey(host string) string {
 // written for the instance this cleanup belongs to.
 func (c *GrafanaEntryCleanup) Matches(ip string, port int) bool {
 	return HostKey(c.Host) == HostKey(ip) && c.Port == port
-}
-
-// PendingGrafanaEntryCleanups returns the entry cleanups a topology owes after
-// a change, given what it owed before (recorded) and the Grafana instances the
-// change removes and keeps. A surviving managed instance takes over the
-// discovery entry and settles them all; without one, the removed instances
-// join the recorded cleanups.
-func PendingGrafanaEntryCleanups(remaining []*GrafanaSpec, recorded, removed []*GrafanaEntryCleanup) []*GrafanaEntryCleanup {
-	if len(remaining) > 0 {
-		return nil
-	}
-	return slices.Concat(recorded, removed)
 }
 
 // Role returns the component role of the instance

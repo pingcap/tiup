@@ -15,6 +15,7 @@
 package task
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"testing"
@@ -221,6 +222,41 @@ func TestUpdateGrafanaAndOpsPropagatesReadError(t *testing.T) {
 			require.ErrorIs(t, err, readFailed)
 		})
 	}
+}
+
+func TestLastGrafanaScaleInDeletesEntryOfEarlierRemoval(t *testing.T) {
+	// Two Grafana instances are managed and the entry points at the first. The
+	// first is scaled in, but the refresh that should move the entry to the
+	// second fails. By the time the second is scaled in, the entry still points
+	// at an instance TiUP removed, and only the record of the first removal can
+	// tell that leftover from an entry an operator maintains.
+	t.Setenv("TIUP_COMPONENT_DATA_DIR", t.TempDir())
+	require.NoError(t, spec.Initialize("cluster"))
+	metadata := &spec.ClusterMeta{User: "tidb", Topology: &spec.Specification{
+		TiDBServers: []*spec.TiDBSpec{{Host: "n1", Port: 4000}},
+		Grafanas:    []*spec.GrafanaSpec{{Host: "first", Port: 3000}, {Host: "second", Port: 3000}},
+	}}
+	require.NoError(t, spec.SaveClusterMeta("test", metadata))
+	value, err := json.Marshal(componentTopology{IP: "first", Port: 3000, DeployPath: "/deploy/grafana-3000"})
+	require.NoError(t, err)
+	entry := &topologyEntry{value: value, modRevision: 42}
+
+	// The refresh of this scale-in fails, so nothing settles its record.
+	require.NoError(t, (&UpdateMeta{
+		cluster: "test", metadata: metadata, deletedNodeIDs: []string{"first:3000"},
+	}).Execute(context.Background()))
+	between, err := spec.ClusterMetadata("test")
+	require.NoError(t, err)
+
+	require.NoError(t, (&UpdateMeta{
+		cluster: "test", metadata: between, deletedNodeIDs: []string{"second:3000"},
+	}).Execute(context.Background()))
+	// UpdateTopology is given the metadata as it was before UpdateMeta ran.
+	_, _, cleanup, err := updateGrafanaAndOps(nil, nil, set.NewStringSet("second:3000"),
+		(&spec.GrafanaComponent{Topology: between.Topology}).Instances(), between.Topology.PendingGrafanaEntryCleanups,
+		func() (*topologyEntry, error) { return entry, nil })
+	require.NoError(t, err)
+	require.Same(t, entry, cleanup)
 }
 
 func TestUpdateTopologyOp(t *testing.T) {

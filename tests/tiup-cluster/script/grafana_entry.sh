@@ -113,10 +113,12 @@ function grafana_entry() (
     tiup-cluster _test "$name" writable
 
     # While TiUP manages a Grafana, the entry follows the managed instances:
-    # scaling in one of them leaves the entry with a survivor.
+    # scaling in one of them leaves the entry with a survivor. The removal is
+    # recorded for a retry all the same, and the same command settles it.
     grafana_entry_assert_key "$key_a"
     tiup-cluster --yes scale-in "$name" -N n2:3000
     grafana_entry_assert_key "$key_b"
+    grafana_entry_assert_settled
 
     # Scaling in the last managed Grafana deletes the entry: TiUP removed the
     # instance it points at. The cleanup recorded for a retry is settled by
