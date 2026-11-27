@@ -11,6 +11,7 @@ on:
       - release-*
       - feature/*
     paths-ignore:
+      - "OWNERS"
       - "**.html"
       - "**.md"
       - "CNAME"

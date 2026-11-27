@@ -11,6 +11,7 @@ on:
       - release-*
       - feature/*
     paths-ignore:
+      - 'OWNERS'
       - '**.html'
       - '**.md'
       - 'CNAME'
@@ -21,6 +22,7 @@ on:
     branches:
       - release-*
     paths-ignore:
+      - 'OWNERS'
       - '**.html'
       - '**.md'
       - 'CNAME'

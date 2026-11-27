@@ -10,6 +10,7 @@ on:
       - master
       - release-*
     paths-ignore:
+      - 'OWNERS'
       - '**.html'
       - '**.md'
       - 'CNAME'
