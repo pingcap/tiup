@@ -51,25 +51,29 @@ only; no workflow change is needed.
 
 1. `resolve` selects `staging` only for a `workflow_dispatch` with
    `staging-mirror: true`; every other trigger selects `production`.
-2. `bootstrap` checks out the release ref on a GitHub-hosted runner, records the
-   exact commit and branch name, builds the `tiup` driver with `make tiup`, and
-   uploads `bin/tiup` as a short-lived artifact.
-3. Each `release` matrix job (linux/darwin × amd64/arm64) checks out the commit
-   recorded by `bootstrap` (not the branch again), downloads that driver, fetches
-   `root.json` from the selected mirror, builds and packages the components, then
-   runs `tiup mirror set` and `tiup mirror publish`.
-4. `brew-upgrade` runs after a `release` event.
+2. `prepare` checks out the release ref on a GitHub-hosted runner, records the
+   exact commit, derives the version from the ref, and builds the linux/amd64
+   `tiup` driver used for publishing.
+3. `build` (GitHub-hosted, 4-way matrix) checks out the commit recorded by
+   `prepare`, builds the components for each OS/arch, writes the checksums, and
+   uploads `bin/` plus the checksum file as an artifact.
+4. `release` (self-hosted, 4-way matrix) runs only the mirror interaction:
+   downloads the build output and the driver, fetches `root.json` from the
+   selected mirror, packages the components, publishes them, and uploads the
+   all-in-one tarball to the GitHub release.
+5. `brew-upgrade` runs after a `release` event.
 
-If `TIUP_SERVER` or `TIUP_COMP_KEY` is empty, the job fails before any publish;
-there is no fallback to another mirror or another key.
+If `TIUP_SERVER` or `TIUP_COMP_KEY` is empty, the `release` job fails before any
+publish; there is no fallback to another mirror or another key.
 
 ## Verify a staging run
 
 1. Run the workflow with `git-ref: master` and `staging-mirror: true`.
 2. Check that the run page shows the `staging` deployment environment.
-3. Check the logs: `bootstrap` contains `make tiup`; `release` contains
-   `tiup --version` and does **not** request `tiup-linux-amd64.tar.gz`; the
-   `root.json` request goes to the staging mirror.
+3. Check the logs: `prepare` contains `make tiup`; `build` contains the component
+   builds and checksums; `release` contains `tiup --version` and does **not**
+   request `tiup-linux-amd64.tar.gz`; the `root.json` request goes to the staging
+   mirror.
 4. Check the published component manifest: `signatures[].keyid` must equal the
    staging `index.json` owner key id.
 
