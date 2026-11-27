@@ -210,13 +210,19 @@ func (u *UpdateMeta) Execute(ctx context.Context) error {
 	newMeta.Topology.Monitors = monitors
 
 	grafanas := make([]*spec.GrafanaSpec, 0)
+	var removedGrafanas []*spec.GrafanaEntryCleanup
 	for i, instance := range (&spec.GrafanaComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
+			removedGrafanas = append(removedGrafanas, grafanaEntryCleanupFor(instance))
 			continue
 		}
 		grafanas = append(grafanas, topo.Grafanas[i])
 	}
 	newMeta.Topology.Grafanas = grafanas
+	// Record the removal before the refresh that clears the entry runs, as
+	// spec.GrafanaEntryCleanup describes.
+	newMeta.Topology.PendingGrafanaEntryCleanups = spec.PendingGrafanaEntryCleanups(
+		grafanas, topo.PendingGrafanaEntryCleanups, removedGrafanas)
 
 	alertmanagers := make([]*spec.AlertmanagerSpec, 0)
 	for i, instance := range (&spec.AlertManagerComponent{Topology: topo}).Instances() {

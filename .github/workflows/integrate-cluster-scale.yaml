@@ -35,6 +35,7 @@ jobs:
       fail-fast: true
       matrix:
         cases:
+          - 'test_grafana_entry'
           - 'test_scale_core'
           - 'test_scale_tools'
           - 'test_scale_core_tls'
