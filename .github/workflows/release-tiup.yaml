@@ -27,12 +27,69 @@ on:
         type: boolean
 
 jobs:
+  resolve:
+    name: Resolve mirror environment
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      environment: ${{ steps.select.outputs.environment }}
+    steps:
+      - name: Select the mirror environment
+        id: select
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          STAGING_MIRROR: ${{ inputs.staging-mirror }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$STAGING_MIRROR" = "true" ]; then
+            echo "environment=staging" >> "$GITHUB_OUTPUT"
+          else
+            echo "environment=production" >> "$GITHUB_OUTPUT"
+          fi
+
+  bootstrap:
+    name: Build tiup for publishing
+    runs-on: arc-runner-set-tiup-release
+    timeout-minutes: 20
+    steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.git-ref }}
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Build the tiup driver for publishing
+        env:
+          GOOS: linux
+          GOARCH: amd64
+        run: |
+          export GOPATH=${GITHUB_WORKSPACE}/go
+          export PATH=$PATH:$GOPATH/bin
+          BUILD_FLAGS='-trimpath -mod=readonly -modcacherw -buildvcs=false' make tiup
+          ./bin/tiup --version
+
+      - name: Upload the tiup driver
+        uses: actions/upload-artifact@v7
+        with:
+          name: tiup-linux-amd64
+          path: bin/tiup
+          retention-days: 1
+          if-no-files-found: error
+
   release:
     # Builds on the self-hosted runner set deployed for this repository; the
     # image has no wget, so downloads below use curl. Rollback: set this back to
     # `ubuntu-22.04`.
     runs-on: arc-runner-set-tiup-release
     timeout-minutes: 30
+    needs:
+      - resolve
+      - bootstrap
+    environment: ${{ needs.resolve.outputs.environment }}
     outputs:
       REL_VER: ${{ steps.build_tiup.outputs.REL_VER }}
     strategy:
@@ -48,7 +105,7 @@ jobs:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.event.inputs.git-ref || github.event.pull_request.head.sha }}
+          ref: ${{ inputs.git-ref }}
           fetch-depth: 0
 
       - name: Set up Go
@@ -56,6 +113,17 @@ jobs:
         with:
           go-version-file: 'go.mod'
         id: go
+
+      - name: Validate mirror credentials
+        env:
+          TIUP_SERVER: ${{ secrets.TIUP_SERVER }}
+          TIUP_COMP_KEY: ${{ secrets.TIUP_COMP_KEY }}
+        run: |
+          if [ -z "${TIUP_SERVER:-}" ] || [ -z "${TIUP_COMP_KEY:-}" ]; then
+            echo "::error::The '${{ needs.resolve.outputs.environment }}' environment is missing TIUP_SERVER or TIUP_COMP_KEY."
+            exit 1
+          fi
+          echo "Publishing to the '${{ needs.resolve.outputs.environment }}' environment (${TIUP_SERVER%/})"
 
       - name: Check if this is a staging build
         id: check_staging
@@ -67,40 +135,41 @@ jobs:
           else
             STAGING_VER=$(git describe --tags | sed 's/-[^-]*$//' | sed -r 's/(-[^-]*$)/-nightly\1/')
           fi
-          echo ::set-output name=STAGING::$STAGING_VER
+          echo "STAGING=$STAGING_VER" >> "$GITHUB_OUTPUT"
 
       - name: Get git ref and commit
         id: get_git
         # when empty, it will be determined by Makefile
         run: |
           if [[ $GITHUB_REF == refs/tags/* ]]; then
-            echo ::set-output name=GIT_REF::${GITHUB_REF/refs\/tags\//}
+            echo "GIT_REF=${GITHUB_REF/refs\/tags\//}" >> "$GITHUB_OUTPUT"
           elif [[ $GITHUB_REF == refs/heads/* ]]; then
-            echo ::set-output name=GIT_REF::${GITHUB_REF/refs\/heads\//}
+            echo "GIT_REF=${GITHUB_REF/refs\/heads\//}" >> "$GITHUB_OUTPUT"
           fi
-          COMMIT_TIMESTAMP=`git show --no-patch --no-notes --pretty='%aI'`
-          echo ::set-output name=COMMIT_TIMESTAMP::$COMMIT_TIMESTAMP
+          COMMIT_TIMESTAMP=$(git show --no-patch --no-notes --pretty='%aI')
+          echo "COMMIT_TIMESTAMP=$COMMIT_TIMESTAMP" >> "$GITHUB_OUTPUT"
 
       - name: Build for ${{ matrix.os }}-${{ matrix.arch }}
         id: build_tiup
         env:
           GOOS: ${{ matrix.os }}
           GOARCH: ${{ matrix.arch }}
-          COMMIT: ${GITHUB_SHA}
           GITREF: ${{ steps.get_git.outputs.GIT_REF }}
+          STAGING: ${{ steps.check_staging.outputs.STAGING }}
           actor: ${{ github.actor }}
           event: ${{ github.event_name }}
         run: |
           export GOPATH=${GITHUB_WORKSPACE}/go
           export PATH=$PATH:$GOPATH/bin
 
-          if [ ! -z ${{ steps.check_staging.outputs.STAGING }} ]; then
-            export EXTRA_LDFLAGS="-X \"github.com/${{ github.repository }}/pkg/version.TiUPVerName=${{ steps.check_staging.outputs.STAGING }}\""
-            export REL_VER=${{ steps.check_staging.outputs.STAGING }}
+          if [ -n "$STAGING" ]; then
+            export EXTRA_LDFLAGS="-X \"github.com/${{ github.repository }}/pkg/version.TiUPVerName=$STAGING\""
+            REL_VER="$STAGING"
           else
-            export REL_VER=`git describe --tags --always`
+            REL_VER=$(git describe --tags --always)
           fi
-          echo ::set-output name=REL_VER::$REL_VER
+          export REL_VER
+          echo "REL_VER=$REL_VER" >> "$GITHUB_OUTPUT"
 
           BUILD_FLAGS='-trimpath -mod=readonly -modcacherw -buildvcs=false' make build && \
           BUILD_FLAGS='-trimpath -mod=readonly -modcacherw -buildvcs=false' make ctl && \
@@ -115,27 +184,38 @@ jobs:
           b2sum bin/* >> ${checksum_file}
           cat ${checksum_file}
 
+      - name: Download the tiup driver built from this commit
+        uses: actions/download-artifact@v8
+        with:
+          name: tiup-linux-amd64
+          path: ${{ runner.temp }}/tiup-bin
+
       - name: Package components
         id: packaging
         env:
           ARCH: ${{ matrix.os }}-${{ matrix.arch }}
           REL_VER: ${{ steps.build_tiup.outputs.REL_VER }}
+          COMMIT_TIMESTAMP: ${{ steps.get_git.outputs.COMMIT_TIMESTAMP }}
+          TIUP_SERVER: ${{ secrets.TIUP_SERVER }}
         run: |
-          TMP_DIR=`mktemp -d`
+          TMP_DIR=$(mktemp -d)
           export TIUP_HOME="$TMP_DIR/home"
-          echo ::set-output name=TIUP_HOME::$TIUP_HOME
-          echo ::set-output name=TIUP_BIN::$TIUP_HOME/bin/tiup
+          echo "TIUP_HOME=$TIUP_HOME" >> "$GITHUB_OUTPUT"
+          echo "TIUP_BIN=$TIUP_HOME/bin/tiup" >> "$GITHUB_OUTPUT"
 
           rm -rf $TIUP_HOME && mkdir -p $TIUP_HOME/{bin,keys}
-          curl -fsSL -o $TMP_DIR/tiup-linux-amd64.tar.gz https://tiup-mirrors.pingcap.com/tiup-linux-amd64.tar.gz
-          tar -zxf $TMP_DIR/tiup-linux-amd64.tar.gz -C $TIUP_HOME/bin && chmod 755 $TIUP_HOME/bin/tiup
-          curl -s https://tiup-mirrors.pingcap.com/root.json -o $TIUP_HOME/bin/root.json
+          cp "${{ runner.temp }}/tiup-bin/tiup" $TIUP_HOME/bin/tiup
+          chmod 755 $TIUP_HOME/bin/tiup
+          $TIUP_HOME/bin/tiup --version >/dev/null
+
+          MIRROR="${TIUP_SERVER%/}"
+          curl -fsSL "$MIRROR/root.json" -o $TIUP_HOME/bin/root.json
 
           mkdir -p package
           cp $TIUP_HOME/bin/root.json bin/root.json
 
           # make tar reproducible
-          TAR="tar --sort=name --mtime=${{ steps.get_git.outputs.COMMIT_TIMESTAMP }} --owner=0 --group=0 --numeric-owner"
+          TAR="tar --sort=name --mtime=$COMMIT_TIMESTAMP --owner=0 --group=0 --numeric-owner"
 
           # package all binaries to upload to github release asset
           ${TAR} -czf tiup-${REL_VER}-${ARCH}.tar.gz bin checksum.${{ matrix.os }}-${{ matrix.arch }}.txt
@@ -152,7 +232,8 @@ jobs:
 
       - name: Publish packages
         env:
-          TIUP_MIRRORS: ${{ github.event.inputs.staging-mirror == 'true' && secrets.TIUP_SERVER_STAGING || secrets.TIUP_SERVER_PROD }}
+          TIUP_SERVER: ${{ secrets.TIUP_SERVER }}
+          TIUP_COMP_KEY: ${{ secrets.TIUP_COMP_KEY }}
           TIUP_HOME: ${{ steps.packaging.outputs.TIUP_HOME }}
           TIUP_BIN: ${{ steps.packaging.outputs.TIUP_BIN }}
           REL_VER: ${{ steps.build_tiup.outputs.REL_VER }}
@@ -164,13 +245,15 @@ jobs:
           client_desc: "Client to connect playground"
           server_desc: "TiUP publish/cache server"
         run: |
-          ${TIUP_BIN} mirror set ${TIUP_MIRRORS}
+          MIRROR="${TIUP_SERVER%/}"
+          ${TIUP_BIN} mirror set "${MIRROR}"
 
-          echo ${{ secrets.TIUP_COMP_KEY_PINGCAP }} | base64 -d > $TIUP_HOME/keys/private.json
+          printf '%s' "$TIUP_COMP_KEY" | base64 -d > $TIUP_HOME/keys/private.json
+          chmod 600 $TIUP_HOME/keys/private.json
 
           # add a random delay before actually publishing, this can help reduce manifest conflict
           # when there are multiple jobs running in parallel
-          sleep $[ ( $RANDOM % 10 ) ]s
+          sleep $(( RANDOM % 10 ))s
           ${TIUP_BIN} mirror publish tiup ${REL_VER} package/tiup-${REL_VER}-${ARCH}.tar.gz tiup --arch ${{ matrix.arch }} --os ${{ matrix.os }} --desc="${tiup_desc}"
           ${TIUP_BIN} mirror publish cluster ${REL_VER} package/cluster-${REL_VER}-${ARCH}.tar.gz tiup-cluster --arch ${{ matrix.arch }} --os ${{ matrix.os }} --desc="${cluster_desc}"
           ${TIUP_BIN} mirror publish dm ${REL_VER} package/dm-${REL_VER}-${ARCH}.tar.gz tiup-dm --arch ${{ matrix.arch }} --os ${{ matrix.os }} --desc="${dm_desc}" --standalone

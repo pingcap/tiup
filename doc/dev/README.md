@@ -29,6 +29,10 @@ TiUP has unit and integration tests; you can run unit tests by running `make tes
 
 Unit tests are alongside the code they test, following the Go convention of using a `_test` suffix for test files. Integration tests are in the [tests](../../tests) directory.
 
+## Releasing
+
+The release workflow publishes TiUP components to the staging or production mirror. Mirror credentials are bound to the `staging` and `production` GitHub Environments, so a job only ever uses the key for the mirror it publishes to. See [release-tiup.md](./release-tiup.md) for environment setup, the trigger-to-environment mapping, verification, and rollback.
+
 ## Architecture overview
 
 Each TiUP command has its own executable, their source is in the [cmd](../../cmd) directory. The main TiUP executable is [root.go](../../cmd/root.go).
