@@ -116,6 +116,7 @@ func TestUpdateGrafanaAndOps(t *testing.T) {
 		deleted  []string                    // node IDs removed by this run
 		recorded []*spec.GrafanaEntryCleanup // cleanups owed before this run
 		entry    string                      // current value of the discovery entry, empty when absent
+		settle   bool                        // whether the metadata on disk carries a record
 		read     bool                        // whether deciding needs the entry
 		delete   bool
 		wantIDs  []string
@@ -123,8 +124,16 @@ func TestUpdateGrafanaAndOps(t *testing.T) {
 		// While a managed Grafana survives it takes over the entry, as before.
 		{name: "surviving Grafana takes over the entry",
 			managed: []string{"first", "second"}, wantIDs: []string{"first:3000", "second:3000"}},
+		// The refresh writes the survivor's entry and settles the record
+		// UpdateMeta has saved for the removal.
 		{name: "surviving Grafana after a removal",
-			managed: []string{"first", "second"}, deleted: []string{"first:3000"}, wantIDs: []string{"second:3000"}},
+			managed: []string{"first", "second"}, deleted: []string{"first:3000"},
+			settle: true, wantIDs: []string{"second:3000"}},
+		// A cleanup an earlier refresh failed to settle is settled the same
+		// way, without the entry being read for it.
+		{name: "surviving Grafana with a cleanup recorded earlier",
+			managed: []string{"kept"}, recorded: owed, entry: entry("removed", 3000),
+			settle: true, wantIDs: []string{"kept:3000"}},
 		// With no managed Grafana and nothing owed, the entry is not TiUP's:
 		// it may belong to a Grafana handed over with detach-grafana, or to one
 		// an operator runs outside TiUP. It is left alone, and not even read.
@@ -135,32 +144,32 @@ func TestUpdateGrafanaAndOps(t *testing.T) {
 		// at, so the entry is deleted in the same run ...
 		{name: "entry at the instance removed in this run is deleted",
 			managed: []string{"gone"}, deleted: []string{"gone:3000"},
-			entry: entry("gone", 3000), read: true, delete: true},
+			settle: true, entry: entry("gone", 3000), read: true, delete: true},
 		// ... and only that entry: one pointing elsewhere, say at a Grafana
 		// detached earlier, is not TiUP's to delete.
 		{name: "entry elsewhere during a removal is left alone",
 			managed: []string{"gone"}, deleted: []string{"gone:3000"},
-			entry: entry("elsewhere", 3000), read: true},
+			settle: true, entry: entry("elsewhere", 3000), read: true},
 		{name: "missing entry during a removal stays missing",
-			managed: []string{"gone"}, deleted: []string{"gone:3000"}, read: true},
+			managed: []string{"gone"}, deleted: []string{"gone:3000"}, settle: true, read: true},
 		// When the PD update of that scale-in fails, the saved metadata no
 		// longer lists the instance. The recorded cleanup is what lets every
 		// later refresh retry the deletion.
 		{name: "recorded cleanup is retried by a later refresh",
-			recorded: owed, entry: entry("removed", 3000), read: true, delete: true},
+			recorded: owed, settle: true, entry: entry("removed", 3000), read: true, delete: true},
 		{name: "recorded cleanup does not reach an entry at another address",
-			recorded: owed, entry: entry("moved", 3000), read: true},
-		{name: "recorded cleanup with the entry already gone", recorded: owed, read: true},
+			recorded: owed, settle: true, entry: entry("moved", 3000), read: true},
+		{name: "recorded cleanup with the entry already gone", recorded: owed, settle: true, read: true},
 		{name: "recorded and removed instances both count",
 			managed: []string{"gone"}, deleted: []string{"gone:3000"},
-			recorded: owed, entry: entry("removed", 3000), read: true, delete: true},
+			recorded: owed, settle: true, entry: entry("removed", 3000), read: true, delete: true},
 		// Hosts are compared by address, so IPv6 spellings name one instance.
 		{name: "IPv6 spelling differences name the same instance",
-			recorded: []*spec.GrafanaEntryCleanup{{Host: "2001:db8::1", Port: 3000}},
-			entry:    entry("2001:db8:0:0:0:0:0:1", 3000), read: true, delete: true},
+			recorded: []*spec.GrafanaEntryCleanup{{Host: "2001:db8::1", Port: 3000}}, settle: true,
+			entry: entry("2001:db8:0:0:0:0:0:1", 3000), read: true, delete: true},
 		// A value TiUP did not write is not the leftover of an instance it
 		// removed; decoding it must not fail the refresh either.
-		{name: "undecodable entry is left alone", recorded: owed, entry: "not json", read: true},
+		{name: "undecodable entry is left alone", recorded: owed, settle: true, entry: "not json", read: true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			topo := &spec.Specification{}
@@ -169,7 +178,7 @@ func TestUpdateGrafanaAndOps(t *testing.T) {
 			}
 			previous := previousTiDBInstance()
 			read := false
-			ops, retained, cleanup, err := updateGrafanaAndOps(
+			ops, retained, settle, cleanup, err := updateGrafanaAndOps(
 				[]clientv3.Op{clientv3.OpPut("/previous", "untouched")}, previous,
 				set.NewStringSet(test.deleted...), (&spec.GrafanaComponent{Topology: topo}).Instances(), test.recorded,
 				func() (*topologyEntry, error) {
@@ -181,7 +190,8 @@ func TestUpdateGrafanaAndOps(t *testing.T) {
 				},
 			)
 			require.NoError(t, err)
-			require.Equal(t, test.read, read, "the entry is read exactly when a cleanup is owed")
+			require.Equal(t, test.settle, settle, "the metadata on disk carries a record exactly when a cleanup is owed")
+			require.Equal(t, test.read, read, "the entry is read exactly when no Grafana is managed and a cleanup is owed")
 			requirePassthrough(t, ops, previous, retained, test.wantIDs)
 			// The decision never adds an operation. The entry to delete is
 			// handed back as it was read, revision included, and Execute owns
@@ -215,7 +225,7 @@ func TestUpdateGrafanaAndOpsPropagatesReadError(t *testing.T) {
 			for _, host := range test.managed {
 				topo.Grafanas = append(topo.Grafanas, &spec.GrafanaSpec{Host: host, Port: 3000})
 			}
-			_, _, _, err := updateGrafanaAndOps(
+			_, _, _, _, err := updateGrafanaAndOps(
 				nil, nil, set.NewStringSet(test.deleted...), (&spec.GrafanaComponent{Topology: topo}).Instances(), test.recorded,
 				func() (*topologyEntry, error) { return nil, readFailed },
 			)
@@ -252,7 +262,7 @@ func TestLastGrafanaScaleInDeletesEntryOfEarlierRemoval(t *testing.T) {
 		cluster: "test", metadata: between, deletedNodeIDs: []string{"second:3000"},
 	}).Execute(context.Background()))
 	// UpdateTopology is given the metadata as it was before UpdateMeta ran.
-	_, _, cleanup, err := updateGrafanaAndOps(nil, nil, set.NewStringSet("second:3000"),
+	_, _, _, cleanup, err := updateGrafanaAndOps(nil, nil, set.NewStringSet("second:3000"),
 		(&spec.GrafanaComponent{Topology: between.Topology}).Instances(), between.Topology.PendingGrafanaEntryCleanups,
 		func() (*topologyEntry, error) { return entry, nil })
 	require.NoError(t, err)

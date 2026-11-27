@@ -80,7 +80,7 @@ func TestUpdateMetaRecordsGrafanaEntryCleanup(t *testing.T) {
 }
 
 func TestSettleGrafanaEntryCleanups(t *testing.T) {
-	// UpdateMeta goes through the global profile, so the test needs its own.
+	// The functions go through the global profile, so the test needs its own.
 	t.Setenv("TIUP_COMPONENT_DATA_DIR", t.TempDir())
 	require.NoError(t, spec.Initialize("cluster"))
 	metadata := &spec.ClusterMeta{User: "tidb", Topology: &spec.Specification{
@@ -92,8 +92,8 @@ func TestSettleGrafanaEntryCleanups(t *testing.T) {
 	require.NoError(t, err)
 
 	updateTopology := &UpdateTopology{cluster: "test", metadata: metadata}
-	// Nothing owed: the saved metadata is left as it is.
-	require.NoError(t, updateTopology.settleGrafanaEntryCleanups())
+	// Without a record on disk, the saved metadata is left as it is.
+	require.NoError(t, updateTopology.settleGrafanaEntryCleanups(context.Background()))
 	after, err := os.ReadFile(metaFile)
 	require.NoError(t, err)
 	require.Equal(t, before, after)
@@ -107,7 +107,7 @@ func TestSettleGrafanaEntryCleanups(t *testing.T) {
 		PendingGrafanaEntryCleanups: recorded,
 	}}
 	require.NoError(t, spec.SaveClusterMeta("test", saved))
-	require.NoError(t, updateTopology.settleGrafanaEntryCleanups())
+	require.NoError(t, updateTopology.settleGrafanaEntryCleanups(context.Background()))
 
 	settled, err := spec.ClusterMetadata("test")
 	require.NoError(t, err)
@@ -118,17 +118,37 @@ func TestSettleGrafanaEntryCleanups(t *testing.T) {
 	// without the record in memory as well.
 	metadata.Topology.PendingGrafanaEntryCleanups = recorded
 	require.NoError(t, spec.SaveClusterMeta("test", metadata))
-	require.NoError(t, updateTopology.settleGrafanaEntryCleanups())
+	require.NoError(t, updateTopology.settleGrafanaEntryCleanups(context.Background()))
 	require.Nil(t, metadata.Topology.PendingGrafanaEntryCleanups)
 }
 
-func TestSettleGrafanaEntryCleanupsReportsUnreadableMetadata(t *testing.T) {
+func TestSettleGrafanaEntryCleanupsKeepsRefreshFromUnreadableMetadata(t *testing.T) {
+	// Scale-in, scale-out and prune run on a topology that fails validation,
+	// so that an operator can repair it. Once the refresh has committed, the
+	// metadata read only to drop a record must neither fail the refresh nor be
+	// rewritten from what a failed read left: the record stays, and the next
+	// refresh settles it.
 	t.Setenv("TIUP_COMPONENT_DATA_DIR", t.TempDir())
 	require.NoError(t, spec.Initialize("cluster"))
-	// No cluster of that name exists: an unreadable metadata must surface
-	// instead of silently leaving a record behind.
-	err := (&UpdateTopology{
+	// TiSpark workers without a master is one of the tolerated errors.
+	invalid := &spec.ClusterMeta{User: "tidb", Topology: &spec.Specification{
+		TiSparkWorkers:              []*spec.TiSparkWorkerSpec{{Host: "w1", Port: 7078}},
+		PendingGrafanaEntryCleanups: []*spec.GrafanaEntryCleanup{{Host: "removed", Port: 3000}},
+	}}
+	require.NoError(t, spec.SaveClusterMeta("test", invalid))
+	_, err := spec.ClusterMetadata("test")
+	require.ErrorIs(t, err, spec.ErrNoTiSparkMaster)
+	metaFile := spec.GetSpecManager().Path("test", "meta.yaml")
+	before, err := os.ReadFile(metaFile)
+	require.NoError(t, err)
+
+	require.NoError(t, (&UpdateTopology{cluster: "test", metadata: invalid}).settleGrafanaEntryCleanups(context.Background()))
+	after, err := os.ReadFile(metaFile)
+	require.NoError(t, err)
+	require.Equal(t, before, after)
+
+	// A metadata that cannot be read at all does not fail the refresh either.
+	require.NoError(t, (&UpdateTopology{
 		cluster: "missing", metadata: &spec.ClusterMeta{Topology: &spec.Specification{}},
-	}).settleGrafanaEntryCleanups()
-	require.Error(t, err)
+	}).settleGrafanaEntryCleanups(context.Background()))
 }

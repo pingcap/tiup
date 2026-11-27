@@ -10,6 +10,7 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
+	logprinter "github.com/pingcap/tiup/pkg/logger/printer"
 	"github.com/pingcap/tiup/pkg/proxy"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/utils"
@@ -64,11 +65,12 @@ func (u *UpdateTopology) Execute(ctx context.Context) error {
 	var instances []spec.Instance
 
 	ops, instances = updateInstancesAndOps(ops, instances, deleted, (&spec.MonitorComponent{Topology: topo}).Instances(), "prometheus")
-	// The entry is read from etcd only when a cleanup is owed, and the entry
-	// that was read is the only one this refresh may delete. Both decisions
-	// are made in updateGrafanaAndOps, which hands that entry back.
+	// The entry is read from etcd, and the metadata read back, only while a
+	// cleanup is owed. updateGrafanaAndOps decides both and hands back the
+	// entry to delete, the only one this refresh may delete.
+	var owed bool
 	var cleanup *topologyEntry
-	ops, instances, cleanup, err = updateGrafanaAndOps(ops, instances, deleted, (&spec.GrafanaComponent{Topology: topo}).Instances(),
+	ops, instances, owed, cleanup, err = updateGrafanaAndOps(ops, instances, deleted, (&spec.GrafanaComponent{Topology: topo}).Instances(),
 		topo.PendingGrafanaEntryCleanups, func() (*topologyEntry, error) {
 			return readTopologyEntry(ctx, client, spec.ComponentGrafana)
 		})
@@ -116,7 +118,10 @@ func (u *UpdateTopology) Execute(ctx context.Context) error {
 	if _, err := txn.Commit(); err != nil {
 		return err
 	}
-	return u.settleGrafanaEntryCleanups()
+	if !owed {
+		return nil
+	}
+	return u.settleGrafanaEntryCleanups(ctx)
 }
 
 // componentTopology represent the topology info for alertmanager, prometheus and grafana.
@@ -177,8 +182,12 @@ func updateInstancesAndOps(ops []clientv3.Op, ins []spec.Instance, deleted set.S
 //
 // The entry to delete is returned rather than deleted here: Execute deletes
 // it only while the key still carries the revision that was read, so that an
-// entry rewritten in the meantime is left alone.
-func updateGrafanaAndOps(ops []clientv3.Op, ins []spec.Instance, deleted set.StringSet, instances []spec.Instance, recorded []*spec.GrafanaEntryCleanup, readEntry func() (*topologyEntry, error)) ([]clientv3.Op, []spec.Instance, *topologyEntry, error) {
+// entry rewritten in the meantime is left alone. The function also reports
+// whether a cleanup is owed, for Execute to settle the record once the
+// refresh has committed: the records the topology carried and the Grafana
+// instances this run removes add up to what UpdateMeta has just saved, so the
+// metadata on disk carries a record if, and only if, there is a cleanup.
+func updateGrafanaAndOps(ops []clientv3.Op, ins []spec.Instance, deleted set.StringSet, instances []spec.Instance, recorded []*spec.GrafanaEntryCleanup, readEntry func() (*topologyEntry, error)) ([]clientv3.Op, []spec.Instance, bool, *topologyEntry, error) {
 	var currentInstances []spec.Instance
 	cleanups := append([]*spec.GrafanaEntryCleanup{}, recorded...)
 	for _, instance := range instances {
@@ -188,22 +197,23 @@ func updateGrafanaAndOps(ops []clientv3.Op, ins []spec.Instance, deleted set.Str
 		}
 		cleanups = append(cleanups, grafanaEntryCleanupFor(instance))
 	}
+	owed := len(cleanups) > 0
 
 	if len(currentInstances) > 0 {
-		return ops, append(ins, currentInstances...), nil, nil
+		return ops, append(ins, currentInstances...), owed, nil, nil
 	}
-	if len(cleanups) == 0 {
-		return ops, ins, nil, nil
+	if !owed {
+		return ops, ins, false, nil, nil
 	}
 
 	entry, err := readEntry()
 	if err != nil {
-		return ops, ins, nil, err
+		return ops, ins, false, nil, err
 	}
 	if entry != nil && grafanaEntryPointsAt(entry.value, cleanups) {
-		return ops, ins, entry, nil
+		return ops, ins, true, entry, nil
 	}
-	return ops, ins, nil, nil
+	return ops, ins, true, nil, nil
 }
 
 // grafanaEntryCleanupFor returns the cleanup owed for a Grafana instance TiUP
@@ -253,12 +263,25 @@ func readTopologyEntry(ctx context.Context, client *clientv3.Client, component s
 //
 // The record is read back from disk, not from the in-memory topology: during a
 // scale-in that one still lists the removed instance and predates the record
-// UpdateMeta has just saved.
-func (u *UpdateTopology) settleGrafanaEntryCleanups() error {
+// UpdateMeta has just saved. It is cleared there as well, since a reload saves
+// the in-memory topology back once the refresh is done.
+//
+// A metadata that cannot be read does not fail the refresh, which has
+// committed already, and is not rewritten from what was read: commands such as
+// scale-in and prune run on a topology that fails validation, so that an
+// operator can repair it, and such a topology says nothing about the record.
+// The record stays then, and the next refresh settles it.
+func (u *UpdateTopology) settleGrafanaEntryCleanups(ctx context.Context) error {
 	u.metadata.Topology.PendingGrafanaEntryCleanups = nil
 	metadata, err := spec.ClusterMetadata(u.cluster)
-	if err != nil || metadata.Topology == nil || len(metadata.Topology.PendingGrafanaEntryCleanups) == 0 {
-		return err
+	if err != nil {
+		if logger, ok := ctx.Value(logprinter.ContextKeyLogger).(*logprinter.Logger); ok {
+			logger.Debugf("The pending Grafana entry cleanups were not dropped, the next topology refresh retries: %v", err)
+		}
+		return nil
+	}
+	if metadata.Topology == nil || len(metadata.Topology.PendingGrafanaEntryCleanups) == 0 {
+		return nil
 	}
 	metadata.Topology.PendingGrafanaEntryCleanups = nil
 	return spec.SaveClusterMeta(u.cluster, metadata)
