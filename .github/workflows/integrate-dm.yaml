@@ -11,6 +11,7 @@ on:
       - release-*
     paths-ignore:
       - 'OWNERS'
+      - '.github/**'
       - '**.html'
       - '**.md'
       - 'CNAME'

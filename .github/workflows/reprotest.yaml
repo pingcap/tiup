@@ -12,6 +12,7 @@ on:
       - feature/*
     paths-ignore:
       - 'OWNERS'
+      - '.github/**'
       - '**.html'
       - '**.md'
       - 'CNAME'
@@ -23,6 +24,7 @@ on:
       - release-*
     paths-ignore:
       - 'OWNERS'
+      - '.github/**'
       - '**.html'
       - '**.md'
       - 'CNAME'

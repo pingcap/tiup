@@ -12,6 +12,7 @@ on:
       - feature/*
     paths-ignore:
       - "OWNERS"
+      - ".github/**"
       - "**.html"
       - "**.md"
       - "CNAME"
