@@ -20,6 +20,15 @@ function grafana_entry() (
         local status=$?
         trap - EXIT
         set +e
+        # The workflow collects logs once this script has exited, by which time
+        # destroy has removed the remote ones and the cleanup below the local
+        # ones: on a failure, collect both first into the directory the
+        # workflow uploads.
+        if [ "$status" -ne 0 ]; then
+            mkdir -p /tiup-cluster/logs
+            bash ./script/pull_log.sh /tiup-cluster/logs
+            find "$TIUP_COMPONENT_DATA_DIR" -name '*.log' -exec cp {} /tiup-cluster/logs/ \; 2> /dev/null
+        fi
         if [ "$destroyed" = false ]; then
             if [ -f "$state/meta.before-edit" ]; then
                 cp "$state/meta.before-edit" "$meta"

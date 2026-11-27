@@ -33,8 +33,12 @@ func previousTiDBInstance() []spec.Instance {
 	}}).Instances()
 }
 
-func requireOps(t *testing.T, ops []clientv3.Op, previous []spec.Instance, retained []spec.Instance, key string, wantIDs []string, deleted bool) {
+// requirePassthrough checks what the two functions have in common: the
+// operations and the instance list an earlier call left in the output come
+// back untouched, followed by the surviving instances.
+func requirePassthrough(t *testing.T, ops []clientv3.Op, previous, retained []spec.Instance, wantIDs []string) {
 	t.Helper()
+	require.NotEmpty(t, ops)
 	require.True(t, ops[0].IsPut())
 	require.Equal(t, "/previous", string(ops[0].KeyBytes()))
 	require.Equal(t, "untouched", string(ops[0].ValueBytes()))
@@ -44,13 +48,6 @@ func requireOps(t *testing.T, ops []clientv3.Op, previous []spec.Instance, retai
 		ids = append(ids, instance.ID())
 	}
 	require.Equal(t, wantIDs, ids)
-	if deleted {
-		require.Len(t, ops, 2)
-		require.True(t, ops[1].IsDelete())
-		require.Equal(t, key, string(ops[1].KeyBytes()))
-	} else {
-		require.Len(t, ops, 1)
-	}
 }
 
 func TestUpdateInstancesAndOps(t *testing.T) {
@@ -89,7 +86,14 @@ func TestUpdateInstancesAndOps(t *testing.T) {
 					[]clientv3.Op{clientv3.OpPut("/previous", "untouched")}, previous,
 					set.NewStringSet(test.deleted...), instances, component,
 				)
-				requireOps(t, ops, previous, retained, "/topology/"+component, test.wantIDs, len(test.wantIDs) == 0)
+				requirePassthrough(t, ops, previous, retained, test.wantIDs)
+				if len(test.wantIDs) == 0 {
+					require.Len(t, ops, 2)
+					require.True(t, ops[1].IsDelete())
+					require.Equal(t, "/topology/"+component, string(ops[1].KeyBytes()))
+				} else {
+					require.Len(t, ops, 1)
+				}
 			})
 		}
 	}
@@ -164,17 +168,29 @@ func TestUpdateGrafanaAndOps(t *testing.T) {
 			}
 			previous := previousTiDBInstance()
 			read := false
-			ops, retained, err := updateGrafanaAndOps(
+			ops, retained, cleanup, err := updateGrafanaAndOps(
 				[]clientv3.Op{clientv3.OpPut("/previous", "untouched")}, previous,
 				set.NewStringSet(test.deleted...), (&spec.GrafanaComponent{Topology: topo}).Instances(), test.recorded,
-				func() ([]byte, error) {
+				func() (*topologyEntry, error) {
 					read = true
-					return []byte(test.entry), nil
+					if test.entry == "" {
+						return nil, nil
+					}
+					return &topologyEntry{value: []byte(test.entry), modRevision: 42}, nil
 				},
 			)
 			require.NoError(t, err)
 			require.Equal(t, test.read, read, "the entry is read exactly when a cleanup is owed")
-			requireOps(t, ops, previous, retained, "/topology/grafana", test.wantIDs, test.delete)
+			requirePassthrough(t, ops, previous, retained, test.wantIDs)
+			// The decision never adds an operation. The entry to delete is
+			// handed back as it was read, revision included, and Execute owns
+			// the delete: only while the key still carries that revision.
+			require.Len(t, ops, 1)
+			if test.delete {
+				require.Equal(t, &topologyEntry{value: []byte(test.entry), modRevision: 42}, cleanup)
+			} else {
+				require.Nil(t, cleanup)
+			}
 		})
 	}
 }
@@ -198,9 +214,9 @@ func TestUpdateGrafanaAndOpsPropagatesReadError(t *testing.T) {
 			for _, host := range test.managed {
 				topo.Grafanas = append(topo.Grafanas, &spec.GrafanaSpec{Host: host, Port: 3000})
 			}
-			_, _, err := updateGrafanaAndOps(
+			_, _, _, err := updateGrafanaAndOps(
 				nil, nil, set.NewStringSet(test.deleted...), (&spec.GrafanaComponent{Topology: topo}).Instances(), test.recorded,
-				func() ([]byte, error) { return nil, readFailed },
+				func() (*topologyEntry, error) { return nil, readFailed },
 			)
 			require.ErrorIs(t, err, readFailed)
 		})

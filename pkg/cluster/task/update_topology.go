@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/pingcap/errors"
@@ -63,10 +64,12 @@ func (u *UpdateTopology) Execute(ctx context.Context) error {
 	var instances []spec.Instance
 
 	ops, instances = updateInstancesAndOps(ops, instances, deleted, (&spec.MonitorComponent{Topology: topo}).Instances(), "prometheus")
-	// The entry is read from etcd only when a cleanup is owed; the closure
-	// keeps that decision inside updateGrafanaAndOps.
-	ops, instances, err = updateGrafanaAndOps(ops, instances, deleted, (&spec.GrafanaComponent{Topology: topo}).Instances(),
-		topo.PendingGrafanaEntryCleanups, func() ([]byte, error) {
+	// The entry is read from etcd only when a cleanup is owed, and the entry
+	// that was read is the only one this refresh may delete. Both decisions
+	// are made in updateGrafanaAndOps, which hands that entry back.
+	var cleanup *topologyEntry
+	ops, instances, cleanup, err = updateGrafanaAndOps(ops, instances, deleted, (&spec.GrafanaComponent{Topology: topo}).Instances(),
+		topo.PendingGrafanaEntryCleanups, func() (*topologyEntry, error) {
 			return readTopologyEntry(ctx, client, spec.ComponentGrafana)
 		})
 	if err != nil {
@@ -97,7 +100,20 @@ func (u *UpdateTopology) Execute(ctx context.Context) error {
 		ops = append(ops, *op)
 	}
 
-	if _, err := txn.Then(ops...).Commit(); err != nil {
+	if cleanup != nil {
+		// Delete only the entry that was read. A key written since no longer
+		// holds the leftover the decision matched and is left to whoever wrote
+		// it. The other updates apply on either branch, so a failed comparison
+		// cannot hold them back.
+		key := "/topology/" + spec.ComponentGrafana
+		txn = txn.
+			If(clientv3.Compare(clientv3.ModRevision(key), "=", cleanup.modRevision)).
+			Then(append(slices.Clone(ops), clientv3.OpDelete(key))...).
+			Else(ops...)
+	} else {
+		txn = txn.Then(ops...)
+	}
+	if _, err := txn.Commit(); err != nil {
 		return err
 	}
 	return u.settleGrafanaEntryCleanups()
@@ -108,6 +124,13 @@ type componentTopology struct {
 	IP         string `json:"ip"`
 	Port       int    `json:"port"`
 	DeployPath string `json:"deploy_path"`
+}
+
+// topologyEntry is a discovery entry as etcd holds it: its value together with
+// the revision that last wrote the key.
+type topologyEntry struct {
+	value       []byte
+	modRevision int64
 }
 
 // updateInstancesAndOps receives alertmanager or prometheus instance list, if the list has
@@ -151,7 +174,11 @@ func updateInstancesAndOps(ops []clientv3.Op, ins []spec.Instance, deleted set.S
 // it (still in instances, listed in deleted) or a record says so, and
 // settleGrafanaEntryCleanups drops the records once the refresh has committed.
 // A missing entry stays missing.
-func updateGrafanaAndOps(ops []clientv3.Op, ins []spec.Instance, deleted set.StringSet, instances []spec.Instance, recorded []*spec.GrafanaEntryCleanup, readEntry func() ([]byte, error)) ([]clientv3.Op, []spec.Instance, error) {
+//
+// The entry to delete is returned rather than deleted here: Execute deletes
+// it only while the key still carries the revision that was read, so that an
+// entry rewritten in the meantime is left alone.
+func updateGrafanaAndOps(ops []clientv3.Op, ins []spec.Instance, deleted set.StringSet, instances []spec.Instance, recorded []*spec.GrafanaEntryCleanup, readEntry func() (*topologyEntry, error)) ([]clientv3.Op, []spec.Instance, *topologyEntry, error) {
 	var currentInstances []spec.Instance
 	cleanups := append([]*spec.GrafanaEntryCleanup{}, recorded...)
 	for _, instance := range instances {
@@ -163,20 +190,20 @@ func updateGrafanaAndOps(ops []clientv3.Op, ins []spec.Instance, deleted set.Str
 	}
 
 	if len(currentInstances) > 0 {
-		return ops, append(ins, currentInstances...), nil
+		return ops, append(ins, currentInstances...), nil, nil
 	}
 	if len(cleanups) == 0 {
-		return ops, ins, nil
+		return ops, ins, nil, nil
 	}
 
-	value, err := readEntry()
+	entry, err := readEntry()
 	if err != nil {
-		return ops, ins, err
+		return ops, ins, nil, err
 	}
-	if grafanaEntryPointsAt(value, cleanups) {
-		ops = append(ops, clientv3.OpDelete("/topology/"+spec.ComponentGrafana))
+	if entry != nil && grafanaEntryPointsAt(entry.value, cleanups) {
+		return ops, ins, entry, nil
 	}
-	return ops, ins, nil
+	return ops, ins, nil, nil
 }
 
 // grafanaEntryCleanupFor returns the cleanup owed for a Grafana instance TiUP
@@ -204,9 +231,9 @@ func grafanaEntryPointsAt(value []byte, cleanups []*spec.GrafanaEntryCleanup) bo
 	return false
 }
 
-// readTopologyEntry returns the current value of a monitoring component's
-// discovery entry, or nil when the entry does not exist.
-func readTopologyEntry(ctx context.Context, client *clientv3.Client, component string) ([]byte, error) {
+// readTopologyEntry returns a monitoring component's discovery entry together
+// with the revision that last wrote it, or nil when the entry does not exist.
+func readTopologyEntry(ctx context.Context, client *clientv3.Client, component string) (*topologyEntry, error) {
 	resp, err := client.Get(ctx, "/topology/"+component)
 	if err != nil {
 		return nil, err
@@ -214,13 +241,15 @@ func readTopologyEntry(ctx context.Context, client *clientv3.Client, component s
 	if len(resp.Kvs) == 0 {
 		return nil, nil
 	}
-	return resp.Kvs[0].Value, nil
+	return &topologyEntry{value: resp.Kvs[0].Value, modRevision: resp.Kvs[0].ModRevision}, nil
 }
 
 // settleGrafanaEntryCleanups drops the pending entry cleanups once this
-// refresh has committed, as spec.GrafanaEntryCleanup describes. From then on a
-// record would only let a later refresh delete an entry someone wrote at the
-// removed instance's former address.
+// refresh has committed, as spec.GrafanaEntryCleanup describes. By then the
+// entry a cleanup was waiting for is gone, whether the refresh deleted it or
+// the key was written since the read and the delete was skipped. A record
+// left behind would only let a later refresh delete an entry someone wrote at
+// the removed instance's former address.
 //
 // The record is read back from disk, not from the in-memory topology: during a
 // scale-in that one still lists the removed instance and predates the record
