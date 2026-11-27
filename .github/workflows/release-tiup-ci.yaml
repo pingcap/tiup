@@ -1,0 +1,14 @@
+---
+name: release-tiup-ci
+
+on:
+  push:
+    branches:
+      - ci/gh-*
+
+jobs:
+  release:
+    uses: ./.github/workflows/release-tiup.yaml
+    secrets: inherit
+    permissions:
+      contents: write
