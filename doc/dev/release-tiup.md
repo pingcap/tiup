@@ -51,12 +51,13 @@ only; no workflow change is needed.
 
 1. `resolve` selects `staging` only for a `workflow_dispatch` with
    `staging-mirror: true`; every other trigger selects `production`.
-2. `bootstrap` checks out the release ref on a GitHub-hosted runner, builds the
-   `tiup` driver with `make tiup`, and uploads `bin/tiup` as a short-lived
-   artifact.
-3. Each `release` matrix job (linux/darwin × amd64/arm64) downloads that driver,
-   fetches `root.json` from the selected mirror, builds and packages the
-   components, then runs `tiup mirror set` and `tiup mirror publish`.
+2. `bootstrap` checks out the release ref on a GitHub-hosted runner, records the
+   exact commit and branch name, builds the `tiup` driver with `make tiup`, and
+   uploads `bin/tiup` as a short-lived artifact.
+3. Each `release` matrix job (linux/darwin × amd64/arm64) checks out the commit
+   recorded by `bootstrap` (not the branch again), downloads that driver, fetches
+   `root.json` from the selected mirror, builds and packages the components, then
+   runs `tiup mirror set` and `tiup mirror publish`.
 4. `brew-upgrade` runs after a `release` event.
 
 If `TIUP_SERVER` or `TIUP_COMP_KEY` is empty, the job fails before any publish;

@@ -52,12 +52,21 @@ jobs:
     # on a GitHub-hosted runner so the matrix jobs can start their own runners.
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    outputs:
+      commit: ${{ steps.commit.outputs.commit }}
+      branch: ${{ steps.commit.outputs.branch }}
     steps:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v6
         with:
           ref: ${{ inputs.git-ref }}
           fetch-depth: 0
+
+      - name: Record the checked-out commit
+        id: commit
+        run: |
+          echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "branch=$(git rev-parse --abbrev-ref HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Set up Go
         uses: actions/setup-go@v6
@@ -107,7 +116,7 @@ jobs:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.git-ref }}
+          ref: ${{ needs.bootstrap.outputs.commit }}
           fetch-depth: 0
 
       - name: Set up Go
@@ -130,8 +139,9 @@ jobs:
       - name: Check if this is a staging build
         id: check_staging
         if: github.event_name != 'release'
+        env:
+          BRANCH_NAME: ${{ needs.bootstrap.outputs.branch }}
         run: |
-          BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
           if [ "$BRANCH_NAME" != "master" ]; then
             STAGING_VER=$(git describe --tags | sed 's/-[0-9]*-[^-]*$//')-$(echo $BRANCH_NAME | sed 's|/|.|g')
           else
