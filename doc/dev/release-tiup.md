@@ -73,8 +73,11 @@ publish; there is no fallback to another mirror or another key.
 2. Check that the run page shows the `staging` deployment environment.
 3. Check the logs: `build` contains the component builds and checksums (the
    linux/amd64 leg also uploads the driver); `release` contains `tiup --version`
-   and does **not** request `tiup-linux-amd64.tar.gz`; the `root.json` request
-   goes to the staging mirror.
+   and does **not** request `tiup-linux-amd64.tar.gz`. The logs do not show the
+   mirror URL (`TIUP_SERVER` is masked), so they cannot prove the destination.
+   Instead, compare the `Mirror fingerprint` line (SHA-256 of the configured URL)
+   with the expected staging URL:
+   `printf '%s' "http://tiup.pingcap.net:8988" | sha256sum`.
 4. Check the published component manifest: `signatures[].keyid` must equal the
    staging `index.json` owner key id.
 

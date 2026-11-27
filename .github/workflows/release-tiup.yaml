@@ -215,7 +215,8 @@ jobs:
             echo "::error::The '${{ needs.resolve.outputs.environment }}' environment is missing TIUP_SERVER or TIUP_COMP_KEY."
             exit 1
           fi
-          echo "Publishing to the '${{ needs.resolve.outputs.environment }}' environment (${TIUP_SERVER%/})"
+          echo "Publishing to the '${{ needs.resolve.outputs.environment }}' environment"
+          echo "Mirror fingerprint: $(printf '%s' "${TIUP_SERVER%/}" | sha256sum | cut -d' ' -f1)"
 
       - name: Download the build output
         uses: actions/download-artifact@v8
@@ -252,6 +253,10 @@ jobs:
 
           mkdir -p package
           cp $TIUP_HOME/bin/root.json bin/root.json
+
+          # Artifact download does not preserve file modes; restore the
+          # executable bits before packaging the binaries.
+          chmod 755 bin/tiup*
 
           # make tar reproducible
           TAR="tar --sort=name --mtime=$COMMIT_TIMESTAMP --owner=0 --group=0 --numeric-owner"
