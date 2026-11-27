@@ -44,8 +44,9 @@ base64 < /path/to/production-private.json | tr -d '\n' \
   | gh secret set TIUP_COMP_KEY --env production --repo pingcap/tiup
 ```
 
-To change a mirror address or rotate a key, update that environment's secret
-only; no workflow change is needed.
+To change a mirror address or rotate a key, update the affected secret(s) on that
+environment; no workflow change is needed. When switching to a mirror with a
+different owner key, update `TIUP_SERVER` and `TIUP_COMP_KEY` together.
 
 ## How the workflow runs
 
@@ -80,7 +81,8 @@ publish; there is no fallback to another mirror or another key.
 ## Rollback
 
 - Revert the workflow commit to restore the previous behavior, or
-- change only the environment secret to point at another mirror.
+- change the environment's `TIUP_SERVER` and `TIUP_COMP_KEY` together to point
+  at another mirror.
 - Re-running a staging or other non-formal version overwrites it; released
   `vX.Y.Z` versions are immutable.
 
