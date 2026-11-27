@@ -40,9 +40,12 @@ function grafana_entry() (
     }
 
     # Refuse to replace resources from an earlier test. Install the destructive
-    # cleanup trap only after proving the fixture paths are unused.
+    # cleanup trap only after proving the fixture paths are unused. Host keys
+    # are not checked, as in the rest of the suite: the control container is
+    # still adding the nodes to its known_hosts when a case starts, and strict
+    # checking refuses a host whose entry shows up while it connects.
     for host in n1 n2 n3 n4 n5; do
-        ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new \
+        ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=no \
             -i "$HOME/.ssh/id_rsa" "root@$host" \
             "test ! -e /home/tidb/entry-deploy && test ! -e /home/tidb/entry-data"
     done
