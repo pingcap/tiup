@@ -63,6 +63,11 @@ different owner key, update `TIUP_SERVER` and `TIUP_COMP_KEY` together.
    all-in-one tarball to the GitHub release.
 4. `brew-upgrade` runs after a `release` event.
 
+Pushes to `ci/gh-*` are routed through `release-tiup-ci`, which calls this
+workflow without path filters, so workflow-only changes on that branch are still
+tested. `master` pushes ignore `OWNERS` and `.github/**`; a non-code merge does
+not publish a nightly.
+
 If `TIUP_SERVER` or `TIUP_COMP_KEY` is empty, the `release` job fails before any
 publish; there is no fallback to another mirror or another key.
 
