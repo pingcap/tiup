@@ -50,19 +50,18 @@ different owner key, update `TIUP_SERVER` and `TIUP_COMP_KEY` together.
 
 ## How the workflow runs
 
-1. `resolve` selects `staging` only for a `workflow_dispatch` with
-   `staging-mirror: true`; every other trigger selects `production`.
-2. `prepare` resolves the exact commit, version and refs from the release ref;
-   it does not compile.
-3. `build` (GitHub-hosted, 4-way matrix) checks out the commit recorded by
+1. `prepare` selects `staging` only for a `workflow_dispatch` with
+   `staging-mirror: true` (otherwise `production`) and resolves the exact commit,
+   version and refs from the release ref; it does not compile.
+2. `build` (GitHub-hosted, 4-way matrix) checks out the commit recorded by
    `prepare`, builds the components for each OS/arch, writes the checksums, and
    uploads `bin/` plus the checksum file as an artifact. The linux/amd64 leg also
    uploads `bin/tiup` as the driver used for publishing.
-4. `release` (self-hosted, 4-way matrix) runs only the mirror interaction:
+3. `release` (self-hosted, 4-way matrix) runs only the mirror interaction:
    downloads the build output and the driver, fetches `root.json` from the
    selected mirror, packages the components, publishes them, and uploads the
    all-in-one tarball to the GitHub release.
-5. `brew-upgrade` runs after a `release` event.
+4. `brew-upgrade` runs after a `release` event.
 
 If `TIUP_SERVER` or `TIUP_COMP_KEY` is empty, the `release` job fails before any
 publish; there is no fallback to another mirror or another key.
