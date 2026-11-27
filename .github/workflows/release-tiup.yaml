@@ -48,7 +48,9 @@ jobs:
 
   bootstrap:
     name: Build tiup for publishing
-    runs-on: arc-runner-set-tiup-release
+    # The driver build is small and does not need the release runner set; run it
+    # on a GitHub-hosted runner so the matrix jobs can start their own runners.
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Check out code into the Go module directory

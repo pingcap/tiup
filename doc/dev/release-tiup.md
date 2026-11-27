@@ -51,8 +51,9 @@ only; no workflow change is needed.
 
 1. `resolve` selects `staging` only for a `workflow_dispatch` with
    `staging-mirror: true`; every other trigger selects `production`.
-2. `bootstrap` checks out the release ref, builds the `tiup` driver with
-   `make tiup`, and uploads `bin/tiup` as a short-lived artifact.
+2. `bootstrap` checks out the release ref on a GitHub-hosted runner, builds the
+   `tiup` driver with `make tiup`, and uploads `bin/tiup` as a short-lived
+   artifact.
 3. Each `release` matrix job (linux/darwin × amd64/arm64) downloads that driver,
    fetches `root.json` from the selected mirror, builds and packages the
    components, then runs `tiup mirror set` and `tiup mirror publish`.
