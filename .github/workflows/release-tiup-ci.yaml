@@ -5,6 +5,14 @@ on:
   push:
     branches:
       - ci/gh-*
+    paths-ignore:
+      - "OWNERS"
+      - "**.html"
+      - "**.md"
+      - "CNAME"
+      - "LICENSE"
+      - "doc/**"
+      - "embed/templates/examples/**"
 
 jobs:
   release:
