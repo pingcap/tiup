@@ -2,12 +2,13 @@
 approvers:
 # tiup-maintainers:
 - bb7133
-- xhebox
+- zanmato1984
 # tiup-committers: 0 members
 emeritus_approvers:
 - lonng
 - lucklove
 - AstroProfundis
+- xhebox
 reviewers:
 # tiup-reviewers:
 - nexustar

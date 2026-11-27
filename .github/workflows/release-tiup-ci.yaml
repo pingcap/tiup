@@ -1,0 +1,22 @@
+---
+name: release-tiup-ci
+
+on:
+  push:
+    branches:
+      - ci/gh-*
+    paths-ignore:
+      - "OWNERS"
+      - "**.html"
+      - "**.md"
+      - "CNAME"
+      - "LICENSE"
+      - "doc/**"
+      - "embed/templates/examples/**"
+
+jobs:
+  release:
+    uses: ./.github/workflows/release-tiup.yaml
+    secrets: inherit
+    permissions:
+      contents: write
